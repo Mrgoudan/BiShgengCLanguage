@@ -1315,6 +1315,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
            "Unknown TSS value");
     Result = Context.Char32Ty;
     break;
+  case DeclSpec::TST_This:
+    Result = Context.ThisTy;
+    break;
   case DeclSpec::TST_unspecified:
     // If this is a missing declspec in a block literal return context, then it
     // is inferred from the return statements inside the block.
@@ -1555,6 +1558,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
     break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
+  case DeclSpec::TST_trait:
   case DeclSpec::TST_union:
   case DeclSpec::TST_struct:
   case DeclSpec::TST_interface: {
@@ -3559,6 +3563,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       } else {
         switch (cast<TagDecl>(SemaRef.CurContext)->getTagKind()) {
         case TTK_Enum: llvm_unreachable("unhandled tag kind");
+        case TTK_Trait:
         case TTK_Struct: Error = Cxx ? 1 : 2; /* Struct member */ break;
         case TTK_Union:  Error = Cxx ? 3 : 4; /* Union member */ break;
         case TTK_Class:  Error = 5; /* Class member */ break;

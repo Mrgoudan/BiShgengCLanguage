@@ -1015,6 +1015,90 @@ void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   UnusedLocalTypedefNameCandidates.clear();
 }
 
+TraitDecl* Sema::ActOnDesugarFind(IdentifierInfo *Name){
+  TraitDecl* Result;
+  DeclContext::lookup_result Decls = getASTContext().getTranslationUnitDecl()->lookup(DeclarationName(&Context.Idents.get(Name->getName())));
+  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
+    if (isa<TraitDecl>(*I)) {
+      Result = dyn_cast<TraitDecl>(*I);
+    }
+  }
+  return Result;
+}
+
+RecordDecl* Sema::ActOnDesugarVtableRecord(SourceLocation StartLoc,
+                                           SourceLocation NameLoc,
+                                           IdentifierInfo *Name) {
+  RecordDecl *Result;
+  std::string TraitVTableName = "__Trait_" + Name->getName().str() + "_Vtable";
+  DeclContext::lookup_result VtableDecls = 
+          getASTContext().getTranslationUnitDecl()->
+                lookup(DeclarationName(&Context.Idents.get(TraitVTableName)));
+  if (!VtableDecls.empty()) {
+    return Result;
+  }
+    Result = RecordDecl::Create(Context, TTK_Struct, CurContext,
+                                StartLoc, NameLoc, &Context.Idents.get(TraitVTableName));
+    Result->startDefinition(); 
+    Result->completeDefinition();
+    PushOnScopeChains(Result, getCurScope());
+  return Result;
+}
+
+// when we saw a trait like:
+// ` trait I {int g(char a);};
+// we should generate two struct in ast:
+// |--RecordDecl  struct Trait_I_Vtable
+// |----FieldDecl  g 'int (*)(char)'
+// |--RecordDecl  struct Trait_I
+// |----FieldDecl  data (*)(void)
+// |----FieldDecl  vtable struct (*)Trait_I_Vtable
+void Sema::ActOnDesugarTraitVtable(TraitDecl *Find, SourceLocation StartLoc,
+                                   SourceLocation NameLoc, IdentifierInfo *Name,
+                                   DeclSpec &DS) {
+  for (TraitDecl::field_iterator FieldIt = Find->field_begin();
+       FieldIt != Find->field_end(); ++FieldIt){
+    QualType FT = FieldIt->getType();
+    QualType PT = Context.getPointerType(FT);
+    FieldDecl *NewFD = FieldDecl::Create(Context, CurContext, StartLoc, NameLoc,
+                                         FieldIt->getIdentifier(), PT,
+                                         Context.CreateTypeSourceInfo(PT),
+                                         nullptr, false, ICIS_CopyInit);
+    PushOnScopeChains(NewFD, getCurScope());
+  }
+}
+
+RecordDecl *Sema::ActOnDesugarTraitRecord(SourceLocation StartLoc, SourceLocation NameLoc, IdentifierInfo *Name) {
+  std::string TraitName = "__Trait_" + Name->getName().str();
+  RecordDecl *NewTrait = RecordDecl::Create(Context, TTK_Struct, CurContext,
+                                            StartLoc, NameLoc, &Context.Idents.get(TraitName));
+  NewTrait->startDefinition(); 
+  NewTrait->completeDefinition();
+  PushOnScopeChains(NewTrait, getCurScope());
+  return NewTrait;
+}
+
+void Sema::ActOnDesugarTrait(RecordDecl *TraitVtableRecord,
+                             SourceLocation StartLoc, SourceLocation NameLoc) {
+  std::string DataName = "data";
+  std::string VtableName = "vtable";
+  QualType DataPT = Context.getPointerType(Context.VoidTy);
+  QualType RecordTy = Context.getRecordType(TraitVtableRecord);
+  QualType VtablePT = Context.getPointerType(RecordTy);
+  FieldDecl *DataFD = FieldDecl::Create(Context, CurContext, StartLoc, NameLoc,
+                                        &Context.Idents.get(DataName), DataPT,
+                                        Context.CreateTypeSourceInfo(DataPT),
+                                        nullptr, false, ICIS_CopyInit);
+  FieldDecl *VtableFD = FieldDecl::Create(Context, CurContext, StartLoc,
+                                          NameLoc,
+                                          &Context.Idents.get(VtableName),
+                                          VtablePT,
+                                          Context.CreateTypeSourceInfo(VtablePT),
+                                          nullptr, false, ICIS_CopyInit);
+  PushOnScopeChains(DataFD, getCurScope());
+  PushOnScopeChains(VtableFD, getCurScope());
+}
+
 /// This is called before the very first declaration in the translation unit
 /// is parsed. Note that the ASTContext may have already injected some
 /// declarations.

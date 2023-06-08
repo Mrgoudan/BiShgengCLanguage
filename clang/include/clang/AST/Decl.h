@@ -3592,6 +3592,7 @@ public:
   bool isClass()  const { return getTagKind() == TTK_Class; }
   bool isUnion()  const { return getTagKind() == TTK_Union; }
   bool isEnum()   const { return getTagKind() == TTK_Enum; }
+  bool isTrait() const { return getTagKind() == TTK_Trait; }
 
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?
@@ -4011,7 +4012,12 @@ public:
   void setHasFlexibleArrayMember(bool V) {
     RecordDeclBits.HasFlexibleArrayMember = V;
   }
-
+  void setTraitDesugarFlag() {
+    TraitDesugarFlag = true;
+  }
+  bool getTraitDesugarFlag() {
+    return TraitDesugarFlag;
+  }
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
   /// there must be no objects of this type declared, e.g.,
@@ -4277,6 +4283,56 @@ public:
 private:
   /// Deserialize just the fields.
   void LoadFieldsFromExternalStorage() const;
+
+  bool TraitDesugarFlag = false;
+};
+
+class TraitDecl : public TagDecl {
+public:
+  friend class DeclContext;
+
+protected:
+  TraitDecl(Kind DK, TagKind TK, const ASTContext &C,
+                DeclContext *DC, SourceLocation StartLoc,
+                SourceLocation IdLoc, IdentifierInfo *Id,
+                TraitDecl *PrevDecl);
+
+public:
+  static TraitDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
+                            SourceLocation StartLoc, SourceLocation IdLoc,
+                            IdentifierInfo *Id, TraitDecl* PrevDecl = nullptr);
+  TraitDecl *getPreviousDecl() {
+    return cast_or_null<TraitDecl>(
+        static_cast<TagDecl *>(this)->getPreviousDecl());
+  }
+  const TraitDecl *getPreviousDecl() const {
+    return const_cast<TraitDecl*>(this)->getPreviousDecl();
+  }
+
+  using field_iterator = specific_decl_iterator<FunctionDecl>;
+  using field_range = llvm::iterator_range<specific_decl_iterator<FunctionDecl>>;
+
+  field_range fields() const { return field_range(field_begin(), field_end()); }
+  field_iterator field_begin() const;
+
+  field_iterator field_end() const {
+    return field_iterator(decl_iterator());
+  }
+
+  bool field_empty() const {
+    return field_begin() == field_end();
+  }
+
+  virtual void completeDefinition();
+
+  TraitDecl *getDefinition() const {
+    return cast_or_null<TraitDecl>(TagDecl::getDefinition());
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) {
+    return K == Trait;
+  }
 };
 
 class FileScopeAsmDecl : public Decl {

@@ -1291,7 +1291,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   // C99 6.2.5p19.
   InitBuiltinType(VoidTy,              BuiltinType::Void);
-
+  // BSC
+  InitBuiltinType(ThisTy,              BuiltinType::This);
   // C99 6.2.5p2.
   InitBuiltinType(BoolTy,              BuiltinType::Bool);
   // C99 6.2.5p3.
@@ -1373,7 +1374,8 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   // C++20 (proposed)
   InitBuiltinType(Char8Ty,              BuiltinType::Char8);
-
+  if (LangOpts.BSC)
+    InitBuiltinType(ThisTy,             BuiltinType::This);
   if (LangOpts.CPlusPlus) // C++0x 3.9.1p5, extension for C++
     InitBuiltinType(Char16Ty,           BuiltinType::Char16);
   else // C99
@@ -2310,6 +2312,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
   }
   case Type::Record:
+  case Type::Trait:
   case Type::Enum: {
     const auto *TT = cast<TagType>(T);
 
@@ -3596,6 +3599,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::ObjCObjectPointer:
   case Type::Record:
   case Type::Enum:
+  case Type::Trait:
   case Type::UnresolvedUsing:
   case Type::TypeOfExpr:
   case Type::TypeOf:
@@ -4612,6 +4616,9 @@ QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
   } else if (const auto *Enum = dyn_cast<EnumDecl>(Decl)) {
     assert(Enum->isFirstDecl() && "enum has previous declaration");
     return getEnumType(Enum);
+  } else if (const auto *Trait = dyn_cast<TraitDecl>(Decl)) {
+    assert(Trait->isFirstDecl() && "Trait has previous declaration");
+    return getTraitType(Trait);
   } else if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl)) {
     return getUnresolvedUsingType(Using);
   } else
@@ -4665,6 +4672,19 @@ QualType ASTContext::getRecordType(const RecordDecl *Decl) const {
       return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
 
   auto *newType = new (*this, TypeAlignment) RecordType(Decl);
+  Decl->TypeForDecl = newType;
+  Types.push_back(newType);
+  return QualType(newType, 0);
+}
+
+QualType ASTContext::getTraitType(const TraitDecl *Decl) const {
+  if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
+
+  if (const TraitDecl *PrevDecl = Decl->getPreviousDecl())
+    if (PrevDecl->TypeForDecl)
+      return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
+
+  auto *newType = new (*this, TypeAlignment)TraitType(Decl);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
   return QualType(newType, 0);
@@ -8249,6 +8269,9 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
   }
 
+  case Type::Trait:
+    return;
+
   case Type::BlockPointer: {
     const auto *BT = T->castAs<BlockPointerType>();
     S += "@?"; // Unlike a pointer-to-function, which is "^?".
@@ -10571,6 +10594,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified);
   case Type::Record:
   case Type::Enum:
+  case Type::Trait:
     return {};
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.

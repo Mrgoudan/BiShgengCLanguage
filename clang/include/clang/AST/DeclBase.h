@@ -1571,6 +1571,14 @@ class DeclContext {
   /// Number of non-inherited bits in RecordDeclBitfields.
   enum { NumRecordDeclBits = 15 };
 
+  class TraitDeclBitfields {
+    friend class TraitDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
+    /// For the bits in TagDeclBitfields.
+    uint64_t : NumTagDeclBits;
+  };
+
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor
   /// methods in OMPDeclareReductionDecl should be updated appropriately.
@@ -1851,6 +1859,7 @@ protected:
     ObjCContainerDeclBitfields ObjCContainerDeclBits;
     LinkageSpecDeclBitfields LinkageSpecDeclBits;
     BlockDeclBitfields BlockDeclBits;
+    TraitDeclBitfields TraitDeclBits;
 
     static_assert(sizeof(DeclContextBitfields) <= 8,
                   "DeclContextBitfields is larger than 8 bytes!");
@@ -1986,6 +1995,10 @@ public:
   bool isRecord() const {
     return getDeclKind() >= Decl::firstRecord &&
            getDeclKind() <= Decl::lastRecord;
+  }
+
+  bool isTrait() const {
+    return getDeclKind() == Decl::Trait;
   }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }

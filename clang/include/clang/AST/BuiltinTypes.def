@@ -57,6 +57,9 @@
 // void
 BUILTIN_TYPE(Void, VoidTy)
 
+// This
+BUILTIN_TYPE(This, ThisTy)
+
 //===- Unsigned Types -----------------------------------------------------===//
 
 // 'bool' in C++, '_Bool' in C99

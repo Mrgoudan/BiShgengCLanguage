@@ -46,6 +46,7 @@ template <> struct ScalarEnumerationTraits<clang::TagTypeKind> {
     IO.enumCase(Value, "Union", clang::TagTypeKind::TTK_Union);
     IO.enumCase(Value, "Class", clang::TagTypeKind::TTK_Class);
     IO.enumCase(Value, "Enum", clang::TagTypeKind::TTK_Enum);
+    IO.enumCase(Value, "Trait", clang::TagTypeKind::TTK_Trait);
   }
 };
 

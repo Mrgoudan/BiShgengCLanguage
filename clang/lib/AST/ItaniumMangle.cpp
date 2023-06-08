@@ -2361,6 +2361,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
 
   case Type::Enum:
   case Type::Record:
+  case Type::Trait:
     mangleSourceNameWithAbiTags(cast<TagType>(Ty)->getDecl());
     break;
 
@@ -3368,6 +3369,9 @@ void CXXNameMangler::mangleType(const EnumType *T) {
 void CXXNameMangler::mangleType(const RecordType *T) {
   mangleType(static_cast<const TagType*>(T));
 }
+void CXXNameMangler::mangleType(const TraitType *T) {
+  mangleType(static_cast<const TagType*>(T));
+}
 void CXXNameMangler::mangleType(const TagType *T) {
   mangleName(T->getDecl());
 }
@@ -3905,6 +3909,7 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
     case ETK_Typename:
       break;
     case ETK_Struct:
+    case ETK_Trait:
     case ETK_Class:
     case ETK_Interface:
       Out << "Ts";

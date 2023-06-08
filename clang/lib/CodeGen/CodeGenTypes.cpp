@@ -447,6 +447,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   llvm::Type *ResultType = nullptr;
   switch (Ty->getTypeClass()) {
   case Type::Record: // Handled above.
+  case Type::Trait:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -458,6 +459,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Builtin: {
     switch (cast<BuiltinType>(Ty)->getKind()) {
     case BuiltinType::Void:
+    case BuiltinType::This:
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:

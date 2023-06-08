@@ -11319,6 +11319,9 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     return CanTy->isUnionType() ? GCCTypeClass::Union
                                 : GCCTypeClass::ClassOrStruct;
 
+  case Type::Trait:
+    return GCCTypeClass::ClassOrStruct;
+
   case Type::Atomic:
     // GCC classifies _Atomic T the same as T.
     return EvaluateBuiltinClassifyType(

@@ -2275,6 +2275,12 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
+  case Trait: {
+    TraitDecl *Rec = cast<TraitType>(CanonicalType)->getDecl();
+    if (Def)
+      *Def = Rec;
+    return !Rec->isCompleteDefinition();
+  }
   case ConstantArray:
   case VariableArray:
     // An array is incomplete if its element type is incomplete
@@ -2864,6 +2870,7 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   case TST_interface: return ETK_Interface;
   case TST_union: return ETK_Union;
   case TST_enum: return ETK_Enum;
+  case TST_trait: return ETK_Trait;
   }
 }
 
@@ -2875,6 +2882,7 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   case TST_interface: return TTK_Interface;
   case TST_union: return TTK_Union;
   case TST_enum: return TTK_Enum;
+  case TST_trait: return TTK_Trait;
   }
 
   llvm_unreachable("Type specifier is not a tag type kind.");
@@ -2888,6 +2896,7 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   case TTK_Interface: return ETK_Interface;
   case TTK_Union: return ETK_Union;
   case TTK_Enum: return ETK_Enum;
+  case TTK_Trait: return ETK_Trait;
   }
   llvm_unreachable("Unknown tag type kind.");
 }
@@ -2900,6 +2909,7 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   case ETK_Interface: return TTK_Interface;
   case ETK_Union: return TTK_Union;
   case ETK_Enum: return TTK_Enum;
+  case ETK_Trait: return TTK_Trait;
   case ETK_None: // Fall through.
   case ETK_Typename:
     llvm_unreachable("Elaborated type keyword is not a tag type kind.");
@@ -2917,6 +2927,7 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
   case ETK_Struct:
   case ETK_Interface:
   case ETK_Union:
+  case ETK_Trait:
   case ETK_Enum:
     return true;
   }
@@ -2932,6 +2943,7 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   case ETK_Interface: return "__interface";
   case ETK_Union:  return "union";
   case ETK_Enum:   return "enum";
+  case ETK_Trait: return "trait";
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3000,6 +3012,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   switch (getKind()) {
   case Void:
     return "void";
+  case This:
+    return "This";
   case Bool:
     return Policy.Bool ? "bool" : "_Bool";
   case Char_S:
@@ -3992,7 +4006,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return CachedProperties(ExternalLinkage, false);
 
   case Type::Record:
-  case Type::Enum: {
+  case Type::Enum:
+  case Type::Trait:{
     const TagDecl *Tag = cast<TagType>(T)->getDecl();
 
     // C++ [basic.link]p8:
@@ -4094,6 +4109,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
 
   case Type::Record:
   case Type::Enum:
+  case Type::Trait:
     return getDeclLinkageAndVisibility(cast<TagType>(T)->getDecl());
 
   case Type::Complex:
@@ -4246,6 +4262,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
       return ResultIfUnknown;
 
     case BuiltinType::Void:
+    case BuiltinType::This:
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
@@ -4298,6 +4315,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Record:
   case Type::DeducedTemplateSpecialization:
   case Type::Enum:
+  case Type::Trait:
   case Type::InjectedClassName:
   case Type::PackExpansion:
   case Type::ObjCObject:

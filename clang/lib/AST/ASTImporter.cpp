@@ -403,6 +403,7 @@ namespace clang {
     ExpectedType VisitInjectedClassNameType(const InjectedClassNameType *T);
     // FIXME: DependentDecltypeType
     ExpectedType VisitRecordType(const RecordType *T);
+    ExpectedType VisitTraitType(const TraitType *T);
     ExpectedType VisitEnumType(const EnumType *T);
     ExpectedType VisitAttributedType(const AttributedType *T);
     ExpectedType VisitTemplateTypeParmType(const TemplateTypeParmType *T);
@@ -1483,6 +1484,14 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
 
 ExpectedType ASTNodeImporter::VisitRecordType(const RecordType *T) {
   Expected<RecordDecl *> ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  return Importer.getToContext().getTagDeclType(*ToDeclOrErr);
+}
+
+ExpectedType ASTNodeImporter::VisitTraitType(const TraitType *T) {
+  Expected<TraitDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 

@@ -103,6 +103,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::UnresolvedUsingIfExists:
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
+  case Decl::Trait:     // trait X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
       if (cast<RecordDecl>(D).getDefinition())

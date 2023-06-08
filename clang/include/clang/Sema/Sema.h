@@ -3282,7 +3282,7 @@ public:
   Decl *ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
                    Declarator &D, Expr *BitfieldWidth);
 
-  FieldDecl *HandleField(Scope *S, RecordDecl *TagD, SourceLocation DeclStart,
+  FieldDecl *HandleField(Scope *S, TagDecl *TagD, SourceLocation DeclStart,
                          Declarator &D, Expr *BitfieldWidth,
                          InClassInitStyle InitStyle,
                          AccessSpecifier AS);
@@ -3295,7 +3295,7 @@ public:
 
   FieldDecl *CheckFieldDecl(DeclarationName Name, QualType T,
                             TypeSourceInfo *TInfo,
-                            RecordDecl *Record, SourceLocation Loc,
+                            TagDecl *Record, SourceLocation Loc,
                             bool Mutable, Expr *BitfieldWidth,
                             InClassInitStyle InitStyle,
                             SourceLocation TSSL,
@@ -7486,6 +7486,9 @@ public:
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
+  NamedDecl *ActOnTraitMemberDeclarator(Scope *S, Declarator &D);
+
+  void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
 
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
@@ -7493,6 +7496,18 @@ public:
                                          const ParsedAttributesView &AttrList);
   void ActOnFinishCXXMemberDecls();
   void ActOnFinishCXXNonNestedClass();
+  TraitDecl *ActOnDesugarFind(IdentifierInfo *Name);
+  RecordDecl *ActOnDesugarVtableRecord(SourceLocation StartLoc,
+                                       SourceLocation NameLoc,
+                                       IdentifierInfo *Name);
+  void ActOnDesugarTraitVtable(TraitDecl *Find, SourceLocation StartLoc,
+                               SourceLocation NameLoc, IdentifierInfo *Name,
+                               DeclSpec &DS);
+  RecordDecl *ActOnDesugarTraitRecord(SourceLocation StartLoc,
+                                      SourceLocation NameLoc,
+                                      IdentifierInfo *Name);
+  void ActOnDesugarTrait(RecordDecl *TraitVtableRecord, SourceLocation StartLoc,
+                         SourceLocation NameLoc);
 
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,

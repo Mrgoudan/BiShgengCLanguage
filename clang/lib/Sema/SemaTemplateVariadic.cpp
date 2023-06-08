@@ -876,6 +876,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
 
   case TST_unspecified:
   case TST_void:
+  case TST_This:
   case TST_char:
   case TST_wchar:
   case TST_char8:
@@ -900,6 +901,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_struct:
   case TST_interface:
   case TST_class:
+  case TST_trait:
   case TST_auto:
   case TST_auto_type:
   case TST_decltype_auto:

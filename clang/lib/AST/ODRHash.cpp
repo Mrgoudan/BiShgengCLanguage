@@ -1020,6 +1020,7 @@ public:
 
   void VisitRecordType(const RecordType *T) { VisitTagType(T); }
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }
+  void VisitTraitType(const TraitType *T) { VisitTagType(T); }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
     ID.AddInteger(T->getNumArgs());

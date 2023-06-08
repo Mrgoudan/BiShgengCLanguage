@@ -2760,6 +2760,9 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
         TagKind=tok::kw___interface;break;
       case DeclSpec::TST_class:
         TagName="class" ; FixitTagName = "class " ;TagKind=tok::kw_class ;break;
+      case DeclSpec::TST_trait:
+        TagName="trait"; FixitTagName = "trait ";
+        TagKind=tok::kw_trait;break;
     }
 
     if (TagName) {
@@ -3535,6 +3538,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw___super:
     case tok::kw_decltype:
     case tok::identifier: {
+      if (Tok.getIdentifierInfo()->getName().equals("This")) {
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_This, Loc, PrevSpec,
+                                       DiagID, Policy);
+        break;
+        }
       // This identifier can only be a typedef name if we haven't already seen
       // a type-specifier.  Without this check we misparse:
       //  typedef int X; struct Y { short X; };  as 'short int'.
@@ -4243,6 +4251,17 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSContext);
       continue;
 
+    case tok::kw_trait: {
+      ConsumeToken();
+      ParsedAttributes Attributes(AttrFactory);
+      ParseTraitSpecifier(Loc, DS, EnteringContext, DSContext, Attributes);
+      if (!Attributes.empty()) {
+        AttrsLastTime = true;
+        attrs.takeAllFrom(Attributes);
+      }
+      continue;
+    }
+
     // cv-qualifier:
     case tok::kw_const:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_const, Loc, PrevSpec, DiagID,
@@ -4511,6 +4530,31 @@ void Parser::ParseStructDeclaration(
   }
 }
 
+bool Parser::ParseTraitMemberDeclaratorBeforeInitializer(
+    Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
+    LateParsedAttrList &LateParsedAttrs) {
+  if (Tok.isNot(tok::colon)) {
+    DeclaratorInfo.setIsTraitMem(true);
+    ParseDeclarator(DeclaratorInfo);
+  } else {
+    DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
+  }
+
+  if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
+    assert(DeclaratorInfo.isPastIdentifier() &&
+           "don't know where identifier would go yet?");
+    BitfieldSize = ParseConstantExpression();
+    if (BitfieldSize.isInvalid())
+      SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
+  }
+  if (!DeclaratorInfo.hasName() && BitfieldSize.isUnset()) {
+    // If so, skip until the semi-colon or a }.
+    SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+    return true;
+  }
+  return false;
+}
+
 /// ParseStructUnionBody
 ///       struct-contents:
 ///         struct-declaration-list
@@ -4639,6 +4683,128 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
+}
+
+Parser::DeclGroupPtrTy Parser::ParseTraitMemberDeclaration(ParsedAttributes &AccessAttrs) {
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+  ParsedAttributes attrs(AttrFactory);
+  ParsedAttributesView FnAttrs;
+  // we need to keep these attributes for future diagnostic
+  // before they are taken over by declaration specifier
+  FnAttrs.addAll(attrs.begin(), attrs.end());
+  FnAttrs.Range = attrs.Range;
+  LateParsedAttrList CommonLateParsedAttrs;
+  // decl-specifier-seq:
+  // Parse the common declaration-specifiers piece
+  ParsingDeclSpec DS(*this);
+  DS.takeAttributesFrom(attrs);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_public, DeclSpecContext::DSC_class, &CommonLateParsedAttrs);
+  if (TryConsumeToken(tok::semi)) {
+    RecordDecl *AnonRecord = nullptr;
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_public, DS, FnAttrs, AnonRecord);
+    DS.complete(TheDecl);
+    if (AnonRecord) {
+      Decl* decls[] = {AnonRecord, TheDecl};
+      return Actions.BuildDeclaratorGroup(decls);
+    }
+    return Actions.ConvertDeclToDeclGroup(TheDecl);
+  }
+  ParsingDeclarator DeclaratorInfo(*this, DS, attrs, DeclaratorContext::Member);
+  VirtSpecifiers VS;
+  //Hold late-parsed attributes so we can attach a Decl to them later.
+  LateParsedAttrList LateParsedAttrs;
+  SmallVector<Decl *, 8> DeclsInGroup;
+  ExprResult BitfieldSize;
+  ExprResult TrailingRequiresClause;
+  ParseTraitMemberDeclaratorBeforeInitializer(DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs);
+  while(1) {
+    NamedDecl *ThisDecl = Actions.ActOnTraitMemberDeclarator(
+      getCurScope(), DeclaratorInfo);
+    if (ThisDecl) {
+      Actions.ProcessDeclAttributeList(getCurScope(), ThisDecl, AccessAttrs);
+      if (!ThisDecl->isInvalidDecl()) {
+        //Set the Decl for any late parsed attributes
+        for (unsigned i = 0, ni = CommonLateParsedAttrs.size(); i < ni; ++i)
+          CommonLateParsedAttrs[i]->addDecl(ThisDecl);
+        for (unsigned i = 0, ni = LateParsedAttrs.size(); i< ni; ++i)
+          LateParsedAttrs[i]->addDecl(ThisDecl);
+      }
+      Actions.FinalizeDeclaration(ThisDecl);
+      DeclsInGroup.push_back(ThisDecl); //Put each Decl inside struct Foo
+      if (DeclaratorInfo.isFunctionDeclarator() &&
+          DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
+          DeclSpec::SCS_typedef)
+        HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
+    }
+    LateParsedAttrs.clear();
+    DeclaratorInfo.complete(ThisDecl);
+    // if we dont have a comma, it is either the end of the list (a, ';')
+    // or an error, bail out
+    SourceLocation CommaLoc;
+    if (!TryConsumeToken(tok::comma, CommaLoc))
+      break;
+    if (Tok.isAtStartOfLine() &&
+        !MightBeDeclarator(DeclaratorContext::Member)) {
+          Diag(CommaLoc, diag::err_expected_semi_declaration) << FixItHint::CreateReplacement(CommaLoc, ";");
+          break;
+        }
+    // Parse the next declarator
+    DeclaratorInfo.clear();
+    VS.clear();
+    BitfieldSize = ExprResult(false);
+    DeclaratorInfo.setCommaLoc(CommaLoc);
+    if (ParseTraitMemberDeclaratorBeforeInitializer(DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))
+      break;
+  }
+  return Actions.FinalizeDeclaratorGroup(getCurScope(), DS, DeclsInGroup);
+}
+
+void Parser::ParseTraitBody(SourceLocation TraitLoc, SourceLocation AttrFixitLoc, Decl *TagDecl) {
+  PrettyDeclStackTraceEntry CrashInfo(Actions.Context, TagDecl, TraitLoc,
+                                      "parsing trait body");
+  bool NonNestedClass = true;
+  // Enter a scope for the class
+  ParseScope ClassScope(this, Scope::ClassScope | Scope::DeclScope);
+
+  // Note that we are parsing a new (potentially-nested) class definition
+  ParsingClassDefinition ParsingDef(*this, TagDecl, NonNestedClass, false);
+  if (TagDecl)
+    Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
+  if (!Tok.is(tok::l_brace)) {
+    if (TagDecl)
+      Actions.ActOnTagDefinitionError(getCurScope(), TagDecl);
+    return;
+  }
+  BalancedDelimiterTracker T(*this, tok::l_brace);
+  T.consumeOpen();
+  ParsedAttributes AccessAttrs(AttrFactory);
+  if (TagDecl) {
+    // While we still have something to read. read the member-decls
+    while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
+      // Each iter of this loop reads one member-declaration
+      if (Tok.is(tok::semi)) {
+        ConsumeExtraSemi(InsideStruct, DeclSpec::TST_trait);
+        continue;
+      }
+      ParseTraitMemberDeclaration(AccessAttrs);
+      MaybeDestroyTemplateIds();
+      if (TryConsumeToken(tok::semi))
+         continue;
+    }
+    T.consumeClose();
+  } else {
+    SkipUntil(tok::r_brace);
+  }
+  ParsedAttributes attrs(AttrFactory);
+  if (TagDecl)
+    Actions.ActOnFinishTraitMemberSpecification(TagDecl);
+  if (TagDecl) {
+    TagDecl->setInvalidDecl();
+    Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
+  }
+  // Leave the class scope
+  ParsingDef.Pop();
+  ClassScope.Exit();
 }
 
 /// ParseEnumSpecifier
@@ -5045,6 +5211,184 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     Diag(StartLoc, DiagID) << PrevSpec;
 }
 
+void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
+                                 bool EnteringContext, DeclSpecContext DSC,
+                                 ParsedAttributes &Attributes) {
+  DeclSpec::TST TagType = DeclSpec::TST_trait;
+  if (Tok.is(tok::code_completion)) {
+    Actions.CodeCompleteTag(getCurScope(), TagType);
+    return cutOffParsing();
+  }                                                                                                                                           
+  ParsedAttributes attrs(AttrFactory);
+  SourceLocation AttrFixitLoc = Tok.getLocation();
+
+  struct PreserveAtomicIdentifierInfoRAII {
+    PreserveAtomicIdentifierInfoRAII(Token &Tok, bool Enabled)
+        : AtomicII(nullptr) {
+      if (!Enabled)
+        return;
+      assert(Tok.is(tok::kw__Atomic));
+      AtomicII = Tok.getIdentifierInfo();
+      AtomicII->revertTokenIDToIdentifier();
+      Tok.setKind(tok::identifier);
+    }
+    ~PreserveAtomicIdentifierInfoRAII() {
+      if (!AtomicII)
+        return;
+      AtomicII->revertIdentifierToTokenID(tok::kw__Atomic);
+    }
+    IdentifierInfo *AtomicII;
+  };
+
+  CXXScopeSpec &SS = DS.getTypeSpecScope();
+
+  IdentifierInfo *Name = nullptr;
+  SourceLocation NameLoc;
+  if (Tok.is(tok::identifier)) {
+    Name = Tok.getIdentifierInfo();
+    NameLoc = ConsumeToken();
+  }
+
+  const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
+  Sema::TagUseKind TUK;
+  if (isDefiningTypeSpecifierContext(DSC, false) == AllowDefiningTypeSpec::No)
+    TUK = Sema::TUK_Reference;
+  else if (Tok.is(tok::l_brace)) {
+    TUK = Sema::TUK_Definition;
+  } else if (!isTypeSpecifier(DSC) &&
+             (Tok.is(tok::semi) ||
+              (Tok.isAtStartOfLine() && !isValidAfterTypeSpecifier(false)))) {
+    TUK = DS.isFriendSpecified() ? Sema::TUK_Friend : Sema::TUK_Declaration;
+    if (Tok.isNot(tok::semi)) {
+      const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
+      // A semicolon was missing after this declaration. Diagnose and recover.
+      ExpectAndConsume(tok::semi, diag::err_expected_after,
+                       DeclSpec::getSpecifierName(TagType, PPol));
+      PP.EnterToken(Tok, /*IsReinject*/true);
+      Tok.setKind(tok::semi);
+    }
+  } else
+    TUK = Sema::TUK_Reference;
+
+  if (TUK != Sema::TUK_Reference) {
+    SourceRange AttrRange = Attributes.Range;
+    if (AttrRange.isValid()) {
+      Diag(AttrRange.getBegin(), diag::err_attributes_not_allowed)
+          << AttrRange
+          << FixItHint::CreateInsertionFromRange(AttrFixitLoc,
+                                                 CharSourceRange(AttrRange, true))
+          << FixItHint::CreateRemoval(AttrRange);
+      attrs.takeAllFrom(Attributes);
+    }
+  }
+
+  if (!Name && (DS.getTypeSpecType() == DeclSpec::TST_error ||
+                               TUK != Sema::TUK_Definition)) {
+    if (DS.getTypeSpecType() != DeclSpec::TST_error) {
+      Diag(StartLoc, diag::err_anon_type_definition)
+          << DeclSpec::getSpecifierName(TagType, Policy);
+    }
+    if (TUK == Sema::TUK_Definition && Tok.is(tok::colon))
+      SkipUntil(tok::semi, StopBeforeMatch);
+    else
+      SkipUntil(tok::comma, StopAtSemi);
+    return;
+  }
+
+  DeclResult TagOrTempResult = true; // invalid
+  TypeResult TypeResult = true; // invalid
+
+  bool Owned = false;
+  Sema::SkipBodyInfo SkipBody;
+  if (TUK != Sema::TUK_Declaration && TUK != Sema::TUK_Definition)
+    ProhibitAttributes(attrs);
+
+  bool IsDependent = false;
+
+  MultiTemplateParamsArg TParams;
+
+  stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
+  TagOrTempResult = Actions.ActOnTag(
+      getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs, AS_public,
+      DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
+      SourceLocation(), false, clang::TypeResult(),
+      DSC == DeclSpecContext::DSC_type_specifier,
+      DSC == DeclSpecContext::DSC_template_param ||
+      DSC == DeclSpecContext::DSC_template_type_arg,
+      &SkipBody);
+  if (IsDependent) {
+    assert(TUK == Sema::TUK_Reference);
+    TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK,
+                                            SS, Name, StartLoc, NameLoc);
+  }
+  
+  if (TUK == Sema::TUK_Definition) {
+    assert(Tok.is(tok::l_brace));
+    ParseTraitBody(StartLoc, AttrFixitLoc, TagOrTempResult.get());
+    if (SkipBody.CheckSameAsPrevious &&
+        !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(),
+                                          SkipBody)) {
+      DS.SetTypeSpecError();
+      return;
+    }
+  }
+
+  if (!TagOrTempResult.isInvalid())
+    Actions.ProcessDeclAttributeDelayed(TagOrTempResult.get(), attrs);
+
+  const char *PrevSpec = nullptr;
+  unsigned DiagID;
+  bool Result;
+  if (!TypeResult.isInvalid()) {
+    Result = DS.SetTypeSpecType(DeclSpec::TST_typename, StartLoc,
+                                NameLoc.isValid() ? NameLoc : StartLoc,
+                                PrevSpec, DiagID, TypeResult.get(), Policy);
+  } else if (!TagOrTempResult.isInvalid()) {
+    Result = DS.SetTypeSpecType(TagType, StartLoc,
+                                 NameLoc.isValid() ? NameLoc : StartLoc,
+                                PrevSpec, DiagID, TagOrTempResult.get(), Owned,
+                                Policy);
+  } else {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  if (Result)
+    Diag(StartLoc, DiagID) << PrevSpec;
+
+  if (TUK == Sema::TUK_Definition &&
+      (!isTypeSpecifier(DSC)) &&
+      (!isValidAfterTypeSpecifier(false))) {
+    if (Tok.isNot(tok::semi)) {
+      const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
+      ExpectAndConsume(tok::semi, diag::err_expected_after,
+                       DeclSpec::getSpecifierName(TagType, PPol));
+      PP.EnterToken(Tok, /*IsReinject=*/true);
+      Tok.setKind(tok::semi);
+    }
+  }
+  if (TUK == Sema::TUK_Definition) {
+    TraitDecl *find = Actions.ActOnDesugarFind(Name);
+    RecordDecl *TraitVtableRecord = Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
+    RecordDecl *TraitRecord = Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
+    if (TraitVtableRecord) {
+      ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
+      Actions.ActOnTagStartDefinition(getCurScope(), TraitVtableRecord);
+      Actions.ActOnDesugarTraitVtable(find, StartLoc, NameLoc, Name, DS);
+      StructScope.Exit();
+      Actions.ActOnTagFinishDefinition(getCurScope(), TraitVtableRecord, StartLoc);
+    }
+    if (TraitRecord) {
+      TraitRecord->setTraitDesugarFlag();
+      ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
+      Actions.ActOnTagStartDefinition(getCurScope(), TraitRecord);
+      Actions.ActOnDesugarTrait(TraitVtableRecord, StartLoc, NameLoc);
+      StructScope.Exit();
+      Actions.ActOnTagFinishDefinition(getCurScope(), TraitRecord, StartLoc);
+    }
+  }
+}
+
 /// ParseEnumBody - Parse a {} enclosed enumerator-list.
 ///       enumerator-list:
 ///         enumerator
@@ -5241,7 +5585,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw_union:
     // enum-specifier
   case tok::kw_enum:
-
+  case tok::kw_trait:
     // typedef-name
   case tok::annot_typename:
     return true;
@@ -5324,7 +5668,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_union:
     // enum-specifier
   case tok::kw_enum:
-
+  case tok::kw_trait:
     // type-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
@@ -5494,7 +5838,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw___interface:
     // enum-specifier
   case tok::kw_enum:
-
+  case tok::kw_trait:
     // type-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
@@ -6569,7 +6913,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       if (IsFunctionDeclaration)
         Actions.ActOnStartFunctionDeclarationDeclarator(D,
                                                         TemplateParameterDepth);
-      ParseFunctionDeclarator(D, attrs, T, IsAmbiguous);
+      bool isTraitMem = D.getIsTraitMem();
+      ParseFunctionDeclarator(D, attrs, T, IsAmbiguous, false, isTraitMem);
       if (IsFunctionDeclaration)
         Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
@@ -6837,7 +7182,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
                                      ParsedAttributes &FirstArgAttrs,
                                      BalancedDelimiterTracker &Tracker,
                                      bool IsAmbiguous,
-                                     bool RequiresArg) {
+                                     bool RequiresArg,
+                                     bool isTraitMem) {
   assert(getCurScope()->isFunctionPrototypeScope() &&
          "Should call from a Function scope");
   // lparen is already consumed!
@@ -6897,8 +7243,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
           TypePtr = TypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
       }
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
-                                      EllipsisLoc, TypePtr);
-
+                                      EllipsisLoc, TypePtr, isTraitMem);
     } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
@@ -7167,7 +7512,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, const Type *typePtr) {
+    SourceLocation &EllipsisLoc, const Type *typePtr, bool isTraitMem) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7350,6 +7695,15 @@ void Parser::ParseParameterDeclarationClause(
             Actions.ActOnParamDefaultArgument(Param, EqualLoc,
                                               DefArgResult.get());
           }
+        }
+      }
+      // the trait's function params must begin with This * this 
+      if (ParamInfo.empty() && isTraitMem) {
+        if (DS.getTypeSpecType() != TST_This) {
+          Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_for_trait_member);
+        }
+        if (ParmDeclarator.getIdentifier()->getName() != "this") {
+          Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_name_for_trait);
         }
       }
 

@@ -2828,6 +2828,7 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
       break;
     case TTK_Struct:
     case TTK_Interface:
+    case TTK_Trait:
       Out << 'U';
       break;
     case TTK_Class:
@@ -2843,6 +2844,10 @@ void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
   mangleType(cast<TagType>(T)->getDecl());
 }
 void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
+                                         SourceRange) {
+  mangleType(cast<TagType>(T)->getDecl());
+}
+void MicrosoftCXXNameMangler::mangleType(const TraitType *T, Qualifiers,
                                          SourceRange) {
   mangleType(cast<TagType>(T)->getDecl());
 }

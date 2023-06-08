@@ -322,6 +322,8 @@ public:
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
   static const TST TST_atomic = clang::TST_atomic;
+  static const TST TST_trait = clang::TST_trait;
+  static const TST TST_This = clang::TST_This;
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -450,7 +452,7 @@ public:
   static bool isDeclRep(TST T) {
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
-            T == TST_class);
+            T == TST_class || T == TST_trait);
   }
 
   DeclSpec(AttributeFactory &attrFactory)
@@ -1935,6 +1937,8 @@ private:
   /// parameters (if any).
   TemplateParameterList *InventedTemplateParameterList;
 
+  bool IsTraitMem = false;
+
 #ifndef _MSC_VER
   union {
 #endif
@@ -1985,7 +1989,7 @@ public:
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
         DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
-        InventedTemplateParameterList(nullptr) {
+        InventedTemplateParameterList(nullptr), IsTraitMem(false) {
     assert(llvm::all_of(DeclarationAttrs,
                         [](const ParsedAttr &AL) {
                           return AL.isStandardAttributeSyntax();
@@ -2083,6 +2087,7 @@ public:
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
+    IsTraitMem = false;
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2297,6 +2302,10 @@ public:
   void SetIdentifier(IdentifierInfo *Id, SourceLocation IdLoc) {
     Name.setIdentifier(Id, IdLoc);
   }
+
+  bool getIsTraitMem() const {return IsTraitMem;}
+
+  void setIsTraitMem(bool i) {IsTraitMem = i;}
 
   /// Set the decomposition bindings for this declarator.
   void

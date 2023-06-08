@@ -369,6 +369,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_struct:
     case TST_interface:
     case TST_union:
+    case TST_trait:
     case TST_unknown_anytype:
     case TST_unspecified:
     case TST_void:
@@ -574,6 +575,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
   case DeclSpec::TST_typeofType:
+  case DeclSpec::TST_trait:       return "trait";
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_auto:        return "auto";
   case DeclSpec::TST_auto_type:   return "__auto_type";

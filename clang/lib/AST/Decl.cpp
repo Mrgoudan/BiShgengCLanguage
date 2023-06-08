@@ -1709,7 +1709,12 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
-    } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
+    } else if (const auto *ID = dyn_cast<TraitDecl>(DC)) {
+      if (!ID->getIdentifier())
+        OS << "(anonymous " << ID->getKindName() << ')';
+      else
+        OS << *ID;
+    }else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
         FT = dyn_cast<FunctionProtoType>(FD->getType()->castAs<FunctionType>());
@@ -4635,6 +4640,34 @@ SourceRange EnumDecl::getSourceRange() const {
       Res.setEnd(TSI->getTypeLoc().getEndLoc());
   }
   return Res;
+}
+
+TraitDecl::TraitDecl(Kind DK, TagKind TK, const ASTContext &C,
+                       DeclContext *DC, SourceLocation StartLoc,
+                       SourceLocation IdLoc, IdentifierInfo *Id,
+                       TraitDecl *PrevDecl)
+    : TagDecl(DK, TK, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
+  assert(classof(static_cast<Decl *>(this)) && "Invalid Kind!");
+}
+
+TraitDecl *TraitDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
+                                     SourceLocation StartLoc, SourceLocation IdLoc,
+                                     IdentifierInfo *Id, TraitDecl* PrevDecl) {
+  TraitDecl *R = new (C, DC) TraitDecl(Trait, TK, C, DC,
+                                         StartLoc, IdLoc, Id, PrevDecl);
+  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
+
+  C.getTypeDeclType(R, PrevDecl);
+  return R;
+}
+
+TraitDecl::field_iterator TraitDecl::field_begin() const {
+  return field_iterator(decl_iterator(FirstDecl));
+}
+
+void TraitDecl::completeDefinition() {
+  assert(!isCompleteDefinition() && "Cannot redefine trait!");
+  TagDecl::completeDefinition();
 }
 
 //===----------------------------------------------------------------------===//

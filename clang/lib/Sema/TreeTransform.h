@@ -953,7 +953,9 @@ public:
   QualType RebuildRecordType(RecordDecl *Record) {
     return SemaRef.Context.getTypeDeclType(Record);
   }
-
+  QualType RebuildTraitType(TraitDecl *Trait) {
+    return SemaRef.Context.getTypeDeclType(Trait);
+  }
   /// Build a new Enum type.
   QualType RebuildEnumType(EnumDecl *Enum) {
     return SemaRef.Context.getTypeDeclType(Enum);
@@ -6357,6 +6359,30 @@ QualType TreeTransform<Derived>::TransformRecordType(TypeLocBuilder &TLB,
   }
 
   RecordTypeLoc NewTL = TLB.push<RecordTypeLoc>(Result);
+  NewTL.setNameLoc(TL.getNameLoc());
+
+  return Result;
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformTraitType(TypeLocBuilder &TLB,
+                                                     TraitTypeLoc TL) {
+  const TraitType *T = TL.getTypePtr();
+  TraitDecl *Trait
+      = cast_or_null<TraitDecl>(getDerived().TransformDecl(TL.getNameLoc(),
+                                                            T->getDecl()));
+  if (!Trait)
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() ||
+      Trait != T->getDecl()) {
+    Result = getDerived().RebuildTraitType(Trait);
+    if (Result.isNull())
+      return QualType();
+  }
+
+  TraitTypeLoc NewTL = TLB.push<TraitTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
 
   return Result;

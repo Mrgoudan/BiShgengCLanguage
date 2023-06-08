@@ -32,6 +32,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
           def ClassTemplateSpecialization : DeclNode<CXXRecord>;
             def ClassTemplatePartialSpecialization
               : DeclNode<ClassTemplateSpecialization>;
+      def Trait : DeclNode<Tag, "Traits">;
     def TemplateTypeParm : DeclNode<Type>;
   def Value : DeclNode<Named, "value declarations", 1>;
     def EnumConstant : DeclNode<Value, "enumerators">;

@@ -497,6 +497,7 @@ private:
                                           unsigned Count);
   bool TraverseArrayTypeLocHelper(ArrayTypeLoc TL);
   bool TraverseRecordHelper(RecordDecl *D);
+  bool TraverseTraitHelper(TraitDecl *D);
   bool TraverseCXXRecordHelper(CXXRecordDecl *D);
   bool TraverseDeclaratorHelper(DeclaratorDecl *D);
   bool TraverseDeclContextHelper(DeclContext *DC);
@@ -1105,6 +1106,7 @@ DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
 })
 
 DEF_TRAVERSE_TYPE(RecordType, {})
+DEF_TRAVERSE_TYPE(TraitType, {})
 DEF_TRAVERSE_TYPE(EnumType, {})
 DEF_TRAVERSE_TYPE(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {
@@ -1387,6 +1389,7 @@ DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPELOC(RecordType, {})
 DEF_TRAVERSE_TYPELOC(EnumType, {})
+DEF_TRAVERSE_TYPELOC(TraitType, {})
 DEF_TRAVERSE_TYPELOC(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {
   TRY_TO(TraverseType(TL.getTypePtr()->getReplacementType()));
@@ -1997,6 +2000,13 @@ bool RecursiveASTVisitor<Derived>::TraverseRecordHelper(RecordDecl *D) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseTraitHelper(TraitDecl *D) {
+  TRY_TO(TraverseDeclTemplateParameterLists(D));
+  TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseCXXBaseSpecifier(
     const CXXBaseSpecifier &Base) {
   TRY_TO(TraverseTypeLoc(Base.getTypeSourceInfo()->getTypeLoc()));
@@ -2018,6 +2028,8 @@ bool RecursiveASTVisitor<Derived>::TraverseCXXRecordHelper(CXXRecordDecl *D) {
 }
 
 DEF_TRAVERSE_DECL(RecordDecl, { TRY_TO(TraverseRecordHelper(D)); })
+
+DEF_TRAVERSE_DECL(TraitDecl, { TRY_TO(TraverseTraitHelper(D)); })
 
 DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
 

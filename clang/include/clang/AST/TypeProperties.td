@@ -528,6 +528,17 @@ let Class = RecordType in {
   }]>;
 }
 
+let Class = TraitType in {
+  def : Creator<[{
+    auto trait = cast<TraitDecl>(declaration);
+    QualType result = ctx.getTraitType(trait);
+    if (dependent)
+      const_cast<Type *>(result.getTypePtr())
+          ->addDependence(TypeDependence::DependentInstantiation);
+    return result;
+  }]>;
+}
+
 let Class = ElaboratedType in {
   def : Property<"keyword", ElaboratedTypeKeyword> {
     let Read = [{ node->getKeyword() }];

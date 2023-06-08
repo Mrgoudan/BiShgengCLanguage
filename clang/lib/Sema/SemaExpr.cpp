@@ -4578,6 +4578,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::ConstantMatrix:
     case Type::Record:
     case Type::Enum:
+    case Type::Trait:
     case Type::Elaborated:
     case Type::TemplateSpecialization:
     case Type::ObjCObject:

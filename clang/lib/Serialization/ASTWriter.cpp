@@ -484,6 +484,10 @@ void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 
+void TypeLocWriter::VisitTraitTypeLoc(TraitTypeLoc TL) {
+  Record.AddSourceLocation(TL.getNameLoc());
+}
+
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
 }

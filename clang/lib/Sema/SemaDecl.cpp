@@ -650,6 +650,7 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
       case TTK_Struct: return DeclSpec::TST_struct;
       case TTK_Interface: return DeclSpec::TST_interface;
       case TTK_Union:  return DeclSpec::TST_union;
+      case TTK_Trait: return DeclSpec::TST_trait;
       case TTK_Class:  return DeclSpec::TST_class;
       case TTK_Enum:   return DeclSpec::TST_enum;
       }
@@ -841,6 +842,10 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
 
       case TTK_Interface:
         FixItTagName = "__interface ";
+        break;
+
+      case TTK_Trait:
+        FixItTagName = "trait ";
         break;
 
       case TTK_Union:
@@ -4999,7 +5004,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
-      DS.getTypeSpecType() == DeclSpec::TST_enum) {
+      DS.getTypeSpecType() == DeclSpec::TST_enum ||
+      DS.getTypeSpecType() == DeclSpec::TST_trait) {
     TagD = DS.getRepAsDecl();
 
     if (!TagD) // We probably had an error
@@ -6366,6 +6372,10 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                                   TemplateParamLists,
                                   AddToScope);
   } else {
+    if (D.getIsTraitMem()) {
+      Diag(D.getIdentifierLoc(), diag::err_trait_member_not_func);
+      D.setInvalidType(true);
+    }
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);
   }
@@ -7142,7 +7152,7 @@ static bool shouldConsiderLinkage(const VarDecl *VD) {
     return VD->hasExternalStorage();
   if (DC->isFileContext())
     return true;
-  if (DC->isRecord())
+  if (DC->isRecord() || DC->isTrait())
     return false;
   if (isa<RequiresExprBodyDecl>(DC))
     return false;
@@ -7154,7 +7164,7 @@ static bool shouldConsiderLinkage(const FunctionDecl *FD) {
   if (DC->isFileContext() || DC->isFunctionOrMethod() ||
       isa<OMPDeclareReductionDecl>(DC) || isa<OMPDeclareMapperDecl>(DC))
     return true;
-  if (DC->isRecord())
+  if (DC->isRecord() || DC->isTrait())
     return false;
   llvm_unreachable("Unexpected context");
 }
@@ -9481,6 +9491,13 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   default:
     return false;
   }
+}
+
+NamedDecl *Sema::ActOnTraitMemberDeclarator(Scope *S, Declarator &D) {
+  D.setIsTraitMem(true);
+  MultiTemplateParamsArg TemplateParams;
+  NamedDecl *Member = HandleDeclarator(S, D, TemplateParams);
+  return Member;
 }
 
 NamedDecl*
@@ -16067,6 +16084,7 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
   else if (isa<TemplateTemplateParmDecl>(PrevDecl))
     return NTK_TemplateTemplateArgument;
   switch (TTK) {
+  case TTK_Trait:
   case TTK_Struct:
   case TTK_Interface:
   case TTK_Class:
@@ -17054,9 +17072,12 @@ CreateNewDecl:
 
       if (isStdBadAlloc && (!StdBadAlloc || getStdBadAlloc()->isImplicit()))
         StdBadAlloc = cast<CXXRecordDecl>(New);
-    } else
-      New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
-                               cast_or_null<RecordDecl>(PrevDecl));
+    } else if (Kind == TTK_Trait) {
+        New = TraitDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
+                                    cast_or_null<TraitDecl>(PrevDecl));
+      }
+      else {New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
+                                     cast_or_null<RecordDecl>(PrevDecl));}
   }
 
   // C++11 [dcl.type]p3:
@@ -17296,6 +17317,12 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
          "Broken injected-class-name");
 }
 
+void Sema::ActOnFinishTraitMemberSpecification(Decl *TagDecl) {
+  if (!TagDecl)
+    return;
+  AdjustDeclIfTemplate(TagDecl);
+}
+
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                                     SourceRange BraceRange) {
   AdjustDeclIfTemplate(TagD);
@@ -17307,6 +17334,8 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     assert(Tag->isInvalidDecl() && "We should already have completed it");
     if (RecordDecl *RD = dyn_cast<RecordDecl>(Tag))
       RD->completeDefinition();
+    if (TraitDecl *TD = dyn_cast<TraitDecl>(Tag))
+      TD->completeDefinition();
   }
 
   if (auto *RD = dyn_cast<CXXRecordDecl>(Tag)) {
@@ -17332,6 +17361,11 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
   if (getCurLexicalContext()->isObjCContainer() &&
       Tag->getDeclContext()->isFileContext())
     Tag->setTopLevelDeclInObjCContainer();
+
+  TraitDecl *TD = dyn_cast<TraitDecl>(Tag);
+  if (TD) {
+    return;
+  }
 
   // Notify the consumer that we've defined a tag.
   if (!Tag->isInvalidDecl())
@@ -17480,7 +17514,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
 /// to create a FieldDecl object for it.
 Decl *Sema::ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
                        Declarator &D, Expr *BitfieldWidth) {
-  FieldDecl *Res = HandleField(S, cast_or_null<RecordDecl>(TagD),
+  FieldDecl *Res = HandleField(S, cast_or_null<TagDecl>(TagD),
                                DeclStart, D, static_cast<Expr*>(BitfieldWidth),
                                /*InitStyle=*/ICIS_NoInit, AS_public);
   return Res;
@@ -17488,7 +17522,7 @@ Decl *Sema::ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
 
 /// HandleField - Analyze a field of a C struct or a C++ data member.
 ///
-FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
+FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag,
                              SourceLocation DeclStart,
                              Declarator &D, Expr *BitWidth,
                              InClassInitStyle InitStyle,
@@ -17560,18 +17594,18 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
     PrevDecl = nullptr;
   }
 
-  if (PrevDecl && !isDeclInScope(PrevDecl, Record, S))
+  if (PrevDecl && !isDeclInScope(PrevDecl, Tag, S))
     PrevDecl = nullptr;
 
   bool Mutable
     = (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_mutable);
   SourceLocation TSSL = D.getBeginLoc();
   FieldDecl *NewFD
-    = CheckFieldDecl(II, T, TInfo, Record, Loc, Mutable, BitWidth, InitStyle,
+    = CheckFieldDecl(II, T, TInfo, Tag, Loc, Mutable, BitWidth, InitStyle,
                      TSSL, AS, PrevDecl, &D);
 
   if (NewFD->isInvalidDecl())
-    Record->setInvalidDecl();
+    Tag->setInvalidDecl();
 
   if (D.getDeclSpec().isModulePrivateSpecified())
     NewFD->setModulePrivate();
@@ -17582,7 +17616,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
   } else if (II) {
     PushOnScopeChains(NewFD, S);
   } else
-    Record->addDecl(NewFD);
+    Tag->addDecl(NewFD);
 
   return NewFD;
 }
@@ -17599,7 +17633,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
 /// \todo The Declarator argument is a hack. It will be removed once
 FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                                 TypeSourceInfo *TInfo,
-                                RecordDecl *Record, SourceLocation Loc,
+                                TagDecl *Tag, SourceLocation Loc,
                                 bool Mutable, Expr *BitWidth,
                                 InClassInitStyle InitStyle,
                                 SourceLocation TSSL,
@@ -17621,13 +17655,13 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     if (RequireCompleteSizedType(Loc, EltTy,
                                  diag::err_field_incomplete_or_sizeless)) {
       // Fields of incomplete type force their record to be invalid.
-      Record->setInvalidDecl();
+      Tag->setInvalidDecl();
       InvalidDecl = true;
     } else {
       NamedDecl *Def;
       EltTy->isIncompleteType(&Def);
       if (Def && Def->isInvalidDecl()) {
-        Record->setInvalidDecl();
+        Tag->setInvalidDecl();
         InvalidDecl = true;
       }
     }
@@ -17637,7 +17671,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (T.hasAddressSpace() || T->isDependentAddressSpaceType() ||
       T->getBaseElementTypeUnsafe()->isDependentAddressSpaceType()) {
     Diag(Loc, diag::err_field_with_address_space);
-    Record->setInvalidDecl();
+    Tag->setInvalidDecl();
     InvalidDecl = true;
   }
 
@@ -17647,7 +17681,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     if (T->isEventT() || T->isImageType() || T->isSamplerT() ||
         T->isBlockPointerType()) {
       Diag(Loc, diag::err_opencl_type_struct_or_union_field) << T;
-      Record->setInvalidDecl();
+      Tag->setInvalidDecl();
       InvalidDecl = true;
     }
     // OpenCL v1.2 s6.9.c: bitfields are not supported, unless Clang extension
@@ -17684,8 +17718,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     BitWidth = nullptr;
   // If this is declared as a bit-field, check the bit-field.
   if (BitWidth) {
-    BitWidth =
-        VerifyBitField(Loc, II, T, Record->isMsStruct(Context), BitWidth).get();
+    if (Tag->isTrait()) {
+    BitWidth = VerifyBitField(Loc, II, T, false, BitWidth).get();} else{
+    BitWidth = VerifyBitField(Loc, II, T, cast<RecordDecl>(Tag)->isMsStruct(Context), 
+                              BitWidth).get();
+    }
     if (!BitWidth) {
       InvalidDecl = true;
       BitWidth = nullptr;
@@ -17717,9 +17754,9 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   //   At most one variant member of a union may have a
   //   brace-or-equal-initializer.
   if (InitStyle != ICIS_NoInit)
-    checkDuplicateDefaultInit(*this, cast<CXXRecordDecl>(Record), Loc);
+    checkDuplicateDefaultInit(*this, cast<CXXRecordDecl>(Tag), Loc);
 
-  FieldDecl *NewFD = FieldDecl::Create(Context, Record, TSSL, Loc, II, T, TInfo,
+  FieldDecl *NewFD = FieldDecl::Create(Context, Tag, TSSL, Loc, II, T, TInfo,
                                        BitWidth, Mutable, InitStyle);
   if (InvalidDecl)
     NewFD->setInvalidDecl();
@@ -17731,7 +17768,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   }
 
   if (!InvalidDecl && getLangOpts().CPlusPlus) {
-    if (Record->isUnion()) {
+    if (Tag->isUnion()) {
       if (const RecordType *RT = EltTy->getAs<RecordType>()) {
         CXXRecordDecl* RDecl = cast<CXXRecordDecl>(RT->getDecl());
         if (RDecl->getDefinition()) {

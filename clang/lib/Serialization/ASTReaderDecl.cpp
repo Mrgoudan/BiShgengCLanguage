@@ -336,6 +336,8 @@ namespace clang {
     void VisitRecordDecl(RecordDecl *RD);
     RedeclarableResult VisitCXXRecordDeclImpl(CXXRecordDecl *D);
     void VisitCXXRecordDecl(CXXRecordDecl *D) { VisitCXXRecordDeclImpl(D); }
+    RedeclarableResult VisitTraitDeclImpl(TraitDecl *TD);
+    void VisitTraitDecl(TraitDecl *TD) {VisitTraitDeclImpl(TD);}
     RedeclarableResult VisitClassTemplateSpecializationDeclImpl(
                                             ClassTemplateSpecializationDecl *D);
 
@@ -891,6 +893,12 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
       OldDef = RD;
     }
   }
+}
+
+ASTDeclReader::RedeclarableResult
+ASTDeclReader::VisitTraitDeclImpl(TraitDecl *RD) {
+  RedeclarableResult Redecl = VisitTagDecl(RD);
+  return Redecl;
 }
 
 void ASTDeclReader::VisitValueDecl(ValueDecl *VD) {

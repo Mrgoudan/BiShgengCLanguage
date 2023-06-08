@@ -1938,6 +1938,8 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
             return "union <anonymous>";
           case TTK_Enum:
             return "enum <anonymous>";
+          case TTK_Trait:
+            return "trait <anonymous>";
           }
         }
   }
@@ -4058,6 +4060,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
       switch (TD->getTagKind()) {
       case TTK_Interface: // fall through
       case TTK_Struct:
+      case TTK_Trait:
         return CXCursor_StructDecl;
       case TTK_Class:
         return CXCursor_ClassDecl;
@@ -5762,6 +5765,7 @@ void Sema::CodeCompleteTag(Scope *S, unsigned TagSpec) {
   case DeclSpec::TST_struct:
   case DeclSpec::TST_class:
   case DeclSpec::TST_interface:
+  case DeclSpec::TST_trait:
     Filter = &ResultBuilder::IsClassOrStruct;
     ContextKind = CodeCompletionContext::CCC_ClassOrStructTag;
     break;

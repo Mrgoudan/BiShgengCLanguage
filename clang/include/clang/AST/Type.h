@@ -122,6 +122,7 @@ class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 struct PrintingPolicy;
 class RecordDecl;
+class TraitDecl;
 class Stmt;
 class TagDecl;
 class TemplateArgument;
@@ -2141,6 +2142,7 @@ public:
   bool isVariableArrayType() const;
   bool isDependentSizedArrayType() const;
   bool isRecordType() const;
+  bool isTraitType() const;
   bool isClassType() const;
   bool isStructureType() const;
   bool isObjCBoxableRecordType() const;
@@ -4741,7 +4743,7 @@ public:
   bool isBeingDefined() const;
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == Enum || T->getTypeClass() == Record;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record || T->getTypeClass() == Trait;
   }
 };
 
@@ -4780,6 +4782,30 @@ public:
   QualType desugar() const { return QualType(this, 0); }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Record; }
+};
+
+class TraitType : public TagType {
+protected:
+  friend class ASTContext; // ASTContext creates these.
+
+  explicit TraitType(const TraitDecl *D)
+      : TagType(Trait, reinterpret_cast<const TagDecl*>(D), QualType()) {}
+  explicit TraitType(TypeClass TC, TraitDecl *D)
+      : TagType(TC, reinterpret_cast<const TagDecl*>(D), QualType()) {}
+
+public:
+  TraitDecl *getDecl() const {
+    return reinterpret_cast<TraitDecl*>(TagType::getDecl());
+  }
+
+  /// Recursively check all fields in the record for const-ness. If any field
+  /// is declared const, return true. Otherwise, return false.
+  bool hasConstFields() const;
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  static bool classof(const Type *T) { return T->getTypeClass() == Trait; }
 };
 
 /// A helper class that allows the use of isa/cast/dyncast
@@ -5509,7 +5535,10 @@ enum TagTypeKind {
   TTK_Class,
 
   /// The "enum" keyword.
-  TTK_Enum
+  TTK_Enum,
+
+  /// The "trait" keyword.
+  TTK_Trait
 };
 
 /// The elaboration keyword that precedes a qualified type name or
@@ -5529,6 +5558,9 @@ enum ElaboratedTypeKeyword {
 
   /// The "enum" keyword introduces the elaborated-type-specifier.
   ETK_Enum,
+
+  /// The "trait" keyword introduces the elaborated-type-specifier.
+  ETK_Trait,
 
   /// The "typename" keyword precedes the qualified type name, e.g.,
   /// \c typename T::type.
@@ -6966,6 +6998,10 @@ inline bool Type::isRecordType() const {
 
 inline bool Type::isEnumeralType() const {
   return isa<EnumType>(CanonicalType);
+}
+
+inline bool Type::isTraitType() const {
+  return isa<TraitType>(CanonicalType);
 }
 
 inline bool Type::isAnyComplexType() const {

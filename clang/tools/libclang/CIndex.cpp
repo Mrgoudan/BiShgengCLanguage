@@ -1898,6 +1898,7 @@ DEFAULT_TYPELOC_IMPL(DependentSizedMatrix, MatrixType)
 DEFAULT_TYPELOC_IMPL(FunctionProto, FunctionType)
 DEFAULT_TYPELOC_IMPL(FunctionNoProto, FunctionType)
 DEFAULT_TYPELOC_IMPL(Record, TagType)
+DEFAULT_TYPELOC_IMPL(Trait, TagType)
 DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
@@ -6717,6 +6718,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
 
   case Decl::Enum:
   case Decl::Record:
+  case Decl::Trait:
   case Decl::CXXRecord:
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:

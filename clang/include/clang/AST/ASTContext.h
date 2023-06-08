@@ -1110,6 +1110,7 @@ public:
 
   // Builtin Types.
   CanQualType VoidTy;
+  CanQualType ThisTy;
   CanQualType BoolTy;
   CanQualType CharTy;
   CanQualType WCharTy;  // [C++ 3.9.1p5].
@@ -1618,6 +1619,8 @@ public:
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped);
+
+  QualType getTraitType(const TraitDecl *Decl) const;
 
   QualType getSubstTemplateTypeParmType(const TemplateTypeParmType *Replaced,
                                         QualType Replacement) const;

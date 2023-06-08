@@ -89,6 +89,7 @@ def UnaryTransformType : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def TagType : TypeNode<Type, 1>;
 def RecordType : TypeNode<TagType>, LeafType;
 def EnumType : TypeNode<TagType>, LeafType;
+def TraitType : TypeNode<TagType>, LeafType;
 def ElaboratedType : TypeNode<Type>, NeverCanonical;
 def AttributedType : TypeNode<Type>, NeverCanonical;
 def BTFTagAttributedType : TypeNode<Type>, NeverCanonical;

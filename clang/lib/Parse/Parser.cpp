@@ -1145,6 +1145,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
         return 4;
       case DeclSpec::TST_interface:
         return 9;
+      case DeclSpec::TST_trait:
+        return 5;
       default:
         llvm_unreachable("we only expect to get the length of the class/struct/union/enum");
       }

@@ -248,6 +248,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::UnaryTransform:
     case Type::Record:
     case Type::Enum:
+    case Type::Trait:
     case Type::Elaborated:
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
@@ -1443,6 +1444,13 @@ void TypePrinter::printEnumBefore(const EnumType *T, raw_ostream &OS) {
 }
 
 void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
+
+void TypePrinter::printTraitBefore(const TraitType *T, raw_ostream &OS) {
+  printTag(T->getDecl(), OS);
+}
+
+void TypePrinter::printTraitAfter(const TraitType *T, raw_ostream &OS) {}
+
 
 void TypePrinter::printTemplateTypeParmBefore(const TemplateTypeParmType *T,
                                               raw_ostream &OS) {

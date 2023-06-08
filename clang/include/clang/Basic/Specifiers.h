@@ -76,6 +76,7 @@ namespace clang {
     TST_enum,
     TST_union,
     TST_struct,
+    TST_trait,
     TST_class,        // C++ class type
     TST_interface,    // C++ (Microsoft-specific) __interface type
     TST_typename,     // Typedef, C++ class-name or enum name, etc.
@@ -88,6 +89,7 @@ namespace clang {
     TST_auto_type,        // __auto_type extension
     TST_unknown_anytype,  // __unknown_anytype extension
     TST_atomic,           // C11 _Atomic
+    TST_This,
 #define GENERIC_IMAGE_TYPE(ImgType, Id) TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
     TST_error // erroneous type

@@ -1594,6 +1594,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::FunctionNoProto:
     case Type::Record:
     case Type::Enum:
+    case Type::Trait:
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
@@ -5964,6 +5965,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::FunctionNoProto:
   case Type::Record:
   case Type::Enum:
+  case Type::Trait:
   case Type::ObjCInterface:
   case Type::ObjCObject:
   case Type::ObjCObjectPointer:

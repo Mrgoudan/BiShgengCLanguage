@@ -3509,6 +3509,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     VTableName = "_ZTVN10__cxxabiv120__function_type_infoE";
     break;
 
+  case Type::Trait:
   case Type::Enum:
     // abi::__enum_type_info.
     VTableName = "_ZTVN10__cxxabiv116__enum_type_infoE";
@@ -3774,6 +3775,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     // abi::__function_type_info adds no data members to std::type_info.
     break;
 
+  case Type::Trait:
   case Type::Enum:
     // Itanium C++ ABI 2.9.5p5:
     // abi::__enum_type_info adds no data members to std::type_info.

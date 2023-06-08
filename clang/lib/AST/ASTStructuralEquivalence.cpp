@@ -1033,6 +1033,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   case Type::Record:
   case Type::Enum:
+  case Type::Trait:
     if (!IsStructurallyEquivalent(Context, cast<TagType>(T1)->getDecl(),
                                   cast<TagType>(T2)->getDecl()))
       return false;
