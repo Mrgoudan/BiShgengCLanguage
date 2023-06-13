@@ -1609,5 +1609,7 @@ def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
   InGroup<HLSLExtension>;
-
+  
+// BSC Parser Diagnostics 
+def ambiguous_bscmethod_define : Error<"Ambiguous declaration of BSCMethod">;
 } // end of Parser diagnostics

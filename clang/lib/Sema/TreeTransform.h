@@ -11050,7 +11050,12 @@ TreeTransform<Derived>::TransformCallExpr(CallExpr *E) {
   ExprResult Callee = getDerived().TransformExpr(E->getCallee());
   if (Callee.isInvalid())
     return ExprError();
-
+  
+  if (E->getCallee()->IsDesugaredBSCMethodCall) {
+    // Keep desugar flag true in transformation.
+    Callee.get()->IsDesugaredBSCMethodCall = true;
+  }
+  
   // Transform arguments.
   bool ArgChanged = false;
   SmallVector<Expr*, 8> Args;

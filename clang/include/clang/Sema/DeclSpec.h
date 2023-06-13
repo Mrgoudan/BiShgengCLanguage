@@ -222,6 +222,33 @@ public:
   unsigned location_size() const { return Builder.getBuffer().second; }
 };
 
+/// Represents a BSC typename-specifier.
+///
+/// These can be in 2 states:
+///   1) Not present, identified by isEmpty()
+///   2) Present, identified by isNotEmpty()
+class BSCScopeSpec {
+private:
+  QualType ExtendedType;
+  SourceLocation ExtendedTypeBLoc;
+  SourceRange Range;
+
+public:
+  /// Used to mark parameters that include 'this'.
+  bool HasThisParam = false;
+
+  QualType getExtendedType() const { return ExtendedType; }
+  void setExtendedType(QualType ExtendedType) {
+    this->ExtendedType = ExtendedType;
+  }
+
+  void setBeginLoc(SourceLocation Loc) { ExtendedTypeBLoc = Loc; }
+  SourceLocation getBeginLoc() const { return ExtendedTypeBLoc; }
+
+  bool isEmpty() const { return getBeginLoc().isInvalid(); }
+  bool isNotEmpty() const { return !isEmpty(); }
+};
+
 /// Captures information about "declaration specifiers".
 ///
 /// "Declaration specifiers" encompasses storage-class-specifiers,
@@ -1807,6 +1834,8 @@ class Declarator {
 private:
   const DeclSpec &DS;
   CXXScopeSpec SS;
+  BSCScopeSpec BSS;
+
   UnqualifiedId Name;
   SourceRange Range;
 
@@ -1954,6 +1983,11 @@ public:
   /// nested-name-specifier) that is part of the declarator-id.
   const CXXScopeSpec &getCXXScopeSpec() const { return SS; }
   CXXScopeSpec &getCXXScopeSpec() { return SS; }
+
+  /// getBSCScopeSpec - Return the BSCMethod declaration-specifier that this
+  /// declarator was declared with.
+  const BSCScopeSpec &getBSCScopeSpec() const { return BSS; }
+  BSCScopeSpec &getBSCScopeSpec() { return BSS; }
 
   /// Retrieve the name specified by this declarator.
   UnqualifiedId &getName() { return Name; }

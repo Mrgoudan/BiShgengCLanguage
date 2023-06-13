@@ -44,8 +44,133 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
     return ParseExplicitInstantiation(Context, SourceLocation(), ConsumeToken(),
                                       DeclEnd, AccessAttrs, AS);
   }
+  // Parse BSC template declaration
+  // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
+  if (isBSCTemplateDecl(Tok)) {
+    return ParseBSCGenericDeclaration(Context, DeclEnd, AccessAttrs, AS);
+  }
   return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
                                                   AS);
+}
+
+// DIY rewrite ParseTemplateDeclarationOrSpecialization for BSC
+Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
+                                         SourceLocation &DeclEnd,
+                                         ParsedAttributes &AccessAttrs,
+                                         AccessSpecifier AS) {
+  assert(getLangOpts().BSC &&
+         "Error enter BSC template declaration parsing function.");
+
+  MultiParseScope TemplateParamScopes(*this);
+
+  // Tell the action that names should be checked in the context of
+  // the declaration to come.
+  ParsingDeclRAIIObject ParsingTemplateParams(
+      *this, ParsingDeclRAIIObject::NoParent); // not sure
+
+  // Parse multiple levels of template headers within this template  // make
+  // sure each parameter pass same branch & branch condition is fully considered
+  bool isSpecialization =
+      true; // changed in (2), shuold be false : Kind(isSpecialization?
+            // ExplicitSpecialization : Template)
+  bool LastParamListWasEmpty =
+      false; // changed in (2), should be false: Whether the last template
+             // parameter list was empty.
+  TemplateParameterLists
+      ParamLists; // changed in (2), only called onece at ParamLists.push_back
+  TemplateParameterDepthRAII CurTemplateDepthTracker(
+      TemplateParameterDepth); // changed in (2),
+
+  // Consume the 'export', if any.  // no corresponding syntax
+  SourceLocation ExportLoc;
+  TryConsumeToken(tok::kw_export, ExportLoc);
+
+  // Consume the 'template', which should be here.  // no corresponding syntax
+  SourceLocation TemplateLoc;
+  TryConsumeToken(tok::kw_template, TemplateLoc);
+
+  int LookAheadOffset = 0; // LookAheadOffset starts from 0, assume the first
+                           // token we see must not be '<'
+  while (!PP.LookAhead(LookAheadOffset)
+              .is(tok::less)) { // use while since the template function
+                                // definition struct is not solid in BSC
+    LookAheadOffset += 1;
+  }
+  assert(PP.LookAhead(LookAheadOffset).is(tok::less) &&
+         "BSC template function parameter list does not begin with tok::less");
+
+  int LookGreaterOffset = 1;
+  Token TmpTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset);
+  Token PostTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset + 1);
+  while (!(TmpTok.is(tok::greater) &&
+           PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon)) &&
+         !TmpTok.is(tok::eof)) {
+    if (TmpTok.is(tok::less)) {
+      LookAheadOffset = LookGreaterOffset + LookAheadOffset;
+      LookGreaterOffset = 0;
+    }
+    LookGreaterOffset++;
+    TmpTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset);
+    PostTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset + 1);
+  }
+
+  assert(TmpTok.is(tok::greater) &&
+         (PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon)) &&
+         "BSC template function parameter list is not standardized.");
+
+  // Parse the '<' template-parameter-list '>'
+  SourceLocation LAngleLoc, RAngleLoc;
+  SmallVector<NamedDecl *, 4> TemplateParams;
+  if (ParseBSCTemplateParameters(TemplateParamScopes,
+                                 CurTemplateDepthTracker.getDepth(),
+                                 TemplateParams, LAngleLoc, RAngleLoc,
+                                 LookAheadOffset)) { // open this
+    // Skip until the semi-colon or a '}'.
+    SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch); // error handel
+    TryConsumeToken(tok::semi);
+    return nullptr;
+  }
+
+  ExprResult OptionalRequiresClauseConstraintER;
+  if (!TemplateParams.empty()) {
+    isSpecialization = false;  // keep this
+    ++CurTemplateDepthTracker; // keep this
+
+    if (TryConsumeToken(tok::kw_requires)) { // C++ concept-requries clause
+      OptionalRequiresClauseConstraintER =
+          Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+              /*IsTrailingRequiresClause=*/false));
+      if (!OptionalRequiresClauseConstraintER.isUsable()) {
+        // Skip until the semi-colon or a '}'.
+        SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+        TryConsumeToken(tok::semi);
+        return nullptr;
+      }
+    }
+  } else {
+    LastParamListWasEmpty = true;
+  }
+
+  ParamLists.push_back(
+      Actions.ActOnTemplateParameterList( // make sure parameters input is same
+                                          // as C++, for both func and struct
+          CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
+          TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
+
+  // Parse the actual template declaration.
+  if (Tok.is(tok::kw_concept)) // C++ concept-requires clause, no corresponding
+                               // syntax in BSC
+    return ParseConceptDefinition(ParsedTemplateInfo(&ParamLists,
+                                                     isSpecialization,
+                                                     LastParamListWasEmpty),
+                                  DeclEnd);
+
+  return ParseSingleDeclarationAfterTemplate( // make sure parameters input is
+                                              // same as C++, for both func and
+                                              // struct
+      Context,
+      ParsedTemplateInfo(&ParamLists, isSpecialization, LastParamListWasEmpty),
+      ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
 
 /// Parse a template declaration or an explicit specialization.
@@ -492,6 +617,44 @@ bool Parser::ParseTemplateParameters(
   return false;
 }
 
+// ParseBSCTemplateParameters - rewrite ParseTemplateParameters for cross-order
+// BSC syntax, use Peeking
+bool Parser::ParseBSCTemplateParameters(
+    MultiParseScope &TemplateScopes, unsigned Depth,
+    SmallVectorImpl<NamedDecl *> &TemplateParams, SourceLocation &LAngleLoc,
+    SourceLocation &RAngleLoc, int &LookAheadOffset) {
+  Token PeekTok = PP.LookAhead(LookAheadOffset);
+  if (PeekTok.is(tok::less)) {
+    LookAheadOffset += 1;
+    LAngleLoc = PeekTok.getLocation();
+  } else {
+    Diag(PeekTok.getLocation(), diag::err_expected_less_after) << "template";
+    return true;
+  }
+  PeekTok = PP.LookAhead(LookAheadOffset);
+
+  // Try to parse the template parameter list.
+  bool Failed = false;
+  if (!PeekTok.is(tok::greater)) {
+    TemplateScopes.Enter(Scope::TemplateParamScope);
+    Failed =
+        ParseBSCTemplateParameterList(Depth, TemplateParams, LookAheadOffset);
+  }
+  PeekTok = PP.LookAhead(LookAheadOffset);
+
+  if (PeekTok.getKind() == tok::greater) {
+    LookAheadOffset += 1;
+    RAngleLoc = PeekTok.getLocation();
+  } else {
+    if (Failed) {
+      Diag(PeekTok.getLocation(), diag::err_expected) << tok::greater;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// ParseTemplateParameterList - Parse a template parameter list. If
 /// the parsing fails badly (i.e., closing bracket was left out), this
 /// will try to put the token stream in a reasonable position (closing
@@ -528,6 +691,48 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
       Diag(Tok.getLocation(), diag::err_expected_comma_greater);
       SkipUntil(tok::comma, tok::greater, tok::greatergreater,
                 StopAtSemi | StopBeforeMatch);
+      return false;
+    }
+  }
+  return true;
+}
+
+// ParseBSCTemplateParameterList - rewrite ParseTemplateParameterList, for
+// cross-order BSC syntax, use Peeking
+bool Parser::ParseBSCTemplateParameterList(
+    const unsigned Depth, SmallVectorImpl<NamedDecl *> &TemplateParams,
+    int &LookAheadOffset) {
+  Token PeekTok = PP.LookAhead(LookAheadOffset);
+  while (1) {
+
+    // if (NamedDecl *TmpParam
+    //       = ParseTemplateParameter(Depth, TemplateParams.size())) {
+    if (NamedDecl *TmpParam = ParseBSCTypeParameter(
+            Depth, TemplateParams.size(), LookAheadOffset)) {
+      TemplateParams.push_back(TmpParam);
+    } else {
+      // If we failed to parse a template parameter, skip until we find
+      // a comma or closing brace.
+      SkipUntil(tok::comma, tok::greater, // FIXME: logic error
+                StopAtSemi | StopBeforeMatch);
+    }
+    PeekTok = PP.LookAhead(LookAheadOffset);
+
+    // Did we find a comma or the end of the template parameter list?
+    if (PeekTok.is(tok::comma)) {
+      // ConsumeToken();
+      LookAheadOffset += 1;
+      PeekTok = PP.LookAhead(LookAheadOffset);
+      // } else if (PeekTok.isOneOf(tok::greater, tok::greatergreater)) {
+    } else if (PeekTok.is(tok::greater)) {
+      // Don't consume this... that's done by template parser.
+      break;
+    } else {
+      // Somebody probably forgot to close the template. Skip ahead and
+      // try to get out of the expression. This error is currently
+      // subsumed by whatever goes on in ParseTemplateParameter.
+      Diag(PeekTok.getLocation(), diag::err_expected_comma_greater);
+      SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
       return false;
     }
   }
@@ -854,6 +1059,105 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
                                                   Depth, Position, EqualLoc,
                                                   DefaultArg,
                                                   TypeConstraint != nullptr);
+
+  if (TypeConstraint) {
+    Actions.ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
+                                cast<TemplateTypeParmDecl>(NewDecl),
+                                EllipsisLoc);
+  }
+
+  return NewDecl;
+}
+
+// ParseBSCTypeParameter - rewrite ParseTypeParameter for cross-order BSC
+// syntax, use Peeking
+NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position,
+                                         int &LookAheadOffset) {
+  // Check Tok location
+  Token PeekTok = PP.LookAhead(LookAheadOffset);
+  bool isBSCTemplateTypeParameter = getLangOpts().BSC; // TODO: fix the cond
+  assert(
+      isBSCTemplateTypeParameter &&
+      "A type-parameter starts with 'class', 'typename' or a type-constraint");
+
+  CXXScopeSpec TypeConstraintSS;
+  TemplateIdAnnotation *TypeConstraint = nullptr;
+  bool TypenameKeyword = false;
+  SourceLocation KeyLoc;
+  ParseOptionalCXXScopeSpecifier(TypeConstraintSS, /*ObjectType=*/nullptr,
+                                 /*ObjectHadErrors=*/false,
+                                 /*EnteringContext*/ false);
+  if (PeekTok.is(tok::annot_template_id)) {
+    // Consume the 'type-constraint'.
+    TypeConstraint =
+        static_cast<TemplateIdAnnotation *>(PeekTok.getAnnotationValue());
+    assert(TypeConstraint->Kind == TNK_Concept_template &&
+           "stray non-concept template-id annotation");
+    // KeyLoc remain at init status
+  } else {
+    assert(TypeConstraintSS.isEmpty() &&
+           "expected type constraint after scope specifier");
+
+    // Consume the 'class' or 'typename' keyword.
+    TypenameKeyword = false;
+    // KeyLoc = ConsumeToken();  // no typename in BSC, KeyLoc remain at init
+    // status
+  }
+
+  // Grab the ellipsis (if given).
+  SourceLocation EllipsisLoc;
+  if (PeekTok.is(tok::ellipsis)) {
+    EllipsisLoc = PeekTok.getLocation();
+    LookAheadOffset += 1;
+    PeekTok = PP.LookAhead(LookAheadOffset);
+    Diag(EllipsisLoc, getLangOpts().CPlusPlus11
+                          ? diag::warn_cxx98_compat_variadic_templates
+                          : diag::ext_variadic_templates);
+  }
+
+  // Grab the template parameter name (if given)
+  SourceLocation NameLoc = PeekTok.getLocation();
+  IdentifierInfo *ParamName = nullptr;
+  if (PeekTok.is(tok::identifier)) {
+    ParamName =
+        PeekTok.getIdentifierInfo(); // unknown manipulation, parsing T token
+    LookAheadOffset += 1;
+    PeekTok = PP.LookAhead(LookAheadOffset);
+  } else if (PeekTok.isOneOf(tok::equal, tok::comma, tok::greater,
+                             tok::greatergreater)) {
+    // Unnamed template parameter. Don't have to do anything here, just
+    // don't consume this token.
+  } else {
+    Diag(PeekTok.getLocation(), diag::err_expected) << tok::identifier;
+    return nullptr;
+  }
+
+  // Recover from misplaced ellipsis.
+  bool AlreadyHasEllipsis = EllipsisLoc.isValid();
+  if (PP.LookAhead(LookAheadOffset).is(tok::ellipsis)) {
+    EllipsisLoc = PeekTok.getLocation();
+    LookAheadOffset += 1;
+    PeekTok = PP.LookAhead(LookAheadOffset);
+    DiagnoseMisplacedEllipsis(EllipsisLoc, NameLoc, AlreadyHasEllipsis, true);
+  }
+
+  // Grab a default argument (if available).
+  // Per C++0x [basic.scope.pdecl]p9, we parse the default argument before
+  // we introduce the type parameter into the local scope.
+  SourceLocation EqualLoc;
+  ParsedType DefaultArg;
+  if (PeekTok.is(tok::equal)) {
+    EqualLoc = PeekTok.getLocation();
+    LookAheadOffset += 1;
+    PeekTok = PP.LookAhead(LookAheadOffset);
+    DefaultArg =
+        ParseTypeName(/*Range=*/nullptr, DeclaratorContext::TemplateTypeArg)
+            .get();
+  }
+
+  NamedDecl *NewDecl = Actions.ActOnTypeParameter(
+      getCurScope(), TypenameKeyword, EllipsisLoc, KeyLoc, ParamName, NameLoc,
+      Depth, Position, EqualLoc, DefaultArg, TypeConstraint != nullptr);
 
   if (TypeConstraint) {
     Actions.ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
@@ -1324,7 +1628,8 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
                                      UnqualifiedId &TemplateName,
                                      bool AllowTypeAnnotation,
                                      bool TypeConstraint) {
-  assert(getLangOpts().CPlusPlus && "Can only annotate template-ids in C++");
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+         "Can only annotate template-ids in C++ and BSC");
   assert((Tok.is(tok::less) || TypeConstraint) &&
          "Parser isn't at the beginning of a template-id");
   assert(!(TypeConstraint && AllowTypeAnnotation) && "type-constraint can't be "

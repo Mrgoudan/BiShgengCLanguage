@@ -756,6 +756,8 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   CmdArgs.push_back("-x");
   if (Args.hasArg(options::OPT_rewrite_objc))
     CmdArgs.push_back(types::getTypeName(types::TY_PP_ObjCXX));
+  else if (Args.hasArg(options::OPT_rewrite_bsc))
+    CmdArgs.push_back(types::getTypeName(types::TY_PP_BSC));
   else {
     // Map the driver type to the frontend type. This is mostly an identity
     // mapping, except that the distinction between module interface units
@@ -4674,7 +4676,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-Eonly");
     else {
       CmdArgs.push_back("-E");
-      if (Args.hasArg(options::OPT_rewrite_objc) &&
+      if ((Args.hasArg(options::OPT_rewrite_objc) ||
+           Args.hasArg(options::OPT_rewrite_bsc)) &&
           !Args.hasArg(options::OPT_g_Group))
         CmdArgs.push_back("-P");
       else if (JA.getType() == types::TY_PP_CXXHeaderUnit)
@@ -4744,6 +4747,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
+    } else if (JA.getType() == types::TY_RewrittenBSC) {
+      CmdArgs.push_back("-rewrite-bsc");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }

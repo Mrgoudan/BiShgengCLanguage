@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -verify %s
+
+enum E {
+    X3,
+    X4
+};
+
+int enum E::getA(enum E this); // expected-error {{enum E is not supported on this target}}
+

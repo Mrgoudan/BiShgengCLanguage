@@ -2322,6 +2322,10 @@ public:
     return static_cast<CXXRecordDecl *>(TemplatedDecl);
   }
 
+  RecordDecl *getBSCTemplatedDecl() const {
+    return static_cast<RecordDecl *>(TemplatedDecl);
+  }
+
   /// Returns whether this template declaration defines the primary
   /// class pattern.
   bool isThisDeclarationADefinition() const {

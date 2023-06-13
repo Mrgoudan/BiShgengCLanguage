@@ -1,0 +1,18 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+union MyUnion<T1, T2> {
+  T1 res1;
+  T2 res2;
+};
+
+union MyUnion<T1, T2> foo<T1, T2>(union MyUnion<T1, T2> *this) {
+  return *this;
+}
+
+int main() {
+  union MyUnion<int, float> p;
+  foo(&p);
+  return 0;  
+}

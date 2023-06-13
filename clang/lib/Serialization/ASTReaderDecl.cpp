@@ -364,6 +364,7 @@ namespace clang {
     void VisitDeclaratorDecl(DeclaratorDecl *DD);
     void VisitFunctionDecl(FunctionDecl *FD);
     void VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *GD);
+    void VisitBSCMethodDecl(BSCMethodDecl *D);
     void VisitCXXMethodDecl(CXXMethodDecl *D);
     void VisitCXXConstructorDecl(CXXConstructorDecl *D);
     void VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -2081,6 +2082,12 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   D->setIsCopyDeductionCandidate(Record.readInt());
 }
 
+void ASTDeclReader::VisitBSCMethodDecl(BSCMethodDecl *D) {
+  VisitFunctionDecl(D);
+  D->setExtendedType(Record.readQualType());
+  D->setHasThisParam(Record.readInt());
+}
+
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {
   VisitFunctionDecl(D);
 
@@ -3587,6 +3594,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_FUNCTION:
     D = FunctionDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_BSC_METHOD:
+    D = BSCMethodDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_LINKAGE_SPEC:
     D = LinkageSpecDecl::CreateDeserialized(Context, ID);

@@ -189,6 +189,9 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
   for (const CXXBaseSpecifier &Base : Class->bases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
+    if (!BaseDecl->getASTContext().getLangOpts().CPlusPlus)
+      continue;
+
     CharUnits EmptySize;
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(BaseDecl);
     if (BaseDecl->isEmpty()) {
@@ -210,6 +213,9 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
 
     // We only care about record types.
     if (!RT)
+      continue;
+
+    if (!FD->getASTContext().getLangOpts().CPlusPlus)
       continue;
 
     CharUnits EmptySize;

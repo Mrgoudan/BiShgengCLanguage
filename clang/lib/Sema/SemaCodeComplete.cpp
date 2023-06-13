@@ -3264,7 +3264,7 @@ static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
     if (const auto *RecordTy = Ty->getAs<RecordType>())
       Record = cast<CXXRecordDecl>(RecordTy->getDecl());
     else if (const auto *InjectedTy = Ty->getAs<InjectedClassNameType>())
-      Record = InjectedTy->getDecl();
+      Record = cast<CXXRecordDecl>(InjectedTy->getDecl());
     else {
       Result.AddTypedTextChunk(
           Result.getAllocator().CopyString(ND->getNameAsString()));

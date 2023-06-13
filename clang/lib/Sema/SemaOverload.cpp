@@ -8118,20 +8118,23 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     if (!SemaRef.isCompleteType(Loc, Ty))
       return;
 
-    CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
-    for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
-      if (isa<UsingShadowDecl>(D))
-        D = cast<UsingShadowDecl>(D)->getTargetDecl();
+    // Don`t do anything here to avoid cast if is BSC.
+    if (!SemaRef.getLangOpts().BSC) {
+      CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
+      for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
+        if (isa<UsingShadowDecl>(D))
+          D = cast<UsingShadowDecl>(D)->getTargetDecl();
 
-      // Skip conversion function templates; they don't tell us anything
-      // about which builtin types we can convert to.
-      if (isa<FunctionTemplateDecl>(D))
-        continue;
+        // Skip conversion function templates; they don't tell us anything
+        // about which builtin types we can convert to.
+        if (isa<FunctionTemplateDecl>(D))
+          continue;
 
-      CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
-      if (AllowExplicitConversions || !Conv->isExplicit()) {
-        AddTypesConvertedFrom(Conv->getConversionType(), Loc, false, false,
-                              VisibleQuals);
+        CXXConversionDecl *Conv = cast<CXXConversionDecl>(D);
+        if (AllowExplicitConversions || !Conv->isExplicit()) {
+          AddTypesConvertedFrom(Conv->getConversionType(), Loc, false, false,
+                                VisibleQuals);
+        }
       }
     }
   }
@@ -8187,34 +8190,37 @@ static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
       return VRQuals;
     }
 
-    CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
-    if (!ClassDecl->hasDefinition())
-      return VRQuals;
+    // Don`t do anything here to avoid cast if is BSC.
+    if (!Context.getLangOpts().BSC) {
+      CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
+      if (!ClassDecl->hasDefinition())
+        return VRQuals;
 
-    for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
-      if (isa<UsingShadowDecl>(D))
-        D = cast<UsingShadowDecl>(D)->getTargetDecl();
-      if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(D)) {
-        QualType CanTy = Context.getCanonicalType(Conv->getConversionType());
-        if (const ReferenceType *ResTypeRef = CanTy->getAs<ReferenceType>())
-          CanTy = ResTypeRef->getPointeeType();
-        // Need to go down the pointer/mempointer chain and add qualifiers
-        // as see them.
-        bool done = false;
-        while (!done) {
-          if (CanTy.isRestrictQualified())
-            VRQuals.addRestrict();
-          if (const PointerType *ResTypePtr = CanTy->getAs<PointerType>())
-            CanTy = ResTypePtr->getPointeeType();
-          else if (const MemberPointerType *ResTypeMPtr =
-                CanTy->getAs<MemberPointerType>())
-            CanTy = ResTypeMPtr->getPointeeType();
-          else
-            done = true;
-          if (CanTy.isVolatileQualified())
-            VRQuals.addVolatile();
-          if (VRQuals.hasRestrict() && VRQuals.hasVolatile())
-            return VRQuals;
+      for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
+        if (isa<UsingShadowDecl>(D))
+          D = cast<UsingShadowDecl>(D)->getTargetDecl();
+        if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(D)) {
+          QualType CanTy = Context.getCanonicalType(Conv->getConversionType());
+          if (const ReferenceType *ResTypeRef = CanTy->getAs<ReferenceType>())
+            CanTy = ResTypeRef->getPointeeType();
+          // Need to go down the pointer/mempointer chain and add qualifiers
+          // as see them.
+          bool done = false;
+          while (!done) {
+            if (CanTy.isRestrictQualified())
+              VRQuals.addRestrict();
+            if (const PointerType *ResTypePtr = CanTy->getAs<PointerType>())
+              CanTy = ResTypePtr->getPointeeType();
+            else if (const MemberPointerType *ResTypeMPtr =
+                         CanTy->getAs<MemberPointerType>())
+              CanTy = ResTypeMPtr->getPointeeType();
+            else
+              done = true;
+            if (CanTy.isVolatileQualified())
+              VRQuals.addVolatile();
+            if (VRQuals.hasRestrict() && VRQuals.hasVolatile())
+              return VRQuals;
+          }
         }
       }
     }
@@ -13145,7 +13151,8 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
       llvm_unreachable("performing ADL for builtin");
 
     // We don't perform ADL in C.
-    assert(getLangOpts().CPlusPlus && "ADL enabled in C");
+    assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+           "ADL enabled in C");
   }
 #endif
 

@@ -1,0 +1,74 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+#include <stdlib.h>
+
+struct ListNode<T> {
+    T data;
+    struct ListNode<T> *next;
+};
+
+struct LinkedList<T> {
+    struct ListNode<T> *head;
+};
+
+void struct LinkedList<T>::init(struct LinkedList<T> *this) {
+    this->head = malloc(sizeof(struct ListNode<T>));
+    this->head->next = NULL;
+}
+
+void struct LinkedList<T>::insert(struct LinkedList<T> *this, T data) {
+    struct ListNode<T> *newNode = malloc(sizeof(struct ListNode<T>));
+    newNode->data = data;
+    newNode->next = this->head->next;
+    this->head->next = newNode;
+}
+
+void struct LinkedList<T>::delete(struct LinkedList<T> *this, T data) {
+    struct ListNode<T> *p = this->head->next;
+    struct ListNode<T> *pre = this->head;
+    while(p != NULL) {
+        if (p->data == data) {
+            pre->next = p->next;
+            free(p);
+            return;
+        }
+        pre = p;
+        p = p->next;
+    }
+}
+
+void struct LinkedList<T>::destroy(struct LinkedList<T> *this) {
+    struct ListNode<T> *p = this->head;
+    while(p != NULL) {
+        struct ListNode<T> *q = p->next;
+        free(p);
+        p = q;
+    }
+}
+
+int main() {
+    struct LinkedList<int> L;
+    L.init();
+    for(int i = 0; i < 10; i++) {
+        L.insert(i);
+    }
+    struct ListNode<int> *p = L.head->next;
+    while(p != NULL) {
+        printf("%d ", p->data);
+        p = p->next;
+    }
+    printf("\n");
+
+    L.delete(2);
+    L.delete(5);
+    p = L.head->next;
+    while(p != NULL) {
+        printf("%d ", p->data);
+        p = p->next;
+    }
+    L.destroy();
+    return 0;
+}

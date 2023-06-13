@@ -107,6 +107,27 @@ static bool IsCommonTypo(tok::TokenKind ExpectedTok, const Token &Tok) {
   }
 }
 
+bool Parser::FindUntil(tok::TokenKind FindToken) {
+  if (Tok.isOneOf(tok::star, tok::greater, tok::r_paren, tok::comma))
+    return false;
+  std::vector<tok::TokenKind> StopTokens {tok::l_brace, tok::semi, tok::eof,
+                                          tok::equal};
+  int LookStep = 0;
+  tok::TokenKind KindToMatch;
+
+  while (1) {
+    LookStep ++;
+    KindToMatch = GetLookAheadToken(LookStep).getKind();
+    if (llvm::any_of(StopTokens, [KindToMatch](tok::TokenKind &Toke) {
+            return Toke == KindToMatch;
+        }))
+      return false;
+    if (FindToken == KindToMatch) {
+      return true;
+    }
+  }
+}
+
 bool Parser::ExpectAndConsume(tok::TokenKind ExpectedTok, unsigned DiagID,
                               StringRef Msg) {
   if (Tok.is(ExpectedTok) || Tok.is(tok::code_completion)) {
@@ -1011,6 +1032,17 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
 
   default:
   dont_know:
+    // parse BSC template declaration
+    // TODO: change if entrance condition, abandon isBSCTemplateDecl()
+    if (isBSCTemplateDecl(Tok)) {
+      // parsing function (enter next level of parsing function)
+      SourceLocation DeclEnd;
+      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs, EmptyDeclSpecAttrs);
+      //
+      break;
+    }
+
     if (Tok.isEditorPlaceholder()) {
       ConsumeToken();
       return nullptr;
@@ -1683,7 +1715,12 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
   const bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
 
   CXXScopeSpec SS;
-  if (getLangOpts().CPlusPlus &&
+  // Deal with BiShengC for the following case:
+  // @Code
+  //    int main() {
+  //      foo<int, int>(1, 2); // Call ParseOptionalCXXScopeSpecifier
+  //    }
+  if ((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      EnteringContext))
@@ -1899,7 +1936,7 @@ bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
 ///
 /// Note that this routine emits an error if you call it with ::new or ::delete
 /// as the current tokens, so only call it in contexts where these are invalid.
-bool Parser::TryAnnotateTypeOrScopeToken() {
+bool Parser::TryAnnotateTypeOrScopeToken(QualType ExtendedTy) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -2002,28 +2039,35 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
 
   CXXScopeSpec SS;
-  if (getLangOpts().CPlusPlus)
+  // For code like:
+  // @Code
+  //    foo<int, int>(1,2);
+  if (getLangOpts().CPlusPlus || getLangOpts().BSC)
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                        /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))
       return true;
 
-  return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation);
+  return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
+                                                   ExtendedTy);
 }
 
 /// Try to annotate a type or scope token, having already parsed an
 /// optional scope specifier. \p IsNewScope should be \c true unless the scope
 /// specifier was extracted from an existing tok::annot_cxxscope annotation.
 bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
-                                                       bool IsNewScope) {
+                                                       bool IsNewScope,
+                                                       QualType ExtendedTy) {
   if (Tok.is(tok::identifier)) {
     // Determine whether the identifier is a type name.
     if (ParsedType Ty = Actions.getTypeName(
             *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), &SS,
             false, NextToken().is(tok::period), nullptr,
             /*IsCtorOrDtorName=*/false,
-            /*NonTrivialTypeSourceInfo*/true,
-            /*IsClassTemplateDeductionContext*/true)) {
+            /*NonTrivialTypeSourceInfo*/ true,
+            /*IsClassTemplateDeductionContext*/ true,
+            /*CorrectedII*/ nullptr,
+            /*ExtendedTy*/ ExtendedTy)) {
       SourceLocation BeginLoc = Tok.getLocation();
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
         BeginLoc = SS.getBeginLoc();
@@ -2129,8 +2173,9 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
 /// Note that this routine emits an error if you call it with ::new or ::delete
 /// as the current tokens, so only call it in contexts where these are invalid.
 bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
-  assert(getLangOpts().CPlusPlus &&
-         "Call sites of this function should be guarded by checking for C++");
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+         "Call sites of this function should be guarded by checking for C++ "
+         "and BSC");
   assert(MightBeCXXScopeToken() && "Cannot be a type or scope token!");
 
   CXXScopeSpec SS;

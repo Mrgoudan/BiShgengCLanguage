@@ -58,25 +58,26 @@ public:
 
   TypoCorrection(const DeclarationName &Name, NamedDecl *NameDecl,
                  NestedNameSpecifier *NNS = nullptr, unsigned CharDistance = 0,
-                 unsigned QualifierDistance = 0)
+                 unsigned QualifierDistance = 0, Type *ET = nullptr)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), QualifierDistance(QualifierDistance) {
+        CharDistance(CharDistance), QualifierDistance(QualifierDistance),
+        ExtendedType(ET) {
     if (NameDecl)
       CorrectionDecls.push_back(NameDecl);
   }
 
   TypoCorrection(NamedDecl *Name, NestedNameSpecifier *NNS = nullptr,
-                 unsigned CharDistance = 0)
+                 unsigned CharDistance = 0, Type *ET = nullptr)
       : CorrectionName(Name->getDeclName()), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance) {
+        CharDistance(CharDistance), ExtendedType(ET) {
     if (Name)
       CorrectionDecls.push_back(Name);
   }
 
   TypoCorrection(DeclarationName Name, NestedNameSpecifier *NNS = nullptr,
-                 unsigned CharDistance = 0)
+                 unsigned CharDistance = 0, Type *ET = nullptr)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance) {}
+        CharDistance(CharDistance), ExtendedType(ET) {}
 
   TypoCorrection() = default;
 
@@ -96,6 +97,11 @@ public:
     CorrectionNameSpec = NNS;
     ForceSpecifierReplacement = (NNS != nullptr);
   }
+
+  /// Gets the QualType needed to use the typo correction for BSC
+  Type *getExtendedType() const { return ExtendedType; }
+
+  void setExtendedType(Type *ET) { ExtendedType = ET; }
 
   void WillReplaceSpecifier(bool ForceReplacement) {
     ForceSpecifierReplacement = ForceReplacement;
@@ -268,6 +274,7 @@ private:
   SmallVector<NamedDecl *, 1> CorrectionDecls;
   unsigned CharDistance = 0;
   unsigned QualifierDistance = 0;
+  Type *ExtendedType = nullptr;
   unsigned CallbackDistance = 0;
   SourceRange CorrectionRange;
   bool ForceSpecifierReplacement = false;
@@ -283,8 +290,9 @@ public:
   static const unsigned InvalidDistance = TypoCorrection::InvalidDistance;
 
   explicit CorrectionCandidateCallback(IdentifierInfo *Typo = nullptr,
-                                       NestedNameSpecifier *TypoNNS = nullptr)
-      : Typo(Typo), TypoNNS(TypoNNS) {}
+                                       NestedNameSpecifier *TypoNNS = nullptr,
+                                       const Type *ExtendedType = nullptr)
+      : Typo(Typo), TypoNNS(TypoNNS), ExtendedType(ExtendedType) {}
 
   virtual ~CorrectionCandidateCallback() = default;
 
@@ -321,6 +329,7 @@ public:
 
   void setTypoName(IdentifierInfo *II) { Typo = II; }
   void setTypoNNS(NestedNameSpecifier *NNS) { TypoNNS = NNS; }
+  void setExtendType(const Type *ET) { ExtendedType = ET; }
 
   // Flags for context-dependent keywords. WantFunctionLikeCasts is only
   // used/meaningful when WantCXXNamedCasts is false.
@@ -342,11 +351,13 @@ protected:
            candidate.getCorrectionAsIdentifierInfo() == Typo &&
            // FIXME: This probably does not return true when both
            // NestedNameSpecifiers have the same textual representation.
-           candidate.getCorrectionSpecifier() == TypoNNS;
+           candidate.getCorrectionSpecifier() == TypoNNS &&
+           candidate.getExtendedType() == ExtendedType;
   }
 
   IdentifierInfo *Typo;
   NestedNameSpecifier *TypoNNS;
+  const Type *ExtendedType;
 };
 
 class DefaultFilterCCC final : public CorrectionCandidateCallback {

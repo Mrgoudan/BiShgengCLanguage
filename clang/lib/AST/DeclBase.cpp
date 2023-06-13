@@ -737,6 +737,7 @@ bool Decl::isWeakImported() const {
 unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
   switch (DeclKind) {
     case Function:
+    case BSCMethod:
     case CXXDeductionGuide:
     case CXXMethod:
     case CXXConstructor:
@@ -988,7 +989,8 @@ bool Decl::AccessDeclContextCheck() const {
       // AS_none as access specifier.
       isa<CXXRecordDecl>(this) ||
       isa<ClassScopeFunctionSpecializationDecl>(this) ||
-      isa<LifetimeExtendedTemporaryDecl>(this))
+      isa<LifetimeExtendedTemporaryDecl>(this) ||
+      isa<RecordDecl>(getDeclContext()))
     return true;
 
   assert(Access != AS_none &&
@@ -1165,6 +1167,10 @@ bool DeclContext::isDependentContext() const {
       return true;
     if (Record->isNeverDependentLambda())
       return false;
+  }
+  if (const auto *Record = dyn_cast<RecordDecl>(this)) {
+    if (Record->getDescribedClassTemplate())
+      return true;
   }
 
   if (const auto *Function = dyn_cast<FunctionDecl>(this)) {
@@ -1563,8 +1569,16 @@ void DeclContext::addHiddenDecl(Decl *D) {
 
   // Notify a C++ record declaration that we've added a member, so it can
   // update its class-specific state.
-  if (auto *Record = dyn_cast<CXXRecordDecl>(this))
-    Record->addedMember(D);
+  // Only CXXRecordDecl supports addedMember(), Clang assume only C++
+  // supports template-structure,
+  //      BSC template-structure reuses CXX.. logic, each RecordDecl need to be
+  //      checked.
+  if (D->getASTContext()
+          .getLangOpts()
+          .CPlusPlus) { // LangOpts().CPlusPlus does not work at here
+    if (auto *Record = dyn_cast<CXXRecordDecl>(this))
+      Record->addedMember(D);
+  }
 
   // If this is a newly-created (not de-serialized) import declaration, wire
   // it in to the list of local import declarations.
@@ -1890,6 +1904,19 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
     // this decl.
     buildLookup();
     makeDeclVisibleInContextImpl(D, Internal);
+    // There may be instances before extending member functions for
+    // structs in BSC. Therefore, we need to add member functions
+    // to the already instantiated map when defining them.
+    if (getParentASTContext().getLangOpts().BSC && dyn_cast<BSCMethodDecl>(D)) {
+      if (RecordDecl *RD = dyn_cast<RecordDecl>(this)) {
+        if (ClassTemplateDecl *DCT = RD->getDescribedClassTemplate()) {
+          for (auto it = DCT->spec_begin(); it != DCT->spec_end(); ++it) {
+            (*it)->setCompleteDefinition(false);
+            (*it)->setSpecializationKind(TSK_Undeclared);
+          }
+        }
+      }
+    }
   } else {
     setHasLazyLocalLexicalLookups(true);
   }

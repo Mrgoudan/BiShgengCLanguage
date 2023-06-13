@@ -1113,7 +1113,10 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   // Complete translation units and modules define vtables and perform implicit
   // instantiations. PCH files do not.
-  if (TUKind != TU_Prefix) {
+  // When generating .ast file at serialization part, TUKind will be TU_Prefix.
+  // This may be caused by compilation opts. So we need this BSC language judge
+  // to instantiate BSC generic noramlly.
+  if ((TUKind != TU_Prefix || getLangOpts().BSC)) {
     DiagnoseUseOfUnimplementedSelectors();
 
     ActOnEndOfTranslationUnitFragment(

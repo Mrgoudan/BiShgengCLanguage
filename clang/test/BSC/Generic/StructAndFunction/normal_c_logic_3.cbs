@@ -1,0 +1,14 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include<stdbool.h>
+
+int m(bool i) {
+    return 0;
+}
+
+int main() {
+    return 0;
+}
+

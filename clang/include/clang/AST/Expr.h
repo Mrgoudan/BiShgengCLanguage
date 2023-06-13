@@ -137,7 +137,16 @@ protected:
   friend class ASTImporter; // Sets dependence dircetly.
   friend class ASTStmtReader; // Sets dependence dircetly.
 
+  SourceLocation EBLoc;
+
 public:
+  bool HasBSCScopeSpec = false;
+  // Add BSC Member func desugar flag.
+  bool IsDesugaredBSCMethodCall = false;
+
+  SourceLocation getExtendedTypeBeginLoc() { return EBLoc; }
+  void setExtendedTypeBeginLoc(SourceLocation L) { EBLoc = L; }
+
   QualType getType() const { return TR; }
   void setType(QualType t) {
     // In C++, the type of an expression is always adjusted so that it

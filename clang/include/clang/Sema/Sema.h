@@ -2537,7 +2537,8 @@ public:
                          bool IsCtorOrDtorName = false,
                          bool WantNontrivialTypeSourceInfo = false,
                          bool IsClassTemplateDeductionContext = true,
-                         IdentifierInfo **CorrectedII = nullptr);
+                         IdentifierInfo **CorrectedII = nullptr,
+                         QualType ExtendedTy = QualType());
   TypeSpecifierType isTagName(IdentifierInfo &II, Scope *S);
   bool isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S);
   void DiagnoseUnknownTypeName(IdentifierInfo *&II,
@@ -2898,10 +2899,15 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
+  QualType ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
+                                     bool AddToContextMap, BSCScopeSpec &BSS,
+                                     DeclSpec &DS);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
-  Decl *ActOnParamDeclarator(Scope *S, Declarator &D);
+  // FIXME: Not good enough to add two extra args.
+  Decl *ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize = 0,
+                             const Type *TypePtr = nullptr);
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
@@ -4306,11 +4312,10 @@ private:
   std::unique_ptr<TypoCorrectionConsumer>
   makeTypoCorrectionConsumer(const DeclarationNameInfo &Typo,
                              Sema::LookupNameKind LookupKind, Scope *S,
-                             CXXScopeSpec *SS,
-                             CorrectionCandidateCallback &CCC,
+                             CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
                              DeclContext *MemberContext, bool EnteringContext,
                              const ObjCObjectPointerType *OPT,
-                             bool ErrorRecovery);
+                             bool ErrorRecovery, QualType ET = QualType());
 
 public:
   const TypoExprState &getTypoExprState(TypoExpr *TE) const;
@@ -4338,7 +4343,7 @@ public:
                            CXXScopeSpec &SS);
   bool LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
                         bool AllowBuiltinCreation = false,
-                        bool EnteringContext = false);
+                        bool EnteringContext = false, QualType T = QualType());
   ObjCProtocolDecl *LookupProtocol(IdentifierInfo *II, SourceLocation IdLoc,
                                    RedeclarationKind Redecl
                                      = NotForRedeclaration);
@@ -4413,15 +4418,13 @@ public:
                              const ObjCObjectPointerType *OPT = nullptr,
                              bool RecordFailure = true);
 
-  TypoExpr *CorrectTypoDelayed(const DeclarationNameInfo &Typo,
-                               Sema::LookupNameKind LookupKind, Scope *S,
-                               CXXScopeSpec *SS,
-                               CorrectionCandidateCallback &CCC,
-                               TypoDiagnosticGenerator TDG,
-                               TypoRecoveryCallback TRC, CorrectTypoKind Mode,
-                               DeclContext *MemberContext = nullptr,
-                               bool EnteringContext = false,
-                               const ObjCObjectPointerType *OPT = nullptr);
+  TypoExpr *CorrectTypoDelayed(
+      const DeclarationNameInfo &Typo, Sema::LookupNameKind LookupKind,
+      Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
+      TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC,
+      CorrectTypoKind Mode, DeclContext *MemberContext = nullptr,
+      bool EnteringContext = false, const ObjCObjectPointerType *OPT = nullptr,
+      QualType ET = QualType());
 
   /// Process any TypoExprs in the given Expr and its children,
   /// generating diagnostics as appropriate and returning a new Expr if there
@@ -5400,7 +5403,8 @@ public:
       Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
       UnqualifiedId &Id, bool HasTrailingLParen, bool IsAddressOfOperand,
       CorrectionCandidateCallback *CCC = nullptr,
-      bool IsInlineAsmIdentifier = false, Token *KeywordReplacement = nullptr);
+      bool IsInlineAsmIdentifier = false, Token *KeywordReplacement = nullptr,
+      QualType T = QualType());
 
   void DecomposeUnqualifiedId(const UnqualifiedId &Id,
                               TemplateArgumentListInfo &Buffer,
@@ -5413,7 +5417,8 @@ public:
   DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
-                      ArrayRef<Expr *> Args = None, TypoExpr **Out = nullptr);
+                      ArrayRef<Expr *> Args = None, TypoExpr **Out = nullptr,
+                      QualType ET = QualType());
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
                                     IdentifierInfo *II);
@@ -7896,9 +7901,9 @@ public:
   TemplateParameterList *MatchTemplateParametersToScopeSpecifier(
       SourceLocation DeclStartLoc, SourceLocation DeclLoc,
       const CXXScopeSpec &SS, TemplateIdAnnotation *TemplateId,
-      ArrayRef<TemplateParameterList *> ParamLists,
-      bool IsFriend, bool &IsMemberSpecialization, bool &Invalid,
-      bool SuppressDiagnostic = false);
+      ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
+      bool &IsMemberSpecialization, bool &Invalid,
+      bool SuppressDiagnostic = false, QualType ExtendedTy = QualType());
 
   DeclResult CheckClassTemplate(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
@@ -9709,12 +9714,10 @@ public:
                       CXXRecordDecl *Pattern,
                       const MultiLevelTemplateArgumentList &TemplateArgs);
 
-  bool
-  InstantiateClass(SourceLocation PointOfInstantiation,
-                   CXXRecordDecl *Instantiation, CXXRecordDecl *Pattern,
-                   const MultiLevelTemplateArgumentList &TemplateArgs,
-                   TemplateSpecializationKind TSK,
-                   bool Complain = true);
+  bool InstantiateClass(SourceLocation PointOfInstantiation,
+                        RecordDecl *Instantiation, RecordDecl *Pattern,
+                        const MultiLevelTemplateArgumentList &TemplateArgs,
+                        TemplateSpecializationKind TSK, bool Complain = true);
 
   bool InstantiateEnum(SourceLocation PointOfInstantiation,
                        EnumDecl *Instantiation, EnumDecl *Pattern,
@@ -9759,10 +9762,11 @@ public:
                            TemplateSpecializationKind TSK,
                            bool Complain = true);
 
-  void InstantiateClassMembers(SourceLocation PointOfInstantiation,
-                               CXXRecordDecl *Instantiation,
-                            const MultiLevelTemplateArgumentList &TemplateArgs,
-                               TemplateSpecializationKind TSK);
+  void
+  InstantiateClassMembers(SourceLocation PointOfInstantiation,
+                          RecordDecl *Instantiation,
+                          const MultiLevelTemplateArgumentList &TemplateArgs,
+                          TemplateSpecializationKind TSK);
 
   void InstantiateClassTemplateSpecializationMembers(
                                           SourceLocation PointOfInstantiation,
@@ -11950,7 +11954,9 @@ public:
                               SmallVectorImpl<Expr *> &AllArgs,
                               VariadicCallType CallType = VariadicDoesNotApply,
                               bool AllowExplicit = false,
-                              bool IsListInitialization = false);
+                              bool IsListInitialization = false,
+                              bool IsBSCInstanceFunc = false,
+                              CallExpr *Call = nullptr);
 
   // DefaultVariadicArgumentPromotion - Like DefaultArgumentPromotion, but
   // will create a runtime trap if the resulting type is not a POD type.

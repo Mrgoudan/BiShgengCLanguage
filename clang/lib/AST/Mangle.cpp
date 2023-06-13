@@ -105,6 +105,10 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
 bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   const ASTContext &ASTContext = getASTContext();
 
+  const auto *MD = dyn_cast<BSCMethodDecl>(D);
+  if (MD && !MD->getExtendedType().isNull())
+    return true;
+
   CCMangling CC = getCallingConvMangling(ASTContext, D);
   if (CC != CCM_Other)
     return true;
@@ -119,6 +123,14 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   if (!getASTContext().getLangOpts().CPlusPlus &&
       isUniqueInternalLinkageDecl(D))
     return true;
+
+  // In BSC, generic function always does mangling.
+  if (getASTContext().getLangOpts().BSC) {
+    if (auto FD = dyn_cast<FunctionDecl>(D)) {
+      return FD->getTemplatedKind() ==
+             FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization;
+    }
+  }
 
   // In C, functions with no attributes never need to be mangled. Fastpath them.
   if (!getASTContext().getLangOpts().CPlusPlus && !D->hasAttrs())
@@ -180,6 +192,14 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
 
   if (CC == CCM_WasmMainArgcArgv) {
     Out << "__main_argc_argv";
+    return;
+  }
+
+  const auto *MD = dyn_cast<BSCMethodDecl>(D);
+  if (MD && !MD->getExtendedType().isNull()) {
+    Out << "_ZN";
+    mangleTypeName(MD->getExtendedType(), Out);
+    Out << D->getIdentifier()->getName();
     return;
   }
 

@@ -2464,6 +2464,7 @@ static const auto &getFrontendActionTable() {
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
       {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
       {frontend::EmitObj, OPT_emit_obj},
+      {frontend::RewriteBSC, OPT_rewrite_bsc},
       {frontend::ExtractAPI, OPT_extract_api},
 
       {frontend::FixIt, OPT_fixit_EQ},
@@ -2648,6 +2649,9 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
       break;
     case Language::CUDA:
       Lang = "cuda";
+      break;
+    case Language::BSC:
+      Lang = "bsc";
       break;
     case Language::HIP:
       Lang = "hip";
@@ -2860,6 +2864,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                 .Case("clcpp", Language::OpenCLCXX)
                 .Case("cuda", Language::CUDA)
                 .Case("hip", Language::HIP)
+                .Case("bsc", Language::BSC)
                 .Case("c++", Language::CXX)
                 .Case("objective-c", Language::ObjC)
                 .Case("objective-c++", Language::ObjCXX)
@@ -3243,6 +3248,9 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
   case Language::HIP:
     return S.getLanguage() == Language::CXX || S.getLanguage() == Language::HIP;
 
+  case Language::BSC:
+    return S.getLanguage() == Language::C || S.getLanguage() == Language::BSC;
+
   case Language::Asm:
     // Accept (and ignore) all -std= values.
     // FIXME: The -std= value is not ignored; it affects the tokenization
@@ -3277,6 +3285,8 @@ static StringRef GetInputKindName(InputKind IK) {
     return "RenderScript";
   case Language::HIP:
     return "HIP";
+  case Language::BSC:
+    return "BSC";
 
   case Language::Asm:
     return "Asm";
@@ -4137,6 +4147,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::PluginAction:
   case frontend::RewriteObjC:
   case frontend::RewriteTest:
+  case frontend::RewriteBSC:
   case frontend::RunAnalysis:
   case frontend::TemplightDump:
   case frontend::MigrateSource:

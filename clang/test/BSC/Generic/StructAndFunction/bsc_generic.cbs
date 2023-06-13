@@ -1,0 +1,24 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+struct S<T>{
+  T a;
+};
+
+T max<T>(T a, T b) {
+  return a > b ? a : b;
+}
+
+int main() {
+  struct S<int> s1 = {.a = 42}; // ClassTemplateSpecializationDecl
+  int a = s1.a;
+  printf("Generic Struct Works!\n");
+  printf("a is %d\n", a);
+  int b = max<int>(2023, 2022);
+  printf("Generic Function Works!\n");
+  printf("b is %d\n", b);
+  return 0;
+}

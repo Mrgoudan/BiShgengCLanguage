@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -verify %s
+
+// struct
+struct Foo {
+  int a;
+};
+
+struct Bar {
+  int a;
+};
+
+int struct Foo::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+  return this->a;
+}
+
+// enum
+enum E {
+  X3,
+  X4
+};
+
+int enum E::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+  return this->a;
+}
+
+// union
+union SimpleUnion {
+  float uf;
+  int ui;
+  char uc;
+};
+
+int union SimpleUnion::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+  return this->a;
+}
+
+// BuiltinType
+int int::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+  return this->a;
+}

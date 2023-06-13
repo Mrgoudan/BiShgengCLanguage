@@ -692,9 +692,7 @@ class InjectedClassNameTypeLoc :
                                      InjectedClassNameTypeLoc,
                                      InjectedClassNameType> {
 public:
-  CXXRecordDecl *getDecl() const {
-    return getTypePtr()->getDecl();
-  }
+  RecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for source info for unresolved typename using decls.

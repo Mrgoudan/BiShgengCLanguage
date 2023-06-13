@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -verify %s
+
+struct Foo {
+};
+int struct Foo::getA(struct Foo this) { // expected-error {{struct Foo is not supported on this target}}
+    return 1;
+}

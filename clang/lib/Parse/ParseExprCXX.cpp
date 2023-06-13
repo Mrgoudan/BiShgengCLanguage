@@ -155,8 +155,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
-  assert(getLangOpts().CPlusPlus &&
-         "Call sites of this function should be guarded by checking for C++");
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+         "Call sites of this function should be guarded by checking for C++ or "
+         "BSC");
 
   if (Tok.is(tok::annot_cxxscope)) {
     assert(!LastII && "want last identifier but have already annotated scope");
@@ -386,7 +387,41 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     //   type-name '::'
     //   namespace-name '::'
     //   nested-name-specifier identifier '::'
-    Token Next = NextToken();
+
+    // Skip param list "<T>" in template function declaration:
+    // "T max<T> (T a, T b) {...}"
+    Token Next;
+    bool ParsingBSCTemplateFunction =
+        getLangOpts().BSC && Tok.is(tok::identifier) &&
+        PP.LookAhead(0).is(tok::less) &&
+        PP.LookAhead(1).is(
+            tok::identifier) && // TODO: this could be missidentified from typo:
+                                // "intt"
+        (PP.LookAhead(2).is(tok::comma) || PP.LookAhead(2).is(tok::greater));
+
+    if (ParsingBSCTemplateFunction) {
+      // Determine if '>' is followed by '{' or '('
+      int LGreaterOffset = 2;
+      Token TmpTok = PP.LookAhead(LGreaterOffset);
+      while (!TmpTok.is(tok::greater) && !TmpTok.is(tok::eof)) {
+        LGreaterOffset += 1;
+        TmpTok = PP.LookAhead(LGreaterOffset);
+      }
+      ParsingBSCTemplateFunction =
+          TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
+                                          .isOneOf(tok::l_paren, tok::l_brace));
+    }
+
+    if (ParsingBSCTemplateFunction) {
+      int LParenOffset = 0;
+      while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
+        LParenOffset += 1;
+      }
+      Next = PP.LookAhead(LParenOffset);
+    } else {
+      Next = NextToken();
+    }
+
     Sema::NestedNameSpecInfo IdInfo(&II, Tok.getLocation(), Next.getLocation(),
                                     ObjectType);
 
@@ -487,6 +522,270 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                                                         EnteringContext,
                                                         Template,
                                               MemberOfUnknownSpecialization)) {
+        // If lookup didn't find anything, we treat the name as a template-name
+        // anyway. C++20 requires this, and in prior language modes it improves
+        // error recovery. But before we commit to this, check that we actually
+        // have something that looks like a template-argument-list next.
+        if (!IsTypename && TNK == TNK_Undeclared_template &&
+            isTemplateArgumentList(1) == TPResult::False)
+          break;
+
+        // We have found a template name, so annotate this token
+        // with a template-id annotation. We do not permit the
+        // template-id to be translated into a type annotation,
+        // because some clients (e.g., the parsing of class template
+        // specializations) still want to see the original template-id
+        // token, and it might not be a type at all (e.g. a concept name in a
+        // type-constraint).
+        ConsumeToken();
+        if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
+                                    TemplateName, false))
+          return true;
+        continue;
+      }
+
+      if (MemberOfUnknownSpecialization && (ObjectType || SS.isSet()) &&
+          (IsTypename || isTemplateArgumentList(1) == TPResult::True)) {
+        // If we had errors before, ObjectType can be dependent even without any
+        // templates. Do not report missing template keyword in that case.
+        if (!ObjectHadErrors) {
+          // We have something like t::getAs<T>, where getAs is a
+          // member of an unknown specialization. However, this will only
+          // parse correctly as a template, so suggest the keyword 'template'
+          // before 'getAs' and treat this as a dependent template name.
+          unsigned DiagID = diag::err_missing_dependent_template_keyword;
+          if (getLangOpts().MicrosoftExt)
+            DiagID = diag::warn_missing_dependent_template_keyword;
+
+          Diag(Tok.getLocation(), DiagID)
+              << II.getName()
+              << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
+        }
+
+        SourceLocation TemplateNameLoc = ConsumeToken();
+
+        TemplateNameKind TNK = Actions.ActOnTemplateName(
+            getCurScope(), SS, TemplateNameLoc, TemplateName, ObjectType,
+            EnteringContext, Template, /*AllowInjectedClassName*/ true);
+        if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
+                                    TemplateName, false))
+          return true;
+
+        continue;
+      }
+    }
+
+    // We don't have any tokens that form the beginning of a
+    // nested-name-specifier, so we're done.
+    break;
+  }
+
+  // Even if we didn't see any pieces of a nested-name-specifier, we
+  // still check whether there is a tilde in this position, which
+  // indicates a potential pseudo-destructor.
+  if (CheckForDestructor && !HasScopeSpecifier && Tok.is(tok::tilde))
+    *MayBePseudoDestructor = true;
+
+  return false;
+}
+
+// Parse instation for bsc struct part of generic, to avoid affecting
+// the original logic of C++.
+bool Parser::ParseOptionalBSCGenericSpecifier(
+    CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
+    bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
+    IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
+  assert(getLangOpts().BSC &&
+         "Call sites of this function should be guarded by checking for BSC");
+
+  if (Tok.is(tok::annot_cxxscope)) {
+    assert(!LastII && "want last identifier but have already annotated scope");
+    assert(!MayBePseudoDestructor && "unexpected annot_cxxscope");
+    Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
+                                                 Tok.getAnnotationRange(), SS);
+    ConsumeAnnotationToken();
+    return false;
+  }
+
+  // Has to happen before any "return false"s in this function.
+  bool CheckForDestructor = false;
+  if (MayBePseudoDestructor && *MayBePseudoDestructor) {
+    CheckForDestructor = true;
+    *MayBePseudoDestructor = false;
+  }
+
+  if (LastII)
+    *LastII = nullptr;
+
+  bool HasScopeSpecifier = false;
+
+  if (!HasScopeSpecifier &&
+      Tok.isOneOf(tok::kw_decltype, tok::annot_decltype)) {
+    DeclSpec DS(AttrFactory);
+    SourceLocation DeclLoc = Tok.getLocation();
+    SourceLocation EndLoc = ParseDecltypeSpecifier(DS);
+
+    SourceLocation CCLoc;
+    // Work around a standard defect: 'decltype(auto)::' is not a
+    // nested-name-specifier.
+    if (DS.getTypeSpecType() == DeclSpec::TST_decltype_auto ||
+        !TryConsumeToken(tok::coloncolon, CCLoc)) {
+      AnnotateExistingDecltypeSpecifier(DS, DeclLoc, EndLoc);
+      return false;
+    }
+
+    if (Actions.ActOnCXXNestedNameSpecifierDecltype(SS, DS, CCLoc))
+      SS.SetInvalid(SourceRange(DeclLoc, CCLoc));
+
+    HasScopeSpecifier = true;
+  }
+
+  // Preferred type might change when parsing qualifiers, we need the original.
+  auto SavedType = PreferredType;
+  while (true) {
+    if (HasScopeSpecifier) {
+      if (Tok.is(tok::code_completion)) {
+        // Code completion for a nested-name-specifier, where the code
+        // completion token follows the '::'.
+        Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
+                                        InUsingDeclaration, ObjectType.get(),
+                                        SavedType.get(SS.getBeginLoc()));
+        // Include code completion token into the range of the scope otherwise
+        // when we try to annotate the scope tokens the dangling code completion
+        // token will cause assertion in
+        // Preprocessor::AnnotatePreviousCachedTokens.
+        SS.setEndLoc(Tok.getLocation());
+        cutOffParsing();
+        return true;
+      }
+
+      ObjectType = nullptr;
+    }
+
+    // nested-name-specifier:
+    //   nested-name-specifier 'template'[opt] simple-template-id '::'
+
+    // Parse the optional 'template' keyword, then make sure we have
+    // 'identifier <' after it.
+    if (Tok.is(tok::kw_template)) {
+      // If we don't have a scope specifier or an object type, this isn't a
+      // nested-name-specifier, since they aren't allowed to start with
+      // 'template'.
+      if (!HasScopeSpecifier && !ObjectType)
+        break;
+
+      TentativeParsingAction TPA(*this);
+      SourceLocation TemplateKWLoc = ConsumeToken();
+
+      UnqualifiedId TemplateName;
+      if (Tok.is(tok::identifier)) {
+        // Consume the identifier.
+        TemplateName.setIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
+        ConsumeToken();
+      } else if (Tok.is(tok::kw_operator)) {
+        // We don't need to actually parse the unqualified-id in this case,
+        // because a simple-template-id cannot start with 'operator', but
+        // go ahead and parse it anyway for consistency with the case where
+        // we already annotated the template-id.
+        if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
+                                       TemplateName)) {
+          TPA.Commit();
+          break;
+        }
+
+        if (TemplateName.getKind() !=
+                UnqualifiedIdKind::IK_OperatorFunctionId &&
+            TemplateName.getKind() != UnqualifiedIdKind::IK_LiteralOperatorId) {
+          Diag(TemplateName.getSourceRange().getBegin(),
+               diag::err_id_after_template_in_nested_name_spec)
+              << TemplateName.getSourceRange();
+          TPA.Commit();
+          break;
+        }
+      } else {
+        TPA.Revert();
+        break;
+      }
+
+      // If the next token is not '<', we have a qualified-id that refers
+      // to a template name, such as T::template apply, but is not a
+      // template-id.
+      if (Tok.isNot(tok::less)) {
+        TPA.Revert();
+        break;
+      }
+
+      // Commit to parsing the template-id.
+      TPA.Commit();
+      TemplateTy Template;
+      TemplateNameKind TNK = Actions.ActOnTemplateName(
+          getCurScope(), SS, TemplateKWLoc, TemplateName, ObjectType,
+          EnteringContext, Template, /*AllowInjectedClassName*/ true);
+      if (AnnotateTemplateIdToken(Template, TNK, SS, TemplateKWLoc,
+                                  TemplateName, false))
+        return true;
+
+      continue;
+    }
+
+    // The rest of the nested-name-specifier possibilities start with
+    // tok::identifier.
+    if (Tok.isNot(tok::identifier))
+      break;
+
+    IdentifierInfo &II = *Tok.getIdentifierInfo();
+
+    // nested-name-specifier:
+    //   type-name '::'
+    //   namespace-name '::'
+    //   nested-name-specifier identifier '::'
+
+    Token Next;
+    bool ParsingBSCTemplateFunction =
+        getLangOpts().BSC && Tok.is(tok::identifier) &&
+        PP.LookAhead(0).is(tok::less) && PP.LookAhead(1).is(tok::identifier) &&
+        (PP.LookAhead(2).is(tok::comma) || PP.LookAhead(2).is(tok::greater));
+
+    if (ParsingBSCTemplateFunction) {
+      // Determine if 'tok::greater' is followed by 'l_ paren' and 'l_brace'
+      int LGreaterOffset = 2;
+      Token TmpTok = PP.LookAhead(LGreaterOffset);
+      while (!TmpTok.is(tok::greater) && !TmpTok.is(tok::eof)) {
+        LGreaterOffset += 1;
+        TmpTok = PP.LookAhead(LGreaterOffset);
+      }
+      ParsingBSCTemplateFunction =
+          TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
+                                          .isOneOf(tok::l_paren, tok::l_brace));
+    }
+
+    if (ParsingBSCTemplateFunction) {
+      int LParenOffset = 0;
+      while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
+        LParenOffset += 1;
+      }
+      Next = PP.LookAhead(LParenOffset);
+    } else {
+      Next = NextToken();
+    }
+
+    Sema::NestedNameSpecInfo IdInfo(&II, Tok.getLocation(), Next.getLocation(),
+                                    ObjectType);
+
+    CheckForTemplateAndDigraph(Next, ObjectType, EnteringContext, II, SS);
+
+    // nested-name-specifier:
+    //   type-name '<'
+    if (Next.is(tok::less)) {
+
+      TemplateTy Template;
+      UnqualifiedId TemplateName;
+      TemplateName.setIdentifier(&II, Tok.getLocation());
+      bool MemberOfUnknownSpecialization;
+      if (TemplateNameKind TNK = Actions.isTemplateName(
+              getCurScope(), SS,
+              /*hasTemplateKeyword=*/false, TemplateName, ObjectType,
+              EnteringContext, Template, MemberOfUnknownSpecialization)) {
         // If lookup didn't find anything, we treat the name as a template-name
         // anyway. C++20 requires this, and in prior language modes it improves
         // error recovery. But before we commit to this, check that we actually
@@ -2824,6 +3123,26 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     SourceLocation IdLoc = ConsumeToken();
 
     if (!getLangOpts().CPlusPlus) {
+      // We add this judge to parse BSC syntax, without
+      // affecting the original logic of C.
+      // @Code:k
+      //  T max<T>(T a, T b) {...}
+      // @EndCode
+      if (Actions.getCurScope()->isTemplateParamScope() && 
+          (getLangOpts().BSC && Tok.is(tok::less))) {
+        // TODO: we should refactoring check logic, abandon assert.
+        assert(Tok.is(tok::less) && "expected 'less' token");
+        while (!Tok.is(tok::greater)) {
+          ConsumeToken();
+        }
+        if (Tok.is(tok::greater)) {
+          ConsumeToken();
+        } else {
+          Diag(Tok.getLocation(), diag::err_expected_comma_greater);
+        }
+        assert(Tok.is(tok::l_paren) && "expected 'l_paren' token");
+      }
+
       // If we're not in C++, only identifiers matter. Record the
       // identifier and return.
       Result.setIdentifier(Id, IdLoc);

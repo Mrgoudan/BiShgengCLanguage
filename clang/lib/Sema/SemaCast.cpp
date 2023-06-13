@@ -3272,7 +3272,12 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getEndLoc());
 
-  Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
+  // Try to use C-Style cast check for BSC generic.
+  if (getLangOpts().BSC) {
+    Op.CheckCStyleCast();
+  } else {
+    Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
+  }
   if (Op.SrcExpr.isInvalid())
     return ExprError();
 

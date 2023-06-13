@@ -1608,6 +1608,27 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       SS = Spec;
   }
 
+  // Generic struct 'struct S<int> s1' should enter here.
+  if (getLangOpts().BSC) {
+    ColonProtectionRAIIObject X(*this);
+
+    CXXScopeSpec Spec;
+    bool HasValidSpec = true;
+    if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
+                                         /*ObjectHadErrors=*/false,
+                                         EnteringContext)) {
+      DS.SetTypeSpecError();
+      HasValidSpec = false;
+    }
+    if (Spec.isSet())
+      if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id)) {
+        Diag(Tok, diag::err_expected) << tok::identifier;
+        HasValidSpec = false;
+      }
+    if (HasValidSpec)
+      SS = Spec;
+  }
+
   TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
 
   auto RecoverFromUndeclaredTemplateName = [&](IdentifierInfo *Name,
@@ -1644,9 +1665,24 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   IdentifierInfo *Name = nullptr;
   SourceLocation NameLoc;
   TemplateIdAnnotation *TemplateId = nullptr;
+  bool isParsingBSCTemplateStruct =
+      getLangOpts().BSC && Tok.is(tok::identifier) && NextToken().is(tok::less);
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
+
+    // BSC Sturct Template Declaration may have "<T>" syntax.
+    //      This param list must been parsed, skip it.
+    if (isParsingBSCTemplateStruct) {
+      while (Tok.getKind() != tok::greater) {
+        ConsumeToken();
+      }
+      if(Tok.is(tok::greater)) {
+        ConsumeToken();
+      } else {
+        Diag(Tok.getLocation(), diag::err_expected_comma_greater);
+      }
+    }
 
     if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
       // The name was supposed to refer to a template, but didn't.
@@ -1849,6 +1885,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   bool Owned = false;
   Sema::SkipBodyInfo SkipBody;
   if (TemplateId) {
+    // specialization for BSC generic: `struct S<int>`
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
@@ -2018,8 +2055,14 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       ParseCXXMemberSpecification(StartLoc, AttrFixitLoc, attrs, TagType,
                                   TagOrTempResult.get());
     else {
-      Decl *D =
-          SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
+      Decl *D = nullptr;
+      if (isParsingBSCTemplateStruct) {
+        // TODO: add more check
+        D = static_cast<ClassTemplateDecl *>(TagOrTempResult.get())
+                ->getTemplatedDecl();
+      } else {
+        D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
+      }
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
       if (SkipBody.CheckSameAsPrevious &&

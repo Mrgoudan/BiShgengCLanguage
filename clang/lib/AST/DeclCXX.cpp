@@ -1800,105 +1800,6 @@ void CXXRecordDecl::removeConversion(const NamedDecl *ConvDecl) {
   llvm_unreachable("conversion not found in set!");
 }
 
-CXXRecordDecl *CXXRecordDecl::getInstantiatedFromMemberClass() const {
-  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo())
-    return cast<CXXRecordDecl>(MSInfo->getInstantiatedFrom());
-
-  return nullptr;
-}
-
-MemberSpecializationInfo *CXXRecordDecl::getMemberSpecializationInfo() const {
-  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
-}
-
-void
-CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
-                                             TemplateSpecializationKind TSK) {
-  assert(TemplateOrInstantiation.isNull() &&
-         "Previous template or instantiation?");
-  assert(!isa<ClassTemplatePartialSpecializationDecl>(this));
-  TemplateOrInstantiation
-    = new (getASTContext()) MemberSpecializationInfo(RD, TSK);
-}
-
-ClassTemplateDecl *CXXRecordDecl::getDescribedClassTemplate() const {
-  return TemplateOrInstantiation.dyn_cast<ClassTemplateDecl *>();
-}
-
-void CXXRecordDecl::setDescribedClassTemplate(ClassTemplateDecl *Template) {
-  TemplateOrInstantiation = Template;
-}
-
-TemplateSpecializationKind CXXRecordDecl::getTemplateSpecializationKind() const{
-  if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(this))
-    return Spec->getSpecializationKind();
-
-  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo())
-    return MSInfo->getTemplateSpecializationKind();
-
-  return TSK_Undeclared;
-}
-
-void
-CXXRecordDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK) {
-  if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
-    Spec->setSpecializationKind(TSK);
-    return;
-  }
-
-  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
-    MSInfo->setTemplateSpecializationKind(TSK);
-    return;
-  }
-
-  llvm_unreachable("Not a class template or member class specialization");
-}
-
-const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
-  auto GetDefinitionOrSelf =
-      [](const CXXRecordDecl *D) -> const CXXRecordDecl * {
-    if (auto *Def = D->getDefinition())
-      return Def;
-    return D;
-  };
-
-  // If it's a class template specialization, find the template or partial
-  // specialization from which it was instantiated.
-  if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
-    auto From = TD->getInstantiatedFrom();
-    if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
-      while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
-        if (NewCTD->isMemberSpecialization())
-          break;
-        CTD = NewCTD;
-      }
-      return GetDefinitionOrSelf(CTD->getTemplatedDecl());
-    }
-    if (auto *CTPSD =
-            From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
-      while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
-        if (NewCTPSD->isMemberSpecialization())
-          break;
-        CTPSD = NewCTPSD;
-      }
-      return GetDefinitionOrSelf(CTPSD);
-    }
-  }
-
-  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
-    if (isTemplateInstantiation(MSInfo->getTemplateSpecializationKind())) {
-      const CXXRecordDecl *RD = this;
-      while (auto *NewRD = RD->getInstantiatedFromMemberClass())
-        RD = NewRD;
-      return GetDefinitionOrSelf(RD);
-    }
-  }
-
-  assert(!isTemplateInstantiation(this->getTemplateSpecializationKind()) &&
-         "couldn't find pattern for class template instantiation");
-  return nullptr;
-}
-
 CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
   ASTContext &Context = getASTContext();
   QualType ClassType = Context.getTypeDeclType(this);
@@ -2207,6 +2108,23 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
   return new (C, RD) CXXMethodDecl(
       CXXMethod, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
       isInline, ConstexprKind, EndLocation, TrailingRequiresClause);
+}
+
+BSCMethodDecl *BSCMethodDecl::Create(
+    ASTContext &C, DeclContext *RD, SourceLocation StartLoc,
+    const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
+    StorageClass SC, bool UsesFPIntrinbool, bool isInline, ConstexprSpecKind ConstexprKind,
+    SourceLocation EndLocation, Expr *TrailingRequiresClause) {
+  return new (C, RD) BSCMethodDecl(BSCMethod, C, RD, StartLoc, NameInfo, T,
+                                   TInfo, SC, UsesFPIntrinbool, isInline, ConstexprKind,
+                                   EndLocation, TrailingRequiresClause);
+}
+
+BSCMethodDecl *BSCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID)
+      BSCMethodDecl(BSCMethod, C, nullptr, SourceLocation(),
+                    DeclarationNameInfo(), QualType(), nullptr, SC_None, false, false,
+                    ConstexprSpecKind::Unspecified, SourceLocation(), nullptr);
 }
 
 CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {

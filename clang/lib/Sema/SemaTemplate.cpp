@@ -179,7 +179,8 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                                       TemplateTy &TemplateResult,
                                       bool &MemberOfUnknownSpecialization,
                                       bool Disambiguation) {
-  assert(getLangOpts().CPlusPlus && "No template names in C!");
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+         "No template names in C!");
 
   DeclarationName TName;
   MemberOfUnknownSpecialization = false;
@@ -1977,11 +1978,22 @@ DeclResult Sema::CheckClassTemplate(
   bool ShouldAddRedecl
     = !(TUK == TUK_Friend && CurContext->isDependentContext());
 
-  CXXRecordDecl *NewClass =
-    CXXRecordDecl::Create(Context, Kind, SemanticContext, KWLoc, NameLoc, Name,
-                          PrevClassTemplate && ShouldAddRedecl ?
-                            PrevClassTemplate->getTemplatedDecl() : nullptr,
-                          /*DelayTypeCreation=*/true);
+  RecordDecl *NewClass;
+  if (getLangOpts().CPlusPlus) {
+    NewClass = CXXRecordDecl::Create(Context, Kind, SemanticContext, KWLoc,
+                                     NameLoc, Name,
+                                     PrevClassTemplate && ShouldAddRedecl
+                                         ? PrevClassTemplate->getTemplatedDecl()
+                                         : nullptr,
+                                     /*DelayTypeCreation=*/true);
+  } else {
+    NewClass =
+        RecordDecl::Create(Context, Kind, SemanticContext, KWLoc, NameLoc, Name,
+                           PrevClassTemplate && ShouldAddRedecl
+                               ? PrevClassTemplate->getBSCTemplatedDecl()
+                               : nullptr,
+                           /*DelayTypeCreation=*/true);
+  }
   SetNestedNameSpecifier(*this, NewClass, SS);
   if (NumOuterTemplateParamLists > 0)
     NewClass->setTemplateParameterListsInfo(
@@ -1995,10 +2007,9 @@ DeclResult Sema::CheckClassTemplate(
     AddMsStructLayoutForRecord(NewClass);
   }
 
-  ClassTemplateDecl *NewTemplate
-    = ClassTemplateDecl::Create(Context, SemanticContext, NameLoc,
-                                DeclarationName(Name), TemplateParams,
-                                NewClass);
+  ClassTemplateDecl *NewTemplate = ClassTemplateDecl::Create(
+      Context, SemanticContext, NameLoc, DeclarationName(Name), TemplateParams,
+      NewClass);
 
   if (ShouldAddRedecl)
     NewTemplate->setPreviousDecl(PrevClassTemplate);
@@ -2037,7 +2048,9 @@ DeclResult Sema::CheckClassTemplate(
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
 
   AddPushedVisibilityAttribute(NewClass);
-  inferGslOwnerPointerAttribute(NewClass);
+  if (!getLangOpts().BSC) {
+    inferGslOwnerPointerAttribute(static_cast<CXXRecordDecl *>(NewClass));
+  }
 
   if (TUK != TUK_Friend) {
     // Per C++ [basic.scope.temp]p2, skip the template parameter scopes.
@@ -3102,6 +3115,9 @@ static SourceRange getRangeOfTypeInNestedNameSpecifier(ASTContext &Context,
 /// denotes a fully-specialized type, and therefore this is a declaration of
 /// a member specialization.
 ///
+/// \param ExtendedTy used to infer scope specifier that will be matched to
+/// the given template parameter lists for BSC.
+///
 /// \returns the template parameter list, if any, that corresponds to the
 /// name that is preceded by the scope specifier @p SS. This template
 /// parameter list may have template parameters (if we're declaring a
@@ -3112,7 +3128,8 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     SourceLocation DeclStartLoc, SourceLocation DeclLoc, const CXXScopeSpec &SS,
     TemplateIdAnnotation *TemplateId,
     ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
-    bool &IsMemberSpecialization, bool &Invalid, bool SuppressDiagnostic) {
+    bool &IsMemberSpecialization, bool &Invalid, bool SuppressDiagnostic,
+    QualType ExtendedTy) {
   IsMemberSpecialization = false;
   Invalid = false;
 
@@ -3127,6 +3144,16 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       T = Context.getTypeDeclType(Record);
     else
       T = QualType(SS.getScopeRep()->getAsType(), 0);
+  } else if (!ExtendedTy.isNull()) {
+    DeclContext *DC =
+        getASTContext()
+            .BSCDeclContextMap[ExtendedTy.getCanonicalType().getTypePtr()];
+    if (DC) {
+      if (RecordDecl *Record = dyn_cast_or_null<RecordDecl>(DC))
+        T = Context.getTypeDeclType(Record);
+    } else {
+      T = QualType(ExtendedTy.getTypePtr(), 0);
+    }
   }
 
   // If we found an explicit specialization that prevents us from needing
@@ -3138,7 +3165,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     NestedTypes.push_back(T);
 
     // Retrieve the parent of a record type.
-    if (CXXRecordDecl *Record = T->getAsCXXRecordDecl()) {
+    if (RecordDecl *Record = T->getAsRecordDecl()) {
       // If this type is an explicit specialization, we're done.
       if (ClassTemplateSpecializationDecl *Spec
           = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
@@ -3270,7 +3297,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     //   class templates. In an explicit specialization for such a member, the
     //   member declaration shall be preceded by a template<> for each
     //   enclosing class template that is explicitly specialized.
-    if (CXXRecordDecl *Record = T->getAsCXXRecordDecl()) {
+    if (RecordDecl *Record = T->getAsRecordDecl()) {
       if (ClassTemplatePartialSpecializationDecl *Partial
             = dyn_cast<ClassTemplatePartialSpecializationDecl>(Record)) {
         ExpectedTemplateParams = Partial->getTemplateParameters();
@@ -3299,8 +3326,8 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
         continue;
       }
-    } else if (const TemplateSpecializationType *TST
-                                     = T->getAs<TemplateSpecializationType>()) {
+    } else if (const TemplateSpecializationType *TST =
+                   T->getAs<TemplateSpecializationType>()) {
       if (TemplateDecl *Template = TST->getTemplateName().getAsTemplateDecl()) {
         ExpectedTemplateParams = Template->getTemplateParameters();
         NeedNonemptyTemplateHeader = true;
@@ -9941,8 +9968,8 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   if (Tag->isInvalidDecl())
     return true;
 
-  CXXRecordDecl *Record = cast<CXXRecordDecl>(Tag);
-  CXXRecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
+  RecordDecl *Record = cast<RecordDecl>(Tag);
+  RecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
   if (!Pattern) {
     Diag(TemplateLoc, diag::err_explicit_instantiation_nontemplate_type)
       << Context.getTypeDeclType(Record);
@@ -9971,8 +9998,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   CheckExplicitInstantiation(*this, Record, NameLoc, true, TSK);
 
   // Verify that it is okay to explicitly instantiate here.
-  CXXRecordDecl *PrevDecl
-    = cast_or_null<CXXRecordDecl>(Record->getPreviousDecl());
+  RecordDecl *PrevDecl = cast_or_null<RecordDecl>(Record->getPreviousDecl());
   if (!PrevDecl && Record->getDefinition())
     PrevDecl = Record;
   if (PrevDecl) {

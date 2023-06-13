@@ -266,6 +266,17 @@ TEST_F(LexerTest, GetSourceTextExpandsRecursively) {
   EXPECT_EQ("M(i)", getSourceText(toks[3], toks[3]));
 }
 
+TEST_F(LexerTest, BSCTest) {
+  LangOpts.BSC = 1; // Make sure Lexer is in BSC mode.
+  std::vector<tok::TokenKind> ExpectedTokens;
+  ExpectedTokens.push_back(tok::identifier);
+  ExpectedTokens.push_back(tok::coloncolon);
+  ExpectedTokens.push_back(tok::identifier);
+  std::vector<Token> toks = CheckLex("Foo::getA", ExpectedTokens);
+  EXPECT_EQ(ExpectedTokens.size(), toks.size());
+  // If new keyword in BSC is introduced like async/await, we can add test here.
+}
+
 TEST_F(LexerTest, LexAPI) {
   std::vector<tok::TokenKind> ExpectedTokens;
   // Line 1 (after the #defines)

@@ -38,7 +38,8 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
 
     return nullptr;
   } else if (isa<InjectedClassNameType>(Ty))
-    return cast<InjectedClassNameType>(Ty)->getDecl();
+    return dyn_cast_or_null<CXXRecordDecl>(
+        cast<InjectedClassNameType>(Ty)->getDecl());
   else
     return nullptr;
 }
@@ -219,6 +220,8 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 
   SourceLocation loc = SS.getLastQualifierNameLoc();
   if (loc.isInvalid()) loc = SS.getRange().getBegin();
+  if (LangOpts.BSC && loc.isInvalid())
+    loc = tag->getBeginLoc();
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,

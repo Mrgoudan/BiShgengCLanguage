@@ -1,0 +1,14 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+long int f2<T>(long int x, T a) { // FIXME Ok but there is err now
+  return x;
+}
+
+int main() {
+  float b = 1.5;
+  long int a = f2<float>(a, b);
+}

@@ -5396,7 +5396,7 @@ class InjectedClassNameType : public Type {
                           // interdependencies.
   template <class T> friend class serialization::AbstractTypeReader;
 
-  CXXRecordDecl *Decl;
+  RecordDecl *Decl;
 
   /// The template specialization which this type represents.
   /// For example, in
@@ -5409,7 +5409,7 @@ class InjectedClassNameType : public Type {
   /// and always dependent.
   QualType InjectedType;
 
-  InjectedClassNameType(CXXRecordDecl *D, QualType TST)
+  InjectedClassNameType(RecordDecl *D, QualType TST)
       : Type(InjectedClassName, QualType(),
              TypeDependence::DependentInstantiation),
         Decl(D), InjectedType(TST) {
@@ -5429,7 +5429,7 @@ public:
     return getInjectedTST()->getTemplateName();
   }
 
-  CXXRecordDecl *getDecl() const;
+  RecordDecl *getDecl() const;
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }

@@ -565,6 +565,11 @@ enum class TemplateSubstitutionKind : char {
                              Optional<const ASTTemplateArgumentListInfo *>
                                  ClassScopeSpecializationArgs = llvm::None,
                              RewriteKind RK = RewriteKind::None);
+    Decl *VisitBSCMethodDecl(BSCMethodDecl *D,
+                             TemplateParameterList *TemplateParams,
+                             Optional<const ASTTemplateArgumentListInfo *>
+                                 ClassScopeSpecializationArgs = llvm::None,
+                             RewriteKind RK = RewriteKind::None);
     Decl *VisitFunctionDecl(FunctionDecl *D,
                             TemplateParameterList *TemplateParams,
                             RewriteKind RK = RewriteKind::None);
@@ -624,6 +629,7 @@ enum class TemplateSubstitutionKind : char {
                              SmallVectorImpl<ParmVarDecl *> &Params);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
+    bool InitMethodInstantiation(BSCMethodDecl *New, BSCMethodDecl *Tmpl);
 
     bool SubstDefaultedFunction(FunctionDecl *New, FunctionDecl *Tmpl);
 

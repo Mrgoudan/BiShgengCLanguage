@@ -50,6 +50,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
       def MSProperty : DeclNode<Declarator>;
       def Function : DeclNode<Declarator, "functions">, DeclContext;
         def CXXDeductionGuide : DeclNode<Function>;
+        def BSCMethod : DeclNode<Function>;
         def CXXMethod : DeclNode<Function>;
           def CXXConstructor : DeclNode<CXXMethod>;
           def CXXDestructor : DeclNode<CXXMethod>;

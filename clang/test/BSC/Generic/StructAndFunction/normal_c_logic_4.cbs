@@ -1,0 +1,15 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct Runtime {
+    int a;
+};
+struct Runtime runtime;
+
+int main() {
+    struct Runtime a;
+    runtime = a;
+    return 0;
+}
+

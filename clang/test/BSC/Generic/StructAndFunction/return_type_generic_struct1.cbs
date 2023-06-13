@@ -1,0 +1,17 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct MyStruct<T> {
+  T res;
+};
+
+struct MyStruct<T1> foo<T1, T2>(struct MyStruct<T1> *this, T2 a) {
+  return *this;
+}
+
+int main() {
+  struct MyStruct<int> p;
+  foo<int, int>(&p, 12);
+  return 0;  
+}

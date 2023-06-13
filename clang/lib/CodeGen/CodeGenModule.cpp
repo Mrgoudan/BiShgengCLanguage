@@ -1390,6 +1390,7 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
     const auto *FD = dyn_cast<FunctionDecl>(ND);
+    const auto *MD = dyn_cast<BSCMethodDecl>(ND);
 
     if (FD &&
         FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
@@ -1397,6 +1398,10 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__device_stub__" << II->getName();
+    } else if (MD && !MD->getExtendedType().isNull()) {
+      Out << "_ZN";
+      MC.mangleTypeName(MD->getExtendedType(), Out); // TODO: change mangle rule
+      Out << II->getName();
     } else {
       Out << II->getName();
     }
@@ -6090,6 +6095,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   switch (D->getKind()) {
   case Decl::CXXConversion:
   case Decl::CXXMethod:
+  case Decl::BSCMethod:
   case Decl::Function:
     EmitGlobal(cast<FunctionDecl>(D));
     // Always provide some coverage mapping
@@ -6380,6 +6386,7 @@ void CodeGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
     return;
   switch (D->getKind()) {
   case Decl::CXXConversion:
+  case Decl::BSCMethod:
   case Decl::CXXMethod:
   case Decl::Function:
   case Decl::ObjCMethod:

@@ -1,0 +1,16 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+T1 FunctionCall<T1, T2>(T1 a, T2 b)
+{
+  a.foo();
+  b.foo();
+}
+
+int main() {
+  // Cannot combine with member function now, so we cannot have the instantiation behavior.
+  return 0;
+}

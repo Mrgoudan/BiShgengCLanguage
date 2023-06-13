@@ -85,6 +85,8 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
     return LangStandard::lang_hip;
   case Language::HLSL:
     return LangStandard::lang_hlsl2021;
+  case Language::BSC:
+    return LangStandard::lang_bsc;
   }
   llvm_unreachable("unhandled Language kind!");
 }

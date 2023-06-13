@@ -16,6 +16,7 @@ def note_previous_decl : Note<"%0 declared here">;
 def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;
 def note_defined_here : Note<"%0 defined here">;
+def note_no_this_parameter : Note<"found the following member function %0 which doesn't have a 'this' parameter">;
 
 // For loop analysis
 def warn_variables_not_in_loop_body : Warning<
@@ -6729,6 +6730,8 @@ def err_typecheck_incomplete_tag : Error<"incomplete definition of type %0">;
 def err_no_member : Error<"no member named %0 in %1">;
 def err_no_member_overloaded_arrow : Error<
   "no member named %0 in %1; did you mean to use '->' instead of '.'?">;
+def err_no_instance_member : Error<
+  "no instance member named %0 in %1; did you mean to use '::' instead of '%select{.|->}2'?">;
 
 def err_member_not_yet_instantiated : Error<
   "no member %0 in %1; it has not yet been instantiated">;

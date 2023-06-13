@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+struct S<T> {
+  T t;
+};
+void struct S<T>::f(struct S<T>* this) {}
+
+int main() {
+  struct S<int> s1;
+  s1.f();
+  struct S<double> s2;
+  s2.f();
+
+  return 0;
+}

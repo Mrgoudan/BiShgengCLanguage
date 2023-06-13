@@ -1804,6 +1804,14 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     SingleDecl = ParseStaticAssertDeclaration(DeclEnd);
     break;
   default:
+    // parse BSC generic declaration
+    // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
+    if (isBSCTemplateDecl(Tok)) {
+      ProhibitAttributes(DeclAttrs);
+      SingleDecl =
+          ParseDeclarationStartingWithTemplate(Context, DeclEnd, DeclAttrs);
+      break;
+    }
     return ParseSimpleDeclaration(Context, DeclEnd, DeclAttrs, DeclSpecAttrs,
                                   true, nullptr, DeclSpecStart);
   }
@@ -2180,6 +2188,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   SmallVector<Decl *, 8> DeclsInGroup;
   Decl *FirstDecl = ParseDeclarationAfterDeclaratorAndAttributes(
       D, ParsedTemplateInfo(), FRI);
+
   if (LateParsedAttrs.size() > 0)
     ParseLexedAttributeList(LateParsedAttrs, FirstDecl, true, false);
   D.complete(FirstDecl);
@@ -3102,6 +3111,13 @@ static void SetupFixedPointError(const LangOptions &LangOpts,
   isInvalid = true;
 }
 
+void Parser::ParseBSCScopeSpecifiers(DeclSpec &DS) {
+  bool BSCScopeSpecFlag = true;
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
+                             DeclSpecContext::DSC_normal, nullptr,
+                             BSCScopeSpecFlag);
+}
+
 /// ParseDeclarationSpecifiers
 ///       declaration-specifiers: [C99 6.7]
 ///         storage-class-specifier declaration-specifiers[opt]
@@ -3133,7 +3149,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                         const ParsedTemplateInfo &TemplateInfo,
                                         AccessSpecifier AS,
                                         DeclSpecContext DSContext,
-                                        LateParsedAttrList *LateAttrs) {
+                                        LateParsedAttrList *LateAttrs,
+                                        bool BSCScopeSpecFlag) {
+  bool BSCMethodFlag = false;
+  if (getLangOpts().BSC && !BSCScopeSpecFlag)
+    BSCMethodFlag = FindUntil(tok::coloncolon);
   if (DS.getSourceRange().isInvalid()) {
     // Start the range at the current token but make the end of the range
     // invalid.  This will make the entire range invalid unless we successfully
@@ -3190,6 +3210,16 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     bool IsTemplateSpecOrInst =
         (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
          TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+
+    if (BSCMethodFlag) {
+      if (DS.hasTypeSpecifier())
+        goto DoneWithDeclSpec;
+      // if the method is unsinged long long::getA(){...}, which causes a
+      // misunderstanding on whether the BSCScopeSpec is long long or long, it
+      // throws out an error.
+      if (IsBSCMethodAmbiguous())
+        Diag(Loc, diag::ambiguous_bscmethod_define);
+    }
 
     switch (Tok.getKind()) {
     default:
@@ -3283,6 +3313,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     case tok::coloncolon: // ::foo::bar
       // C++ scope specifier.  Annotate and loop, or bail out on error.
+      if (BSCScopeSpecFlag)
+        goto DoneWithDeclSpec;
       if (TryAnnotateCXXScopeToken(EnteringContext)) {
         if (!DS.hasTypeSpecifier())
           DS.SetTypeSpecError();
@@ -5860,6 +5892,26 @@ static bool isPipeDeclarator(const Declarator &D) {
   return false;
 }
 
+bool Parser::IsBSCMethodAmbiguous() {
+  if (GetLookAheadToken(2).isNot(tok::coloncolon)) {
+    bool FlagUnsigned = (Tok.is(tok::kw_unsigned) &&
+                         NextToken().isOneOf(tok::kw_int, tok::kw_short,
+                                             tok::kw_long, tok::kw_unsigned));
+    bool FlagLong =
+        (Tok.is(tok::kw_long) &&
+         NextToken().isOneOf(tok::kw_int, tok::kw_long, tok::kw_unsigned));
+    bool FlagShort =
+        (Tok.is(tok::kw_short) &&
+         NextToken().isOneOf(tok::kw_short, tok::kw_int, tok::kw_unsigned));
+    bool FlagInt =
+        (Tok.is(tok::kw_int) &&
+         NextToken().isOneOf(tok::kw_short, tok::kw_long, tok::kw_unsigned));
+    if (FlagUnsigned || FlagLong || FlagShort || FlagInt)
+      return true;
+  }
+  return false;
+}
+
 /// ParseDeclaratorInternal - Parse a C or C++ declarator. The direct-declarator
 /// is parsed by the function passed to it. Pass null, and the direct-declarator
 /// isn't parsed at all, making this function effectively parse the C++
@@ -5889,6 +5941,20 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                                      DirectDeclParseFunction DirectDeclParser) {
   if (Diags.hasAllExtensionsSilenced())
     D.setExtension();
+
+  // BSC
+  if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
+    DeclSpec DS(AttrFactory);
+    ParseBSCScopeSpecifiers(DS);
+    TryConsumeToken(tok::coloncolon);
+
+    BSCScopeSpec BSS;
+    BSS.setBeginLoc(DS.getBeginLoc());
+    Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), true, BSS, DS);
+    D.getBSCScopeSpec() = BSS;
+    (this->*DirectDeclParser)(D);
+    return;
+  }
 
   // C++ member pointers start with a '::' or a nested-name.
   // Member pointers get special handling, since there's no place for the
@@ -6115,7 +6181,10 @@ static SourceLocation getMissingDeclaratorIdLoc(Declarator &D,
 void Parser::ParseDirectDeclarator(Declarator &D) {
   DeclaratorScopeObj DeclScopeObj(*this, D.getCXXScopeSpec());
 
-  if (getLangOpts().CPlusPlus && D.mayHaveIdentifier()) {
+  // Add language judgement for BSC template entrance.
+  if ((getLangOpts().CPlusPlus ||
+       (getLangOpts().BSC && Actions.getCurScope()->isTemplateParamScope())) &&
+      D.mayHaveIdentifier()) {
     // This might be a C++17 structured binding.
     if (Tok.is(tok::l_square) && !D.mayOmitIdentifier() &&
         D.getCXXScopeSpec().isEmpty())
@@ -6392,7 +6461,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // In such a case, check if we actually have a function declarator; if it
       // is not, the declarator has been fully parsed.
       bool IsAmbiguous = false;
-      if (getLangOpts().CPlusPlus && D.mayBeFollowedByCXXDirectInit()) {
+
+      // Add language judgement for BSC template entrance. Change branch
+      // entering condition | BSC syntax reusing C++ parsing code
+      if ((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+           Actions.getCurScope()->getParent()->isTemplateParamScope() &&
+           D.mayBeFollowedByCXXDirectInit()) {
         // The name of the declarator, if any, is tentatively declared within
         // a possible direct initializer.
         TentativelyDeclaredIdentifiers.push_back(D.getIdentifier());
@@ -6726,17 +6800,34 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     MaybeParseCXX11Attributes(FnAttrs);
     ProhibitAttributes(FnAttrs);
   } else {
-    if (Tok.isNot(tok::r_paren))
+    if (Tok.isNot(tok::r_paren)) {
+      const Type *TypePtr = nullptr;
+      if (D.getBSCScopeSpec().isNotEmpty() &&
+          !D.getBSCScopeSpec().getExtendedType().isNull()) {
+        TypePtr = D.getBSCScopeSpec().getExtendedType().getTypePtrOrNull();
+        if (TypePtr)
+          TypePtr = TypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
+      }
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
-                                      EllipsisLoc);
-    else if (RequiresArg)
+                                      EllipsisLoc, TypePtr);
+
+    } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
+
+    if (ParamInfo.size() > 0) {
+      ParmVarDecl *PD =
+          dyn_cast_or_null<ParmVarDecl>(ParamInfo.data()[0].Param);
+      if (PD && !D.getBSCScopeSpec().getExtendedType().isNull())
+        D.getBSCScopeSpec().HasThisParam = PD->IsThisParam;
+    }
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
     // strict prototypes as in C2x because it allows a function definition to
     // have an identifier list. See OpenCL 3.0 6.11/g for more details.
     HasProto = ParamInfo.size() || getLangOpts().requiresStrictPrototypes() ||
-               getLangOpts().OpenCL;
+               getLangOpts().OpenCL ||
+               (getLangOpts().BSC &&
+                Actions.getCurScope()->getParent()->isTemplateParamScope());
 
     // If we have the closing ')', eat it.
     Tracker.consumeClose();
@@ -6744,7 +6835,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     LocalEndLoc = RParenLoc;
     EndLoc = RParenLoc;
 
-    if (getLangOpts().CPlusPlus) {
+    // Change branch entering condition, reusing C++ parse code when parsing
+    if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
       // FIXME: Accept these components in any order, and produce fixits to
       // correct the order if the user gets it wrong. Ideally we should deal
       // with the pure-specifier in the same way.
@@ -6987,7 +7079,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc) {
+    SourceLocation &EllipsisLoc, const Type *typePtr) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7112,7 +7204,8 @@ void Parser::ParseParameterDeclarationClause(
       }
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
-      Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator);
+      Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator,
+                                                 ParamInfo.size(), typePtr);
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in

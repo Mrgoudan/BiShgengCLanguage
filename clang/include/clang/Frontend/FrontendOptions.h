@@ -126,6 +126,9 @@ enum ActionKind {
   /// ObjC->C Rewriter.
   RewriteObjC,
 
+  /// BSC->C Rewriter.
+  RewriteBSC,
+
   /// Rewriter playground
   RewriteTest,
 

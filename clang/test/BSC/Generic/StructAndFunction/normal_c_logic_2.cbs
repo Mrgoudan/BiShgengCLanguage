@@ -1,0 +1,19 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+enum sock_handle_type {
+    SOCK_HANDLE_INIT = 0,
+    SOCK_HANLE_LISTENER = 1
+};
+
+int s(enum sock_handle_type except) {
+    if (except != SOCK_HANDLE_INIT) {
+
+    }
+    return 0;
+}
+
+int main() {
+    return 0;
+}

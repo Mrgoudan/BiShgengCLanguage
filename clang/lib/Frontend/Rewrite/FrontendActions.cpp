@@ -178,6 +178,16 @@ RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 #endif
 
+std::unique_ptr<ASTConsumer>
+RewriteBSCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
+  if (std::unique_ptr<raw_ostream> OS =
+          CI.createDefaultOutputFile(false, InFile, "c")) {
+    return CreateBSCRewriter(std::string(InFile), std::move(OS),
+                             CI.getDiagnostics(), CI.getLangOpts());
+  }
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Preprocessor Actions
 //===----------------------------------------------------------------------===//

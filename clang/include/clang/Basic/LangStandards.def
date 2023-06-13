@@ -213,6 +213,9 @@ LANGSTANDARD(hlsl, "hlsl",
              HLSL, "High Level Shader Language",
              LineComment | HLSL | CPlusPlus )
 
+LANGSTANDARD(bsc, "bsc", BSC, "BiSheng C Language",
+             LineComment | BSC | C99 | C11 | C17 | C2x | Digraphs | GNUMode | HexFloat)
+
 LANGSTANDARD(hlsl2015, "hlsl2015",
              HLSL, "High Level Shader Language 2015",
              LineComment | HLSL | CPlusPlus )

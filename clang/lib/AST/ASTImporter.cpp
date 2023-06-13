@@ -527,6 +527,7 @@ namespace clang {
     ExpectedDecl VisitRecordDecl(RecordDecl *D);
     ExpectedDecl VisitEnumConstantDecl(EnumConstantDecl *D);
     ExpectedDecl VisitFunctionDecl(FunctionDecl *D);
+    ExpectedDecl VisitBSCMethodDecl(BSCMethodDecl *D);
     ExpectedDecl VisitCXXMethodDecl(CXXMethodDecl *D);
     ExpectedDecl VisitCXXConstructorDecl(CXXConstructorDecl *D);
     ExpectedDecl VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -1460,7 +1461,7 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
-  Expected<CXXRecordDecl *> ToDeclOrErr = import(T->getDecl());
+  Expected<RecordDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
@@ -2986,9 +2987,9 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
                    DCXX->getMemberSpecializationInfo()) {
         TemplateSpecializationKind SK =
             MemberInfo->getTemplateSpecializationKind();
-        CXXRecordDecl *FromInst = DCXX->getInstantiatedFromMemberClass();
+        RecordDecl *FromInst = DCXX->getInstantiatedFromMemberClass();
 
-        if (Expected<CXXRecordDecl *> ToInstOrErr = import(FromInst))
+        if (Expected<RecordDecl *> ToInstOrErr = import(FromInst))
           D2CXX->setInstantiationOfMemberClass(*ToInstOrErr, SK);
         else
           return ToInstOrErr.takeError();
@@ -3677,6 +3678,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   return ToFunction;
+}
+
+ExpectedDecl ASTNodeImporter::VisitBSCMethodDecl(BSCMethodDecl *D) {
+  return VisitFunctionDecl(D);
 }
 
 ExpectedDecl ASTNodeImporter::VisitCXXMethodDecl(CXXMethodDecl *D) {

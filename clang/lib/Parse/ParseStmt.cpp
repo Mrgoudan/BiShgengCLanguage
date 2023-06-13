@@ -230,11 +230,14 @@ Retry:
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
+    // FIXME: if-cond is too complex here.
     if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
+         getLangOpts().BSC ||
          (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
              ParsedStmtContext()) &&
         ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
-         isDeclarationStatement())) {
+         (isDeclarationStatement() &&
+         !(getLangOpts().BSC && FindUntil(tok::coloncolon))))) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
       if (GNUAttributeLoc.isValid()) {

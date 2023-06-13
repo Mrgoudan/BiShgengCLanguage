@@ -4154,7 +4154,7 @@ LexNextToken:
     if (LangOpts.Digraphs && Char == '>') {
       Kind = tok::r_square; // ':>' -> ']'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
-    } else if ((LangOpts.CPlusPlus ||
+    } else if ((LangOpts.CPlusPlus || LangOpts.BSC ||
                 LangOpts.DoubleSquareBracketAttributes) &&
                Char == ':') {
       Kind = tok::coloncolon;

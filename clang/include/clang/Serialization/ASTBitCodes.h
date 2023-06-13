@@ -1385,6 +1385,9 @@ enum DeclCode {
   /// A CXXDeductionGuideDecl record.
   DECL_CXX_DEDUCTION_GUIDE,
 
+  /// A BSCMethodDecl record.
+  DECL_BSC_METHOD,
+
   /// A CXXMethodDecl record.
   DECL_CXX_METHOD,
 

@@ -945,6 +945,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
   // a template template argument that way. If we do, we need to
   // consider its linkage.
   if (!(isa<CXXMethodDecl>(D) ||
+        isa<BSCMethodDecl>(D) ||
         isa<VarDecl>(D) ||
         isa<FieldDecl>(D) ||
         isa<IndirectFieldDecl>(D) ||
@@ -1170,8 +1171,8 @@ getExplicitVisibilityAux(const NamedDecl *ND,
 
   // If this is a member class of a specialization of a class template
   // and the corresponding decl has explicit visibility, use that.
-  if (const auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
-    CXXRecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
+  if (const auto *RD = dyn_cast<RecordDecl>(ND)) {
+    RecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
     if (InstantiatedFrom)
       return getVisibilityOf(InstantiatedFrom, kind);
   }
@@ -2139,7 +2140,8 @@ static bool isDeclExternC(const T &D) {
   // language linkage or no language linkage.
   const DeclContext *DC = D.getDeclContext();
   if (DC->isRecord()) {
-    assert(D.getASTContext().getLangOpts().CPlusPlus);
+    assert(D.getASTContext().getLangOpts().CPlusPlus ||
+           D.getASTContext().getLangOpts().BSC);
     return false;
   }
 
@@ -3464,8 +3466,17 @@ void FunctionDecl::setParams(ASTContext &C,
 /// getMinRequiredArguments - Returns the minimum number of arguments
 /// needed to call this function. This may be fewer than the number of
 /// function parameters, if some of the parameters have default
-/// arguments (in C++) or are parameter packs (C++11).
-unsigned FunctionDecl::getMinRequiredArguments() const {
+/// arguments (in C++) or are parameter packs (C++11) or contain "this"
+/// parameter (in BSC).
+unsigned FunctionDecl::getMinRequiredArguments(bool HasBSCScopeSpec) const {
+  if (getASTContext().getLangOpts().BSC && !HasBSCScopeSpec) {
+    int num = getNumParams();
+    if (num > 0 && parameters()[0] && parameters()[0]->IsThisParam) {
+      num--;
+    }
+    return num;
+  }
+
   if (!getASTContext().getLangOpts().CPlusPlus)
     return getNumParams();
 
@@ -4649,12 +4660,14 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
-                               IdentifierInfo *Id, RecordDecl* PrevDecl) {
+                               IdentifierInfo *Id, RecordDecl *PrevDecl,
+                               bool DelayTypeCreation) {
   RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
                                          StartLoc, IdLoc, Id, PrevDecl);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
 
-  C.getTypeDeclType(R, PrevDecl);
+  if (!DelayTypeCreation)
+    C.getTypeDeclType(R, PrevDecl);
   return R;
 }
 
@@ -4664,6 +4677,102 @@ RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C, unsigned ID) {
                              SourceLocation(), nullptr, nullptr);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
   return R;
+}
+
+RecordDecl *RecordDecl::getInstantiatedFromMemberClass() const {
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo())
+    return cast<RecordDecl>(MSInfo->getInstantiatedFrom());
+
+  return nullptr;
+}
+
+MemberSpecializationInfo *RecordDecl::getMemberSpecializationInfo() const {
+  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
+}
+
+ClassTemplateDecl *RecordDecl::getDescribedClassTemplate() const {
+  return TemplateOrInstantiation.dyn_cast<ClassTemplateDecl *>();
+}
+
+void RecordDecl::setDescribedClassTemplate(ClassTemplateDecl *Template) {
+  TemplateOrInstantiation = Template;
+}
+
+TemplateSpecializationKind RecordDecl::getTemplateSpecializationKind() const {
+  if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(this))
+    return Spec->getSpecializationKind();
+
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo())
+    return MSInfo->getTemplateSpecializationKind();
+
+  return TSK_Undeclared;
+}
+
+void RecordDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK) {
+  if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
+    Spec->setSpecializationKind(TSK);
+    return;
+  }
+
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
+    MSInfo->setTemplateSpecializationKind(TSK);
+    return;
+  }
+
+  llvm_unreachable("Not a class template or member class specialization");
+}
+
+const RecordDecl *RecordDecl::getTemplateInstantiationPattern() const {
+  auto GetDefinitionOrSelf = [](const RecordDecl *D) -> const RecordDecl * {
+    if (auto *Def = D->getDefinition())
+      return Def;
+    return D;
+  };
+
+  // If it's a class template specialization, find the template or partial
+  // specialization from which it was instantiated.
+  if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
+    auto From = TD->getInstantiatedFrom();
+    if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
+      while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
+        if (NewCTD->isMemberSpecialization())
+          break;
+        CTD = NewCTD;
+      }
+      return GetDefinitionOrSelf(CTD->getTemplatedDecl());
+    }
+    if (auto *CTPSD =
+            From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+      while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
+        if (NewCTPSD->isMemberSpecialization())
+          break;
+        CTPSD = NewCTPSD;
+      }
+      return GetDefinitionOrSelf(CTPSD);
+    }
+  }
+
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo()) {
+    if (isTemplateInstantiation(MSInfo->getTemplateSpecializationKind())) {
+      const RecordDecl *RD = this;
+      while (auto *NewRD = RD->getInstantiatedFromMemberClass())
+        RD = NewRD;
+      return GetDefinitionOrSelf(RD);
+    }
+  }
+
+  assert(!isTemplateInstantiation(this->getTemplateSpecializationKind()) &&
+         "couldn't find pattern for class template instantiation");
+  return nullptr;
+}
+
+void RecordDecl::setInstantiationOfMemberClass(RecordDecl *RD,
+                                               TemplateSpecializationKind TSK) {
+  assert(TemplateOrInstantiation.isNull() &&
+         "Previous template or instantiation?");
+  assert(!isa<ClassTemplatePartialSpecializationDecl>(this));
+  TemplateOrInstantiation =
+      new (getASTContext()) MemberSpecializationInfo(RD, TSK);
 }
 
 bool RecordDecl::isInjectedClassName() const {

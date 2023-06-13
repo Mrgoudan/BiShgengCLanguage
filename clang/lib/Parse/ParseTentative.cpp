@@ -1106,6 +1106,67 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
   return llvm::is_contained(TentativelyDeclaredIdentifiers, II);
 }
 
+// FIXME: Refactor!
+// Check template declaration syntax in BSC:
+//   function template declaration: "T Foo<T>(T a) {..}"
+//   struct template declaration: "struct S<T> {..};"
+//   struct template's method: "void struct S<T>::Foo();"
+//   struct template's method: "void struct S<T>::Foo(){..};"
+// The method of checking template declaration is:
+//   1. find template parameter list syntax structure "identifier <T, ..>"
+//   2. find declaration syntax(different from spcialization syntax)
+//     "<T, ..> ()" in template function or "<T, ..> {}" in template structure
+bool Parser::isBSCTemplateDecl(Token tok) {
+  // 1. check language
+  if (!getLangOpts().BSC)
+    return false;
+
+  // 2. check "identifier<T, ..>" structure
+  int LessOffset = 0;
+  bool FoundLess = false;
+  bool FoundGreater = false;
+  bool FoundIdentifier = false;
+  Token prevTok = tok;
+  Token TmpTok = PP.LookAhead(LessOffset);
+  for (LessOffset = 1; !PP.LookAhead(LessOffset).is(tok::eof); LessOffset++) {
+    if (TmpTok.is(tok::l_paren) || TmpTok.is(tok::l_brace) ||
+        TmpTok.is(tok::equal)) {
+      return false;
+    }
+    // "<>" must appear neighboring with identtifier
+    if (TmpTok.is(tok::less) && prevTok.is(tok::identifier)) {
+      FoundLess = true;
+      break; // do not check if ">" missing, leave diagnose in outer API
+    }
+    prevTok = TmpTok;
+    TmpTok = PP.LookAhead(LessOffset);
+  }
+  if (!FoundLess)
+    return false;
+
+  // 3. check "<T, ..> {}", "<T, ..>()" or "<T, ..> ::" structure in struct
+  // declaration
+  int LBraceOffset = 0;
+  TmpTok = PP.LookAhead(LessOffset + LBraceOffset);
+  for (; !TmpTok.is(tok::eof); LBraceOffset++) { // check "Foo<>" structure
+    TmpTok = PP.LookAhead(LessOffset + LBraceOffset);
+    if (TmpTok.is(tok::greater)) {
+      Token PostTok = PP.LookAhead(LessOffset + LBraceOffset + 1);
+      if (PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon) &&
+          FoundIdentifier)
+        return true;
+    }
+    if (TmpTok.is(tok::identifier) &&
+        !FoundGreater) // check if there is an identifier in "<>""
+      FoundIdentifier = true;
+    if (TmpTok.is(tok::semi) ||
+        TmpTok.is(tok::equal)) // no "{" in current sentence
+      return false;
+  }
+
+  return false;
+}
+
 namespace {
 class TentativeParseCCC final : public CorrectionCandidateCallback {
 public:

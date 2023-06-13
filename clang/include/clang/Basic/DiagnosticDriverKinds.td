@@ -625,6 +625,10 @@ def err_drv_invalid_object_mode : Error<
 
 def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
 
+def warn_target_unsupported_non_bsc_file : Warning<
+  "ignoring '-rewrite-bsc' option because rewriting input type '%0' is not supported">,
+  InGroup<OptionIgnored>;
+
 def err_invalid_cxx_abi : Error<"invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;
 

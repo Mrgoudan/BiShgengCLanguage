@@ -1,0 +1,10 @@
+// test .hbs header file 
+// RUN: %clang %S/queue.hbs
+
+// test linkage
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+
+#include "queue.hbs"
+
+// CHECK: define dso_local void @_ZN_ZTS5queueisEmpty(%struct.queue* %this) #0
+void struct queue::isEmpty(struct queue* this) {}

@@ -54,6 +54,7 @@ namespace clang {
 class ASTContext;
 struct ASTTemplateArgumentListInfo;
 class CompoundStmt;
+class ClassTemplateDecl;
 class DependentFunctionTemplateSpecializationInfo;
 class EnumDecl;
 class Expr;
@@ -1705,6 +1706,8 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
+  bool IsThisParam = false;
+
   void setObjCMethodScopeInfo(unsigned parameterIndex) {
     ParmVarDeclBits.IsObjCMethodParam = true;
     setParameterIndex(parameterIndex);
@@ -2548,8 +2551,9 @@ public:
 
   /// Returns the minimum number of arguments needed to call this function. This
   /// may be fewer than the number of function parameters, if some of the
-  /// parameters have default arguments (in C++).
-  unsigned getMinRequiredArguments() const;
+  /// parameters have default arguments (in C++) or contain "this" parameter (in
+  /// BSC).
+  unsigned getMinRequiredArguments(bool HasBSCScopeSpec = false) const;
 
   /// Determine whether this function has a single parameter, or multiple
   /// parameters where all but the first have default arguments.
@@ -3944,6 +3948,18 @@ public:
     APK_CanNeverPassInRegs
   };
 
+  /// The template or declaration that this declaration
+  /// describes or was instantiated from, respectively.
+  ///
+  /// For non-templates, this value will be null. For record
+  /// declarations that describe a class template, this will be a
+  /// pointer to a ClassTemplateDecl. For member
+  /// classes of class template specializations, this will be the
+  /// MemberSpecializationInfo referring to the member class that was
+  /// instantiated or specialized.
+  llvm::PointerUnion<ClassTemplateDecl *, MemberSpecializationInfo *>
+      TemplateOrInstantiation;
+
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
              SourceLocation StartLoc, SourceLocation IdLoc,
@@ -3952,7 +3968,8 @@ protected:
 public:
   static RecordDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                             SourceLocation StartLoc, SourceLocation IdLoc,
-                            IdentifierInfo *Id, RecordDecl* PrevDecl = nullptr);
+                            IdentifierInfo *Id, RecordDecl *PrevDecl = nullptr,
+                            bool DelayTypeCreation = false);
   static RecordDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
   RecordDecl *getPreviousDecl() {
@@ -4061,6 +4078,70 @@ public:
 
   void setHasNonTrivialToPrimitiveCopyCUnion(bool V) {
     RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion = V;
+  }
+
+  /// The declaration for X<int>::A is a (non-templated) CXXRecordDecl
+  /// whose parent is the class template specialization X<int>. For
+  /// this declaration, getInstantiatedFromMemberClass() will return
+  /// the CXXRecordDecl X<T>::A. When a complete definition of
+  /// X<int>::A is required, it will be instantiated from the
+  /// declaration returned by getInstantiatedFromMemberClass().
+  RecordDecl *getInstantiatedFromMemberClass() const;
+
+  /// If this class is an instantiation of a member class of a
+  /// class template specialization, retrieves the member specialization
+  /// information.
+  MemberSpecializationInfo *getMemberSpecializationInfo() const;
+
+  /// Specify that this record is an instantiation of the
+  /// member class \p RD.
+  void setInstantiationOfMemberClass(RecordDecl *RD,
+                                     TemplateSpecializationKind TSK);
+
+  /// Retrieves the class template that is described by this
+  /// class declaration.
+  ///
+  /// Every class template is represented as a ClassTemplateDecl and a
+  /// CXXRecordDecl. The former contains template properties (such as
+  /// the template parameter lists) while the latter contains the
+  /// actual description of the template's
+  /// contents. ClassTemplateDecl::getTemplatedDecl() retrieves the
+  /// CXXRecordDecl that from a ClassTemplateDecl, while
+  /// getDescribedClassTemplate() retrieves the ClassTemplateDecl from
+  /// a CXXRecordDecl.
+  ClassTemplateDecl *getDescribedClassTemplate() const;
+
+  void setDescribedClassTemplate(ClassTemplateDecl *Template);
+
+  /// Determine whether this particular class is a specialization or
+  /// instantiation of a class template or member class of a class template,
+  /// and how it was instantiated or specialized.
+  TemplateSpecializationKind getTemplateSpecializationKind() const;
+
+  /// Set the kind of specialization or template instantiation this is.
+  void setTemplateSpecializationKind(TemplateSpecializationKind TSK);
+
+  /// Retrieve the record declaration from which this record could be
+  /// instantiated. Returns null if this class is not a template instantiation.
+  const RecordDecl *getTemplateInstantiationPattern() const;
+
+  RecordDecl *getTemplateInstantiationPattern() {
+    return const_cast<RecordDecl *>(const_cast<const RecordDecl *>(this)
+                                        ->getTemplateInstantiationPattern());
+  }
+
+  /// If the class is a local class [class.local], returns
+  /// the enclosing function declaration.
+  const FunctionDecl *isLocalClass() const {
+    if (const auto *RD = dyn_cast<RecordDecl>(getDeclContext()))
+      return RD->isLocalClass();
+
+    return dyn_cast<FunctionDecl>(getDeclContext());
+  }
+
+  FunctionDecl *isLocalClass() {
+    return const_cast<FunctionDecl *>(
+        const_cast<const RecordDecl *>(this)->isLocalClass());
   }
 
   /// Determine whether this class can be passed in registers. In C++ mode,

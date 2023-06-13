@@ -1081,6 +1081,7 @@ void PrintPreambleAction::ExecuteAction() {
   case Language::OpenCLCXX:
   case Language::CUDA:
   case Language::HIP:
+  case Language::BSC:
   case Language::HLSL:
     break;
 

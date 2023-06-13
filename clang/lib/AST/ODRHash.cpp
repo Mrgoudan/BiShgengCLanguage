@@ -341,6 +341,12 @@ public:
     Inherited::VisitFunctionDecl(D);
   }
 
+  void VisitBSCMethodDecl(const BSCMethodDecl *D) {
+    // Handled by the ODRHash for FunctionDecl
+
+    Inherited::VisitBSCMethodDecl(D);
+  }
+
   void VisitCXXMethodDecl(const CXXMethodDecl *D) {
     // Handled by the ODRHash for FunctionDecl
 

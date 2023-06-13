@@ -1,0 +1,20 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+struct f {
+    int len;
+};
+
+int f(struct f* m) {
+    if (m->len <sizeof(unsigned int)) {
+        // pass
+    }
+    return 0;
+}
+
+int main() {
+  return 0;
+}

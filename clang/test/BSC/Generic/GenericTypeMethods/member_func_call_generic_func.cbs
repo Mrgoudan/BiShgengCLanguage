@@ -1,0 +1,20 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct MyStruct<T> {
+  T res;
+};
+
+int foo<T1, T2>(T1 a, T2 b) {
+  return 42;
+}
+
+int struct MyStruct<T>::foo() {
+  return foo<int, int>(1, 2);
+}
+
+int main() {
+  int res = struct MyStruct<int>::foo();
+  return res - 42;  
+}

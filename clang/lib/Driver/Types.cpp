@@ -104,13 +104,28 @@ bool types::onlyPrecompileType(ID Id) {
 
 bool types::canTypeBeUserSpecified(ID Id) {
   static const clang::driver::types::ID kStaticLangageTypes[] = {
-      TY_CUDA_DEVICE,   TY_HIP_DEVICE,    TY_PP_CHeader,
-      TY_PP_ObjCHeader, TY_PP_CXXHeader,  TY_PP_ObjCXXHeader,
-      TY_PP_CXXModule,  TY_LTO_IR,        TY_LTO_BC,
-      TY_Plist,         TY_RewrittenObjC, TY_RewrittenLegacyObjC,
-      TY_Remap,         TY_PCH,           TY_Object,
-      TY_Image,         TY_dSYM,          TY_Dependencies,
-      TY_CUDA_FATBIN,   TY_HIP_FATBIN};
+      TY_CUDA_DEVICE,
+      TY_HIP_DEVICE,
+      TY_PP_CHeader,
+      TY_PP_BSCHeader,
+      TY_PP_ObjCHeader,
+      TY_PP_CXXHeader,
+      TY_PP_ObjCXXHeader,
+      TY_PP_CXXModule,
+      TY_LTO_IR,
+      TY_LTO_BC,
+      TY_Plist,
+      TY_RewrittenObjC,
+      TY_RewrittenLegacyObjC,
+      TY_RewrittenBSC,
+      TY_Remap,
+      TY_PCH,
+      TY_Object,
+      TY_Image,
+      TY_dSYM,
+      TY_Dependencies,
+      TY_CUDA_FATBIN,
+      TY_HIP_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
@@ -136,6 +151,9 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CL: case TY_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
+  // 1
+  case TY_BSC:
+  case TY_PP_BSC:
   case TY_HIP:
   case TY_PP_HIP:
   case TY_HIP_DEVICE:
@@ -144,6 +162,9 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_ObjCXX: case TY_PP_ObjCXX: case TY_PP_ObjCXX_Alias:
   case TY_CHeader: case TY_PP_CHeader:
   case TY_CLHeader:
+  // 2
+  case TY_BSCHeader:
+  case TY_PP_BSCHeader:
   case TY_ObjCHeader: case TY_PP_ObjCHeader:
   case TY_CXXHeader: case TY_PP_CXXHeader:
   case TY_CXXSHeader:
@@ -317,6 +338,8 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("mi", TY_PP_ObjC)
            .Case("mm", TY_ObjCXX)
            .Case("rs", TY_RenderScript)
+           .Case("cbs", TY_BSC)
+           .Case("hbs", TY_BSCHeader)
            .Case("adb", TY_Ada)
            .Case("ads", TY_Ada)
            .Case("asm", TY_PP_Asm)
@@ -414,6 +437,8 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
   case types::TY_CXX:
   case types::TY_CXXModule:
     return types::TY_CXXHeader;
+  case types::TY_BSC:
+    return types::TY_BSCHeader;
   case types::TY_ObjC:
     return types::TY_ObjCHeader;
   case types::TY_ObjCXX:

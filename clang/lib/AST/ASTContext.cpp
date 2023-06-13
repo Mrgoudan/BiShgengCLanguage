@@ -891,7 +891,7 @@ TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
 }
 
 CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
-  if (!LangOpts.CPlusPlus) return nullptr;
+  if (!(LangOpts.CPlusPlus || LangOpts.BSC)) return nullptr;
 
   switch (getCXXABIKind()) {
   case TargetCXXABI::AppleARM64:
@@ -4563,9 +4563,7 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 }
 
 #ifndef NDEBUG
-static bool NeedsInjectedClassNameType(const RecordDecl *D) {
-  if (!isa<CXXRecordDecl>(D)) return false;
-  const auto *RD = cast<CXXRecordDecl>(D);
+static bool NeedsInjectedClassNameType(const RecordDecl *RD) {
   if (isa<ClassTemplatePartialSpecializationDecl>(RD))
     return true;
   if (RD->getDescribedClassTemplate() &&
@@ -4577,12 +4575,12 @@ static bool NeedsInjectedClassNameType(const RecordDecl *D) {
 
 /// getInjectedClassNameType - Return the unique reference to the
 /// injected class name type for the specified templated declaration.
-QualType ASTContext::getInjectedClassNameType(CXXRecordDecl *Decl,
+QualType ASTContext::getInjectedClassNameType(RecordDecl *Decl,
                                               QualType TST) const {
   assert(NeedsInjectedClassNameType(Decl));
   if (Decl->TypeForDecl) {
     assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
-  } else if (CXXRecordDecl *PrevDecl = Decl->getPreviousDecl()) {
+  } else if (RecordDecl *PrevDecl = Decl->getPreviousDecl()) {
     assert(PrevDecl->TypeForDecl && "previous declaration has no type");
     Decl->TypeForDecl = PrevDecl->TypeForDecl;
     assert(isa<InjectedClassNameType>(Decl->TypeForDecl));

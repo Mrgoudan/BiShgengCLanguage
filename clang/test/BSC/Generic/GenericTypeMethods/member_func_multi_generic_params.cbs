@@ -1,0 +1,27 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct MyStruct<T1, T2, T3> {
+  T1 res;
+};
+
+union MyUnion<T1, T2, T3> {
+  T1 res;
+};
+
+struct MyStruct<T1, T2, T3> struct MyStruct<T1, T2, T3>::foo(struct MyStruct<T1, T2, T3> *this) {
+  return *this;
+}
+
+union MyUnion<T1, T2, T3> union MyUnion<T1, T2, T3>::foo(union MyUnion<T1, T2, T3> *this) {
+  return *this;
+}
+
+int main() {
+  struct MyStruct<int, int, float> s = {.res = 1};
+  union MyUnion<float, int, char> u = {.res = 5.0};
+  s.foo();
+  u.foo();
+  return 0;  
+}

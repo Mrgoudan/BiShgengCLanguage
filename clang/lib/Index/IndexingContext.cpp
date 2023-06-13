@@ -196,7 +196,7 @@ bool IndexingContext::shouldIgnoreIfImplicit(const Decl *D) {
   return true;
 }
 
-static const CXXRecordDecl *
+static const RecordDecl *
 getDeclContextForTemplateInstationPattern(const Decl *D) {
   if (const auto *CTSD =
           dyn_cast<ClassTemplateSpecializationDecl>(D->getDeclContext()))
@@ -225,7 +225,7 @@ static const Decl *adjustTemplateImplicitInstantiation(const Decl *D) {
     return ED->getInstantiatedFromMemberEnum();
   } else if (isa<FieldDecl>(D) || isa<TypedefNameDecl>(D)) {
     const auto *ND = cast<NamedDecl>(D);
-    if (const CXXRecordDecl *Pattern =
+    if (const RecordDecl *Pattern =
             getDeclContextForTemplateInstationPattern(ND)) {
       for (const NamedDecl *BaseND : Pattern->lookup(ND->getDeclName())) {
         if (BaseND->isImplicit())

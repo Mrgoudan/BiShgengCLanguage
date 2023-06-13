@@ -311,6 +311,7 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
 
   // Each function, method, and block declaration is its own DeclContext.
   case Decl::Function:
+  case Decl::BSCMethod:
   case Decl::CXXMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
@@ -381,6 +382,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
     return true;
 
   // Never redeclarable.
+  case Decl::BSCMethod:
   case Decl::UsingDirective:
   case Decl::Label:
   case Decl::UnresolvedUsingTypename:

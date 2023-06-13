@@ -354,6 +354,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_bsc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
@@ -3900,6 +3901,20 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
+  Arg *RewriteBSCArg = Args.getLastArg(options::OPT_rewrite_bsc);
+  if (RewriteBSCArg) {
+    for (auto &I : Inputs) {
+      types::ID InputType = I.first;
+      if (InputType != types::TY_BSC) {
+        Diag(clang::diag::warn_target_unsupported_non_bsc_file)
+            << types::getTypeName(InputType);
+        Args.eraseArg(options::OPT_rewrite_bsc);
+        RewriteBSCArg = nullptr;
+        break;
+      }
+    }
+  }
+
   Arg *FinalPhaseArg;
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
 
@@ -4615,6 +4630,9 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_rewrite_legacy_objc))
       return C.MakeAction<CompileJobAction>(Input,
                                             types::TY_RewrittenLegacyObjC);
+    if (Args.hasArg(options::OPT_rewrite_bsc)) {
+      return C.MakeAction<CompileJobAction>(Input, types::TY_RewrittenBSC);
+    }
     if (Args.hasArg(options::OPT__analyze))
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT__migrate))
@@ -4924,7 +4942,8 @@ class ToolSelector final {
   bool canCollapsePreprocessorAction() const {
     return !C.getArgs().hasArg(options::OPT_no_integrated_cpp) &&
            !C.getArgs().hasArg(options::OPT_traditional_cpp) && !SaveTemps &&
-           !C.getArgs().hasArg(options::OPT_rewrite_objc);
+           !C.getArgs().hasArg(options::OPT_rewrite_objc) &&
+           !C.getArgs().hasArg(options::OPT_rewrite_bsc);
   }
 
   /// Struct that relates an action with the offload actions that would be

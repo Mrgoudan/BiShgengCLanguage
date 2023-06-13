@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
@@ -2666,18 +2667,19 @@ namespace clang {
 /// to the lack of a definition.
 ///
 /// \returns true if an error occurred, false otherwise.
-bool
-Sema::InstantiateClass(SourceLocation PointOfInstantiation,
-                       CXXRecordDecl *Instantiation, CXXRecordDecl *Pattern,
-                       const MultiLevelTemplateArgumentList &TemplateArgs,
-                       TemplateSpecializationKind TSK,
-                       bool Complain) {
-  CXXRecordDecl *PatternDef
-    = cast_or_null<CXXRecordDecl>(Pattern->getDefinition());
-  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Instantiation,
-                                Instantiation->getInstantiatedFromMemberClass(),
-                                     Pattern, PatternDef, TSK, Complain))
-    return true;
+bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
+                            RecordDecl *Instantiation, RecordDecl *Pattern,
+                            const MultiLevelTemplateArgumentList &TemplateArgs,
+                            TemplateSpecializationKind TSK, bool Complain) {
+  RecordDecl *PatternDef = cast_or_null<RecordDecl>(Pattern->getDefinition());
+  if (getLangOpts().CPlusPlus) {
+    if (DiagnoseUninstantiableTemplate(
+            PointOfInstantiation, Instantiation,
+            (static_cast<CXXRecordDecl *>(Instantiation))
+                ->getInstantiatedFromMemberClass(),
+            Pattern, PatternDef, TSK, Complain))
+      return true;
+  }
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
     std::string Name;
@@ -2690,12 +2692,19 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   Pattern = PatternDef;
 
   // Record the point of instantiation.
-  if (MemberSpecializationInfo *MSInfo
-        = Instantiation->getMemberSpecializationInfo()) {
-    MSInfo->setTemplateSpecializationKind(TSK);
-    MSInfo->setPointOfInstantiation(PointOfInstantiation);
-  } else if (ClassTemplateSpecializationDecl *Spec
-        = dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
+  if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
+    if (MemberSpecializationInfo *MSInfo =
+            (static_cast<RecordDecl *>(Instantiation))
+                ->getMemberSpecializationInfo()) {
+      MSInfo->setTemplateSpecializationKind(TSK);
+      MSInfo->setPointOfInstantiation(PointOfInstantiation);
+    } else if (ClassTemplateSpecializationDecl *Spec =
+                   dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
+      Spec->setTemplateSpecializationKind(TSK);
+      Spec->setPointOfInstantiation(PointOfInstantiation);
+    }
+  } else if (ClassTemplateSpecializationDecl *Spec =
+                 dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
     Spec->setTemplateSpecializationKind(TSK);
     Spec->setPointOfInstantiation(PointOfInstantiation);
   }
@@ -2739,14 +2748,37 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   Instantiation->setTagKind(Pattern->getTagKind());
 
   // Do substitution on the base class specifiers.
-  if (SubstBaseSpecifiers(Instantiation, Pattern, TemplateArgs))
-    Instantiation->setInvalidDecl();
+  if(getLangOpts().CPlusPlus) {
+    if (SubstBaseSpecifiers(static_cast<CXXRecordDecl *>(Instantiation),
+                            static_cast<CXXRecordDecl *>(Pattern),
+                            TemplateArgs))
+      Instantiation->setInvalidDecl();
+  }
 
   TemplateDeclInstantiator Instantiator(*this, Instantiation, TemplateArgs);
   SmallVector<Decl*, 4> Fields;
   // Delay instantiation of late parsed attributes.
   LateInstantiatedAttrVec LateAttrs;
   Instantiator.enableLateAttributeInstantiation(&LateAttrs);
+
+  if (getLangOpts().BSC) {
+    StoredDeclsMap *Map = Instantiation->getLookupPtr();
+    for (auto *Member : getASTContext().getTranslationUnitDecl()->decls()) {
+      if (BSCMethodDecl *Method = dyn_cast<BSCMethodDecl>(Member)) {
+        if (Method->getDeclContext() == cast<DeclContext>(Pattern) &&
+            (Map == nullptr || !Map->count(Method->getDeclName()))) {
+          Instantiator.Visit(Method);
+          getASTContext().BSCDeclContextMap[Instantiation->getTypeForDecl()] =
+              Instantiation;
+        }
+      }
+    }
+
+    if (Map) {
+      Instantiation->setCompleteDefinition(true);
+      return Instantiation->isInvalidDecl();
+    }
+  }
 
   bool MightHaveConstexprVirtualFunctions = false;
   for (auto *Member : Pattern->decls()) {
@@ -2799,8 +2831,10 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
           break;
         }
       } else if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewMember)) {
-        if (MD->isConstexpr() && !MD->getFriendObjectKind() &&
-            (MD->isVirtualAsWritten() || Instantiation->getNumBases()))
+        if (getLangOpts().CPlusPlus && MD->isConstexpr() &&
+            !MD->getFriendObjectKind() &&
+            (MD->isVirtualAsWritten() ||
+             (static_cast<CXXRecordDecl *>(Instantiation))->getNumBases()))
           MightHaveConstexprVirtualFunctions = true;
       }
 
@@ -2817,7 +2851,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   // Finish checking fields.
   ActOnFields(nullptr, Instantiation->getLocation(), Instantiation, Fields,
               SourceLocation(), SourceLocation(), ParsedAttributesView());
-  CheckCompletedCXXClass(nullptr, Instantiation);
+  if (getLangOpts().CPlusPlus) {
+    CheckCompletedCXXClass(
+        nullptr, (static_cast<CXXRecordDecl *>(
+                     Instantiation))); // FIXME: make it work for BSC RecordDecl
+  }
 
   // Default arguments are parsed, if not instantiated. We can go instantiate
   // default arg exprs for default constructors if necessary now. Unless we're
@@ -2860,7 +2898,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
   if (!Instantiation->isInvalidDecl()) {
     // Perform any dependent diagnostics from the pattern.
-    if (Pattern->isDependentContext())
+    if (getLangOpts().CPlusPlus && Pattern->isDependentContext())
       PerformDependentDiagnostics(Pattern, TemplateArgs);
 
     // Instantiate any out-of-line class template partial
@@ -2898,11 +2936,15 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     // of a polymorphic class template specialization. Otherwise, eagerly
     // instantiate only constexpr virtual functions in preparation for their use
     // in constant evaluation.
-    if (TSK == TSK_ExplicitInstantiationDefinition)
-      MarkVTableUsed(PointOfInstantiation, Instantiation, true);
-    else if (MightHaveConstexprVirtualFunctions)
-      MarkVirtualMembersReferenced(PointOfInstantiation, Instantiation,
-                                   /*ConstexprOnly*/ true);
+    if (getLangOpts().CPlusPlus) {
+      if (TSK == TSK_ExplicitInstantiationDefinition)
+        MarkVTableUsed(PointOfInstantiation,
+                       (static_cast<CXXRecordDecl *>(Instantiation)), true);
+      else if (MightHaveConstexprVirtualFunctions)
+        MarkVirtualMembersReferenced(
+            PointOfInstantiation, static_cast<CXXRecordDecl *>(Instantiation),
+            /*ConstexprOnly*/ true);
+    }
   }
 
   Consumer.HandleTagDeclDefinition(Instantiation);
@@ -3085,8 +3127,7 @@ bool Sema::usesPartialOrExplicitSpecialization(
 /// Get the instantiation pattern to use to instantiate the definition of a
 /// given ClassTemplateSpecializationDecl (either the pattern of the primary
 /// template or of a partial specialization).
-static ActionResult<CXXRecordDecl *>
-getPatternForClassTemplateSpecialization(
+static ActionResult<RecordDecl *> getPatternForClassTemplateSpecialization(
     Sema &S, SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
     TemplateSpecializationKind TSK) {
@@ -3202,7 +3243,7 @@ getPatternForClassTemplateSpecialization(
     }
   }
 
-  CXXRecordDecl *Pattern = nullptr;
+  RecordDecl *Pattern = nullptr;
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *PartialSpec =
           Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
@@ -3226,7 +3267,11 @@ getPatternForClassTemplateSpecialization(
 
       Template = Template->getInstantiatedFromMemberTemplate();
     }
-    Pattern = Template->getTemplatedDecl();
+    if (S.Context.getLangOpts().BSC) {
+      Pattern = Template->getBSCTemplatedDecl();
+    } else {
+      Pattern = Template->getTemplatedDecl();
+    }
   }
 
   return Pattern;
@@ -3242,9 +3287,8 @@ bool Sema::InstantiateClassTemplateSpecialization(
   if (ClassTemplateSpec->isInvalidDecl())
     return true;
 
-  ActionResult<CXXRecordDecl *> Pattern =
-      getPatternForClassTemplateSpecialization(*this, PointOfInstantiation,
-                                               ClassTemplateSpec, TSK);
+  ActionResult<RecordDecl *> Pattern = getPatternForClassTemplateSpecialization(
+      *this, PointOfInstantiation, ClassTemplateSpec, TSK);
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
@@ -3256,11 +3300,10 @@ bool Sema::InstantiateClassTemplateSpecialization(
 /// Instantiates the definitions of all of the member
 /// of the given class, which is an instantiation of a class template
 /// or a member class of a template.
-void
-Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
-                              CXXRecordDecl *Instantiation,
-                        const MultiLevelTemplateArgumentList &TemplateArgs,
-                              TemplateSpecializationKind TSK) {
+void Sema::InstantiateClassMembers(
+    SourceLocation PointOfInstantiation, RecordDecl *Instantiation,
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    TemplateSpecializationKind TSK) {
   // FIXME: We need to notify the ASTMutationListener that we did all of these
   // things, in case we have an explicit instantiation definition in a PCM, a
   // module, or preamble, and the declaration is in an imported AST.
@@ -3403,7 +3446,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
           SuppressNew)
         continue;
 
-      CXXRecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
+      RecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
       assert(Pattern && "Missing instantiated-from-template information");
 
       if (!Record->getDefinition()) {
@@ -3472,7 +3515,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       // No need to instantiate in-class initializers during explicit
       // instantiation.
       if (Field->hasInClassInitializer() && TSK == TSK_ImplicitInstantiation) {
-        CXXRecordDecl *ClassPattern =
+        RecordDecl *ClassPattern =
             Instantiation->getTemplateInstantiationPattern();
         DeclContext::lookup_result Lookup =
             ClassPattern->lookup(Field->getDeclName());

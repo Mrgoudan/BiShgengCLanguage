@@ -635,6 +635,43 @@ private:
   const RecordDecl *const Record;
 };
 
+// Callback to only accept typo corrections that are either a ValueDecl or a
+// and are declared in the current enum or, for a C++ classes, one of its
+// base classes.
+class EnumMemberExprValidatorCCC final : public CorrectionCandidateCallback {
+public:
+  explicit EnumMemberExprValidatorCCC(const EnumType *ETy)
+      : Enum(ETy->getDecl()) {
+    // Don't add bare keywords to the consumer since they will always fail
+    // validation by virtue of not being associated with any decls.
+    WantTypeSpecifiers = false;
+    WantExpressionKeywords = false;
+    WantCXXNamedCasts = false;
+    WantFunctionLikeCasts = false;
+    WantRemainingKeywords = false;
+  }
+
+  bool ValidateCandidate(const TypoCorrection &candidate) override {
+    NamedDecl *ND = candidate.getCorrectionDecl();
+    // Don't accept candidates that cannot be member functions, constants,
+    // variables.
+    if (!ND || !(isa<ValueDecl>(ND)))
+      return false;
+
+    // Accept candidates that occur in the current enum.
+    if (Enum->containsDecl(ND))
+      return true;
+
+    return false;
+  }
+
+  std::unique_ptr<CorrectionCandidateCallback> clone() override {
+    return std::make_unique<EnumMemberExprValidatorCCC>(*this);
+  }
+
+private:
+  const EnumDecl *const Enum;
+};
 }
 
 static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
@@ -796,6 +833,66 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
                                   OpLoc, IsArrow, SS, TemplateKWLoc,
                                   FirstQualifierInScope, R, TemplateArgs, S,
                                   false, ExtraArgs);
+}
+
+static bool LookupMemberExprInEnum(Sema &SemaRef, LookupResult &R,
+                                   Expr *BaseExpr, const EnumType *ETy,
+                                   SourceLocation OpLoc, bool IsArrow,
+                                   CXXScopeSpec &SS, TypoExpr *&TE) {
+  SourceRange BaseRange = BaseExpr ? BaseExpr->getSourceRange() : SourceRange();
+  EnumDecl *EDecl = ETy->getDecl();
+
+  DeclContext *DC = EDecl;
+
+  // The enum definition is complete, now look up the member.
+  SemaRef.LookupQualifiedName(R, DC, SS);
+
+  if (!R.empty())
+    return false;
+
+  DeclarationName Typo = R.getLookupName();
+  SourceLocation TypoLoc = R.getNameLoc();
+
+  struct QueryState {
+    Sema &SemaRef;
+    DeclarationNameInfo NameInfo;
+    Sema::LookupNameKind LookupKind;
+    Sema::RedeclarationKind Redecl;
+  };
+  QueryState Q = {R.getSema(), R.getLookupNameInfo(), R.getLookupKind(),
+                  R.redeclarationKind()};
+  EnumMemberExprValidatorCCC CCC(ETy);
+  TE = SemaRef.CorrectTypoDelayed(
+      R.getLookupNameInfo(), R.getLookupKind(), nullptr, &SS, CCC,
+      [=, &SemaRef](const TypoCorrection &TC) {
+        if (TC) {
+          assert(!TC.isKeyword() &&
+                 "Got a keyword as a correction for a member!");
+          bool DroppedSpecifier =
+              TC.WillReplaceSpecifier() &&
+              Typo.getAsString() == TC.getAsString(SemaRef.getLangOpts());
+          SemaRef.diagnoseTypo(TC, SemaRef.PDiag(diag::err_no_member_suggest)
+                                       << Typo << DC << DroppedSpecifier
+                                       << SS.getRange());
+        } else {
+          SemaRef.Diag(TypoLoc, diag::err_no_member) << Typo << DC << BaseRange;
+        }
+      },
+      [=](Sema &SemaRef, TypoExpr *TE, TypoCorrection TC) mutable {
+        LookupResult R(Q.SemaRef, Q.NameInfo, Q.LookupKind, Q.Redecl);
+        R.clear(); // Ensure there's no decls lingering in the shared state.
+        R.suppressDiagnostics();
+        R.setLookupName(TC.getCorrection());
+        for (NamedDecl *ND : TC)
+          R.addDecl(ND);
+        R.resolveKind();
+        return SemaRef.BuildMemberReferenceExpr(
+            BaseExpr, BaseExpr->getType(), OpLoc, IsArrow, SS, SourceLocation(),
+            nullptr, R, nullptr, nullptr);
+      },
+      Sema::CTK_ErrorRecovery, DC);
+
+  return false;
 }
 
 ExprResult
@@ -993,9 +1090,19 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   if (R.empty()) {
     // Rederive where we looked up.
-    DeclContext *DC = (SS.isSet()
-                       ? computeDeclContext(SS, false)
+    DeclContext *DC = nullptr;
+    std::string BuiltinName = "";
+    if (const BuiltinType *BTy = BaseType->getAs<BuiltinType>()) {
+      BuiltinName = BTy->getNameAsCString(getPrintingPolicy());
+    } else if (const EnumType *ETy = BaseType->getAs<EnumType>()) {
+      if (getASTContext().BSCDeclContextMap.find(ETy) !=
+          getASTContext().BSCDeclContextMap.end()) {
+        DC = getASTContext().BSCDeclContextMap[ETy];
+      }
+    } else {
+      DC = (SS.isSet() ? computeDeclContext(SS, false)
                        : BaseType->castAs<RecordType>()->getDecl());
+    }
 
     if (ExtraArgs) {
       ExprResult RetryExpr;
@@ -1016,15 +1123,27 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
           RetryExpr = ExprError();
       }
       if (RetryExpr.isUsable()) {
-        Diag(OpLoc, diag::err_no_member_overloaded_arrow)
-          << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
-        return RetryExpr;
+        if (DC) {
+          Diag(OpLoc, diag::err_no_member_overloaded_arrow)
+              << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
+          return RetryExpr;
+        } else {
+          Diag(OpLoc, diag::err_no_member_overloaded_arrow)
+              << MemberName << "type '" + BuiltinName + "'"
+              << FixItHint::CreateReplacement(OpLoc, "->");
+          return RetryExpr;
+        }
       }
     }
-
-    Diag(R.getNameLoc(), diag::err_no_member)
-      << MemberName << DC
-      << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
+    if (DC) {
+      Diag(R.getNameLoc(), diag::err_no_member)
+          << MemberName << DC
+          << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
+    } else {
+      Diag(R.getNameLoc(), diag::err_no_member)
+          << MemberName << "type '" + BuiltinName + "'"
+          << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
+    }
     return ExprError();
   }
 
@@ -1131,6 +1250,42 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                            MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, type, valueKind, OK_Ordinary);
   }
+
+  if (BSCMethodDecl *MemberFn = dyn_cast<BSCMethodDecl>(MemberDecl)) {
+    ExprValueKind valueKind;
+    QualType type;
+    valueKind = VK_LValue;
+    type = MemberFn->getType();
+    std::string BuiltinName = "";
+    QualType ET = MemberFn->getExtendedType();
+    DeclContext *DC = nullptr;
+    if (!ET.isNull()) {
+      if (const BuiltinType *BTy = ET->getAs<BuiltinType>())
+        BuiltinName = BTy->getNameAsCString(getPrintingPolicy());
+      else
+        DC = getASTContext()
+                 .BSCDeclContextMap[ET.getCanonicalType().getTypePtr()];
+      // If this first parameter is not "this",
+      // it can only be called through '::'.
+      if (!MemberFn->getHasThisParam()) {
+        if (DC) {
+          Diag(OpLoc, diag::err_no_instance_member)
+              << MemberName << DC << int(IsArrow)
+              << FixItHint::CreateReplacement(OpLoc, "::");
+        } else {
+          Diag(OpLoc, diag::err_no_instance_member)
+              << MemberName << "type '" + BuiltinName + "'" << int(IsArrow)
+              << FixItHint::CreateReplacement(OpLoc, "::");
+        }
+        Diag(MemberLoc, diag::note_no_this_parameter) << MemberName;
+      }
+    }
+
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc,
+                           MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
+                           MemberNameInfo, type, valueKind, OK_Ordinary);
+  }
+
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
@@ -1319,6 +1474,53 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     // failed, the lookup result will have been cleared--that combined with the
     // valid-but-null ExprResult will trigger the appropriate diagnostics.
     return ExprResult(TE);
+  }
+
+  if (S.getLangOpts().BSC) {
+    if (const BuiltinType *BTy = BaseType->getAs<BuiltinType>()) {
+      TypoExpr *TE = nullptr;
+      if (S.getASTContext().BSCDeclContextMap.find(BTy) !=
+          S.getASTContext().BSCDeclContextMap.end()) {
+        auto DeclContext = S.getASTContext().BSCDeclContextMap[BTy];
+        // TODO: add assert
+        RecordDecl *Rdecl = dyn_cast<RecordDecl>(DeclContext);
+        const RecordType *RTy = dyn_cast<RecordType>(Rdecl->getTypeForDecl());
+        if (LookupMemberExprInRecord(S, R, BaseExpr.get(), RTy, OpLoc, IsArrow,
+                                     SS, HasTemplateArgs, TemplateKWLoc, TE))
+          return ExprError();
+      }
+      // Returning valid-but-null is how we indicate to the caller that
+      // the lookup result was filled in. If typo correction was attempted and
+      // failed, the lookup result will have been cleared--that combined with
+      // the valid-but-null ExprResult will trigger the appropriate
+      // diagnostics.
+      return ExprResult(TE);
+    }
+
+    if (const EnumType *ETy = BaseType->getAs<EnumType>()) {
+      TypoExpr *TE = nullptr;
+      if (S.getASTContext().BSCDeclContextMap.find(ETy) !=
+          S.getASTContext().BSCDeclContextMap.end()) {
+        // TODO: add assert
+        if (LookupMemberExprInEnum(S, R, BaseExpr.get(), ETy, OpLoc, IsArrow,
+                                   SS, TE))
+          return ExprError();
+
+        if (!R.empty() &&
+            dyn_cast<BSCMethodDecl>(R.getFoundDecl()) == nullptr) {
+          S.Diag(OpLoc, diag::err_typecheck_member_reference_struct_union)
+              << BaseType << BaseExpr.get()->getSourceRange() << MemberLoc;
+
+          return ExprError();
+        }
+      }
+      // Returning valid-but-null is how we indicate to the caller that
+      // the lookup result was filled in. If typo correction was attempted
+      // and failed, the lookup result will have been cleared--that combined
+      // with the valid-but-null ExprResult will trigger the appropriate
+      // diagnostics.
+      return ExprResult(TE);
+    }
   }
 
   // Handle ivar access to Objective-C objects.

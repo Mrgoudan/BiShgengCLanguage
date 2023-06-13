@@ -3641,8 +3641,8 @@ bool AttributedType::isCallingConv() const {
   llvm_unreachable("invalid attr kind");
 }
 
-CXXRecordDecl *InjectedClassNameType::getDecl() const {
-  return cast<CXXRecordDecl>(getInterestingTagDecl(Decl));
+RecordDecl *InjectedClassNameType::getDecl() const {
+  return cast<RecordDecl>(getInterestingTagDecl(Decl));
 }
 
 IdentifierInfo *TemplateTypeParmType::getIdentifier() const {

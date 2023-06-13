@@ -316,7 +316,7 @@ static AccessResult IsDerivedFromInclusive(const CXXRecordDecl *Derived,
         RD = cast<CXXRecordDecl>(RT->getDecl());
       } else if (const InjectedClassNameType *IT
                    = T->getAs<InjectedClassNameType>()) {
-        RD = IT->getDecl();
+        RD = cast<CXXRecordDecl>(IT->getDecl());
       } else {
         assert(T->isDependentType() && "non-dependent base wasn't a record?");
         OnFailure = AR_dependent;
@@ -669,7 +669,7 @@ struct ProtectedFriendContext {
         RD = cast<CXXRecordDecl>(RT->getDecl());
       } else if (const InjectedClassNameType *IT
                    = T->getAs<InjectedClassNameType>()) {
-        RD = IT->getDecl();
+        RD = cast<CXXRecordDecl>(IT->getDecl());
       } else {
         assert(T->isDependentType() && "non-dependent base wasn't a record?");
         EverDependent = true;

@@ -1,0 +1,22 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct MyStruct<T> {
+  T res;
+};
+
+void int::increase(int* this) {
+    *this = *this +1;
+}
+
+int struct MyStruct<T>::foo() {
+  int x = 1;
+  x.increase();
+  return x;
+}
+
+int main() {
+  int res = struct MyStruct<int>::foo();
+  return res - 2;  
+}

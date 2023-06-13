@@ -60,6 +60,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::NonTypeTemplateParm:
   case Decl::CXXDeductionGuide:
   case Decl::CXXMethod:
+  case Decl::BSCMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
   case Decl::CXXConversion:

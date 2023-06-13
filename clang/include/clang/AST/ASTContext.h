@@ -487,6 +487,8 @@ public:
   using TemplateOrSpecializationInfo =
       llvm::PointerUnion<VarTemplateDecl *, MemberSpecializationInfo *>;
 
+  mutable llvm::DenseMap<const Type *, DeclContext *> BSCDeclContextMap;
+
 private:
   friend class ASTDeclReader;
   friend class ASTReader;
@@ -1605,7 +1607,7 @@ public:
   QualType
   getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
 
-  QualType getInjectedClassNameType(CXXRecordDecl *Decl, QualType TST) const;
+  QualType getInjectedClassNameType(RecordDecl *Decl, QualType TST) const;
 
   QualType getAttributedType(attr::Kind attrKind, QualType modifiedType,
                              QualType equivalentType) const;

@@ -1253,13 +1253,14 @@ getImageAccess(const ParsedAttributesView &Attrs) {
 /// to be converted, along with other associated processing state.
 /// \returns The type described by the declaration specifiers.  This function
 /// never returns null.
-static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
+static QualType ConvertDeclSpecToType(TypeProcessingState &state,
+                                      DeclSpec &PDS) {
   // FIXME: Should move the logic from DeclSpec::Finish to here for validity
   // checking.
 
   Sema &S = state.getSema();
   Declarator &declarator = state.getDeclarator();
-  DeclSpec &DS = declarator.getMutableDeclSpec();
+  DeclSpec &DS = PDS;
   SourceLocation DeclLoc = declarator.getIdentifierLoc();
   if (DeclLoc.isInvalid())
     DeclLoc = DS.getBeginLoc();
@@ -1887,6 +1888,51 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
 
   assert(!Result.isNull() && "This function should not return a null type");
   return Result;
+}
+
+QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
+                                         bool AddToContextMap,
+                                         BSCScopeSpec &BSS, DeclSpec &DS) {
+  TypeProcessingState state(*this, D);
+  QualType T = ConvertDeclSpecToType(state, DS);
+  NamedDecl *Def = nullptr;
+  if (!AddToContextMap && T.getTypePtr()->getAs<TemplateSpecializationType>())
+    return T;
+  if (T->isIncompleteType(&Def)) {
+    BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
+    Diagnoser.diagnose(*this, Loc, T);
+  } else {
+    BSS.setExtendedType(T);
+    const Type *BasedType = T.getCanonicalType().getTypePtr();
+    // build declcontext map
+    if (getASTContext().BSCDeclContextMap.find(BasedType) ==
+        getASTContext().BSCDeclContextMap.end()) {
+      if (const RecordType *RTy = dyn_cast<const RecordType>(
+              BasedType)) { // struct type or union type
+        getASTContext().BSCDeclContextMap[BasedType] = RTy->getDecl();
+      } else if (const EnumType *ETy =
+                     dyn_cast<const EnumType>(BasedType)) { // enum type
+        getASTContext().BSCDeclContextMap[BasedType] = ETy->getDecl();
+      } else if (const BuiltinType *BTy =
+                     dyn_cast<const BuiltinType>(BasedType)) { // builtin type
+        std::string Prefix = "__";
+        std::string BuiltinTypeName =
+            Prefix + BTy->getNameAsCString(getPrintingPolicy());
+        auto TmpRecord =
+            getASTContext().buildImplicitRecord(StringRef(BuiltinTypeName));
+        TmpRecord->startDefinition();
+        TmpRecord->completeDefinition();
+        getASTContext().BSCDeclContextMap[BasedType] = TmpRecord;
+      } else if (const TemplateSpecializationType *TemplateTy =
+                     dyn_cast<const TemplateSpecializationType>(BasedType)) {
+        auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
+                                            .getAsTemplateDecl()
+                                            ->getTemplatedDecl());
+        getASTContext().BSCDeclContextMap[BasedType] = DC;
+      }
+    }
+  }
+  return T;
 }
 
 static std::string getPrintableNameForEntity(DeclarationName Entity) {
@@ -3394,7 +3440,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
   case UnqualifiedIdKind::IK_Identifier:
   case UnqualifiedIdKind::IK_LiteralOperatorId:
   case UnqualifiedIdKind::IK_TemplateId:
-    T = ConvertDeclSpecToType(state);
+    T = ConvertDeclSpecToType(state, D.getMutableDeclSpec());
 
     if (!D.isInvalidType() && D.getDeclSpec().isTypeSpecOwned()) {
       OwnedTagDecl = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
@@ -5294,7 +5340,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // OpenCL disallows functions without a prototype, but it doesn't enforce
       // strict prototypes as in C2x because it allows a function definition to
       // have an identifier list. See OpenCL 3.0 6.11/g for more details.
-      if (!FTI.NumParams && !FTI.isVariadic &&
+      // 
+      if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.BSC &&
           !LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL) {
         // Simple void foo(), where the incoming T is the result type.
         T = Context.getFunctionNoProtoType(T, EI);
@@ -8657,7 +8704,7 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
-  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+  } else if (auto *RD = dyn_cast<RecordDecl>(D)) {
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -8885,7 +8932,13 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   // If we have a class template specialization or a class member of a
   // class template specialization, or an array with known size of such,
   // try to instantiate it.
-  if (auto *RD = dyn_cast_or_null<CXXRecordDecl>(Tag)) {
+  RecordDecl *RD = nullptr;
+  if (getLangOpts().BSC) {
+    RD = dyn_cast_or_null<RecordDecl>(Tag);
+  } else {
+    RD = dyn_cast_or_null<CXXRecordDecl>(Tag);
+  }
+  if (RD) {
     bool Instantiated = false;
     bool Diagnosed = false;
     if (RD->isDependentContext()) {
@@ -8903,18 +8956,20 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         Instantiated = true;
       }
     } else {
-      CXXRecordDecl *Pattern = RD->getInstantiatedFromMemberClass();
+      RecordDecl *Pattern =
+          (static_cast<RecordDecl *>(RD))->getInstantiatedFromMemberClass();
       if (!RD->isBeingDefined() && Pattern) {
-        MemberSpecializationInfo *MSI = RD->getMemberSpecializationInfo();
+        MemberSpecializationInfo *MSI =
+            (static_cast<CXXRecordDecl *>(RD))->getMemberSpecializationInfo();
         assert(MSI && "Missing member specialization information?");
         // This record was instantiated from a class within a template.
         if (MSI->getTemplateSpecializationKind() !=
             TSK_ExplicitSpecialization) {
           runWithSufficientStackSpace(Loc, [&] {
-            Diagnosed = InstantiateClass(Loc, RD, Pattern,
-                                         getTemplateInstantiationArgs(RD),
-                                         TSK_ImplicitInstantiation,
-                                         /*Complain=*/Diagnoser);
+            Diagnosed = InstantiateClass(
+                Loc, (static_cast<CXXRecordDecl *>(RD)), Pattern,
+                getTemplateInstantiationArgs(RD), TSK_ImplicitInstantiation,
+                /*Complain=*/Diagnoser);
           });
           Instantiated = true;
         }

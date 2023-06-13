@@ -1,0 +1,35 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct MyStruct<T> {
+  int isPending;
+  T res;
+};
+
+struct MyStruct<int> foo(struct MyStruct<int> *a) {
+  return *a;
+}
+
+int struct MyStruct<T>::bar(struct MyStruct<T> *this, int a) {
+  return a;
+}
+
+int f() {
+  struct MyStruct<int> p;
+  int res1 = p.bar(10);
+  int res2 = struct MyStruct<int>::bar(&p, 12);
+  return res1 + res2;  
+}
+
+int struct MyStruct<T>::poll(struct MyStruct<T> *this, int a) {
+  return a;
+}
+
+int main() {
+  struct MyStruct<int> p;
+  int res1 = p.poll(10);
+  int res2 = struct MyStruct<int>::poll(&p, 12);
+  int res3 = f();
+  return res1 + res2 - res3;  
+}

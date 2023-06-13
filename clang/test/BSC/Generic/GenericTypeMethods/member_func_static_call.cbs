@@ -1,0 +1,25 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct MyStruct<T> {
+  T res;
+};
+
+union MyUnion<T> {
+  T res;
+};
+
+T struct MyStruct<T>::foo(T a) {
+  return a;
+}
+
+T union MyUnion<T>::foo(T a) {
+  return a;
+}
+
+int main() {
+  int res1 = struct MyStruct<int>::foo(12);
+  int res2 = union MyUnion<int>::foo(10);
+  return res1 - res2 - 2;  
+}
