@@ -1934,6 +1934,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
   // Now that the primary-expression piece of the postfix-expression has been
   // parsed, see if there are any postfix-expression pieces here.
   SourceLocation Loc;
+  Expr *TraitParam = nullptr;
   auto SavedType = PreferredType;
   while (true) {
     // Each iteration relies on preferred type for the whole expression.
@@ -2122,6 +2123,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       ExprVector ArgExprs;
+      if (TraitParam)
+        ArgExprs.push_back(TraitParam);
       CommaLocsTy CommaLocs;
       auto RunSignatureHelp = [&]() -> QualType {
         QualType PreferredType = Actions.ProduceCallSignatureHelp(
@@ -2170,7 +2173,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         LHS = ExprError();
       } else {
         assert(
-            (ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size()) &&
+            (ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size()) ||
+             (TraitParam && (ArgExprs.size() == 1 ||
+                             ArgExprs.size() - 2 == CommaLocs.size())) &&
             "Unexpected number of commas!");
         Expr *Fn = LHS.get();
         SourceLocation RParLoc = Tok.getLocation();
@@ -2186,7 +2191,15 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       break;
     }
-    case tok::arrow:
+    case tok::arrow: {
+      if (getLangOpts().BSC) {
+        QualType T = LHS.get()->getType();
+        if (Actions.IsQualTypeDesugarStructTrait(T)) {
+          TraitParam = Actions.AddAfterStructTrait(LHS, Loc, "data").get();
+          LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");
+        }
+      }
+    }
     case tok::period: {
       // postfix-expression: p-e '->' template[opt] id-expression
       // postfix-expression: p-e '.' template[opt] id-expression

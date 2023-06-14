@@ -2796,6 +2796,8 @@ public:
   void warnOnReservedIdentifier(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
+  NamedDecl *ActOnImplTraitDecl(Scope *S, Declarator &D, SourceLocation TypeLoc, TraitDecl *TD);
+  TraitDecl *ActOnTraitId(IdentifierInfo *II);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
                               MultiTemplateParamsArg TemplateParameterLists);
@@ -2899,6 +2901,8 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
+  bool IsImplTraitDeclIncomplete(Declarator &D, SourceLocation TypeLoc,
+                                 TraitDecl *TD);
   QualType ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
                                      bool AddToContextMap, BSCScopeSpec &BSS,
                                      DeclSpec &DS);
@@ -5522,6 +5526,13 @@ public:
                                 const DeclarationNameInfo &NameInfo,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 QualType ExtendedTy = QualType());
+  NamedDecl *DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D);
+  QualType DesugarTraitToStructTrait(QualType T);
+  IdentifierInfo *ReturnTraitIdentifierOrNull(NamedDecl *ND);
+  bool IsQualTypeDesugarStructTrait(QualType T);
+  bool IsTraitEqaulExpr(QualType DstType, QualType SrcType);
+  ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc, StringRef ID);
+  Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType, SourceLocation DSLoc);
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                       LookupResult &R,

@@ -64,6 +64,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
         def ParmVar : DeclNode<Var, "parameters">;
         def Decomposition : DeclNode<Var>;
         def OMPCapturedExpr : DeclNode<Var>;
+      def ImplTrait : DeclNode<Declarator, "impltraits">;
       def NonTypeTemplateParm : DeclNode<Declarator>;
   def Template : DeclNode<Named, "templates", 1>;
     def RedeclarableTemplate : DeclNode<Template, "redeclarable templates", 1>;

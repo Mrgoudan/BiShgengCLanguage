@@ -1812,6 +1812,11 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   }
 }
 
+void TextNodeDumper::VisitImplTraitDecl(const ImplTraitDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+}
+
 void TextNodeDumper::VisitBindingDecl(const BindingDecl *D) {
   dumpName(D);
   dumpType(D->getType());

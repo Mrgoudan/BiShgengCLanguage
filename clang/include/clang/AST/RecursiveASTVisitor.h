@@ -503,6 +503,7 @@ private:
   bool TraverseDeclContextHelper(DeclContext *DC);
   bool TraverseFunctionHelper(FunctionDecl *D);
   bool TraverseVarHelper(VarDecl *D);
+  bool TraverseImplTraitHelper(ImplTraitDecl *D);
   bool TraverseOMPExecutableDirective(OMPExecutableDirective *S);
   bool TraverseOMPLoopDirective(OMPLoopDirective *S);
   bool TraverseOMPClause(OMPClause *C);
@@ -2303,7 +2304,14 @@ bool RecursiveASTVisitor<Derived>::TraverseVarHelper(VarDecl *D) {
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseImplTraitHelper(ImplTraitDecl *D) {
+  return true;
+}
+
 DEF_TRAVERSE_DECL(VarDecl, { TRY_TO(TraverseVarHelper(D)); })
+
+DEF_TRAVERSE_DECL(ImplTraitDecl, { TRY_TO(TraverseImplTraitHelper(D)); })
 
 DEF_TRAVERSE_DECL(ImplicitParamDecl, { TRY_TO(TraverseVarHelper(D)); })
 

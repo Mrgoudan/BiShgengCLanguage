@@ -334,6 +334,7 @@ public:
   void VisitFunctionDecl(const FunctionDecl *D);
   void VisitFieldDecl(const FieldDecl *D);
   void VisitVarDecl(const VarDecl *D);
+  void VisitImplTraitDecl(const ImplTraitDecl *D);
   void VisitBindingDecl(const BindingDecl *D);
   void VisitCapturedDecl(const CapturedDecl *D);
   void VisitImportDecl(const ImportDecl *D);

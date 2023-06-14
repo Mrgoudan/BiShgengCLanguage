@@ -6739,6 +6739,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   }
 
   case Decl::Var:
+  case Decl::ImplTrait:
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Decomposition: {

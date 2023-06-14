@@ -11710,4 +11710,7 @@ def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
+
+// BSC
+def err_trait_impl : Error<"can not find '%0' of 'trait %1' in %2">;
 } // end of sema component.

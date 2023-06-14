@@ -3277,6 +3277,99 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
          (FD->isCPUDispatchMultiVersion() || FD->isCPUSpecificMultiVersion());
 }
 
+ExprResult Sema::AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
+                                     StringRef ID) {
+  CXXScopeSpec SS;
+  SourceLocation TemplateKWLoc;
+  UnqualifiedId Name;
+  IdentifierInfo* VId = &Context.Idents.get(ID);
+  Name.setIdentifier(VId, DSLoc);
+  TemplateKWLoc;
+  ULE = ActOnMemberAccessExpr(getCurScope(), ULE.get(), DSLoc,
+                              tok::period, SS, TemplateKWLoc, Name, nullptr);
+  return ULE;
+}
+
+Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
+                                          SourceLocation DSLoc) {
+  PrintingPolicy PrintPolicy = LangOptions();
+  SplitQualType T_split = ProtoArgType.split();
+  std::string Tmp = ProtoArgType.getAsString(T_split, PrintPolicy).substr(7, -1);
+  StringRef TraitName = Tmp;
+  std::string TN = TraitName.str();
+  DeclContext::lookup_result Decls =
+      getASTContext().getTranslationUnitDecl()->
+      lookup(DeclarationName(&Context.Idents.get(TraitName)));
+  RecordDecl *LookUpTrait = nullptr;
+  QualType T;
+  for (DeclContext::lookup_result::iterator I = Decls.begin();
+       I != Decls.end(); ++I) {
+    if (isa<RecordDecl>(*I)) {
+      LookUpTrait = dyn_cast<RecordDecl>(*I);
+      T = Context.getRecordType(LookUpTrait);
+    }
+  }
+
+  QualType VoidPT = Context.getPointerType(Context.VoidTy);
+  ImplicitCastExpr *TraitData = ImplicitCastExpr::Create(Context, VoidPT,
+                                /* CastKind=*/CK_BitCast,
+                                /* Expr=*/UO,
+                                /* CXXCastPath=*/nullptr,
+                                /* ExprValueKind=*/VK_PRValue,
+                                /* FPFeatures */ FPOptionsOverride());
+  Tmp = TN + "_Vtable";
+  StringRef VtableName = Tmp;
+  DeclContext::lookup_result LookupVtables = 
+      getASTContext().getTranslationUnitDecl()->
+      lookup(DeclarationName(&Context.Idents.get(VtableName)));
+  QualType VtableTy;
+  RecordDecl *LookUpVtable = nullptr;
+  for (DeclContext::lookup_result::iterator I = LookupVtables.begin();
+       I != LookupVtables.end(); ++I) {
+    LookUpVtable = dyn_cast<RecordDecl>(*I);
+    VtableTy = Context.getRecordType(LookUpVtable); 
+  }
+  QualType VtablePT = Context.getPointerType(VtableTy);
+
+  QualType Ts = UO->getType().getCanonicalType();
+  const PointerType *PT = dyn_cast_or_null<PointerType>(Ts.getTypePtr());
+  Ts = PT->getPointeeType();
+  T_split = Ts.split();
+  StringRef Tys = Ts.getAsString(T_split, PrintPolicy);
+  int n = Tys.find(' ');
+  Tmp = n > 0 ? Tys.str().substr(0, n) + "_" +
+                Tys.str().substr(n + 1, -1) : Tys.str();
+  StringRef Prof = Tmp;
+  Tmp = "__" + Prof.str() + "_t" + TN.substr(3, -1);
+
+  StringRef InstanceName = Tmp;
+  DeclContext::lookup_result VarDecls =
+      getASTContext().getTranslationUnitDecl()->
+      lookup(DeclarationName(&Context.Idents.get(InstanceName)));
+  VarDecl *LookUpVar;
+  for (DeclContext::lookup_result::iterator I = VarDecls.begin();
+       I != VarDecls.end(); ++I)
+    LookUpVar = dyn_cast<VarDecl>(*I);
+  LookUpVar->setIsUsed();
+  DeclRefExpr *VtableRef = DeclRefExpr::Create(
+      Context, NestedNameSpecifierLoc(), DSLoc, LookUpVar,
+      false, DSLoc, VtableTy, VK_LValue);
+  UnaryOperator *UOVtable = UnaryOperator::Create(Context, VtableRef, UO_AddrOf,
+                               VtablePT, VK_PRValue,
+                               OK_Ordinary, DSLoc,
+                               false, FPOptionsOverride());
+  
+  std::vector<Expr*> Exprs = {TraitData, UOVtable};
+  MutableArrayRef<Expr*> initExprs = MutableArrayRef<Expr*>(Exprs);
+  ExprResult Result = ActOnInitList(DSLoc, initExprs, DSLoc);
+
+  TypeSourceInfo *TInfo = Context.CreateTypeSourceInfo(T);
+  TypeResult  Ty = CreateParsedType(T, TInfo);
+
+  Result = ActOnCompoundLiteral(DSLoc, Ty.get(), DSLoc, Result.get());
+  return Result.get();
+}
+
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
                                           bool AcceptInvalidDecl) {
@@ -3440,6 +3533,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
   }
 
   case Decl::Var:
+  case Decl::ImplTrait:
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Decomposition:
@@ -6284,6 +6378,9 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
+      if (getLangOpts().BSC && IsQualTypeDesugarStructTrait(ProtoArgType) &&
+          !IsQualTypeDesugarStructTrait(Arg->getType()))
+        Arg = ConvertParmTraitToStructTrait(Arg, ProtoArgType, CallLoc);
 
       if (RequireCompleteType(Arg->getBeginLoc(), ProtoArgType,
                               diag::err_call_incomplete_argument, Arg))
@@ -17302,6 +17399,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatibleFunctionPointer:
+    if (getLangOpts().BSC)
+      return false;
     if (getLangOpts().CPlusPlus) {
       DiagKind = diag::err_typecheck_convert_incompatible_function_pointer;
       isInvalid = true;
@@ -17312,6 +17411,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointer:
+    if (getLangOpts().BSC)
+      return false;
     if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {
@@ -17451,6 +17552,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     isInvalid = true;
     break;
   case Incompatible:
+    if (getLangOpts().BSC && IsTraitEqaulExpr(DstType, SrcType)) {
+      DiagnoseAssignmentEnum(DstType, SrcType, SrcExpr);
+      *Complained = true;
+      return false;
+    }
     if (maybeDiagnoseAssignmentToFunction(*this, DstType, SrcExpr)) {
       if (Complained)
         *Complained = true;
@@ -17537,6 +17643,14 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (Complained)
     *Complained = true;
   return isInvalid;
+}
+
+bool Sema::IsTraitEqaulExpr(QualType DstType, QualType SrcType) {
+  const PointerType *PT = dyn_cast<PointerType>(DstType);
+  if (PT && PT->getPointeeType().getTypePtr()->isTraitType())
+    if (IsQualTypeDesugarStructTrait(SrcType))
+      return true;
+  return false;
 }
 
 ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,

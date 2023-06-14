@@ -373,6 +373,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::UsingShadow:
   case Decl::ConstructorUsingShadow:
   case Decl::Var:
+  case Decl::ImplTrait:
   case Decl::FunctionTemplate:
   case Decl::ClassTemplate:
   case Decl::VarTemplate:

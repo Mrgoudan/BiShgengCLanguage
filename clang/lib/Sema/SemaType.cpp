@@ -9,7 +9,8 @@
 //  This file implements type-related semantic analysis.
 //
 //===----------------------------------------------------------------------===//
-
+#include "clang/Sema/Initialization.h"
+#include "clang/Sema/Designator.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -1896,6 +1897,160 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
 
   assert(!Result.isNull() && "This function should not return a null type");
   return Result;
+}
+
+bool Sema::IsImplTraitDeclIncomplete(Declarator &D, SourceLocation TypeLoc, TraitDecl *TD) {
+  TypeProcessingState state(*this, D);
+  bool BSCMethodFlag = true;
+  CXXScopeSpec SS;
+  Scope *S = getCurScope();
+  NamedDecl *Def = nullptr;
+  DeclContext *DC = CurContext;
+  BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
+  
+  QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec());
+  if (T->isIncompleteType(&Def))
+    Diagnoser.diagnose(*this, TypeLoc, T);
+
+  bool DiagFlag = true;
+  IdentifierInfo* functionID = nullptr;
+  for (TraitDecl::field_iterator FieldIt = TD->field_begin();
+       FieldIt != TD->field_end(); ++FieldIt) {
+    functionID = FieldIt->getIdentifier();
+    FunctionDecl *Old = FieldIt->getAsFunction();
+    FunctionDecl *New;
+    DeclContext *DC = getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    if (DC) {
+      DeclContext::lookup_result DR = DC->lookup(functionID);
+      for (NamedDecl *D : DR) {
+        if (D)
+          New = D->getAsFunction();
+      }
+    }
+    BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
+    if (!BS) {
+      Diag(FieldIt->getLocation(), diag::err_trait_impl)
+        << FieldIt->getName() << TD->getNameAsString() << T;
+      return false;
+    }
+    else {
+      if (!BS->getHasThisParam() || !Context.hasSameFunctionTypeIgnoringPtrSizes(Old->getReturnType(), New->getReturnType()))
+        DiagFlag = false;
+      else {
+        int n = Old->getNumParams();
+        int m = New->getNumParams();
+        if (n == m)
+          for (int i = 1; i < n; ++i) {
+            QualType T1 = Old->getParamDecl(i)->getType();
+            QualType T2 = New->getParamDecl(i)->getType();
+            if (!Context.hasSameFunctionTypeIgnoringPtrSizes(T1, T2))
+              DiagFlag = false;
+          }
+        else
+          DiagFlag = false;
+      }
+    }
+    if (!DiagFlag)
+      Diag(New->getLocation(), diag::err_conflicting_types)
+          << New->getDeclName();
+  }
+  if (DiagFlag)
+    return false;
+  return true;
+}
+
+NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
+  TraitDecl *TD = ITD->getTraitDecl();
+  SourceLocation TraitLoc = ITD->getLocation();
+  CXXScopeSpec SS;
+  Scope *S = getCurScope();
+  DeclContext *DC = CurContext;
+  std::string Tmp = "__Trait_" + D.getIdentifier()->getName().str() + "_Vtable";
+  StringRef TraitVTableName = Tmp;
+  DeclContext::lookup_result Decls = getASTContext().getTranslationUnitDecl()->
+      lookup(DeclarationName(&(getASTContext().Idents).get(TraitVTableName)));
+  RecordDecl *TraitRecord = nullptr;
+  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
+                                            I != E; ++I) {
+    if (isa<RecordDecl>(*I)) {
+      TraitRecord = dyn_cast<RecordDecl>(*I);
+    }
+  }
+  QualType QT = TraitRecord->getTypeForDecl()->getCanonicalTypeInternal();
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+  QualType T = TInfo->getType().getCanonicalType();
+  PrintingPolicy PrintPolicy = LangOptions();
+  SplitQualType T_split = T.split();
+  StringRef Ty = T.getAsString(T_split, PrintPolicy);
+  int n = Ty.find(' ');
+  Tmp = n > 0 ? Ty.str().substr(0, n) + "_" +
+                Ty.str().substr(n + 1, -1) : Ty.str();
+  StringRef Prof = Tmp;
+  Tmp = "__" + Prof.str() + "_trait_" + D.getIdentifier()->getName().str();
+  StringRef ImplTraitName = Tmp;
+  IdentifierInfo* ITII = &Context.Idents.get(ImplTraitName);
+  StorageClass SC = clang::SC_None;
+  VarDecl *NewVD = nullptr;
+  NewVD = VarDecl::Create(Context, DC, TraitLoc, D.getIdentifierLoc(),
+                          ITII, QT, TInfo, SC);
+  NewVD->setLexicalDeclContext(CurContext);
+  PushOnScopeChains(NewVD, S, true);
+
+  SmallVector<Expr*, 12> InitExprs;
+  for (TraitDecl::field_iterator FieldIt = TD->field_begin();
+       FieldIt != TD->field_end(); ++FieldIt) {
+    IdentifierInfo* functionID = FieldIt->getIdentifier();
+    Designation Desig;
+    Desig.AddDesignator(Designator::getField(functionID, TraitLoc, TraitLoc));
+    UnqualifiedId Id;
+    Id.setIdentifier(functionID, TraitLoc);
+    TemplateArgumentListInfo TemplateArgsBuffer;
+    DeclarationNameInfo NameInfo;
+    const TemplateArgumentListInfo *TemplateArgs;
+    DecomposeUnqualifiedId(Id, TemplateArgsBuffer, NameInfo, TemplateArgs);
+    DeclarationName Name = NameInfo.getName();
+    LookupResult R(*this, NameInfo, LookupOrdinaryName);
+    LookupParsedName(R, S, &SS, true, false, T);
+    ExprResult Res = BuildTemplateIdExpr(SS, TraitLoc, R, false, TemplateArgs);
+    Res.get()->HasBSCScopeSpec = true;
+    typedef DesignatedInitExpr::Designator ASTDesignator;
+    bool Invalid = false;
+    SmallVector<ASTDesignator, 32> Designators;
+    SmallVector<Expr *, 32> InitExpressions;
+    const Designator &DDD = Desig.getDesignator(0);
+    Designators.push_back(ASTDesignator(DDD.getField(), TraitLoc,
+                                        TraitLoc));
+    Desig.ClearExprs(*this);
+    Res = DesignatedInitExpr::Create(Context, Designators, InitExpressions,
+                                        TraitLoc, false, Res.getAs<Expr>());
+    Res = this->CorrectDelayedTyposInExpr(Res.get());
+    InitExprs.push_back(Res.get());
+  }
+
+  ExprResult LHS = this->ActOnInitList(TraitLoc, InitExprs, TraitLoc);
+
+  Expr *Init = LHS.get();
+  QualType DclT = NewVD->getType();
+  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(NewVD);
+  InitializationKind Kind = InitializationKind::CreateForInit(TraitLoc, false,
+                                                              Init);
+  MultiExprArg Args = Init;
+  ExprResult ResTmpFor = CorrectDelayedTyposInExpr(
+          Args[0], NewVD, true,
+          [this, Entity, Kind](Expr *E) {
+            InitializationSequence Init(*this, Entity, Kind, MultiExprArg(E));
+            return Init.Failed() ? ExprError() : E;
+          });
+  Args[0] = ResTmpFor.get();
+  InitializationSequence InitSeq(*this, Entity, Kind, Args, false, false);
+  ExprResult ResultTmpIf = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
+  Init = ResultTmpIf.getAs<Expr>();
+  ExprResult Result = ActOnFinishFullExpr(Init, TraitLoc, false,
+                                          NewVD->isConstexpr());
+  Init = Result.get();
+  NewVD->setInit(Init);
+  return NewVD;
 }
 
 QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
@@ -5111,6 +5266,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
     case DeclaratorChunk::Function: {
+      bool TraitDesugarFlag = false;
+      const PointerType *PT = dyn_cast<PointerType>(T);
+      if (Context.getLangOpts().BSC &&
+          PT && PT->getPointeeType().getTypePtr()->isTraitType()) {
+        TraitDesugarFlag = true;
+        T = S.DesugarTraitToStructTrait(PT->getPointeeType());
+      }
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
       // of the type, otherwise the argument list is ().
@@ -5559,6 +5721,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         }
         T = Context.getFunctionType(T, ParamTys, EPI);
       }
+      if (TraitDesugarFlag)
+        return Context.CreateTypeSourceInfo(T);
       break;
     }
     case DeclaratorChunk::MemberPointer: {
@@ -5913,6 +6077,30 @@ TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D, Scope *S) {
     inferARCWriteback(state, T);
 
   return GetFullTypeForDeclarator(state, T, ReturnTypeInfo);
+}
+
+bool Sema::IsQualTypeDesugarStructTrait(QualType T) {
+  if (RecordDecl *RD = T.getTypePtr()->getAsRecordDecl())
+    return RD->getTraitDesugarFlag();
+  return false;
+}
+
+QualType Sema::DesugarTraitToStructTrait(QualType T) {
+  T = T.getCanonicalType();
+  PrintingPolicy PrintPolicy = LangOptions();
+  SplitQualType T_split = T.split();
+  StringRef TRName = "__Trait_" + T.getAsString(T_split, PrintPolicy).substr(6, -1);
+
+  DeclContext::lookup_result Decls = getASTContext().getTranslationUnitDecl()->
+      lookup(DeclarationName(&(getASTContext().Idents).get(TRName)));
+  RecordDecl *TR = nullptr;
+  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
+    if (isa<RecordDecl>(*I)) {
+      TR = dyn_cast<RecordDecl>(*I);
+    }
+  }
+  T = TR->getTypeForDecl()->getCanonicalTypeInternal();
+  return T;
 }
 
 static void transferARCOwnershipToDeclSpec(Sema &S,

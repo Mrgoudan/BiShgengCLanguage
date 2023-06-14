@@ -1047,6 +1047,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       break;
     }
 
+    if (ShouldParseImplTraitDecl())
+      return ParseImplTraitDeclaration();
+
     if (Tok.isEditorPlaceholder()) {
       ConsumeToken();
       return nullptr;
@@ -1230,6 +1233,64 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
 
     return ParseDeclOrFunctionDefInternal(Attrs, PDS, AS);
   }
+}
+
+bool Parser::ShouldParseImplTraitDecl() {
+  if (!getLangOpts().BSC)
+    return false;
+  if (Tok.is(tok::identifier) &&
+             Tok.getIdentifierInfo()->getName().equals("impl"))
+    if (NextToken().is(tok::kw_trait) ||
+        (NextToken().is(tok::identifier) &&
+         GetLookAheadToken(2).is(tok::kw_for)))
+      return true;
+  return false;
+}
+
+/// ParseImplTraitDeclaration - Parse ImplTraitDecl, for example:
+/// "impl trait T for int;"
+///
+Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
+  ConsumeToken(); // eat token "impl"
+  SourceLocation TraitLoc = Tok.getLocation();
+
+  if (Tok.is(tok::kw_trait))// to be fixed
+    ConsumeToken();
+  else {
+  }
+
+  IdentifierInfo* TraitII = Tok.getIdentifierInfo();
+  ConsumeToken();
+  TraitDecl *Trait = Actions.ActOnTraitId(TraitII);
+  if (!Trait)// to be fixed
+    Diag(Tok.getLocation(), diag::unexpected_token_for_impl_trait_decl);
+
+  if (Tok.is(tok::kw_for))
+    ConsumeToken(); // eat token kw_for
+  else {
+    Diag(Tok.getLocation(), diag::unexpected_token_for_impl_trait_decl);
+    return nullptr;
+  }
+
+  ParsingDeclSpec BSS(*this);
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  ParseBSCScopeSpecifiers(BSS);
+  ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
+
+  ParsingDeclarator D(*this, BSS, EmptyDeclSpecAttrs, DeclaratorContext::File);
+  D.SetIdentifier(TraitII, TraitLoc);
+  D.SetRangeEnd(TraitLoc);
+
+  Decl *ThisDecl = Actions.ActOnImplTraitDecl(getCurScope(), D,
+                                              BSS.getBeginLoc(), Trait);
+
+  SmallVector<Decl *, 8> DeclsInGroup;
+  Actions.FinalizeDeclaration(ThisDecl);
+  D.complete(ThisDecl);
+  if (ThisDecl)
+    DeclsInGroup.push_back(ThisDecl);
+
+  return Actions.FinalizeDeclaratorGroup(getCurScope(), BSS, DeclsInGroup);
 }
 
 /// ParseFunctionDefinition - We parsed and verified that the specified

@@ -1095,6 +1095,10 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
   return VisitVarDecl(D, /*InstantiatingVarTemplate=*/false);
 }
 
+Decl *TemplateDeclInstantiator::VisitImplTraitDecl(ImplTraitDecl *D) {
+  return nullptr;
+}
+
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                                              bool InstantiatingVarTemplate,
                                              ArrayRef<BindingDecl*> *Bindings) {

@@ -6060,6 +6060,37 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
   return false;
 }
 
+NamedDecl *Sema::ActOnImplTraitDecl(Scope *S, Declarator &D,
+                                    SourceLocation TypeLoc, TraitDecl *TD) {
+  if (IsImplTraitDeclIncomplete(D, TypeLoc, TD))
+    return nullptr;
+  DeclContext *DC = CurContext;
+  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
+
+  QualType R = TInfo->getType();
+  DeclarationName Name = GetNameForDeclarator(D).getName();
+  IdentifierInfo *II = Name.getAsIdentifierInfo();
+  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
+
+  ImplTraitDecl *ITD;
+  ITD = ImplTraitDecl::Create(Context, DC, D.getBeginLoc(),
+                              D.getIdentifierLoc(), II, R, TInfo, SC);
+  ITD->setTraitDecl(TD);
+  CurContext->addDecl(ITD);
+
+  return DesugarImplTrait(ITD, D);
+}
+
+TraitDecl *Sema::ActOnTraitId(IdentifierInfo *II) {
+  DeclContext::lookup_result Decls =
+      getASTContext().getTranslationUnitDecl()->lookup(II);
+  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
+       I != E; ++I)
+    if (isa<TraitDecl>(*I))
+      return dyn_cast<TraitDecl>(*I);
+  return nullptr;
+}
+
 /// Diagnose a declaration whose declarator-id has the given
 /// nested-name-specifier.
 ///
@@ -14415,6 +14446,11 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
       }
     }
   }
+
+  const PointerType *PT = dyn_cast<PointerType>(parmDeclType);
+  if (getLangOpts().BSC && PT &&
+      PT->getPointeeType().getTypePtr()->isTraitType())
+    parmDeclType = DesugarTraitToStructTrait(PT->getPointeeType());
 
   // Temporarily put parameter variables in the translation unit, not
   // the enclosing context.  This prevents them from accidentally

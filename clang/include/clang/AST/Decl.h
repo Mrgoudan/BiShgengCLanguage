@@ -1611,6 +1611,41 @@ public:
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
 };
 
+class ImplTraitDecl : public DeclaratorDecl,
+                      public Redeclarable<ImplTraitDecl> {
+protected:
+  ImplTraitDecl(Kind DK, ASTContext &C, DeclContext *DC,
+                SourceLocation StartLoc, SourceLocation IdLoc,
+                IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
+                StorageClass SC);
+
+  using redeclarable_base = Redeclarable<ImplTraitDecl>;
+
+  TraitDecl *TD;
+
+public:
+  using redeclarable_base::getPreviousDecl;
+
+  static ImplTraitDecl *Create(ASTContext &C, DeclContext *DC,
+                         SourceLocation StartLoc, SourceLocation IdLoc,
+                         IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
+                         StorageClass S);
+
+  static ImplTraitDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  LanguageLinkage getLanguageLinkage() const;
+
+  bool isInExternCContext() const;
+
+  void setTraitDecl(TraitDecl *D);
+
+  TraitDecl *getTraitDecl();
+
+  ImplTraitDecl *getCanonicalDecl() override;
+};
+
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
