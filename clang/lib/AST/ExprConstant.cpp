@@ -10686,6 +10686,8 @@ static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
 
 // Return true iff the given array filler may depend on the element index.
 static bool MaybeElementDependentArrayFiller(const Expr *FillerExpr) {
+  if (!FillerExpr)
+    return false;
   // For now, just allow non-class value-initialization and initialization
   // lists comprised of them.
   if (isa<ImplicitValueInitExpr>(FillerExpr))
@@ -14843,6 +14845,8 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
 /// an object can indirectly refer to subobjects which were initialized earlier.
 static bool EvaluateInPlace(APValue &Result, EvalInfo &Info, const LValue &This,
                             const Expr *E, bool AllowNonLiteralTypes) {
+  if (!E)
+    return false;
   assert(!E->isValueDependent());
 
   if (!AllowNonLiteralTypes && !CheckLiteralType(Info, E, &This))

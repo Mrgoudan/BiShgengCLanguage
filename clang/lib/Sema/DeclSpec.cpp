@@ -462,7 +462,7 @@ unsigned DeclSpec::getParsedSpecifiers() const {
     Res |= PQ_TypeSpecifier;
 
   if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
-      FS_noreturn_specified || FS_forceinline_specified)
+      FS_noreturn_specified || FS_forceinline_specified || FS_safe_specified)
     Res |= PQ_FunctionSpecifier;
   return Res;
 }
@@ -1057,6 +1057,24 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   FS_noreturn_specified = true;
   FS_noreturnLoc = Loc;
   return false;
+}
+
+bool DeclSpec::setFunctionSafeSpecifier(SourceLocation Loc,
+                                        const char *&PrevSpec,
+                                        unsigned &DiagID,
+                                        SafeScopeSpecifier SafeSpec) {
+  if (FS_safe_specified == SS_None) {
+    FS_safe_specified = SafeSpec;
+    FS_safe_loc = Loc;
+    return false;
+  } else if (FS_safe_specified == SS_Safe) {
+    PrevSpec = "safe";
+  } else if (FS_safe_specified == SS_Unsafe) {
+    PrevSpec = "unsafe";
+  } else {
+    PrevSpec = "";
+  }
+  return true;
 }
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,

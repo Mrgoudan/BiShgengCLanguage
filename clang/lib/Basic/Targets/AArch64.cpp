@@ -64,7 +64,8 @@ StringRef AArch64TargetInfo::getArchProfile() const {
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().isOSOpenBSD()) {
+  if (getTriple().isOSOpenBSD() ||
+      getTriple().getEnvironment() == llvm::Triple::GNUILP32) {
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {
@@ -79,7 +80,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   HasLegalHalfType = true;
   HasFloat16 = true;
 
-  if (Triple.isArch64Bit())
+  if (Triple.isArch64Bit() &&
+      getTriple().getEnvironment() != llvm::Triple::GNUILP32)
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
   else
     LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
@@ -264,9 +266,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ELF__");
 
   // Target properties.
-  if (!getTriple().isOSWindows() && getTriple().isArch64Bit()) {
+  if (!getTriple().isOSWindows() && getTriple().isArch64Bit() &&
+      getTriple().getEnvironment() != llvm::Triple::GNUILP32) {
     Builder.defineMacro("_LP64");
     Builder.defineMacro("__LP64__");
+  }
+  if (getTriple().getEnvironment() == llvm::Triple::GNUILP32) {
+    Builder.defineMacro("_ILP32");
+    Builder.defineMacro("__ILP32__");
   }
 
   std::string CodeModel = getTargetOpts().CodeModel;
@@ -886,9 +893,14 @@ void AArch64leTargetInfo::setDataLayout() {
     if(getTriple().isArch32Bit())
       resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128", "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128", "_");
-  } else
-    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128");
+  } else {
+    if (getTriple().getEnvironment() == llvm::Triple::GNUILP32)
+      resetDataLayout(
+          "e-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+    else
+      resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  }
 }
 
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -911,7 +923,11 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 void AArch64beTargetInfo::setDataLayout() {
   assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  if (getTriple().getEnvironment() == llvm::Triple::GNUILP32)
+    resetDataLayout(
+        "E-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  else
+    resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
 }
 
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,

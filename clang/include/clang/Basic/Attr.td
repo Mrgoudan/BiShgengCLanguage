@@ -1942,8 +1942,8 @@ def NoSplitStack : InheritableAttr {
 
 def NonNull : InheritableParamAttr {
   let Spellings = [GCC<"nonnull">];
-  let Subjects = SubjectList<[ObjCMethod, HasFunctionProto, ParmVar], WarnDiag,
-                             "functions, methods, and parameters">;
+  let Subjects = SubjectList<[ObjCMethod, HasFunctionProto, ParmVar, Var, Field], WarnDiag,
+                             "functions, methods, and parameters (EnhanceC: additional applies to vars and fields)">;
   let Args = [VariadicParamIdxArgument<"Args">];
   let AdditionalMembers = [{
     bool isNonNull(unsigned IdxAST) const {
@@ -1961,7 +1961,7 @@ def NonNull : InheritableParamAttr {
 
 def ReturnsNonNull : InheritableAttr {
   let Spellings = [GCC<"returns_nonnull">];
-  let Subjects = SubjectList<[ObjCMethod, Function]>;
+  let Subjects = SubjectList<[ObjCMethod, Function, Var, Field]>;
   let Documentation = [ReturnsNonNullDocs];
 }
 
@@ -4046,4 +4046,81 @@ def FunctionReturnThunks : InheritableAttr,
   >];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [FunctionReturnThunksDocs];
+}
+// EnhanceC attributes
+def Count : InheritableParamAttr {
+  let Spellings = [GNU<"count">];
+  let Subjects = SubjectList<[Function, ParmVar, Field, Var]>;
+  let Documentation = [Undocumented];
+  let Args = [ExprArgument<"LenExpr">, VariadicParamIdxArgument<"Index">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let LateParsed = 1;
+  let TemplateDependent = 1;
+}
+
+def ReturnsCount : InheritableAttr {
+  let Spellings = [GNU<"returns_count">];
+  let Subjects = SubjectList<[Function, Var, Field]>;
+  let Documentation = [Undocumented];
+  let Args = [ExprArgument<"LenExpr">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let LateParsed = 1;
+  let TemplateDependent = 1;
+}
+
+def CountIndex : InheritableParamAttr {
+  let Spellings = [GNU<"count_index">];
+  let Subjects = SubjectList<[Function, ParmVar, Field, Var]>;
+  let Documentation = [Undocumented];
+  let Args = [ParamIdxArgument<"LenVarIndex">, VariadicParamIdxArgument<"Index">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let TemplateDependent = 1;
+}
+
+def ReturnsCountIndex : InheritableAttr {
+  let Spellings = [GNU<"returns_count_index">];
+  let Subjects = SubjectList<[Function, Field, Var]>;
+  let Documentation = [Undocumented];
+  let Args = [ParamIdxArgument<"LenVarIndex">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let TemplateDependent = 1;
+}
+
+// byte_count
+def ByteCount : InheritableParamAttr {
+  let Spellings = [GNU<"byte_count">];
+  let Subjects = SubjectList<[Function, ParmVar, Field, Var]>;
+  let Documentation = [Undocumented];
+  let Args = [ExprArgument<"LenExpr">, VariadicParamIdxArgument<"Index">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let LateParsed = 1;
+  let TemplateDependent = 1;
+}
+
+def ReturnsByteCount : InheritableAttr {
+  let Spellings = [GNU<"returns_byte_count">];
+  let Subjects = SubjectList<[Function, Var, Field]>;
+  let Documentation = [Undocumented];
+  let Args = [ExprArgument<"LenExpr">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let LateParsed = 1;
+  let TemplateDependent = 1;
+}
+
+def ByteCountIndex : InheritableParamAttr {
+  let Spellings = [GNU<"byte_count_index">];
+  let Subjects = SubjectList<[Function, ParmVar, Field, Var]>;
+  let Documentation = [Undocumented];
+  let Args = [ParamIdxArgument<"LenVarIndex">, VariadicParamIdxArgument<"Index">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let TemplateDependent = 1;
+}
+
+def ReturnsByteCountIndex : InheritableAttr {
+  let Spellings = [GNU<"returns_byte_count_index">];
+  let Subjects = SubjectList<[Function, Var, Field]>;
+  let Documentation = [Undocumented];
+  let Args = [ParamIdxArgument<"LenVarIndex">];
+  let InheritEvenIfAlreadyPresent = 1;
+  let TemplateDependent = 1;
 }

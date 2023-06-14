@@ -910,6 +910,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // after everything else is read.
 
   FD->setStorageClass(static_cast<StorageClass>(Record.readInt()));
+  FD->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
   FD->setInlineSpecified(Record.readInt());
   FD->setImplicitlyInline(Record.readInt());
   FD->setVirtualAsWritten(Record.readInt());

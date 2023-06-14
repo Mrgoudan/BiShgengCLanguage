@@ -407,7 +407,8 @@ sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
 }
 
 StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                                   ArrayRef<Stmt *> Elts, bool isStmtExpr) {
+                                   ArrayRef<Stmt *> Elts, bool isStmtExpr,
+                                   SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc) {
   const unsigned NumElts = Elts.size();
 
   // If we're in C mode, check that we don't have any decls after stmts.  If
@@ -451,7 +452,13 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                       : getCurCompoundScope().InitialFPFeatures;
   FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
 
-  return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
+  // return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
+  return CompoundStmt::Create(Context, Elts, FPDiff, L, R, SafeSpec, SafeLoc);
+}
+
+void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
+  SafeScopeSpecifier spec = St == PSS_On ? SS_Safe : SS_Unsafe;
+  SetPragmaSafeInfo(spec);
 }
 
 ExprResult

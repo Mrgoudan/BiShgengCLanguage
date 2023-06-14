@@ -143,6 +143,17 @@ void ASTDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpTemplateDecl(D, false);
 }
 
+void ASTDumper::VisitCompoundStmt(const CompoundStmt *Node) {
+  VisitStmt(Node);
+  SafeScopeSpecifier SafeSpec = Node->getSafeSpecifier();
+
+  if (SafeSpec == SS_Safe) {
+    OS << " safe";
+  } else if (SafeSpec == SS_Unsafe) {
+    OS << " unsafe";
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Type method implementations
 //===----------------------------------------------------------------------===//

@@ -4902,7 +4902,28 @@ public:
   void ActOnAfterCompoundStatementLeadingPragmas();
   void ActOnFinishOfCompoundStmt();
   StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                               ArrayRef<Stmt *> Elts, bool isStmtExpr);
+                               ArrayRef<Stmt *> Elts, bool isStmtExpr,
+                               SafeScopeSpecifier SafeSpec = SS_None,
+                               SourceLocation SafeLoc = SourceLocation());
+
+private:
+  SafeScopeSpecifier PragmaSafeInfo = SS_None;
+
+public:
+  enum PragmaSafeStatus {
+    PSS_On,
+    PSS_Off,
+  };
+
+  void ActOnPragmaSafe(PragmaSafeStatus St);
+
+  SafeScopeSpecifier GetPragmaSafeInfo() {
+    return PragmaSafeInfo;
+  }
+
+  void SetPragmaSafeInfo(SafeScopeSpecifier SafeSpec) {
+    PragmaSafeInfo = SafeSpec;
+  }
 
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {

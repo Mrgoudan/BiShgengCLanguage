@@ -3088,9 +3088,22 @@ def err_attribute_only_once_per_parameter : Error<
   "%0 attribute can only be applied once per parameter">;
 def err_mismatched_uuid : Error<"uuid does not match previous declaration">;
 def note_previous_uuid : Note<"previous uuid specified here">;
+// EnhanceC
 def warn_attribute_pointers_only : Warning<
-  "%0 attribute only applies to%select{| constant}1 pointer arguments">,
+  "(EnhanceC) %0 attribute only applies to%select{| constant}1 pointer arguments, vars or fields)">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_no_pointers : Warning<
+  "(EnhanceC) %0 attribute applied to function with no pointer arguments">,
+  InGroup<IgnoredAttributes>;
+def err_attribute_redundant_pointers : Error<
+  "(EnhanceC) %0 attribute applied to function with more than one pointer arguments, "
+  "please specify the index argument in the %0 attribute">;
+def warn_attribute_function_pointer : Warning<
+  "(EnhanceC) %0 attribute applied to function and function type pointer">,
+  InGroup<IgnoredAttributes>;
+def err_attribute_zero_pointer : Error<
+  "(EnhanceC) %0 attribute: The number of pointer arguments index cannot be zero">;
+
 def err_attribute_pointers_only : Error<warn_attribute_pointers_only.Text>;
 def err_attribute_integers_only : Error<
   "%0 attribute argument may only refer to a function parameter of integer "

@@ -644,6 +644,10 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     HandlePragmaUnused();
     return false;
 
+  case tok::annot_pragma_safe:
+    HandlePragmaSafe();
+    return false;
+
   case tok::kw_export:
     switch (NextToken().getKind()) {
     case tok::kw_module:

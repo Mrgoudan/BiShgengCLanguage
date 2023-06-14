@@ -714,6 +714,10 @@ ALIAS("_uuidof"          , __uuidof     , KEYMS | KEYBORLAND)
 ALIAS("_virtual_inheritance", __virtual_inheritance, KEYMSCOMPAT)
 ALIAS("_w64"             , __w64        , KEYMSCOMPAT)
 
+// safe region key word
+KEYWORD(__Safe__                      , KEYALL)
+KEYWORD(__Unsafe__                    , KEYALL)
+
 // Borland Extensions which should be disabled in strict conformance mode.
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)
 
@@ -793,6 +797,11 @@ ANNOTATION(decltype)     // annotation for a decltype expression,
 // For each argument inside the parentheses the pragma handler will produce
 // one 'pragma_unused' annotation token followed by the argument token.
 PRAGMA_ANNOTATION(pragma_unused)
+
+// Annotations for SAFE pragma
+// The lexer produces these so that they only take effect when the parser
+// handles #pragma SAFE ... directives.
+PRAGMA_ANNOTATION(pragma_safe)
 
 // Annotation for #pragma GCC visibility...
 // The lexer produces these so that they only take effect when the parser

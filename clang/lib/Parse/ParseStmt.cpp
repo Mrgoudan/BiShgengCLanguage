@@ -225,6 +225,7 @@ Retry:
     LLVM_FALLTHROUGH;
   }
 
+Default:
   default: {
     bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
@@ -265,6 +266,14 @@ Retry:
     }
 
     return ParseExprStatement(StmtCtx);
+  }
+
+  case tok::kw___Safe__:
+  case tok::kw___Unsafe__: {
+    Token Next = NextToken();
+    if (Next.is(tok::l_brace))
+      return ParseCompoundStatement();
+    goto Default;
   }
 
   case tok::kw___attribute: {
@@ -485,6 +494,10 @@ Retry:
 
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
+    return StmtEmpty();
+
+  case tok::annot_pragma_safe:
+    HandlePragmaSafe();
     return StmtEmpty();
   }
 
@@ -959,6 +972,18 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
 ///
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
                                           unsigned ScopeFlags) {
+  // Add security scope identification processing.
+  SafeScopeSpecifier SafeSpec = SS_None;
+  SourceLocation SafeLoc;
+
+  if (Tok.is(tok::kw___Safe__)) {
+    SafeSpec = SS_Safe;
+    SafeLoc = ConsumeToken();
+  } else if (Tok.is(tok::kw___Unsafe__)) {
+    SafeSpec = SS_Unsafe;
+    SafeLoc = ConsumeToken();
+  }
+
   assert(Tok.is(tok::l_brace) && "Not a compount stmt!");
 
   // Enter a scope to hold everything within the compound stmt.  Compound
@@ -966,7 +991,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr);
+  return ParseCompoundStatementBody(isStmtExpr, SafeSpec, SafeLoc);
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1027,6 +1052,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_dump:
       HandlePragmaDump();
+      break;
+    case tok::annot_pragma_safe:
+      HandlePragmaSafe();
       break;
     default:
       checkForPragmas = false;
@@ -1089,7 +1117,7 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
 /// ActOnCompoundStmt action.  This expects the '{' to be the current token, and
 /// consume the '}' at the end of the block.  It does not manipulate the scope
 /// stack.
-StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
+StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
                                 Tok.getLocation(),
                                 "in compound statement ('{}')");
@@ -1230,7 +1258,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
     CloseLoc = T.getCloseLocation();
 
   return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,
-                                   Stmts, isStmtExpr);
+                                   Stmts, isStmtExpr, SafeSpec, SafeLoc);
 }
 
 /// ParseParenExprOrCondition:

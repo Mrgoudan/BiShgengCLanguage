@@ -362,8 +362,9 @@ int64_t Stmt::getID(const ASTContext &Context) const {
 }
 
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
-                           SourceLocation LB, SourceLocation RB)
-    : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB) {
+                           SourceLocation LB, SourceLocation RB,
+                           SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc)
+    : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB), SafeSpec(SafeSpec), SafeLoc(SafeLoc) {
   CompoundStmtBits.NumStmts = Stmts.size();
   CompoundStmtBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   setStmts(Stmts);
@@ -380,12 +381,12 @@ void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
 
 CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                                    FPOptionsOverride FPFeatures,
-                                   SourceLocation LB, SourceLocation RB) {
+                                   SourceLocation LB, SourceLocation RB,
+                                   SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc) {
   void *Mem =
-      C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(
-                     Stmts.size(), FPFeatures.requiresTrailingStorage()),
-                 alignof(CompoundStmt));
-  return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB);
+      C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(Stmts.size(),  FPFeatures.requiresTrailingStorage()),
+      alignof(CompoundStmt));
+  return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB, SafeSpec, SafeLoc);
 }
 
 CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C, unsigned NumStmts,

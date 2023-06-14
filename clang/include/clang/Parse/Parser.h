@@ -216,6 +216,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> SafeHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -789,6 +790,8 @@ private:
       SourceLocation &AnyLoc, SourceLocation &LastMatchRuleEndLoc);
 
   void HandlePragmaAttribute();
+
+  void HandlePragmaSafe();
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
@@ -2105,7 +2108,9 @@ private:
                                     unsigned ScopeFlags);
   void ParseCompoundStatementLeadingPragmas();
   bool ConsumeNullStmt(StmtVector &Stmts);
-  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
+  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false,
+                                        SafeScopeSpecifier SafeSpec = SS_None,
+                                        SourceLocation SafeLoc = SourceLocation());
   bool ParseParenExprOrCondition(StmtResult *InitStmt,
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,

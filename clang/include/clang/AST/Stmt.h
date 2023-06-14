@@ -1415,9 +1415,13 @@ class CompoundStmt final
   /// The location of the closing "}".
   SourceLocation RBraceLoc;
 
-  CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
-               SourceLocation LB, SourceLocation RB);
-  explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {}
+  SafeScopeSpecifier SafeSpec;
+  SourceLocation SafeLoc;
+
+  CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures, SourceLocation LB, SourceLocation RB,
+               SafeScopeSpecifier SafeSpec = SS_None, SourceLocation SafeLoc = SourceLocation());
+  explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty),
+                                            SafeSpec(SS_None), SafeLoc() {}
 
   void setStmts(ArrayRef<Stmt *> Stmts);
 
@@ -1434,11 +1438,13 @@ class CompoundStmt final
 public:
   static CompoundStmt *Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                               FPOptionsOverride FPFeatures, SourceLocation LB,
-                              SourceLocation RB);
+                              SourceLocation RB,
+                              SafeScopeSpecifier SafeSpec = SS_None,
+                              SourceLocation SafeLoc = SourceLocation());
 
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
+      : Stmt(CompoundStmtClass), RBraceLoc(Loc), SafeSpec(SS_None), SafeLoc() {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.HasFPFeatures = 0;
   }
@@ -1530,6 +1536,18 @@ public:
 
   const Stmt *getStmtExprResult() const {
     return const_cast<CompoundStmt *>(this)->getStmtExprResult();
+  }
+
+  SafeScopeSpecifier getSafeSpecifier() const {
+    return SafeSpec;
+  }
+
+  void setSafeSpecifier(SafeScopeSpecifier spec) {
+    SafeSpec = spec;
+  }
+
+  SourceLocation getSafeSpecifierLoc() const {
+    return SafeLoc;
   }
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }

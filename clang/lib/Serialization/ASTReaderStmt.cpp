@@ -154,6 +154,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned NumStmts = Record.readInt();
   unsigned HasFPFeatures = Record.readInt();
   assert(S->hasStoredFPFeatures() == HasFPFeatures);
+  S->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
   S->setStmts(Stmts);

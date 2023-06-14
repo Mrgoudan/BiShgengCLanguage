@@ -390,6 +390,12 @@ namespace clang {
     }
     llvm_unreachable("Unknown AccessSpecifier");
   }
+
+  enum SafeScopeSpecifier {
+    SS_None = 0,
+    SS_Safe = 1,
+    SS_Unsafe = 2,
+  };
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_SPECIFIERS_H

@@ -2969,6 +2969,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.UsesFPIntrin = UsesFPIntrin;
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
+  FunctionDeclBits.SafeSpecifier = SS_None;
   FunctionDeclBits.IsMultiVersion = false;
   FunctionDeclBits.IsCopyDeductionCandidate = false;
   FunctionDeclBits.HasODRHash = false;

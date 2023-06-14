@@ -548,6 +548,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FunctionDecl's body is handled last at ASTWriterDecl::Visit,
   // after everything else is written.
   Record.push_back(static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
+  Record.push_back(D->getSafeSpecifier());
   Record.push_back(D->isInlineSpecified());
   Record.push_back(D->isInlined());
   Record.push_back(D->isVirtualAsWritten());

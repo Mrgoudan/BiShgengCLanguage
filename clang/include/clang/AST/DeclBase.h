@@ -1642,6 +1642,8 @@ class DeclContext {
     /// have a body, once we're done parsing it.
     uint64_t WillHaveBody : 1;
 
+    uint64_t SafeSpecifier : 2;
+
     /// Indicates that this function is a multiversioned
     /// function using attribute 'target'.
     uint64_t IsMultiVersion : 1;

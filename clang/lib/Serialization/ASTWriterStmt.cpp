@@ -82,6 +82,7 @@ void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
   Record.push_back(S->size());
   Record.push_back(S->hasStoredFPFeatures());
+  Record.push_back(S->getSafeSpecifier());
   for (auto *CS : S->body())
     Record.AddStmt(CS);
   if (S->hasStoredFPFeatures())
