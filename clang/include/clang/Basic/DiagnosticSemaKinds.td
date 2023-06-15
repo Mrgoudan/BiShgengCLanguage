@@ -11713,4 +11713,9 @@ def err_cast_from_randomized_struct : Error<
 
 // BSC
 def err_trait_impl : Error<"can not find '%0' of 'trait %1' in %2">;
+def err_trait_impl_function_type_conflict : Error<
+  "type of '%0' conflicts with that of 'trait %1'">;
+def err_type_has_not_impl_trait : Error<
+  "pointer type which has implemented 'trait %0' or 'trait %0*' is expected, "
+  "but get %1 here">;
 } // end of sema component.

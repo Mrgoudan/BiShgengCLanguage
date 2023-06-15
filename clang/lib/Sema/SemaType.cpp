@@ -1899,92 +1899,86 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
   return Result;
 }
 
-bool Sema::IsImplTraitDeclIncomplete(Declarator &D, SourceLocation TypeLoc, TraitDecl *TD) {
+bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
+                                     TraitDecl *TD) {
   TypeProcessingState state(*this, D);
-  bool BSCMethodFlag = true;
   CXXScopeSpec SS;
-  Scope *S = getCurScope();
   NamedDecl *Def = nullptr;
-  DeclContext *DC = CurContext;
   BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
   
   QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec());
   if (T->isIncompleteType(&Def))
     Diagnoser.diagnose(*this, TypeLoc, T);
 
-  bool DiagFlag = true;
   IdentifierInfo* functionID = nullptr;
   for (TraitDecl::field_iterator FieldIt = TD->field_begin();
        FieldIt != TD->field_end(); ++FieldIt) {
     functionID = FieldIt->getIdentifier();
     FunctionDecl *Old = FieldIt->getAsFunction();
-    FunctionDecl *New;
-    DeclContext *DC = getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    FunctionDecl *New = nullptr;
+    DeclContext *DC =
+        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
     if (DC) {
       DeclContext::lookup_result DR = DC->lookup(functionID);
-      for (NamedDecl *D : DR) {
+      for (NamedDecl *D : DR)
         if (D)
           New = D->getAsFunction();
-      }
+    }
+    if (!New) {
+      Diag(TypeLoc, diag::err_trait_impl) << FieldIt->getName()
+          << TD->getNameAsString() << T;
+      return true;
     }
     BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
-    if (!BS) {
-      Diag(FieldIt->getLocation(), diag::err_trait_impl)
-        << FieldIt->getName() << TD->getNameAsString() << T;
-      return false;
-    }
+    bool TypeDiagFlag = false;
+    if (!BS->getHasThisParam() ||
+        !Context.hasSameFunctionTypeIgnoringPtrSizes(Old->getReturnType(),
+                                                     New->getReturnType()))
+      TypeDiagFlag = true;
     else {
-      if (!BS->getHasThisParam() || !Context.hasSameFunctionTypeIgnoringPtrSizes(Old->getReturnType(), New->getReturnType()))
-        DiagFlag = false;
-      else {
-        int n = Old->getNumParams();
-        int m = New->getNumParams();
-        if (n == m)
-          for (int i = 1; i < n; ++i) {
-            QualType T1 = Old->getParamDecl(i)->getType();
-            QualType T2 = New->getParamDecl(i)->getType();
-            if (!Context.hasSameFunctionTypeIgnoringPtrSizes(T1, T2))
-              DiagFlag = false;
-          }
-        else
-          DiagFlag = false;
-      }
+      int n = Old->getNumParams();
+      int m = New->getNumParams();
+      if (n == m)
+        for (int i = 1; i < n; ++i) {
+          QualType T1 = Old->getParamDecl(i)->getType();
+          QualType T2 = New->getParamDecl(i)->getType();
+          if (!Context.hasSameFunctionTypeIgnoringPtrSizes(T1, T2))
+            TypeDiagFlag = true;
+        }
+      else
+        TypeDiagFlag = true;
     }
-    if (!DiagFlag)
-      Diag(New->getLocation(), diag::err_conflicting_types)
-          << New->getDeclName();
+    if (TypeDiagFlag) {
+      Diag(TypeLoc, diag::err_trait_impl_function_type_conflict)
+              << FieldIt->getName() << TD->getNameAsString();
+      return true;
+    }
   }
-  if (DiagFlag)
-    return false;
-  return true;
+  return false;
 }
 
 NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
   TraitDecl *TD = ITD->getTraitDecl();
+  RecordDecl *TraitRecord = TD->getVtable();
   SourceLocation TraitLoc = ITD->getLocation();
   CXXScopeSpec SS;
   Scope *S = getCurScope();
   DeclContext *DC = CurContext;
-  std::string Tmp = "__Trait_" + D.getIdentifier()->getName().str() + "_Vtable";
-  StringRef TraitVTableName = Tmp;
-  DeclContext::lookup_result Decls = getASTContext().getTranslationUnitDecl()->
-      lookup(DeclarationName(&(getASTContext().Idents).get(TraitVTableName)));
-  RecordDecl *TraitRecord = nullptr;
-  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
-                                            I != E; ++I) {
-    if (isa<RecordDecl>(*I)) {
-      TraitRecord = dyn_cast<RecordDecl>(*I);
-    }
-  }
   QualType QT = TraitRecord->getTypeForDecl()->getCanonicalTypeInternal();
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType T = TInfo->getType().getCanonicalType();
+  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
+  if (LookUpVar)
+    return nullptr;
   PrintingPolicy PrintPolicy = LangOptions();
   SplitQualType T_split = T.split();
   StringRef Ty = T.getAsString(T_split, PrintPolicy);
   int n = Ty.find(' ');
-  Tmp = n > 0 ? Ty.str().substr(0, n) + "_" +
-                Ty.str().substr(n + 1, -1) : Ty.str();
+  std::string Tmp;
+  if (n > 0)
+    Tmp = Ty.str().substr(0, n) + "_" + Ty.str().substr(n + 1, -1);
+  else
+    Tmp = Ty.str();
   StringRef Prof = Tmp;
   Tmp = "__" + Prof.str() + "_trait_" + D.getIdentifier()->getName().str();
   StringRef ImplTraitName = Tmp;
@@ -2008,13 +2002,11 @@ NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
     DeclarationNameInfo NameInfo;
     const TemplateArgumentListInfo *TemplateArgs;
     DecomposeUnqualifiedId(Id, TemplateArgsBuffer, NameInfo, TemplateArgs);
-    DeclarationName Name = NameInfo.getName();
     LookupResult R(*this, NameInfo, LookupOrdinaryName);
     LookupParsedName(R, S, &SS, true, false, T);
     ExprResult Res = BuildTemplateIdExpr(SS, TraitLoc, R, false, TemplateArgs);
     Res.get()->HasBSCScopeSpec = true;
     typedef DesignatedInitExpr::Designator ASTDesignator;
-    bool Invalid = false;
     SmallVector<ASTDesignator, 32> Designators;
     SmallVector<Expr *, 32> InitExpressions;
     const Designator &DDD = Desig.getDesignator(0);
@@ -2022,7 +2014,7 @@ NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
                                         TraitLoc));
     Desig.ClearExprs(*this);
     Res = DesignatedInitExpr::Create(Context, Designators, InitExpressions,
-                                        TraitLoc, false, Res.getAs<Expr>());
+                                     TraitLoc, false, Res.getAs<Expr>());
     Res = this->CorrectDelayedTyposInExpr(Res.get());
     InitExprs.push_back(Res.get());
   }
@@ -2031,7 +2023,6 @@ NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
 
   Expr *Init = LHS.get();
   QualType DclT = NewVD->getType();
-  ParenListExpr *CXXDirectInit = dyn_cast<ParenListExpr>(Init);
   InitializedEntity Entity = InitializedEntity::InitializeVariable(NewVD);
   InitializationKind Kind = InitializationKind::CreateForInit(TraitLoc, false,
                                                               Init);
@@ -2050,6 +2041,7 @@ NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
                                           NewVD->isConstexpr());
   Init = Result.get();
   NewVD->setInit(Init);
+  TD->MapInsert(T, NewVD);
   return NewVD;
 }
 
@@ -6081,26 +6073,15 @@ TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D, Scope *S) {
 
 bool Sema::IsQualTypeDesugarStructTrait(QualType T) {
   if (RecordDecl *RD = T.getTypePtr()->getAsRecordDecl())
-    return RD->getTraitDesugarFlag();
+    return RD->getDesugaredTraitDecl();
   return false;
 }
 
 QualType Sema::DesugarTraitToStructTrait(QualType T) {
   T = T.getCanonicalType();
-  PrintingPolicy PrintPolicy = LangOptions();
-  SplitQualType T_split = T.split();
-  StringRef TRName = "__Trait_" + T.getAsString(T_split, PrintPolicy).substr(6, -1);
-
-  DeclContext::lookup_result Decls = getASTContext().getTranslationUnitDecl()->
-      lookup(DeclarationName(&(getASTContext().Idents).get(TRName)));
-  RecordDecl *TR = nullptr;
-  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
-    if (isa<RecordDecl>(*I)) {
-      TR = dyn_cast<RecordDecl>(*I);
-    }
-  }
-  T = TR->getTypeForDecl()->getCanonicalTypeInternal();
-  return T;
+  TraitDecl *TD = dyn_cast<TraitDecl>(T.getTypePtr()->getAsTagDecl());
+  RecordDecl *RD = TD->getTrait();
+  return RD->getTypeForDecl()->getCanonicalTypeInternal();
 }
 
 static void transferARCOwnershipToDeclSpec(Sema &S,

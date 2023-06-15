@@ -2201,6 +2201,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   D.complete(FirstDecl);
   bool ShouldPushBack = true;
 
+  bool TraitFlag = false;
   VarDecl *VD = dyn_cast_or_null<VarDecl>(FirstDecl);
   if(getLangOpts().BSC && VD) {
     QualType T = VD->getType();
@@ -2208,10 +2209,11 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     if (PT && PT->getPointeeType()->isTraitType()) {
       ShouldPushBack = false;
       VarDecl *NewVD = Actions.ActOnDesugarTraitInstance(D, PT->getPointeeType(), VD);
-      DeclsInGroup.push_back(NewVD); 
+      DeclsInGroup.push_back(NewVD);
+      TraitFlag = true;
     }
   }
-  if (FirstDecl && ShouldPushBack)
+  if (FirstDecl && ShouldPushBack && !TraitFlag)
     DeclsInGroup.push_back(FirstDecl);
 
   if (FirstDecl) {
@@ -3554,7 +3556,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_This, Loc, PrevSpec,
                                        DiagID, Policy);
         break;
-        }
+      }
       // This identifier can only be a typedef name if we haven't already seen
       // a type-specifier.  Without this check we misparse:
       //  typedef int X; struct Y { short X; };  as 'short int'.
@@ -5383,6 +5385,8 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     TraitDecl *find = Actions.ActOnDesugarFind(Name);
     RecordDecl *TraitVtableRecord = Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
     RecordDecl *TraitRecord = Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
+    find->setTrait(TraitRecord);
+    find->setVtable(TraitVtableRecord);
     if (TraitVtableRecord) {
       ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitVtableRecord);
@@ -5391,7 +5395,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       Actions.ActOnTagFinishDefinition(getCurScope(), TraitVtableRecord, StartLoc);
     }
     if (TraitRecord) {
-      TraitRecord->setTraitDesugarFlag();
+      TraitRecord->setDesugaredTraitDecl(find);
       ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitRecord);
       Actions.ActOnDesugarTrait(TraitVtableRecord, StartLoc, NameLoc);
@@ -7256,7 +7260,9 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       }
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
                                       EllipsisLoc, TypePtr, isTraitMem);
-    } else if (RequiresArg)
+    } else if (isTraitMem)
+      Diag(Tok.getLocation(), diag::invalid_param_for_trait_member);
+    else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
     if (ParamInfo.size() > 0) {
@@ -7715,7 +7721,7 @@ void Parser::ParseParameterDeclarationClause(
           Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_for_trait_member);
         }
         if (ParmDeclarator.getIdentifier()->getName() != "this") {
-          Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_name_for_trait);
+          Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_for_trait_member);
         }
       }
 

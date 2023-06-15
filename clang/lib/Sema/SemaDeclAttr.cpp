@@ -507,7 +507,7 @@ static const TraitType *getTraitType(QualType QT) {
   if (const auto *PT = QT->getAs<PointerType>())
     return PT->getPointeeType()->getAs<TraitType>();
 
-return nullptr;
+  return nullptr;
 }
 
 template <typename AttrType>

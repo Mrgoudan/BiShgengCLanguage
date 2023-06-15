@@ -4047,11 +4047,11 @@ public:
   void setHasFlexibleArrayMember(bool V) {
     RecordDeclBits.HasFlexibleArrayMember = V;
   }
-  void setTraitDesugarFlag() {
-    TraitDesugarFlag = true;
+  void setDesugaredTraitDecl(TraitDecl *TD) {
+    DesugaredTD = TD;
   }
-  bool getTraitDesugarFlag() {
-    return TraitDesugarFlag;
+  TraitDecl *getDesugaredTraitDecl() {
+    return DesugaredTD;
   }
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
@@ -4319,11 +4319,27 @@ private:
   /// Deserialize just the fields.
   void LoadFieldsFromExternalStorage() const;
 
-  bool TraitDesugarFlag = false;
+  TraitDecl *DesugaredTD = nullptr;
 };
 
 class TraitDecl : public TagDecl {
+  RecordDecl *TraitR = nullptr;
+  RecordDecl *Vtable = nullptr;
+  std::map<QualType, VarDecl*> TypeImpled;
+
 public:
+  void MapInsert(QualType QT, VarDecl* VD) {
+    TypeImpled.insert(std::pair<QualType, VarDecl*>(QT, VD));
+  }
+
+  VarDecl *getTypeImpledVarDecl(QualType QT) {
+    std::map<QualType, VarDecl*>::iterator find;
+    find = TypeImpled.find(QT);
+    if (find == TypeImpled.end())
+      return nullptr;
+    return find->second;
+  }
+
   friend class DeclContext;
 
 protected:
@@ -4349,6 +4365,22 @@ public:
 
   field_range fields() const { return field_range(field_begin(), field_end()); }
   field_iterator field_begin() const;
+
+  void setTrait(RecordDecl *RD) {
+    TraitR = RD;
+  }
+
+  void setVtable(RecordDecl *RD) {
+    Vtable = RD;
+  }
+
+  RecordDecl *getTrait() {
+    return TraitR;
+  }
+
+  RecordDecl *getVtable() {
+    return Vtable;
+  }
 
   field_iterator field_end() const {
     return field_iterator(decl_iterator());

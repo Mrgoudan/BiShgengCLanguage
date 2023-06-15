@@ -1611,6 +1611,7 @@ private:
                                                 AccessSpecifier AS);
   bool ShouldParseImplTraitDecl();
   DeclGroupPtrTy ParseImplTraitDeclaration();
+  DeclGroupPtrTy ParseTraitDeclaration(ParsedAttributes &attrs);
 
   void SkipFunctionBody();
   Decl *ParseFunctionDefinition(ParsingDeclarator &D,

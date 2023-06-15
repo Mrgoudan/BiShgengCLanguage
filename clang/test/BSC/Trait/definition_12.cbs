@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+trait F {
+  int foo(This* this);
+};
+
+int get(trait F* f) {
+  return 1;
+};
+
+int int::foo(int* this) {
+  return 0;
+}
+
+impl trait F for int;
+
+int main() {
+  int a = 1;
+  trait F* f = &a;
+  int b = get(f);
+  return 0;
+}

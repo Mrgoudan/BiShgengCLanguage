@@ -2193,10 +2193,12 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     }
     case tok::arrow: {
       if (getLangOpts().BSC) {
-        QualType T = LHS.get()->getType();
-        if (Actions.IsQualTypeDesugarStructTrait(T)) {
-          TraitParam = Actions.AddAfterStructTrait(LHS, Loc, "data").get();
-          LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");
+        if (LHS.get()) {
+          QualType T = LHS.get()->getType();
+          if (Actions.IsQualTypeDesugarStructTrait(T)) {
+            TraitParam = Actions.AddAfterStructTrait(LHS, Loc, "data").get();
+            LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");
+          }
         }
       }
     }

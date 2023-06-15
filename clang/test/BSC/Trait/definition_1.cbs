@@ -1,0 +1,58 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+trait F {
+  int foo(This* this, int a);
+};
+
+struct S_1{
+  int x;
+};
+
+enum S_2{
+  x,
+};
+
+union S_3{
+  int x;
+};
+
+int struct S_1::foo(struct S_1* this, int a) {
+  return this->x + a;
+}
+
+impl trait F for struct S_1;
+
+int enum S_2::foo(enum S_2* this, int a) {
+  return *this + a;
+}
+
+impl trait F for enum S_2;
+
+int union S_3::foo(union S_3* this, int a) {
+  return this->x + a;
+}
+
+impl trait F for union S_3;
+
+int int::foo(int* this,int a) {
+  return *this + a;
+}
+
+impl trait F for int;
+
+int main() {
+  struct S_1 s_1 = { .x = 1 };
+  trait F* i = &s_1; 
+
+  enum S_2 s_2 = x;
+  trait F* j = &s_2; 
+
+  union S_3 s_3 = { .x = 1 };
+  trait F* k = &s_3; 
+
+  int s_4 = 1;
+  trait F* l = &s_4; 
+
+  return 1;
+};

@@ -2901,8 +2901,6 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
-  bool IsImplTraitDeclIncomplete(Declarator &D, SourceLocation TypeLoc,
-                                 TraitDecl *TD);
   QualType ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
                                      bool AddToContextMap, BSCScopeSpec &BSS,
                                      DeclSpec &DS);
@@ -5526,9 +5524,11 @@ public:
                                 const DeclarationNameInfo &NameInfo,
                                 const TemplateArgumentListInfo *TemplateArgs,
                                 QualType ExtendedTy = QualType());
+
+  bool IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
+                              TraitDecl *TD);
   NamedDecl *DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D);
   QualType DesugarTraitToStructTrait(QualType T);
-  IdentifierInfo *ReturnTraitIdentifierOrNull(NamedDecl *ND);
   bool IsQualTypeDesugarStructTrait(QualType T);
   bool IsTraitEqaulExpr(QualType DstType, QualType SrcType);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc, StringRef ID);

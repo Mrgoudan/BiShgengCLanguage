@@ -1613,7 +1613,6 @@ def ext_hlsl_access_specifiers : ExtWarn<
 // BSC Parser Diagnostics 
 def ambiguous_bscmethod_define : Error<"Ambiguous declaration of BSCMethod">;
 
-def invalid_param_for_trait_member : Error<"Params of trait member functions must begin with This* Type">;
-def invalid_param_name_for_trait : Error<"Params of trait member functions must begin with This* this">;
+def invalid_param_for_trait_member : Error<"the first parameter of trait member function must be 'This* this'">;
 def unexpected_token_for_impl_trait_decl : Error<"Unexpected token for ImplTraitDecl">;
 } // end of Parser diagnostics

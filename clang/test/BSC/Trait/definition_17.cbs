@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+trait F {
+  int foo(This* this);
+};
+
+trait F* get() {
+  int a = 1;
+  return &a; /// definition_17.cbs:9:10: error: pointer type which has implemented 'trait F' or 'trait F*' is expected, but get 'int' here
+};
+
+int main() {
+  trait F* f = get();
+  return 0;
+}

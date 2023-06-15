@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+trait F {
+  int foo(This* this, int a);
+};
+
+union S_2 {
+  int x;
+};
+
+int union S_2::foo(union S_2* this, int a) { 
+  return a;
+}
+
+impl trait F for union S_2;
+
+int main() {
+  union S_2 s_2; 
+  int a = s_2.foo(1);
+  trait F* f = &s_2;
+  return 1;
+}

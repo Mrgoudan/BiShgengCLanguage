@@ -6062,7 +6062,7 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
 
 NamedDecl *Sema::ActOnImplTraitDecl(Scope *S, Declarator &D,
                                     SourceLocation TypeLoc, TraitDecl *TD) {
-  if (IsImplTraitDeclIncomplete(D, TypeLoc, TD))
+  if (IsImplTraitDeclIllegal(D, TypeLoc, TD))
     return nullptr;
   DeclContext *DC = CurContext;
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
@@ -6413,7 +6413,11 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
   if (!New)
     return nullptr;
-
+  
+  const PointerType *PT = dyn_cast<PointerType>(TInfo->getType());
+  if (Context.getLangOpts().BSC &&
+      PT && PT->getPointeeType().getTypePtr()->isTraitType())
+    AddToScope = false;
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)
@@ -7372,27 +7376,37 @@ static void copyAttrFromTypedefToDecl(Sema &S, Decl *D, const TypedefType *TT) {
 //`}
 VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *VarDec) {
   // build expr: .data = &s;
-  std::string TypeStr = QT.getAsString();
-  size_t pos = TypeStr.find(" ");
-  std::string TypeNameStr = TypeStr.substr(pos+1);
-  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
-  StringRef TraitName = "__Trait_" + TypeNameStr;
-  DeclContext::lookup_result Decls = getASTContext().getTranslationUnitDecl()->lookup(DeclarationName(&Context.Idents.get(TraitName)));
-  RecordDecl *LookUpTrait = nullptr;
-  VarDecl *NewVD;
-  for (DeclContext::lookup_result::iterator I = Decls.begin(); I != Decls.end(); ++I) {
-    if (isa<RecordDecl>(*I)) {
-      LookUpTrait = dyn_cast<RecordDecl>(*I);
-      QualType RecordTy = Context.getRecordType(LookUpTrait);   
-      StringRef InstanceName = GetNameForDeclarator(D).getAsString();             
-      NewVD = VarDecl::Create(Context, CurContext, D.getBeginLoc(), D.getIdentifierLoc(),
-                          &Context.Idents.get(InstanceName), RecordTy, Context.CreateTypeSourceInfo(RecordTy), SC);
-      PushOnScopeChains(NewVD, getCurScope(), true);
-    }
-  }
-  assert(NewVD && "Could not find trait instance");
+  TraitDecl *TD = dyn_cast<TraitDecl>(QT.getTypePtr()->getAsTagDecl());
   Expr *exp = VarDec->getInit();
   ImplicitCastExpr *Icexpr = dyn_cast<ImplicitCastExpr>(exp);
+  if (!Icexpr)
+    return nullptr;
+  Expr *UO = Icexpr->getSubExpr();
+  QualType T = UO->getType();
+  const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
+  if (!PT) {
+    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
+            << TD->getNameAsString() << T;
+    return nullptr;
+  }
+  T = PT->getPointeeType().getCanonicalType();
+  RecordDecl *LookUpTrait = TD->getTrait();
+  RecordDecl *LookUpVtable = TD->getVtable();
+  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
+  if (!LookUpVar) {
+    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
+            << TD->getNameAsString() << T;
+    return nullptr;
+  }
+
+  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
+  QualType RecordTy = Context.getRecordType(LookUpTrait);
+  VarDecl *NewVD =
+      VarDecl::Create(Context, CurContext, D.getBeginLoc(),
+                      D.getIdentifierLoc(), VarDec->getIdentifier(), RecordTy,
+                      Context.CreateTypeSourceInfo(RecordTy), SC);
+  PushOnScopeChains(NewVD, getCurScope(), true);
+
   if (CallExpr *Cexpr = dyn_cast<CallExpr>(exp)) {
     QualType ET = exp->getType();
     if (IsQualTypeDesugarStructTrait(ET)) {
@@ -7400,7 +7414,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *Va
       return NewVD;
     }
   }
-  Expr *UO = Icexpr->getSubExpr();
+
   QualType VoidPT = Context.getPointerType(Context.VoidTy);
   ImplicitCastExpr *TraitData = ImplicitCastExpr::Create(Context, VoidPT,
                                 /* CastKind=*/CK_BitCast,
@@ -7408,66 +7422,17 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *Va
                                 /* CXXCastPath=*/nullptr,
                                 /* ExprValueKind=*/VK_PRValue,
                                 /* FPFeatures */ FPOptionsOverride());
-  std::string Vtable = "__Trait_" + TypeNameStr + "_Vtable";
-  StringRef VtableName = Vtable;
-  DeclContext::lookup_result LookupVtables = getASTContext().getTranslationUnitDecl()->lookup(DeclarationName(&Context.Idents.get(VtableName)));
-  QualType VtableTy;
-  RecordDecl *LookUpVtable = nullptr;
-  for (DeclContext::lookup_result::iterator I = LookupVtables.begin(); I != LookupVtables.end(); ++I) {
-    LookUpVtable = dyn_cast<RecordDecl>(*I);
-    VtableTy = Context.getRecordType(LookUpVtable); 
-  }
+
+  QualType VtableTy = Context.getRecordType(LookUpVtable);
   QualType VtablePT = Context.getPointerType(VtableTy);
-  
-  // build expr: .vtable = *struct_S_Trait_I_Vtable;
-  // when we saw trait *I i = &s;
-  // we build string: "struct_S_Trait_I", then find the vtable.
-  DeclRefExpr *VTInstance = dyn_cast<DeclRefExpr>(dyn_cast<UnaryOperator>(UO)->getSubExpr());
-  std::string InsName = VTInstance->getDecl()->getDeclName().getAsString();
-  DeclContext::lookup_result MainDecls = getASTContext().getTranslationUnitDecl()->lookup(DeclarationName(&Context.Idents.get("main"))); 
-  FunctionDecl *Main;
-  for (DeclContext::lookup_result::iterator I = MainDecls.begin(); I != MainDecls.end(); ++I) {
-    Main = dyn_cast<FunctionDecl>(*I);
-  }
-  //DeclContext::lookup_result VarDecls = Main->lookup(DeclarationName(&Context.Idents.get(InsName)));
-  LookupResult R(
-            *this,
-            DeclarationNameInfo(&(getASTContext().Idents).get(InsName),
-                                SourceLocation()),
-            LookupOrdinaryName);
-  CXXScopeSpec SS;
-  LookupParsedName(R, getCurScope(), &SS, true, false);
-  VarDecl *LookUpVar;
-  QualType InsTy;
-  // for (DeclContext::lookup_result::iterator I = VarDecls.begin(); I != VarDecls.end(); ++I) {
-  //   LookUpVar = dyn_cast<VarDecl>(*I);
-  //   InsTy = LookUpVar->getType(); 
-  // }
-  if (!R.empty()) {
-    LookUpVar = dyn_cast<VarDecl>(R.getFoundDecl());
-    InsTy = LookUpVar->getType();
-  }
-
-  std::string InsTypeString = InsTy.getAsString();
-  StringRef Ty = InsTypeString;
-  int n = Ty.find(' ');
-  std::string Tmp = n > 0 ? Ty.str().substr(0, n) + "_" +
-                    Ty.str().substr(n + 1, -1) : Ty.str();
-  InsTypeString = Tmp;
-
-  std::string VtableStr = "__" + InsTypeString + "_trait_" + TypeNameStr;
-  StringRef InsVtableStr = VtableStr;
-  DeclContext::lookup_result VarDecls = getASTContext().getTranslationUnitDecl()->lookup(DeclarationName(&Context.Idents.get(InsVtableStr))); 
-  for (DeclContext::lookup_result::iterator I = VarDecls.begin(); I != VarDecls.end(); ++I) {
-    LookUpVar = dyn_cast<VarDecl>(*I);
-  }
-  DeclRefExpr *VtableRef = DeclRefExpr::Create(
-      Context, NestedNameSpecifierLoc(), SourceLocation(), LookUpVar,
-      false, SourceLocation(), VtableTy, VK_LValue);
-  UnaryOperator *UOVtable = UnaryOperator::Create(Context, VtableRef, UO_AddrOf,
-                               VtablePT, VK_PRValue,
-                               OK_Ordinary, SourceLocation(),
-                               false, FPOptionsOverride());
+  DeclRefExpr *VtableRef =
+      DeclRefExpr::Create(Context, NestedNameSpecifierLoc(), SourceLocation(),
+                          LookUpVar, false, SourceLocation(), VtableTy,
+                          VK_LValue);
+  UnaryOperator *UOVtable =
+      UnaryOperator::Create(Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
+                            OK_Ordinary, SourceLocation(), false,
+                            FPOptionsOverride());
   
   std::vector<Expr*> Exprs = {TraitData, UOVtable};
   MutableArrayRef<Expr*> initExprs = MutableArrayRef<Expr*>(Exprs); 
@@ -17360,7 +17325,7 @@ CreateNewDecl:
     if (Name) // can be null along some error paths
       if (Scope *EnclosingScope = getScopeForDeclContext(S, DC))
         PushOnScopeChains(New, EnclosingScope, /* AddToContext = */ false);
-  }  else if (Name && Kind != TTK_Trait) {
+  }  else if (Name) {
     S = getNonFieldDeclScope(S);
     PushOnScopeChains(New, S, true);
   } else {

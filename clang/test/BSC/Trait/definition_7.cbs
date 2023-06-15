@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+trait F {
+  int a(This *this);
+};
+
+int int::a(int *this) {
+  return 0;
+};
+
+impl trait F for int;
+
+int main() {
+  int a = 1;
+  trait F f = &a; /// definition_7.cbs:15:11: error: initializing 'trait F' with an expression of incompatible type 'int *'
+  return 0;
+}

@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+trait F {
+  int a(); /// definition_6.cbs: error:
+};
+
+int main() {
+  return 0;
+}
