@@ -2199,7 +2199,19 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (LateParsedAttrs.size() > 0)
     ParseLexedAttributeList(LateParsedAttrs, FirstDecl, true, false);
   D.complete(FirstDecl);
-  if (FirstDecl)
+  bool ShouldPushBack = true;
+
+  VarDecl *VD = dyn_cast_or_null<VarDecl>(FirstDecl);
+  if(getLangOpts().BSC && VD) {
+    QualType T = VD->getType();
+    auto *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
+    if (PT && PT->getPointeeType()->isTraitType()) {
+      ShouldPushBack = false;
+      VarDecl *NewVD = Actions.ActOnDesugarTraitInstance(D, PT->getPointeeType(), VD);
+      DeclsInGroup.push_back(NewVD); 
+    }
+  }
+  if (FirstDecl && ShouldPushBack)
     DeclsInGroup.push_back(FirstDecl);
 
   if (FirstDecl) {

@@ -5532,6 +5532,8 @@ public:
   bool IsQualTypeDesugarStructTrait(QualType T);
   bool IsTraitEqaulExpr(QualType DstType, QualType SrcType);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc, StringRef ID);
+  VarDecl *ActOnDesugarTraitInstance(Declarator &D, QualType QT,
+                                     VarDecl *VarDec);
   Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType, SourceLocation DSLoc);
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS,
