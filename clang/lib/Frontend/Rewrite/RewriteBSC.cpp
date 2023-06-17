@@ -54,11 +54,20 @@ public:
   }
   void HandleTopLevelSingleDecl(Decl *D);
   void HandleDeclInMainFile(Decl *D);
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    HandleTopLevelSingleDecl(D);
+  }
 
   void RewriteBSCMethodDecl(BSCMethodDecl *BMD);
   void RewriteMemberExpr(MemberExpr *ME);
   void RewriteCallExpr(CallExpr *CE);
   void RewriteDeclRefExpr(DeclRefExpr *CE);
+
+  void RewriteVarDecl(VarDecl *VD);
+  void RwriteBSCFunctionTemplateDecl(FunctionTemplateDecl *FTD);
+  void RewriteBSCInstantialFunctionDecl(FunctionDecl *FD);
+  void RwriteBSCClassTemplateDecl(ClassTemplateDecl *FTD);
+  void RwriteBSCInstantialClassDecl(ClassTemplateSpecializationDecl *FD);
 
   void InsertText(SourceLocation Loc, StringRef Str, bool InsertAfter = true) {
     // If insertion succeeded or warning disabled return with no warning.
@@ -71,6 +80,22 @@ public:
   void ReplaceText(SourceLocation Start, unsigned OrigLength, StringRef Str) {
     // If removal succeeded or warning disabled return with no warning.
     if (!Rewrite.ReplaceText(Start, OrigLength, Str))
+      return;
+
+    Diags.Report(Context->getFullLoc(Start), RewriteFailedDiag);
+  }
+
+  void ReplaceText(SourceLocation Start, SourceRange range, StringRef NewStr) {
+    // If removal succeeded or warning disabled return with no warning.
+    if (!Rewrite.ReplaceText(range, NewStr))
+      return;
+
+    Diags.Report(Context->getFullLoc(Start), RewriteFailedDiag);
+  }
+
+  void RemoveText(SourceLocation Start, SourceRange range) {
+    // Remove the specified text region.
+    if (!Rewrite.RemoveText(range))
       return;
 
     Diags.Report(Context->getFullLoc(Start), RewriteFailedDiag);
@@ -95,6 +120,14 @@ public:
   void VisitDeclRefExpr(DeclRefExpr *DRE) {
     VisitExpr(DRE);
     rewriter->RewriteDeclRefExpr(DRE);
+  }
+
+  void VisitDeclStmt(DeclStmt *DT) {
+    VisitStmt(DT);
+    for (auto *D : DT->decls()) {
+      if (VarDecl *VD = cast<VarDecl>(D))
+        rewriter->RewriteVarDecl(VD);
+    }
   }
 
   void VisitStmt(Stmt *S) {
@@ -161,10 +194,33 @@ void RewriteBSC::HandleDeclInMainFile(Decl *D) {
     FunctionDecl *FD = cast<FunctionDecl>(D);
     if (!FD->isThisDeclarationADefinition())
       break;
-    if (CompoundStmt *Body = dyn_cast_or_null<CompoundStmt>(FD->getBody())) {
-      RewriterVisitor visitor(this);
-      visitor.VisitStmt(Body);
+    // Rewrite BSC instantial template function
+    if (FD->isTemplateInstantiation()) {
+      RewriteBSCInstantialFunctionDecl(FD);
+    } else {
+      if (CompoundStmt *Body = dyn_cast_or_null<CompoundStmt>(FD->getBody())) {
+        RewriterVisitor visitor(this);
+        visitor.VisitStmt(Body);
+      }
     }
+    break;
+  }
+  case Decl::FunctionTemplate: {
+    FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(D);
+    // Remove origin BSC template function.
+    RwriteBSCFunctionTemplateDecl(FTD);
+    break;
+  }
+  case Decl::ClassTemplate: {
+    ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(D);
+    // Remove origin BSC template struct.
+    RwriteBSCClassTemplateDecl(CTD);
+    break;
+  }
+  case Decl::ClassTemplateSpecialization: {
+    // Rewrite ClassTemplateSpecializationDecl
+    ClassTemplateSpecializationDecl *CTSD = cast<ClassTemplateSpecializationDecl>(D);
+    RwriteBSCInstantialClassDecl(CTSD);
     break;
   }
   default:
@@ -186,14 +242,20 @@ void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
   OutFile->flush();
 }
 
-std::string GetPrefix(QualType T) {
+// To prefix the type by jointing '_' between types and function name.
+// Arg 'isFront' determines weather to prefix '_' at the front of type or not.
+static std::string GetTpyoPrefix(QualType T, bool isFront) {
   std::string ExtendedTypeStr = T.getAsString();
   for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
     if (ExtendedTypeStr[i] == ' ') {
       ExtendedTypeStr.replace(i, 1, "_");
     }
   }
-  ExtendedTypeStr += "_";
+  if (isFront) {
+    ExtendedTypeStr = "_" + ExtendedTypeStr;
+  } else {
+    ExtendedTypeStr += "_";
+  }
   return ExtendedTypeStr;
 }
 
@@ -206,7 +268,8 @@ void RewriteBSC::RewriteBSCMethodDecl(BSCMethodDecl *BMD) {
   const char *startBuf = SM->getCharacterData(StartLoc);
   const char *endBuf = SM->getCharacterData(EndLoc);
 
-  std::string ExtendedTypeStr = GetPrefix(BMD->getExtendedType());
+  std::string ExtendedTypeStr = GetTpyoPrefix(BMD->getExtendedType(),
+                                              /*isFront=*/false);
   ReplaceText(StartLoc, endBuf - startBuf, ExtendedTypeStr);
 }
 
@@ -230,6 +293,37 @@ void RewriteBSC::RewriteCallExpr(CallExpr *CE) {
         }
       }
     }
+    if (DeclRefExpr *DeclRef = dyn_cast<DeclRefExpr>(SE)) {
+      if (DeclRef->getFoundDecl()->isTemplateDecl()) {
+        // 1.get repalce name
+        auto *FD = dyn_cast<FunctionDecl>(DeclRef->getDecl());
+        std::string FunctionNameStr = FD->getDeclName().getAsString();
+        for (unsigned i = 0; i < FD->getTemplateSpecializationArgs()->size(); i++) {
+          std::string QT = GetTpyoPrefix(FD->getTemplateSpecializationArgs()
+                                         ->asArray()[i].getAsType(),
+                                         /*isFront=*/true);
+          FunctionNameStr += QT;
+        }
+        // 2.get locations to replace 
+        unsigned TemplateArgNum = DeclRef->getNumTemplateArgs();
+        SourceLocation LocStart = CE->getBeginLoc();
+        SourceLocation LocEnd;
+        // If template args '(T a)' is not zero, then use getBeginLoc() and 
+        // shift to left for 1, so that we can get '>' location. If template
+        // arg '()' is zero, then getBeginLoc() API is invalid， we can only 
+        // find the location of ')', then shift to the left 
+        // for 2 to get '<'.
+        if (TemplateArgNum != 0) {
+          LocEnd = CE->getArg(0)->getBeginLoc().getLocWithOffset(-1);
+        } else {
+          LocEnd = CE->getRParenLoc().getLocWithOffset(-2);
+        }
+        // 3.replace the func name
+        const char *startBuf = SM->getCharacterData(LocStart);
+        const char *endBuf = SM->getCharacterData(LocEnd);
+        ReplaceText(LocStart, endBuf - startBuf, FunctionNameStr);
+      }
+    }
   }
 }
 
@@ -239,7 +333,8 @@ void RewriteBSC::RewriteMemberExpr(MemberExpr *ME) {
     SourceLocation MemberStart = ME->getMemberLoc();
     const char *startBuf = SM->getCharacterData(LocStart);
     const char *endBuf = SM->getCharacterData(MemberStart);
-    std::string ExtendedTypeStr = GetPrefix(BD->getExtendedType());
+    std::string ExtendedTypeStr = GetTpyoPrefix(BD->getExtendedType(),
+                                                /*isFront=*/false);
     ReplaceText(LocStart, endBuf - startBuf, ExtendedTypeStr);
   }
 }
@@ -251,8 +346,73 @@ void RewriteBSC::RewriteDeclRefExpr(DeclRefExpr *DRE) {
       SourceLocation LocEnd = DRE->getBeginLoc();
       const char *startBuf = SM->getCharacterData(LocStart);
       const char *endBuf = SM->getCharacterData(LocEnd);
-      std::string ExtendedTypeStr = GetPrefix(BD->getExtendedType());
+      std::string ExtendedTypeStr = GetTpyoPrefix(BD->getExtendedType(),
+                                                  /*isFront=*/false);
       ReplaceText(LocStart, endBuf - startBuf, ExtendedTypeStr);
     }
   }
+}
+
+void RewriteBSC::RewriteVarDecl(VarDecl *VD) {
+  QualType T = VD->getTypeSourceInfo()
+    ? VD->getTypeSourceInfo()->getType()
+    : VD->getASTContext().getUnqualifiedObjCPointerType(VD->getType());
+
+  // rewrite BSC template struct instantial statement.
+  if (const auto *ET = dyn_cast<ElaboratedType>(T)) {
+    QualType QT = ET->getNamedType();
+    if (const auto *TST = dyn_cast<TemplateSpecializationType>(QT)) {
+      std::string SStr;
+      llvm::raw_string_ostream Buf(SStr);
+      VD->print(Buf, PrintingPolicy(LangOpts), /*PrintInstantiation=*/true);
+      const std::string &Str = Buf.str();
+      
+      SourceLocation StartLoc = VD->getBeginLoc();
+      SourceRange VDRange = VD->getSourceRange();
+      ReplaceText(StartLoc, VDRange, Str);
+    }
+  }
+}
+
+void RewriteBSC::RwriteBSCFunctionTemplateDecl(FunctionTemplateDecl *FTD) {
+  // Remove the BSC template function source code;
+  SourceRange range = FTD->getSourceRange();
+  RemoveText(FTD->getBeginLoc(), range);
+}
+
+void RewriteBSC::RewriteBSCInstantialFunctionDecl(FunctionDecl *FD) {
+  // Rename the BSC instantial function template decl, and insert it
+  // at the end of the origin function template decl.
+  SourceLocation EndLoc = FD->getEndLoc();
+  std::string SStr;
+  llvm::raw_string_ostream Buf(SStr);
+  FD->print(Buf, PrintingPolicy(LangOpts), /*PrintInstantiation=*/true);
+  const std::string &Str = Buf.str();
+  // Insert instantial function decl at the end of origin template function
+  // shift 2, in case the origin template function is at the beginning of
+  // source code.
+  InsertText(EndLoc.getLocWithOffset(2), Str + "\n");
+}
+
+void RewriteBSC::RwriteBSCClassTemplateDecl(ClassTemplateDecl *CTD){
+  // Remove the BSC template struct source code;
+  SourceRange range = CTD->getSourceRange();
+  // somehow, the range doesn`t include the end semi ';' of the 
+  // struct, so we need to shift end loc to right for 1.
+  range.setEnd(range.getEnd().getLocWithOffset(1));
+  RemoveText(CTD->getBeginLoc(), range);
+}
+
+void RewriteBSC::RwriteBSCInstantialClassDecl(ClassTemplateSpecializationDecl *CTSD) {
+  // Rename the BSC instantial struct template decl, and insert it
+  // at the end of the origin struct template decl.
+  SourceLocation EndLoc = CTSD->getEndLoc();
+  std::string SStr;
+  llvm::raw_string_ostream Buf(SStr);
+  CTSD->print(Buf, PrintingPolicy(LangOpts), /*PrintInstantiation=*/true);
+  const std::string &Str = Buf.str();
+  // Insert instantial struct decl at the end of origin template struct
+  // shift 2, in case the origin template struct is at the beginning of
+  // source code.
+  InsertText(EndLoc.getLocWithOffset(2), Str + ";" + "\n");
 }

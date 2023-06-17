@@ -1133,7 +1133,25 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }
 
+static std::string GetPrefix(QualType T) {
+  std::string ExtendedTypeStr = T.getAsString();
+  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
+    if (ExtendedTypeStr[i] == ' ') {
+      ExtendedTypeStr.replace(i, 1, "_");
+    }
+  }
+  ExtendedTypeStr += "_";
+  return ExtendedTypeStr;
+}
+
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
+  if (Node->HasBSCScopeSpec) {
+    if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
+      std::string ExtendedTypeStr = GetPrefix(BD->getExtendedType());
+      OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
+      return;
+    }
+  }
   if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
@@ -1554,7 +1572,11 @@ static bool isImplicitThis(const Expr *E) {
 }
 
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
-  if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
+  // const SourceManager &SM = Context->getSourceManager();
+  if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
+    std::string ExtendedTypeStr = GetPrefix(BD->getExtendedType());
+    OS << ExtendedTypeStr;
+  } else if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
     PrintExpr(Node->getBase());
 
     auto *ParentMember = dyn_cast<MemberExpr>(Node->getBase());

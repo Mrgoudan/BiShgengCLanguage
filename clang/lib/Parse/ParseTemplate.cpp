@@ -89,6 +89,11 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   SourceLocation TemplateLoc;
   TryConsumeToken(tok::kw_template, TemplateLoc);
 
+  // We don`t have keyword 'template' in BSC, so we need use 
+  // the first tok`s location.
+  if (TemplateLoc.isInvalid())
+    TemplateLoc = Tok.getLocation();
+  
   int LookAheadOffset = 0; // LookAheadOffset starts from 0, assume the first
                            // token we see must not be '<'
   while (!PP.LookAhead(LookAheadOffset)

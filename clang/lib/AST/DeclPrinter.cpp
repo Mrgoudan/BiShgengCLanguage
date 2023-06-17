@@ -591,14 +591,33 @@ static void printExplicitSpecifier(ExplicitSpecifier ES, llvm::raw_ostream &Out,
   Out << Proto;
 }
 
+// To prefix the type by jointing '_' between types and function name.
+// Arg 'isFront' determines weather to prefix '_' at the front of type or not.
+static std::string GetTpyoPrefix(QualType T, bool isFront) {
+  std::string ExtendedTypeStr = T.getAsString();
+  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
+    if (ExtendedTypeStr[i] == ' ') {
+      ExtendedTypeStr.replace(i, 1, "_");
+    }
+  }
+  if (isFront) {
+    ExtendedTypeStr = "_" + ExtendedTypeStr;
+  } else {
+    ExtendedTypeStr += "_";
+  }
+  return ExtendedTypeStr;
+}
+
 void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (!D->getDescribedFunctionTemplate() &&
       !D->isFunctionTemplateSpecialization())
     prettyPrintPragmas(D);
 
-  if (D->isFunctionTemplateSpecialization())
-    Out << "template<> ";
-  else if (!D->getDescribedFunctionTemplate()) {
+  if (D->isFunctionTemplateSpecialization()) {
+    // We don`t need to print this in BSC generic.
+    if (!Context.getLangOpts().BSC)
+      Out << "template<> ";
+  } else if (!D->getDescribedFunctionTemplate()) {
     for (unsigned I = 0, NumTemplateParams = D->getNumTemplateParameterLists();
          I < NumTemplateParams; ++I)
       printTemplateParameters(D->getTemplateParameterList(I));
@@ -641,7 +660,20 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         NS->print(OS, Policy);
       }
     }
-    D->getNameInfo().printName(OS, Policy);
+    // We don`t need print this in BSC generic.
+    if(!(Context.getLangOpts().BSC && D->isTemplateInstantiation())) {
+      D->getNameInfo().printName(OS, Policy);
+    } else {
+      std::string FunctionNameStr = D->getDeclName().getAsString();
+      if(const TemplateArgumentList *TArgs =
+              D->getTemplateSpecializationArgs()) {
+        for (size_t i = 0; i < TArgs->size(); i++) {
+          std::string QT = GetTpyoPrefix(TArgs->asArray()[i].getAsType(), /*isFront=*/true);
+          FunctionNameStr += QT;
+        }
+      }
+      OS << FunctionNameStr;
+    }
   }
 
   if (GuideDecl)
@@ -653,8 +685,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (TArgAsWritten && !Policy.PrintCanonicalTypes)
       TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
-                 D->getTemplateSpecializationArgs())
-      TArgPrinter.printTemplateArguments(TArgs->asArray(), nullptr);
+                 D->getTemplateSpecializationArgs()){
+      if(!(Context.getLangOpts().BSC && D->isTemplateInstantiation()))
+        TArgPrinter.printTemplateArguments(TArgs->asArray(), nullptr);
+    }
   }
 
   QualType Ty = D->getType();
@@ -888,10 +922,51 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
     }
   }
 
-  printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
-                    D->getIdentifier())
-                       ? D->getIdentifier()->deuglifiedName()
-                       : D->getName());
+  // FIXME: this looks very weird, too many if-else.
+  // rewrite BSC template struct instantial statement.
+  if (Context.getLangOpts().BSC) {
+    if (const auto *ET = dyn_cast<ElaboratedType>(T)) {
+      QualType QT = ET->getNamedType();
+      if (const auto *TST = dyn_cast<TemplateSpecializationType>(QT)) {
+        std::string InstantialName = D->getNameAsString();
+        std::string RecordKind;
+        switch (QT->getAsRecordDecl()->getTagKind())
+        {
+        case TTK_Struct:
+          RecordKind = "struct";
+          break;
+        case TTK_Union:
+          RecordKind = "union";
+          break;
+        case TTK_Enum:
+          RecordKind = "enum";
+          break;
+        default:
+          break;
+        }
+
+        std::string FunctionNameStr = 
+          TST->getTemplateName().getAsTemplateDecl()->getDeclName().getAsString();
+
+        FunctionNameStr = RecordKind + " " + FunctionNameStr;
+
+        for (size_t i = 0; i < TST->getNumArgs(); i++) {
+          std::string QT = GetTpyoPrefix(TST->getArg(i).getAsType(), /*isFront=*/true);
+          FunctionNameStr += QT;
+        }
+        Out << FunctionNameStr + " " + InstantialName;
+      } else {
+        printDeclType(T, D->getName());
+      }
+    } else {
+      printDeclType(T, D->getName());
+    }
+  } else {
+    printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
+                      D->getIdentifier())
+                        ? D->getIdentifier()->deuglifiedName()
+                        : D->getName());
+  }
   Expr *Init = D->getInit();
   if (!Policy.SuppressInitializers && Init) {
     bool ImplicitInit = false;
@@ -993,11 +1068,19 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   prettyPrintAttributes(D);
 
   if (D->getIdentifier()) {
-    Out << ' ' << *D;
+    if (!Context.getLangOpts().BSC)
+      Out << ' ' << *D;
 
     if (auto S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();
-      if (!Policy.PrintCanonicalTypes)
+      if (Context.getLangOpts().BSC) {
+        std::string FunctionNameStr = S->getDeclName().getAsString();
+        for (size_t i = 0; i < Args.size(); i++) {
+          std::string QT = GetTpyoPrefix(Args[i].getAsType(), /*isFront=*/true);
+          FunctionNameStr += QT;
+        }
+        Out << ' ' + FunctionNameStr;
+      } else if (!Policy.PrintCanonicalTypes)
         if (const auto* TSI = S->getTypeAsWritten())
           if (const auto *TST =
                   dyn_cast<TemplateSpecializationType>(TSI->getType()))
@@ -1211,7 +1294,8 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
 void DeclPrinter::VisitClassTemplateSpecializationDecl(
                                            ClassTemplateSpecializationDecl *D) {
-  Out << "template<> ";
+  if (!Context.getLangOpts().BSC)
+    Out << "template<> ";
   VisitCXXRecordDecl(D);
 }
 
