@@ -1080,13 +1080,15 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
           FunctionNameStr += QT;
         }
         Out << ' ' + FunctionNameStr;
-      } else if (!Policy.PrintCanonicalTypes)
-        if (const auto* TSI = S->getTypeAsWritten())
-          if (const auto *TST =
-                  dyn_cast<TemplateSpecializationType>(TSI->getType()))
-            Args = TST->template_arguments();
-      printTemplateArguments(
-          Args, S->getSpecializedTemplate()->getTemplateParameters());
+      } else {
+        if (!Policy.PrintCanonicalTypes) 
+          if (const auto* TSI = S->getTypeAsWritten())
+            if (const auto *TST =
+                    dyn_cast<TemplateSpecializationType>(TSI->getType()))
+              Args = TST->template_arguments();
+        printTemplateArguments(
+            Args, S->getSpecializedTemplate()->getTemplateParameters());
+      }
     }
   }
 
