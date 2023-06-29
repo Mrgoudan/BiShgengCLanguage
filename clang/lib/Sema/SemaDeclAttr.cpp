@@ -8454,8 +8454,15 @@ static void handleCountFuncPtrParams(Sema &S, Decl *D, const ParsedAttr &AL, Qua
 }
 
 static void handleCountAttr(Sema &S, Decl *D, const ParsedAttr &AL, bool isByte = false) {
+  bool isFlexibleArrayMember = false;
+  if (D->getKind() == Decl::Field) {
+    const auto *FD = dyn_cast<clang::FieldDecl>(D);
+    if (FD->getType()->isIncompleteArrayType()) {
+      isFlexibleArrayMember = true;
+    }
+  }
   const auto *VD = dyn_cast<clang::ValueDecl>(D);
-  if (VD != nullptr &&
+  if (VD != nullptr && !isFlexibleArrayMember &&
       !attrNonNullArgCheck(S, VD->getType(), AL, SourceRange(), D->getSourceRange())) {
     return;
   }
