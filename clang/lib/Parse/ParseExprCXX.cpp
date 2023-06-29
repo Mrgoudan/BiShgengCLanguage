@@ -728,6 +728,43 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
       continue;
     }
 
+    if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon)) {
+      TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+      if (CheckForDestructor && GetLookAheadToken(2).is(tok::tilde)) {
+        *MayBePseudoDestructor = true;
+        return false;
+      }
+
+      if (LastII)
+        *LastII = TemplateId->Name;
+
+      SourceLocation CCLoc = NextToken().getLocation();
+
+      HasScopeSpecifier = true;
+
+      ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                         TemplateId->NumArgs);
+      ParsedTemplateTy OldTemplate = TemplateId->Template;
+      if (TemplateId->isInvalid() ||
+          Actions.ActOnCXXNestedNameSpecifier(getCurScope(),
+                                              SS,
+                                              TemplateId->TemplateKWLoc,
+                                              TemplateId->Template,
+                                              TemplateId->TemplateNameLoc,
+                                              TemplateId->LAngleLoc,
+                                              TemplateArgsPtr,
+                                              TemplateId->RAngleLoc,
+                                              CCLoc,
+                                              EnteringContext)) {
+        SourceLocation StartLoc
+          = SS.getBeginLoc().isValid()? SS.getBeginLoc()
+                                      : TemplateId->TemplateNameLoc;
+        SS.SetInvalid(SourceRange(StartLoc, CCLoc));
+      }
+      if (TemplateId->Template.get().getAsTemplateDecl())
+        TemplateId->Kind = TNK_Type_template;
+    }
+
     // The rest of the nested-name-specifier possibilities start with
     // tok::identifier.
     if (Tok.isNot(tok::identifier))

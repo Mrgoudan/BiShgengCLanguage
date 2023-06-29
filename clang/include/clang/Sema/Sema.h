@@ -5453,7 +5453,8 @@ public:
                                         SourceLocation TemplateKWLoc,
                                         const DeclarationNameInfo &NameInfo,
                                         bool isAddressOfOperand,
-                                const TemplateArgumentListInfo *TemplateArgs);
+                                const TemplateArgumentListInfo *TemplateArgs,
+                                QualType ExtendedTy = QualType());
 
   /// If \p D cannot be odr-used in the current expression evaluation context,
   /// return a reason explaining why. Otherwise, return NOUR_None.
@@ -5509,7 +5510,8 @@ public:
   ExprResult BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
-                                const TemplateArgumentListInfo *TemplateArgs);
+                                const TemplateArgumentListInfo *TemplateArgs,
+                                QualType ExtendedTy = QualType());
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                       LookupResult &R,
@@ -6896,16 +6898,11 @@ public:
   ///
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool ActOnCXXNestedNameSpecifier(Scope *S,
-                                   CXXScopeSpec &SS,
-                                   SourceLocation TemplateKWLoc,
-                                   TemplateTy TemplateName,
-                                   SourceLocation TemplateNameLoc,
-                                   SourceLocation LAngleLoc,
-                                   ASTTemplateArgsPtr TemplateArgs,
-                                   SourceLocation RAngleLoc,
-                                   SourceLocation CCLoc,
-                                   bool EnteringContext);
+  bool ActOnCXXNestedNameSpecifier(
+      Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+      TemplateTy &TemplateName, SourceLocation TemplateNameLoc,
+      SourceLocation LAngleLoc, ASTTemplateArgsPtr TemplateArgs,
+      SourceLocation RAngleLoc, SourceLocation CCLoc, bool EnteringContext);
 
   /// Given a C++ nested-name-specifier, produce an annotation value
   /// that the parser can use later to reconstruct the given

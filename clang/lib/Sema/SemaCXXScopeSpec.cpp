@@ -910,16 +910,11 @@ bool Sema::IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
                                       /*ScopeLookupResult=*/nullptr, true);
 }
 
-bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
-                                       CXXScopeSpec &SS,
-                                       SourceLocation TemplateKWLoc,
-                                       TemplateTy OpaqueTemplate,
-                                       SourceLocation TemplateNameLoc,
-                                       SourceLocation LAngleLoc,
-                                       ASTTemplateArgsPtr TemplateArgsIn,
-                                       SourceLocation RAngleLoc,
-                                       SourceLocation CCLoc,
-                                       bool EnteringContext) {
+bool Sema::ActOnCXXNestedNameSpecifier(
+    Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    TemplateTy &OpaqueTemplate, SourceLocation TemplateNameLoc,
+    SourceLocation LAngleLoc, ASTTemplateArgsPtr TemplateArgsIn,
+    SourceLocation RAngleLoc, SourceLocation CCLoc, bool EnteringContext) {
   if (SS.isInvalid())
     return true;
 
@@ -962,6 +957,12 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
   if (Template.getAsAssumedTemplateName() &&
       resolveAssumedTemplateNameAsType(S, Template, TemplateNameLoc))
     return true;
+
+  // For the case of "struct MyStruct11<T>: foo()", if the name of 
+  // the struct is incorrect, correct it in a timely manner to 
+  // prevent duplicate errors from being reported.
+  if (getLangOpts().BSC)
+    OpaqueTemplate = TemplateTy::make(Template);
 
   TemplateDecl *TD = Template.getAsTemplateDecl();
   if (Template.getAsOverloadedTemplate() || DTN ||

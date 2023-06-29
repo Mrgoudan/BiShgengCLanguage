@@ -742,6 +742,16 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
   BSS.setBeginLoc(DS.getBeginLoc());
   QualType T =
       Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), false, BSS, DS);
+  // For generic member functions, if the generic 'T' comes from a scope when
+  // called, we need to obtain the NestedNameSpecifier from the scope and store
+  // it in QualType to facilitate the creation of 'DependentScopeDeclRefExpr'
+  // ast nodes.
+  auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T.getCanonicalType().getTypePtr());
+  if (Tok.is(tok::coloncolon) && TST) {
+    TagDecl *TD = dyn_cast_or_null<TagDecl>(Actions.getASTContext().BSCDeclContextMap[TST]);
+    if (TD)
+      TD->setQualifierInfo(DS.getTypeSpecScope().getWithLocInContext(Actions.getASTContext()));
+  }
   HasBSCScopeSpec = TryConsumeToken(tok::coloncolon);
   D.getBSCScopeSpec() = BSS;
 

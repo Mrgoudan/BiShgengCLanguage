@@ -499,7 +499,8 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   //   If there are fewer initializer-clauses in the list than there are
   //   members in the aggregate, then each member not explicitly initialized
   //   ...
-  bool EmptyInitList = SemaRef.getLangOpts().CPlusPlus11 &&
+  bool EmptyInitList =
+      (SemaRef.getLangOpts().CPlusPlus11 || SemaRef.getLangOpts().BSC) &&
       Entity.getType()->getBaseElementTypeUnsafe()->isRecordType();
   if (EmptyInitList) {
     // C++1y / DR1070:

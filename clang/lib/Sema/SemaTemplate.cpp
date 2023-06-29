@@ -729,7 +729,8 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  SourceLocation TemplateKWLoc,
                                  const DeclarationNameInfo &NameInfo,
                                  bool isAddressOfOperand,
-                           const TemplateArgumentListInfo *TemplateArgs) {
+                           const TemplateArgumentListInfo *TemplateArgs,
+                           QualType ExtendedTy) {
   DeclContext *DC = getFunctionLevelDeclContext();
 
   // C++11 [expr.prim.general]p12:
@@ -765,16 +766,22 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
         FirstQualifierInScope, NameInfo, TemplateArgs);
   }
 
-  return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
+  return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs, ExtendedTy);
 }
 
 ExprResult
 Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                 SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
-                                const TemplateArgumentListInfo *TemplateArgs) {
+                                const TemplateArgumentListInfo *TemplateArgs,
+                                QualType ExtendedTy) {
   // DependentScopeDeclRefExpr::Create requires a valid QualifierLoc
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
+  if (!ExtendedTy.isNull()) {
+    TagDecl *TD = dyn_cast_or_null<TagDecl>(getASTContext().BSCDeclContextMap[ExtendedTy.getCanonicalType().getTypePtr()]);
+    assert(TD && "no corresponding DeclContext found for this type");
+    QualifierLoc = TD->getQualifierLoc();
+  }
   if (!QualifierLoc)
     return ExprError();
 

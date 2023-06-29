@@ -2559,11 +2559,14 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     } else {
       DependentID = true;
     }
+  } else if (!T.isNull()) {
+    if (dyn_cast_or_null<TemplateSpecializationType>(T.getCanonicalType().getTypePtr()))
+      DependentID = true;
   }
 
   if (DependentID)
     return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
-                                      IsAddressOfOperand, TemplateArgs);
+                                      IsAddressOfOperand, TemplateArgs, T);
   // Perform the required lookup.
   LookupResult R(*this, NameInfo,
                  (Id.getKind() == UnqualifiedIdKind::IK_ImplicitSelfParam)
@@ -7145,10 +7148,9 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall =
         CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
                          CurFPFeatureOverrides(), NumParams, UsesADL);
-    if (Fn->IsDesugaredBSCMethodCall) {
-      // Set desugar flag true in transformation.
-      TheCall->getCallee()->IsDesugaredBSCMethodCall = true;
-    }
+    // Keep flag unchanged in transformation.
+    TheCall->getCallee()->IsDesugaredBSCMethodCall = Fn->IsDesugaredBSCMethodCall;
+    TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
   }
 
   if (!Context.isDependenceAllowed()) {

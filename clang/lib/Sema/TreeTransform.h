@@ -11051,10 +11051,9 @@ TreeTransform<Derived>::TransformCallExpr(CallExpr *E) {
   if (Callee.isInvalid())
     return ExprError();
   
-  if (E->getCallee()->IsDesugaredBSCMethodCall) {
-    // Keep desugar flag true in transformation.
-    Callee.get()->IsDesugaredBSCMethodCall = true;
-  }
+  // Keep flag unchanged in transformation.
+  Callee.get()->IsDesugaredBSCMethodCall = E->getCallee()->IsDesugaredBSCMethodCall;
+  Callee.get()->HasBSCScopeSpec = E->getCallee()->HasBSCScopeSpec;
   
   // Transform arguments.
   bool ArgChanged = false;

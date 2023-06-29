@@ -1,0 +1,33 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct S<T> {
+    T res;
+};
+
+struct MyStruct<T> {
+    T res;
+    struct S<T> s;
+};
+
+T struct MyStruct<T>::foo(struct MyStruct<T> *this, T a) {
+    this->res = a;
+    return this->res;
+}
+
+T f1<T>(T a) {
+    struct MyStruct<T> s = {.res = a};
+    return struct MyStruct<T>::foo(&s, a);
+}
+
+T f2<T>(T a) {
+    struct MyStruct<T> s = {.res = a};
+    return s.foo(a);
+}
+
+int main() {
+    int res1 = f1<int>(2);
+    int res2 = f2<int>(2);
+    return res1 - res2;
+}
