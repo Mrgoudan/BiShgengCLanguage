@@ -1,0 +1,25 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+struct PollResult<T> {
+    _Bool isPending;
+};
+
+struct PollResult<int> poll() {
+    struct PollResult<int> s;
+    return s;
+}
+
+void struct PollResult<int>::foo(struct PollResult<int> *this) {
+}
+
+
+int main() {
+    struct PollResult<int> (*pollFunc)() = int::poll;
+    struct PollResult<int> res = pollFunc();
+    if (res.isPending) {
+        res.foo();
+    }
+    return 0;
+}
