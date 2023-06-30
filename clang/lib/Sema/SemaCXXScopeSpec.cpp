@@ -219,14 +219,19 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
     return false;
 
   SourceLocation loc = SS.getLastQualifierNameLoc();
-  if (loc.isInvalid()) loc = SS.getRange().getBegin();
-  if (LangOpts.BSC && loc.isInvalid())
-    loc = tag->getBeginLoc();
+  if (loc.isInvalid()) {
+    if (!LangOpts.BSC) 
+      loc = SS.getRange().getBegin();
+    else  
+      loc = tag->getBeginLoc(); // FIXME: not same as SS.getRange().getBegin()
+  }
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
-    SS.SetInvalid(SS.getRange());
+    // For BSC, SS.getRange() is invalid
+    if (!LangOpts.BSC)
+      SS.SetInvalid(SS.getRange());
     return true;
   }
 

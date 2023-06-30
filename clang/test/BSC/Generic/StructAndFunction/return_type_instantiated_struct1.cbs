@@ -6,12 +6,12 @@ struct PollResult<T> {
     _Bool isPending;
 };
 
-struct PollResult<int> poll() {
+struct PollResult<int> int::poll() {
     struct PollResult<int> s;
     return s;
 }
 
-void struct PollResult<int>::foo(struct PollResult<int> *this) {
+void struct PollResult<T>::foo(struct PollResult<T> *this) {
 }
 
 

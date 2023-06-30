@@ -341,8 +341,8 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     if (dyn_cast_or_null<ClassTemplateSpecializationDecl>(
             BasedType->getAsTagDecl())) {
       LookupCtx = BasedType->getAsTagDecl();
-      if (LookupCtx)
-        RequireCompleteDeclContext(*SS, LookupCtx);
+      if (LookupCtx && RequireCompleteDeclContext(*SS, LookupCtx))
+        return nullptr;
     }
   }
 
