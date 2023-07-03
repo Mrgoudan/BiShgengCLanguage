@@ -744,7 +744,6 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
 
       ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                          TemplateId->NumArgs);
-      ParsedTemplateTy OldTemplate = TemplateId->Template;
       if (TemplateId->isInvalid() ||
           Actions.ActOnCXXNestedNameSpecifier(getCurScope(),
                                               SS,

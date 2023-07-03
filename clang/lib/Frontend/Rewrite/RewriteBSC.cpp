@@ -278,7 +278,7 @@ void RewriteBSC::RewriteCallExpr(CallExpr *CE) {
   if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Callee)) {
     Expr *SE = ICE->getSubExpr();
     if (MemberExpr *Member = dyn_cast<MemberExpr>(SE)) {
-      if (auto *BD = dyn_cast<BSCMethodDecl>(Member->getMemberDecl())) {
+      if (dyn_cast<BSCMethodDecl>(Member->getMemberDecl())) {
         std::string SStr;
         llvm::raw_string_ostream Buf(SStr);
         CE->getArg(0)->printPretty(Buf, nullptr, PrintingPolicy(LangOpts));
@@ -361,7 +361,7 @@ void RewriteBSC::RewriteVarDecl(VarDecl *VD) {
   // rewrite BSC template struct instantial statement.
   if (const auto *ET = dyn_cast<ElaboratedType>(T)) {
     QualType QT = ET->getNamedType();
-    if (const auto *TST = dyn_cast<TemplateSpecializationType>(QT)) {
+    if (dyn_cast<TemplateSpecializationType>(QT)) {
       std::string SStr;
       llvm::raw_string_ostream Buf(SStr);
       VD->print(Buf, PrintingPolicy(LangOpts), /*PrintInstantiation=*/true);
