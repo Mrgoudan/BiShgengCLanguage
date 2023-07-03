@@ -2128,7 +2128,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
                                                   &LateParsedAttrs);
 
           FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TheDecl);
-          if (getLangOpts().BSC && FD && FD->isAsyncSpecified()) {
+          if (getLangOpts().BSC && FD) {
             SmallVector<Decl *, 8> decls =
                 Actions.ActOnAsyncFunctionDeclaration(FD);
             return Actions.BuildDeclaratorGroup(decls);

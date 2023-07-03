@@ -365,7 +365,7 @@ static RecordDecl *buildFutureRecordDecl(
   for (unsigned I = 0; I != Args.size(); ++I) {
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
     if (!IsFutureType(AE->getType())) {
-      RecordDecl *FatPointerStruct;
+      RecordDecl *FatPointerStruct = nullptr;
       const std::string FatPointerName =
           "__FatPointer_" + GetPrefix(AE->getType());
       DeclContext::lookup_result FatPointerDecls =
@@ -381,9 +381,10 @@ static RecordDecl *buildFutureRecordDecl(
             break;
           }
         }
-      } else {
-        abort();
       }
+
+      assert(FatPointerStruct != nullptr);
+
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
           &(S.Context.Idents).get("Ft_" + std::to_string(I + 1)),
           S.Context.getRecordType(FatPointerStruct)));
@@ -443,9 +444,6 @@ static RecordDecl *generateVoidStruct(Sema &S) {
     VoidRD->startDefinition();
     VoidRD->completeDefinition();
     S.PushOnScopeChains(VoidRD, S.getCurScope(), true);
-  } else {
-    // should not reach here. todo: change to assert
-    abort();
   }
   return VoidRD;
 }
@@ -490,9 +488,6 @@ generateVtableAndFatPointerStruct(Sema &S, QualType T,
     VtableStruct->completeDefinition();
     VtableStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
     S.PushOnScopeChains(VtableStruct, S.getCurScope(), true);
-  } else {
-    // should not reach here. todo: change to assert
-    abort();
   }
   RecordDecl *FatPointerStruct = nullptr;
   std::string FatPointerName = "__FatPointer_" + GetPrefix(ReturnTy);
@@ -526,9 +521,6 @@ generateVtableAndFatPointerStruct(Sema &S, QualType T,
     FatPointerStruct->completeDefinition();
     FatPointerStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
     S.PushOnScopeChains(FatPointerStruct, S.getCurScope(), true);
-  } else {
-    // should not reach here. todo: change to assert
-    abort();
   }
   return std::make_tuple(std::make_pair(VtableStruct, IsVtableExisted),
                          std::make_pair(FatPointerStruct, IsFatPointerExisted));
@@ -631,9 +623,8 @@ FunctionDecl *buildFutureInitFunctionDeclaraion(Sema &S, RecordDecl *RD,
     NewFD->setParams(ParmVarDecls);
     NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
     S.PushOnScopeChains(NewFD, S.getCurScope(), true);
-  } else {
-    abort();
   }
+
   S.PushFunctionScope();
   S.PushDeclContext(S.getCurScope(), NewFD);
 
@@ -2445,53 +2436,52 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
     return Res;
   }
 
-  Expr *InnerE = E;
-  QualType AwaitReturnTy = InnerE->getType();
-  bool IsCall = isa<CallExpr>(InnerE);
+  QualType AwaitReturnTy = E->getType();
+  bool IsCall = isa<CallExpr>(E);
   if (IsCall) {
-    Decl *AwaitDecl = (dyn_cast<CallExpr>(InnerE))->getCalleeDecl();
+    Decl *AwaitDecl = (dyn_cast<CallExpr>(E))->getCalleeDecl();
     FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(AwaitDecl);
     if (!FDecl) {
       return ExprError();
     }
     if (!FDecl->isAsyncSpecified() && !IsFutureType(AwaitReturnTy)) {
-      // TODO: modify error message
-      Diag(InnerE->getExprLoc(), PDiag(diag::err_not_a_async_call)
-                                     << getExprRange(InnerE));
+      Diag(E->getExprLoc(), PDiag(diag::err_not_a_async_call)
+                                     << getExprRange(E));
       return ExprError();
     }
   } else {
     if (!IsFutureType(AwaitReturnTy)) {
-      Diag(InnerE->getExprLoc(), PDiag(diag::err_not_a_async_call)
-                                     << getExprRange(InnerE));
+      Diag(E->getExprLoc(), PDiag(diag::err_not_a_async_call)
+                                     << getExprRange(E));
       return ExprError();
     }
   }
 
+  // TODO: After we use future in stdlib, get template argument directly.
   if (IsFutureType(AwaitReturnTy)) {
-    const RecordType *FPRD =
+    const RecordType *FatPointerType =
         dyn_cast<RecordType>(AwaitReturnTy.getDesugaredType(Context));
-    RecordDecl *RD = FPRD->getDecl();
-    for (RecordDecl::field_iterator FieldIt = RD->field_begin(),
-                                    Field_end = RD->field_end();
+    RecordDecl *FatPointer = FatPointerType->getDecl();
+    for (RecordDecl::field_iterator FieldIt = FatPointer->field_begin(),
+                                    Field_end = FatPointer->field_end();
          FieldIt != Field_end; ++FieldIt) {
       if (FieldIt->getDeclName().getAsString() == "vtable") {
-        const RecordType *VTRD = dyn_cast<RecordType>(
+        const RecordType *VtableType = dyn_cast<RecordType>(
             FieldIt->getType()->getPointeeType().getDesugaredType(Context));
-        RecordDecl *NewRD = VTRD->getDecl();
-        for (RecordDecl::field_iterator FieldIt = NewRD->field_begin(),
-                                        Field_end = NewRD->field_end();
+        RecordDecl *Vtable = VtableType->getDecl();
+        for (RecordDecl::field_iterator FieldIt = Vtable->field_begin(),
+                                        Field_end = Vtable->field_end();
              FieldIt != Field_end; ++FieldIt) {
           if (FieldIt->getDeclName().getAsString() == "poll") {
-            const RecordType *VTRD1 = dyn_cast<RecordType>(
+            const RecordType *PollResultType = dyn_cast<RecordType>(
                 dyn_cast<FunctionType>(
                     FieldIt->getType()->getPointeeType().getDesugaredType(
                         Context))
                     ->getReturnType()
                     .getDesugaredType(Context));
-            RecordDecl *NewRD1 = VTRD1->getDecl();
-            for (RecordDecl::field_iterator FieldIt = NewRD1->field_begin(),
-                                            Field_end = NewRD1->field_end();
+            RecordDecl *PollResult = PollResultType->getDecl();
+            for (RecordDecl::field_iterator FieldIt = PollResult->field_begin(),
+                                            Field_end = PollResult->field_end();
                  FieldIt != Field_end; ++FieldIt) {
               if (FieldIt->getDeclName().getAsString() == "res") {
                 AwaitReturnTy = FieldIt->getType();
@@ -2504,7 +2494,7 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
   }
 
   // build AwaitExpr
-  AwaitExpr *Res = new (Context) AwaitExpr(AwaitLoc, InnerE, AwaitReturnTy);
+  AwaitExpr *Res = new (Context) AwaitExpr(AwaitLoc, E, AwaitReturnTy);
   return Res;
 }
 
@@ -2551,16 +2541,32 @@ void Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD,
 SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
   SmallVector<Decl *, 8> decls;
 
-  if (IsFutureType(FD->getReturnType())) {
-    decls.push_back(FD);
-    return decls;
-  }
   AwaitExprFinder finder = AwaitExprFinder();
   finder.Visit(FD->getBody());
 
-  if (finder.GetAwaitExprNum() == 0) {
-    // TODO: return type check.
+  // Report if await expression appear in non-async functions.
+  if (!FD->isAsyncSpecified()) {
+    if (finder.GetAwaitExprNum() != 0) {
+      Diag(FD->getBeginLoc(), diag::err_await_invalid_scope) << "non-async function.";
+    }
     decls.push_back(FD);
+    return decls;
+  }
+
+  // For leaf nodes, should not be modified async.
+  if (IsFutureType(FD->getReturnType())) {
+    Diag(FD->getBeginLoc(), diag::err_invalid_async_function);
+    return decls;
+  }
+
+  // Async functions should have await expression.
+  if (finder.GetAwaitExprNum() == 0) {
+    Diag(FD->getBeginLoc(), diag::err_await_expression_not_found);
+    return decls;
+  }
+
+  // Do not process desugar if we already met errors.
+  if (Diags.hasErrorOccurred()) {
     return decls;
   }
 
@@ -2589,34 +2595,48 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     decls.push_back(std::get<0>(std::get<0>(NewRDs)));
   if (!std::get<1>(std::get<1>(NewRDs)))
     decls.push_back(std::get<0>(std::get<1>(NewRDs)));
-
-  FunctionDecl *FutureInitDef = buildFutureInitFunctionDefinition(
+  
+  // Handle definition first.
+  (void)buildFutureInitFunctionDefinition(
       *this, FD, std::get<0>(std::get<1>(NewRDs)));
 
   const int FutureStateNumber = finder.GetAwaitExprNum() + 1;
+  
   RecordDecl *RD = buildFutureRecordDecl(*this, FD, finder.GetAwaitExpr(),
                                          finder.GetLocalVarList());
+  if (!RD) {
+    return decls;
+  }
+  decls.push_back(RD);
 
   BSCMethodDecl *PollDecl =
       buildPollFunction(*this, RD, PollResultRD, FD,
                         std::get<0>(std::get<1>(NewRDs)), FutureStateNumber);
+  if (!PollDecl) {
+    return decls;
+  }
+  decls.push_back(PollDecl);
 
   BSCMethodDecl *FreeDecl = buildFreeFunction(*this, RD, FD);
   if (!FreeDecl) {
     return decls;
   }
+  decls.push_back(FreeDecl);
 
   VarDecl *VtableDecl =
       buildVtableInitDecl(*this, FD, std::get<0>(std::get<0>(NewRDs)),
                           PollResultRD, PollDecl, FreeDecl);
+  if (!VtableDecl) {
+    return decls;
+  }
+  decls.push_back(VtableDecl);
+
 
   FunctionDecl *FutureInit = buildFutureInitFunctionDeclaraion(
       *this, RD, FD, std::get<0>(std::get<1>(NewRDs)), VtableDecl);
-
-  decls.push_back(RD);
-  decls.push_back(PollDecl);
-  decls.push_back(FreeDecl);
-  decls.push_back(VtableDecl);
+  if (!FutureInit) {
+    return decls;
+  }
   decls.push_back(FutureInit);
   return decls;
 }
