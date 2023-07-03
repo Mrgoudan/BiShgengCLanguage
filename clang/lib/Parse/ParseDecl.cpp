@@ -2195,6 +2195,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (FirstDecl)
     DeclsInGroup.push_back(FirstDecl);
 
+
   bool ExpectSemi = Context != DeclaratorContext::ForInit;
 
   // If we don't have a comma, it is either the end of the list (a ';') or an
@@ -2604,6 +2605,8 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   if (Specs & DeclSpec::PQ_FunctionSpecifier) {
     if (DS.isInlineSpecified())
       Diag(DS.getInlineSpecLoc(), diag::err_typename_invalid_functionspec);
+    if (DS.isAsyncSpecified())
+      Diag(DS.getAsyncSpecLoc(), diag::err_typename_invalid_functionspec);
     if (DS.isVirtualSpecified())
       Diag(DS.getVirtualSpecLoc(), diag::err_typename_invalid_functionspec);
     if (DS.hasExplicitSpecifier())
@@ -3872,6 +3875,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // function-specifier
     case tok::kw_inline:
       isInvalid = DS.setFunctionSpecInline(Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw___async:
+      isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
       break;
     case tok::kw_virtual:
       // C++ for OpenCL does not allow virtual function qualifier, to avoid
@@ -5453,6 +5459,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
 
     // function-specifier
   case tok::kw_inline:
+  case tok::kw___async:
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:

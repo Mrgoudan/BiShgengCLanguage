@@ -58,6 +58,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   clang::ASTContext &ast = lldb_ast->getASTContext();
 
   const bool isInlineSpecified = false;
+  const bool isAsyncSpecified = false;
   const bool hasWrittenPrototype = true;
   const bool isConstexprSpecified = false;
 
@@ -79,9 +80,11 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
 
   clang::FunctionDecl *func_decl = FunctionDecl::Create(
       ast, context, SourceLocation(), SourceLocation(), decl_name, qual_type,
-      nullptr, SC_Extern, /*UsesFPIntrin=*/false, isInlineSpecified, hasWrittenPrototype,
+      nullptr, SC_Extern, /*UsesFPIntrin=*/false, isInlineSpecified,
+      hasWrittenPrototype,
       isConstexprSpecified ? ConstexprSpecKind::Constexpr
-                           : ConstexprSpecKind::Unspecified);
+                           : ConstexprSpecKind::Unspecified,
+      isAsyncSpecified);
 
   // We have to do more than just synthesize the FunctionDecl.  We have to
   // synthesize ParmVarDecls for all of the FunctionDecl's arguments.  To do

@@ -2941,7 +2941,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            TypeSourceInfo *TInfo, StorageClass S,
                            bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
-                           Expr *TrailingRequiresClause)
+                           Expr *TrailingRequiresClause, bool isAsyncSpecified)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
@@ -2950,6 +2950,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.SClass = S;
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
+  FunctionDeclBits.IsAsyncSpecified = isAsyncSpecified;
   FunctionDeclBits.IsVirtualAsWritten = false;
   FunctionDeclBits.IsPure = false;
   FunctionDeclBits.HasInheritedPrototype = false;
@@ -5103,10 +5104,11 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                      TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                      bool isInlineSpecified, bool hasWrittenPrototype,
                      ConstexprSpecKind ConstexprKind,
-                     Expr *TrailingRequiresClause) {
-  FunctionDecl *New = new (C, DC) FunctionDecl(
-      Function, C, DC, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-      isInlineSpecified, ConstexprKind, TrailingRequiresClause);
+                     Expr *TrailingRequiresClause, bool isAsyncSpecified) {
+  FunctionDecl *New = new (C, DC)
+      FunctionDecl(Function, C, DC, StartLoc, NameInfo, T, TInfo, SC,
+                   UsesFPIntrin, isInlineSpecified, ConstexprKind,
+                   TrailingRequiresClause, isAsyncSpecified);
   New->setHasWrittenPrototype(hasWrittenPrototype);
   return New;
 }

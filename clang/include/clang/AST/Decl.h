@@ -2017,7 +2017,8 @@ protected:
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool UsesFPIntrin,
                bool isInlineSpecified, ConstexprSpecKind ConstexprKind,
-               Expr *TrailingRequiresClause = nullptr);
+               Expr *TrailingRequiresClause = nullptr,
+               bool isAsyncSpecified = false);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2053,12 +2054,13 @@ public:
          TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin = false,
          bool isInlineSpecified = false, bool hasWrittenPrototype = true,
          ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified,
-         Expr *TrailingRequiresClause = nullptr) {
+         Expr *TrailingRequiresClause = nullptr,
+         bool isAsyncSpecified = false) {
     DeclarationNameInfo NameInfo(N, NLoc);
     return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 UsesFPIntrin, isInlineSpecified,
                                 hasWrittenPrototype, ConstexprKind,
-                                TrailingRequiresClause);
+                                TrailingRequiresClause, isAsyncSpecified);
   }
 
   static FunctionDecl *
@@ -2066,7 +2068,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInlineSpecified,
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause);
+         Expr *TrailingRequiresClause, bool isAsyncSpecified = false);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2628,6 +2630,13 @@ public:
   void setStorageClass(StorageClass SClass) {
     FunctionDeclBits.SClass = SClass;
   }
+
+  /// Determine whether the "async" keyword was specified for this
+  /// function.
+  bool isAsyncSpecified() const { return FunctionDeclBits.IsAsyncSpecified; }
+
+  /// Set whether the "async" keyword was specified for this function.
+  void setAsyncSpecified(bool I) { FunctionDeclBits.IsAsyncSpecified = I; }
 
   /// Determine whether the "inline" keyword was specified for this
   /// function.

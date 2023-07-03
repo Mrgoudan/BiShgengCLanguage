@@ -560,6 +560,7 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
 
   ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
+  AddBoolean(Function->isAsyncSpecified());
   AddBoolean(Function->isVirtualAsWritten());
   AddBoolean(Function->isPure());
   AddBoolean(Function->isDeletedAsWritten());

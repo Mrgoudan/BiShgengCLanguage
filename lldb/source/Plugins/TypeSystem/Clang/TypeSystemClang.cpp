@@ -2139,7 +2139,7 @@ std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl) {
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, const CompilerType &function_clang_type,
-    clang::StorageClass storage, bool is_inline) {
+    clang::StorageClass storage, bool is_inline, bool is_async) {
   FunctionDecl *func_decl = nullptr;
   ASTContext &ast = getASTContext();
   if (!decl_ctx)
@@ -2156,6 +2156,7 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   func_decl->setType(ClangUtil::GetQualType(function_clang_type));
   func_decl->setStorageClass(storage);
   func_decl->setInlineSpecified(is_inline);
+  func_decl->setAsyncSpecified(is_async);
   func_decl->setHasWrittenPrototype(hasWrittenPrototype);
   func_decl->setConstexprKind(isConstexprSpecified
                                   ? ConstexprSpecKind::Constexpr

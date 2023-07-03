@@ -1601,6 +1601,7 @@ class DeclContext {
     uint64_t SClass : 3;
     uint64_t IsInline : 1;
     uint64_t IsInlineSpecified : 1;
+    uint64_t IsAsyncSpecified : 1;
 
     uint64_t IsVirtualAsWritten : 1;
     uint64_t IsPure : 1;

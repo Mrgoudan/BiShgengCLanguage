@@ -2573,6 +2573,12 @@ void StmtPrinter::VisitCoyieldExpr(CoyieldExpr *S) {
   PrintExpr(S->getOperand());
 }
 
+// BSC
+void StmtPrinter::VisitAwaitExpr(AwaitExpr *S) {
+  OS << "await ";
+  PrintExpr(S->getSubExpr());
+}
+
 // Obj-C
 
 void StmtPrinter::VisitObjCStringLiteral(ObjCStringLiteral *Node) {

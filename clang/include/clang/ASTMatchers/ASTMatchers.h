@@ -7748,6 +7748,17 @@ AST_MATCHER_P(FunctionDecl, hasExplicitSpecifier, internal::Matcher<Expr>,
   return InnerMatcher.matches(*ES.getExpr(), Finder, Builder);
 }
 
+/// Matches function that are marked with the async keyword.
+///
+/// Given
+/// \code
+///   async void g();
+/// \endcode
+/// functionDecl(isAsyncSpecified()) will match ::g().
+AST_MATCHER(FunctionDecl, isAsyncSpecified) {
+  return (dyn_cast<FunctionDecl>(&Node))->isAsyncSpecified();
+}
+
 /// Matches functions, variables and namespace declarations that are marked with
 /// the inline keyword.
 ///

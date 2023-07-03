@@ -1232,6 +1232,7 @@ public:
 ///
 ///         function-specifier:
 ///           'inline'
+///           'async'
 ///           'virtual'
 ///           'explicit'
 ///
@@ -1428,6 +1429,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw__Thread_local:
     // function-specifier
   case tok::kw_inline:
+  case tok::kw___async:
   case tok::kw_virtual:
   case tok::kw_explicit:
 

@@ -1902,14 +1902,12 @@ class BSCMethodDecl : public FunctionDecl {
 protected:
   BSCMethodDecl(Kind DK, ASTContext &C, DeclContext *RD,
                 SourceLocation StartLoc, const DeclarationNameInfo &NameInfo,
-                QualType T, TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
-                bool isInline, ConstexprSpecKind ConstexprKind,
-                SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr)
-      : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin, isInline,
-                     ConstexprKind, TrailingRequiresClause) {
-      //: FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-      //             isInline, ConstexprKind, TrailingRequiresClause) {
+                QualType T, TypeSourceInfo *TInfo, StorageClass SC,
+                bool UsesFPIntrin, bool isInline,
+                ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
+                Expr *TrailingRequiresClause = nullptr, bool isAsync = false)
+      : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
+                     isInline, ConstexprKind, TrailingRequiresClause, isAsync) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
   }
@@ -1918,8 +1916,9 @@ public:
   static BSCMethodDecl *
   Create(ASTContext &C, DeclContext *RD, SourceLocation StartLoc,
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
-         StorageClass SC, bool UsesFPIntrin, bool isInline, ConstexprSpecKind ConstexprKind,
-         SourceLocation EndLocation, Expr *TrailingRequiresClause = nullptr);
+         StorageClass SC, bool UsesFPIntrin, bool isInline,
+         ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
+         Expr *TrailingRequiresClause = nullptr, bool isAsync = false);
   static BSCMethodDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   bool getHasThisParam() const { return HasThisParam; }
@@ -1956,9 +1955,9 @@ protected:
                 QualType T, TypeSourceInfo *TInfo, StorageClass SC,
                 bool UsesFPIntrin, bool isInline,
                 ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr)
+                Expr *TrailingRequiresClause = nullptr, bool isAsync = false)
       : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-                     isInline, ConstexprKind, TrailingRequiresClause) {
+                     isInline, ConstexprKind, TrailingRequiresClause, isAsync) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
   }
