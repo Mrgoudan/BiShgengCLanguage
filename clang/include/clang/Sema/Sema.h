@@ -3175,6 +3175,17 @@ public:
   Decl *ActOnFinishExportDecl(Scope *S, Decl *ExportDecl,
                               SourceLocation RBraceLoc);
 
+  /// The parser has processed a await declaration.
+  /// \param AwaitLoc The location of the await token in the declaration.
+  /// \param E await expression
+  ExprResult BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E);
+  ExprResult ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E);
+
+  // Entry
+  void ActOnAsyncFunctionDefinition(FunctionDecl *FD,
+                                    SmallVector<Decl *, 8> DeclsInGroup);
+  SmallVector<Decl *, 8> ActOnAsyncFunctionDeclaration(FunctionDecl *FD);
+
   /// We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
   /// and partial specializations are visible/reachable, and diagnose if not.

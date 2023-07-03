@@ -4680,6 +4680,18 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
       ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
 }
 
+namespace {
+bool IsFutureType(QualType T) { // TODO: change after get
+  std::string prefix = "struct __FatPointer_";
+  std::string string = T.getAsString();
+  bool isPrefix =
+      prefix.size() <= string.size() &&
+      std::mismatch(prefix.begin(), prefix.end(), string.begin(), string.end())
+              .first == prefix.end();
+  return isPrefix;
+}
+} // namespace
+
 /// Build a sizeof or alignof expression given an expression
 /// operand.
 ExprResult
@@ -6081,7 +6093,6 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
       // Flag IsDesugaredBSCMethodCall is to jugde if this func call has already desugared.
       if (!Call->getCallee()->IsDesugaredBSCMethodCall)
         NumParams = NumParams - 1;
-      // }
     }
   }
 
@@ -6889,6 +6900,54 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     }
   } else if (isa<MemberExpr>(NakedFn))
     NDecl = cast<MemberExpr>(NakedFn)->getMemberDecl();
+
+  if (FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl)) {
+    if (FDecl->isAsyncSpecified()) {
+      QualType AwaitReturnTy = FDecl->getReturnType();
+      if (!IsFutureType(AwaitReturnTy)) {
+        FunctionDecl *TempCFD = nullptr;
+        std::string TempName =
+            "__" + FDecl->getDeclName().getAsString(); // TODO
+        DeclContext::lookup_result Decls = FDecl->getDeclContext()->lookup(
+            DeclarationName(&(getASTContext().Idents).get(TempName)));
+
+        if (Decls.isSingleResult()) {
+          for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                                    E = Decls.end();
+               I != E; ++I) {
+            if (isa<FunctionDecl>(*I)) {
+              TempCFD = dyn_cast<FunctionDecl>(*I);
+              break;
+            }
+          }
+        } else {
+          // todo: error report?
+        }
+        if (TempCFD) {
+          if (dyn_cast<DeclRefExpr>(NakedFn)) {
+            ExprResult RHSER1 = BuildDeclRefExpr(
+                TempCFD, TempCFD->getType().getNonReferenceType(), VK_LValue,
+                TempCFD->getLocation());
+            Expr *RHSExpr1 = RHSER1.get();
+            Fn = ImpCastExprToType(RHSExpr1,
+                                   Context.getPointerType(TempCFD->getType()),
+                                   CK_FunctionToPointerDecay)
+                     .get();
+          } else if (isa<MemberExpr>(NakedFn)) {
+            MemberExpr *ME = dyn_cast<MemberExpr>(NakedFn);
+            Fn = MemberExpr::Create(
+                Context, ME->getBase(), ME->isArrow(), ME->getOperatorLoc(),
+                ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), TempCFD,
+                DeclAccessPair::make(TempCFD, TempCFD->getAccess()),
+                DeclarationNameInfo(), nullptr, TempCFD->getType(),
+                ME->getValueKind(), ME->getObjectKind(), ME->isNonOdrUse());
+          }
+          Fn->IsDesugaredBSCMethodCall = NakedFn->IsDesugaredBSCMethodCall;
+          Fn->HasBSCScopeSpec = NakedFn->HasBSCScopeSpec;
+        }
+      }
+    }
+  }
 
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
     if (CallingNDeclIndirectly && !checkAddressOfFunctionIsAvailable(

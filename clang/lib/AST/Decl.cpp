@@ -3303,6 +3303,9 @@ bool FunctionDecl::isGlobal() const {
   if (const auto *Method = dyn_cast<CXXMethodDecl>(this))
     return Method->isStatic();
 
+  if (const auto *Method = dyn_cast<BSCMethodDecl>(this))
+    return Method->isStatic();
+
   if (getCanonicalDecl()->getStorageClass() == SC_Static)
     return false;
 

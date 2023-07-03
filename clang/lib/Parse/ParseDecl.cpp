@@ -2126,6 +2126,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
           Decl *TheDecl = ParseFunctionDefinition(D, ParsedTemplateInfo(),
                                                   &LateParsedAttrs);
+
+          FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TheDecl);
+          if (getLangOpts().BSC && FD && FD->isAsyncSpecified()) {
+            SmallVector<Decl *, 8> decls =
+                Actions.ActOnAsyncFunctionDeclaration(FD);
+            return Actions.BuildDeclaratorGroup(decls);
+          }
           return Actions.ConvertDeclToDeclGroup(TheDecl);
         }
 
@@ -2195,6 +2202,12 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (FirstDecl)
     DeclsInGroup.push_back(FirstDecl);
 
+  if (FirstDecl) {
+    FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(FirstDecl);
+    if (getLangOpts().BSC && FD && FD->isAsyncSpecified()) {
+      Actions.ActOnAsyncFunctionDefinition(FD, DeclsInGroup);
+    }
+  }
 
   bool ExpectSemi = Context != DeclaratorContext::ForInit;
 
