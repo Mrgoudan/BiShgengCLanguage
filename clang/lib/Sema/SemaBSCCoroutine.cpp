@@ -37,6 +37,52 @@
 using namespace clang;
 using namespace sema;
 
+static RecordDecl *buildAsyncDataRecord(ASTContext &C, StringRef Name,
+                                        SourceLocation StartLoc,
+                                        SourceLocation EndLoc,
+                                        RecordDecl::TagKind TK) {
+
+  RecordDecl *NewDecl;
+  NewDecl = RecordDecl::Create(C, TK, C.getTranslationUnitDecl(), StartLoc,
+                               EndLoc, &C.Idents.get(Name));
+  return NewDecl;
+}
+
+static void addAsyncRecordDecl(ASTContext &C, StringRef Name, QualType Type,
+                               SourceLocation StartLoc, SourceLocation EndLoc,
+                               RecordDecl *RD) {
+  FieldDecl *Field = FieldDecl::Create(
+      C, RD, StartLoc, EndLoc, &C.Idents.get(Name), Type,
+      C.getTrivialTypeSourceInfo(Type, SourceLocation()),
+      /*BW=*/nullptr, /*Mutable=*/false, /*InitStyle=*/ICIS_NoInit);
+  Field->setAccess(AS_public);
+  RD->addDecl(Field);
+}
+
+static FunctionDecl *buildAsyncFuncDecl(ASTContext &C, DeclContext *DC,
+                                        SourceLocation StartLoc,
+                                        SourceLocation NLoc, DeclarationName N,
+                                        QualType T, TypeSourceInfo *TInfo) {
+  FunctionDecl *NewDecl =
+      FunctionDecl::Create(C, DC, StartLoc, NLoc, N, T, TInfo, SC_None);
+  return NewDecl;
+}
+
+static BSCMethodDecl *
+buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                        SourceLocation NLoc, DeclarationName N, QualType T,
+                        TypeSourceInfo *TInfo, StorageClass SC) {
+  BSCMethodDecl *NewDecl =
+      BSCMethodDecl::Create( // TODO: inline should be passed.
+          C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false,
+          false, ConstexprSpecKind::Unspecified, NLoc);
+  if (auto RD = dyn_cast_or_null<RecordDecl>(DC)) {
+    C.BSCDeclContextMap[RD->getTypeForDecl()] = DC;
+    NewDecl->setHasThisParam(true);
+    NewDecl->setExtendedType(RD->getTypeForDecl()->getCanonicalTypeInternal());
+  }
+  return NewDecl;
+}
 
 namespace {
 class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
@@ -97,6 +143,154 @@ bool HasAwaitExpr(Stmt *S) {
   return false;
 }
 
+/// Look for Illegal AwaitExpr
+class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
+  Sema &SemaRef;
+  bool HasIllegalAwait;
+
+public:
+  IllegalAEFinder(Sema &SemaRef)
+      : SemaRef(SemaRef) {
+        HasIllegalAwait = false;
+      }
+  
+  bool CheckCondHasAwaitExpr(Stmt *S) {
+    Expr *condE = nullptr;
+    bool CHasIllegalAwait = false;
+    std::string ArgString;
+
+    switch (S->getStmtClass()) {
+    case Stmt::IfStmtClass: {
+      ArgString = "condition statement of if statement";
+      condE = cast<IfStmt>(S)->getCond();
+      CHasIllegalAwait = HasAwaitExpr(cast<Stmt>(condE));
+      break;
+    }
+
+    case Stmt::WhileStmtClass: {
+      ArgString = "condition statement of while loop";
+      condE = cast<WhileStmt>(S)->getCond();
+      CHasIllegalAwait = HasAwaitExpr(cast<Stmt>(condE));
+      break;
+    }
+
+    case Stmt::DoStmtClass: {
+      ArgString = "condition statement of do/while loop";
+      condE = cast<DoStmt>(S)->getCond();
+      CHasIllegalAwait = HasAwaitExpr(cast<Stmt>(condE));
+      break;
+    }
+
+    case Stmt::ForStmtClass: {
+      ArgString = "condition statement of for loop";
+      Stmt *Init = cast<ForStmt>(S)->getInit();
+      if (Init != nullptr)
+        CHasIllegalAwait = HasAwaitExpr(Init);
+
+      if (!CHasIllegalAwait) {
+        condE = cast<ForStmt>(S)->getCond();
+        CHasIllegalAwait = HasAwaitExpr(cast<Stmt>(condE));
+      }
+
+      break;
+    }
+
+    case Stmt::SwitchStmtClass: {
+      ArgString = "condition statement of switch statement";
+      condE = cast<SwitchStmt>(S)->getCond();
+      CHasIllegalAwait = HasAwaitExpr(cast<Stmt>(condE));
+      break;
+    }
+
+    default:
+      break;
+    }
+
+    if (CHasIllegalAwait) {
+      SemaRef.Diag(S->getBeginLoc(), diag::err_await_invalid_scope) << ArgString;
+    }
+
+    if (CHasIllegalAwait && !HasIllegalAwait)
+      HasIllegalAwait = CHasIllegalAwait;
+
+    return CHasIllegalAwait;
+  }
+
+  bool CheckExprHasAwaitExpr(Stmt *S) {
+    bool IsContinue = true;
+    std::string ArgString;
+
+    if (isa<BinaryOperator>(S)) {
+      ArgString = "binary operator expression";
+      BinaryOperator *BO = cast<BinaryOperator>(S);
+      switch (BO->getOpcode())
+      {
+      case BO_Comma:
+      case BO_Assign:
+        return false;
+      
+      default:
+        break;
+      }
+    } else if (isa<ConditionalOperator>(S)) 
+      ArgString = "condition operator expression";
+
+    bool CHasIllegalAwait = HasAwaitExpr(S);
+
+    if (CHasIllegalAwait && !HasIllegalAwait)
+      HasIllegalAwait = CHasIllegalAwait;
+
+    if (CHasIllegalAwait) {
+      SemaRef.Diag(S->getBeginLoc(), diag::err_await_invalid_scope) << ArgString;
+    }
+    return IsContinue;
+  }
+
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        if (isa<IfStmt>(C) || isa<WhileStmt>(C) || isa<ForStmt>(C) ||
+            isa<DoStmt>(C) || isa<SwitchStmt>(C)) {
+          CheckCondHasAwaitExpr(C);
+        } else if (isa<BinaryOperator>(C) || isa<ConditionalOperator>(C)) {
+          bool IsContinue = CheckExprHasAwaitExpr(C);
+          if (IsContinue)
+            continue;
+        }
+
+        Visit(C);
+      }
+    }
+  }
+
+  bool hasIllegalAwaitExpr() {
+    return HasIllegalAwait;
+  }
+};
+
+bool HasReturnStmt(Stmt *S) {
+  if (S == nullptr)
+    return false;
+
+  if (isa<ReturnStmt>(S))
+    return true;
+
+  for (auto *C : S->children()) {
+    if (HasReturnStmt(C)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool IsRefactorStmt(Stmt *S) {
+  if (isa<CompoundStmt>(S) || isa<IfStmt>(S) || isa<WhileStmt>(S) ||
+      isa<ForStmt>(S) || isa<DoStmt>(S) || isa<SwitchStmt>(S))
+    return true;
+
+  return false;
+}
 
 std::string GetPrefix(QualType T) {
   std::string ExtendedTypeStr = T.getAsString();
@@ -751,6 +945,1060 @@ Stmt *ProcessAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD, Expr *ICE,
 }
 
 
+namespace {
+class TransformToAP : public TreeTransform<TransformToAP> {
+  typedef TreeTransform<TransformToAP> BaseTransform;
+  Expr *PDRE;
+  RecordDecl *FutureRD;
+  BSCMethodDecl *FD;
+  std::vector<Stmt *> DeclStmts;
+  int DIndex;
+  llvm::DenseMap<Stmt *, std::tuple<int, int>> DMap;
+  llvm::DenseMap<StringRef, VarDecl *> ArrayPointersMap;
+  llvm::DenseMap<StringRef, VarDecl *> ArrayAssignedPointerMap;
+
+public:
+  TransformToAP(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD,
+                BSCMethodDecl *FD)
+      : BaseTransform(SemaRef), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {
+    DIndex = 0;
+  }
+
+  // make sure redo semantic analysis
+  bool AlwaysRebuild() { return true; }
+
+  ExprResult TransformDeclRefExpr(DeclRefExpr *E) {
+    Expr *RE = E;
+    RecordDecl::field_iterator TheField, FieldIt;
+    for (FieldIt = FutureRD->field_begin(); FieldIt != FutureRD->field_end();
+         ++FieldIt) {
+      if (FieldIt->getDeclName().getAsString() ==
+          cast<DeclRefExpr>(RE)->getDecl()->getName()) {
+        TheField = FieldIt;
+        break;
+      }
+    }
+
+    if (FieldIt != FutureRD->field_end()) {
+      DeclarationName Name = TheField->getDeclName();
+      DeclarationNameInfo MemberNameInfo(Name, TheField->getLocation());
+      RE = BaseTransform::RebuildMemberExpr(
+               PDRE, SourceLocation(), true, NestedNameSpecifierLoc(),
+               SourceLocation(), MemberNameInfo, *TheField,
+               DeclAccessPair::make(*TheField, TheField->getAccess()).getDecl(),
+               nullptr, nullptr)
+               .getAs<Expr>();
+    }
+
+    return RE;
+  }
+
+  StmtResult TransformDeclStmt(DeclStmt *S) {
+    Stmt *Result = nullptr;
+    DeclStmt *StmDecl = S;
+    int CIndex = 0;
+
+    std::vector<BinaryOperator *> BOStmts;
+    std::vector<Stmt *> NullStmts;
+    for (auto *SD : StmDecl->decls()) {
+      if (VarDecl *VD = dyn_cast<VarDecl>(SD)) {
+        Expr *Init = const_cast<Expr *>(VD->getInit());
+        Expr *LE = nullptr;
+        Expr *RE = nullptr;
+        QualType QT = VD->getType();
+
+        RecordDecl::field_iterator LField, FieldIt;
+        for (FieldIt = FutureRD->field_begin();
+             FieldIt != FutureRD->field_end(); ++FieldIt) {
+          if (FieldIt->getDeclName().getAsString() == VD->getName()) {
+            LField = FieldIt;
+            break;
+          }
+        }
+
+        if (FieldIt != FutureRD->field_end()) {
+          DeclarationName Name = LField->getDeclName();
+          DeclarationNameInfo MemberNameInfo(Name, LField->getLocation());
+          LE = BaseTransform::RebuildMemberExpr(
+                   PDRE, SourceLocation(), true, NestedNameSpecifierLoc(),
+                   SourceLocation(), MemberNameInfo, *LField,
+                   DeclAccessPair::make(*LField, LField->getAccess()).getDecl(),
+                   nullptr, nullptr)
+                   .getAs<Expr>();
+        }
+
+        if (QT->isArrayType() ||
+            QT->isRecordType() || 
+            QT->isRValueReferenceType()) {
+
+          std::string ArgName = VD->getName().str();
+          VarDecl *ArgVDNew = VarDecl::Create(
+              SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+              &(SemaRef.Context.Idents).get(ArgName),
+              VD->getType().getNonReferenceType(), nullptr, SC_None);
+
+          Expr *CInit = nullptr;
+          if (Init != nullptr) {
+            CInit = BaseTransform::TransformExpr(Init).get();      
+          } else {
+            if (VD->getType()->isArrayType()) {
+              auto *CAT = cast<ConstantArrayType>(VD->getType()->castAsArrayTypeUnsafe());
+              InitListExpr *ILE = new (SemaRef.Context)
+                                  InitListExpr(SemaRef.Context, SourceLocation(), None, SourceLocation());
+              ILE->setType(VD->getType());
+              Expr *Filler = new (SemaRef.Context) ImplicitValueInitExpr(CAT->getElementType());
+              ILE->setArrayFiller(Filler);
+              Init = CInit = ILE;
+            } else {
+              Expr *CE = new (SemaRef.Context) ImplicitValueInitExpr(LE->getType());
+              Init = CInit = CE;
+            }
+          }      
+
+          SemaRef.AddInitializerToDecl(ArgVDNew, CInit, /*DirectInit=*/true);
+          DeclStmt *DSNew =
+              SemaRef
+                  .ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(ArgVDNew),
+                                 SourceLocation(), SourceLocation())
+                  .getAs<DeclStmt>();
+
+          DeclStmts.push_back(DSNew);
+
+          RE = SemaRef.BuildDeclRefExpr(ArgVDNew,
+                                        VD->getType().getNonReferenceType(),
+                                        VK_LValue, SourceLocation());
+          RE = ImplicitCastExpr::Create(
+              SemaRef.Context, VD->getType().getNonReferenceType(),
+              CK_LValueToRValue, RE, nullptr, VK_PRValue, FPOptionsOverride());
+          DIndex++;
+          CIndex++;
+
+          if (QT->isArrayType()) {
+
+            int Elements = 1;
+
+            QualType SubQT = QT;
+            while (const ConstantArrayType *AT = SemaRef.Context.getAsConstantArrayType(SubQT)) {
+              Elements *= AT->getSize().getZExtValue();
+              if (AT->getSize() == 0)
+                return true;
+              SubQT = AT->getElementType();
+            }
+
+            QualType Pty = SemaRef.Context.getPointerType(SubQT);
+            Expr *AssignedRVExpr = SemaRef.BuildDeclRefExpr(ArgVDNew, ArgVDNew->getType(), VK_LValue,
+                                                            SourceLocation());
+            AssignedRVExpr = SemaRef.ImpCastExprToType(AssignedRVExpr, SemaRef.Context.getArrayDecayedType(QT),
+                                                       CK_ArrayToPointerDecay).get(); 
+            TypeSourceInfo *AssignedType = SemaRef.Context.getTrivialTypeSourceInfo(Pty);
+            Expr *AssignedCCE = BaseTransform::RebuildCStyleCastExpr(SourceLocation(),
+                                                                    AssignedType,
+                                                                    SourceLocation(),
+                                                                    AssignedRVExpr).get();
+
+            std::string AssignedPtrName = "__ASSIGNED_ARRAY_PTR_" + SubQT.getAsString();
+            VarDecl *AssignedPtrVar = GetArrayAssignedPointerMap(StringRef(AssignedPtrName));
+            if (AssignedPtrVar == nullptr) {
+              AssignedPtrVar = VarDecl::Create(
+                  SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+                  &(SemaRef.Context.Idents).get(AssignedPtrName),
+                  Pty.getNonReferenceType(), nullptr, SC_None);
+
+              SemaRef.AddInitializerToDecl(AssignedPtrVar, AssignedCCE, /*DirectInit=*/true);
+
+              DeclStmt *AssignedDS =
+                  SemaRef
+                      .ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(AssignedPtrVar),
+                                    SourceLocation(), SourceLocation())
+                      .getAs<DeclStmt>();
+
+              DeclStmts.push_back(AssignedDS);
+              SetArrayAssignedPointerMap(StringRef(AssignedPtrName), AssignedPtrVar);
+            } else {
+              Expr *AssignedDRE = SemaRef.BuildDeclRefExpr(AssignedPtrVar, AssignedPtrVar->getType(), VK_LValue,
+                                                           SourceLocation());
+              Stmt *AssignedBO = BaseTransform::RebuildBinaryOperator(
+                                        SourceLocation(), BO_Assign, AssignedDRE, AssignedCCE)
+                                        .getAs<Stmt>();
+              DeclStmts.push_back(AssignedBO);
+            }
+            DIndex++;
+            CIndex++;
+
+            Expr *ArrayRVExpr = SemaRef.ImpCastExprToType(LE, SemaRef.Context.getArrayDecayedType(QT),
+                                                          CK_ArrayToPointerDecay).get(); 
+            TypeSourceInfo *ArrayType = SemaRef.Context.getTrivialTypeSourceInfo(Pty);
+            Expr *ArrayCCE = BaseTransform::RebuildCStyleCastExpr(SourceLocation(),
+                                                                  ArrayType,
+                                                                  SourceLocation(),
+                                                                  ArrayRVExpr).get();
+
+            std::string ArrayPtrName = "__ARRAY_PTR_" + SubQT.getAsString();
+            VarDecl *ArrayPtrVar = GetArrayPointersMap(StringRef(ArrayPtrName));
+            if (ArrayPtrVar == nullptr) {
+              ArrayPtrVar = VarDecl::Create(
+                  SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+                  &(SemaRef.Context.Idents).get(ArrayPtrName),
+                  Pty.getNonReferenceType(), nullptr, SC_None);
+
+              SemaRef.AddInitializerToDecl(ArrayPtrVar, ArrayCCE, /*DirectInit=*/true);
+              DeclStmt *ArrayDS =
+                  SemaRef
+                      .ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(ArrayPtrVar),
+                                    SourceLocation(), SourceLocation())
+                      .getAs<DeclStmt>();
+
+              DeclStmts.push_back(ArrayDS);
+              SetArrayPointersMap(StringRef(ArrayPtrName), ArrayPtrVar);
+            } else {
+              Expr *ArrayDRE = SemaRef.BuildDeclRefExpr(ArrayPtrVar, ArrayPtrVar->getType(), VK_LValue,
+                                                        SourceLocation());
+              Stmt *ArrayBO = BaseTransform::RebuildBinaryOperator(
+                                        SourceLocation(), BO_Assign, ArrayDRE, ArrayCCE)
+                                        .getAs<Stmt>();
+              DeclStmts.push_back(ArrayBO);
+            }
+            DIndex++;
+            CIndex++;
+
+            if (Elements > 1) {
+              VarDecl *IArgVDNew = VarDecl::Create(
+                  SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+                  &(SemaRef.Context.Idents).get("I"), SemaRef.Context.IntTy,
+                  nullptr, SC_None);
+              llvm::APInt Zero(
+                  SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), 0);
+              Expr *IInit = IntegerLiteral::Create(SemaRef.Context, Zero,
+                                                   SemaRef.Context.IntTy,
+                                                   SourceLocation());
+              IArgVDNew->setInit(IInit);
+              DeclGroupRef IDG(IArgVDNew);
+              Stmt *Init = new (SemaRef.Context)
+                  DeclStmt(IDG, SourceLocation(), SourceLocation());
+
+              Expr *IDRE =
+                  SemaRef.BuildDeclRefExpr(IArgVDNew, SemaRef.Context.IntTy,
+                                           VK_LValue, SourceLocation());
+              Expr *ILE = ImplicitCastExpr::Create(
+                  SemaRef.Context, SemaRef.Context.IntTy, CK_LValueToRValue,
+                  IDRE, nullptr, VK_PRValue, FPOptionsOverride());
+
+              llvm::APInt ISize(
+                  SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), Elements);
+              Expr *IRE = IntegerLiteral::Create(SemaRef.Context, ISize,
+                                                 SemaRef.Context.IntTy,
+                                                 SourceLocation());
+
+              Expr *Cond = BaseTransform::RebuildBinaryOperator(
+                               SourceLocation(), BO_LT, ILE, IRE)
+                               .getAs<Expr>();
+
+              Expr *Inc = BaseTransform::RebuildUnaryOperator(SourceLocation(),
+                                                              UO_PreInc, IDRE)
+                              .getAs<Expr>();
+
+              llvm::SmallVector<Stmt *, 1> Stmts;
+
+              Expr *LHS = SemaRef.BuildDeclRefExpr(
+                                ArrayPtrVar, ArrayPtrVar->getType(), VK_LValue, SourceLocation());
+              LHS = SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_PostInc, LHS).get(); 
+              LHS = SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_Deref, LHS).get(); 
+
+              Expr *RHS = SemaRef.BuildDeclRefExpr(
+                                AssignedPtrVar, AssignedPtrVar->getType(), VK_LValue, SourceLocation());
+              RHS = SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_PostInc, RHS).get();
+              RHS = SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_Deref, RHS).get();
+              RHS = SemaRef.ImpCastExprToType(RHS, LHS->getType(), CK_LValueToRValue).get();
+
+              Expr *BO = BaseTransform::RebuildBinaryOperator(
+                             SourceLocation(), BO_Assign, LHS, RHS)
+                             .getAs<Expr>();
+
+              Stmts.push_back(BO);
+              Sema::CompoundScopeRAII CompoundScope(SemaRef);
+              Stmt *Body = BaseTransform::RebuildCompoundStmt(
+                               SourceLocation(), Stmts, SourceLocation(), false)
+                               .getAs<CompoundStmt>();
+              ForStmt *For = new (SemaRef.Context)
+                  ForStmt(SemaRef.Context, Init, Cond, nullptr, Inc, Body,
+                          SourceLocation(), SourceLocation(), SourceLocation());
+
+              DeclStmts.push_back(For);
+              DIndex++;
+              CIndex++;
+
+              LE = SemaRef.BuildDeclRefExpr(
+                                ArrayPtrVar, ArrayPtrVar->getType(), VK_LValue, SourceLocation());
+              RE = new (SemaRef.Context) ImplicitValueInitExpr(LE->getType());
+            }
+          }
+        }
+
+        if (LE && Init) {
+          if (RE == nullptr)
+            RE = BaseTransform::TransformExpr(const_cast<Expr *>(Init))
+                     .getAs<Expr>();
+          BinaryOperator *BO = BaseTransform::RebuildBinaryOperator(
+                                   LField->getLocation(), BO_Assign, LE, RE)
+                                   .getAs<BinaryOperator>();
+          BOStmts.push_back(BO);
+        } else if (LE && Init == nullptr) {
+          RE = new (SemaRef.Context) ImplicitValueInitExpr(LE->getType());
+          Stmt *NoInit = BaseTransform::RebuildBinaryOperator(
+                             LField->getLocation(), BO_Assign, LE, RE)
+                             .getAs<Stmt>();
+          NullStmts.push_back(NoInit);
+        }
+      }
+    }
+
+    int BOSize = BOStmts.size();
+    if (BOSize == 0) {
+      if (NullStmts.size() != 0)
+        Result = NullStmts.front();
+      else
+        Result = StmDecl;
+    } else if (BOSize == 1) {
+      Result = cast<Stmt>(BOStmts.front());
+    } else {
+      BinaryOperator *PreBO = BOStmts.front();
+      for (int I = 1; I < BOSize; I++) {
+        BinaryOperator *BO = BaseTransform::RebuildBinaryOperator(
+                                 SourceLocation(), BO_Comma, PreBO, BOStmts[I])
+                                 .getAs<BinaryOperator>();
+        PreBO = BO;
+      }
+      Result = cast<Stmt>(PreBO);
+    }
+
+    SetDMap(Result, std::make_tuple(DIndex - CIndex, CIndex));
+    return Result;
+  }
+
+  void SetDMap(Stmt *S, std::tuple<int, int> val) {
+    assert(S && "Passed null DeclStmt");
+    DMap[S] = val;
+  }
+
+  std::tuple<int, int> GetDMap(Stmt *S) {
+    llvm::DenseMap<Stmt *, std::tuple<int, int>>::iterator I = DMap.find(S);
+    if (I != DMap.end())
+      return I->second;
+    return {-1, -1};
+  }
+
+  std::vector<Stmt *> GetDeclStmts() { return DeclStmts; }
+
+  void SetArrayPointersMap(StringRef APName, VarDecl *VD) {
+    assert(VD && "Passed null array pointers variable");
+    ArrayPointersMap[APName] = VD;
+  }
+
+  VarDecl *GetArrayPointersMap(StringRef APName) {
+    llvm::DenseMap<StringRef, VarDecl *>::iterator I = ArrayPointersMap.find(APName);
+    if (I != ArrayPointersMap.end())
+      return I->second;
+    return nullptr;
+  }
+
+  void SetArrayAssignedPointerMap(StringRef AAPName, VarDecl *VD) {
+    assert(VD && "Passed null array pointers variable");
+    ArrayAssignedPointerMap[AAPName] = VD;
+  }
+
+  VarDecl *GetArrayAssignedPointerMap(StringRef AAPName) {
+    llvm::DenseMap<StringRef, VarDecl *>::iterator I = ArrayAssignedPointerMap.find(AAPName);
+    if (I != ArrayAssignedPointerMap.end())
+      return I->second;
+    return nullptr;
+  }
+};
+} // namespace
+
+namespace {
+class TransformToHasSingleState
+    : public TreeTransform<TransformToHasSingleState> {
+  typedef TreeTransform<TransformToHasSingleState> BaseTransform;
+  TransformToAP DT;
+
+public:
+  TransformToHasSingleState(Sema &SemaRef, TransformToAP DT)
+      : BaseTransform(SemaRef), DT(DT) {}
+
+  // make sure redo semantic analysis
+  bool AlwaysRebuild() { return true; }
+
+  StmtResult TransformIfStmt(IfStmt *S) {
+    bool HasStatement = false;
+    bool HasStatementElse = false;
+    IfStmt *If = S;
+    Stmt *TS = If->getThen();
+    Stmt *ES = If->getElse();
+    if (TS != nullptr)
+      HasStatement = (HasAwaitExpr(TS) || HasReturnStmt(TS));
+    if (ES != nullptr)
+      HasStatementElse = (HasAwaitExpr(ES) || HasReturnStmt(ES));
+
+    if (HasStatementElse && !IsRefactorStmt(ES)) {
+      std::vector<Stmt *> Stmts;
+      Stmts.push_back(ES);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      ES = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                              SourceLocation(), false)
+               .getAs<CompoundStmt>();
+      If->setElse(ES);
+    }
+
+    if (HasStatement && !IsRefactorStmt(TS)) {
+      std::vector<Stmt *> Stmts;
+      Stmts.push_back(TS);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      TS = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                              SourceLocation(), false)
+               .getAs<CompoundStmt>();
+      If->setThen(TS);
+    }
+
+    return BaseTransform::TransformIfStmt(If);
+  }
+
+  StmtResult TransformWhileStmt(WhileStmt *S) {
+    bool HasStatement = false;
+    WhileStmt *WS = S;
+    Stmt *Body = WS->getBody();
+
+    if (Body != nullptr)
+      HasStatement = (HasAwaitExpr(Body) || HasReturnStmt(Body));
+
+    if (HasStatement && !IsRefactorStmt(Body)) {
+      std::vector<Stmt *> Stmts;
+      Stmts.push_back(Body);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      Body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                                SourceLocation(), false)
+                 .getAs<CompoundStmt>();
+      WS->setBody(Body);
+    }
+    return BaseTransform::TransformWhileStmt(WS);
+  }
+
+  StmtResult TransformForStmt(ForStmt *S) {
+    bool HasStatement = false;
+    ForStmt *FS = S;
+    Stmt *Body = FS->getBody();
+
+    if (Body != nullptr)
+      HasStatement = (HasAwaitExpr(Body) || HasReturnStmt(Body));
+    if (HasStatement && !IsRefactorStmt(Body)) {
+      std::vector<Stmt *> Stmts;
+      Stmts.push_back(Body);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      Body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                                SourceLocation(), false)
+                 .getAs<CompoundStmt>();
+      FS->setBody(Body);
+    }
+    return BaseTransform::TransformForStmt(FS);
+  }
+
+  StmtResult TransformCaseStmt(CaseStmt *S) {
+    bool HasStatement = false;
+    CaseStmt *CS = S;
+    Stmt *SS = CS->getSubStmt();
+    if (SS != nullptr)
+      HasStatement = (HasAwaitExpr(SS) || HasReturnStmt(SS));
+    if (HasStatement && !IsRefactorStmt(SS)) {
+      std::vector<Stmt *> Stmts;
+      Stmts.push_back(SS);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      SS = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                              SourceLocation(), false)
+               .getAs<CompoundStmt>();
+      CS->setSubStmt(SS);
+    }
+    return BaseTransform::TransformCaseStmt(CS);
+  }
+
+  StmtResult TransformDefaultStmt(DefaultStmt *S) {
+    bool HasStatement = false;
+    DefaultStmt *DS = S;
+    Stmt *SS = DS->getSubStmt();
+    if (SS != nullptr)
+      HasStatement = (HasAwaitExpr(SS) || HasReturnStmt(SS));
+    if (HasStatement && !IsRefactorStmt(SS)) {
+      std::vector<Stmt *> Stmts;
+      Stmts.push_back(SS);
+      Sema::CompoundScopeRAII CompoundScope(SemaRef);
+      SS = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                              SourceLocation(), false)
+               .getAs<CompoundStmt>();
+      DS->setSubStmt(SS);
+    }
+    return BaseTransform::TransformDefaultStmt(DS);
+  }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S) {
+    if (S == nullptr)
+      return S;
+
+    std::vector<Stmt *> Statements;
+    for (auto *C : S->children()) {
+      Stmt *SS = const_cast<Stmt *>(C);
+      std::tuple<int, int> DRes = DT.GetDMap(SS);
+      int DIndex = std::get<0>(DRes);
+      if (DIndex != -1) {
+        int DNum = std::get<1>(DRes);
+        std::vector<Stmt *> DeclStmts = DT.GetDeclStmts();
+        int size = DeclStmts.size();
+        for (int i = DIndex; i < DIndex + DNum; i++) {
+          if (i < size)
+            Statements.push_back(DeclStmts[i]);
+        }
+      }
+      SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
+      Statements.push_back(SS);
+    }
+    Sema::CompoundScopeRAII CompoundScope(SemaRef);
+    CompoundStmt *CS =
+        BaseTransform::RebuildCompoundStmt(SourceLocation(), Statements,
+                                           SourceLocation(), false)
+            .getAs<CompoundStmt>();
+    return CS;
+  }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
+    return S;
+  }
+};
+} // namespace
+
+namespace {
+/// Look for Return Stmt
+class ARFinder : public StmtVisitor<ARFinder> {
+  Sema &SemaRef;
+  Expr *PDRE;
+  RecordDecl *FutureRD;
+  BSCMethodDecl *FD;
+  QualType ReturnTy;
+  std::vector<Stmt *> ReturnStmts;
+  const int UnitNum = 3;
+  int ReturnNum;
+  llvm::DenseMap<ReturnStmt *, int> ARMap;
+
+public:
+  ARFinder(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD,
+           QualType ReturnTy)
+      : SemaRef(SemaRef), PDRE(PDRE), FutureRD(FutureRD), FD(FD),
+        ReturnTy(ReturnTy) {
+    ReturnNum = 0;
+  }
+
+  void VisitReturnStmt(ReturnStmt *S) {
+    int ARSecond = ReturnStmts.size();
+    SetARMap(S, ARSecond);
+    ReturnNum++;
+    ReturnStmt *RSS =
+        ReturnStmt::Create(SemaRef.Context, SourceLocation(),
+                           cast<ReturnStmt>(S)->getRetValue(), nullptr);
+    const Expr *RetVal = RSS->getRetValue();
+    Expr *RHSExpr = const_cast<Expr *>(RetVal);
+
+    RecordDecl::field_iterator FutureStateField, TheFieldIt;
+    for (TheFieldIt = FutureRD->field_begin();
+         TheFieldIt != FutureRD->field_end(); ++TheFieldIt) {
+      if (TheFieldIt->getDeclName().getAsString() == "__future_state") {
+        FutureStateField = TheFieldIt;
+        break;
+      }
+    }
+    if (TheFieldIt != FutureRD->field_end()) {
+      DeclarationName Name = FutureStateField->getDeclName();
+      DeclarationNameInfo MemberNameInfo(Name, FutureStateField->getLocation());
+      Expr *LHSExpr = SemaRef.BuildMemberExpr(
+          PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *FutureStateField,
+          DeclAccessPair::make(*FutureStateField,
+                               FutureStateField->getAccess()),
+          false, MemberNameInfo,
+          FutureStateField->getType().getNonReferenceType(), VK_LValue,
+          OK_Ordinary);
+
+      llvm::APInt ResultVal(SemaRef.Context.getTargetInfo().getIntWidth(), 1);
+      Expr *FutureStateVal = IntegerLiteral::Create(
+          SemaRef.Context, ResultVal, SemaRef.Context.IntTy, SourceLocation());
+
+      Expr *Unop =
+          SemaRef
+              .CreateBuiltinUnaryOp(SourceLocation(), UO_Minus, FutureStateVal)
+              .get();
+      Expr *BO =
+          SemaRef.CreateBuiltinBinOp(SourceLocation(), BO_Assign, LHSExpr, Unop)
+              .get();
+      ReturnStmts.push_back(BO);
+    }
+
+    std::string ResReturnName = "__RES_RETURN";
+    VarDecl *ResReturnVD =
+        VarDecl::Create(SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+                        &(SemaRef.Context.Idents).get(ResReturnName),
+                        RHSExpr->getType(), nullptr, SC_None);
+
+    ResReturnVD->setInit(RHSExpr);
+    DeclGroupRef ResReturnDG(ResReturnVD);
+    DeclStmt *ResReturnDS = new (SemaRef.Context)
+        DeclStmt(ResReturnDG, SourceLocation(), SourceLocation());
+    ReturnStmts.push_back(ResReturnDS);
+
+    Expr *ResExpr = SemaRef.BuildDeclRefExpr(
+        ResReturnVD, ResReturnVD->getType(), VK_LValue, SourceLocation());
+
+    ResExpr = ImplicitCastExpr::Create(SemaRef.Context, ResReturnVD->getType(),
+                                       CK_LValueToRValue, ResExpr, nullptr,
+                                       VK_PRValue, FPOptionsOverride());
+
+    SmallVector<Expr *, 1> Args;
+    Args.push_back(ResExpr);
+
+    QualType PollResultType = FD->getReturnType();
+    RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
+
+    std::string CompletedFuncName = "completed";
+    LookupResult CompletedFDResult(
+        SemaRef,
+        DeclarationNameInfo(&(SemaRef.Context.Idents).get(CompletedFuncName),
+                            SourceLocation()),
+        SemaRef.LookupOrdinaryName);
+    SemaRef.LookupQualifiedName(CompletedFDResult, PollResultRD);
+    BSCMethodDecl *CompletedFD = nullptr;
+    if (!CompletedFDResult.empty())
+      CompletedFD =
+          dyn_cast_or_null<BSCMethodDecl>(CompletedFDResult.getFoundDecl());
+
+    Expr *CompletedRef = SemaRef.BuildDeclRefExpr(
+        CompletedFD, CompletedFD->getType(), VK_LValue, SourceLocation());
+    CompletedRef = SemaRef
+                       .ImpCastExprToType(CompletedRef,
+                                          SemaRef.Context.getPointerType(
+                                              CompletedRef->getType()),
+                                          CK_FunctionToPointerDecay)
+                       .get();
+
+    Expr *CE = SemaRef
+                   .BuildCallExpr(nullptr, CompletedRef, SourceLocation(), Args,
+                                  SourceLocation())
+                   .get();
+    Stmt *RS = SemaRef.BuildReturnStmt(SourceLocation(), CE).get();
+    ReturnStmts.push_back(RS);
+    return;
+  }
+
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        Visit(C);
+      }
+    }
+  }
+
+  int GetReturnNum() { return ReturnNum; }
+
+  std::vector<Stmt *> GetReturnStmts() { return ReturnStmts; }
+
+  int GetUnitNum() { return UnitNum; }
+
+  void SetARMap(ReturnStmt *RS, int index) {
+    assert(RS && "Passed null Return");
+    ARMap[RS] = index;
+  }
+
+  int GetARMap(ReturnStmt *RS) {
+    llvm::DenseMap<ReturnStmt *, int>::iterator I = ARMap.find(RS);
+    if (I != ARMap.end())
+      return I->second;
+    return -1;
+  }
+};
+} // namespace
+
+namespace {
+class TransformARToCS : public TreeTransform<TransformARToCS> {
+  typedef TreeTransform<TransformARToCS> BaseTransform;
+  ARFinder ARInitlizer;
+  int ReturnNum;
+  int ReturnIndex;
+
+public:
+  TransformARToCS(Sema &SemaRef, ARFinder ARInitlizer)
+      : BaseTransform(SemaRef), ARInitlizer(ARInitlizer) {
+    ReturnIndex = 0;
+    ReturnNum = ARInitlizer.GetReturnNum();
+  }
+
+  // make sure redo semantic analysis
+  bool AlwaysRebuild() { return true; }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S) {
+    if (S == nullptr)
+      return S;
+
+    int UnitNum = ARInitlizer.GetUnitNum();
+    std::vector<Stmt *> ReturnStmts = ARInitlizer.GetReturnStmts();
+    int StmtsSize = ReturnStmts.size();
+
+    std::vector<Stmt *> Statements;
+    for (auto *C : S->children()) {
+      Stmt *SS = const_cast<Stmt *>(C);
+      if (isa<ReturnStmt>(SS)) {
+        int index = ARInitlizer.GetARMap(cast<ReturnStmt>(SS));
+        for (int i = index; i < index + UnitNum; i++) {
+          if (i < StmtsSize)
+            Statements.push_back(ReturnStmts[i]);
+        }
+        continue;
+      }
+      SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
+      Statements.push_back(SS);
+    }
+    Sema::CompoundScopeRAII CompoundScope(SemaRef);
+    CompoundStmt *CS =
+        BaseTransform::RebuildCompoundStmt(SourceLocation(), Statements,
+                                           SourceLocation(), false)
+            .getAs<CompoundStmt>();
+    return CS;
+  }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
+    return S;
+  }
+};
+} // namespace
+
+namespace {
+class AEFinder : public StmtVisitor<AEFinder> {
+  Sema &SemaRef;
+  ParmVarDecl *PVD;
+  Expr *PDRE;
+  RecordDecl *FutureRD;
+  BSCMethodDecl *FD;
+  std::vector<Stmt *> AwaitStmts;
+  const int UnitNum = 5;
+  int AwaitCount = 0;
+  llvm::DenseMap<AwaitExpr *, int> AEMap;
+  llvm::DenseMap<AwaitExpr *, Expr *> AEReplaceMap;
+
+public:
+  AEFinder(Sema &SemaRef, ParmVarDecl *PVD, Expr *PDRE, RecordDecl *FutureRD,
+           BSCMethodDecl *FD)
+      : SemaRef(SemaRef), PVD(PVD), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {
+    AwaitCount = 0;
+  }
+
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        Visit(C);
+      }
+    }
+  }
+
+  void VisitAwaitExpr(AwaitExpr *E) {
+    Visit(E->getSubExpr());
+    AwaitCount++;
+    int AESecond = AwaitStmts.size();
+    SetAEMap(E, AESecond);
+    AwaitExpr *AtEr = E;
+    auto *AE = AtEr->getSubExpr();
+    RecordDecl::field_iterator FtField, FtFieldIt;
+    for (FtFieldIt = FutureRD->field_begin();
+         FtFieldIt != FutureRD->field_end(); ++FtFieldIt) {
+      if (FtFieldIt->getDeclName().getAsString() ==
+          "Ft_" + std::to_string(AwaitCount)) {
+        FtField = FtFieldIt;
+        break;
+      }
+    }
+
+    Expr *LHSExpr = SemaRef.BuildMemberExpr(
+        PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
+        SourceLocation(), *FtField,
+        DeclAccessPair::make(PVD, FtField->getAccess()), false,
+        DeclarationNameInfo(), FtField->getType().getNonReferenceType(),
+        VK_LValue, OK_Ordinary);
+    Expr *RHSExpr = AE;
+    // Handle nested call
+    if (isa<CallExpr>(AE)) {
+      CallExpr *CE = const_cast<CallExpr *>(cast<CallExpr>(AE));
+      FunctionDecl *CFD = CE->getDirectCallee();
+      std::vector<Expr *> CallArgs;
+      for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
+        if (auto *KReplaceAE = dyn_cast<AwaitExpr>(CE->getArg(I))) {
+          Expr *VReplaceAE = GetAEReplaceMap(KReplaceAE);
+          if (VReplaceAE != nullptr) {
+            CallArgs.push_back(VReplaceAE);
+            continue;
+          }
+        }
+        CallArgs.push_back(CE->getArg(I));
+      }
+      Expr *FDRef =
+          SemaRef.BuildDeclRefExpr(CFD, CFD->getType().getNonReferenceType(),
+                                   VK_LValue, CFD->getLocation());
+      FDRef = SemaRef
+                  .ImpCastExprToType(
+                      FDRef, SemaRef.Context.getPointerType(CFD->getType()),
+                      CK_FunctionToPointerDecay)
+                  .get();
+
+      RHSExpr = SemaRef
+                    .BuildCallExpr(nullptr, FDRef, SourceLocation(), CallArgs,
+                                   SourceLocation())
+                    .get();
+    }
+
+    Expr *ResultStmt = SemaRef
+                           .CreateBuiltinBinOp((*FtField)->getLocation(),
+                                               BO_Assign, LHSExpr, RHSExpr)
+                           .get();
+    AwaitStmts.push_back(ResultStmt);
+    RecordDecl *FatPointerRD =
+        dyn_cast<RecordType>(
+            LHSExpr->getType().getDesugaredType(SemaRef.Context))
+            ->getDecl();
+    RecordDecl::field_iterator PtrField, VtableField, FPFieldIt;
+    for (FPFieldIt = FatPointerRD->field_begin();
+         FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {
+      if (FPFieldIt->getDeclName().getAsString() == "data") {
+        PtrField = FPFieldIt;
+      } else if (FPFieldIt->getDeclName().getAsString() == "vtable") {
+        VtableField = FPFieldIt;
+      }
+    }
+
+      // this.Ft_<x>.vtable
+      Expr *VtableExpr = SemaRef.BuildMemberExpr(
+          LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *VtableField,
+          DeclAccessPair::make(FatPointerRD, VtableField->getAccess()), false,
+          DeclarationNameInfo(), VtableField->getType(), VK_LValue,
+          OK_Ordinary);
+      VtableExpr = ImplicitCastExpr::Create(
+          SemaRef.Context, VtableExpr->getType(), CK_LValueToRValue, VtableExpr,
+          nullptr, VK_PRValue, FPOptionsOverride());
+
+      RecordDecl::field_iterator PollFuncField, VtableFieldIt;
+      const RecordType *RT = dyn_cast<RecordType>(
+          VtableField->getType()->getPointeeType().getDesugaredType(
+              SemaRef.Context));
+      RecordDecl *VtableRD = RT->getDecl();
+      for (VtableFieldIt = VtableRD->field_begin();
+           VtableFieldIt != VtableRD->field_end(); ++VtableFieldIt) {
+        if (VtableFieldIt->getDeclName().getAsString() == "poll") {
+          PollFuncField = VtableFieldIt;
+        }
+      }
+      const FunctionType *FT = dyn_cast<FunctionType>(
+          PollFuncField->getType()->getPointeeType().getDesugaredType(
+              SemaRef.Context));
+      RecordDecl *PollResultRD = dyn_cast<RecordDecl>(
+          dyn_cast<RecordType>(
+              SemaRef.Context.getCanonicalType(FT->getReturnType()))
+              ->getDecl());
+
+      Expr *PollFuncExpr = SemaRef.BuildMemberExpr(
+          VtableExpr, true, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *PollFuncField,
+          DeclAccessPair::make(VtableRD, PollFuncField->getAccess()), false,
+          DeclarationNameInfo(), PollFuncField->getType(), VK_LValue,
+          OK_Ordinary);
+      PollFuncExpr = ImplicitCastExpr::Create(
+          SemaRef.Context, PollFuncExpr->getType(), CK_LValueToRValue,
+          PollFuncExpr, nullptr, VK_PRValue, FPOptionsOverride());
+      std::vector<Expr *> PollArgs;
+      Expr *PtrExpr = SemaRef.BuildMemberExpr(
+          LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *PtrField,
+          DeclAccessPair::make(FatPointerRD, PtrField->getAccess()), false,
+          DeclarationNameInfo(), PtrField->getType(), VK_LValue, OK_Ordinary);
+      PtrExpr = ImplicitCastExpr::Create(SemaRef.Context, PtrExpr->getType(),
+                                         CK_LValueToRValue, PtrExpr, nullptr,
+                                         VK_PRValue, FPOptionsOverride());
+      PollArgs.push_back(PtrExpr);
+      Expr *PollFuncCall =
+          SemaRef
+              .BuildCallExpr(nullptr, PollFuncExpr, SourceLocation(), PollArgs,
+                             SourceLocation())
+              .get();
+
+      RecordDecl::field_iterator ResField, FieldIt;
+      for (FieldIt = PollResultRD->field_begin();
+           FieldIt != PollResultRD->field_end(); ++FieldIt) {
+        if (FieldIt->getDeclName().getAsString() == "res") {
+          ResField = FieldIt;
+          break;
+        }
+      }
+      std::string AwaitResultVDName = "Res_" + std::to_string(AwaitCount);
+      VarDecl *AwaitResultVD = VarDecl::Create(
+          SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+          &(SemaRef.Context.Idents).get(AwaitResultVDName), ResField->getType(),
+          nullptr, SC_None);
+
+      DeclGroupRef AwaitResultDG(AwaitResultVD);
+      DeclStmt *AwaitResultDS = new (SemaRef.Context)
+          DeclStmt(AwaitResultDG, SourceLocation(), SourceLocation());
+      AwaitStmts.push_back(AwaitResultDS);
+
+      std::string PollResultVDName = "PR_" + std::to_string(AwaitCount);
+      VarDecl *PollResultVD = VarDecl::Create(
+          SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+          &(SemaRef.Context.Idents).get(PollResultVDName),
+          PollFuncCall->getType(), nullptr, SC_None);
+
+      PollResultVD->setInit(PollFuncCall);
+      DeclGroupRef PollResultDG(PollResultVD);
+      DeclStmt *PollResultDS = new (SemaRef.Context)
+          DeclStmt(PollResultDG, SourceLocation(), SourceLocation());
+      AwaitStmts.push_back(PollResultDS);
+
+      auto *If = ProcessAwaitExprStatus(SemaRef, AwaitCount, FutureRD, PDRE,
+                                        PVD, PollResultVD, AwaitResultVD, FD);
+      if (If != nullptr)
+        AwaitStmts.push_back(If);
+
+      Expr *AwaitResultRef = SemaRef.BuildDeclRefExpr(
+          AwaitResultVD, AwaitResultVD->getType(), VK_LValue, SourceLocation());
+      AwaitResultRef = ImplicitCastExpr::Create(
+          SemaRef.Context, AwaitResultVD->getType(), CK_LValueToRValue,
+          AwaitResultRef, nullptr, VK_PRValue, FPOptionsOverride());
+      SetAEReplaceMap(E, AwaitResultRef);
+      AwaitStmts.push_back(cast<Stmt>(AwaitResultRef));
+  }
+
+  int GetAwaitCount() { return AwaitCount; }
+
+  std::vector<Stmt *> GetAwaitStmts() { return AwaitStmts; }
+
+  int GetUnitNum() { return UnitNum; }
+
+  void SetAEMap(AwaitExpr *AE, int index) {
+    assert(AE && "Passed null AwaitExpr");
+    AEMap[AE] = index;
+  }
+
+  int GetAEMap(AwaitExpr *AE) {
+    llvm::DenseMap<AwaitExpr *, int>::iterator I = AEMap.find(AE);
+    if (I != AEMap.end())
+      return I->second;
+    return -1;
+  }
+
+  void SetAEReplaceMap(AwaitExpr *AE, Expr *AEReplace) {
+    assert(AE && "Passed null AwaitExpr");
+    AEReplaceMap[AE] = AEReplace;
+  }
+
+  Expr *GetAEReplaceMap(AwaitExpr *AE) {
+    llvm::DenseMap<AwaitExpr *, Expr *>::iterator I = AEReplaceMap.find(AE);
+    if (I != AEReplaceMap.end())
+      return cast<Expr>(I->second);
+    return nullptr;
+  }
+};
+} // namespace
+
+namespace {
+class TransformAEToCS : public TreeTransform<TransformAEToCS> {
+  typedef TreeTransform<TransformAEToCS> BaseTransform;
+  AEFinder AEInitlizer;
+  int AwaitNum;
+  int AwaitIndex;
+  std::vector<AwaitExpr *> AEStmts;
+  std::vector<LabelDecl *> &LabelDecls;
+
+public:
+  TransformAEToCS(Sema &SemaRef, AEFinder AEInitlizer,
+                  std::vector<LabelDecl *> &LabelDecls)
+      : BaseTransform(SemaRef), AEInitlizer(AEInitlizer),
+        LabelDecls(LabelDecls) {
+    AwaitIndex = 0;
+    AwaitNum = AEInitlizer.GetAwaitCount();
+  }
+
+  // make sure redo semantic analysis
+  bool AlwaysRebuild() { return true; }
+
+  ExprResult TransformAwaitExpr(AwaitExpr *E) {
+    return AEInitlizer.GetAEReplaceMap(E);
+  }
+
+  StmtResult TransformReturnStmt(ReturnStmt *S) { return S; }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S) {
+    if (S == nullptr)
+      return S;
+
+    int UnitNum = AEInitlizer.GetUnitNum();
+    std::vector<Stmt *> AwaitStmts = AEInitlizer.GetAwaitStmts();
+    int StmtsSize = AwaitStmts.size();
+
+    std::vector<Stmt *> Statements;
+    for (auto *C : S->children()) {
+      Stmt *SS = const_cast<Stmt *>(C);
+      AEStmts.clear();
+      GetAwaitExpr(SS);
+      int AESize = AEStmts.size();
+      if (AESize > 0) {
+        for (int i = 0; i < AESize; i++) {
+          int index = AEInitlizer.GetAEMap(AEStmts[i]);
+          for (int j = index; j < index + UnitNum - 1; j++) {
+            if (j == index + 1) {
+              LabelStmt *LS =
+                  BaseTransform::RebuildLabelStmt(
+                      SourceLocation(),
+                      cast<LabelDecl>(LabelDecls[AwaitIndex + i + 1]),
+                      SourceLocation(), AwaitStmts[j])
+                      .getAs<LabelStmt>();
+              Statements.push_back(LS);
+              continue;
+            }
+
+            if (j < StmtsSize)
+              Statements.push_back(AwaitStmts[j]);
+          }
+        }
+
+        AwaitIndex = AwaitIndex + AESize;
+      }
+
+      SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
+      Statements.push_back(SS);
+    }
+    Sema::CompoundScopeRAII CompoundScope(SemaRef);
+    CompoundStmt *CS =
+        BaseTransform::RebuildCompoundStmt(SourceLocation(), Statements,
+                                           SourceLocation(), false)
+            .getAs<CompoundStmt>();
+    return CS;
+  }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
+    return S;
+  }
+
+  void GetAwaitExpr(Stmt *S) {
+    if (S == nullptr || isa<CompoundStmt>(S))
+      return;
+
+    for (auto *C : S->children()) {
+      GetAwaitExpr(C);
+    }
+
+    if (isa<AwaitExpr>(S)) {
+      AEStmts.push_back(cast<AwaitExpr>(S));
+    }
+  }
+};
+} // namespace
 
 static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
                                         FunctionDecl *FD) {
