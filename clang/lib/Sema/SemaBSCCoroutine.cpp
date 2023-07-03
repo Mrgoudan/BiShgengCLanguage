@@ -421,6 +421,34 @@ static RecordDecl *buildFutureRecordDecl(
   return RD;
 }
 
+static RecordDecl *generateVoidStruct(Sema &S) {
+  std::string Recordname = "Void";
+  DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
+      DeclarationName(&(S.Context.Idents).get(Recordname)));
+  RecordDecl *VoidRD = nullptr;
+
+  if (Decls.isSingleResult()) {
+    for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                              E = Decls.end();
+         I != E; ++I) {
+      if (isa<RecordDecl>(*I)) {
+        VoidRD = dyn_cast<RecordDecl>(*I);
+        break;
+      }
+    }
+  } else if (Decls.empty()) {
+    VoidRD = buildAsyncDataRecord(S.Context, Recordname, SourceLocation(),
+                                  SourceLocation(),
+                                  clang::TagDecl::TagKind::TTK_Struct);
+    VoidRD->startDefinition();
+    VoidRD->completeDefinition();
+    S.PushOnScopeChains(VoidRD, S.getCurScope(), true);
+  } else {
+    // should not reach here. todo: change to assert
+    abort();
+  }
+  return VoidRD;
+}
 
 /// TODO: will be removed after using Future in stdlib
 static std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
@@ -944,6 +972,88 @@ Stmt *ProcessAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD, Expr *ICE,
   return If;
 }
 
+namespace {
+class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
+  typedef TreeTransform<TransformToReturnVoid> BaseTransform;
+  QualType ReturnTy = QualType();
+
+public:
+  TransformToReturnVoid(Sema &SemaRef) : BaseTransform(SemaRef) {}
+
+  // make sure redo semantic analysis
+  bool AlwaysRebuild() { return true; }
+
+  Decl *TransformFunctionDecl(FunctionDecl *D) {
+    if (D->getReturnType()->isVoidType()) {
+      std::string ReturnStructName = "Void";
+      DeclContext::lookup_result ReturnDecls =
+          SemaRef.Context.getTranslationUnitDecl()->lookup(
+              DeclarationName(&(SemaRef.Context.Idents).get(ReturnStructName)));
+      RecordDecl *ReturnDecl = nullptr;
+      if (ReturnDecls.isSingleResult()) {
+        for (DeclContext::lookup_result::iterator I = ReturnDecls.begin(),
+                                                  E = ReturnDecls.end();
+             I != E; ++I) {
+          if (isa<RecordDecl>(*I)) {
+            ReturnDecl = dyn_cast<RecordDecl>(*I);
+            break;
+          }
+        }
+      }
+
+      assert(ReturnDecl && "struct Void not generated");
+      ReturnTy = SemaRef.Context.getRecordType(ReturnDecl);
+      SmallVector<QualType, 16> ParamTys;
+      FunctionDecl::param_const_iterator pi;
+      for (pi = D->param_begin(); pi != D->param_end(); pi++) {
+        ParamTys.push_back((*pi)->getType());
+      }
+      QualType FuncType =
+          SemaRef.Context.getFunctionType(ReturnTy, ParamTys, {});
+      D->setType(FuncType);
+
+      CompoundStmt *body = dyn_cast<CompoundStmt>(D->getBody());
+      Stmt *LastStmt = body->body_back();
+      if (!LastStmt || !dyn_cast<ReturnStmt>(LastStmt)) {
+        std::vector<Stmt *> Stmts;
+        for (auto *C : body->children()) {
+          Stmts.push_back(C);
+        }
+        ReturnStmt *RS = ReturnStmt::Create(SemaRef.Context, SourceLocation(),
+                                            nullptr, nullptr);
+        Stmts.push_back(RS);
+        Sema::CompoundScopeRAII CompoundScope(SemaRef);
+        CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
+                               SourceLocation(), Stmts, SourceLocation(), false)
+                               .getAs<CompoundStmt>();
+        D->setBody(CS);
+      }
+
+      Stmt *FuncBody = BaseTransform::TransformStmt(D->getBody()).getAs<Stmt>();
+      D->setBody(FuncBody);
+    }
+    return D;
+  }
+
+  StmtResult TransformReturnStmt(ReturnStmt *S) {
+    assert(!S->getRetValue() && "void function should not return a value");
+    InitListExpr *ILE = new (SemaRef.Context)
+        InitListExpr(SemaRef.Context, SourceLocation(), {}, SourceLocation());
+    QualType Ty = SemaRef.Context.getElaboratedType(ETK_Struct, nullptr,
+                                                    ReturnTy, nullptr);
+    ILE->setType(Ty);
+    TypeSourceInfo *superTInfo = SemaRef.Context.getTrivialTypeSourceInfo(Ty);
+    CompoundLiteralExpr *CLE = new (SemaRef.Context) CompoundLiteralExpr(
+        SourceLocation(), superTInfo, Ty, VK_LValue, ILE, false);
+    ImplicitCastExpr *ICE =
+        ImplicitCastExpr::Create(SemaRef.Context, Ty, CK_LValueToRValue, CLE,
+                                 nullptr, VK_PRValue, FPOptionsOverride());
+    ReturnStmt *RS =
+        ReturnStmt::Create(SemaRef.Context, SourceLocation(), ICE, nullptr);
+    return RS;
+  }
+};
+} // namespace
 
 namespace {
 class TransformToAP : public TreeTransform<TransformToAP> {
