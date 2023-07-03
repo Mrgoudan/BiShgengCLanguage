@@ -1,0 +1,27 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../../../async-func-read.hbs"
+
+const int MAX = 3;
+
+async int f(int start) {
+  int *nptr = NULL;
+  int  var[] = {10, 100, 200};
+  int  i, *ptr;
+ 
+  ptr = &var[MAX-1];
+  for ( i = MAX; i > 0; i--)
+  {
+    ptr--;
+  }
+  int result = await read(1);
+  return result;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

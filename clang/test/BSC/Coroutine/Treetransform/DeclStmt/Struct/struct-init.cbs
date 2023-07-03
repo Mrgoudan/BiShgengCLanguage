@@ -1,0 +1,27 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../../../async-func-read.hbs"
+
+struct Books
+{
+   char  title[50];
+   char  author[50];
+   char  subject[100];
+   int   book_id;
+};
+
+async int f(int start) {
+  struct Books book1;
+  struct Books book = {"C language", "RUNOOB", "programming language", 123456};
+  struct Books *pbook;
+  int result = await read(1);
+  return result;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

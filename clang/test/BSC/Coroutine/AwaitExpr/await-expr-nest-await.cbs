@@ -1,0 +1,17 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../async-func-read.hbs"
+
+async int f(int start) { 
+  int result = await read(await read(start));
+  return result;
+}
+
+int main() {
+  struct __FatPointer_int this = f(1);
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data); 
+  return 0;
+}

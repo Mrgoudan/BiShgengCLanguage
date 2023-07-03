@@ -1,0 +1,22 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+
+#include "../../async-func-read.hbs"
+
+async int g();
+
+async int f() {
+    int a = await g();
+    return a;
+}
+
+async int g() {
+    int a = await read(1);
+    return 0;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

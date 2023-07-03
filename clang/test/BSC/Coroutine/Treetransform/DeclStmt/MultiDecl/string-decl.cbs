@@ -1,0 +1,19 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../../../async-func-read.hbs"
+
+async int f(int start) {
+  char str1[14] = "runoob";
+  char str2[7] = {'R', 'U', 'N', 'O', 'O', 'B', '\0'};
+  char str3[] = "RUNOOB";
+  int result = await read(1);
+  return result;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

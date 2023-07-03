@@ -1,0 +1,20 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../../async-func-read.hbs"
+
+async int f(int start) {
+    int result = await read(1);
+    return start * result;
+}
+
+async int g() {
+    int result = await f(2);
+    return result + 5;
+}
+
+int main() {
+    g();
+    return 0;
+}

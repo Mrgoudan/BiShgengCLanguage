@@ -1,0 +1,26 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../../../async-func-read.hbs"
+
+struct Addr {
+    int a;
+    char *addr;
+};
+
+async int f(int start) {
+  int result = start;
+  struct Addr addr = {.a=1,.addr = "hello"};
+  char *tt = "hello";
+  struct Addr addcp = {.a=1,.addr = tt};
+  struct Addr *ptr = &addr;
+  int a = await read(1);
+  return result;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}
