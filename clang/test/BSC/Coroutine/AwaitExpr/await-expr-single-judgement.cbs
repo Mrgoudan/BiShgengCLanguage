@@ -16,8 +16,12 @@ async int f(int start) {
     else 
         a = await read(1);
 
-    while (a<3)
+    while (a < 3)
         a = await read(1);
+
+    do 
+        a = await read(1);
+    while (a < 3);
 
     return start;
 }
