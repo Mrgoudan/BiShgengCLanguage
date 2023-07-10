@@ -6578,6 +6578,9 @@ void Sema::DiagnoseFunctionSpecifiers(const DeclSpec &DS) {
   if (DS.isNoreturnSpecified())
     Diag(DS.getNoreturnSpecLoc(),
          diag::err_noreturn_non_function);
+
+  if (DS.isAsyncSpecified())
+    Diag(DS.getAsyncSpecLoc(), diag::err_async_non_function);
 }
 
 NamedDecl*
@@ -8945,6 +8948,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
 
   FunctionDecl *NewFD = nullptr;
   bool isInline = D.getDeclSpec().isInlineSpecified();
+  bool isAsync = D.getDeclSpec().isAsyncSpecified();
 
   if (!SemaRef.getLangOpts().CPlusPlus) {
     // Determine whether the function was written with a prototype. This is
@@ -8973,7 +8977,8 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
       // FIXME: check whether UsesFPIntrin(before arg "isInline") is false?
       BSCMethodDecl *Ret = BSCMethodDecl::Create(
           SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
-          false, isInline, ConstexprKind, SourceLocation(), TrailingRequiresClause);
+          SemaRef.getCurFPFeatures().isFPConstrained(), isInline, ConstexprKind,
+          SourceLocation(), TrailingRequiresClause, isAsync);
       Ret->setHasThisParam(D.getBSCScopeSpec().HasThisParam);
       Ret->setExtendedType(D.getBSCScopeSpec().getExtendedType());
       Ret->setExtentedTypeBeginLoc(D.getBSCScopeSpec().getBeginLoc());
@@ -8993,7 +8998,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
         SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
         ConstexprSpecKind::Unspecified,
-        /*TrailingRequiresClause=*/nullptr);
+        /*TrailingRequiresClause=*/nullptr, isAsync);
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
 
@@ -11717,6 +11722,9 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
   if (FD->isInlineSpecified())
     Diag(DS.getInlineSpecLoc(), diag::err_inline_main)
       << FixItHint::CreateRemoval(DS.getInlineSpecLoc());
+  if (FD->isAsyncSpecified())
+    Diag(DS.getAsyncSpecLoc(), diag::err_async_main)
+        << FixItHint::CreateRemoval(DS.getAsyncSpecLoc());
   if (DS.isNoreturnSpecified()) {
     SourceLocation NoreturnLoc = DS.getNoreturnSpecLoc();
     SourceRange NoreturnRange(NoreturnLoc, getLocForEndOfToken(NoreturnLoc));

@@ -1,0 +1,51 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../async-func-read.hbs"
+
+struct _Futuretest2 {
+    int a;
+    int res;
+    int __future_state;
+};
+typedef struct _Futuretest2 __Futuretest2;
+
+struct PollResult<int> struct _Futuretest2::poll(__Futuretest2 *this)     {
+    struct PollResult<int> poll_result;
+    switch (this->__future_state) {
+      case 0:
+        goto L0;
+    }
+  L0:
+    this->res = this->a;
+    this->__future_state = -1;
+    return struct PollResult<int>::completed(this->res);
+}
+
+void struct _Futuretest2::free(struct _Futuretest2 *this) {}
+
+struct __Vtable_int _Futuretest2_vtable = {
+  .poll = struct _Futuretest2::poll,
+  .free = struct _Futuretest2::free
+};
+
+struct __FatPointer_int test2(int a)     {
+  struct _Futuretest2* ptr = malloc(sizeof(struct _Futuretest2));
+  ptr->a = a;
+  ptr->__future_state = 0;
+  return (struct __FatPointer_int) { .data = ptr, .vtable = &_Futuretest2_vtable};
+}
+
+async int f(int start) { 
+  int result = await read(2);
+  if (start < 20)
+    start = await test2(1);
+  return result + start;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

@@ -447,6 +447,7 @@ public:
   Value *VisitUnaryCoawait(const UnaryOperator *E) {
     return Visit(E->getSubExpr());
   }
+  Value *VisitAwaitExpr(AwaitExpr *E) { return Visit(E->getSubExpr()); }
 
   // Leaves.
   Value *VisitIntegerLiteral(const IntegerLiteral *E) {

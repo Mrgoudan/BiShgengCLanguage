@@ -1453,6 +1453,16 @@ ExprResult Parser::ParseCastExpression(
     return Res;
   }
 
+  case tok::kw___await: { // unary-expression: 'await' cast-expression
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    SourceLocation AwaitLoc = ConsumeToken();
+    Res = ParseCastExpression(AnyCastExpr);
+    if (!Res.isInvalid())
+      Res = Actions.ActOnAwaitExpr(AwaitLoc, Res.get());
+    return Res;  
+  }
+
   case tok::kw___extension__:{//unary-expression:'__extension__' cast-expr [GNU]
     // __extension__ silences extension warnings in the subexpression.
     if (NotPrimaryExpression)

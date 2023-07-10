@@ -3564,11 +3564,12 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     cast<CXXDeductionGuideDecl>(ToFunction)
         ->setIsCopyDeductionCandidate(Guide->isCopyDeductionCandidate());
   } else {
-    if (GetImportedOrCreateDecl(
-            ToFunction, D, Importer.getToContext(), DC, ToInnerLocStart,
-            NameInfo, T, TInfo, D->getStorageClass(), D->UsesFPIntrin(),
-            D->isInlineSpecified(), D->hasWrittenPrototype(),
-            D->getConstexprKind(), TrailingRequiresClause))
+    if (GetImportedOrCreateDecl(ToFunction, D, Importer.getToContext(), DC,
+                                ToInnerLocStart, NameInfo, T, TInfo,
+                                D->getStorageClass(), D->UsesFPIntrin(),
+                                D->isInlineSpecified(),
+                                D->hasWrittenPrototype(), D->getConstexprKind(),
+                                TrailingRequiresClause, D->isAsyncSpecified()))
       return ToFunction;
   }
 

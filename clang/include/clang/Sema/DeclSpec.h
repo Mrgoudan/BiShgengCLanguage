@@ -377,6 +377,7 @@ private:
   unsigned FS_forceinline_specified: 1;
   unsigned FS_virtual_specified : 1;
   unsigned FS_noreturn_specified : 1;
+  unsigned FS_async_specified : 1;
 
   // friend-specifier
   unsigned Friend_specified : 1;
@@ -419,7 +420,8 @@ private:
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
-  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
+  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
+      FS_asyncLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
@@ -462,11 +464,10 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), Friend_specified(false),
-        ConstexprSpecifier(
-            static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
-        FS_explicit_specifier(),
-        FS_safe_specified(SS_None), FS_safe_loc(),
+        FS_noreturn_specified(false), FS_async_specified(false),
+        Friend_specified(false), ConstexprSpecifier(static_cast<unsigned>(
+                                     ConstexprSpecKind::Unspecified)),
+        FS_explicit_specifier(), FS_safe_specified(SS_None), FS_safe_loc(),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
@@ -605,6 +606,9 @@ public:
     return FS_inline_specified ? FS_inlineLoc : FS_forceinlineLoc;
   }
 
+  bool isAsyncSpecified() const { return FS_async_specified; }
+  SourceLocation getAsyncSpecLoc() const { return FS_asyncLoc; }
+
   ExplicitSpecifier getExplicitSpecifier() const {
     return FS_explicit_specifier;
   }
@@ -638,6 +642,8 @@ public:
     FS_inlineLoc = SourceLocation();
     FS_forceinline_specified = false;
     FS_forceinlineLoc = SourceLocation();
+    FS_async_specified = false;
+    FS_asyncLoc = SourceLocation();
     FS_virtual_specified = false;
     FS_virtualLoc = SourceLocation();
     FS_explicit_specifier = ExplicitSpecifier();
@@ -774,6 +780,8 @@ public:
                              unsigned &DiagID);
   bool setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevSpec,
                                   unsigned &DiagID);
+  bool setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
+                            unsigned &DiagID);
   bool setFunctionSpecVirtual(SourceLocation Loc, const char *&PrevSpec,
                               unsigned &DiagID);
   bool setFunctionSpecExplicit(SourceLocation Loc, const char *&PrevSpec,

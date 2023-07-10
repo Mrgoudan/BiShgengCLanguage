@@ -203,6 +203,9 @@ def TypoExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
 
+// BSC Extensions
+def AwaitExpr : StmtNode<Expr>;
+
 // Microsoft Extensions.
 def MSPropertyRefExpr : StmtNode<Expr>;
 def MSPropertySubscriptExpr : StmtNode<Expr>;

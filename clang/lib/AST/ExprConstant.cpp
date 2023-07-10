@@ -15425,6 +15425,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::AtomicExprClass:
   case Expr::LambdaExprClass:
   case Expr::CXXFoldExprClass:
+  case Expr::AwaitExprClass:
   case Expr::CoawaitExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CoyieldExprClass:

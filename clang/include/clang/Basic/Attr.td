@@ -136,6 +136,9 @@ def GlobalVar : SubsetSubject<Var,
 def InlineFunction : SubsetSubject<Function,
                              [{S->isInlineSpecified()}], "inline functions">;
 
+def AsyncFunction : SubsetSubject<Function,
+                             [{S->isAsyncSpecified()}], "async functions">;
+
 def FunctionTmpl
     : SubsetSubject<Function, [{S->getTemplatedKind() ==
                                  FunctionDecl::TK_FunctionTemplate}],

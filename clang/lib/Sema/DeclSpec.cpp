@@ -462,7 +462,8 @@ unsigned DeclSpec::getParsedSpecifiers() const {
     Res |= PQ_TypeSpecifier;
 
   if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
-      FS_noreturn_specified || FS_forceinline_specified || FS_safe_specified)
+      FS_noreturn_specified || FS_forceinline_specified || FS_safe_specified ||
+      FS_async_specified)
     Res |= PQ_FunctionSpecifier;
   return Res;
 }
@@ -1007,6 +1008,18 @@ bool DeclSpec::setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevS
   }
   FS_forceinline_specified = true;
   FS_forceinlineLoc = Loc;
+  return false;
+}
+
+bool DeclSpec::setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
+                                    unsigned &DiagID) {
+  if (FS_async_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "async";
+    return true;
+  }
+  FS_async_specified = true;
+  FS_asyncLoc = Loc;
   return false;
 }
 

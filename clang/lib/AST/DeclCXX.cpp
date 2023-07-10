@@ -2113,11 +2113,12 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
 BSCMethodDecl *BSCMethodDecl::Create(
     ASTContext &C, DeclContext *RD, SourceLocation StartLoc,
     const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
-    StorageClass SC, bool UsesFPIntrinbool, bool isInline, ConstexprSpecKind ConstexprKind,
-    SourceLocation EndLocation, Expr *TrailingRequiresClause) {
-  return new (C, RD) BSCMethodDecl(BSCMethod, C, RD, StartLoc, NameInfo, T,
-                                   TInfo, SC, UsesFPIntrinbool, isInline, ConstexprKind,
-                                   EndLocation, TrailingRequiresClause);
+    StorageClass SC, bool UsesFPIntrinbool, bool isInline,
+    ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
+    Expr *TrailingRequiresClause, bool isAsync) {
+  return new (C, RD) BSCMethodDecl(
+      BSCMethod, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrinbool,
+      isInline, ConstexprKind, EndLocation, TrailingRequiresClause, isAsync);
 }
 
 BSCMethodDecl *BSCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {

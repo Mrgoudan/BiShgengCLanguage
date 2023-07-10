@@ -6471,6 +6471,40 @@ private:
   friend class ASTStmtWriter;
 };
 
+class AwaitExpr final : public Expr {
+protected:
+  Stmt *SubExpr;
+
+public:
+  explicit AwaitExpr(SourceLocation AwaitLoc, Expr *Se, QualType Ty)
+      : Expr(AwaitExprClass, Ty, VK_PRValue, OK_Ordinary), AwaitLoc(AwaitLoc) {
+    SubExpr = Se;
+  }
+
+  explicit AwaitExpr(EmptyShell Empty) : Expr(AwaitExprClass, Empty) {}
+
+  SourceLocation getBeginLoc() const { return AwaitLoc; }
+  SourceLocation getEndLoc() const { return SubExpr->getEndLoc(); }
+
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == AwaitExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&SubExpr, &SubExpr + 1); }
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
+  }
+
+private:
+  SourceLocation AwaitLoc;
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+};
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_EXPR_H

@@ -3795,6 +3795,14 @@ public:
                                      Sema::AtomicArgumentOrder::AST);
   }
 
+  /// Build a new await operation expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildAwaitExpr(SourceLocation BuiltinLoc, Expr *SubExprs) {
+    return getSema().BuildAwaitExpr(BuiltinLoc, SubExprs);
+  }
+
   ExprResult RebuildRecoveryExpr(SourceLocation BeginLoc, SourceLocation EndLoc,
                                  ArrayRef<Expr *> SubExprs, QualType Type) {
     return getSema().CreateRecoveryExpr(BeginLoc, EndLoc, SubExprs, Type);
@@ -14448,6 +14456,22 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
 
   return getDerived().RebuildAtomicExpr(E->getBuiltinLoc(), SubExprs,
                                         E->getOp(), E->getRParenLoc());
+}
+
+//===----------------------------------------------------------------------===//
+// BSC await expression transform
+//===----------------------------------------------------------------------===//
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformAwaitExpr(AwaitExpr *E) {
+  ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
+  if (SubExpr.isInvalid())
+    return ExprError();
+
+  // If nothing changed, just retain the existing expression.
+  if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getSubExpr())
+    return E;
+
+  return getDerived().RebuildAwaitExpr(E->getBeginLoc(), SubExpr.get());
 }
 
 //===----------------------------------------------------------------------===//

@@ -913,6 +913,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
   FD->setInlineSpecified(Record.readInt());
   FD->setImplicitlyInline(Record.readInt());
+  FD->setAsyncSpecified(Record.readInt());
   FD->setVirtualAsWritten(Record.readInt());
   // We defer calling `FunctionDecl::setPure()` here as for methods of
   // `CXXTemplateSpecializationDecl`s, we may not have connected up the

@@ -2126,6 +2126,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
           Decl *TheDecl = ParseFunctionDefinition(D, ParsedTemplateInfo(),
                                                   &LateParsedAttrs);
+
+          FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TheDecl);
+          if (getLangOpts().BSC && FD) {
+            SmallVector<Decl *, 8> decls =
+                Actions.ActOnAsyncFunctionDeclaration(FD);
+            return Actions.BuildDeclaratorGroup(decls);
+          }
           return Actions.ConvertDeclToDeclGroup(TheDecl);
         }
 
@@ -2194,6 +2201,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   D.complete(FirstDecl);
   if (FirstDecl)
     DeclsInGroup.push_back(FirstDecl);
+
+  if (FirstDecl) {
+    FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(FirstDecl);
+    if (getLangOpts().BSC && FD && FD->isAsyncSpecified()) {
+      Actions.ActOnAsyncFunctionDefinition(FD, DeclsInGroup);
+    }
+  }
 
   bool ExpectSemi = Context != DeclaratorContext::ForInit;
 
@@ -2604,6 +2618,8 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
   if (Specs & DeclSpec::PQ_FunctionSpecifier) {
     if (DS.isInlineSpecified())
       Diag(DS.getInlineSpecLoc(), diag::err_typename_invalid_functionspec);
+    if (DS.isAsyncSpecified())
+      Diag(DS.getAsyncSpecLoc(), diag::err_typename_invalid_functionspec);
     if (DS.isVirtualSpecified())
       Diag(DS.getVirtualSpecLoc(), diag::err_typename_invalid_functionspec);
     if (DS.hasExplicitSpecifier())
@@ -3872,6 +3888,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // function-specifier
     case tok::kw_inline:
       isInvalid = DS.setFunctionSpecInline(Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw___async:
+      isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
       break;
     case tok::kw_virtual:
       // C++ for OpenCL does not allow virtual function qualifier, to avoid
@@ -5453,6 +5472,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
 
     // function-specifier
   case tok::kw_inline:
+  case tok::kw___async:
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:

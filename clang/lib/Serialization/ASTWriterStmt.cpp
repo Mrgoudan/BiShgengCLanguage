@@ -1520,6 +1520,17 @@ void ASTStmtWriter::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E)
 }
 
 //===----------------------------------------------------------------------===//
+// BSC Expressions.
+//===----------------------------------------------------------------------===//
+void ASTStmtWriter::VisitAwaitExpr(AwaitExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getBeginLoc());
+  for (Stmt *S : E->children())
+    Record.AddStmt(S);
+  Code = serialization::EXPR_BSC_AWAIT;
+}
+
+//===----------------------------------------------------------------------===//
 // C++ Expressions and Statements.
 //===----------------------------------------------------------------------===//
 

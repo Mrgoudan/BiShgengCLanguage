@@ -1664,6 +1664,8 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
     OS << ' ' << VarDecl::getStorageClassSpecifierString(SC);
   if (D->isInlineSpecified())
     OS << " inline";
+  if (D->isAsyncSpecified())
+    OS << " async";
   if (D->isVirtualAsWritten())
     OS << " virtual";
   if (D->isModulePrivate())

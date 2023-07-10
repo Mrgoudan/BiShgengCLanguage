@@ -1,0 +1,23 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// expected-no-diagnostics
+
+#include "../../../async-func-read.hbs"
+
+async int f(int start) {
+  auto int j = 1;
+    {
+        auto int j= 2;
+        {
+            auto int j = 3;
+        }
+    }
+  int result = await read(1);
+  return result;
+}
+
+int main() {
+    struct _Futuref this = {}; 
+    struct _Futuref::poll(&this);
+    return 0;
+}

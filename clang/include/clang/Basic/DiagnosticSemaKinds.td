@@ -109,6 +109,18 @@ def err_ice_too_large : Error<
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
 
+// BSC warnings and errors
+def err_await_invalid_scope : Error<
+  "await expression is not allowed to appear in %0">;
+def err_not_a_async_call : Error<
+  "the await expression's external function declaration must be modified by async or return 'Future' type">;
+def err_function_not_found : Error <
+  "'%0' was not found, you need to include %1 before using the 'async' keyword">;
+def err_await_expression_not_found: Error <
+  "await expression was not found in async function">;
+def err_invalid_async_function : Error <
+  "function which returns 'Future' type should not be modified by 'async'">;
+
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
   "predefined identifier is only valid inside function">,
@@ -438,6 +450,8 @@ def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
 def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
+def err_async_non_function : Error<
+  "'async' can only appear on functions">;
 def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
@@ -858,6 +872,7 @@ def warn_static_main : Warning<"'main' should not be declared static">,
     InGroup<Main>;
 def err_static_main : Error<"'main' is not allowed to be declared static">;
 def err_inline_main : Error<"'main' is not allowed to be declared inline">;
+def err_async_main : Error<"'main' is not allowed to be declared async">;
 def ext_variadic_main : ExtWarn<
   "'main' is not allowed to be declared variadic">, InGroup<Main>;
 def ext_noreturn_main : ExtWarn<

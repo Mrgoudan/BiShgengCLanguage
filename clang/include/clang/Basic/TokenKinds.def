@@ -450,6 +450,12 @@ KEYWORD(__FUNCTION__                , KEYALL)
 KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
 KEYWORD(__auto_type                 , KEYALL)
 
+// BSC Extensions
+KEYWORD(__await                     , KEYBSC)
+ALIAS("await", __await, KEYBSC)
+KEYWORD(__async                     , KEYBSC)
+ALIAS("async", __async, KEYBSC)
+
 // GNU Extensions (outside impl-reserved namespace)
 KEYWORD(typeof                      , KEYGNU)
 

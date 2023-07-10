@@ -497,6 +497,15 @@ void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
     SubExpr = Record.readSubStmt();
 }
 
+//===----------------------------------------------------------------------===//
+// BSC Expressions
+//===----------------------------------------------------------------------===//
+void ASTStmtReader::VisitAwaitExpr(AwaitExpr *E) {
+  VisitExpr(E);
+  E->AwaitLoc = readSourceLocation();
+  E->SubExpr = Record.readSubStmt();
+}
+
 void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
   VisitStmt(S);
   Record.skipInts(1);
@@ -3997,6 +4006,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_DEPENDENT_COAWAIT:
       S = new (Context) DependentCoawaitExpr(Empty);
+      break;
+
+    case EXPR_BSC_AWAIT:
+      S = new (Context) AwaitExpr(Empty);
       break;
 
     case EXPR_CONCEPT_SPECIALIZATION: {
