@@ -836,6 +836,17 @@ const ObjCObjectPointerType *ObjCObjectPointerType::stripObjCKindOfTypeAndQuals(
   return ctx.getObjCObjectPointerType(obj)->castAs<ObjCObjectPointerType>();
 }
 
+bool PointerType::hasOwnedFields() const {
+  QualType R = getPointeeType();
+  if (R.isOwnedQualified()) {
+    return true;
+  }
+  if (R.getTypePtr()->hasOwnedFields()) {
+    return true;
+  }
+  return false;
+}
+
 namespace {
 
 /// Visitor used to perform a simple type transformation that does not change
@@ -1989,6 +2000,15 @@ bool Type::isChar16Type() const {
 bool Type::isChar32Type() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() == BuiltinType::Char32;
+  return false;
+}
+
+bool Type::hasOwnedFields() const {
+  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
+    return RecTy->hasOwnedFields();
+  } else if (const auto *PointerTy = dyn_cast<PointerType>(CanonicalType)) {
+    return PointerTy->hasOwnedFields();
+  }
   return false;
 }
 
@@ -3375,6 +3395,18 @@ bool FunctionProtoType::isTemplateVariadic() const {
   return false;
 }
 
+bool FunctionProtoType::hasOwnedRetOrParams() const {
+  if (getReturnType().isOwnedQualified()) {
+    return true;
+  }
+  for (auto ParamType:getParamTypes()) {
+    if (ParamType.isOwnedQualified()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
@@ -3574,6 +3606,52 @@ bool RecordType::hasConstFields() const {
     }
     ++NextToCheckIndex;
   }
+  return false;
+}
+
+void RecordType::initOwnedStatus() const {
+  if (hasOwn != ownedStatus::unInit) return;
+  std::vector<const RecordType*> RecordTypeList;
+  RecordTypeList.push_back(this);
+  unsigned NextToCheckIndex = 0;
+
+  while (RecordTypeList.size() > NextToCheckIndex) {
+    for (FieldDecl *FD :
+         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+      QualType FieldTy = FD->getType();
+      if (FieldTy.isOwnedQualified()) {
+        hasOwn = ownedStatus::withOwned;
+        return;
+      }
+      QualType tempQT = FieldTy;
+      const Type* tempT = tempQT.getTypePtr();
+      while(tempT->isPointerType()) {
+        tempQT = tempT->getPointeeType();
+        if (tempQT.isOwnedQualified()) {
+          hasOwn = ownedStatus::withOwned;
+          return;
+        } else {
+          tempQT = tempQT.getCanonicalType();
+          tempT = tempQT.getTypePtr();
+        }
+      }
+      FieldTy = tempQT.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+          RecordTypeList.push_back(FieldRecTy);
+      }
+    }
+    ++NextToCheckIndex;
+  }
+  hasOwn = ownedStatus::withoutOwned;
+  return;
+}
+
+bool RecordType::hasOwnedFields() const {
+  if (hasOwn == ownedStatus::unInit)
+    initOwnedStatus();
+  if (hasOwn == ownedStatus::withOwned)
+    return true;
   return false;
 }
 

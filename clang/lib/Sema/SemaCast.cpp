@@ -2869,6 +2869,15 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // bsc owned type CStyleCast
+  if (Self.getLangOpts().BSC
+      && (SrcExpr.get()->getType().isOwnedQualified() || DestType.isOwnedQualified())) {
+    if(!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get())) {
+      SrcExpr = ExprError();
+      return;
+    }
+  }
+
   // If the type is dependent, we won't do any other semantic analysis now.
   if (Self.getASTContext().isDependenceAllowed() &&
       (DestType->isDependentType() || SrcExpr.get()->isTypeDependent() ||

@@ -4238,6 +4238,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                  getLangOpts());
       break;
 
+    // owned-qualifier:
+    case tok::kw_owned:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+
     // C++ typename-specifier:
     case tok::kw_typename:
       if (TryAnnotateTypeOrScopeToken()) {
@@ -5468,6 +5474,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
+  case tok::kw_owned:
   case tok::kw__Sat:
 
     // function-specifier
@@ -5770,6 +5777,12 @@ void Parser::ParseTypeQualifierListOpt(
       break;
     case tok::kw_restrict:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+
+    // owned-qualifier:
+    case tok::kw_owned:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
     case tok::kw__Atomic:

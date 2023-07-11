@@ -82,47 +82,47 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
 // Constants for TokenKinds.def
 namespace {
 
-enum {
-  KEYC99 = 0x1,
-  KEYCXX = 0x2,
-  KEYCXX11 = 0x4,
-  KEYGNU = 0x8,
-  KEYMS = 0x10,
-  BOOLSUPPORT = 0x20,
-  KEYALTIVEC = 0x40,
-  KEYNOCXX = 0x80,
-  KEYBORLAND = 0x100,
-  KEYOPENCLC = 0x200,
-  KEYC11 = 0x400,
-  KEYNOMS18 = 0x800,
-  KEYNOOPENCL = 0x1000,
-  WCHARSUPPORT = 0x2000,
-  HALFSUPPORT = 0x4000,
-  CHAR8SUPPORT = 0x8000,
-  KEYCONCEPTS = 0x10000,
-  KEYOBJC = 0x20000,
-  KEYZVECTOR = 0x40000,
-  KEYCOROUTINES = 0x80000,
-  KEYMODULES = 0x100000,
-  KEYCXX20 = 0x200000,
-  KEYOPENCLCXX = 0x400000,
-  KEYMSCOMPAT = 0x800000,
-  KEYSYCL = 0x1000000,
-  KEYCUDA = 0x2000000,
-  KEYBSC = 0x3000000,
-  KEYMAX = KEYCUDA, // The maximum key
-  KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 &
-           ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
-};
+  enum {
+    KEYC99        = 0x1,
+    KEYCXX        = 0x2,
+    KEYCXX11      = 0x4,
+    KEYGNU        = 0x8,
+    KEYMS         = 0x10,
+    BOOLSUPPORT   = 0x20,
+    KEYALTIVEC    = 0x40,
+    KEYNOCXX      = 0x80,
+    KEYBORLAND    = 0x100,
+    KEYOPENCLC    = 0x200,
+    KEYC11        = 0x400,
+    KEYNOMS18     = 0x800,
+    KEYNOOPENCL   = 0x1000,
+    WCHARSUPPORT  = 0x2000,
+    HALFSUPPORT   = 0x4000,
+    CHAR8SUPPORT  = 0x8000,
+    KEYCONCEPTS   = 0x10000,
+    KEYOBJC       = 0x20000,
+    KEYZVECTOR    = 0x40000,
+    KEYCOROUTINES = 0x80000,
+    KEYMODULES    = 0x100000,
+    KEYCXX20      = 0x200000,
+    KEYOPENCLCXX  = 0x400000,
+    KEYMSCOMPAT   = 0x800000,
+    KEYSYCL       = 0x1000000,
+    KEYCUDA       = 0x2000000,
+    KEYBSC        = 0x4000000,
+    KEYMAX        = KEYBSC, // The maximum key
+    KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
+    KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
+             ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
+  };
 
-/// How a keyword is treated in the selected standard.
-enum KeywordStatus {
-  KS_Disabled,  // Disabled
-  KS_Extension, // Is an extension
-  KS_Enabled,   // Enabled
-  KS_Future     // Is a keyword in future standard
-};
+  /// How a keyword is treated in the selected standard.
+  enum KeywordStatus {
+    KS_Disabled,    // Disabled
+    KS_Extension,   // Is an extension
+    KS_Enabled,     // Enabled
+    KS_Future       // Is a keyword in future standard
+  };
 
 } // namespace
 
@@ -165,6 +165,7 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
     return KS_Enabled;
   if (LangOpts.CUDA && (Flags & KEYCUDA))
     return KS_Enabled;
+  if (LangOpts.BSC && (Flags & KEYBSC)) return KS_Enabled;
   return KS_Disabled;
 }
 

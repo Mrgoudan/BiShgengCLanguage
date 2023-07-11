@@ -5010,6 +5010,13 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return CreateOverloadedArraySubscriptExpr(lbLoc, rbLoc, base, ArgExprs);
   }
 
+  // BSC owned pointer index check
+  if (getLangOpts().BSC && base->getType()->isPointerType() && base->getType().isOwnedQualified()) {
+     Diag(lbLoc, diag::err_typecheck_invalid_owned_arrsub)
+    << base->getType() << base->getSourceRange();
+    return ExprError();
+  }
+
   ExprResult Res =
       CreateBuiltinArraySubscriptExpr(base, lbLoc, ArgExprs.front(), rbLoc);
 
@@ -10109,6 +10116,153 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
   return Compatible;
 }
 
+// for union fields/array/global variable type check
+void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env) {
+  enum {
+    ownedQualified,
+    ownedTypedef,
+    ownedFields
+  };
+  if (T.getCanonicalType().isOwnedQualified() && !T.getTypePtr()->getAs<TypedefType>()) {
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check) << ownedQualified << Env;
+  } else if (T.getCanonicalType().isOwnedQualified() && T.getTypePtr()->getAs<TypedefType>()) {
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check) << ownedTypedef << Env << T;
+  } else if (T.getCanonicalType().getTypePtr()->hasOwnedFields()) {
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check) << ownedFields << Env << T;
+  }
+}
+
+// modify err_owned_qualcheck_incompatible synchronously if OwnErr changed
+enum OwnedErr {
+  ownedToOwned,
+  unOwnedToOwned,
+  ownedToUnowned
+};
+
+bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, Expr* RHSExpr) {
+  QualType RHSCanType = RHSExpr->getType().getCanonicalType();
+  QualType LHSCanType = LHSType.getCanonicalType();
+  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+  bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
+
+  // owned to owned cases:
+  // int owned a;
+  // (int owned)a;  //legal
+  // (float owned); //illegal
+  // int* owned p0;
+  // (void* owned)p0;               //legal
+  // (int* owned)((void* owned)p0); //legal
+  if (LHSCanType.isOwnedQualified() && RHSCanType.isOwnedQualified()
+      && !IsSameType) {
+    if (RHSCanType->isPointerType() && LHSCanType->isPointerType()
+        && (LHSCanType.getTypePtr()->isVoidPointerType() || RHSCanType.getTypePtr()->isVoidPointerType())) {
+      return true;
+    }
+    Diag(RHSExpr->getBeginLoc(), diag::err_owned_qualcheck_incompatible) << ownedToOwned << RHSCanType << LHSCanType;
+    return false;
+  }
+
+  // unOwned to owned cases:
+  // int a;
+  // (int owned)a;    //legal
+  // (float owned)a;  //illegal
+  if (LHSCanType.isOwnedQualified() && !RHSCanType.isOwnedQualified()
+      && !IsSameType) {
+    Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << unOwnedToOwned << RHSCanType << LHSCanType;
+    return false;
+  }
+
+  // owned to unOwned cases:
+  // int owned a;
+  // (int)a;    //legal
+  // (float)a;  //illegal
+  if (!LHSCanType.isOwnedQualified() && RHSCanType.isOwnedQualified()
+      && !IsSameType) {
+    Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << ownedToUnowned << RHSCanType << LHSCanType;
+    return false;
+  }
+  return true;
+}
+
+bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
+  QualType RHSCanType = RHSExpr->getType().getCanonicalType();
+  QualType LHSCanType = LHSType.getCanonicalType();
+  bool isLiteral = false;
+  Stmt::StmtClass RHSClass = RHSExpr->getStmtClass();
+  if (RHSClass == Expr::IntegerLiteralClass
+      || RHSClass == Expr::FloatingLiteralClass
+      || RHSClass == Expr::CharacterLiteralClass) {
+    isLiteral = true;
+  }
+  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+
+  // owned to owned cases:
+  // int owned a = 10;
+  // int owned b = a;   //legal
+  // float owned c = a; //illegal
+  if (LHSCanType.isOwnedQualified() && RHSCanType.isOwnedQualified()) {
+    if (LHSCanType != RHSCanType) {
+      Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << ownedToOwned << RHSCanType << LHSCanType;
+      return false;
+    }
+  }
+
+  // unOwned to owned cases:
+  // int owned a = 10;        //legal even 10 is not owned type
+  // int owned b = 10 + 10;   //ilegal
+  // char owned c = 'c';      // legal even 'c' is int type
+  // int owned d = (int)a;    // illegal
+  if (LHSCanType.isOwnedQualified() && !RHSCanType.isOwnedQualified()) {
+    if (!isLiteral) {
+      Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << unOwnedToOwned << RHSCanType << LHSCanType;
+      return false;
+    } else if (LHSCanType.getTypePtr() != RHSCanType.getTypePtr()
+              && !(LHSCanType.getTypePtr()->isCharType() && RHSCanType.getTypePtr()->isIntegerType())) {
+       Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << unOwnedToOwned << RHSCanType << LHSCanType;
+      return false;
+    }
+  }
+
+  // owned to unOwned cases:
+  // int owned a = 10;
+  // int b = a;   //illegal
+  if (!LHSCanType.isOwnedQualified() && RHSCanType.isOwnedQualified()) {
+    Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << ownedToUnowned << RHSCanType << LHSCanType;
+    return false;
+  }
+  return true;
+}
+
+bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
+  const FunctionProtoType* LSHFuncType = LHSType->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>();
+  const FunctionProtoType* RSHFuncType = RHSExpr->getType()->isFunctionPointerType()?
+    RHSExpr->getType()->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>():
+    RHSExpr->getType()->getAs<FunctionProtoType>();
+  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+
+  // return if no 'owned' in both side
+  if (!LSHFuncType->hasOwnedRetOrParams() && !RSHFuncType->hasOwnedRetOrParams()) {
+    return true;
+  }
+  if ((LSHFuncType->getReturnType().isOwnedQualified() && !RSHFuncType->getReturnType().isOwnedQualified())
+       || (!LSHFuncType->getReturnType().isOwnedQualified() && RSHFuncType->getReturnType().isOwnedQualified())) {
+    Diag(ExprLoc, diag::err_owned_funcPtr_incompatible) << LHSType << RHSExpr->getType();
+    return false;
+  }
+  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
+    Diag(ExprLoc, diag::err_owned_funcPtr_incompatible) << LHSType << RHSExpr->getType();
+    return false;
+  }
+  for (unsigned i = 0; i < LSHFuncType->getNumParams(); i++) {
+    if ((LSHFuncType->getParamType(i).isOwnedQualified() && !RSHFuncType->getParamType(i).isOwnedQualified())
+         || (!LSHFuncType->getParamType(i).isOwnedQualified() && RSHFuncType->getParamType(i).isOwnedQualified())) {
+      Diag(ExprLoc, diag::err_owned_funcPtr_incompatible) << LHSType << RHSExpr->getType();
+      return false;
+    }
+  }
+  return true;
+}
+
 Sema::AssignConvertType
 Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
                                        bool Diagnose,
@@ -10132,6 +10286,18 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
              diag::warn_noderef_to_dereferenceable_pointer)
             << RHS.get()->getSourceRange();
       }
+    }
+  }
+
+  if (getLangOpts().BSC) {
+    if (RHS.get()->getType().isOwnedQualified() || LHSType.isOwnedQualified()) {
+      if (!CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
+        return IncompatibleOwnedPointer;
+    }
+    if (LHSType->isFunctionPointerType()
+        && (RHS.get()->getType()->isFunctionPointerType() || RHS.get()->getType()->isFunctionType())) {
+      if (!CheckOwnedFunctionPointerType(LHSType, RHS.get()))
+        return IncompatibleOwnedPointer;
     }
   }
 
@@ -15471,6 +15637,24 @@ static void DiagnoseShiftCompare(Sema &S, SourceLocation OpLoc,
       SourceRange(OCE->getArg(1)->getBeginLoc(), RHSExpr->getEndLoc()));
 }
 
+static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
+                                    SourceLocation OpLoc, Expr *LHSExpr,
+                                    Expr *RHSExpr) {
+  if (!BinaryOperator::isComparisonOp(Opc)) {
+    Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_binOp)
+    << LHSExpr->getType() << RHSExpr->getType()
+    << LHSExpr->getSourceRange() << RHSExpr->getSourceRange();
+  }
+}
+
+static void DiagnoseOwnedPointerUnaryOp(Sema &Self, UnaryOperatorKind Opc,
+                                    SourceLocation OpLoc, Expr *Input) {
+  if (Opc != UO_AddrOf && Opc != UO_Deref) {
+    Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_unaOp)
+    << Input->getType() << Input->getSourceRange();
+  }
+}
+
 /// DiagnoseBinOpPrecedence - Emit warnings for expressions with tricky
 /// precedence.
 static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
@@ -15505,6 +15689,14 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
   // cout << 5 == 4;
   if (BinaryOperator::isComparisonOp(Opc))
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
+
+  //bsc owned pointer type check
+  if (Self.getLangOpts().BSC
+      && ((LHSExpr->getType()->isPointerType() && LHSExpr->getType().isOwnedQualified())
+      || (RHSExpr->getType()->isPointerType() && RHSExpr->getType().isOwnedQualified()))) {
+    DiagnoseOwnedPointerBinaryOp(Self, Opc, OpLoc, LHSExpr, RHSExpr);
+  }
+
 }
 
 // Binary Operators.  'Tok' is the token for the operator.
@@ -16032,6 +16224,10 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
       LookupOverloadedOperatorName(OverOp, S, Functions);
 
     return CreateOverloadedUnaryOp(OpLoc, Opc, Functions, Input);
+  }
+  if (getLangOpts().BSC && Input->getType()->isPointerType()
+      && Input->getType().isOwnedQualified()) {
+    DiagnoseOwnedPointerUnaryOp(*this, Opc, OpLoc, Input);
   }
 
   return CreateBuiltinUnaryOp(OpLoc, Opc, Input);
@@ -17267,6 +17463,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     isInvalid = true;
     MayHaveFunctionDiff = true;
     break;
+  case IncompatibleOwnedPointer:
+    return false;
   }
 
   QualType FirstType, SecondType;

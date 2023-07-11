@@ -12092,6 +12092,11 @@ public:
     /// object with __weak qualifier.
     IncompatibleObjCWeakRef,
 
+    /// IncompatibleOwnedPointer - The assignment is between a owned qualified pointer
+    /// type with a unOwned qualified pointer type or two owned qualified pointer type
+    /// with different base types
+    IncompatibleOwnedPointer,
+
     /// Incompatible - We reject this conversion outright, it is invalid to
     /// represent it in the AST.
     Incompatible
@@ -12154,6 +12159,11 @@ public:
   // can initialize the transparent union with the given expression.
   AssignConvertType CheckTransparentUnionArgumentConstraints(QualType ArgType,
                                                              ExprResult &RHS);
+
+  bool CheckOwnedQualTypeCStyleCast(QualType LHSType, Expr* RHSExpr);
+  bool CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
+  bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
+  void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);
 

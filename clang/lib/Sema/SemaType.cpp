@@ -1877,6 +1877,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
       // produce a warning in this case.
     }
 
+    if(S.getLangOpts().BSC && (TypeQuals & DeclSpec::TQ_owned) && DS.getTypeSpecType() == DeclSpec::TST_union) {
+      S.Diag(DS.getOwnedSpecLoc(), diag::err_owned_union_spec) << "owned";
+    }
+
     QualType Qualified = S.BuildQualifiedType(Result, DeclLoc, TypeQuals, &DS);
 
     // If adding qualifiers fails, just use the unqualified type.
@@ -5045,6 +5049,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         D.setInvalidType(true);
       }
 
+      // BSC rules: ele of array cannot be qualified by owned or owned-like
+      if (LangOpts.BSC)
+        S.CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "array");
+
       // C99 6.7.5.2p1: The optional type qualifiers and the keyword static
       // shall appear only in a declaration of a function parameter with an
       // array type, ...
@@ -5340,7 +5348,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // OpenCL disallows functions without a prototype, but it doesn't enforce
       // strict prototypes as in C2x because it allows a function definition to
       // have an identifier list. See OpenCL 3.0 6.11/g for more details.
-      // 
+      //
       if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.BSC &&
           !LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL) {
         // Simple void foo(), where the incoming T is the result type.

@@ -333,10 +333,11 @@ public:
     TQ_const       = 1,
     TQ_restrict    = 2,
     TQ_volatile    = 4,
-    TQ_unaligned   = 8,
+    TQ_owned       = 8,
+    TQ_unaligned   = 16,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
-    TQ_atomic      = 16
+    TQ_atomic      = 32
   };
 
   /// ParsedSpecifiers - Flags to query which specifiers were applied.  This is
@@ -370,7 +371,7 @@ private:
   unsigned ConstrainedAuto : 1;
 
   // type-qualifiers
-  unsigned TypeQualifiers : 5;  // Bitwise OR of TQ.
+  unsigned TypeQualifiers : 6;  // Bitwise OR of TQ.
 
   // function-specifier
   unsigned FS_inline_specified : 1;
@@ -419,7 +420,7 @@ private:
   SourceLocation TSTNameLoc;
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
-      TQ_unalignedLoc;
+      TQ_unalignedLoc, TQ_ownedLoc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc,
       FS_asyncLoc;
   SourceLocation FS_explicitCloseParenLoc;
@@ -581,6 +582,7 @@ public:
   /// getTypeQualifiers - Return a set of TQs.
   unsigned getTypeQualifiers() const { return TypeQualifiers; }
   SourceLocation getConstSpecLoc() const { return TQ_constLoc; }
+  SourceLocation getOwnedSpecLoc() const { return TQ_ownedLoc; }
   SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
   SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
   SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
@@ -591,6 +593,7 @@ public:
   void ClearTypeQualifiers() {
     TypeQualifiers = 0;
     TQ_constLoc = SourceLocation();
+    TQ_ownedLoc = SourceLocation();
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
     TQ_atomicLoc = SourceLocation();
@@ -1245,11 +1248,14 @@ struct DeclaratorChunk {
   ParsedAttributesView AttrList;
 
   struct PointerTypeInfo {
-    /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
-    unsigned TypeQuals : 5;
+    /// The type qualifiers: const/volatile/restrict/owned/unaligned/atomic.
+    unsigned TypeQuals : 6;
 
     /// The location of the const-qualifier, if any.
     SourceLocation ConstQualLoc;
+
+    /// The location of the owned-qualifier, if any.
+    SourceLocation OwnedQualLoc;
 
     /// The location of the volatile-qualifier, if any.
     SourceLocation VolatileQualLoc;
@@ -1278,8 +1284,8 @@ struct DeclaratorChunk {
 
   struct ArrayTypeInfo {
     /// The type qualifiers for the array:
-    /// const/volatile/restrict/__unaligned/_Atomic.
-    unsigned TypeQuals : 5;
+    /// const/volatile/restrict/owned/__unaligned/_Atomic.
+    unsigned TypeQuals : 6;
 
     /// True if this dimension included the 'static' keyword.
     unsigned hasStatic : 1;
@@ -1566,16 +1572,16 @@ struct DeclaratorChunk {
 
   struct BlockPointerTypeInfo {
     /// For now, sema will catch these as invalid.
-    /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
-    unsigned TypeQuals : 5;
+    /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
+    unsigned TypeQuals : 6;
 
     void destroy() {
     }
   };
 
   struct MemberPointerTypeInfo {
-    /// The type qualifiers: const/volatile/restrict/__unaligned/_Atomic.
-    unsigned TypeQuals : 5;
+    /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
+    unsigned TypeQuals : 6;
     /// Location of the '*' token.
     SourceLocation StarLoc;
     // CXXScopeSpec has a constructor, so it can't be a direct member.

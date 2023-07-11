@@ -5219,6 +5219,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (DS.getTypeQualifiers()) {
     if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
+    if (DS.getTypeQualifiers() & DeclSpec::TQ_owned)
+      Diag(DS.getOwnedSpecLoc(), DiagID) << "owned";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
     // Restrict is covered above.
@@ -7978,6 +7980,13 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (IsMemberSpecialization && !NewVD->isInvalidDecl())
     CompleteMemberSpecialization(NewVD, Previous);
+
+  // BSC global variable owned type check
+  // 'typedef owned int myInt;' is legal
+  bool IsTypedefName = D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef;
+  if (!IsTypedefName && getLangOpts().BSC && NewVD
+      && NewVD->getDeclContext()->isFileContext())
+    CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), R, "global variable");
 
   return NewVD;
 }
@@ -17517,6 +17526,10 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
     Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
          diag::err_invalid_thread)
       << DeclSpec::getSpecifierName(TSCS);
+
+  // BSC union fileds owned type check
+  if (getLangOpts().BSC && Record->isUnion())
+    CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "union field");
 
   // Check to see if this name was declared as a member previously
   NamedDecl *PrevDecl = nullptr;

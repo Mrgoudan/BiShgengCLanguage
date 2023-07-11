@@ -426,6 +426,8 @@ void DeclSpec::forEachCVRUQualifier(
     llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle) {
   if (TypeQualifiers & TQ_const)
     Handle(TQ_const, "const", TQ_constLoc);
+  if (TypeQualifiers & TQ_owned)
+    Handle(TQ_owned, "owned", TQ_ownedLoc);
   if (TypeQualifiers & TQ_volatile)
     Handle(TQ_volatile, "volatile", TQ_volatileLoc);
   if (TypeQualifiers & TQ_restrict)
@@ -608,6 +610,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   switch (T) {
   case DeclSpec::TQ_unspecified: return "unspecified";
   case DeclSpec::TQ_const:       return "const";
+  case DeclSpec::TQ_owned:         return "owned";
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
   case DeclSpec::TQ_atomic:      return "_Atomic";
@@ -976,6 +979,7 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   switch (T) {
   case TQ_unspecified: break;
   case TQ_const:    TQ_constLoc = Loc; return false;
+  case TQ_owned:   TQ_ownedLoc = Loc; return false;
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
   case TQ_unaligned: TQ_unalignedLoc = Loc; return false;

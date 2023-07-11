@@ -6412,7 +6412,7 @@ void Sema::AddOverloadCandidate(
       NamedDecl *ND = Function;
       if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
         ND = SpecInfo->getTemplate();
-      
+
       if (ND->getFormalLinkage() == Linkage::InternalLinkage) {
         Candidate.Viable = false;
         Candidate.FailureKind = ovl_fail_module_mismatched;
@@ -7977,12 +7977,16 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
   unsigned BaseCVR = PointeeTy.getCVRQualifiers();
   bool hasVolatile = VisibleQuals.hasVolatile();
   bool hasRestrict = VisibleQuals.hasRestrict();
+  bool hasOwned = VisibleQuals.hasOwned();
 
   // Iterate through all strict supersets of BaseCVR.
   for (unsigned CVR = BaseCVR+1; CVR <= Qualifiers::CVRMask; ++CVR) {
     if ((CVR | BaseCVR) != CVR) continue;
     // Skip over volatile if no volatile found anywhere in the types.
     if ((CVR & Qualifiers::Volatile) && !hasVolatile) continue;
+
+    // Skip over owned if no owned found anywhere in the types.
+    if ((CVR & Qualifiers::Owned) && !hasOwned) continue;
 
     // Skip over restrict if no restrict found anywhere in the types, or if
     // the type cannot be restrict-qualified.
@@ -9677,7 +9681,7 @@ static bool canCompareFunctionConstraints(Sema &S,
                                           const OverloadCandidate &Cand1,
                                           const OverloadCandidate &Cand2) {
   // FIXME: Per P2113R0 we also need to compare the template parameter lists
-  // when comparing template functions. 
+  // when comparing template functions.
   if (Cand1.Function && Cand2.Function && Cand1.Function->hasPrototype() &&
       Cand2.Function->hasPrototype()) {
     auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());

@@ -66,7 +66,7 @@ class TemplateParameterList;
 class Type;
 
 enum {
-  TypeAlignmentInBits = 4,
+  TypeAlignmentInBits = 5,
   TypeAlignment = 1 << TypeAlignmentInBits
 };
 
@@ -150,7 +150,8 @@ public:
     Const    = 0x1,
     Restrict = 0x2,
     Volatile = 0x4,
-    CVRMask = Const | Volatile | Restrict
+    Owned      = 0x8,
+    CVRMask = Const | Volatile | Restrict | Owned
   };
 
   enum GC {
@@ -183,11 +184,11 @@ public:
 
   enum {
     /// The maximum supported address space number.
-    /// 23 bits should be enough for anyone.
-    MaxAddressSpace = 0x7fffffu,
+    /// 22 bits should be enough for anyone.
+    MaxAddressSpace = 0x3fffffu,
 
     /// The width of the "fast" qualifier mask.
-    FastWidth = 3,
+    FastWidth = 4,
 
     /// The fast qualifier mask.
     FastMask = (1 << FastWidth) - 1
@@ -268,6 +269,16 @@ public:
   Qualifiers withConst() const {
     Qualifiers Qs = *this;
     Qs.addConst();
+    return Qs;
+  }
+
+  bool hasOwned() const { return Mask & Owned; }
+  bool hasOnlyOwned() const { return Mask == Owned; }
+  void removeOwned() { Mask &= ~Owned; }
+  void addOwned() { Mask |= Owned; }
+  Qualifiers withOwned() const {
+    Qualifiers Qs = *this;
+    Qs.addOwned();
     return Qs;
   }
 
@@ -609,19 +620,19 @@ public:
   }
 
 private:
-  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
-  //           |C R V|U|GCAttr|Lifetime|AddressSpace|
+  // bits:     |0 1 2 3|4|5 .. 6|7  ..  9|10  ...   31|
+  //           |C R V O|U|GCAttr|Lifetime|AddressSpace|
   uint32_t Mask = 0;
 
-  static const uint32_t UMask = 0x8;
-  static const uint32_t UShift = 3;
-  static const uint32_t GCAttrMask = 0x30;
-  static const uint32_t GCAttrShift = 4;
-  static const uint32_t LifetimeMask = 0x1C0;
-  static const uint32_t LifetimeShift = 6;
+  static const uint32_t UMask = 0x10;
+  static const uint32_t UShift = 4;
+  static const uint32_t GCAttrMask = 0x60;
+  static const uint32_t GCAttrShift = 5;
+  static const uint32_t LifetimeMask = 0x380;
+  static const uint32_t LifetimeShift = 7;
   static const uint32_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
-  static const uint32_t AddressSpaceShift = 9;
+  static const uint32_t AddressSpaceShift = 10;
 };
 
 class QualifiersAndAtomic {
@@ -637,16 +648,19 @@ public:
 
   bool hasVolatile() const { return Quals.hasVolatile(); }
   bool hasConst() const { return Quals.hasConst(); }
+  bool hasOwned() const { return Quals.hasOwned(); }
   bool hasRestrict() const { return Quals.hasRestrict(); }
   bool hasAtomic() const { return HasAtomic; }
 
   void addVolatile() { Quals.addVolatile(); }
   void addConst() { Quals.addConst(); }
+  void addOwned() { Quals.addOwned(); }
   void addRestrict() { Quals.addRestrict(); }
   void addAtomic() { HasAtomic = true; }
 
   void removeVolatile() { Quals.removeVolatile(); }
   void removeConst() { Quals.removeConst(); }
+  void removeOwned() { Quals.removeOwned(); }
   void removeRestrict() { Quals.removeRestrict(); }
   void removeAtomic() { HasAtomic = false; }
 
@@ -654,6 +668,7 @@ public:
     return {Quals.withVolatile(), HasAtomic};
   }
   QualifiersAndAtomic withConst() { return {Quals.withConst(), HasAtomic}; }
+  QualifiersAndAtomic withOwned() { return {Quals.withOwned(), HasAtomic}; }
   QualifiersAndAtomic withRestrict() {
     return {Quals.withRestrict(), HasAtomic};
   }
@@ -808,6 +823,16 @@ public:
   bool isConstQualified() const;
 
   /// Determine whether this particular QualType instance has the
+  /// "owned" qualifier set, without looking through typedefs that may have
+  /// added "owned" at a different level.
+  bool isLocalOwnedQualified() const {
+    return (getLocalFastQualifiers() & Qualifiers::Owned);
+  }
+
+  /// Determine whether this type is owned-qualified.
+  bool isOwnedQualified() const;
+
+  /// Determine whether this particular QualType instance has the
   /// "restrict" qualifier set, without looking through typedefs that may have
   /// added "restrict" at a different level.
   bool isLocalRestrictQualified() const {
@@ -906,6 +931,14 @@ public:
     return withFastQualifiers(Qualifiers::Const);
   }
 
+  /// Add the `owned` type qualifier to this QualType.
+  void addOwned() {
+    addFastQualifiers(Qualifiers::Owned);
+  }
+  QualType withOwned() const {
+    return withFastQualifiers(Qualifiers::Owned);
+  }
+
   /// Add the `volatile` type qualifier to this QualType.
   void addVolatile() {
     addFastQualifiers(Qualifiers::Volatile);
@@ -933,6 +966,7 @@ public:
   }
 
   void removeLocalConst();
+  void removeLocalOwned();
   void removeLocalVolatile();
   void removeLocalRestrict();
   void removeLocalCVRQualifiers(unsigned Mask);
@@ -2022,6 +2056,8 @@ public:
   /// Returns true if the type is a builtin type.
   bool isBuiltinType() const;
 
+  bool hasOwnedFields() const;
+
   /// Test for a particular builtin type.
   bool isSpecificBuiltinType(unsigned K) const;
 
@@ -2733,6 +2769,7 @@ public:
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Pointer; }
+  bool hasOwnedFields() const;
 };
 
 /// Represents a type which was implicitly adjusted by the semantic
@@ -3896,6 +3933,7 @@ public:
                 "the fast qualifiers.");
 
   bool isConst() const { return getFastTypeQuals().hasConst(); }
+  bool isOwned() const { return getFastTypeQuals().hasOwned(); }
   bool isVolatile() const { return getFastTypeQuals().hasVolatile(); }
   bool isRestrict() const { return getFastTypeQuals().hasRestrict(); }
 
@@ -4213,6 +4251,9 @@ public:
   /// Return whether this function has an instantiation-dependent exception
   /// spec.
   bool hasInstantiationDependentExceptionSpec() const;
+
+  // return true if any 'owned' here
+  bool hasOwnedRetOrParams() const;
 
   /// Return all the available information about this type's exception spec.
   ExceptionSpecInfo getExceptionSpecInfo() const {
@@ -4712,6 +4753,13 @@ protected:
   explicit RecordType(TypeClass TC, RecordDecl *D)
       : TagType(TC, reinterpret_cast<const TagDecl*>(D), QualType()) {}
 
+  enum ownedStatus {
+    unInit,
+    withOwned,
+    withoutOwned
+  };
+  mutable ownedStatus hasOwn = ownedStatus::unInit;
+
 public:
   RecordDecl *getDecl() const {
     return reinterpret_cast<RecordDecl*>(TagType::getDecl());
@@ -4720,6 +4768,10 @@ public:
   /// Recursively check all fields in the record for const-ness. If any field
   /// is declared const, return true. Otherwise, return false.
   bool hasConstFields() const;
+
+  bool hasOwnedFields() const;
+
+  void initOwnedStatus() const;
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -6620,6 +6672,11 @@ inline bool QualType::isConstQualified() const {
          getCommonPtr()->CanonicalType.isLocalConstQualified();
 }
 
+inline bool QualType::isOwnedQualified() const {
+  return isLocalOwnedQualified() ||
+         getCommonPtr()->CanonicalType.isLocalOwnedQualified();
+}
+
 inline bool QualType::isRestrictQualified() const {
   return isLocalRestrictQualified() ||
          getCommonPtr()->CanonicalType.isLocalRestrictQualified();
@@ -6637,8 +6694,9 @@ inline bool QualType::hasQualifiers() const {
 }
 
 inline QualType QualType::getUnqualifiedType() const {
+  int addOwned = isOwnedQualified() ? Qualifiers::Owned : 0;
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
-    return QualType(getTypePtr(), 0);
+    return QualType(getTypePtr(), addOwned);
 
   return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, 0);
 }
@@ -6652,6 +6710,11 @@ inline SplitQualType QualType::getSplitUnqualifiedType() const {
 
 inline void QualType::removeLocalConst() {
   removeLocalFastQualifiers(Qualifiers::Const);
+}
+
+
+inline void QualType::removeLocalOwned() {
+  removeLocalFastQualifiers(Qualifiers::Owned);
 }
 
 inline void QualType::removeLocalRestrict() {

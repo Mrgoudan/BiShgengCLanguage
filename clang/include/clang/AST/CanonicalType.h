@@ -138,6 +138,10 @@ public:
     return Stored.isLocalConstQualified();
   }
 
+   bool isOwnedQualified() const {
+    return Stored.isLocalOwnedQualified();
+  }
+
   bool isVolatileQualified() const {
     return Stored.isLocalVolatileQualified();
   }

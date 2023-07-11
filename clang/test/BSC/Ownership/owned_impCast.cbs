@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+//owned to owned
+void test1() {
+    float owned a1 = 10.0f;
+    int owned a2 = a1;    //expected-error {{incompatible owned types, cannot cast ownedType 'owned float' to ownedType 'owned int'}}
+}
+
+//unOwned to owned
+void test2() {
+    int b1 = 10;
+    int owned b2 = b1;  //expected-error {{incompatible owned types, cannot cast UnOwnedType 'int' to OwnedType 'owned int'}}
+}
+
+//owned to unOwned
+void test3() {
+    int owned c1 = 10;
+    int c2 = c1;  //expected-error {{incompatible owned types, cannot cast OwnedType 'owned int' to UnOwnedType 'int'}}
+}
+
+//unOwned to owned with typedef
+typedef int* owned myInt;
+void test4() {
+    int b = 10;
+    int* p1 = &b;
+    myInt p2 = p1;  //expected-error {{incompatible owned types, cannot cast UnOwnedType 'int *' to OwnedType 'int *owned'}}
+}
+
+

@@ -2318,6 +2318,8 @@ def err_illegal_decl_array_of_auto : Error<
   "'%0' declared as array of %1">;
 def err_new_array_of_auto : Error<
   "cannot allocate array of 'auto'">;
+def err_owned_array_decl : Error<
+  "type of array cannot qualified by 'owned'">;
 def err_auto_not_allowed : Error<
   "%select{'auto'|'decltype(auto)'|'__auto_type'|"
   "use of "
@@ -6776,6 +6778,16 @@ def err_specialization_not_primary_template : Error<
   "template specialization %0 is %select{instantiated from a partial|"
   "an explicit}1 specialization">;
 
+def err_owned_qualcheck_incompatible : Error<
+  "incompatible owned types, "
+  "%select{"
+  "cannot cast ownedType %1 to ownedType %2|"
+  "cannot cast UnOwnedType %1 to OwnedType %2|"
+  "cannot cast OwnedType %1 to UnOwnedType %2}0">;
+
+def err_owned_funcPtr_incompatible : Error<
+  "cannot cast %0 to %1">;
+
 def err_member_redeclared : Error<"class member cannot be redeclared">;
 def ext_member_redeclared : ExtWarn<"class member cannot be redeclared">,
   InGroup<RedeclaredClassMember>;
@@ -6964,6 +6976,12 @@ def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
 def err_typecheck_invalid_operands : Error<
   "invalid operands to binary expression (%0 and %1)">, Deferrable;
+def err_typecheck_invalid_owned_binOp : Error<
+  "invalid operands to binary expression (%0 and %1)">, Deferrable;
+def err_typecheck_invalid_owned_unaOp : Error<
+  "invalid operands to unary expression (%0)">, Deferrable;
+def err_typecheck_invalid_owned_arrsub : Error<
+  "owned pointer type (%0) do not support ArraySubscript operate">, Deferrable;
 def note_typecheck_invalid_operands_converted : Note<
   "%select{first|second}0 operand was implicitly converted to type %1">;
 def err_typecheck_logical_vector_expr_gnu_cpp_restrict : Error<
@@ -8087,6 +8105,13 @@ def err_typecheck_convert_pointer_int : Error<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">;
+def err_owned_qualcheck_incompatible_pointer : Error<
+  "incompatible owned types, "
+  "%select{"
+  "cannot cast ownedType %1 to ownedType %2|"
+  "cannot cast UnOwnedType %1 to OwnedType %2|"
+  "cannot cast %1 to OwnedType %2|"
+  "cannot cast OwnedType %1 to UnOwnedType %2}0">;
 def ext_typecheck_convert_pointer_int : ExtWarn<
   err_typecheck_convert_pointer_int.Text>,
   InGroup<IntConversion>, DefaultError;
