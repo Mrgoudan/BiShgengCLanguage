@@ -490,6 +490,21 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->isParamDestroyedInCallee());
   Record.push_back(D->getArgPassingRestrictions());
 
+  enum { CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization };
+  if (ClassTemplateDecl *TemplD = D->getDescribedClassTemplate()) {
+    Record.push_back(CXXRecTemplate);
+    Record.AddDeclRef(TemplD);
+  } else if (MemberSpecializationInfo *MSInfo =
+                 D->getMemberSpecializationInfo()) {
+    Record.push_back(CXXRecMemberSpecialization);
+    Record.AddDeclRef(MSInfo->getInstantiatedFrom());
+    Record.push_back(MSInfo->getTemplateSpecializationKind());
+    Record.AddSourceLocation(MSInfo->getPointOfInstantiation());
+  } else {
+    Record.push_back(CXXRecNotTemplate);
+    Record.AddDeclRef(nullptr);
+  }
+
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
       !D->isImplicit() &&
@@ -1367,22 +1382,6 @@ void ASTDeclWriter::VisitUnresolvedUsingIfExistsDecl(
 void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   VisitRecordDecl(D);
 
-  enum {
-    CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization
-  };
-  if (ClassTemplateDecl *TemplD = D->getDescribedClassTemplate()) {
-    Record.push_back(CXXRecTemplate);
-    Record.AddDeclRef(TemplD);
-  } else if (MemberSpecializationInfo *MSInfo
-               = D->getMemberSpecializationInfo()) {
-    Record.push_back(CXXRecMemberSpecialization);
-    Record.AddDeclRef(MSInfo->getInstantiatedFrom());
-    Record.push_back(MSInfo->getTemplateSpecializationKind());
-    Record.AddSourceLocation(MSInfo->getPointOfInstantiation());
-  } else {
-    Record.push_back(CXXRecNotTemplate);
-  }
-
   Record.push_back(D->isThisDeclarationADefinition());
   if (D->isThisDeclarationADefinition())
     Record.AddCXXDefinitionData(D);
@@ -2112,6 +2111,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   // getArgPassingRestrictions
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
+  // CXXRecNotTemplate/CXXRecTemplate/CXXRecMemberSpecialization
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  // InstantiatedMembRecord
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
 
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
@@ -2277,6 +2280,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // FunctionDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // StorageClass
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // SafeSpecifier
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Inline
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InlineSpecified
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // AsyncSpecified
@@ -2344,8 +2348,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   // FunctionDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // StorageClass
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // SafeSpecifier
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // Inline
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // InlineSpecified
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // AsyncSpecified
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // VirtualAsWritten
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // Pure
   Abv->Add(BitCodeAbbrevOp(0));                          // HasInheritedProto
@@ -2365,11 +2371,13 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));    // LocEnd
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // TemplateKind
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   // BSCMethodDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ExtendedType
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasThisParam
+  // This Array slurps the rest of the record. Fortunately we want to encode
+  // (nearly) all the remaining (variable number of) fields in the same way.
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   DeclBSCMethodAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for EXPR_DECL_REF

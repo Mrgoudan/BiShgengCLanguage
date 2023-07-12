@@ -820,6 +820,48 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
   RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
+
+  ASTContext &C = Reader.getContext();
+
+  enum CXXRecKind {
+    CXXRecNotTemplate = 0,
+    CXXRecTemplate,
+    CXXRecMemberSpecialization
+  };
+  switch ((CXXRecKind)Record.readInt()) {
+  case CXXRecNotTemplate:
+    // Merged when we merge the folding set entry in the primary template.
+    if (!isa<ClassTemplateSpecializationDecl>(RD))
+      mergeRedeclarable(RD, Redecl);
+    Record.readInt();
+    break;
+  case CXXRecTemplate: {
+    // Merged when we merge the template.
+    auto *Template = readDeclAs<ClassTemplateDecl>();
+    RD->TemplateOrInstantiation = Template;
+    if (!Template->getTemplatedDecl()) {
+      // We've not actually loaded the ClassTemplateDecl yet, because we're
+      // currently being loaded as its pattern. Rely on it to set up our
+      // TypeForDecl (see VisitClassTemplateDecl).
+      //
+      // Beware: we do not yet know our canonical declaration, and may still
+      // get merged once the surrounding class template has got off the ground.
+      DeferredTypeID = 0;
+    }
+    break;
+  }
+  case CXXRecMemberSpecialization: {
+    auto *CRD = readDeclAs<CXXRecordDecl>();
+    auto TSK = (TemplateSpecializationKind)Record.readInt();
+    SourceLocation POI = readSourceLocation();
+    MemberSpecializationInfo *MSI = new (C) MemberSpecializationInfo(CRD, TSK);
+    MSI->setPointOfInstantiation(POI);
+    RD->TemplateOrInstantiation = MSI;
+    mergeRedeclarable(RD, Redecl);
+    break;
+  }
+  }
+
   return Redecl;
 }
 
@@ -2019,42 +2061,6 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
   RedeclarableResult Redecl = VisitRecordDeclImpl(D);
 
   ASTContext &C = Reader.getContext();
-
-  enum CXXRecKind {
-    CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization
-  };
-  switch ((CXXRecKind)Record.readInt()) {
-  case CXXRecNotTemplate:
-    // Merged when we merge the folding set entry in the primary template.
-    if (!isa<ClassTemplateSpecializationDecl>(D))
-      mergeRedeclarable(D, Redecl);
-    break;
-  case CXXRecTemplate: {
-    // Merged when we merge the template.
-    auto *Template = readDeclAs<ClassTemplateDecl>();
-    D->TemplateOrInstantiation = Template;
-    if (!Template->getTemplatedDecl()) {
-      // We've not actually loaded the ClassTemplateDecl yet, because we're
-      // currently being loaded as its pattern. Rely on it to set up our
-      // TypeForDecl (see VisitClassTemplateDecl).
-      //
-      // Beware: we do not yet know our canonical declaration, and may still
-      // get merged once the surrounding class template has got off the ground.
-      DeferredTypeID = 0;
-    }
-    break;
-  }
-  case CXXRecMemberSpecialization: {
-    auto *RD = readDeclAs<CXXRecordDecl>();
-    auto TSK = (TemplateSpecializationKind)Record.readInt();
-    SourceLocation POI = readSourceLocation();
-    MemberSpecializationInfo *MSI = new (C) MemberSpecializationInfo(RD, TSK);
-    MSI->setPointOfInstantiation(POI);
-    D->TemplateOrInstantiation = MSI;
-    mergeRedeclarable(D, Redecl);
-    break;
-  }
-  }
 
   bool WasDefinition = Record.readInt();
   if (WasDefinition)
