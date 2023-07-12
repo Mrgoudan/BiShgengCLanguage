@@ -2673,12 +2673,6 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     return decls;
   }
 
-  // Async functions should have await expression.
-  if (finder.GetAwaitExprNum() == 0) {
-    Diag(FD->getBeginLoc(), diag::err_await_expression_not_found);
-    return decls;
-  }
-
   // Do not process desugar if we already met errors.
   if (Diags.hasErrorOccurred()) {
     return decls;

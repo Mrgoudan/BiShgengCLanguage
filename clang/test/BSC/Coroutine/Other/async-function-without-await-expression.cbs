@@ -1,0 +1,19 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+
+#include "../async-func-read.hbs"
+
+async int f() { 
+    return 0;
+}
+
+async int g() {
+  return await f();
+}
+
+int main() {
+  struct __FatPointer_int a = g();
+  a.vtable->poll(a.data);
+  a.vtable->free(a.data);
+  return 0;
+}
