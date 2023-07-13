@@ -6071,9 +6071,9 @@ TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D, Scope *S) {
   return GetFullTypeForDeclarator(state, T, ReturnTypeInfo);
 }
 
-bool Sema::IsQualTypeDesugarStructTrait(QualType T) {
+bool Sema::ShouldDesugarTrait(QualType T) {
   if (RecordDecl *RD = T.getTypePtr()->getAsRecordDecl())
-    return RD->getDesugaredTraitDecl();
+    return RD->getDesugaredTraitDecl() != nullptr;
   return false;
 }
 

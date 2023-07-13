@@ -6344,8 +6344,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
-      if (getLangOpts().BSC && IsQualTypeDesugarStructTrait(ProtoArgType) &&
-          !IsQualTypeDesugarStructTrait(Arg->getType())) {
+      if (getLangOpts().BSC && ShouldDesugarTrait(ProtoArgType) &&
+          !ShouldDesugarTrait(Arg->getType())) {
         Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(Arg,
                                                                  ProtoArgType,
                                                                  Arg->getBeginLoc());
@@ -17620,7 +17620,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
 bool Sema::IsTraitEqaulExpr(QualType DstType, QualType SrcType) {
   const PointerType *PT = dyn_cast<PointerType>(DstType);
   if (PT && PT->getPointeeType().getTypePtr()->isTraitType())
-    if (IsQualTypeDesugarStructTrait(SrcType))
+    if (ShouldDesugarTrait(SrcType))
       return true;
   return false;
 }

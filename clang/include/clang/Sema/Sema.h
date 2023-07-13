@@ -5529,7 +5529,7 @@ public:
                               TraitDecl *TD);
   NamedDecl *DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D);
   QualType DesugarTraitToStructTrait(QualType T);
-  bool IsQualTypeDesugarStructTrait(QualType T);
+  bool ShouldDesugarTrait(QualType T);
   bool IsTraitEqaulExpr(QualType DstType, QualType SrcType);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc, StringRef ID);
   VarDecl *ActOnDesugarTraitInstance(Declarator &D, QualType QT,

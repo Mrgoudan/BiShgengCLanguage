@@ -332,7 +332,6 @@ KEYWORD(__func__                    , KEYALL)
 KEYWORD(__objc_yes                  , KEYALL)
 KEYWORD(__objc_no                   , KEYALL)
 
-KEYWORD(trait                       , KEYALL)
 // C++ 2.11p1: Keywords.
 KEYWORD(asm                         , KEYCXX|KEYGNU)
 KEYWORD(bool                        , BOOLSUPPORT)
@@ -451,17 +450,14 @@ KEYWORD(__FUNCTION__                , KEYALL)
 KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
 KEYWORD(__auto_type                 , KEYALL)
 
-// BSC Extensions
-KEYWORD(__await                     , KEYBSC)
-ALIAS("await", __await, KEYBSC)
-KEYWORD(__async                     , KEYBSC)
-ALIAS("async", __async, KEYBSC)
+// BSC keywords
+KEYWORD(async                       , KEYBSC)
+KEYWORD(await                       , KEYBSC)
+KEYWORD(owned                       , KEYBSC)
+KEYWORD(trait                       , KEYBSC)
 
 // GNU Extensions (outside impl-reserved namespace)
 KEYWORD(typeof                      , KEYGNU)
-
-// BSC Keywords:
-KEYWORD(owned                         , KEYBSC)
 
 // MS Extensions
 KEYWORD(__FUNCDNAME__               , KEYMS)

@@ -3930,7 +3930,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_inline:
       isInvalid = DS.setFunctionSpecInline(Loc, PrevSpec, DiagID);
       break;
-    case tok::kw___async:
+    case tok::kw_async:
       isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
       break;
     case tok::kw_virtual:
@@ -4264,15 +4264,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ConsumeToken();
       ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSContext);
       continue;
-
+    
+    // trait-specifier:
     case tok::kw_trait: {
       ConsumeToken();
       ParsedAttributes Attributes(AttrFactory);
       ParseTraitSpecifier(Loc, DS, EnteringContext, DSContext, Attributes);
-      if (!Attributes.empty()) {
-        AttrsLastTime = true;
-        attrs.takeAllFrom(Attributes);
-      }
       continue;
     }
 
@@ -5864,7 +5861,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
 
     // function-specifier
   case tok::kw_inline:
-  case tok::kw___async:
+  case tok::kw_async:
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:

@@ -1,0 +1,38 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+struct S{
+  int x;
+};
+
+trait TR {
+  void sayHi(This* this);
+};
+
+void int::sayHi(int* this) {
+  printf("int says Hi\n");
+}
+
+void struct S::sayHi(struct S* this) {
+  printf("struct S says Hi\n");
+}
+
+impl trait TR for int;
+impl trait TR for struct S;
+
+void greet(trait TR* t) {
+  t->sayHi();
+}
+
+int main() {
+  int x = 42;
+  trait TR* t1 = &x;
+  greet(t1);
+  struct S s1 = {.x = 42};
+  trait TR* t2 = &s1;
+  greet(t2);
+  return 0;
+}

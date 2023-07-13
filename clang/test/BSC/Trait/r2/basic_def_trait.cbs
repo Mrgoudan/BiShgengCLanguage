@@ -1,0 +1,28 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+trait TR {
+  void sayHi(This* this);
+  int getAns(This* this, int x);
+};
+
+void int::sayHi(int* this) {
+  printf("Hi\n");
+}
+
+int int::getAns(int* this, int x) {
+  return x;
+}
+
+impl trait TR for int;
+
+int main() {
+  int x = 42;
+  x.sayHi();
+  int y = x.getAns(2023);
+  printf("y: %d\n", y);
+  return 0;
+}

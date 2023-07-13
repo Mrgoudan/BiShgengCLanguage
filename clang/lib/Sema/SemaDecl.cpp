@@ -7407,9 +7407,9 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *Va
                       Context.CreateTypeSourceInfo(RecordTy), SC);
   PushOnScopeChains(NewVD, getCurScope(), true);
 
-  if (CallExpr *Cexpr = dyn_cast<CallExpr>(exp)) {
+  if (dyn_cast<CallExpr>(exp)) {
     QualType ET = exp->getType();
-    if (IsQualTypeDesugarStructTrait(ET)) {
+    if (ShouldDesugarTrait(ET)) {
       AddInitializerToDecl(NewVD, exp, false);
       return NewVD;
     }
@@ -17682,7 +17682,7 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag,
       << DeclSpec::getSpecifierName(TSCS);
 
   // BSC union fileds owned type check
-  if (getLangOpts().BSC && Record->isUnion())
+  if (getLangOpts().BSC && Tag->isUnion())
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "union field");
 
   // Check to see if this name was declared as a member previously

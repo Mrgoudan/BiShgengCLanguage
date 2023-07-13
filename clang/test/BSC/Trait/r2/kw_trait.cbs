@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -verify %s
+
+typedef int trait; // expected-error {{declaration of anonymous trait must be a definition}}
+trait x = 1;
+
+int main() {
+  return 0;
+}

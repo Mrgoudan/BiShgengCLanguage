@@ -1,0 +1,6 @@
+// TODO: make the diagnostics look nice
+
+trait ( // expected-error {{expected identifier after trait}}
+  void f1(This* this):
+)
+

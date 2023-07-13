@@ -1,0 +1,48 @@
+// TODO: Make this case work.
+// For now the checking for a type(as a func param)
+// which has implmented a trait or not is wrong.
+
+#include <stdio.h>
+
+struct S{
+  int x;
+};
+
+struct Leah{
+  int age;
+};
+
+trait TR { // define a trait
+  void sayHi(This* this); // ThisType
+};
+
+void int::sayHi(int* this) {
+  printf("Hi I'm int\n");
+}
+
+void struct S::sayHi(struct S* this) {
+  printf("Hi I'm struct S\n");
+}
+
+void struct Leah::sayHi(struct Leah* this) {
+  printf("Hi I'm Leah\n");
+}
+
+impl trait TR for int;
+impl trait TR for struct S;
+impl trait TR for struct Leah;
+
+void greet(trait TR* t) {
+  t->sayHi();
+}
+
+int main() {
+  int x = 42;
+  greet(&x);
+  struct S* s1 = malloc(sizeof(struct S));
+  s1->x = 42;
+  greet(s1); // We need to check if "struct S has impled trait TR" or not?
+  struct Leah leah = {.age = 1};
+  greet(&leah);
+  return 0;
+}

@@ -1453,7 +1453,7 @@ ExprResult Parser::ParseCastExpression(
     return Res;
   }
 
-  case tok::kw___await: { // unary-expression: 'await' cast-expression
+  case tok::kw_await: { // unary-expression: 'await' cast-expression
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     SourceLocation AwaitLoc = ConsumeToken();
@@ -2172,11 +2172,14 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           PT.consumeClose();
         LHS = ExprError();
       } else {
-        assert(
-            (ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size()) ||
-             (TraitParam && (ArgExprs.size() == 1 ||
-                             ArgExprs.size() - 2 == CommaLocs.size())) &&
-            "Unexpected number of commas!");
+        bool ArgsSizeOK = true;
+        if (TraitParam == nullptr) {
+          ArgsSizeOK = ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size();
+        } else {
+          ArgsSizeOK = ArgExprs.size() == 1 || ArgExprs.size() - 2 == CommaLocs.size();
+
+        }
+        assert(ArgsSizeOK && "Unexpected number of commas!");
         Expr *Fn = LHS.get();
         SourceLocation RParLoc = Tok.getLocation();
         LHS = Actions.ActOnCallExpr(getCurScope(), Fn, Loc, ArgExprs, RParLoc,
@@ -2191,20 +2194,24 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       break;
     }
-    case tok::arrow: {
-      if (getLangOpts().BSC) {
-        if (LHS.get()) {
-          QualType T = LHS.get()->getType();
-          if (Actions.IsQualTypeDesugarStructTrait(T)) {
-            TraitParam = Actions.AddAfterStructTrait(LHS, Loc, "data").get();
-            LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");
-          }
-        }
-      }
-    }
+    case tok::arrow:
     case tok::period: {
       // postfix-expression: p-e '->' template[opt] id-expression
       // postfix-expression: p-e '.' template[opt] id-expression
+      if (getLangOpts().BSC && LHS.get()) {
+        // FIXME: Should we desugar right here after we see "->"?
+        // Maybe we should consider doing "Desugar" at a more coarse level.
+        QualType T = LHS.get()->getType();
+        if (Actions.ShouldDesugarTrait(T)) {
+          // @code
+          // void f(trait T* t) {
+          //   t->foo(); // see '->', desugar to "t.vtable->foo()" immediately;
+          // }
+          // @endcode
+          TraitParam = Actions.AddAfterStructTrait(LHS, Loc, "data").get(); // "t.data"
+          LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable"); // "t.vtable"
+        }
+      }
       tok::TokenKind OpKind = Tok.getKind();
       SourceLocation OpLoc = ConsumeToken();  // Eat the "." or "->" token.
 

@@ -1034,11 +1034,6 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     SkipUntil(tok::semi);
     return nullptr;
 
-  case tok::kw_trait:
-    if (getLangOpts().BSC && NextToken().is(tok::identifier) &&
-        GetLookAheadToken(2).is(tok::l_brace))
-      return ParseTraitDeclaration(Attrs);
-
   default:
   dont_know:
     // parse BSC template declaration

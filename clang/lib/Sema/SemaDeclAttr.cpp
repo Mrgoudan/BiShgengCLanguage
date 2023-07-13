@@ -499,17 +499,6 @@ static const RecordType *getRecordType(QualType QT) {
   return nullptr;
 }
 
-static const TraitType *getTraitType(QualType QT) {
-  if (const auto *TT = QT->getAs<TraitType>())
-    return TT;
-
-  // Now check if we point to record type.
-  if (const auto *PT = QT->getAs<PointerType>())
-    return PT->getPointeeType()->getAs<TraitType>();
-
-  return nullptr;
-}
-
 template <typename AttrType>
 static bool checkRecordDeclForAttr(const RecordDecl *RD) {
   // Check if the record itself has the attribute.

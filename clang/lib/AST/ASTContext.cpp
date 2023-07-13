@@ -2031,6 +2031,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::Builtin:
     switch (cast<BuiltinType>(T)->getKind()) {
     default: llvm_unreachable("Unknown builtin type!");
+    case BuiltinType::This:
+      // BSC ThisType for Trait
+      Width = 0;
+      Align = 8;
+      break;
     case BuiltinType::Void:
       // GCC extension: alignof(void) = 8 bits.
       Width = 0;
@@ -7935,6 +7940,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::SatUShortFract:
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
+    case BuiltinType::This:
       // FIXME: potentially need @encodes for these!
       return ' ';
 
