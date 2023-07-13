@@ -33,15 +33,15 @@ int main() {
 // CHECK-NEXT:     X4
 // CHECK-NEXT: };
 
-// CHECK: int enum_E_getA(enum E* this) {
+// CHECK: int enum_E_getA(enum E *this) {
 // CHECK-NEXT:   return X3;
 // CHECK-NEXT: }
 
-// CHECK: int int_getA(int* this) {
+// CHECK: int int_getA(int *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   int a = 1;
 // CHECK-NEXT:   int_getA(&a);
 // CHECK-NEXT:   enum E foo = X3;

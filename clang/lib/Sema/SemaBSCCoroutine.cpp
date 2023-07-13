@@ -68,20 +68,18 @@ static FunctionDecl *buildAsyncFuncDecl(ASTContext &C, DeclContext *DC,
   return NewDecl;
 }
 
-static BSCMethodDecl *buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC,
-                                              SourceLocation StartLoc,
-                                              SourceLocation NLoc,
-                                              DeclarationName N, QualType T,
-                                              TypeSourceInfo *TInfo,
-                                              StorageClass SC) {
+static BSCMethodDecl *
+buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                        SourceLocation NLoc, DeclarationName N, QualType T,
+                        TypeSourceInfo *TInfo, StorageClass SC, QualType ET) {
   BSCMethodDecl *NewDecl =
       BSCMethodDecl::Create(  // TODO: inline should be passed.
           C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false,
           false, ConstexprSpecKind::Unspecified, NLoc);
   if (auto RD = dyn_cast_or_null<RecordDecl>(DC)) {
     C.BSCDeclContextMap[RD->getTypeForDecl()] = DC;
-    NewDecl->setHasThisParam(true);
-    NewDecl->setExtendedType(RD->getTypeForDecl()->getCanonicalTypeInternal());
+    NewDecl->setHasThisParam(true); // bug
+    NewDecl->setExtendedType(ET);
   }
   return NewDecl;
 }
@@ -457,7 +455,8 @@ static RecordDecl *buildFutureRecordDecl(
   return RD;
 }
 
-static RecordDecl *generateVoidStruct(Sema &S) {
+static RecordDecl *generateVoidStruct(Sema &S, SourceLocation BLoc,
+                                      SourceLocation ELoc) {
   std::string Recordname = "Void";
   DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
       DeclarationName(&(S.Context.Idents).get(Recordname)));
@@ -473,8 +472,7 @@ static RecordDecl *generateVoidStruct(Sema &S) {
       }
     }
   } else if (Decls.empty()) {
-    VoidRD = buildAsyncDataRecord(S.Context, Recordname, SourceLocation(),
-                                  SourceLocation(),
+    VoidRD = buildAsyncDataRecord(S.Context, Recordname, BLoc, ELoc,
                                   clang::TagDecl::TagKind::TTK_Struct);
     VoidRD->startDefinition();
     VoidRD->completeDefinition();
@@ -485,8 +483,8 @@ static RecordDecl *generateVoidStruct(Sema &S) {
 
 /// TODO: will be removed after using Future in stdlib
 static std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
-generateVtableAndFatPointerStruct(Sema &S, QualType T,
-                                  RecordDecl *PollResultRD) {
+generateVtableAndFatPointerStruct(Sema &S, QualType T, RecordDecl *PollResultRD,
+                                  FunctionDecl *FD) {
   RecordDecl *VtableStruct = nullptr;
   QualType ReturnTy = T;
   std::string VtableStructName = "__Vtable_" + GetPrefix(ReturnTy);
@@ -507,7 +505,7 @@ generateVtableAndFatPointerStruct(Sema &S, QualType T,
     VtableStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
   } else if (Decls.empty()) {
     VtableStruct = buildAsyncDataRecord(S.Context, VtableStructName,
-                                        SourceLocation(), SourceLocation(),
+                                        FD->getBeginLoc(), FD->getEndLoc(),
                                         clang::TagDecl::TagKind::TTK_Struct);
     VtableStruct->startDefinition();
     SmallVector<QualType, 1> Args;
@@ -544,7 +542,7 @@ generateVtableAndFatPointerStruct(Sema &S, QualType T,
     FatPointerStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
   } else if (FatPointerDecls.empty()) {
     FatPointerStruct = buildAsyncDataRecord(
-        S.Context, FatPointerName, SourceLocation(), SourceLocation(),
+        S.Context, FatPointerName, FD->getBeginLoc(), FD->getEndLoc(),
         clang::TagDecl::TagKind::TTK_Struct);
     FatPointerStruct->startDefinition();
     addAsyncRecordDecl(S.Context, "data", S.Context.VoidPtrTy, SourceLocation(),
@@ -569,8 +567,8 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
   std::string IName =
       VtableRD->getDeclName().getAsString() + FD->getDeclName().getAsString();
   VarDecl *VD = VarDecl::Create(
-      S.Context, S.Context.getTranslationUnitDecl(), SourceLocation(),
-      SourceLocation(), &(S.Context.Idents).get(IName),
+      S.Context, S.Context.getTranslationUnitDecl(), FD->getBeginLoc(),
+      FD->getEndLoc(), &(S.Context.Idents).get(IName),
       S.Context.getRecordType(VtableRD), nullptr, SC_None);
   DeclGroupRef DG(VD);
   S.PushOnScopeChains(VD, S.getCurScope(), false);
@@ -583,6 +581,7 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
       S.Context.getRecordType(PollResultRD), Args, {}));
   Expr *PollInit = S.BuildDeclRefExpr(PollFunc, PollFunc->getType(), VK_LValue,
                                       SourceLocation());
+  PollInit->HasBSCScopeSpec = true;
   PollInit = S.ImpCastExprToType(PollInit,
                                  S.Context.getPointerType(PollInit->getType()),
                                  CK_FunctionToPointerDecay)
@@ -594,6 +593,7 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
       S.Context.getFunctionType(S.Context.VoidTy, Args, {}));
   Expr *FreeInit = S.BuildDeclRefExpr(FreeFunc, FreeFunc->getType(), VK_LValue,
                                       SourceLocation());
+  FreeInit->HasBSCScopeSpec = true;
   FreeInit = S.ImpCastExprToType(FreeInit,
                                  S.Context.getPointerType(FreeInit->getType()),
                                  CK_FunctionToPointerDecay)
@@ -608,57 +608,20 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
   return VD;
 }
 
-FunctionDecl *buildFutureInitFunctionDeclaraion(Sema &S, RecordDecl *RD,
+FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
                                                 FunctionDecl *FD,
                                                 RecordDecl *FatPointerRD,
-                                                VarDecl *VtableInit) {
+                                                VarDecl *VtableInit,
+                                                FunctionDecl *NewFD) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   DeclarationName funcName = FD->getDeclName();
-  QualType FuncRetType = S.Context.getRecordType(FatPointerRD);
   SmallVector<QualType, 16> ParamTys;
   FunctionDecl::param_const_iterator pi;
   for (pi = FD->param_begin(); pi != FD->param_end(); pi++) {
     ParamTys.push_back((*pi)->getType());
   }
-  QualType FuncType = S.Context.getFunctionType(FuncRetType, ParamTys, {});
-  TypeSourceInfo *Tinfo = FD->getTypeSourceInfo();
   std::string FName = "__" + funcName.getAsString();
-
-  DeclContext::lookup_result Decls = FD->getDeclContext()->lookup(
-      DeclarationName(&(S.Context.Idents).get(FName)));
-  FunctionDecl *NewFD = nullptr;
-  if (Decls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                              E = Decls.end();
-         I != E; ++I) {
-      if (isa<FunctionDecl>(*I)) {
-        NewFD = dyn_cast<FunctionDecl>(*I);
-        break;
-      }
-    }
-  } else if (Decls.empty()) {
-    if (dyn_cast<BSCMethodDecl>(FD)) {
-      NewFD = buildAsyncBSCMethodDecl(S.Context, FD->getDeclContext(), SLoc,
-                                      NLoc, &(S.Context.Idents).get(FName),
-                                      FuncType, Tinfo, SC_None);
-    } else {
-      NewFD =
-          buildAsyncFuncDecl(S.Context, FD->getDeclContext(), SLoc, NLoc,
-                             &(S.Context.Idents).get(FName), FuncType, Tinfo);
-    }
-    SmallVector<ParmVarDecl *, 4> ParmVarDecls;
-    for (const auto &I : FD->parameters()) {
-      ParmVarDecl *PVD = ParmVarDecl::Create(
-          S.Context, NewFD, SourceLocation(), SourceLocation(),
-          &(S.Context.Idents).get(I->getName()), I->getType(), nullptr, SC_None,
-          nullptr);
-      ParmVarDecls.push_back(PVD);
-    }
-    NewFD->setParams(ParmVarDecls);
-    NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
-    S.PushOnScopeChains(NewFD, S.getCurScope(), true);
-  }
 
   S.PushFunctionScope();
   S.PushDeclContext(S.getCurScope(), NewFD);
@@ -825,8 +788,8 @@ FunctionDecl *buildFutureInitFunctionDeclaraion(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, FunctionDecl *FD,
-                                                RecordDecl *FatPointerRD) {
+FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *FD,
+                                                 RecordDecl *FatPointerRD) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   DeclarationName funcName = FD->getDeclName();
@@ -840,25 +803,12 @@ FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, FunctionDecl *FD,
   TypeSourceInfo *Tinfo = FD->getTypeSourceInfo();
   std::string FName = "__" + funcName.getAsString();
 
-  DeclContext::lookup_result Decls = FD->getDeclContext()->lookup(
-      DeclarationName(&(S.Context.Idents).get(FName)));
-
-  if (Decls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                              E = Decls.end();
-         I != E; ++I) {
-      if (isa<FunctionDecl>(*I)) {
-        return dyn_cast<FunctionDecl>(*I);
-        break;
-      }
-    }
-  }
-
-  FunctionDecl *NewFD;
-  if (dyn_cast<BSCMethodDecl>(FD)) {
+  FunctionDecl *NewFD = nullptr;
+  if (isa<BSCMethodDecl>(FD)) {
+    BSCMethodDecl *BMD = cast<BSCMethodDecl>(FD);
     NewFD = buildAsyncBSCMethodDecl(S.Context, FD->getDeclContext(), SLoc, NLoc,
                                     &(S.Context.Idents).get(FName), FuncType,
-                                    Tinfo, SC_None);
+                                    Tinfo, SC_None, BMD->getExtendedType());
   } else {
     NewFD = buildAsyncFuncDecl(S.Context, FD->getDeclContext(), SLoc, NLoc,
                                &(S.Context.Idents).get(FName), FuncType, Tinfo);
@@ -929,6 +879,7 @@ Stmt *ProcessAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD, Expr *ICE,
   if (IsCompletedFD) {
     Expr *IsCompletedFDRef = S.BuildDeclRefExpr(
         IsCompletedFD, IsCompletedFD->getType(), VK_LValue, SourceLocation());
+    IsCompletedFDRef->HasBSCScopeSpec = true;
     IsCompletedFDRef =
         S.ImpCastExprToType(
              IsCompletedFDRef,
@@ -973,6 +924,7 @@ Stmt *ProcessAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD, Expr *ICE,
   if (PendingFD) {
     Expr *PendingFDRef = S.BuildDeclRefExpr(PendingFD, PendingFD->getType(),
                                             VK_LValue, SourceLocation());
+    PendingFDRef->HasBSCScopeSpec = true;
     PendingFDRef =
         S.ImpCastExprToType(PendingFDRef,
                             S.Context.getPointerType(PendingFDRef->getType()),
@@ -1009,7 +961,8 @@ class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
   // make sure redo semantic analysis
   bool AlwaysRebuild() { return true; }
 
-  Decl *TransformFunctionDecl(FunctionDecl *D) {
+  FunctionDecl *TransformFunctionDecl(FunctionDecl *D) {
+    FunctionDecl *NewFD = D;
     if (D->getReturnType()->isVoidType()) {
       std::string ReturnStructName = "Void";
       DeclContext::lookup_result ReturnDecls =
@@ -1036,7 +989,33 @@ class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
       }
       QualType FuncType =
           SemaRef.Context.getFunctionType(ReturnTy, ParamTys, {});
-      D->setType(FuncType);
+
+      SourceLocation SLoc = D->getBeginLoc();
+      SourceLocation NLoc = D->getNameInfo().getLoc();
+      TypeSourceInfo *Tinfo = D->getTypeSourceInfo();
+      std::string FName = std::string(D->getIdentifier()->getName());
+
+      if (isa<BSCMethodDecl>(D)) {
+        BSCMethodDecl *BMD = cast<BSCMethodDecl>(D);
+        NewFD = buildAsyncBSCMethodDecl(
+            SemaRef.Context, D->getDeclContext(), SLoc, NLoc,
+            &(SemaRef.Context.Idents).get(FName), FuncType, Tinfo, SC_None,
+            BMD->getExtendedType());
+      } else {
+        NewFD = buildAsyncFuncDecl(SemaRef.Context, D->getDeclContext(), SLoc,
+                                   NLoc, &(SemaRef.Context.Idents).get(FName),
+                                   FuncType, Tinfo);
+      }
+      SmallVector<ParmVarDecl *, 4> ParmVarDecls;
+      for (const auto &I : D->parameters()) {
+        ParmVarDecl *PVD = ParmVarDecl::Create(
+            SemaRef.Context, NewFD, SourceLocation(), SourceLocation(),
+            &(SemaRef.Context.Idents).get(I->getName()), I->getType(), nullptr,
+            SC_None, nullptr);
+        ParmVarDecls.push_back(PVD);
+      }
+      NewFD->setParams(ParmVarDecls);
+      NewFD->setLexicalDeclContext(SemaRef.Context.getTranslationUnitDecl());
 
       CompoundStmt *body = dyn_cast<CompoundStmt>(D->getBody());
       Stmt *LastStmt = body->body_back();
@@ -1049,16 +1028,15 @@ class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
                                             nullptr, nullptr);
         Stmts.push_back(RS);
         Sema::CompoundScopeRAII CompoundScope(SemaRef);
-        CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
-                               SourceLocation(), Stmts, SourceLocation(), false)
-                               .getAs<CompoundStmt>();
-        D->setBody(CS);
+        body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                                  SourceLocation(), false)
+                   .getAs<CompoundStmt>();
       }
 
-      Stmt *FuncBody = BaseTransform::TransformStmt(D->getBody()).getAs<Stmt>();
-      D->setBody(FuncBody);
+      Stmt *FuncBody = BaseTransform::TransformStmt(body).getAs<Stmt>();
+      NewFD->setBody(FuncBody);
     }
-    return D;
+    return NewFD;
   }
 
   StmtResult TransformReturnStmt(ReturnStmt *S) {
@@ -1194,7 +1172,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
             }
           }
 
-          SemaRef.AddInitializerToDecl(ArgVDNew, CInit, /*DirectInit=*/true);
+          SemaRef.AddInitializerToDecl(ArgVDNew, CInit, /*DirectInit=*/false);
           DeclStmt *DSNew =
               SemaRef
                   .ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(ArgVDNew),
@@ -1240,7 +1218,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                                     .get();
 
             std::string AssignedPtrName =
-                "__ASSIGNED_ARRAY_PTR_" + SubQT.getAsString();
+                "__ASSIGNED_ARRAY_PTR_" + GetPrefix(SubQT);
             VarDecl *AssignedPtrVar =
                 GetArrayAssignedPointerMap(StringRef(AssignedPtrName));
             if (AssignedPtrVar == nullptr) {
@@ -1250,7 +1228,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                   Pty.getNonReferenceType(), nullptr, SC_None);
 
               SemaRef.AddInitializerToDecl(AssignedPtrVar, AssignedCCE,
-                                           /*DirectInit=*/true);
+                                           /*DirectInit=*/false);
 
               DeclStmt *AssignedDS =
                   SemaRef
@@ -1288,7 +1266,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                     SourceLocation(), ArrayType, SourceLocation(), ArrayRVExpr)
                     .get();
 
-            std::string ArrayPtrName = "__ARRAY_PTR_" + SubQT.getAsString();
+            std::string ArrayPtrName = "__ARRAY_PTR_" + GetPrefix(SubQT);
             VarDecl *ArrayPtrVar = GetArrayPointersMap(StringRef(ArrayPtrName));
             if (ArrayPtrVar == nullptr) {
               ArrayPtrVar = VarDecl::Create(
@@ -1297,7 +1275,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                   Pty.getNonReferenceType(), nullptr, SC_None);
 
               SemaRef.AddInitializerToDecl(ArrayPtrVar, ArrayCCE,
-                                           /*DirectInit=*/true);
+                                           /*DirectInit=*/false);
               DeclStmt *ArrayDS =
                   SemaRef
                       .ActOnDeclStmt(
@@ -1765,6 +1743,7 @@ class ARFinder : public StmtVisitor<ARFinder> {
 
     Expr *CompletedRef = SemaRef.BuildDeclRefExpr(
         CompletedFD, CompletedFD->getType(), VK_LValue, SourceLocation());
+    CompletedRef->HasBSCScopeSpec = true;
     CompletedRef =
         SemaRef
             .ImpCastExprToType(
@@ -1932,12 +1911,13 @@ class AEFinder : public StmtVisitor<AEFinder> {
       Expr *FDRef =
           SemaRef.BuildDeclRefExpr(CFD, CFD->getType().getNonReferenceType(),
                                    VK_LValue, CFD->getLocation());
+      FDRef->HasBSCScopeSpec = true;
       FDRef = SemaRef
                   .ImpCastExprToType(
                       FDRef, SemaRef.Context.getPointerType(CFD->getType()),
                       CK_FunctionToPointerDecay)
                   .get();
-
+      FDRef->HasBSCScopeSpec = true;
       RHSExpr = SemaRef
                     .BuildCallExpr(nullptr, FDRef, SourceLocation(), CallArgs,
                                    SourceLocation())
@@ -2125,7 +2105,7 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
         bool HasAwait = HasAwaitExpr(Init);
         if (HasAwait && Init != nullptr) {
           Init = BaseTransform::TransformExpr(Init).get();
-          SemaRef.AddInitializerToDecl(VD, Init, /*DirectInit=*/true);
+          SemaRef.AddInitializerToDecl(VD, Init, /*DirectInit=*/false);
         }
       }
       Decls.push_back(D);
@@ -2158,13 +2138,16 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
 
           for (int j = index; j < index + UnitNum - 1; j++) {
             if (j == index + 1) {
+              Stmt::EmptyShell Empty;
+              Stmt *Null = new (SemaRef.Context) NullStmt(Empty);
               LabelStmt *LS =
                   BaseTransform::RebuildLabelStmt(
                       SourceLocation(),
                       cast<LabelDecl>(LabelDecls[AwaitIndex + i + 1]),
-                      SourceLocation(), AwaitStmts[j])
+                      SourceLocation(), Null)
                       .getAs<LabelStmt>();
               Statements.push_back(LS);
+              Statements.push_back(AwaitStmts[j]);
               continue;
             }
 
@@ -2227,9 +2210,9 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
 
   QualType FuncType = S.Context.getFunctionType(FuncRetType, ParamTys, {});
 
-  BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(S.Context, RD, SLoc, NLoc,
-                                                 &(S.Context.Idents).get(FName),
-                                                 FuncType, nullptr, SC_None);
+  BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(
+      S.Context, RD, SLoc, NLoc, &(S.Context.Idents).get(FName), FuncType,
+      nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
 
@@ -2406,9 +2389,9 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   QualType FuncType = S.Context.getFunctionType(FuncRetType, ParamTys, {});
   QualType OriginType = S.Context.getFunctionType(Ty, ParamTys, {});
 
-  BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(S.Context, RD, SLoc, NLoc,
-                                                 &(S.Context.Idents).get(FName),
-                                                 OriginType, nullptr, SC_None);
+  BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(
+      S.Context, RD, SLoc, NLoc, &(S.Context.Idents).get(FName), OriginType,
+      nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
   S.PushFunctionScope();
@@ -2482,13 +2465,15 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
 
   int StmtSize = Stmts.size();
 
-  TransformToReturnVoid(S).TransformFunctionDecl(FD);
+  FunctionDecl *TransformedFD =
+      TransformToReturnVoid(S).TransformFunctionDecl(FD);
 
-  NewFD->setType(S.Context.getFunctionType(FD->getReturnType(), ParamTys, {}));
+  NewFD->setType(
+      S.Context.getFunctionType(TransformedFD->getReturnType(), ParamTys, {}));
   S.PushDeclContext(S.getCurScope(), NewFD);
 
   TransformToAP DT = TransformToAP(S, FutureObj, RD, NewFD);
-  StmtResult MemberChangeRes = DT.TransformStmt(FD->getBody());
+  StmtResult MemberChangeRes = DT.TransformStmt(TransformedFD->getBody());
   Stmt *FuncBody = MemberChangeRes.get();
 
   StmtResult SingleStateRes =
@@ -2514,20 +2499,16 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   for (auto *C : AEToCSRes.get()->children()) {
     Stmts.push_back(C);
   }
-
+  Stmt::EmptyShell Empty;
+  Stmt *Null = new (S.Context) NullStmt(Empty);
   int CurStmtSize = Stmts.size();
   if (CurStmtSize > StmtSize) {
-    Stmt *FirstStmt = Stmts[StmtSize];
     LabelStmt *LS =
-        new (S.Context) LabelStmt(SourceLocation(), LabelDecls[0], FirstStmt);
-    Stmts.erase(Stmts.begin() + StmtSize);
+        new (S.Context) LabelStmt(SourceLocation(), LabelDecls[0], Null);
     Stmts.insert(Stmts.begin() + StmtSize, LS);
   } else {
-    llvm::APInt ResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
-    Stmt *IL = IntegerLiteral::Create(S.Context, ResultVal, S.Context.IntTy,
-                                      SourceLocation());
     LabelStmt *LS =
-        new (S.Context) LabelStmt(SourceLocation(), LabelDecls[0], IL);
+        new (S.Context) LabelStmt(SourceLocation(), LabelDecls[0], Null);
     Stmts.push_back(LS);
   }
 
@@ -2621,38 +2602,49 @@ ExprResult Sema::ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
   return BuildAwaitExpr(AwaitLoc, E);
 }
 
-void Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD,
-                                        SmallVector<Decl *, 8> DeclsInGroup) {
+SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
+  SmallVector<Decl *, 8> decls;
   if (!IsFutureType(FD->getReturnType())) {
     QualType ReturnTy = FD->getReturnType();
     ReturnTy.removeLocalConst();
     if (ReturnTy->isVoidType()) {
-      RecordDecl *VoidRD = generateVoidStruct(*this);
+      RecordDecl *VoidRD =
+          generateVoidStruct(*this, FD->getBeginLoc(), FD->getEndLoc());
+      decls.push_back(VoidRD);
+      Context.BSCDesugaredMap[FD].push_back(VoidRD);
       ReturnTy = Context.getRecordType(VoidRD);
     }
     QualType PollResultType =
         lookupPollResultType(*this, FD->getBeginLoc(), ReturnTy);
     if (PollResultType.isNull()) {
-      return;
+      return decls;
     }
     RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
     std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
-        NewRDs =
-            generateVtableAndFatPointerStruct(*this, ReturnTy, PollResultRD);
+        NewRDs = generateVtableAndFatPointerStruct(*this, ReturnTy,
+                                                   PollResultRD, FD);
 
-    if (!std::get<1>(std::get<0>(NewRDs)))
-      DeclsInGroup.push_back(std::get<0>(std::get<0>(NewRDs)));
-    if (!std::get<1>(std::get<1>(NewRDs)))
-      DeclsInGroup.push_back(std::get<0>(std::get<1>(NewRDs)));
+    if (!std::get<1>(std::get<0>(NewRDs))) {
+      decls.push_back(std::get<0>(std::get<0>(NewRDs)));
+      Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<0>(NewRDs)));
+    }
+    if (!std::get<1>(std::get<1>(NewRDs))) {
+      decls.push_back(std::get<0>(std::get<1>(NewRDs)));
+      Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
+    }
 
-    FunctionDecl *FutureInitDef = buildFutureInitFunctionDefinition(
+    FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
         *this, FD, std::get<0>(std::get<1>(NewRDs)));
-    DeclsInGroup.push_back(FutureInitDef);
+    FutureInitDef->dump();
+    decls.push_back(FutureInitDef);
+    Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
   }
+  return decls;
 }
 
-SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
+SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   SmallVector<Decl *, 8> decls;
+  decls.push_back(FD);
 
   AwaitExprFinder finder = AwaitExprFinder();
   finder.Visit(FD->getBody());
@@ -2663,7 +2655,6 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
       Diag(FD->getBeginLoc(), diag::err_await_invalid_scope)
           << "non-async function.";
     }
-    decls.push_back(FD);
     return decls;
   }
 
@@ -2685,7 +2676,10 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
   QualType ReturnTy = FD->getReturnType();
   ReturnTy.removeLocalConst();
   if (ReturnTy->isVoidType()) {
-    RecordDecl *VoidRD = generateVoidStruct(*this);
+    RecordDecl *VoidRD =
+        generateVoidStruct(*this, FD->getBeginLoc(), FD->getEndLoc());
+    decls.push_back(VoidRD);
+    Context.BSCDesugaredMap[FD].push_back(VoidRD);
     ReturnTy = Context.getRecordType(VoidRD);
   }
   QualType PollResultType =
@@ -2696,16 +2690,22 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
   RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
 
   std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
-      NewRDs = generateVtableAndFatPointerStruct(*this, ReturnTy, PollResultRD);
+      NewRDs =
+          generateVtableAndFatPointerStruct(*this, ReturnTy, PollResultRD, FD);
 
-  if (!std::get<1>(std::get<0>(NewRDs)))
+  if (!std::get<1>(std::get<0>(NewRDs))) {
     decls.push_back(std::get<0>(std::get<0>(NewRDs)));
-  if (!std::get<1>(std::get<1>(NewRDs)))
-    decls.push_back(std::get<0>(std::get<1>(NewRDs)));
+    Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<0>(NewRDs)));
+  }
 
-  // Handle definition first.
-  (void)buildFutureInitFunctionDefinition(*this, FD,
-                                          std::get<0>(std::get<1>(NewRDs)));
+  if (!std::get<1>(std::get<1>(NewRDs))) {
+    decls.push_back(std::get<0>(std::get<1>(NewRDs)));
+    Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
+  }
+
+  // Handle declaration first.
+  FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
+      *this, FD, std::get<0>(std::get<1>(NewRDs)));
 
   const int FutureStateNumber = finder.GetAwaitExprNum() + 1;
 
@@ -2715,6 +2715,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     return decls;
   }
   decls.push_back(RD);
+  Context.BSCDesugaredMap[FD].push_back(RD);
 
   BSCMethodDecl *PollDecl =
       buildPollFunction(*this, RD, PollResultRD, FD,
@@ -2723,12 +2724,14 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     return decls;
   }
   decls.push_back(PollDecl);
+  Context.BSCDesugaredMap[FD].push_back(PollDecl);
 
   BSCMethodDecl *FreeDecl = buildFreeFunction(*this, RD, FD);
   if (!FreeDecl) {
     return decls;
   }
   decls.push_back(FreeDecl);
+  Context.BSCDesugaredMap[FD].push_back(FreeDecl);
 
   VarDecl *VtableDecl =
       buildVtableInitDecl(*this, FD, std::get<0>(std::get<0>(NewRDs)),
@@ -2737,12 +2740,15 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     return decls;
   }
   decls.push_back(VtableDecl);
+  Context.BSCDesugaredMap[FD].push_back(VtableDecl);
 
-  FunctionDecl *FutureInit = buildFutureInitFunctionDeclaraion(
-      *this, RD, FD, std::get<0>(std::get<1>(NewRDs)), VtableDecl);
+  FunctionDecl *FutureInit = buildFutureInitFunctionDefinition(
+      *this, RD, FD, std::get<0>(std::get<1>(NewRDs)), VtableDecl,
+      FutureInitDef);
   if (!FutureInit) {
     return decls;
   }
   decls.push_back(FutureInit);
+  Context.BSCDesugaredMap[FD].push_back(FutureInit);
   return decls;
 }

@@ -31,7 +31,7 @@ int main() {
 // CHECK-NEXT:  }
 
 
-// CHECK:int main() {
+// CHECK:int main(void) {
 // CHECK-NEXT:  int b1 = 2;
 // CHECK-NEXT:  struct Block bb;
 // CHECK-NEXT:  test_struct_Block(bb);

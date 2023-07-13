@@ -15,7 +15,7 @@ queue* queue::reverse(queue* this) {
 // CHECK: typedef struct _queue {
 // CHECK-NEXT: }queue;
 
-// CHECK: queue* queue_reverse(queue* this) {
+// CHECK: queue *queue_reverse(queue *this) {
 // CHECK-NEXT:     queue_reverse(this);
 // CHECK-NEXT:     return this;
 // CHECK-NEXT: }

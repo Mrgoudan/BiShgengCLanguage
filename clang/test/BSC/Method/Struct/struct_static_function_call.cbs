@@ -22,6 +22,6 @@ int main() {
   return a - 1;
 }
 
-// CHECK: int struct_Foo_getA() {
+// CHECK: int struct_Foo_getA(void) {
 // CHECK: struct_Foo_getA();
 // CHECK-NEXT: int a = struct_Foo_getA();  

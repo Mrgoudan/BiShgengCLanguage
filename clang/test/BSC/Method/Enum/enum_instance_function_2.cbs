@@ -23,11 +23,11 @@ int main() {
 // CHECK-NEXT:   X3
 // CHECK-NEXT: };
 
-// CHECK: int enum_E_to_int(enum E* this) {
+// CHECK: int enum_E_to_int(enum E *this) {
 // CHECK-NEXT:   return (int)*this;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   enum E foo = X3;
 // CHECK-NEXT:   int x = enum_E_to_int(&foo);
 // CHECK-NEXT:   return 0;

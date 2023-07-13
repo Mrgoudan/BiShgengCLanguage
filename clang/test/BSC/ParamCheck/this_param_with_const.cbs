@@ -52,10 +52,10 @@ int main() {
   return 0;
 }
 
-// CHECK: int main() {
-// CHECK-NEXT:   struct Foo foo ={.a = 42};
+// CHECK: int main(void) {
+// CHECK-NEXT:   struct Foo foo = {.a = 42};
 // CHECK-NEXT:   struct_Foo_getA(&foo);
-// CHECK-NEXT:   enum E e= X3;
+// CHECK-NEXT:   enum E e = X3;
 // CHECK-NEXT:   enum_E_getA(&e);
 // CHECK-NEXT:   union SimpleUnion u = {.ui = 1};
 // CHECK-NEXT:   union_SimpleUnion_getA(&u);

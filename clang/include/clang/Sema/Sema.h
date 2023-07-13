@@ -3181,10 +3181,9 @@ public:
   ExprResult BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E);
   ExprResult ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E);
 
-  // Entry
-  void ActOnAsyncFunctionDefinition(FunctionDecl *FD,
-                                    SmallVector<Decl *, 8> DeclsInGroup);
+  /// Entry functions for desugaring async functions.
   SmallVector<Decl *, 8> ActOnAsyncFunctionDeclaration(FunctionDecl *FD);
+  SmallVector<Decl *, 8> ActOnAsyncFunctionDefinition(FunctionDecl *FD);
 
   /// We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations

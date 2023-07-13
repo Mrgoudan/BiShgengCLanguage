@@ -2129,9 +2129,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
           FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TheDecl);
           if (getLangOpts().BSC && FD) {
-            SmallVector<Decl *, 8> decls =
-                Actions.ActOnAsyncFunctionDeclaration(FD);
-            return Actions.BuildDeclaratorGroup(decls);
+            SmallVector<Decl *, 8> Decls =
+                Actions.ActOnAsyncFunctionDefinition(FD);
+            return Actions.BuildDeclaratorGroup(Decls);
           }
           return Actions.ConvertDeclToDeclGroup(TheDecl);
         }
@@ -2205,7 +2205,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (FirstDecl) {
     FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(FirstDecl);
     if (getLangOpts().BSC && FD && FD->isAsyncSpecified()) {
-      Actions.ActOnAsyncFunctionDefinition(FD, DeclsInGroup);
+      SmallVector<Decl *, 8> Decls = Actions.ActOnAsyncFunctionDeclaration(FD);
+      for (auto &D : Decls) {
+        DeclsInGroup.push_back(D);
+      }
     }
   }
 

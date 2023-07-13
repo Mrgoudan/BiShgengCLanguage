@@ -1,5 +1,9 @@
 // RUN: %clang %s -o %t.output
 // RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
 // expected-no-diagnostics
 
 struct MyStruct<T> {
@@ -23,3 +27,27 @@ int main() {
   int res2 = union MyUnion<int>::foo(10);
   return res1 - res2 - 2;  
 }
+
+// CHECK: struct MyStruct_int {
+// CHECK-NEXT:       int res;
+// CHECK-NEXT:   };
+
+// CHECK: union MyUnion_int {
+// CHECK-NEXT:       int res;
+// CHECK-NEXT:   };
+
+// CHECK: int struct_MyStruct_int_foo(int a) {
+// CHECK-NEXT:       return a;
+// CHECK-NEXT:   }
+
+
+// CHECK: int union_MyUnion_int_foo(int a) {
+// CHECK-NEXT:       return a;
+// CHECK-NEXT:   }
+
+
+// CHECK: int main(void) {
+// CHECK-NEXT:       int res1 = struct_MyStruct_int_foo(12);
+// CHECK-NEXT:       int res2 = union_MyUnion_int_foo(10);
+// CHECK-NEXT:       return res1 - res2 - 2;
+// CHECK-NEXT:   }

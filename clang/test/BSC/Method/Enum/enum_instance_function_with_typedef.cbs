@@ -26,14 +26,14 @@ int enum E::getX4_3(enum E* this) {
 // CHECK-NEXT:   X4
 // CHECK-NEXT: }E;
 
-// CHECK: int E_getX4_1(E* this) {
+// CHECK: int E_getX4_1(E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int E_getX4_2(enum E* this) {
+// CHECK: int E_getX4_2(enum E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int enum_E_getX4_3(enum E* this) {
+// CHECK: int enum_E_getX4_3(enum E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }

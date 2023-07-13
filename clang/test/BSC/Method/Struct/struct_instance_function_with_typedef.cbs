@@ -21,14 +21,14 @@ int struct Foo::getA(struct Foo* this) {
   return this->a;
 }
 
-// CHECK: int Foo_getB(Foo* this) {
+// CHECK: int Foo_getB(Foo *this) {
 // CHECK-NEXT:   return this->b;
 // CHECK-NEXT: }
 
-// CHECK: int Foo_getAPlusB(struct Foo* this) {
+// CHECK: int Foo_getAPlusB(struct Foo *this) {
 // CHECK-NEXT:   return this->a + this->b;
 // CHECK-NEXT: }
 
-// CHECK: int struct_Foo_getA(struct Foo* this) {
+// CHECK: int struct_Foo_getA(struct Foo *this) {
 // CHECK-NEXT:   return this->a;
 // CHECK-NEXT: }

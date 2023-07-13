@@ -75,7 +75,7 @@ struct PrintingPolicy {
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true) {}
+        UseEnumerators(true), RewriteBSC(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -85,6 +85,12 @@ struct PrintingPolicy {
     SuppressTagKeyword = true;
     Bool = true;
     UseVoidForZeroParams = false;
+  }
+
+  /// Adjust this printing policy for rewriting BSC code to C doe.
+  void adjustForRewritingBSC() {
+    Bool = false;
+    RewriteBSC = true;
   }
 
   /// The number of spaces to use to indent each line.
@@ -294,6 +300,9 @@ struct PrintingPolicy {
   /// Whether to print enumerator non-type template parameters with a matching
   /// enumerator name or via cast of an integer.
   unsigned UseEnumerators : 1;
+
+  /// Whether rewriting BSC source code to C source code.
+  unsigned RewriteBSC : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

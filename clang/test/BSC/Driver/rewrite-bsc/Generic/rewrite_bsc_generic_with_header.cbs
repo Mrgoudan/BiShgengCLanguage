@@ -18,7 +18,7 @@ int main() {
 }
 
 
-// CHECK:int int_increase(int* this) {
+// CHECK:int int_increase(int *this) {
 // CHECK-NEXT:  return *this += 1;
 // CHECK-NEXT:}
 
@@ -44,13 +44,13 @@ int main() {
 // CHECK-NEXT:  float a;
 // CHECK-NEXT:};
 
-// CHECK:int main() {
+// CHECK:int main(void) {
 // CHECK-NEXT:  int a1 = 1;
 // CHECK-NEXT:  int b1 = 2;
 // CHECK-NEXT:  int_increase(&b1);
 // CHECK-NEXT:  int_increase(&b1);
 // CHECK-NEXT:  int c1 = max_int_int(a1, b1);
-// CHECK-NEXT:  float c2 = max_float_float(1.0, 2.0);
+// CHECK-NEXT:  float c2 = max_float_float(1., 2.);
 // CHECK-NEXT:  struct Foo_int foo = {.a = 42};
 // CHECK-NEXT:  struct Foo_float foo_2 = {.a = 1.5};
 // CHECK-NEXT:  return 0;

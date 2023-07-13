@@ -18,11 +18,11 @@ int main() {
   return 0;
 }
 
-// CHECK: void int_increase(int* this) {
-// CHECK-NEXT:     *this = *this +1;
+// CHECK: void int_increase(int *this) {
+// CHECK-NEXT:     *this = *this + 1;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   int foo = 1;
 // CHECK-NEXT:   void (*fp1)(int *) = int_increase;
 // CHECK-NEXT:   void (*fp2)(int *) = &int_increase;

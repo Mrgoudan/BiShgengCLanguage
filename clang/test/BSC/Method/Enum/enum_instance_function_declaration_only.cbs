@@ -22,9 +22,9 @@ int main() {
 // CHECK-NEXT:     X4
 // CHECK-NEXT: };
 
-// CHECK: int enum_E_getA(enum E* this);
+// CHECK: int enum_E_getA(enum E *this);
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   enum E foo = X3;
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

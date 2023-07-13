@@ -29,18 +29,19 @@ int main() {
 // CHECK: struct queue {
 // CHECK-NEXT: };
 
-// CHECK: void struct_queue_isEmpty(struct queue* this){}
+// CHECK: void struct_queue_isEmpty(struct queue *this) {
+// CHECK-NEXT: }
 
 // CHECK: struct Scheduler {
-// CHECK-NEXT:     struct queue* que;
+// CHECK-NEXT:     struct queue *que;
 // CHECK: };
 
-// CHECK: void struct_Scheduler_run(struct Scheduler* this) {
+// CHECK: void struct_Scheduler_run(struct Scheduler *this) {
 // CHECK-NEXT:       struct_queue_isEmpty(this->que);
 // CHECK-NEXT:       struct_queue_isEmpty(&(*this->que));
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:     struct Scheduler s;
 // CHECK-NEXT:     struct_Scheduler_run(&s);
 // CHECK-NEXT:     return 0;

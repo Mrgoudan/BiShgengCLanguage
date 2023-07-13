@@ -1,0 +1,39 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+struct PollResult<T> {
+
+};
+
+
+struct A {
+struct PollResult<int> a;
+
+};
+
+struct B {
+
+};
+
+
+struct C {
+    struct PollResult<int> a;
+};
+
+int main() {};
+
+// CHECK: struct PollResult_int {
+// CHECK-NEXT:  };
+
+// CHECK: struct A {
+// CHECK-NEXT:      struct PollResult_int a;
+// CHECK-NEXT:  };
+
+// CHECK: struct B {
+// CHECK-NEXT:  };
+
+// CHECK: struct C {
+// CHECK-NEXT:       struct PollResult_int a;
+// CHECK-NEXT:   };

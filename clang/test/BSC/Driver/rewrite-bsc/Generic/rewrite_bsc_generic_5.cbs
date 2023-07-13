@@ -24,7 +24,7 @@ int main() {
   return 0;
 }
 
-// CHECK:int int_increase(int* this) {
+// CHECK:int int_increase(int *this) {
 // CHECK-NEXT:  return *this += 1;
 // CHECK-NEXT:}
 
@@ -42,12 +42,12 @@ int main() {
 // CHECK-NEXT:      return a > b ? a : b;
 // CHECK-NEXT:  }
 
-// CHECK:int main() {
+// CHECK:int main(void) {
 // CHECK-NEXT:  int a1 = 1;
 // CHECK-NEXT:  int b1 = 2;
 // CHECK-NEXT:  int_increase(&b1);
 // CHECK-NEXT:  int_increase(&b1);
 // CHECK-NEXT:  int c1 = max_int(a1);
-// CHECK-NEXT:  float c2 = max_float(1.0);
+// CHECK-NEXT:  float c2 = max_float(1.);
 // CHECK-NEXT:  return 0;
 // CHECK-NEXT:}

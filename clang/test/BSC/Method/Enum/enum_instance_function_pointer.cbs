@@ -28,11 +28,11 @@ int main() {
 // CHECK-NEXT:     X4
 // CHECK-NEXT: };
 
-// CHECK: int enum_E_getA(enum E* this) {
+// CHECK: int enum_E_getA(enum E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   enum E foo = X3;
 // CHECK-NEXT:   int (*fp1)(enum E *) = enum_E_getA;
 // CHECK-NEXT:   int (*fp2)(enum E *) = &enum_E_getA;

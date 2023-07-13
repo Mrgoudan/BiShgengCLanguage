@@ -20,14 +20,14 @@ int main() {
   return 0;
 };
 
-// CHECK: long int_getA1() {
+// CHECK: long int_getA1(void) {
 // CHECK-NEXT:   return 1;
-// CHECK-NEXT: };
+// CHECK-NEXT: }
 
-// CHECK: unsigned int_getA2() {
+// CHECK: unsigned int int_getA2(void) {
 // CHECK-NEXT:   return 1;
-// CHECK-NEXT: };
+// CHECK-NEXT: }
 
-// CHECK: short int_getA3() {
+// CHECK: short int_getA3(void) {
 // CHECK-NEXT:   return 1;
-// CHECK-NEXT: };
+// CHECK-NEXT: }

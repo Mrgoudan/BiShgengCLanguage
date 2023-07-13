@@ -23,14 +23,14 @@ int main() {
   return *y - 1;
 }
 
-// CHECK: void int_increase(const int* this) {
+// CHECK: void int_increase(const int *this) {
 // CHECK-NEXT:     return;
 // CHECK-NEXT:}
 
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:  int x = 1;
-// CHECK-NEXT:  int* y = &x;
+// CHECK-NEXT:  int *y = &x;
 // CHECK-NEXT:  int_increase(y);
 // CHECK-NEXT:  int_increase(y);
 // CHECK-NEXT:  printf("%d", *y);

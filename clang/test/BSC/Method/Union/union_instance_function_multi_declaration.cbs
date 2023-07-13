@@ -24,15 +24,15 @@ int union SimpleUnion::getA(union SimpleUnion * this) {
   return this->ui;
 }
 
-// CHECK: int union_SimpleUnion_getA(union SimpleUnion* this);
-// CHECK-NEXT: int union_SimpleUnion_getA(union SimpleUnion* this);
+// CHECK: int union_SimpleUnion_getA(union SimpleUnion *this);
+// CHECK-NEXT: int union_SimpleUnion_getA(union SimpleUnion *this);
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   union SimpleUnion u = {.ui = 1};
 // CHECK-NEXT:   union_SimpleUnion_getA(&u);
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 
-// CHECK: int union_SimpleUnion_getA(union SimpleUnion * this) {
+// CHECK: int union_SimpleUnion_getA(union SimpleUnion *this) {
 // CHECK-NEXT:   return this->ui;
 // CHECK-NEXT: }

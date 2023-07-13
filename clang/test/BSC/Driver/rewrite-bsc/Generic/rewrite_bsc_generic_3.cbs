@@ -26,7 +26,7 @@ int main() {
 
 
 // CHECK:struct Block {
-// CHECK-NEXT:  char* color;
+// CHECK-NEXT:  char *color;
 // CHECK-NEXT:  int blood;
 // CHECK-NEXT:};
 
@@ -48,8 +48,8 @@ int main() {
 // CHECK-NEXT:      return grass;
 // CHECK-NEXT:  }
 
-// CHECK:int main() {
+// CHECK:int main(void) {
 // CHECK-NEXT:  struct Block br1 = bar_int_int(1, 2);
-// CHECK-NEXT:  struct Block br2 = bar_double_float(1.0, 2.0);
+// CHECK-NEXT:  struct Block br2 = bar_double_float(1., 2.);
 // CHECK-NEXT:  return 0;
 // CHECK-NEXT:}

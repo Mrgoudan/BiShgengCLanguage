@@ -21,7 +21,7 @@ int main() {
 // CHECK-NEXT:  float a;
 // CHECK-NEXT:};
 
-// CHECK:int main() {
+// CHECK:int main(void) {
 // CHECK-NEXT:  struct Foo_int foo = {.a = 42};
 // CHECK-NEXT:  struct Foo_float foo_2 = {.a = 1.5};
 // CHECK-NEXT:  return 0;

@@ -23,6 +23,6 @@ int union SimpleUnion::getA(union SimpleUnion * this) {
   return this->ui;
 }
 
-// CHECK: int union_SimpleUnion_getA(union SimpleUnion* this);
+// CHECK: int union_SimpleUnion_getA(union SimpleUnion *this);
 // CHECK: union_SimpleUnion_getA(&u);
-// CHECK: int union_SimpleUnion_getA(union SimpleUnion * this) {
+// CHECK: int union_SimpleUnion_getA(union SimpleUnion *this) {

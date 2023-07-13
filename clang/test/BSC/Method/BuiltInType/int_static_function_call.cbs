@@ -15,11 +15,11 @@ int main() {
     return a - 2;
 }
 
-//CHECK: int int_getA() {
+//CHECK: int int_getA(void) {
 //CHECK-NEXT:     return 2;
 //CHECK-NEXT: }
 
-//CHECK: int main() {
+//CHECK: int main(void) {
 //CHECK-NEXT:     int_getA();
 //CHECK-NEXT:     int a = int_getA();
 //CHECK-NEXT:     return a - 2;

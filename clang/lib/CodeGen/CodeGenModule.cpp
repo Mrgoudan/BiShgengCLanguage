@@ -6087,10 +6087,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   if (D->isTemplated())
     return;
 
-  // Consteval function shouldn't be emitted.
-  if (auto *FD = dyn_cast<FunctionDecl>(D))
+  // Consteval and async function shouldn't be emitted.
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isConsteval())
       return;
+    if (FD->isAsyncSpecified())
+      return;
+  }
 
   switch (D->getKind()) {
   case Decl::CXXConversion:

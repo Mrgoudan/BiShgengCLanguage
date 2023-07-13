@@ -21,12 +21,15 @@ int main() {return 0;}
 // CHECK: typedef struct _queue {
 // CHECK-NEXT: }queue;
 
-// CHECK: queue* queue_reverse(queue* this) {
+// CHECK: queue *queue_reverse(queue *this) {
 // CHECK-NEXT:  return this;
 // CHECK-NEXT: }
 
-// CHECK: void destroyQueue(queue** q) {
+// CHECK: void destroyQueue(queue **q) {
 // CHECK-NEXT:  queue_reverse((*q));
 // CHECK-NEXT:     queue_reverse(&(**q));
 // CHECK-NEXT: }
-// CHECK-NEXT: int main() {return 0;}
+
+// CHECK: int main(void) {
+// CHECK-NEXT:	return 0;
+// CHECK-NEXT: }

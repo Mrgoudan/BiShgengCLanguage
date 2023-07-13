@@ -6936,6 +6936,9 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                 TempCFD, TempCFD->getType().getNonReferenceType(), VK_LValue,
                 TempCFD->getLocation());
             Expr *RHSExpr1 = RHSER1.get();
+            RHSExpr1->HasBSCScopeSpec = NakedFn->HasBSCScopeSpec;
+            RHSExpr1->IsDesugaredBSCMethodCall =
+                NakedFn->IsDesugaredBSCMethodCall;
             Fn = ImpCastExprToType(RHSExpr1,
                                    Context.getPointerType(TempCFD->getType()),
                                    CK_FunctionToPointerDecay)

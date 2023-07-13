@@ -42,19 +42,19 @@ int main() {
 // CHECK-NEXT: };
 
 // CHECK: typedef enum E F;
-// CHECK-NEXT: int F_getA(enum E* this) {
+// CHECK-NEXT: int F_getA(enum E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int F_getB(F* this) {
+// CHECK: int F_getB(F *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int enum_E_getC(F* this) {
+// CHECK: int enum_E_getC(F *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   enum E foo = X3;
 // CHECK-NEXT:   F_getA(&foo);
 // CHECK-NEXT:   F_getB(&foo);

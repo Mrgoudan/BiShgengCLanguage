@@ -11062,7 +11062,9 @@ TreeTransform<Derived>::TransformCallExpr(CallExpr *E) {
   // Keep flag unchanged in transformation.
   Callee.get()->IsDesugaredBSCMethodCall = E->getCallee()->IsDesugaredBSCMethodCall;
   Callee.get()->HasBSCScopeSpec = E->getCallee()->HasBSCScopeSpec;
-  
+  Callee.get()->IgnoreImplicit()->HasBSCScopeSpec =
+      E->getCallee()->IgnoreImplicit()->HasBSCScopeSpec;
+
   // Transform arguments.
   bool ArgChanged = false;
   SmallVector<Expr*, 8> Args;

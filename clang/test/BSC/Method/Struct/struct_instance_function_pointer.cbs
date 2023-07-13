@@ -23,12 +23,12 @@ int main() {
   return 0;
 }
 
-// CHECK: int struct_Foo_getA(struct Foo* this) {
+// CHECK: int struct_Foo_getA(struct Foo *this) {
 // CHECK-NEXT:   return this->a;
 // CHECK-NEXT: }
 
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   struct Foo foo = {.a = 1};
 // CHECK-NEXT:   int (*fp1)(struct Foo *) = struct_Foo_getA;
 // CHECK-NEXT:   int (*fp2)(struct Foo *) = &struct_Foo_getA;

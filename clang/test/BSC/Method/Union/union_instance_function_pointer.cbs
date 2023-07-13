@@ -24,11 +24,11 @@ int main() {
   return 0;
 }
 
-// CHECK: int union_SimpleUnion_getA(union SimpleUnion * this) {
+// CHECK: int union_SimpleUnion_getA(union SimpleUnion *this) {
 // CHECK-NEXT:   return this->ui;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK-NEXT:   union SimpleUnion foo = {.ui = 1};
 // CHECK-NEXT:   int (*fp1)(union SimpleUnion *) = union_SimpleUnion_getA;
 // CHECK-NEXT:   int (*fp2)(union SimpleUnion *) = &union_SimpleUnion_getA;

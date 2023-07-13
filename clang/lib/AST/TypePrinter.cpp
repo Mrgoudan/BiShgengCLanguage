@@ -83,15 +83,23 @@ namespace {
   class DefaultTemplateArgsPolicyRAII {
     PrintingPolicy &Policy;
     bool Old;
+    bool SuppressTagKeyword;
 
   public:
     explicit DefaultTemplateArgsPolicyRAII(PrintingPolicy &Policy)
-        : Policy(Policy), Old(Policy.SuppressDefaultTemplateArgs) {
+        : Policy(Policy), Old(Policy.SuppressDefaultTemplateArgs),
+          SuppressTagKeyword(Policy.SuppressTagKeyword) {
       Policy.SuppressDefaultTemplateArgs = false;
+      if (Policy.RewriteBSC) { // FIXME: quite hack
+        Policy.SuppressTagKeyword = false;
+      }
     }
 
     ~DefaultTemplateArgsPolicyRAII() {
       Policy.SuppressDefaultTemplateArgs = Old;
+      if (Policy.RewriteBSC) {
+        Policy.SuppressTagKeyword = SuppressTagKeyword;
+      }
     }
   };
 
@@ -2093,8 +2101,13 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
   }
 
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
-  if (!IsPack)
-    OS << '<';
+  if (!IsPack) {
+    if (Policy.RewriteBSC) {
+      OS << '_';
+    } else {
+      OS << '<';
+    }
+  }
 
   bool NeedSpace = false;
   bool FirstArg = true;
@@ -2109,8 +2122,12 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
       printTo(ArgOS, Argument.getPackAsArray(), Policy, TPL,
               /*IsPack*/ true, ParmIndex);
     } else {
-      if (!FirstArg)
-        OS << Comma;
+      if (!FirstArg) {
+        if (!Policy.RewriteBSC)
+          OS << Comma;
+        else
+          OS << '_';
+      }
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
                     TemplateParameterList::shouldIncludeTypeForArgument(
@@ -2124,7 +2141,22 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     if (FirstArg && !ArgString.empty() && ArgString[0] == ':')
       OS << ' ';
 
-    OS << ArgString;
+    std::string NewArgString = ArgString.str();
+
+    if (Policy.RewriteBSC) {
+      for (int i = NewArgString.length() - 1; i >= 0; i--) {
+        if (NewArgString[i] == ' ') {
+          NewArgString.replace(i, 1, "_");
+        } else if (NewArgString[i] == '*') {
+          // Since '*' is not allowed to appear in identifier,
+          // we replace it with 'P'.
+          // FIXME: it may conflict with user defined type Char_P.
+          NewArgString.replace(i, 1, "P");
+        }
+      }
+    }
+
+    OS << NewArgString;
 
     // If the last character of our string is '>', add another space to
     // keep the two '>''s separate tokens.
@@ -2139,9 +2171,11 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
   }
 
   if (!IsPack) {
-    if (NeedSpace)
-      OS << ' ';
-    OS << '>';
+    if (!Policy.RewriteBSC) {
+      if (NeedSpace)
+        OS << ' ';
+      OS << '>';
+    }
   }
 }
 

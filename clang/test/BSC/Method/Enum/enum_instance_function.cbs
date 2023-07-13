@@ -20,11 +20,11 @@ int main() {
   return 0;
 }
 
-// CHECK: int enum_E_getA(enum E* this) {
+// CHECK: int enum_E_getA(enum E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
-// CHECK: int main() {
+// CHECK: int main(void) {
 // CHECK:   enum E foo = X3;
 // CHECK-NEXT:   enum_E_getA(&foo);
 // CHECK-NEXT:   return 0;

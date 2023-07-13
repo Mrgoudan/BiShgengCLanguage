@@ -1133,22 +1133,52 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }
 
-static std::string GetPrefix(QualType T) {
-  std::string ExtendedTypeStr = T.getAsString();
+// To prefix the type by jointing '_' between types and function name.
+// Arg 'isFront' determines weather to prefix '_' at the front of type or not.
+static std::string GetTypePrefix(QualType T, bool isFront,
+                                 const PrintingPolicy &PP) {
+  std::string ExtendedTypeStr;
+  llvm::raw_string_ostream OS(ExtendedTypeStr);
+  T.print(OS, PP);
   for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
     if (ExtendedTypeStr[i] == ' ') {
       ExtendedTypeStr.replace(i, 1, "_");
+    } else if (ExtendedTypeStr[i] == '*') {
+      // Since '*' is not allowed to appear in identifier,
+      // we replace it with 'P'.
+      // FIXME: it may conflict with user defined type Char_P.
+      ExtendedTypeStr.replace(i, 1, "P");
     }
   }
-  ExtendedTypeStr += "_";
+  if (isFront) {
+    ExtendedTypeStr = "_" + ExtendedTypeStr;
+  } else {
+    ExtendedTypeStr += "_";
+  }
   return ExtendedTypeStr;
 }
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
-  if (Node->HasBSCScopeSpec) {
-    if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
-      std::string ExtendedTypeStr = GetPrefix(BD->getExtendedType());
-      OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
+  if (Policy.RewriteBSC) {
+    if (Node->HasBSCScopeSpec) {
+      if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
+        std::string ExtendedTypeStr =
+            GetTypePrefix(BD->getExtendedType(), false, Policy);
+        OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
+        return;
+      }
+    }
+    if (Node->getFoundDecl()->isTemplateDecl()) {
+      auto *FD = dyn_cast<FunctionDecl>(Node->getDecl());
+      std::string FunctionNameStr = FD->getDeclName().getAsString();
+      for (unsigned i = 0; i < FD->getTemplateSpecializationArgs()->size();
+           i++) {
+        std::string QT = GetTypePrefix(
+            FD->getTemplateSpecializationArgs()->asArray()[i].getAsType(),
+            /*isFront=*/true, Policy);
+        FunctionNameStr += QT;
+      }
+      OS << FunctionNameStr;
       return;
     }
   }
@@ -1572,10 +1602,12 @@ static bool isImplicitThis(const Expr *E) {
 }
 
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
-  // const SourceManager &SM = Context->getSourceManager();
-  if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
-    std::string ExtendedTypeStr = GetPrefix(BD->getExtendedType());
-    OS << ExtendedTypeStr;
+  if (Policy.RewriteBSC) {
+    if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
+      std::string ExtendedTypeStr =
+          GetTypePrefix(BD->getExtendedType(), false, Policy);
+      OS << ExtendedTypeStr;
+    }
   } else if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
     PrintExpr(Node->getBase());
 
@@ -2054,7 +2086,13 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
 }
 
 void StmtPrinter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *Node) {
-  OS << (Node->getValue() ? "true" : "false");
+  if (Policy.RewriteBSC) {
+    OS << (Node->getValue()
+               ? "1"
+               : "0"); // FIXME: a little bit weird. why enter here.
+  } else {
+    OS << (Node->getValue() ? "true" : "false");
+  }
 }
 
 void StmtPrinter::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *Node) {
