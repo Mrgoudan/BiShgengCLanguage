@@ -1602,12 +1602,10 @@ static bool isImplicitThis(const Expr *E) {
 }
 
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
-  if (Policy.RewriteBSC) {
-    if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
-      std::string ExtendedTypeStr =
-          GetTypePrefix(BD->getExtendedType(), false, Policy);
-      OS << ExtendedTypeStr;
-    }
+  if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
+    std::string ExtendedTypeStr =
+        GetTypePrefix(BD->getExtendedType(), false, Policy);
+    OS << ExtendedTypeStr;
   } else if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
     PrintExpr(Node->getBase());
 
