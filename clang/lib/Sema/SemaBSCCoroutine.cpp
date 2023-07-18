@@ -2635,7 +2635,6 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
 
     FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
         *this, FD, std::get<0>(std::get<1>(NewRDs)));
-    FutureInitDef->dump();
     decls.push_back(FutureInitDef);
     Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
   }

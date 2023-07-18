@@ -452,6 +452,10 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
       return true;
 
     const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+    // For RecordDecl, no need to track empty subobjects.
+    if (!RD)
+      return true;
+
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     uint64_t NumElements = Context.getConstantArrayElementCount(AT);
@@ -556,6 +560,10 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
       return;
 
     const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
+    // For RecordDecl, no need to track empty subobjects.
+    if (!RD)
+      return;
+
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
     uint64_t NumElements = Context.getConstantArrayElementCount(AT);
