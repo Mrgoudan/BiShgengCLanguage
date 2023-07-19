@@ -84,13 +84,27 @@ buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
   return NewDecl;
 }
 
+std::string GetPrefix(QualType T) {
+  std::string ExtendedTypeStr = T.getAsString();
+  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
+    if (ExtendedTypeStr[i] == ' ') {
+      ExtendedTypeStr.replace(i, 1, "_");
+    }
+  }
+  return ExtendedTypeStr;
+}
+
 namespace {
 class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
+  ASTContext &Context;
   int AwaitCount = 0;
   std::vector<Expr *> Args;
   std::vector<std::pair<DeclarationName, QualType>> LocalVarList;
+  llvm::DenseMap<StringRef, int> IdentifierNumber;
 
  public:
+  AwaitExprFinder(ASTContext &Context) : Context(Context) {}
+
   void VisitAwaitExpr(AwaitExpr *E) {
     Visit(E->getSubExpr());
     Args.push_back(E);
@@ -110,6 +124,15 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
                 QT.removeLocalConst();
                 VD->setType(QT);
               }
+              std::string VDName = VD->getName().str();
+              SetIdentifierNumber(StringRef(VDName),
+                               GetIdentifierNumber(StringRef(VDName)) + 1);
+              if (GetIdentifierNumber(StringRef(VDName)) > 1) {
+                VDName =
+                    VDName + "_" +
+                    std::to_string(GetIdentifierNumber(StringRef(VDName)) - 1);
+                VD->setDeclName(&(Context.Idents).get(VDName));
+              }
 
               LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
                   VD->getDeclName(), VD->getType()));
@@ -127,6 +150,17 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
 
   std::vector<std::pair<DeclarationName, QualType>> GetLocalVarList() const {
     return LocalVarList;
+  }
+
+  void SetIdentifierNumber(StringRef identifier, int index) {
+    assert(!identifier.empty() && "Passed null name");
+    IdentifierNumber[identifier] = index;
+  }
+
+  int GetIdentifierNumber(StringRef identifier) {
+    llvm::DenseMap<StringRef, int>::iterator I = IdentifierNumber.find(identifier);
+    if (I != IdentifierNumber.end()) return I->second;
+    return 0;
   }
 };
 
@@ -324,16 +358,6 @@ bool IsRefactorStmt(Stmt *S) {
     return true;
 
   return false;
-}
-
-std::string GetPrefix(QualType T) {
-  std::string ExtendedTypeStr = T.getAsString();
-  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
-    if (ExtendedTypeStr[i] == ' ') {
-      ExtendedTypeStr.replace(i, 1, "_");
-    }
-  }
-  return ExtendedTypeStr;
 }
 
 bool IsFutureType(QualType T) {
@@ -2647,7 +2671,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   SmallVector<Decl *, 8> decls;
   decls.push_back(FD);
 
-  AwaitExprFinder finder = AwaitExprFinder();
+  AwaitExprFinder finder = AwaitExprFinder(Context);
   finder.Visit(FD->getBody());
 
   // Report if await expression appear in non-async functions.
