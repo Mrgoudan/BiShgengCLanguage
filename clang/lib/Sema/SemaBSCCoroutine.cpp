@@ -2168,6 +2168,8 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
         AwaitIndex = AwaitIndex + AESize;
       }
 
+      if (isa<AwaitExpr>(SS)) continue;
+
       SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
       Statements.push_back(SS);
     }

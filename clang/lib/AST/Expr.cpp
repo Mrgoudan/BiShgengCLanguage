@@ -2663,6 +2663,11 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     return false;
   }
 
+  case AwaitExprClass: {
+    return cast<AwaitExpr>(this)->getSubExpr()->
+      isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  }
+
   // If we don't know precisely what we're looking at, let's not warn.
   case UnresolvedLookupExprClass:
   case CXXUnresolvedConstructExprClass:
