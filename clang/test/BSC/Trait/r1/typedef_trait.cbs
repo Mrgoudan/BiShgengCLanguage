@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+typedef trait F {
+  int foo(This* this, int a);
+}G;
+
+typedef trait G {
+  int foo(This* this);
+};
+
+struct S{
+  int x;
+};
+
+int struct S::foo(struct S* this, int a) {
+  return this->x + a;
+}
+
+impl G for struct S;

@@ -6081,6 +6081,8 @@ QualType Sema::DesugarTraitToStructTrait(QualType T) {
   T = T.getCanonicalType();
   TraitDecl *TD = dyn_cast<TraitDecl>(T.getTypePtr()->getAsTagDecl());
   RecordDecl *RD = TD->getTrait();
+  if (RD == nullptr)
+    return T;
   return RD->getTypeForDecl()->getCanonicalTypeInternal();
 }
 

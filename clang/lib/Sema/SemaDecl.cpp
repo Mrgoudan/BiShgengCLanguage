@@ -7377,7 +7377,13 @@ static void copyAttrFromTypedefToDecl(Sema &S, Decl *D, const TypedefType *TT) {
 VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *VarDec) {
   // build expr: .data = &s;
   TraitDecl *TD = dyn_cast<TraitDecl>(QT.getTypePtr()->getAsTagDecl());
+  if (TD->getVtable() == nullptr) {
+    Diag(VarDec->getLocation(), diag::err_typecheck_decl_incomplete_type) << QT;
+    return nullptr;
+  }
   Expr *exp = VarDec->getInit();
+  if (exp == nullptr) // trait I *a;
+    return nullptr;
   ImplicitCastExpr *Icexpr = dyn_cast<ImplicitCastExpr>(exp);
   if (!Icexpr)
     return nullptr;
@@ -7525,6 +7531,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   VarTemplateDecl *NewTemplate = nullptr;
   TemplateParameterList *TemplateParams = nullptr;
   if (!getLangOpts().CPlusPlus) {
+    const TraitType *TT =
+        dyn_cast<TraitType>(R.getCanonicalType().getTypePtr());
+    if (TT != nullptr) {
+      Diag(D.getIdentifierLoc(), diag::err_variables_not_trait_pointer);
+      return nullptr;
+    }
     NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(), D.getIdentifierLoc(),
                             II, R, TInfo, SC);
 

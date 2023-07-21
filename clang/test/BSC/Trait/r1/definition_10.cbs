@@ -4,7 +4,8 @@ trait F {
   int foo(This* this);
 };
 
-impl trait F for trait F; /// definition_10.cbs:7:12: error: can not find 'foo' of 'trait F' in 'trait F'
+impl trait F for trait F;  // expected-error {{invalid syntax, semi not expected after 'trait 'F''}}
+                           // expected-error@-1 {{can not find 'foo' of 'trait F' in 'trait F'}}
 
 int main() {
   return 0;

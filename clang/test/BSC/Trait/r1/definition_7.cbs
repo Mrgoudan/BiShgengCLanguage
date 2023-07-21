@@ -12,6 +12,6 @@ impl trait F for int;
 
 int main() {
   int a = 1;
-  trait F f = &a; /// definition_7.cbs:15:11: error: initializing 'trait F' with an expression of incompatible type 'int *'
+  trait F f = &a; // expected-error {{only trait pointer type are allowed to be declared}}
   return 0;
 }

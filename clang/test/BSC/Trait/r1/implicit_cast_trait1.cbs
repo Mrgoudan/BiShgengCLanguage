@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+trait F {
+  int foo(This* this);
+};
+
+int main() {
+  int a = 1;
+  trait F* f = &a;
+  return f->foo();
+}

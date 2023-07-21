@@ -1,18 +1,19 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
 
 trait F {
   int foo(This* this);
 };
 
-int int::foo(int* this) {
+int int::foo(int *this) {
   return 0;
-}
+};
 
 impl trait F for int;
 
 int main() {
   int a = 1;
-  trait F* f = &a;
-  f->get(); // expected-error {{no member named 'get' in 'struct __Trait_F_Vtable'}}
+  trait F* f;
+  f = &a;
   return 0;
 }

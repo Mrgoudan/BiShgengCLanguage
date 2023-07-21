@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 trait F {
-  int a; /// definition_9.cbs:4:7: error: only function declarations can be trait member !
+  int a; // expected-error {{only function declarations can be trait member !}}
 };
 
 int main() {

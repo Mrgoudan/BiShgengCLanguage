@@ -17,7 +17,7 @@ int struct S::foo(struct S* this) {
   return this->x;
 }
 
-impl trait F for struct S; /// definition_4.cbs:20:12: error: type of 'foo' conflicts with that of 'trait F'
+impl trait F for struct S; // expected-error {{type of 'foo' conflicts with that of 'trait F'}} 
 
 int main() {
   struct S s1 = { .x = 42 };

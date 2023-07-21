@@ -1034,14 +1034,23 @@ RecordDecl* Sema::ActOnDesugarVtableRecord(SourceLocation StartLoc,
   DeclContext::lookup_result VtableDecls = 
           getASTContext().getTranslationUnitDecl()->
                 lookup(DeclarationName(&Context.Idents.get(TraitVTableName)));
-  if (!VtableDecls.empty()) {
-    return Result;
-  }
+  if (VtableDecls.empty()) {
     Result = RecordDecl::Create(Context, TTK_Struct, CurContext,
                                 StartLoc, NameLoc, &Context.Idents.get(TraitVTableName));
     Result->startDefinition(); 
     Result->completeDefinition();
     PushOnScopeChains(Result, getCurScope());
+  } else if (VtableDecls.isSingleResult()) {
+    for (DeclContext::lookup_result::iterator I = VtableDecls.begin(),
+                                              E = VtableDecls.end();
+         I != E; ++I) {
+      if (isa<RecordDecl>(*I)) {
+        Result = dyn_cast<RecordDecl>(*I);
+      }
+    }
+  } else {
+    // todo: error report?
+  }
   return Result;
 }
 

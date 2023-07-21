@@ -5266,6 +5266,10 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace)) {
     TUK = Sema::TUK_Definition;
+    if (Actions.getCurScope()->getDepth() > 0) {
+      Diag(StartLoc, diag::err_trait_def_not_at_top_level);
+      return;
+    }
   } else if (!isTypeSpecifier(DSC) &&
              (Tok.is(tok::semi) ||
               (Tok.isAtStartOfLine() && !isValidAfterTypeSpecifier(false)))) {
@@ -5277,7 +5281,8 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                        DeclSpec::getSpecifierName(TagType, PPol));
       PP.EnterToken(Tok, /*IsReinject*/true);
       Tok.setKind(tok::semi);
-    }
+    } else
+      Diag(StartLoc, diag::err_invalid_trait) << Name;
   } else
     TUK = Sema::TUK_Reference;
 
@@ -5379,11 +5384,13 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     }
   }
   if (TUK == Sema::TUK_Definition) {
-    TraitDecl *find = Actions.ActOnDesugarFind(Name);
+    TraitDecl *find = Actions.ActOnDesugarFind(Name); // TODO: assert
+    assert(find && "No corresponding trait found");
     RecordDecl *TraitVtableRecord = Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
     RecordDecl *TraitRecord = Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
     find->setTrait(TraitRecord);
     find->setVtable(TraitVtableRecord);
+    // FIXME: Why is it necessary to repeatedly desugar? When will it be empty?
     if (TraitVtableRecord) {
       ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitVtableRecord);
@@ -7714,10 +7721,8 @@ void Parser::ParseParameterDeclarationClause(
       }
       // the trait's function params must begin with This * this 
       if (ParamInfo.empty() && isTraitMem) {
-        if (DS.getTypeSpecType() != TST_This) {
-          Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_for_trait_member);
-        }
-        if (ParmDeclarator.getIdentifier()->getName() != "this") {
+        if (DS.getTypeSpecType() != TST_This ||
+            ParmDeclarator.getIdentifier()->getName() != "this") {
           Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_for_trait_member);
         }
       }

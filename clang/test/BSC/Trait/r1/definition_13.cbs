@@ -10,6 +10,6 @@ int get(trait F* f) {
 
 int main() {
   int a = 1;
-  int b = get(&a); /// definition_13.cbs:13:15: error: pointer type which has implemented 'trait F' or 'trait F*' is expected, but get 'int' here
+  int b = get(&a); // expected-error {{pointer type which has implemented 'trait F' or 'trait F*' is expected, but get 'int' here}}
   return 0;
 }

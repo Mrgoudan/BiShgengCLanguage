@@ -6171,11 +6171,13 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
                        ? 1 /* block */
                        : (IsExecConfig ? 3 /* kernel function (exec config) */
                                        : 0 /* function */);
-  bool isBSCInstanceFunc = false;
+  bool IsBSCInstanceFunc = false;
+  int ParamIndex = 0;
   if (FDecl && !Fn->HasBSCScopeSpec) {
     BSCMethodDecl* MD = dyn_cast_or_null<BSCMethodDecl>(FDecl);
     if (MD && MD->getHasThisParam()) {
-      isBSCInstanceFunc = true;
+      IsBSCInstanceFunc = true;
+      ParamIndex = 1;
       // Flag IsDesugaredBSCMethodCall is to jugde if this func call has already desugared.
       if (!Call->getCallee()->IsDesugaredBSCMethodCall)
         NumParams = NumParams - 1;
@@ -6195,12 +6197,14 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
         diagnoseTypo(TC, PDiag(diag_id) << FnKind << MinArgs
                                         << static_cast<unsigned>(Args.size())
                                         << TC.getCorrectionRange());
-      } else if (MinArgs == 1 && FDecl && FDecl->getParamDecl(0)->getDeclName())
+      } else if (MinArgs == 1 && FDecl &&
+                 FDecl->getParamDecl(ParamIndex)->getDeclName())
         Diag(RParenLoc,
              MinArgs == NumParams && !Proto->isVariadic()
                  ? diag::err_typecheck_call_too_few_args_one
                  : diag::err_typecheck_call_too_few_args_at_least_one)
-            << FnKind << FDecl->getParamDecl(0) << Fn->getSourceRange();
+            << FnKind << FDecl->getParamDecl(ParamIndex)
+            << Fn->getSourceRange();
       else
         Diag(RParenLoc, MinArgs == NumParams && !Proto->isVariadic()
                             ? diag::err_typecheck_call_too_few_args
@@ -6267,7 +6271,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
 
   Invalid = GatherArgumentsForCall(Call->getBeginLoc(), FDecl, Proto, 0, Args,
                                    AllArgs, CallType, false, false,
-                                   isBSCInstanceFunc, Call);
+                                   IsBSCInstanceFunc, Call);
   if (Invalid)
     return true;
   unsigned TotalNumArgs = AllArgs.size();

@@ -11712,6 +11712,7 @@ def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
 // BSC
+def err_variables_not_trait_pointer : Error<"only trait pointer type are allowed to be declared">;
 def err_trait_impl : Error<"can not find '%0' of 'trait %1' in %2">;
 def err_trait_impl_function_type_conflict : Error<
   "type of '%0' conflicts with that of 'trait %1'">;

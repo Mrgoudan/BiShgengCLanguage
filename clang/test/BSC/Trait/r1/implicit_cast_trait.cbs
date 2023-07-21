@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
 
+#include<stdlib.h>
 trait F {
   int foo(This* this);
 };
@@ -10,9 +12,14 @@ int int::foo(int* this) {
 
 impl trait F for int;
 
+trait F* get(trait F* f) {
+  int* c = malloc(sizeof(int));
+  *c = 3;
+  return c;
+};
+
 int main() {
   int a = 1;
-  trait F* f = &a;
-  f->get(); // expected-error {{no member named 'get' in 'struct __Trait_F_Vtable'}}
-  return 0;
+  trait F* b = get(&a);
+  return b->foo();
 }

@@ -13,7 +13,7 @@ struct S{
   int x;
 };
 
-impl trait F for struct S; /// definition_5.cbs:16:12: error: can not find 'foo' of 'trait F' in 'struct S'
+impl trait F for struct S; // expected-error {{can not find 'foo' of 'trait F' in 'struct S'}} 
 
 int main() {
   struct S s1 = { .x = 42 };
