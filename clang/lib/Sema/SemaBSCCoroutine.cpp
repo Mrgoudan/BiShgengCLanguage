@@ -1092,8 +1092,8 @@ class TransformToAP : public TreeTransform<TransformToAP> {
   std::vector<Stmt *> DeclStmts;
   int DIndex;
   llvm::DenseMap<Stmt *, std::tuple<int, int>> DMap;
-  llvm::DenseMap<StringRef, VarDecl *> ArrayPointersMap;
-  llvm::DenseMap<StringRef, VarDecl *> ArrayAssignedPointerMap;
+  std::map<std::string, VarDecl *> ArrayPointerMap;
+  std::map<std::string, VarDecl *> ArrayAssignedPointerMap;
 
  public:
   TransformToAP(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD,
@@ -1244,7 +1244,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
             std::string AssignedPtrName =
                 "__ASSIGNED_ARRAY_PTR_" + GetPrefix(SubQT);
             VarDecl *AssignedPtrVar =
-                GetArrayAssignedPointerMap(StringRef(AssignedPtrName));
+                GetArrayAssignedPointerMap(AssignedPtrName);
             if (AssignedPtrVar == nullptr) {
               AssignedPtrVar = VarDecl::Create(
                   SemaRef.Context, FD, SourceLocation(), SourceLocation(),
@@ -1262,8 +1262,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                       .getAs<DeclStmt>();
 
               DeclStmts.push_back(AssignedDS);
-              SetArrayAssignedPointerMap(StringRef(AssignedPtrName),
-                                         AssignedPtrVar);
+              SetArrayAssignedPointerMap(AssignedPtrName, AssignedPtrVar);
             } else {
               Expr *AssignedDRE = SemaRef.BuildDeclRefExpr(
                   AssignedPtrVar, AssignedPtrVar->getType(), VK_LValue,
@@ -1291,7 +1290,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                     .get();
 
             std::string ArrayPtrName = "__ARRAY_PTR_" + GetPrefix(SubQT);
-            VarDecl *ArrayPtrVar = GetArrayPointersMap(StringRef(ArrayPtrName));
+            VarDecl *ArrayPtrVar = GetArrayPointerMap(ArrayPtrName);
             if (ArrayPtrVar == nullptr) {
               ArrayPtrVar = VarDecl::Create(
                   SemaRef.Context, FD, SourceLocation(), SourceLocation(),
@@ -1308,7 +1307,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                       .getAs<DeclStmt>();
 
               DeclStmts.push_back(ArrayDS);
-              SetArrayPointersMap(StringRef(ArrayPtrName), ArrayPtrVar);
+              SetArrayPointerMap(ArrayPtrName, ArrayPtrVar);
             } else {
               Expr *ArrayDRE =
                   SemaRef.BuildDeclRefExpr(ArrayPtrVar, ArrayPtrVar->getType(),
@@ -1462,27 +1461,28 @@ class TransformToAP : public TreeTransform<TransformToAP> {
 
   std::vector<Stmt *> GetDeclStmts() { return DeclStmts; }
 
-  void SetArrayPointersMap(StringRef APName, VarDecl *VD) {
+  void SetArrayPointerMap(std::string APName, VarDecl *VD) {
     assert(VD && "Passed null array pointers variable");
-    ArrayPointersMap[APName] = VD;
+    ArrayPointerMap[APName] = VD;
   }
 
-  VarDecl *GetArrayPointersMap(StringRef APName) {
-    llvm::DenseMap<StringRef, VarDecl *>::iterator I =
-        ArrayPointersMap.find(APName);
-    if (I != ArrayPointersMap.end()) return I->second;
+  VarDecl *GetArrayPointerMap(std::string APName) {
+    std::map<std::string, VarDecl *>::iterator I = ArrayPointerMap.find(APName);
+    if (I != ArrayPointerMap.end())
+      return I->second;
     return nullptr;
   }
 
-  void SetArrayAssignedPointerMap(StringRef AAPName, VarDecl *VD) {
+  void SetArrayAssignedPointerMap(std::string AAPName, VarDecl *VD) {
     assert(VD && "Passed null array pointers variable");
     ArrayAssignedPointerMap[AAPName] = VD;
   }
 
-  VarDecl *GetArrayAssignedPointerMap(StringRef AAPName) {
-    llvm::DenseMap<StringRef, VarDecl *>::iterator I =
+  VarDecl *GetArrayAssignedPointerMap(std::string AAPName) {
+    std::map<std::string, VarDecl *>::iterator I =
         ArrayAssignedPointerMap.find(AAPName);
-    if (I != ArrayAssignedPointerMap.end()) return I->second;
+    if (I != ArrayAssignedPointerMap.end())
+      return I->second;
     return nullptr;
   }
 };
