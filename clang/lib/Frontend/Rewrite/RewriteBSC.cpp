@@ -148,7 +148,7 @@ void RewriteBSC::HandleTopLevelSingleDecl(Decl *D) {
   if (Loc.isInvalid())
     return;
 
-  // // If we have a decl in the main file, see if we should rewrite it.
+  // If we have a decl in the main file, see if we should rewrite it.
   if (SM->isWrittenInMainFile(Loc))
     return HandleDeclInMainFile(D);
 }
@@ -159,6 +159,9 @@ void RewriteBSC::HandleDeclInMainFile(Decl *D) {
     return;
   }
   switch (D->getKind()) {
+  case Decl::Enum:
+  case Decl::Typedef:
+    break;
   case Decl::BSCMethod:
   case Decl::Function: {
     FunctionDecl *FD = cast<FunctionDecl>(D);
@@ -206,7 +209,8 @@ void RewriteBSC::HandleDeclInMainFile(Decl *D) {
   }
   case Decl::ClassTemplateSpecialization: {
     // Rewrite ClassTemplateSpecializationDecl
-    ClassTemplateSpecializationDecl *CTSD = cast<ClassTemplateSpecializationDecl>(D);
+    ClassTemplateSpecializationDecl *CTSD =
+        cast<ClassTemplateSpecializationDecl>(D);
     RewrittenDecls.push_back(CTSD);
     RewriteBSCInstantialClassDecl(CTSD);
     break;
@@ -307,7 +311,7 @@ void RewriteBSC::RewriteBSCInstantialFunctionDecl(FunctionDecl *FD) {
 void RewriteBSC::RewriteBSCClassTemplateDecl(ClassTemplateDecl *CTD) {
   // Remove the BSC template struct source code;
   SourceRange range = CTD->getSourceRange();
-  // somehow, the range doesn`t include the end semi ';' of the 
+  // somehow, the range doesn`t include the end semi ';' of the
   // struct, so we need to shift end loc to right for 1.
   range.setEnd(range.getEnd().getLocWithOffset(1));
   RemoveText(CTD->getBeginLoc(), range);
