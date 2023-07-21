@@ -2625,6 +2625,13 @@ ExprResult Sema::ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
     Diag(AwaitLoc, diag::err_await_invalid_scope) << "this scope.";
     return ExprError();
   }
+
+  // Correct typos for await expr.
+  ExprResult CorrectVal =
+      CorrectDelayedTyposInExpr(E, nullptr, /*RecoverUncorrectedTypos=*/true);
+  if (CorrectVal.isInvalid())
+    return ExprError();
+  E = CorrectVal.get();
   return BuildAwaitExpr(AwaitLoc, E);
 }
 
