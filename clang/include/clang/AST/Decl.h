@@ -22,6 +22,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -4325,7 +4326,7 @@ private:
 class TraitDecl : public TagDecl {
   RecordDecl *TraitR = nullptr;
   RecordDecl *Vtable = nullptr;
-  std::map<QualType, VarDecl*> TypeImpled;
+  std::map<QualType, VarDecl*, QualTypeOrdering> TypeImpled;
 
 public:
   void MapInsert(QualType QT, VarDecl* VD) {
@@ -4333,11 +4334,20 @@ public:
   }
 
   VarDecl *getTypeImpledVarDecl(QualType QT) {
-    std::map<QualType, VarDecl*>::iterator find;
+    std::map<QualType, VarDecl*, QualTypeOrdering>::iterator find;
     find = TypeImpled.find(QT);
-    if (find == TypeImpled.end())
+    if (find == TypeImpled.end()) 
       return nullptr;
     return find->second;
+  }
+
+  void dumpTypeImplMap() {
+    for (auto i = TypeImpled.begin(); i != TypeImpled.end(); i++) {
+      llvm::outs() << "[key]:\n";
+      i->first->dump();
+      llvm::outs() << "[value]:\n";
+      i->second->dump();
+    }
   }
 
   friend class DeclContext;

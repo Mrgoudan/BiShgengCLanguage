@@ -3300,7 +3300,9 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
             << TD->getNameAsString() << T;
     return nullptr;
   }
-  T = PT->getPointeeType();
+  // For "impl trait TR for struct S",
+  // this might be a ElaboratedType for "struct S"
+  T = PT->getPointeeType().getCanonicalType(); 
   VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
   if (!LookUpVar) {
     Diag(DSLoc, diag::err_type_has_not_impl_trait)

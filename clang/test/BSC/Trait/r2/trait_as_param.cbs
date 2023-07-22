@@ -1,8 +1,9 @@
-// TODO: Make this case work.
-// For now the checking for a type(as a func param)
-// which has implmented a trait or not is wrong.
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
 
 #include <stdio.h>
+#include <stdlib.h>
 
 struct S{
   int x;
