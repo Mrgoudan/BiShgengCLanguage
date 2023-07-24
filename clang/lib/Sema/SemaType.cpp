@@ -1910,16 +1910,16 @@ bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
   if (T->isIncompleteType(&Def))
     Diagnoser.diagnose(*this, TypeLoc, T);
 
-  IdentifierInfo* functionID = nullptr;
+  IdentifierInfo *FunctionID = nullptr;
   for (TraitDecl::field_iterator FieldIt = TD->field_begin();
        FieldIt != TD->field_end(); ++FieldIt) {
-    functionID = FieldIt->getIdentifier();
+    FunctionID = FieldIt->getIdentifier();
     FunctionDecl *Old = FieldIt->getAsFunction();
     FunctionDecl *New = nullptr;
     DeclContext *DC =
         getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
     if (DC) {
-      DeclContext::lookup_result DR = DC->lookup(functionID);
+      DeclContext::lookup_result DR = DC->lookup(FunctionID);
       for (NamedDecl *D : DR)
         if (D)
           New = D->getAsFunction();
@@ -1984,20 +1984,19 @@ NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
   StringRef ImplTraitName = Tmp;
   IdentifierInfo* ITII = &Context.Idents.get(ImplTraitName);
   StorageClass SC = clang::SC_None;
-  VarDecl *NewVD = nullptr;
-  NewVD = VarDecl::Create(Context, DC, TraitLoc, D.getIdentifierLoc(),
-                          ITII, QT, TInfo, SC);
+  VarDecl *NewVD = VarDecl::Create(Context, DC, TraitLoc, D.getIdentifierLoc(),
+                                   ITII, QT, TInfo, SC);
   NewVD->setLexicalDeclContext(CurContext);
   PushOnScopeChains(NewVD, S, true);
 
   SmallVector<Expr*, 12> InitExprs;
   for (TraitDecl::field_iterator FieldIt = TD->field_begin();
        FieldIt != TD->field_end(); ++FieldIt) {
-    IdentifierInfo* functionID = FieldIt->getIdentifier();
+    IdentifierInfo *FunctionID = FieldIt->getIdentifier();
     Designation Desig;
-    Desig.AddDesignator(Designator::getField(functionID, TraitLoc, TraitLoc));
+    Desig.AddDesignator(Designator::getField(FunctionID, TraitLoc, TraitLoc));
     UnqualifiedId Id;
-    Id.setIdentifier(functionID, TraitLoc);
+    Id.setIdentifier(FunctionID, TraitLoc);
     TemplateArgumentListInfo TemplateArgsBuffer;
     DeclarationNameInfo NameInfo;
     const TemplateArgumentListInfo *TemplateArgs;

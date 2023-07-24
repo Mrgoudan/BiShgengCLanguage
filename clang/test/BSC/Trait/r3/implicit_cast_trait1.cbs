@@ -1,9 +1,16 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
 // expected-no-diagnostics
 
 trait F {
   int foo(This* this);
 };
+
+int int::foo(int* this) {
+  return 0;
+}
+
+impl trait F for int;
 
 int main() {
   int a = 1;

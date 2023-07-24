@@ -7366,9 +7366,10 @@ static void copyAttrFromTypedefToDecl(Sema &S, Decl *D, const TypedefType *TT) {
 // for example, we have desugared as follows:
 //`struct Trait_I {
 //`  void *data;
-//`  void *vtable;  
+//`  void *vtable;
 //`}
-// now we parsing a stmt like: trait *I i = &s; (s is a struct S instance)
+// now we parsing a stmt like: trait I *i = &s; (s is a struct S instance)
+// or: trait I *i = (trait I*)&s; (s is a struct S instance)
 // we should give the Trait_I assignment like:
 //`struct Trait_I trait_i = {
 //  .data = &s;
@@ -7381,13 +7382,26 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *Va
     Diag(VarDec->getLocation(), diag::err_typecheck_decl_incomplete_type) << QT;
     return nullptr;
   }
+  RecordDecl *LookUpTrait = TD->getTrait();
+  RecordDecl *LookUpVtable = TD->getVtable();
+  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
+  QualType RecordTy = Context.getRecordType(LookUpTrait);
+  VarDecl *NewVD =
+      VarDecl::Create(Context, CurContext, D.getBeginLoc(),
+                      D.getIdentifierLoc(), VarDec->getIdentifier(), RecordTy,
+                      Context.CreateTypeSourceInfo(RecordTy), SC);
+  PushOnScopeChains(NewVD, getCurScope(), true);
   Expr *exp = VarDec->getInit();
   if (exp == nullptr) // trait I *a;
-    return nullptr;
-  ImplicitCastExpr *Icexpr = dyn_cast<ImplicitCastExpr>(exp);
-  if (!Icexpr)
-    return nullptr;
-  Expr *UO = Icexpr->getSubExpr();
+    return NewVD;
+
+  CastExpr *Cexpr = dyn_cast<CastExpr>(exp);
+  if (!Cexpr) {
+    AddInitializerToDecl(NewVD, exp, false);
+    return NewVD;
+  }
+
+  Expr *UO = Cexpr->getSubExpr();
   QualType T = UO->getType();
   const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
   if (!PT) {
@@ -7396,29 +7410,11 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *Va
     return nullptr;
   }
   T = PT->getPointeeType().getCanonicalType();
-  RecordDecl *LookUpTrait = TD->getTrait();
-  RecordDecl *LookUpVtable = TD->getVtable();
   VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
   if (!LookUpVar) {
     Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
             << TD->getNameAsString() << T;
     return nullptr;
-  }
-
-  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
-  QualType RecordTy = Context.getRecordType(LookUpTrait);
-  VarDecl *NewVD =
-      VarDecl::Create(Context, CurContext, D.getBeginLoc(),
-                      D.getIdentifierLoc(), VarDec->getIdentifier(), RecordTy,
-                      Context.CreateTypeSourceInfo(RecordTy), SC);
-  PushOnScopeChains(NewVD, getCurScope(), true);
-
-  if (dyn_cast<CallExpr>(exp)) {
-    QualType ET = exp->getType();
-    if (ShouldDesugarTrait(ET)) {
-      AddInitializerToDecl(NewVD, exp, false);
-      return NewVD;
-    }
   }
 
   QualType VoidPT = Context.getPointerType(Context.VoidTy);

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 trait F {
   int foo(This* this);
@@ -17,6 +16,6 @@ trait F* get(trait F* f) {
 
 int main() {
   int a = 1;
-  int b = get(&a);
+  int b = get(&a); // expected-error {{initializing 'int' with an expression of incompatible type 'struct __Trait_F'}}
   return 0;
 }

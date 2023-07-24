@@ -1,0 +1,26 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include<stdlib.h>
+trait F {
+  int foo(This* this);
+};
+
+int int::foo(int* this) {
+  return 0;
+}
+
+impl trait F for int;
+
+trait F* get(trait F* f) {
+  int* c = malloc(sizeof(int));
+  *c = 3;
+  return c;
+};
+
+int main() {
+  int a = 1;
+  trait F* b = get(&a);
+  return b->foo();
+}

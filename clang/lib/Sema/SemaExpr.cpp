@@ -15785,6 +15785,53 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
+  // Handling reassignments of variable types with trait pointers:
+  // trait F* f = &a;
+  // f = &a;
+  if (getLangOpts().BSC && LHSExpr->getType() != RHSExpr->getType()) {
+    if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getTypePtr())) {
+      auto RD = dyn_cast<RecordDecl>(RT->getDecl());
+      if (RD && RD->getDesugaredTraitDecl()) {
+        Expr *Bin1 = nullptr;
+        Expr *Bin2 = nullptr;
+        QualType T = RHSExpr->getType()->getPointeeType().getCanonicalType();
+        for (RecordDecl::field_iterator I = RD->field_begin(),
+                                        E = RD->field_end();
+             I != E; ++I) {
+          Expr *NewLHSExpr = BuildMemberExpr(
+              LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+              SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()),
+              false, DeclarationNameInfo(), I->getType(), VK_LValue,
+              OK_Ordinary);
+          Expr *NewRHSExpr = nullptr;
+          if (I->getNameAsString() == "data") {
+            NewRHSExpr = ImplicitCastExpr::Create(
+                Context, I->getType(), CK_BitCast, RHSExpr, nullptr, VK_PRValue,
+                FPOptionsOverride());
+          } else {
+            TraitDecl *TD = RD->getDesugaredTraitDecl();
+            RecordDecl *LookUpVtable = TD->getVtable();
+            VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
+            QualType VtableTy = Context.getRecordType(LookUpVtable);
+            QualType VtablePT = Context.getPointerType(VtableTy);
+            DeclRefExpr *VtableRef = BuildDeclRefExpr(
+                LookUpVar, VtableTy, VK_LValue, LookUpVar->getLocation());
+            NewRHSExpr = UnaryOperator::Create(
+                Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
+                OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+          }
+          if (Bin1 == nullptr)
+            Bin1 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
+                       .get(); // f.data = &a;
+          else
+            Bin2 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
+                       .get(); // f.vtable = &__int_trait_T;
+        }
+        return BuildBinOp(S, TokLoc, BO_Comma, Bin1,
+                          Bin2); // f.data = &a, f.vtable = &__int_trait_T;
+      }
+    }
+  }
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
 
@@ -17378,7 +17425,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case IncompatibleFunctionPointer:
     if (getLangOpts().BSC)
-      return false;
+      if (auto ULE = dyn_cast<UnresolvedLookupExpr>(SrcExpr))
+        if (ULE->isOverloaded())
+          return false;
     if (getLangOpts().CPlusPlus) {
       DiagKind = diag::err_typecheck_convert_incompatible_function_pointer;
       isInvalid = true;
@@ -17390,7 +17439,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case IncompatiblePointer:
     if (getLangOpts().BSC)
-      return false;
+      if (DstType.getTypePtr()->isPointerType())
+        if (DstType.getTypePtr()->getPointeeType().getTypePtr()->isTraitType())
+          return false;
     if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {

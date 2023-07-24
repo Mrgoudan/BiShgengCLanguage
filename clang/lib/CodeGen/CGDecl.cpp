@@ -210,6 +210,10 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     return EmitStaticVarDecl(D, Linkage);
   }
 
+  if (getLangOpts().BSC && D.getType()->isPointerType())
+    if (D.getType()->getPointeeType()->isTraitType())
+      return;
+
   if (D.getType().getAddressSpace() == LangAS::opencl_local)
     return CGM.getOpenCLRuntime().EmitWorkGroupLocalVarDecl(*this, D);
 

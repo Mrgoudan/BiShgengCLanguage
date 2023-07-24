@@ -6,7 +6,7 @@ trait F {
 };
 
 int int::foo(int *this) {
-  return 0;
+  return 10;
 };
 
 impl trait F for int;
@@ -15,5 +15,6 @@ int main() {
   int a = 1;
   trait F* f;
   f = &a;
-  return 0;
+  int b = f->foo();
+  return b - 10;
 }

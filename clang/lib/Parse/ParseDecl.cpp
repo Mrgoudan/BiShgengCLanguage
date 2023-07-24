@@ -2199,22 +2199,19 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (LateParsedAttrs.size() > 0)
     ParseLexedAttributeList(LateParsedAttrs, FirstDecl, true, false);
   D.complete(FirstDecl);
-  bool ShouldPushBack = true;
 
-  bool TraitFlag = false;
+  if (FirstDecl)
+    DeclsInGroup.push_back(FirstDecl);
+
   VarDecl *VD = dyn_cast_or_null<VarDecl>(FirstDecl);
   if(getLangOpts().BSC && VD) {
     QualType T = VD->getType();
     auto *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
     if (PT && PT->getPointeeType()->isTraitType()) {
-      ShouldPushBack = false;
       VarDecl *NewVD = Actions.ActOnDesugarTraitInstance(D, PT->getPointeeType(), VD);
       DeclsInGroup.push_back(NewVD);
-      TraitFlag = true;
     }
   }
-  if (FirstDecl && ShouldPushBack && !TraitFlag)
-    DeclsInGroup.push_back(FirstDecl);
 
   if (FirstDecl) {
     FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(FirstDecl);
@@ -5384,7 +5381,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     }
   }
   if (TUK == Sema::TUK_Definition) {
-    TraitDecl *find = Actions.ActOnDesugarFind(Name); // TODO: assert
+    TraitDecl *find = Actions.ActOnDesugarFind(Name);
     assert(find && "No corresponding trait found");
     RecordDecl *TraitVtableRecord = Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
     RecordDecl *TraitRecord = Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);

@@ -1,5 +1,5 @@
-
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
 // expected-no-diagnostics
 
 trait F {
@@ -7,13 +7,13 @@ trait F {
 };
 
 int int::foo(int* this) {
-  return 0;
+  return 10;
 }
 
 impl trait F for int;
 
 int main() {
   int a = 1;
-  ((trait T*)&a)->foo();
-  return 0;
+  int b = ((trait F*)&a)->foo();
+  return b - 10;
 }
