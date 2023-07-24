@@ -18,3 +18,9 @@ void test2() {
     int x = *p1;
     int* owned* p3 = &p1;
 }
+
+void test3(int* owned a, int* owned b) {
+    int* owned c = a;
+    int* owned d = c;
+    c = b;  //legal BinaryOperator '=' is allowed
+}

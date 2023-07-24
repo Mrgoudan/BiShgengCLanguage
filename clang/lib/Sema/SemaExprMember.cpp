@@ -2041,6 +2041,11 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
 
     assert(!MemberQuals.hasAddressSpace());
 
+    // BSC ownership: unlike other quals, owned cannot inherit from base
+    // struct A owned a; a.b has not owned if b is not owned qualified
+    if (BaseQuals.hasOwned()) {
+      BaseQuals.removeOwned();
+    }
     Qualifiers Combined = BaseQuals + MemberQuals;
     if (Combined != MemberQuals)
       MemberType = Context.getQualifiedType(MemberType, Combined);

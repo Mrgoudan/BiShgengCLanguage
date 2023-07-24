@@ -15643,7 +15643,7 @@ static void DiagnoseShiftCompare(Sema &S, SourceLocation OpLoc,
 static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
                                     SourceLocation OpLoc, Expr *LHSExpr,
                                     Expr *RHSExpr) {
-  if (!BinaryOperator::isComparisonOp(Opc)) {
+  if (!(BinaryOperator::isComparisonOp(Opc) || Opc == BO_Assign)) {
     Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_binOp)
     << LHSExpr->getType() << RHSExpr->getType()
     << LHSExpr->getSourceRange() << RHSExpr->getSourceRange();
