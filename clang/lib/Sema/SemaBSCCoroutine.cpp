@@ -181,10 +181,10 @@ bool HasAwaitExpr(Stmt *S) {
 /// Look for Illegal AwaitExpr
 class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
   Sema &SemaRef;
-  bool HasIllegalAwait;
+  bool IsIllegal;
 
  public:
-  IllegalAEFinder(Sema &SemaRef) : SemaRef(SemaRef) { HasIllegalAwait = false; }
+  IllegalAEFinder(Sema &SemaRef) : SemaRef(SemaRef) { IsIllegal = false; }
 
   bool CheckCondHasAwaitExpr(Stmt *S) {
     Expr *condE = nullptr;
@@ -242,13 +242,13 @@ class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
           << ArgString;
     }
 
-    if (CHasIllegalAwait && !HasIllegalAwait)
-      HasIllegalAwait = CHasIllegalAwait;
+    if (CHasIllegalAwait && !IsIllegal)
+      IsIllegal = CHasIllegalAwait;
 
     return CHasIllegalAwait;
   }
 
-  bool CheckExprHasAwaitExpr(Stmt *S) {
+  bool CheckAsyncFuncIllegalStmt(Stmt *S) {
     bool IsContinue = true;
     std::string ArgString;
 
@@ -279,15 +279,34 @@ class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
         SemaRef.Diag(S->getBeginLoc(), diag::err_await_invalid_scope)
             << ArgString;
 
-        if (!HasIllegalAwait) HasIllegalAwait = true;
+        if (!IsIllegal) IsIllegal = true;
       }
       return IsContinue;
+    } else if (DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
+      bool HasVar = false;
+      for (auto *D : DS->decls()) {
+        if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+          if (isa<VariableArrayType>(VD->getType())) {
+            HasVar = true;
+            break;
+          }
+        }
+      }
+      if (HasVar) {
+        ArgString = "VariableArrayType";
+        SemaRef.Diag(S->getBeginLoc(), diag::err_async_func_unsupported)
+            << ArgString;
+        if (!IsIllegal)
+          IsIllegal = true;
+        return IsContinue;
+      }
+      return false;
     }
 
     bool CHasIllegalAwait = HasAwaitExpr(S);
 
-    if (CHasIllegalAwait && !HasIllegalAwait)
-      HasIllegalAwait = CHasIllegalAwait;
+    if (CHasIllegalAwait && !IsIllegal)
+      IsIllegal = CHasIllegalAwait;
 
     if (CHasIllegalAwait) {
       SemaRef.Diag(S->getBeginLoc(), diag::err_await_invalid_scope)
@@ -303,8 +322,8 @@ class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
             isa<DoStmt>(C) || isa<SwitchStmt>(C)) {
           CheckCondHasAwaitExpr(C);
         } else if (isa<BinaryOperator>(C) || isa<ConditionalOperator>(C) ||
-                   isa<CallExpr>(C)) {
-          bool IsContinue = CheckExprHasAwaitExpr(C);
+                   isa<CallExpr>(C) || isa<DeclStmt>(C)) {
+          bool IsContinue = CheckAsyncFuncIllegalStmt(C);
           if (IsContinue) continue;
         }
 
@@ -335,7 +354,7 @@ class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
     }
   }
 
-  bool hasIllegalAwaitExpr() { return HasIllegalAwait; }
+  bool hasIllegalAwaitExpr() { return IsIllegal; }
 };
 
 bool HasReturnStmt(Stmt *S) {
@@ -1167,34 +1186,14 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                    .getAs<Expr>();
         }
 
-        if (QT->isArrayType() || QT->isRecordType() ||
-            QT->isRValueReferenceType()) {
+        if (Init && (QT->isArrayType() || QT->isRecordType())) {
+          Expr *CInit = BaseTransform::TransformExpr(Init).get();
+          
           std::string ArgName = VD->getName().str();
           VarDecl *ArgVDNew = VarDecl::Create(
               SemaRef.Context, FD, SourceLocation(), SourceLocation(),
               &(SemaRef.Context.Idents).get(ArgName),
               VD->getType().getNonReferenceType(), nullptr, SC_None);
-
-          Expr *CInit = nullptr;
-          if (Init != nullptr) {
-            CInit = BaseTransform::TransformExpr(Init).get();
-          } else {
-            if (VD->getType()->isArrayType()) {
-              auto *CAT = cast<ConstantArrayType>(
-                  VD->getType()->castAsArrayTypeUnsafe());
-              InitListExpr *ILE = new (SemaRef.Context) InitListExpr(
-                  SemaRef.Context, SourceLocation(), None, SourceLocation());
-              ILE->setType(VD->getType());
-              Expr *Filler = new (SemaRef.Context)
-                  ImplicitValueInitExpr(CAT->getElementType());
-              ILE->setArrayFiller(Filler);
-              Init = CInit = ILE;
-            } else {
-              Expr *CE =
-                  new (SemaRef.Context) ImplicitValueInitExpr(LE->getType());
-              Init = CInit = CE;
-            }
-          }
 
           SemaRef.AddInitializerToDecl(ArgVDNew, CInit, /*DirectInit=*/false);
           DeclStmt *DSNew =
@@ -1214,16 +1213,9 @@ class TransformToAP : public TreeTransform<TransformToAP> {
           DIndex++;
           CIndex++;
 
-          if (QT->isArrayType()) {
-            int Elements = 1;
-
-            QualType SubQT = QT;
-            while (const ConstantArrayType *AT =
-                       SemaRef.Context.getAsConstantArrayType(SubQT)) {
-              Elements *= AT->getSize().getZExtValue();
-              if (AT->getSize() == 0) return true;
-              SubQT = AT->getElementType();
-            }
+          if (const ConstantArrayType *CA = dyn_cast<ConstantArrayType>(QT)) {
+            int Elements = SemaRef.Context.getConstantArrayElementCount(CA);
+            QualType SubQT = SemaRef.Context.getBaseElementType(QT);
 
             QualType Pty = SemaRef.Context.getPointerType(SubQT);
             Expr *AssignedRVExpr = SemaRef.BuildDeclRefExpr(
@@ -1333,7 +1325,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                                                    SourceLocation());
               IArgVDNew->setInit(IInit);
               DeclGroupRef IDG(IArgVDNew);
-              Stmt *Init = new (SemaRef.Context)
+              Stmt *FInit = new (SemaRef.Context)
                   DeclStmt(IDG, SourceLocation(), SourceLocation());
 
               Expr *IDRE =
@@ -1393,7 +1385,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                                SourceLocation(), Stmts, SourceLocation(), false)
                                .getAs<CompoundStmt>();
               ForStmt *For = new (SemaRef.Context)
-                  ForStmt(SemaRef.Context, Init, Cond, nullptr, Inc, Body,
+                  ForStmt(SemaRef.Context, FInit, Cond, nullptr, Inc, Body,
                           SourceLocation(), SourceLocation(), SourceLocation());
 
               DeclStmts.push_back(For);
@@ -1407,6 +1399,24 @@ class TransformToAP : public TreeTransform<TransformToAP> {
           }
         }
 
+        if (Init == nullptr) {
+          std::string ArgName = VD->getName().str();
+          VarDecl *ArgVDNew = VarDecl::Create(
+              SemaRef.Context, FD, SourceLocation(), SourceLocation(),
+              &(SemaRef.Context.Idents).get(ArgName),
+              VD->getType().getNonReferenceType(), nullptr, SC_None);
+          SemaRef.ActOnUninitializedDecl(ArgVDNew);
+          DeclStmt *DSNew =
+              SemaRef
+                  .ActOnDeclStmt(SemaRef.ConvertDeclToDeclGroup(ArgVDNew),
+                                 SourceLocation(), SourceLocation())
+                  .getAs<DeclStmt>();
+
+          DeclStmts.push_back(DSNew);
+          DIndex++;
+          CIndex++;
+        }
+
         if (LE && Init) {
           if (RE == nullptr)
             RE = BaseTransform::TransformExpr(const_cast<Expr *>(Init))
@@ -1415,22 +1425,16 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                                    LField->getLocation(), BO_Assign, LE, RE)
                                    .getAs<BinaryOperator>();
           BOStmts.push_back(BO);
-        } else if (LE && Init == nullptr) {
-          RE = new (SemaRef.Context) ImplicitValueInitExpr(LE->getType());
-          Stmt *NoInit = BaseTransform::RebuildBinaryOperator(
-                             LField->getLocation(), BO_Assign, LE, RE)
-                             .getAs<Stmt>();
-          NullStmts.push_back(NoInit);
         }
       }
     }
 
     int BOSize = BOStmts.size();
     if (BOSize == 0) {
-      if (NullStmts.size() != 0)
-        Result = NullStmts.front();
-      else
-        Result = StmDecl;
+      Result = DeclStmts[DeclStmts.size() - 1];
+      DeclStmts.erase(DeclStmts.end() - 1);
+      DIndex--;
+      CIndex--;
     } else if (BOSize == 1) {
       Result = cast<Stmt>(BOStmts.front());
     } else {
@@ -1443,8 +1447,8 @@ class TransformToAP : public TreeTransform<TransformToAP> {
       }
       Result = cast<Stmt>(PreBO);
     }
-
-    SetDMap(Result, std::make_tuple(DIndex - CIndex, CIndex));
+    if (CIndex > 0)
+      SetDMap(Result, std::make_tuple(DIndex - CIndex, CIndex));
     return Result;
   }
 

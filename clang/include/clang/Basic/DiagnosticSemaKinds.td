@@ -112,6 +112,8 @@ def err_expr_not_string_literal : Error<"expression is not a string literal">;
 // BSC warnings and errors
 def err_await_invalid_scope : Error<
   "await expression is not allowed to appear in %0">;
+def err_async_func_unsupported : Error<
+  "async function does not support %0">;
 def err_not_a_async_call : Error<
   "the await expression's external function declaration must be modified by async or return 'Future' type">;
 def err_function_not_found : Error <
