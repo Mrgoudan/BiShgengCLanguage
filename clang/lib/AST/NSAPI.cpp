@@ -422,6 +422,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
     return NSAPI::NSNumberWithBool;
 
   case BuiltinType::Void:
+  case BuiltinType::This:
   case BuiltinType::WChar_U:
   case BuiltinType::WChar_S:
   case BuiltinType::Char8:

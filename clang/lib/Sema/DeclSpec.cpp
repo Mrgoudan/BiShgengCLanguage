@@ -373,6 +373,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_unknown_anytype:
     case TST_unspecified:
     case TST_void:
+    case TST_This:
     case TST_wchar:
     case TST_BFloat16:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
@@ -548,6 +549,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   switch (T) {
   case DeclSpec::TST_unspecified: return "unspecified";
   case DeclSpec::TST_void:        return "void";
+  case DeclSpec::TST_This:        return "This";
   case DeclSpec::TST_char:        return "char";
   case DeclSpec::TST_wchar:       return Policy.MSWChar ? "__wchar_t" : "wchar_t";
   case DeclSpec::TST_char8:       return "char8_t";

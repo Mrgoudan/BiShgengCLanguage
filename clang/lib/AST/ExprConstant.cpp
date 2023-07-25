@@ -11263,6 +11263,7 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     case BuiltinType::SatUShortFract:
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
+    case BuiltinType::This:
       return GCCTypeClass::None;
 
     case BuiltinType::NullPtr:

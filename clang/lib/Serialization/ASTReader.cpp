@@ -6899,6 +6899,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_VOID_ID:
       T = Context.VoidTy;
       break;
+    case PREDEF_TYPE_THIS_ID:
+      T = Context.ThisTy;
+      break;
     case PREDEF_TYPE_BOOL_ID:
       T = Context.BoolTy;
       break;

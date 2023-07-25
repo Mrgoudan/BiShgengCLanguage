@@ -3073,6 +3073,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
   case BuiltinType::Dependent:
+  case BuiltinType::This:
     if (!NullOut)
       llvm_unreachable("mangling a placeholder type");
     break;

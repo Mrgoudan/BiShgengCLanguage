@@ -328,6 +328,8 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   switch (getTypePtr()->getKind()) {
   case BuiltinType::Void:
     return TST_void;
+  case BuiltinType::This:
+    return TST_This;
   case BuiltinType::Bool:
     return TST_bool;
   case BuiltinType::Char_U:

@@ -129,7 +129,8 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
-  case Decl::Trait:     // trait X;
+  case Decl::Trait:     // trait X; [bishengc]
+  case Decl::ImplTrait: // impl trait X for struct S; [bishengc]
     // None of these decls require codegen support.
     return;
 

@@ -720,6 +720,7 @@ void USRGenerator::VisitType(QualType T) {
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
         case BuiltinType::Dependent:
+        case BuiltinType::This:
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
         case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"

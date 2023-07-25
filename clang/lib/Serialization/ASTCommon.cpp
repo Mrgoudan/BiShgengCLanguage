@@ -29,6 +29,9 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Void:
     ID = PREDEF_TYPE_VOID_ID;
     break;
+  case BuiltinType::This:
+    ID = PREDEF_TYPE_THIS_ID;
+    break;
   case BuiltinType::Bool:
     ID = PREDEF_TYPE_BOOL_ID;
     break;
