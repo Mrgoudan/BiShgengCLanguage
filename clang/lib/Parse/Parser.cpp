@@ -2046,7 +2046,7 @@ bool Parser::TryAnnotateTypeOrScopeToken(QualType ExtendedTy) {
   // For code like:
   // @Code
   //    foo<int, int>(1,2);
-  if (getLangOpts().CPlusPlus || getLangOpts().BSC)
+  if (getLangOpts().CPlusPlus || (getLangOpts().BSC && Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::less)))
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                        /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))
