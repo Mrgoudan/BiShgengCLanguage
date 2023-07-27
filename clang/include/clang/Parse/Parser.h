@@ -1889,6 +1889,23 @@ private:
                                   bool EnteringContext, IdentifierInfo &II,
                                   CXXScopeSpec &SS);
 
+  static bool IsBSCTemplateBlackList(tok::TokenKind TmpKind) {
+    switch (TmpKind) 
+    {
+    case tok::eof:
+    case tok::equal:
+    case tok::l_brace:
+    case tok::semi:
+    case tok::numeric_constant:
+      return true;
+
+    default:
+      break;
+    }
+
+    return false;
+  }
+
   bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
                                       ParsedType ObjectType,
                                       bool ObjectHasErrors,
@@ -2388,6 +2405,9 @@ private:
       AccessSpecifier AS = AS_none,
       DeclSpecContext DSC = DeclSpecContext::DSC_normal,
       LateParsedAttrList *LateAttrs = nullptr, bool BSCScopeSpecFlag = false);
+  // Record BSC Generic Look-Ahead when parsing '<>'
+  int BSCGenericLookAhead;
+  bool IsParsingBSCGenericParameters = false;
   void ParseBSCScopeSpecifiers(DeclSpec &DS);
   bool IsBSCMethodAmbiguous();
   bool DiagnoseMissingSemiAfterTagDefinition(
@@ -3424,19 +3444,16 @@ private:
                                   unsigned Depth,
                                   SmallVectorImpl<NamedDecl *> &TemplateParams,
                                   SourceLocation &LAngleLoc,
-                                  SourceLocation &RAngleLoc,
-                                  int &LookAheadOffset);
+                                  SourceLocation &RAngleLoc);
   bool ParseTemplateParameterList(unsigned Depth,
                                   SmallVectorImpl<NamedDecl*> &TemplateParams);
   bool
   ParseBSCTemplateParameterList(unsigned Depth,
-                                SmallVectorImpl<NamedDecl *> &TemplateParams,
-                                int &LookAheadOffset);
+                                SmallVectorImpl<NamedDecl *> &TemplateParams);
   TPResult isStartOfTemplateTypeParameter();
   NamedDecl *ParseTemplateParameter(unsigned Depth, unsigned Position);
   NamedDecl *ParseTypeParameter(unsigned Depth, unsigned Position);
-  NamedDecl *ParseBSCTypeParameter(unsigned Depth, unsigned Position,
-                                   int &LookAheadOffset);
+  NamedDecl *ParseBSCTypeParameter(unsigned Depth, unsigned Position);
   NamedDecl *ParseTemplateTemplateParameter(unsigned Depth, unsigned Position);
   NamedDecl *ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position);
   bool isTypeConstraintAnnotation();

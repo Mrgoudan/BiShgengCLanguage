@@ -94,29 +94,29 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   if (TemplateLoc.isInvalid())
     TemplateLoc = Tok.getLocation();
   
-  int LookAheadOffset = 0; // LookAheadOffset starts from 0, assume the first
+  BSCGenericLookAhead = 0; // BSCGenericLookAhead starts from 0, assume the first
                            // token we see must not be '<'
-  while (!PP.LookAhead(LookAheadOffset)
+  while (!PP.LookAhead(BSCGenericLookAhead)
               .is(tok::less)) { // use while since the template function
                                 // definition struct is not solid in BSC
-    LookAheadOffset += 1;
+    BSCGenericLookAhead++;
   }
-  assert(PP.LookAhead(LookAheadOffset).is(tok::less) &&
+  assert(PP.LookAhead(BSCGenericLookAhead).is(tok::less) &&
          "BSC template function parameter list does not begin with tok::less");
 
   int LookGreaterOffset = 1;
-  Token TmpTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset);
-  Token PostTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset + 1);
+  Token TmpTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead);
+  Token PostTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead + 1);
   while (!(TmpTok.is(tok::greater) &&
            PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon)) &&
          !TmpTok.is(tok::eof)) {
     if (TmpTok.is(tok::less)) {
-      LookAheadOffset = LookGreaterOffset + LookAheadOffset;
+      BSCGenericLookAhead = LookGreaterOffset + BSCGenericLookAhead;
       LookGreaterOffset = 0;
     }
     LookGreaterOffset++;
-    TmpTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset);
-    PostTok = PP.LookAhead(LookGreaterOffset + LookAheadOffset + 1);
+    TmpTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead);
+    PostTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead + 1);
   }
 
   assert(TmpTok.is(tok::greater) &&
@@ -128,8 +128,8 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   SmallVector<NamedDecl *, 4> TemplateParams;
   if (ParseBSCTemplateParameters(TemplateParamScopes,
                                  CurTemplateDepthTracker.getDepth(),
-                                 TemplateParams, LAngleLoc, RAngleLoc,
-                                 LookAheadOffset)) { // open this
+                                 TemplateParams, LAngleLoc, RAngleLoc)) {
+    // open this
     // Skip until the semi-colon or a '}'.
     SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch); // error handel
     TryConsumeToken(tok::semi);
@@ -627,28 +627,30 @@ bool Parser::ParseTemplateParameters(
 bool Parser::ParseBSCTemplateParameters(
     MultiParseScope &TemplateScopes, unsigned Depth,
     SmallVectorImpl<NamedDecl *> &TemplateParams, SourceLocation &LAngleLoc,
-    SourceLocation &RAngleLoc, int &LookAheadOffset) {
-  Token PeekTok = PP.LookAhead(LookAheadOffset);
+    SourceLocation &RAngleLoc) {
+  Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
   if (PeekTok.is(tok::less)) {
-    LookAheadOffset += 1;
+    BSCGenericLookAhead++;
+    IsParsingBSCGenericParameters = true;
     LAngleLoc = PeekTok.getLocation();
   } else {
     Diag(PeekTok.getLocation(), diag::err_expected_less_after) << "template";
     return true;
   }
-  PeekTok = PP.LookAhead(LookAheadOffset);
+  PeekTok = PP.LookAhead(BSCGenericLookAhead);
 
   // Try to parse the template parameter list.
   bool Failed = false;
   if (!PeekTok.is(tok::greater)) {
     TemplateScopes.Enter(Scope::TemplateParamScope);
     Failed =
-        ParseBSCTemplateParameterList(Depth, TemplateParams, LookAheadOffset);
+        ParseBSCTemplateParameterList(Depth, TemplateParams);
   }
-  PeekTok = PP.LookAhead(LookAheadOffset);
+  PeekTok = PP.LookAhead(BSCGenericLookAhead);
 
   if (PeekTok.getKind() == tok::greater) {
-    LookAheadOffset += 1;
+    BSCGenericLookAhead++;
+    IsParsingBSCGenericParameters = false;
     RAngleLoc = PeekTok.getLocation();
   } else {
     if (Failed) {
@@ -705,29 +707,33 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
 // ParseBSCTemplateParameterList - rewrite ParseTemplateParameterList, for
 // cross-order BSC syntax, use Peeking
 bool Parser::ParseBSCTemplateParameterList(
-    const unsigned Depth, SmallVectorImpl<NamedDecl *> &TemplateParams,
-    int &LookAheadOffset) {
-  Token PeekTok = PP.LookAhead(LookAheadOffset);
+    const unsigned Depth, SmallVectorImpl<NamedDecl *> &TemplateParams) {
+  Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
   while (1) {
 
     // if (NamedDecl *TmpParam
     //       = ParseTemplateParameter(Depth, TemplateParams.size())) {
     if (NamedDecl *TmpParam = ParseBSCTypeParameter(
-            Depth, TemplateParams.size(), LookAheadOffset)) {
+            Depth, TemplateParams.size())) {
       TemplateParams.push_back(TmpParam);
     } else {
       // If we failed to parse a template parameter, skip until we find
       // a comma or closing brace.
-      SkipUntil(tok::comma, tok::greater, // FIXME: logic error
-                StopAtSemi | StopBeforeMatch);
+      for (; PeekTok.isNot(tok::semi); BSCGenericLookAhead++) {
+        PeekTok = PP.LookAhead(BSCGenericLookAhead);
+        if (PeekTok.isOneOf(tok::comma, 
+                            tok::greater, 
+                            tok::semi))
+          break;
+      }
     }
-    PeekTok = PP.LookAhead(LookAheadOffset);
+    PeekTok = PP.LookAhead(BSCGenericLookAhead);
 
     // Did we find a comma or the end of the template parameter list?
     if (PeekTok.is(tok::comma)) {
       // ConsumeToken();
-      LookAheadOffset += 1;
-      PeekTok = PP.LookAhead(LookAheadOffset);
+      BSCGenericLookAhead++;
+      PeekTok = PP.LookAhead(BSCGenericLookAhead);
       // } else if (PeekTok.isOneOf(tok::greater, tok::greatergreater)) {
     } else if (PeekTok.is(tok::greater)) {
       // Don't consume this... that's done by template parser.
@@ -1076,14 +1082,36 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 
 // ParseBSCTypeParameter - rewrite ParseTypeParameter for cross-order BSC
 // syntax, use Peeking
-NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position,
-                                         int &LookAheadOffset) {
+NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
   // Check Tok location
-  Token PeekTok = PP.LookAhead(LookAheadOffset);
+  Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
   bool isBSCTemplateTypeParameter = getLangOpts().BSC; // TODO: fix the cond
   assert(
       isBSCTemplateTypeParameter &&
       "A type-parameter starts with 'class', 'typename' or a type-constraint");
+
+  if (PeekTok.is(tok::kw_struct)) {
+    Diag(PeekTok.getLocation(), diag::err_template_nontype_parm_bad_type) << PeekTok.getName();
+    return nullptr;
+  }
+
+  bool IsNextCommaOrGreater = 
+                  PP.LookAhead(BSCGenericLookAhead + 1).isOneOf(tok::comma,
+                                                                tok::greater);
+
+  // if ((PeekTok.isNot(tok::identifier) && (!IsNextCommaOrGreater)) || 
+  //     !IsNextCommaOrGreater) {
+  //   return ParseNonTypeTemplateParameter(Depth, Position);
+  // }
+
+  if (PeekTok.isNot(tok::identifier) && IsNextCommaOrGreater) {
+    Diag(PeekTok.getLocation(), diag::err_expected_template_parameter) << PeekTok.getName();
+    return nullptr;
+  }
+
+  if (PeekTok.isNot(tok::identifier) || !IsNextCommaOrGreater) {
+    return ParseNonTypeTemplateParameter(Depth, Position);
+  }
 
   CXXScopeSpec TypeConstraintSS;
   TemplateIdAnnotation *TypeConstraint = nullptr;
@@ -1113,8 +1141,8 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position,
   SourceLocation EllipsisLoc;
   if (PeekTok.is(tok::ellipsis)) {
     EllipsisLoc = PeekTok.getLocation();
-    LookAheadOffset += 1;
-    PeekTok = PP.LookAhead(LookAheadOffset);
+    BSCGenericLookAhead++;
+    PeekTok = PP.LookAhead(BSCGenericLookAhead);
     Diag(EllipsisLoc, getLangOpts().CPlusPlus11
                           ? diag::warn_cxx98_compat_variadic_templates
                           : diag::ext_variadic_templates);
@@ -1126,8 +1154,8 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position,
   if (PeekTok.is(tok::identifier)) {
     ParamName =
         PeekTok.getIdentifierInfo(); // unknown manipulation, parsing T token
-    LookAheadOffset += 1;
-    PeekTok = PP.LookAhead(LookAheadOffset);
+    BSCGenericLookAhead++;
+    PeekTok = PP.LookAhead(BSCGenericLookAhead);
   } else if (PeekTok.isOneOf(tok::equal, tok::comma, tok::greater,
                              tok::greatergreater)) {
     // Unnamed template parameter. Don't have to do anything here, just
@@ -1139,10 +1167,10 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position,
 
   // Recover from misplaced ellipsis.
   bool AlreadyHasEllipsis = EllipsisLoc.isValid();
-  if (PP.LookAhead(LookAheadOffset).is(tok::ellipsis)) {
+  if (PP.LookAhead(BSCGenericLookAhead).is(tok::ellipsis)) {
     EllipsisLoc = PeekTok.getLocation();
-    LookAheadOffset += 1;
-    PeekTok = PP.LookAhead(LookAheadOffset);
+    BSCGenericLookAhead++;
+    PeekTok = PP.LookAhead(BSCGenericLookAhead);
     DiagnoseMisplacedEllipsis(EllipsisLoc, NameLoc, AlreadyHasEllipsis, true);
   }
 
@@ -1153,8 +1181,8 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position,
   ParsedType DefaultArg;
   if (PeekTok.is(tok::equal)) {
     EqualLoc = PeekTok.getLocation();
-    LookAheadOffset += 1;
-    PeekTok = PP.LookAhead(LookAheadOffset);
+    BSCGenericLookAhead++;
+    PeekTok = PP.LookAhead(BSCGenericLookAhead);
     DefaultArg =
         ParseTypeName(/*Range=*/nullptr, DeclaratorContext::TemplateTypeArg)
             .get();

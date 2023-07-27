@@ -3177,7 +3177,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // Start the range at the current token but make the end of the range
     // invalid.  This will make the entire range invalid unless we successfully
     // consume a token.
-    DS.SetRangeStart(Tok.getLocation());
+    if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
+      DS.SetRangeStart(PP.LookAhead(BSCGenericLookAhead).getLocation());
+    } else {
+      DS.SetRangeStart(Tok.getLocation());
+    }
     DS.SetRangeEnd(SourceLocation());
   }
 
@@ -3188,6 +3192,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
   // We use Sema's policy to get bool macros right.
   PrintingPolicy Policy = Actions.getPrintingPolicy();
   while (true) {
+    // Get Switch Tok for BSC constant generic.
+    Token SwitchTok;
+    if (getLangOpts().BSC && IsParsingBSCGenericParameters){
+      SwitchTok = PP.LookAhead(BSCGenericLookAhead);
+    } else {
+      SwitchTok = Tok;
+    }
+
     bool isInvalid = false;
     bool isStorageClass = false;
     const char *PrevSpec = nullptr;
@@ -3209,7 +3221,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less))
       Tok.setKind(tok::identifier);
 
-    SourceLocation Loc = Tok.getLocation();
+    SourceLocation Loc = SwitchTok.getLocation();
 
     // Helper for image types in OpenCL.
     auto handleOpenCLImageKW = [&] (StringRef Ext, TypeSpecifierType ImageTypeSpec) {
@@ -3240,7 +3252,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Diag(Loc, diag::ambiguous_bscmethod_define);
     }
 
-    switch (Tok.getKind()) {
+    switch (SwitchTok.getKind()) {
     default:
     DoneWithDeclSpec:
       if (!AttrsLastTime)
@@ -3610,7 +3622,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         goto DoneWithDeclSpec;
 
       ParsedType TypeRep = Actions.getTypeName(
-          *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
+          *SwitchTok.getIdentifierInfo(), SwitchTok.getLocation(), getCurScope(), nullptr,
           false, false, nullptr, false, false,
           isClassTemplateDeductionContext(DSContext));
 
@@ -3619,7 +3631,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (!TypeRep) {
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
-        if (Tok.isNot(tok::identifier))
+        if (SwitchTok.isNot(tok::identifier))
           continue;
         ParsedAttributes Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
@@ -3648,8 +3660,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (isInvalid)
         break;
 
-      DS.SetRangeEnd(Tok.getLocation());
-      ConsumeToken(); // The identifier
+      DS.SetRangeEnd(SwitchTok.getLocation());
+      if (IsParsingBSCGenericParameters) {
+        BSCGenericLookAhead++;
+      } else {
+        ConsumeToken(); // The identifier
+      }
 
       // Objective-C supports type arguments and protocol references
       // following an Objective-C object or object pointer
@@ -4358,7 +4374,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
-    DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
+    DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : SwitchTok.getLocation());
 
     // If the specifier wasn't legal, issue a diagnostic.
     if (isInvalid) {
@@ -4378,9 +4394,15 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         Diag(Loc, DiagID) << PrevSpec;
     }
 
-    if (DiagID != diag::err_bool_redeclaration && ConsumedEnd.isInvalid())
-      // After an error the next token can be an annotation token.
-      ConsumeAnyToken();
+    if (DiagID != diag::err_bool_redeclaration && ConsumedEnd.isInvalid()) {
+      if (getLangOpts().BSC && IsParsingBSCGenericParameters){
+        // Assuming that clang consumed this token
+        BSCGenericLookAhead++;
+      } else {
+        // After an error the next token can be an annotation token.
+        ConsumeAnyToken();
+      }
+    }
 
     AttrsLastTime = false;
   }
@@ -5995,7 +6017,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     D.setExtension();
 
   // BSC
-  if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
+  if (getLangOpts().BSC && FindUntil(tok::coloncolon)
+      && !IsParsingBSCGenericParameters) {
     DeclSpec DS(AttrFactory);
     ParseBSCScopeSpecifiers(DS);
     TryConsumeToken(tok::coloncolon);
@@ -6303,6 +6326,19 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // The ellipsis can't be followed by a parenthesized declarator. We
       // check for that in ParseParenDeclarator, after we have disambiguated
       // the l_paren token.
+    }
+
+    if (IsParsingBSCGenericParameters) {
+      Token SwitchTok = PP.LookAhead(BSCGenericLookAhead);
+      UnqualifiedId &Result = D.getName();
+      if (SwitchTok.is(tok::identifier)) {
+        IdentifierInfo *Id = SwitchTok.getIdentifierInfo();
+        SourceLocation IdLoc = SwitchTok.getLocation();
+        Result.setIdentifier(Id, IdLoc);
+        BSCGenericLookAhead++;
+      }
+      D.SetRangeEnd(D.getName().getSourceRange().getEnd());
+      goto PastIdentifier;
     }
 
     if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::annot_template_id,

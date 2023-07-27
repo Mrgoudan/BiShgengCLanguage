@@ -102,6 +102,46 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
              /*AtDigraph*/false);
 }
 
+// To judge if the syntax is a BSC template declaration.
+static bool IsBSCTemplateDeclaration(bool IsBSC,
+                                     bool IsIdentifier,
+                                     Preprocessor &PP) {
+  
+  bool IsCase_1 = (PP.LookAhead(1).is(tok::kw_int) &&
+                   PP.LookAhead(2).is(tok::identifier));
+
+  bool IsCase_2 = (PP.LookAhead(1).is(tok::identifier) && 
+                   PP.LookAhead(2).isOneOf(tok::comma,
+                                           tok::greater));
+
+  bool IsCase_3 = (PP.LookAhead(1).is(tok::identifier) && 
+                   PP.LookAhead(2).is(tok::identifier) && 
+                   PP.LookAhead(3).isOneOf(tok::comma,
+                                           tok::greater));
+
+  bool IsCase_4 = (PP.LookAhead(1).isOneOf(tok::kw_unsigned,
+                                           tok::kw_signed,
+                                           tok::kw_long,
+                                           tok::kw_short) &&  
+                   PP.LookAhead(2).isOneOf(tok::kw_int,
+                                           tok::identifier,
+                                           tok::kw_short,
+                                           tok::kw_long)  &&
+                   PP.LookAhead(3).isOneOf(tok::kw_int,
+                                           tok::identifier,
+                                           tok::comma,
+                                           tok::greater,
+                                           tok::kw_long));
+
+  bool IsBSCTemplateDecl = IsBSC && 
+                           IsIdentifier &&
+                           PP.LookAhead(0).is(tok::less) &&
+                           (IsCase_1 || IsCase_2 || 
+                            IsCase_3 || IsCase_4);
+
+  return IsBSCTemplateDecl;
+}
+
 /// Parse global scope or nested-name-specifier if present.
 ///
 /// Parses a C++ global scope specifier ('::') or nested-name-specifier (which
@@ -391,19 +431,22 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     // Skip param list "<T>" in template function declaration:
     // "T max<T> (T a, T b) {...}"
     Token Next;
-    bool ParsingBSCTemplateFunction =
-        getLangOpts().BSC && Tok.is(tok::identifier) &&
-        PP.LookAhead(0).is(tok::less) &&
-        PP.LookAhead(1).is(
-            tok::identifier) && // TODO: this could be missidentified from typo:
-                                // "intt"
-        (PP.LookAhead(2).is(tok::comma) || PP.LookAhead(2).is(tok::greater));
+    // TODO: this could be missidentified from typo:// "intt"
+    bool ParsingBSCTemplateFunction = 
+                          IsBSCTemplateDeclaration(getLangOpts().BSC,
+                                                   Tok.is(tok::identifier),
+                                                   PP);
 
     if (ParsingBSCTemplateFunction) {
       // Determine if '>' is followed by '{' or '('
       int LGreaterOffset = 2;
       Token TmpTok = PP.LookAhead(LGreaterOffset);
-      while (!TmpTok.is(tok::greater) && !TmpTok.is(tok::eof)) {
+      // Attention to case like: int a = foo<(1>>2)>(3);
+      // The case above is not parsing BSC template function.
+      while ((TmpTok.isNot(tok::greater) ||
+              (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
+               PP.LookAhead(LGreaterOffset - 1).is(tok::greater)
+              )) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
         LGreaterOffset += 1;
         TmpTok = PP.LookAhead(LGreaterOffset);
       }
@@ -777,30 +820,29 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
     //   nested-name-specifier identifier '::'
 
     Token Next;
-    bool ParsingBSCTemplateFunction =
-        getLangOpts().BSC && Tok.is(tok::identifier) &&
-        PP.LookAhead(0).is(tok::less) && PP.LookAhead(1).is(tok::identifier) &&
-        (PP.LookAhead(2).is(tok::comma) || PP.LookAhead(2).is(tok::greater));
+    bool ParsingBSCTemplateStruct = 
+                          IsBSCTemplateDeclaration(getLangOpts().BSC,
+                                                   Tok.is(tok::identifier),
+                                                   PP);
 
-    if (ParsingBSCTemplateFunction) {
-      // Determine if 'tok::greater' is followed by 'l_ paren' and 'l_brace'
-      int LGreaterOffset = 2;
+    int LGreaterOffset = 2;
+    if (ParsingBSCTemplateStruct) {
+      // Determine if '>' is followed by '{' or '('
       Token TmpTok = PP.LookAhead(LGreaterOffset);
-      while (!TmpTok.is(tok::greater) && !TmpTok.is(tok::eof)) {
+      while ((TmpTok.isNot(tok::greater) ||
+              (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
+               PP.LookAhead(LGreaterOffset - 1).is(tok::greater))
+             ) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
         LGreaterOffset += 1;
         TmpTok = PP.LookAhead(LGreaterOffset);
       }
-      ParsingBSCTemplateFunction =
+      ParsingBSCTemplateStruct =
           TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
                                           .isOneOf(tok::l_paren, tok::l_brace));
     }
 
-    if (ParsingBSCTemplateFunction) {
-      int LParenOffset = 0;
-      while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
-        LParenOffset += 1;
-      }
-      Next = PP.LookAhead(LParenOffset);
+    if (ParsingBSCTemplateStruct) {
+      Next = PP.LookAhead(LGreaterOffset + 1);
     } else {
       Next = NextToken();
     }

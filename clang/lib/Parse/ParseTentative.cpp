@@ -1121,49 +1121,88 @@ bool Parser::isBSCTemplateDecl(Token tok) {
   if (!getLangOpts().BSC)
     return false;
 
-  // 2. check "identifier<T, ..>" structure
-  int LessOffset = 0;
+  int LookAheadOffset = 0;
   bool FoundLess = false;
   bool FoundGreater = false;
-  bool FoundIdentifier = false;
-  Token prevTok = tok;
-  Token TmpTok = PP.LookAhead(LessOffset);
-  for (LessOffset = 1; !PP.LookAhead(LessOffset).is(tok::eof); LessOffset++) {
-    if (TmpTok.is(tok::l_paren) || TmpTok.is(tok::l_brace) ||
-        TmpTok.is(tok::equal)) {
-      return false;
-    }
-    // "<>" must appear neighboring with identtifier
-    if (TmpTok.is(tok::less) && prevTok.is(tok::identifier)) {
-      FoundLess = true;
-      break; // do not check if ">" missing, leave diagnose in outer API
-    }
-    prevTok = TmpTok;
-    TmpTok = PP.LookAhead(LessOffset);
-  }
-  if (!FoundLess)
-    return false;
+  bool HasValidParameter = false;
+  tok::TokenKind LookAheadKind = 
+                PP.LookAhead(LookAheadOffset).getKind();
 
-  // 3. check "<T, ..> {}", "<T, ..>()" or "<T, ..> ::" structure in struct
-  // declaration
-  int LBraceOffset = 0;
-  TmpTok = PP.LookAhead(LessOffset + LBraceOffset);
-  for (; !TmpTok.is(tok::eof); LBraceOffset++) { // check "Foo<>" structure
-    TmpTok = PP.LookAhead(LessOffset + LBraceOffset);
-    if (TmpTok.is(tok::greater)) {
-      Token PostTok = PP.LookAhead(LessOffset + LBraceOffset + 1);
-      if (PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon) &&
-          FoundIdentifier)
-        return true;
-    }
-    if (TmpTok.is(tok::identifier) &&
-        !FoundGreater) // check if there is an identifier in "<>""
-      FoundIdentifier = true;
-    if (TmpTok.is(tok::semi) ||
-        TmpTok.is(tok::equal)) // no "{" in current sentence
-      return false;
-  }
+  Token PreTok;
+  Token NextTok;
+  Token LookAheadTok;
 
+  for(; !IsBSCTemplateBlackList(LookAheadKind); LookAheadOffset++) {
+    LookAheadTok = PP.LookAhead(LookAheadOffset);
+    LookAheadKind = PP.LookAhead(LookAheadOffset).getKind();
+
+    NextTok = PP.LookAhead(LookAheadOffset + 1);
+    if(LookAheadOffset != 0) {
+      PreTok = PP.LookAhead(LookAheadOffset - 1);
+    } else {
+      PreTok = Tok;
+    }
+    
+    switch (LookAheadTok.getKind()) {
+    case tok::less:
+      // Not BSC template declaration syntax.
+      if (LookAheadTok.isAtStartOfLine() ||
+          PreTok.isAtStartOfLine())
+        return false;
+
+      if (PreTok.is(tok::identifier)) {
+        // If already found less, or it`s a bit operation 
+        // case, like 'foo<(a<<b), int>;', skip it.
+        if (FoundLess || (PreTok.is(tok::less) ||
+                          NextTok.is(tok::less)))
+          break;
+
+        // To avoid the misjudgement of a none-return 
+        // BSC template function, like this:
+        //    @Code
+        //      void foo<T>(T a){};
+        //      void test() {
+        //        foo<int>(1);        // At here
+        //      }
+        //    @EndCode
+        // Template struct will be distinguished at '>'.
+        if (!(getCurScope()->getDepth() == 0) &&
+            getCurScope()->getParent()->isClassScope())
+          break;
+        
+        FoundLess = true;
+      }
+      break;
+    case tok::l_paren:
+      if (FoundLess)
+      {
+        return false;
+      }
+      break;
+    case tok::greater:
+      // invalid syntax for BSC template
+      if (LookAheadTok.isAtStartOfLine())
+        return false;
+      if (!FoundLess || (PreTok.is(tok::greater) ||
+                         NextTok.is(tok::greater)))
+        break;
+      // valid syntax for BSC template
+      if (HasValidParameter && NextTok.isOneOf(tok::l_brace,
+                                               tok::l_paren,
+                                               tok::coloncolon)) {
+          FoundGreater = true;
+          return true;
+      }
+      break;
+    case tok::identifier:
+      if (FoundLess && !FoundGreater)  // check if there is an identifier in "<>""
+        HasValidParameter = true;
+      break;
+    default:
+      break;
+    }
+  }
+  
   return false;
 }
 
