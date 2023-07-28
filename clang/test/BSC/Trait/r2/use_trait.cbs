@@ -1,0 +1,67 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+#include <stdio.h>
+
+trait TR1{
+  void f1(This* this);
+  int g1(This* this, int x);
+};
+
+trait TR2{
+  void f2(This* this);
+  int g2(This* this, int x);
+};
+
+void int::f1(int* this) {
+  printf("int::f1\n");
+}
+
+int int::g1(int* this, int x) {
+  return *this + x;
+}
+
+void int::f2(int* this) {
+  printf("int::f2\n");
+}
+
+int int::g2(int* this, int x) {
+  return *this + x;
+}
+
+impl trait TR1 for int;
+impl trait TR2 for int;
+
+void baz(trait TR1* tr) {
+  tr->f1();
+};
+
+// Its ok to write a ImplTrait again.
+impl trait TR2 for int;
+
+
+
+int main() {
+  // implicit cast to trait
+  int x = 41;
+  trait TR1* tr1 = &x;
+  tr1->f1();
+  int a1 = tr1->g1(1);
+  if (a1 != 42) return 1;
+  trait TR2* tr2 = &x;
+  tr2->f2();
+  int a2 = tr2->g2(1);
+  if (a2 != 42) return 2;
+
+  // explicit cast to trait
+  int y = 41;
+  trait TR1* tt1 = (trait TR1*)&y;
+  tt1->f1();
+  ((trait TR1*)&y)->f1();
+
+  // pass as a param
+  baz(&y);
+  //baz((trait TR1*)&y); // TODO: need to be supported.
+
+  return 0;
+}

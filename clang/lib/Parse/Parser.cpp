@@ -1235,32 +1235,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   }
 }
 
-Parser::DeclGroupPtrTy Parser::ParseTraitDeclaration(ParsedAttributes &attrs) {
-  ParsingDeclSpec DS(*this);
-  PrintingPolicy Policy = Actions.getPrintingPolicy();
-  SourceLocation Loc = Tok.getLocation();
-
-  ConsumeToken();
-  ParsedAttributes Attributes(AttrFactory);
-  ParseTraitSpecifier(Loc, DS, true, DeclSpecContext::DSC_normal, Attributes);
-  ProhibitAttributes(attrs);
-  DS.Finish(Actions, Policy);
-
-  if (Tok.is(tok::semi)) {
-    SourceLocation CorrectLocationForAttributes =
-            DS.getTypeSpecTypeLoc().getLocWithOffset(5);
-    ProhibitAttributes(attrs, CorrectLocationForAttributes);
-    ConsumeToken();
-    RecordDecl *AnonRecord = nullptr;
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
-                                                       DS, ParsedAttributesView::none(), 
-                                                       AnonRecord);
-    DS.complete(TheDecl);
-    return Actions.ConvertDeclToDeclGroup(TheDecl);
-  }
-  return ParseDeclGroup(DS, DeclaratorContext::File, Attributes);
-}
-
 bool Parser::ShouldParseImplTraitDecl() {
   if (!getLangOpts().BSC)
     return false;
@@ -1275,12 +1249,11 @@ bool Parser::ShouldParseImplTraitDecl() {
 
 /// ParseImplTraitDeclaration - Parse ImplTraitDecl, for example:
 /// "impl trait T for int;"
-///
 Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   ConsumeToken(); // eat token "impl"
   SourceLocation TraitLoc = Tok.getLocation();
   TraitDecl *Trait = nullptr;
-  IdentifierInfo* TraitII;
+  IdentifierInfo* TraitII = nullptr;
 
   if (Tok.is(tok::kw_trait)) {
     ConsumeToken();
@@ -1323,19 +1296,27 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   D.SetIdentifier(TraitII, TraitLoc);
   D.SetRangeEnd(TraitLoc);
 
-  Decl *ThisDecl = Actions.ActOnImplTraitDecl(getCurScope(), D,
-                                              BSS.getBeginLoc(), Trait);
-
-  if (!ThisDecl){
-    SkipUntil(tok::semi);
-    return nullptr;
+  SmallVector<Decl *, 8> DeclsInGroup;
+  // Step 1: Always produce ImplTraitDecl
+  ImplTraitDecl* ITD = Actions.BuildImplTraitDecl(getCurScope(), D,
+                                                  BSS.getBeginLoc(), Trait);
+  if (ITD == nullptr) {
+    return Actions.FinalizeDeclaratorGroup(getCurScope(), BSS, DeclsInGroup);
   }
 
-  SmallVector<Decl *, 8> DeclsInGroup;
-  Actions.FinalizeDeclaration(ThisDecl);
-  D.complete(ThisDecl);
-  if (ThisDecl)
-    DeclsInGroup.push_back(ThisDecl);
+  // Step 2: Desugar the ImplTraitDecl if we see it for the first time.
+  // @code
+  // impl trait TR for int;
+  // impl trait TR for int; // OK, but useless, we don't desugar this line.
+  // @endcode
+
+  VarDecl *DesugaredDecl = Actions.DesugarImplTrait(ITD, D);
+  Actions.FinalizeDeclaration(DesugaredDecl);
+  D.complete(DesugaredDecl);
+
+  if (DesugaredDecl)
+    // Desugared VarDecl takes part in the codegen
+    DeclsInGroup.push_back(DesugaredDecl);
 
   return Actions.FinalizeDeclaratorGroup(getCurScope(), BSS, DeclsInGroup);
 }

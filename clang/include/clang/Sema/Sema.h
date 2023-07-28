@@ -2796,7 +2796,7 @@ public:
   void warnOnReservedIdentifier(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
-  NamedDecl *ActOnImplTraitDecl(Scope *S, Declarator &D, SourceLocation TypeLoc, TraitDecl *TD);
+  ImplTraitDecl *BuildImplTraitDecl(Scope *S, Declarator &D, SourceLocation TypeLoc, TraitDecl *TD);
   TraitDecl *ActOnTraitId(IdentifierInfo *II);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
@@ -5527,7 +5527,7 @@ public:
 
   bool IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
                               TraitDecl *TD);
-  NamedDecl *DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D);
+  VarDecl *DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D);
   QualType DesugarTraitToStructTrait(QualType T);
   bool ShouldDesugarTrait(QualType T);
   bool IsTraitEqaulExpr(QualType DstType, QualType SrcType);

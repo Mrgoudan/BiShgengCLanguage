@@ -1,0 +1,23 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+#include <stdio.h>
+
+trait TR {
+  void f(This* this);
+};
+
+void int::f(int* this) {
+  printf("int::f\n");
+}
+
+impl trait TR for int;
+
+impl trait TR for int; // OK, and useless.
+
+int main() {
+  int x = 1;
+  trait TR* t = &x;
+  t->f();
+  return 0;
+}

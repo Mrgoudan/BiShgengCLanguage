@@ -6060,7 +6060,7 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
   return false;
 }
 
-NamedDecl *Sema::ActOnImplTraitDecl(Scope *S, Declarator &D,
+ImplTraitDecl *Sema::BuildImplTraitDecl(Scope *S, Declarator &D,
                                     SourceLocation TypeLoc, TraitDecl *TD) {
   if (IsImplTraitDeclIllegal(D, TypeLoc, TD))
     return nullptr;
@@ -6072,13 +6072,13 @@ NamedDecl *Sema::ActOnImplTraitDecl(Scope *S, Declarator &D,
   IdentifierInfo *II = Name.getAsIdentifierInfo();
   StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
 
-  ImplTraitDecl *ITD;
+  // We should move this piece of code.
+  ImplTraitDecl *ITD = nullptr;
   ITD = ImplTraitDecl::Create(Context, DC, D.getBeginLoc(),
                               D.getIdentifierLoc(), II, R, TInfo, SC);
   ITD->setTraitDecl(TD);
   CurContext->addDecl(ITD);
-
-  return DesugarImplTrait(ITD, D);
+  return ITD;
 }
 
 TraitDecl *Sema::ActOnTraitId(IdentifierInfo *II) {

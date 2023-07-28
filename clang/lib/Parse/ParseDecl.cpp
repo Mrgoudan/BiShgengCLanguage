@@ -5219,6 +5219,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     Diag(StartLoc, DiagID) << PrevSpec;
 }
 
+// FIXME: ParseTraitSpecifier can be refactored, remove useless code
 void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                  bool EnteringContext, DeclSpecContext DSC,
                                  ParsedAttributes &Attributes) {

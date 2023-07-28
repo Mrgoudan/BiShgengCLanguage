@@ -6117,6 +6117,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     AddDeferredUnusedCoverageMapping(D);
     break;
 
+  case Decl::ImplTrait:
+    // impl-trait decls, do not result in codegen.
+    break;
   case Decl::CXXDeductionGuide:
     // Function-like, but does not result in code emission.
     break;

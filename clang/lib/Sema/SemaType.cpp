@@ -1906,17 +1906,17 @@ bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
   NamedDecl *Def = nullptr;
   BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
   
-  QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec());
+  QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec()); // the Type which might impl the trait.
   if (T->isIncompleteType(&Def))
     Diagnoser.diagnose(*this, TypeLoc, T);
 
   IdentifierInfo *FunctionID = nullptr;
   for (TraitDecl::field_iterator FieldIt = TD->field_begin();
-       FieldIt != TD->field_end(); ++FieldIt) {
+       FieldIt != TD->field_end(); ++FieldIt) { // traverse the traitBody
     FunctionID = FieldIt->getIdentifier();
-    FunctionDecl *Old = FieldIt->getAsFunction();
+    FunctionDecl *Old = FieldIt->getAsFunction(); // method in traitBody
     FunctionDecl *New = nullptr;
-    DeclContext *DC =
+    DeclContext *DC = // The Type's member functions
         getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
     if (DC) {
       DeclContext::lookup_result DR = DC->lookup(FunctionID);
@@ -1929,6 +1929,7 @@ bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
           << TD->getNameAsString() << T;
       return true;
     }
+    // Check whether function prototypes match in traitBody and type's member funcs
     BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
     bool TypeDiagFlag = false;
     if (!BS->getHasThisParam() ||
@@ -1957,7 +1958,7 @@ bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
   return false;
 }
 
-NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
+VarDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
   TraitDecl *TD = ITD->getTraitDecl();
   RecordDecl *TraitRecord = TD->getVtable();
   SourceLocation TraitLoc = ITD->getLocation();
@@ -1967,7 +1968,7 @@ NamedDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
   QualType QT = TraitRecord->getTypeForDecl()->getCanonicalTypeInternal();
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType T = TInfo->getType().getCanonicalType();
-  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
+  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T); // If we have the same ImplTraitDecl before, return nullptr
   if (LookUpVar)
     return nullptr;
   PrintingPolicy PrintPolicy = LangOptions();
