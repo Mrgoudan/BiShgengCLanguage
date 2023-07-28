@@ -255,7 +255,8 @@ void RewriteBSC::ReplaceDecl(Decl *D) {
   if (Context->BSCDesugaredMap.find(D) != Context->BSCDesugaredMap.end()) {
     for (auto &DesugaredDecl : Context->BSCDesugaredMap[D]) {
       DesugaredDecl->print(Buf, Policy, /*PrintInstantiation=*/true);
-      if (!isa<FunctionDecl>(DesugaredDecl)) {
+      if (!isa<FunctionDecl>(DesugaredDecl) ||
+          (isa<FunctionDecl>(DesugaredDecl) && !DesugaredDecl->hasBody())) {
         Buf << ";\n";
       }
       Buf << "\n";

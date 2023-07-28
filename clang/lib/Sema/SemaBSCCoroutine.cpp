@@ -654,18 +654,34 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
 FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
                                                 FunctionDecl *FD,
                                                 RecordDecl *FatPointerRD,
-                                                VarDecl *VtableInit,
-                                                FunctionDecl *NewFD) {
+                                                VarDecl *VtableInit, FunctionDecl *FDecl) {
+  FunctionDecl *NewFD = nullptr;
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
-  DeclarationName funcName = FD->getDeclName();
-  SmallVector<QualType, 16> ParamTys;
   FunctionDecl::param_const_iterator pi;
-  for (pi = FD->param_begin(); pi != FD->param_end(); pi++) {
-    ParamTys.push_back((*pi)->getType());
-  }
-  std::string FName = "__" + funcName.getAsString();
 
+  if (isa<BSCMethodDecl>(FD)) {
+    BSCMethodDecl *BMD = cast<BSCMethodDecl>(FD);
+    NewFD = buildAsyncBSCMethodDecl(
+        S.Context, FDecl->getDeclContext(), SLoc, NLoc,
+        &(S.Context.Idents).get(FDecl->getName().str()), FDecl->getType(),
+        FDecl->getTypeSourceInfo(), SC_None, BMD->getExtendedType());
+  } else {
+    NewFD = buildAsyncFuncDecl(S.Context, FDecl->getDeclContext(), SLoc, NLoc,
+                               &(S.Context.Idents).get(FDecl->getName().str()),
+                               FDecl->getType(), FDecl->getTypeSourceInfo());
+  }
+
+  SmallVector<ParmVarDecl *, 4> ParmVarDecls;
+  for (const auto &I : FD->parameters()) {
+    ParmVarDecl *PVD = ParmVarDecl::Create(
+        S.Context, NewFD, SourceLocation(), SourceLocation(),
+        &(S.Context.Idents).get(I->getName()), I->getType(), nullptr, SC_None,
+        nullptr);
+    ParmVarDecls.push_back(PVD);
+  }
+  NewFD->setParams(ParmVarDecls);
+  NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
   S.PushFunctionScope();
   S.PushDeclContext(S.getCurScope(), NewFD);
 
@@ -992,6 +1008,32 @@ Stmt *ProcessAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD, Expr *ICE,
                      /* RPL=*/SourceLocation(), Body, SourceLocation(), Else);
   return If;
 }
+
+namespace {
+class RecursiveCallVisitor : public StmtVisitor<RecursiveCallVisitor> {
+public:
+  RecursiveCallVisitor(Decl *FD) : FD(FD) { IsRecursiveCall = false; }
+  void VisitCallExpr(CallExpr *E) {
+    if (E->getCalleeDecl() == FD) 
+      IsRecursiveCall = true;
+    
+  }
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        if (IsRecursiveCall)
+          return;
+        Visit(C);
+      }
+    }
+  }
+  bool getIsRecursiveCall() { return IsRecursiveCall; }
+
+private:
+  bool IsRecursiveCall;
+  Decl *FD;
+};
+} // namespace
 
 namespace {
 class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
@@ -2672,8 +2714,10 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
 
     FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
         *this, FD, std::get<0>(std::get<1>(NewRDs)));
-    decls.push_back(FutureInitDef);
-    Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
+    if (FutureInitDef) {
+      decls.push_back(FutureInitDef);
+      Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
+    } 
   }
   return decls;
 }
@@ -2739,9 +2783,18 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
     Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
   }
 
+  RecursiveCallVisitor RecursiveVisitor = RecursiveCallVisitor(FD);
+  RecursiveVisitor.VisitStmt(FD->getBody());
+  bool IsRecursiveCall = RecursiveVisitor.getIsRecursiveCall();
   // Handle declaration first.
   FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
       *this, FD, std::get<0>(std::get<1>(NewRDs)));
+  if (!FutureInitDef) {
+    return decls;
+  } else if (IsRecursiveCall) {
+    decls.push_back(FutureInitDef);
+    Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
+  }
 
   const int FutureStateNumber = finder.GetAwaitExprNum() + 1;
 
