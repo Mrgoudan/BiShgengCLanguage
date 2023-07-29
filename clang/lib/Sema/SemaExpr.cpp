@@ -3277,67 +3277,6 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
          (FD->isCPUDispatchMultiVersion() || FD->isCPUSpecificMultiVersion());
 }
 
-ExprResult Sema::AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
-                                     StringRef ID) {
-  CXXScopeSpec SS;
-  SourceLocation TemplateKWLoc;
-  UnqualifiedId Name;
-  IdentifierInfo* VId = &Context.Idents.get(ID);
-  Name.setIdentifier(VId, DSLoc);
-  ULE = ActOnMemberAccessExpr(getCurScope(), ULE.get(), DSLoc, tok::period, SS,
-                              TemplateKWLoc, Name, nullptr);
-  return ULE;
-}
-
-Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
-                                          SourceLocation DSLoc) {
-  QualType T = UO->getType();
-  const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
-  RecordDecl *RD = ProtoArgType.getTypePtr()->getAsRecordDecl();
-  TraitDecl *TD = RD->getDesugaredTraitDecl();
-  if (!PT) {
-    Diag(DSLoc, diag::err_type_has_not_impl_trait)
-            << TD->getNameAsString() << T;
-    return nullptr;
-  }
-  // For "impl trait TR for struct S",
-  // this might be a ElaboratedType for "struct S"
-  T = PT->getPointeeType().getCanonicalType(); 
-  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
-  if (!LookUpVar) {
-    Diag(DSLoc, diag::err_type_has_not_impl_trait)
-            << TD->getNameAsString() << T;
-    return nullptr;
-  }
-
-  LookUpVar->setIsUsed();
-  RecordDecl *LookUpVtable = TD->getVtable();
-  QualType VoidPT = Context.getPointerType(Context.VoidTy);
-  QualType VtableTy = Context.getRecordType(LookUpVtable);
-  QualType VtablePT = Context.getPointerType(VtableTy);
-
-  ImplicitCastExpr *TraitData = ImplicitCastExpr::Create(Context, VoidPT, 
-                                                         CK_BitCast, UO,
-                                                         nullptr, VK_PRValue,
-                                                         FPOptionsOverride());
-  DeclRefExpr *VtableRef = DeclRefExpr::Create(Context,
-                                               NestedNameSpecifierLoc(), DSLoc,
-                                               LookUpVar, false, DSLoc,
-                                               VtableTy, VK_LValue);
-  UnaryOperator *UOVtable = UnaryOperator::Create(Context, VtableRef, UO_AddrOf,
-                                                  VtablePT, VK_PRValue,
-                                                  OK_Ordinary, DSLoc, false,
-                                                  FPOptionsOverride());
-  
-  std::vector<Expr*> Exprs = {TraitData, UOVtable};
-  MutableArrayRef<Expr*> initExprs = MutableArrayRef<Expr*>(Exprs);
-  ExprResult Result = ActOnInitList(DSLoc, initExprs, DSLoc);
-  TypeSourceInfo *TInfo = Context.CreateTypeSourceInfo(ProtoArgType);
-  TypeResult  TR = CreateParsedType(ProtoArgType, TInfo);
-  Result = ActOnCompoundLiteral(DSLoc, TR.get(), DSLoc, Result.get());
-  return Result.get();
-}
-
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
                                           bool AcceptInvalidDecl) {

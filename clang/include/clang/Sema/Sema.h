@@ -20,6 +20,7 @@
 #include "clang/AST/Availability.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"

@@ -1898,50 +1898,6 @@ public:
   static bool classofKind(Kind K) { return K == RequiresExprBody; }
 };
 
-class BSCMethodDecl : public FunctionDecl {
-protected:
-  BSCMethodDecl(Kind DK, ASTContext &C, DeclContext *RD,
-                SourceLocation StartLoc, const DeclarationNameInfo &NameInfo,
-                QualType T, TypeSourceInfo *TInfo, StorageClass SC,
-                bool UsesFPIntrin, bool isInline,
-                ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr, bool isAsync = false)
-      : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-                     isInline, ConstexprKind, TrailingRequiresClause, isAsync) {
-    if (EndLocation.isValid())
-      setRangeEnd(EndLocation);
-  }
-
-public:
-  static BSCMethodDecl *
-  Create(ASTContext &C, DeclContext *RD, SourceLocation StartLoc,
-         const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
-         StorageClass SC, bool UsesFPIntrin, bool isInline,
-         ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-         Expr *TrailingRequiresClause = nullptr, bool isAsync = false);
-  static BSCMethodDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-
-  bool getHasThisParam() const { return HasThisParam; }
-  void setHasThisParam(bool HasThisParam) { this->HasThisParam = HasThisParam; }
-  QualType getExtendedType() const { return ExtendedType; }
-  void setExtendedType(QualType ExtendedType) {
-    this->ExtendedType = ExtendedType;
-  }
-
-  /// Returns the start sourcelocation of extended type in BSCMethodDecl.
-  SourceLocation getExtentedTypeBeginLoc() { return BLoc; }
-  void setExtentedTypeBeginLoc(SourceLocation L) { BLoc = L; }
-
-  // Implement isa/cast/dyncast/etc.
-  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) { return K == BSCMethod; }
-
-private:
-  QualType ExtendedType;
-  bool HasThisParam = false;
-  SourceLocation BLoc;
-};
-
 /// Represents a static or instance method of a struct/union/class.
 ///
 /// In the terminology of the C++ Standard, these are the (static and

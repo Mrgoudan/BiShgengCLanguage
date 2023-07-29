@@ -9,8 +9,6 @@
 //  This file implements type-related semantic analysis.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Sema/Initialization.h"
-#include "clang/Sema/Designator.h"
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -18,6 +16,7 @@
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeLoc.h"
@@ -1897,152 +1896,6 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
 
   assert(!Result.isNull() && "This function should not return a null type");
   return Result;
-}
-
-bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
-                                     TraitDecl *TD) {
-  TypeProcessingState state(*this, D);
-  CXXScopeSpec SS;
-  NamedDecl *Def = nullptr;
-  BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
-  
-  QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec()); // the Type which might impl the trait.
-  if (T->isIncompleteType(&Def))
-    Diagnoser.diagnose(*this, TypeLoc, T);
-
-  IdentifierInfo *FunctionID = nullptr;
-  for (TraitDecl::field_iterator FieldIt = TD->field_begin();
-       FieldIt != TD->field_end(); ++FieldIt) { // traverse the traitBody
-    FunctionID = FieldIt->getIdentifier();
-    FunctionDecl *Old = FieldIt->getAsFunction(); // method in traitBody
-    FunctionDecl *New = nullptr;
-    DeclContext *DC = // The Type's member functions
-        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
-    if (DC) {
-      DeclContext::lookup_result DR = DC->lookup(FunctionID);
-      for (NamedDecl *D : DR)
-        if (D)
-          New = D->getAsFunction();
-    }
-    if (!New) {
-      Diag(TypeLoc, diag::err_trait_impl) << FieldIt->getName()
-          << TD->getNameAsString() << T;
-      return true;
-    }
-    // Check whether function prototypes match in traitBody and type's member funcs
-    BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
-    bool TypeDiagFlag = false;
-    if (!BS->getHasThisParam() ||
-        !Context.hasSameFunctionTypeIgnoringPtrSizes(Old->getReturnType(),
-                                                     New->getReturnType()))
-      TypeDiagFlag = true;
-    else {
-      int n = Old->getNumParams();
-      int m = New->getNumParams();
-      if (n == m)
-        for (int i = 1; i < n; ++i) {
-          QualType T1 = Old->getParamDecl(i)->getType();
-          QualType T2 = New->getParamDecl(i)->getType();
-          if (!Context.hasSameFunctionTypeIgnoringPtrSizes(T1, T2))
-            TypeDiagFlag = true;
-        }
-      else
-        TypeDiagFlag = true;
-    }
-    if (TypeDiagFlag) {
-      Diag(TypeLoc, diag::err_trait_impl_function_type_conflict)
-              << FieldIt->getName() << TD->getNameAsString();
-      return true;
-    }
-  }
-  return false;
-}
-
-VarDecl *Sema::DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D) {
-  TraitDecl *TD = ITD->getTraitDecl();
-  RecordDecl *TraitRecord = TD->getVtable();
-  SourceLocation TraitLoc = ITD->getLocation();
-  CXXScopeSpec SS;
-  Scope *S = getCurScope();
-  DeclContext *DC = CurContext;
-  QualType QT = TraitRecord->getTypeForDecl()->getCanonicalTypeInternal();
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
-  QualType T = TInfo->getType().getCanonicalType();
-  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T); // If we have the same ImplTraitDecl before, return nullptr
-  if (LookUpVar)
-    return nullptr;
-  PrintingPolicy PrintPolicy = LangOptions();
-  SplitQualType T_split = T.split();
-  StringRef Ty = T.getAsString(T_split, PrintPolicy);
-  int n = Ty.find(' ');
-  std::string Tmp;
-  if (n > 0)
-    Tmp = Ty.str().substr(0, n) + "_" + Ty.str().substr(n + 1, -1);
-  else
-    Tmp = Ty.str();
-  StringRef Prof = Tmp;
-  Tmp = "__" + Prof.str() + "_trait_" + D.getIdentifier()->getName().str();
-  StringRef ImplTraitName = Tmp;
-  IdentifierInfo* ITII = &Context.Idents.get(ImplTraitName);
-  StorageClass SC = clang::SC_None;
-  VarDecl *NewVD = VarDecl::Create(Context, DC, TraitLoc, D.getIdentifierLoc(),
-                                   ITII, QT, TInfo, SC);
-  NewVD->setLexicalDeclContext(CurContext);
-  PushOnScopeChains(NewVD, S, true);
-
-  SmallVector<Expr*, 12> InitExprs;
-  for (TraitDecl::field_iterator FieldIt = TD->field_begin();
-       FieldIt != TD->field_end(); ++FieldIt) {
-    IdentifierInfo *FunctionID = FieldIt->getIdentifier();
-    Designation Desig;
-    Desig.AddDesignator(Designator::getField(FunctionID, TraitLoc, TraitLoc));
-    UnqualifiedId Id;
-    Id.setIdentifier(FunctionID, TraitLoc);
-    TemplateArgumentListInfo TemplateArgsBuffer;
-    DeclarationNameInfo NameInfo;
-    const TemplateArgumentListInfo *TemplateArgs;
-    DecomposeUnqualifiedId(Id, TemplateArgsBuffer, NameInfo, TemplateArgs);
-    LookupResult R(*this, NameInfo, LookupOrdinaryName);
-    LookupParsedName(R, S, &SS, true, false, T);
-    ExprResult Res = BuildTemplateIdExpr(SS, TraitLoc, R, false, TemplateArgs);
-    Res.get()->HasBSCScopeSpec = true;
-    typedef DesignatedInitExpr::Designator ASTDesignator;
-    SmallVector<ASTDesignator, 32> Designators;
-    SmallVector<Expr *, 32> InitExpressions;
-    const Designator &DDD = Desig.getDesignator(0);
-    Designators.push_back(ASTDesignator(DDD.getField(), TraitLoc,
-                                        TraitLoc));
-    Desig.ClearExprs(*this);
-    Res = DesignatedInitExpr::Create(Context, Designators, InitExpressions,
-                                     TraitLoc, false, Res.getAs<Expr>());
-    Res = this->CorrectDelayedTyposInExpr(Res.get());
-    InitExprs.push_back(Res.get());
-  }
-
-  ExprResult LHS = this->ActOnInitList(TraitLoc, InitExprs, TraitLoc);
-
-  Expr *Init = LHS.get();
-  QualType DclT = NewVD->getType();
-  InitializedEntity Entity = InitializedEntity::InitializeVariable(NewVD);
-  InitializationKind Kind = InitializationKind::CreateForInit(TraitLoc, false,
-                                                              Init);
-  MultiExprArg Args = Init;
-  ExprResult ResTmpFor = CorrectDelayedTyposInExpr(
-          Args[0], NewVD, true,
-          [this, Entity, Kind](Expr *E) {
-            InitializationSequence Init(*this, Entity, Kind, MultiExprArg(E));
-            return Init.Failed() ? ExprError() : E;
-          });
-  Args[0] = ResTmpFor.get();
-  InitializationSequence InitSeq(*this, Entity, Kind, Args, false, false);
-  ExprResult ResultTmpIf = InitSeq.Perform(*this, Entity, Kind, Args, &DclT);
-  Init = ResultTmpIf.getAs<Expr>();
-  ExprResult Result = ActOnFinishFullExpr(Init, TraitLoc, false,
-                                          NewVD->isConstexpr());
-  Init = Result.get();
-  NewVD->setInit(Init);
-  TD->MapInsert(T, NewVD);
-  return NewVD;
 }
 
 QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
@@ -6071,21 +5924,6 @@ TypeSourceInfo *Sema::GetTypeForDeclarator(Declarator &D, Scope *S) {
   return GetFullTypeForDeclarator(state, T, ReturnTypeInfo);
 }
 
-bool Sema::ShouldDesugarTrait(QualType T) {
-  if (RecordDecl *RD = T.getTypePtr()->getAsRecordDecl())
-    return RD->getDesugaredTraitDecl() != nullptr;
-  return false;
-}
-
-QualType Sema::DesugarTraitToStructTrait(QualType T) {
-  T = T.getCanonicalType();
-  TraitDecl *TD = dyn_cast<TraitDecl>(T.getTypePtr()->getAsTagDecl());
-  RecordDecl *RD = TD->getTrait();
-  if (RD == nullptr)
-    return T;
-  return RD->getTypeForDecl()->getCanonicalTypeInternal();
-}
-
 static void transferARCOwnershipToDeclSpec(Sema &S,
                                            QualType &declSpecTy,
                                            Qualifiers::ObjCLifetime ownership) {
@@ -9520,4 +9358,64 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
 
   // Build the pointer type.
   return Context.getAtomicType(T);
+}
+
+// TODO: move this API to SemaBSCTrait.cpp. But now it relies on SemaType a lot.
+bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
+                                     TraitDecl *TD) {
+  TypeProcessingState state(*this, D);
+  CXXScopeSpec SS;
+  NamedDecl *Def = nullptr;
+  BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
+  
+  QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec()); // the Type which might impl the trait.
+  if (T->isIncompleteType(&Def))
+    Diagnoser.diagnose(*this, TypeLoc, T);
+
+  IdentifierInfo *FunctionID = nullptr;
+  for (TraitDecl::field_iterator FieldIt = TD->field_begin();
+       FieldIt != TD->field_end(); ++FieldIt) { // traverse the traitBody
+    FunctionID = FieldIt->getIdentifier();
+    FunctionDecl *Old = FieldIt->getAsFunction(); // method in traitBody
+    FunctionDecl *New = nullptr;
+    DeclContext *DC = // The Type's member functions
+        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    if (DC) {
+      DeclContext::lookup_result DR = DC->lookup(FunctionID);
+      for (NamedDecl *D : DR)
+        if (D)
+          New = D->getAsFunction();
+    }
+    if (!New) {
+      Diag(TypeLoc, diag::err_trait_impl) << FieldIt->getName()
+          << TD->getNameAsString() << T;
+      return true;
+    }
+    // Check whether function prototypes match in traitBody and type's member funcs
+    BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
+    bool TypeDiagFlag = false;
+    if (!BS->getHasThisParam() ||
+        !Context.hasSameFunctionTypeIgnoringPtrSizes(Old->getReturnType(),
+                                                     New->getReturnType()))
+      TypeDiagFlag = true;
+    else {
+      int n = Old->getNumParams();
+      int m = New->getNumParams();
+      if (n == m)
+        for (int i = 1; i < n; ++i) {
+          QualType T1 = Old->getParamDecl(i)->getType();
+          QualType T2 = New->getParamDecl(i)->getType();
+          if (!Context.hasSameFunctionTypeIgnoringPtrSizes(T1, T2))
+            TypeDiagFlag = true;
+        }
+      else
+        TypeDiagFlag = true;
+    }
+    if (TypeDiagFlag) {
+      Diag(TypeLoc, diag::err_trait_impl_function_type_conflict)
+              << FieldIt->getName() << TD->getNameAsString();
+      return true;
+    }
+  }
+  return false;
 }

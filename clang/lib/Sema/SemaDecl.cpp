@@ -18,6 +18,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
@@ -6060,36 +6061,6 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
   return false;
 }
 
-ImplTraitDecl *Sema::BuildImplTraitDecl(Scope *S, Declarator &D,
-                                    SourceLocation TypeLoc, TraitDecl *TD) {
-  if (IsImplTraitDeclIllegal(D, TypeLoc, TD))
-    return nullptr;
-  DeclContext *DC = CurContext;
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
-
-  QualType R = TInfo->getType();
-  DeclarationName Name = GetNameForDeclarator(D).getName();
-  IdentifierInfo *II = Name.getAsIdentifierInfo();
-  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
-
-  // We should move this piece of code.
-  ImplTraitDecl *ITD = nullptr;
-  ITD = ImplTraitDecl::Create(Context, DC, D.getBeginLoc(),
-                              D.getIdentifierLoc(), II, R, TInfo, SC);
-  ITD->setTraitDecl(TD);
-  CurContext->addDecl(ITD);
-  return ITD;
-}
-
-TraitDecl *Sema::ActOnTraitId(IdentifierInfo *II) {
-  DeclContext::lookup_result Decls =
-      getASTContext().getTranslationUnitDecl()->lookup(II);
-  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
-       I != E; ++I)
-    if (isa<TraitDecl>(*I))
-      return dyn_cast<TraitDecl>(*I);
-  return nullptr;
-}
 
 /// Diagnose a declaration whose declarator-id has the given
 /// nested-name-specifier.
@@ -7360,88 +7331,6 @@ static void copyAttrFromTypedefToDecl(Sema &S, Decl *D, const TypedefType *TT) {
     Clone->setInherited(true);
     D->addAttr(Clone);
   }
-}
-
-// In this function, we aim to assign the Trait_xxx struct,
-// for example, we have desugared as follows:
-//`struct Trait_I {
-//`  void *data;
-//`  void *vtable;
-//`}
-// now we parsing a stmt like: trait I *i = &s; (s is a struct S instance)
-// or: trait I *i = (trait I*)&s; (s is a struct S instance)
-// we should give the Trait_I assignment like:
-//`struct Trait_I trait_i = {
-//  .data = &s;
-//  .vtable = *struct_S_Trait_I_Vtable;
-//`}
-VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT, VarDecl *VarDec) {
-  // build expr: .data = &s;
-  TraitDecl *TD = dyn_cast<TraitDecl>(QT.getTypePtr()->getAsTagDecl());
-  if (TD->getVtable() == nullptr) {
-    Diag(VarDec->getLocation(), diag::err_typecheck_decl_incomplete_type) << QT;
-    return nullptr;
-  }
-  RecordDecl *LookUpTrait = TD->getTrait();
-  RecordDecl *LookUpVtable = TD->getVtable();
-  StorageClass SC = StorageClassSpecToVarDeclStorageClass(D.getDeclSpec());
-  QualType RecordTy = Context.getRecordType(LookUpTrait);
-  VarDecl *NewVD =
-      VarDecl::Create(Context, CurContext, D.getBeginLoc(),
-                      D.getIdentifierLoc(), VarDec->getIdentifier(), RecordTy,
-                      Context.CreateTypeSourceInfo(RecordTy), SC);
-  PushOnScopeChains(NewVD, getCurScope(), true);
-  Expr *exp = VarDec->getInit();
-  if (exp == nullptr) // trait I *a;
-    return NewVD;
-
-  CastExpr *Cexpr = dyn_cast<CastExpr>(exp);
-  if (!Cexpr) {
-    AddInitializerToDecl(NewVD, exp, false);
-    return NewVD;
-  }
-
-  Expr *UO = Cexpr->getSubExpr();
-  QualType T = UO->getType();
-  const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
-  if (!PT) {
-    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
-            << TD->getNameAsString() << T;
-    return nullptr;
-  }
-  T = PT->getPointeeType().getCanonicalType();
-  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
-  if (!LookUpVar) {
-    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
-            << TD->getNameAsString() << T;
-    return nullptr;
-  }
-
-  QualType VoidPT = Context.getPointerType(Context.VoidTy);
-  ImplicitCastExpr *TraitData = ImplicitCastExpr::Create(Context, VoidPT,
-                                /* CastKind=*/CK_BitCast,
-                                /* Expr=*/UO,
-                                /* CXXCastPath=*/nullptr,
-                                /* ExprValueKind=*/VK_PRValue,
-                                /* FPFeatures */ FPOptionsOverride());
-
-  QualType VtableTy = Context.getRecordType(LookUpVtable);
-  QualType VtablePT = Context.getPointerType(VtableTy);
-  DeclRefExpr *VtableRef =
-      DeclRefExpr::Create(Context, NestedNameSpecifierLoc(), SourceLocation(),
-                          LookUpVar, false, SourceLocation(), VtableTy,
-                          VK_LValue);
-  UnaryOperator *UOVtable =
-      UnaryOperator::Create(Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
-                            OK_Ordinary, SourceLocation(), false,
-                            FPOptionsOverride());
-  
-  std::vector<Expr*> Exprs = {TraitData, UOVtable};
-  MutableArrayRef<Expr*> initExprs = MutableArrayRef<Expr*>(Exprs); 
-  ExprResult TraitInit = ActOnInitList(SourceLocation(), initExprs, SourceLocation());
-  InitListExpr *ResList = dyn_cast<InitListExpr>(TraitInit.get());
-  AddInitializerToDecl(NewVD, ResList, false);
-  return NewVD;
 }
 
 NamedDecl *Sema::ActOnVariableDeclarator(
@@ -9616,12 +9505,6 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
-NamedDecl *Sema::ActOnTraitMemberDeclarator(Scope *S, Declarator &D) {
-  D.setIsTraitMem(true);
-  MultiTemplateParamsArg TemplateParams;
-  NamedDecl *Member = HandleDeclarator(S, D, TemplateParams);
-  return Member;
-}
 
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
@@ -17443,12 +17326,6 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
   PushOnScopeChains(InjectedClassName, S);
   assert(InjectedClassName->isInjectedClassName() &&
          "Broken injected-class-name");
-}
-
-void Sema::ActOnFinishTraitMemberSpecification(Decl *TagDecl) {
-  if (!TagDecl)
-    return;
-  AdjustDeclIfTemplate(TagDecl);
 }
 
 void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,

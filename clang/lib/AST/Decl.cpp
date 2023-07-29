@@ -20,6 +20,7 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
@@ -2814,49 +2815,6 @@ VarDecl::setInstantiationOfStaticDataMember(VarDecl *VD,
 }
 
 //===----------------------------------------------------------------------===//
-// ImplTraitDecl Implementation
-//===----------------------------------------------------------------------===//
-
-ImplTraitDecl::ImplTraitDecl(Kind DK, ASTContext &C, DeclContext *DC,
-                             SourceLocation StartLoc, SourceLocation IdLoc,
-                             IdentifierInfo *Id, QualType T,
-                             TypeSourceInfo *TInfo, StorageClass SC)
-    : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc),
-      redeclarable_base(C) {}
-
-ImplTraitDecl *ImplTraitDecl::Create(ASTContext &C, DeclContext *DC,
-                         SourceLocation StartL, SourceLocation IdL,
-                         IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
-                         StorageClass S) {
-  return new (C, DC) ImplTraitDecl(ImplTrait,
-                                   C, DC, StartL, IdL, Id, T, TInfo, S);
-}
-
-ImplTraitDecl *ImplTraitDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID)
-      ImplTraitDecl(ImplTrait, C, nullptr, SourceLocation(), SourceLocation(),
-                    nullptr, QualType(), nullptr, SC_None);
-}
-
-SourceRange ImplTraitDecl::getSourceRange() const {
-  return DeclaratorDecl::getSourceRange();
-}
-
-LanguageLinkage ImplTraitDecl::getLanguageLinkage() const {
-  return getDeclLanguageLinkage(*this);
-}
-
-bool ImplTraitDecl::isInExternCContext() const {
-  return true;
-}
-
-void ImplTraitDecl::setTraitDecl(TraitDecl *D) { ImplTraitDecl::TD = D; }
-
-TraitDecl *ImplTraitDecl::getTraitDecl() { return ImplTraitDecl::TD; }
-
-ImplTraitDecl *ImplTraitDecl::getCanonicalDecl() { return getFirstDecl(); }
-
-//===----------------------------------------------------------------------===//
 // ParmVarDecl Implementation
 //===----------------------------------------------------------------------===//
 
@@ -4685,33 +4643,6 @@ SourceRange EnumDecl::getSourceRange() const {
   return Res;
 }
 
-TraitDecl::TraitDecl(Kind DK, TagKind TK, const ASTContext &C,
-                       DeclContext *DC, SourceLocation StartLoc,
-                       SourceLocation IdLoc, IdentifierInfo *Id,
-                       TraitDecl *PrevDecl)
-    : TagDecl(DK, TK, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
-  assert(classof(static_cast<Decl *>(this)) && "Invalid Kind!");
-}
-
-TraitDecl *TraitDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
-                                     SourceLocation StartLoc, SourceLocation IdLoc,
-                                     IdentifierInfo *Id, TraitDecl* PrevDecl) {
-  TraitDecl *R = new (C, DC) TraitDecl(Trait, TK, C, DC,
-                                         StartLoc, IdLoc, Id, PrevDecl);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-
-  C.getTypeDeclType(R, PrevDecl);
-  return R;
-}
-
-TraitDecl::field_iterator TraitDecl::field_begin() const {
-  return field_iterator(decl_iterator(FirstDecl));
-}
-
-void TraitDecl::completeDefinition() {
-  assert(!isCompleteDefinition() && "Cannot redefine trait!");
-  TagDecl::completeDefinition();
-}
 
 //===----------------------------------------------------------------------===//
 // RecordDecl Implementation

@@ -18,6 +18,7 @@
 #include "clang/AST/DependentDiagnostic.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceManager.h"
@@ -1096,7 +1097,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
 }
 
 Decl *TemplateDeclInstantiator::VisitImplTraitDecl(ImplTraitDecl *D) {
-  return nullptr;
+  llvm_unreachable("ImplTraitDecl not supported yet");
 }
 
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,

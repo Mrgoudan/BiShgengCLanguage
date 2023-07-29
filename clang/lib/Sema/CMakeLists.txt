@@ -27,6 +27,7 @@ add_clang_library(clangSema
   SemaAttr.cpp
   SemaAvailability.cpp
   SemaBSCCoroutine.cpp
+  SemaBSCTrait.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp
