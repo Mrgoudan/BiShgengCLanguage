@@ -2829,7 +2829,6 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
       break;
     case TTK_Struct:
     case TTK_Interface:
-    case TTK_Trait:
       Out << 'U';
       break;
     case TTK_Class:
@@ -2837,6 +2836,8 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
       break;
     case TTK_Enum:
       Out << "W4";
+      break;
+    case TTK_Trait:
       break;
   }
 }
@@ -2850,7 +2851,7 @@ void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
 }
 void MicrosoftCXXNameMangler::mangleType(const TraitType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  llvm_unreachable("type is illegal to mangle");
 }
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   mangleTagTypeKind(TD->getTagKind());

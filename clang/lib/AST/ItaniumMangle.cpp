@@ -17,8 +17,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclBSC.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
@@ -2319,6 +2319,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::MacroQualified:
   case Type::BitInt:
   case Type::DependentBitInt:
+  case Type::Trait:
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -2362,7 +2363,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
 
   case Type::Enum:
   case Type::Record:
-  case Type::Trait:
     mangleSourceNameWithAbiTags(cast<TagType>(Ty)->getDecl());
     break;
 
@@ -3372,7 +3372,7 @@ void CXXNameMangler::mangleType(const RecordType *T) {
   mangleType(static_cast<const TagType*>(T));
 }
 void CXXNameMangler::mangleType(const TraitType *T) {
-  mangleType(static_cast<const TagType*>(T));
+  llvm_unreachable("type is illegal to mangle");
 }
 void CXXNameMangler::mangleType(const TagType *T) {
   mangleName(T->getDecl());
@@ -3909,9 +3909,9 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   switch (T->getKeyword()) {
     case ETK_None:
     case ETK_Typename:
+    case ETK_Trait:
       break;
     case ETK_Struct:
-    case ETK_Trait:
     case ETK_Class:
     case ETK_Interface:
       Out << "Ts";

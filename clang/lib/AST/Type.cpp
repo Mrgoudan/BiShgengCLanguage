@@ -16,9 +16,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependenceFlags.h"
@@ -2871,7 +2871,8 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   case TST_interface: return ETK_Interface;
   case TST_union: return ETK_Union;
   case TST_enum: return ETK_Enum;
-  case TST_trait: return ETK_Trait;
+  case TST_trait:
+    return ETK_Trait;
   }
 }
 
@@ -2883,7 +2884,8 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   case TST_interface: return TTK_Interface;
   case TST_union: return TTK_Union;
   case TST_enum: return TTK_Enum;
-  case TST_trait: return TTK_Trait;
+  case TST_trait:
+    return TTK_Trait;
   }
 
   llvm_unreachable("Type specifier is not a tag type kind.");
@@ -2897,7 +2899,8 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   case TTK_Interface: return ETK_Interface;
   case TTK_Union: return ETK_Union;
   case TTK_Enum: return ETK_Enum;
-  case TTK_Trait: return ETK_Trait;
+  case TTK_Trait:
+    return ETK_Trait;
   }
   llvm_unreachable("Unknown tag type kind.");
 }
@@ -2910,7 +2913,8 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   case ETK_Interface: return TTK_Interface;
   case ETK_Union: return TTK_Union;
   case ETK_Enum: return TTK_Enum;
-  case ETK_Trait: return TTK_Trait;
+  case ETK_Trait:
+    return TTK_Trait;
   case ETK_None: // Fall through.
   case ETK_Typename:
     llvm_unreachable("Elaborated type keyword is not a tag type kind.");
@@ -2944,7 +2948,8 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   case ETK_Interface: return "__interface";
   case ETK_Union:  return "union";
   case ETK_Enum:   return "enum";
-  case ETK_Trait: return "trait";
+  case ETK_Trait:
+    return "trait";
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -4008,7 +4013,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
 
   case Type::Record:
   case Type::Enum:
-  case Type::Trait:{
+  case Type::Trait: {
     const TagDecl *Tag = cast<TagType>(T)->getDecl();
 
     // C++ [basic.link]p8:

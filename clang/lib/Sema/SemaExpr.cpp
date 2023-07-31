@@ -6291,9 +6291,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       Arg = Args[ArgIx++];
       if (getLangOpts().BSC && ShouldDesugarTrait(ProtoArgType) &&
           !ShouldDesugarTrait(Arg->getType())) {
-        Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(Arg,
-                                                                 ProtoArgType,
-                                                                 Arg->getBeginLoc());
+        Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
+            Arg, ProtoArgType, Arg->getBeginLoc());
         if (TraitDesugaredExpr)
           Arg = TraitDesugaredExpr;
         else
@@ -15725,52 +15724,14 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
   // Handling reassignments of variable types with trait pointers:
-  // trait F* f = &a;
-  // f = &a;
   if (getLangOpts().BSC && LHSExpr->getType() != RHSExpr->getType()) {
     if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getTypePtr())) {
-      auto RD = dyn_cast<RecordDecl>(RT->getDecl());
-      if (RD && RD->getDesugaredTraitDecl()) {
-        Expr *Bin1 = nullptr;
-        Expr *Bin2 = nullptr;
-        QualType T = RHSExpr->getType()->getPointeeType().getCanonicalType();
-        for (RecordDecl::field_iterator I = RD->field_begin(),
-                                        E = RD->field_end();
-             I != E; ++I) {
-          Expr *NewLHSExpr = BuildMemberExpr(
-              LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
-              SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()),
-              false, DeclarationNameInfo(), I->getType(), VK_LValue,
-              OK_Ordinary);
-          Expr *NewRHSExpr = nullptr;
-          if (I->getNameAsString() == "data") {
-            NewRHSExpr = ImplicitCastExpr::Create(
-                Context, I->getType(), CK_BitCast, RHSExpr, nullptr, VK_PRValue,
-                FPOptionsOverride());
-          } else {
-            TraitDecl *TD = RD->getDesugaredTraitDecl();
-            RecordDecl *LookUpVtable = TD->getVtable();
-            VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
-            QualType VtableTy = Context.getRecordType(LookUpVtable);
-            QualType VtablePT = Context.getPointerType(VtableTy);
-            DeclRefExpr *VtableRef = BuildDeclRefExpr(
-                LookUpVar, VtableTy, VK_LValue, LookUpVar->getLocation());
-            NewRHSExpr = UnaryOperator::Create(
-                Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
-                OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
-          }
-          if (Bin1 == nullptr)
-            Bin1 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
-                       .get(); // f.data = &a;
-          else
-            Bin2 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
-                       .get(); // f.vtable = &__int_trait_T;
-        }
-        return BuildBinOp(S, TokLoc, BO_Comma, Bin1,
-                          Bin2); // f.data = &a, f.vtable = &__int_trait_T;
-      }
+      RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());
+      if (RD && RD->getDesugaredTraitDecl())
+        return ActOnTraitReassign(S, TokLoc, Opc, RD, LHSExpr, RHSExpr);
     }
   }
+
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
 
@@ -17319,6 +17280,13 @@ static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
                                               SrcExpr->getBeginLoc());
 }
 
+static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType) {
+  if (DstType->isTraitPointerType())
+    if (S.ShouldDesugarTrait(SrcType))
+      return true;
+  return false;
+}
+
 bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
                                     SourceLocation Loc,
                                     QualType DstType, QualType SrcType,
@@ -17378,9 +17346,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case IncompatiblePointer:
     if (getLangOpts().BSC)
-      if (DstType.getTypePtr()->isPointerType())
-        if (DstType.getTypePtr()->getPointeeType().getTypePtr()->isTraitType())
-          return false;
+      if (DstType->isTraitPointerType())
+        return false;
     if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {
@@ -17520,7 +17487,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     isInvalid = true;
     break;
   case Incompatible:
-    if (getLangOpts().BSC && IsTraitEqaulExpr(DstType, SrcType)) {
+    if (getLangOpts().BSC && IsTraitEqualExpr(*this, DstType, SrcType)) {
       DiagnoseAssignmentEnum(DstType, SrcType, SrcExpr);
       *Complained = true;
       return false;
@@ -17611,14 +17578,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (Complained)
     *Complained = true;
   return isInvalid;
-}
-
-bool Sema::IsTraitEqaulExpr(QualType DstType, QualType SrcType) {
-  const PointerType *PT = dyn_cast<PointerType>(DstType);
-  if (PT && PT->getPointeeType().getTypePtr()->isTraitType())
-    if (ShouldDesugarTrait(SrcType))
-      return true;
-  return false;
 }
 
 ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,

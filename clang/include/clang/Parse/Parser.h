@@ -1609,7 +1609,6 @@ private:
   DeclGroupPtrTy ParseDeclOrFunctionDefInternal(ParsedAttributes &Attrs,
                                                 ParsingDeclSpec &DS,
                                                 AccessSpecifier AS);
-  bool ShouldParseImplTraitDecl();
   DeclGroupPtrTy ParseImplTraitDeclaration();
 
   void SkipFunctionBody();
@@ -2430,13 +2429,14 @@ private:
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
   void ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
-                          bool EnteringContext, DeclSpecContext DSC,
-                          ParsedAttributes &Attributes);
+                           bool EnteringContext, DeclSpecContext DSC,
+                           ParsedAttributes &Attributes);
 
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
       llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
-  void ParseTraitBody(SourceLocation StartLoc, SourceLocation AttrFixitLoc, Decl *TagDecl);
+  void ParseTraitBody(SourceLocation StartLoc, SourceLocation AttrFixitLoc,
+                      Decl *TagDecl);
 
   bool isDeclarationSpecifier(bool DisambiguatingWithExpression = false);
   bool isTypeSpecifierQualifier();
@@ -3035,8 +3035,7 @@ private:
   void ParseParenDeclarator(Declarator &D);
   void ParseFunctionDeclarator(Declarator &D, ParsedAttributes &FirstArgAttrs,
                                BalancedDelimiterTracker &Tracker,
-                               bool IsAmbiguous,
-                               bool RequiresArg = false,
+                               bool IsAmbiguous, bool RequiresArg = false,
                                bool isTraitMem = false);
   void InitCXXThisScopeForDeclaratorIfRelevant(
       const Declarator &D, const DeclSpec &DS,
@@ -3050,7 +3049,8 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, const Type *typePtr = nullptr, bool isTraitMem = false);
+      SourceLocation &EllipsisLoc, const Type *typePtr = nullptr,
+      bool isTraitMem = false);
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);
 
@@ -3144,11 +3144,9 @@ private:
                                    SourceLocation AttrFixitLoc,
                                    ParsedAttributes &Attrs, unsigned TagType,
                                    Decl *TagDecl);
-  bool
-  ParseTraitMemberDeclaratorBeforeInitializer(Declarator &DeclaratorInfo,
-                                            VirtSpecifiers &VS,
-                                            ExprResult &BitfieldSize,
-                                            LateParsedAttrList &LateAttrs);
+  bool ParseTraitMemberDeclaratorBeforeInitializer(
+      Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
+      LateParsedAttrList &LateAttrs);
   DeclGroupPtrTy ParseTraitMemberDeclaration(ParsedAttributes &Attr);
   ExprResult ParseCXXMemberInitializer(Decl *D, bool IsFunction,
                                        SourceLocation &EqualLoc);

@@ -109,20 +109,6 @@ def err_ice_too_large : Error<
   "represented in a %1-bit %select{signed|unsigned}2 integer type">;
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
 
-// BSC warnings and errors
-def err_await_invalid_scope : Error<
-  "await expression is not allowed to appear in %0">;
-def err_async_func_unsupported : Error<
-  "async function does not support %0">;
-def err_not_a_async_call : Error<
-  "the await expression's external function declaration must be modified by async or return 'Future' type">;
-def err_function_not_found : Error <
-  "'%0' was not found, you need to include %1 before using the 'async' keyword">;
-def err_await_expression_not_found: Error <
-  "await expression was not found in async function">;
-def err_invalid_async_function : Error <
-  "function which returns 'Future' type should not be modified by 'async'">;
-
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<
   "predefined identifier is only valid inside function">,
@@ -3206,8 +3192,6 @@ def err_attribute_not_clinkage : Error<
   "function type with %0 attribute must have C linkage">;
 def err_function_decl_cmse_ns_call : Error<
   "functions may not be declared with 'cmse_nonsecure_call' attribute">;
-def err_trait_member_not_func : Error<
-  "only function declarations can be trait member !">;
 def err_attribute_address_function_type : Error<
   "function type may not be qualified with an address space">;
 def err_as_qualified_auto_decl : Error<
@@ -11711,12 +11695,25 @@ def err_non_designated_init_used : Error<
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
-// BSC
-def err_variables_not_trait_pointer : Error<"only trait pointer type are allowed to be declared">;
-def err_trait_impl : Error<"can not find '%0' of 'trait %1' in %2">;
+// BSC warnings and errors
+def err_variables_not_trait_pointer : Error<"only trait pointer type is allowed to be declared">;
+def err_trait_impl : Error<"function %0 in 'trait %1' is not implemented for %2">;
 def err_trait_impl_function_type_conflict : Error<
   "type of '%0' conflicts with that of 'trait %1'">;
 def err_type_has_not_impl_trait : Error<
-  "pointer type which has implemented 'trait %0' or 'trait %0*' is expected, "
-  "but get %1 here">;
+  "expected a pointer type which has implemented 'trait %0' or 'trait %0*', found %1">;
+def err_trait_member_not_func : Error<
+  "only function declarations can be trait member">;
+def err_await_invalid_scope : Error<
+  "await expression is not allowed to appear in %0">;
+def err_async_func_unsupported : Error<
+  "async function does not support %0">;
+def err_not_a_async_call : Error<
+  "the await expression's external function declaration must be modified by async or return 'Future' type">;
+def err_function_not_found : Error <
+  "'%0' was not found, you need to include %1 before using the 'async' keyword">;
+def err_await_expression_not_found: Error <
+  "await expression was not found in async function">;
+def err_invalid_async_function : Error <
+  "function which returns 'Future' type should not be modified by 'async'">;
 } // end of sema component.

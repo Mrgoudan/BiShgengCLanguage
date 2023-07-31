@@ -450,9 +450,8 @@ private:
   void operator=(const DeclSpec &) = delete;
 public:
   static bool isDeclRep(TST T) {
-    return (T == TST_enum || T == TST_struct ||
-            T == TST_interface || T == TST_union ||
-            T == TST_class || T == TST_trait);
+    return (T == TST_enum || T == TST_struct || T == TST_interface ||
+            T == TST_union || T == TST_class || T == TST_trait);
   }
 
   DeclSpec(AttributeFactory &attrFactory)
@@ -1937,7 +1936,7 @@ private:
   /// parameters (if any).
   TemplateParameterList *InventedTemplateParameterList;
 
-  bool IsTraitMem = false;
+  bool IsTraitMember = false;
 
 #ifndef _MSC_VER
   union {
@@ -1988,8 +1987,8 @@ public:
         ObjCWeakProperty(false), InlineStorageUsed(false),
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
         DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
-        TrailingRequiresClause(nullptr),
-        InventedTemplateParameterList(nullptr), IsTraitMem(false) {
+        TrailingRequiresClause(nullptr), InventedTemplateParameterList(nullptr),
+        IsTraitMember(false) {
     assert(llvm::all_of(DeclarationAttrs,
                         [](const ParsedAttr &AL) {
                           return AL.isStandardAttributeSyntax();
@@ -2087,7 +2086,7 @@ public:
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
-    IsTraitMem = false;
+    IsTraitMember = false;
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2303,9 +2302,9 @@ public:
     Name.setIdentifier(Id, IdLoc);
   }
 
-  bool getIsTraitMem() const {return IsTraitMem;}
+  bool getIsTraitMember() const { return IsTraitMember; }
 
-  void setIsTraitMem(bool i) {IsTraitMem = i;}
+  void setIsTraitMember(bool i) { IsTraitMember = i; }
 
   /// Set the decomposition bindings for this declarator.
   void

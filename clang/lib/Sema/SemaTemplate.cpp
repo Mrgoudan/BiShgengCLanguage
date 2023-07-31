@@ -6192,7 +6192,8 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateTypeParmType(
                                                  const TemplateTypeParmType*) {
   return false;
 }
-bool UnnamedLocalNoLinkageFinder::VisitTraitType(const TraitType* T) {
+
+bool UnnamedLocalNoLinkageFinder::VisitTraitType(const TraitType *T) {
   return VisitTagDecl(T->getDecl());
 }
 

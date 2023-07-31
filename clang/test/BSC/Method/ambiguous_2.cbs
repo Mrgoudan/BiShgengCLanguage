@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-long long int::getA() { // expected-error {{Ambiguous declaration of BSCMethod}}
+long long int::getA() { // expected-error {{ambiguous declaration of BSCMethod}}
   return 1;
 };
 

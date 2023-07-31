@@ -19,6 +19,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 
 namespace clang {
 
@@ -73,17 +74,17 @@ private:
 class TraitDecl : public TagDecl {
   RecordDecl *TraitR = nullptr;
   RecordDecl *Vtable = nullptr;
-  std::map<QualType, VarDecl*, QualTypeOrdering> TypeImpled;
+  std::map<QualType, VarDecl *, QualTypeOrdering> TypeImpled;
 
 public:
-  void MapInsert(QualType QT, VarDecl* VD) {
-    TypeImpled.insert(std::pair<QualType, VarDecl*>(QT, VD));
+  void MapInsert(QualType QT, VarDecl *VD) {
+    TypeImpled.insert(std::pair<QualType, VarDecl *>(QT, VD));
   }
 
   VarDecl *getTypeImpledVarDecl(QualType QT) {
-    std::map<QualType, VarDecl*, QualTypeOrdering>::iterator find;
+    std::map<QualType, VarDecl *, QualTypeOrdering>::iterator find;
     find = TypeImpled.find(QT);
-    if (find == TypeImpled.end()) 
+    if (find == TypeImpled.end())
       return nullptr;
     return find->second;
   }
@@ -100,52 +101,40 @@ public:
   friend class DeclContext;
 
 protected:
-  TraitDecl(Kind DK, TagKind TK, const ASTContext &C,
-                DeclContext *DC, SourceLocation StartLoc,
-                SourceLocation IdLoc, IdentifierInfo *Id,
-                TraitDecl *PrevDecl);
+  TraitDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
+            SourceLocation StartLoc, SourceLocation IdLoc, IdentifierInfo *Id,
+            TraitDecl *PrevDecl);
 
 public:
   static TraitDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
-                            SourceLocation StartLoc, SourceLocation IdLoc,
-                            IdentifierInfo *Id, TraitDecl* PrevDecl = nullptr);
+                           SourceLocation StartLoc, SourceLocation IdLoc,
+                           IdentifierInfo *Id, TraitDecl *PrevDecl = nullptr);
   TraitDecl *getPreviousDecl() {
     return cast_or_null<TraitDecl>(
         static_cast<TagDecl *>(this)->getPreviousDecl());
   }
   const TraitDecl *getPreviousDecl() const {
-    return const_cast<TraitDecl*>(this)->getPreviousDecl();
+    return const_cast<TraitDecl *>(this)->getPreviousDecl();
   }
 
   using field_iterator = specific_decl_iterator<FunctionDecl>;
-  using field_range = llvm::iterator_range<specific_decl_iterator<FunctionDecl>>;
+  using field_range =
+      llvm::iterator_range<specific_decl_iterator<FunctionDecl>>;
 
   field_range fields() const { return field_range(field_begin(), field_end()); }
   field_iterator field_begin() const;
 
-  void setTrait(RecordDecl *RD) {
-    TraitR = RD;
-  }
+  void setTrait(RecordDecl *RD) { TraitR = RD; }
 
-  void setVtable(RecordDecl *RD) {
-    Vtable = RD;
-  }
+  void setVtable(RecordDecl *RD) { Vtable = RD; }
 
-  RecordDecl *getTrait() {
-    return TraitR;
-  }
+  RecordDecl *getTrait() { return TraitR; }
 
-  RecordDecl *getVtable() {
-    return Vtable;
-  }
+  RecordDecl *getVtable() { return Vtable; }
 
-  field_iterator field_end() const {
-    return field_iterator(decl_iterator());
-  }
+  field_iterator field_end() const { return field_iterator(decl_iterator()); }
 
-  bool field_empty() const {
-    return field_begin() == field_end();
-  }
+  bool field_empty() const { return field_begin() == field_end(); }
 
   virtual void completeDefinition();
 
@@ -154,9 +143,7 @@ public:
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) {
-    return K == Trait;
-  }
+  static bool classofKind(Kind K) { return K == Trait; }
 };
 
 class ImplTraitDecl : public DeclaratorDecl,
@@ -175,9 +162,9 @@ public:
   using redeclarable_base::getPreviousDecl;
 
   static ImplTraitDecl *Create(ASTContext &C, DeclContext *DC,
-                         SourceLocation StartLoc, SourceLocation IdLoc,
-                         IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
-                         StorageClass S);
+                               SourceLocation StartLoc, SourceLocation IdLoc,
+                               IdentifierInfo *Id, QualType T,
+                               TypeSourceInfo *TInfo, StorageClass S);
 
   static ImplTraitDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 

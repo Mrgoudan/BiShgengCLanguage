@@ -22,9 +22,9 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -1293,7 +1293,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // C99 6.2.5p19.
   InitBuiltinType(VoidTy,              BuiltinType::Void);
   // BSC
-  InitBuiltinType(ThisTy,              BuiltinType::This);
+  InitBuiltinType(ThisTy, BuiltinType::This);
   // C99 6.2.5p2.
   InitBuiltinType(BoolTy,              BuiltinType::Bool);
   // C99 6.2.5p3.
@@ -1376,7 +1376,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // C++20 (proposed)
   InitBuiltinType(Char8Ty,              BuiltinType::Char8);
   if (LangOpts.BSC)
-    InitBuiltinType(ThisTy,             BuiltinType::This);
+    InitBuiltinType(ThisTy, BuiltinType::This);
   if (LangOpts.CPlusPlus) // C++0x 3.9.1p5, extension for C++
     InitBuiltinType(Char16Ty,           BuiltinType::Char16);
   else // C99
@@ -4684,13 +4684,14 @@ QualType ASTContext::getRecordType(const RecordDecl *Decl) const {
 }
 
 QualType ASTContext::getTraitType(const TraitDecl *Decl) const {
-  if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
+  if (Decl->TypeForDecl)
+    return QualType(Decl->TypeForDecl, 0);
 
   if (const TraitDecl *PrevDecl = Decl->getPreviousDecl())
     if (PrevDecl->TypeForDecl)
       return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
 
-  auto *newType = new (*this, TypeAlignment)TraitType(Decl);
+  auto *newType = new (*this, TypeAlignment) TraitType(Decl);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
   return QualType(newType, 0);

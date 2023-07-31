@@ -2199,16 +2199,15 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (LateParsedAttrs.size() > 0)
     ParseLexedAttributeList(LateParsedAttrs, FirstDecl, true, false);
   D.complete(FirstDecl);
-
   if (FirstDecl)
     DeclsInGroup.push_back(FirstDecl);
 
   VarDecl *VD = dyn_cast_or_null<VarDecl>(FirstDecl);
-  if(getLangOpts().BSC && VD) {
+  if (getLangOpts().BSC && VD) {
     QualType T = VD->getType();
-    auto *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
-    if (PT && PT->getPointeeType()->isTraitType()) {
-      VarDecl *NewVD = Actions.ActOnDesugarTraitInstance(D, PT->getPointeeType(), VD);
+    if (T->isTraitPointerType()) {
+      VarDecl *NewVD =
+          Actions.ActOnDesugarTraitInstance(D, T->getPointeeType(), VD);
       DeclsInGroup.push_back(NewVD);
     }
   }
@@ -2772,8 +2771,10 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
       case DeclSpec::TST_class:
         TagName="class" ; FixitTagName = "class " ;TagKind=tok::kw_class ;break;
       case DeclSpec::TST_trait:
-        TagName="trait"; FixitTagName = "trait ";
-        TagKind=tok::kw_trait;break;
+        TagName = "trait";
+        FixitTagName = "trait ";
+        TagKind = tok::kw_trait;
+        break;
     }
 
     if (TagName) {
@@ -4261,7 +4262,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ConsumeToken();
       ParseEnumSpecifier(Loc, DS, TemplateInfo, AS, DSContext);
       continue;
-    
+
     // trait-specifier:
     case tok::kw_trait: {
       ConsumeToken();
@@ -4542,7 +4543,7 @@ bool Parser::ParseTraitMemberDeclaratorBeforeInitializer(
     Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
     LateParsedAttrList &LateParsedAttrs) {
   if (Tok.isNot(tok::colon)) {
-    DeclaratorInfo.setIsTraitMem(true);
+    DeclaratorInfo.setIsTraitMember(true);
     ParseDeclarator(DeclaratorInfo);
   } else {
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
@@ -4693,7 +4694,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
 }
 
-Parser::DeclGroupPtrTy Parser::ParseTraitMemberDeclaration(ParsedAttributes &AccessAttrs) {
+Parser::DeclGroupPtrTy
+Parser::ParseTraitMemberDeclaration(ParsedAttributes &AccessAttrs) {
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   ParsedAttributes attrs(AttrFactory);
   ParsedAttributesView FnAttrs;
@@ -4706,42 +4708,46 @@ Parser::DeclGroupPtrTy Parser::ParseTraitMemberDeclaration(ParsedAttributes &Acc
   // Parse the common declaration-specifiers piece
   ParsingDeclSpec DS(*this);
   DS.takeAttributesFrom(attrs);
-  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_public, DeclSpecContext::DSC_class, &CommonLateParsedAttrs);
+  ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_public,
+                             DeclSpecContext::DSC_class,
+                             &CommonLateParsedAttrs);
   if (TryConsumeToken(tok::semi)) {
     RecordDecl *AnonRecord = nullptr;
-    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_public, DS, FnAttrs, AnonRecord);
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_public,
+                                                       DS, FnAttrs, AnonRecord);
     DS.complete(TheDecl);
     if (AnonRecord) {
-      Decl* decls[] = {AnonRecord, TheDecl};
+      Decl *decls[] = {AnonRecord, TheDecl};
       return Actions.BuildDeclaratorGroup(decls);
     }
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
   ParsingDeclarator DeclaratorInfo(*this, DS, attrs, DeclaratorContext::Member);
   VirtSpecifiers VS;
-  //Hold late-parsed attributes so we can attach a Decl to them later.
+  // Hold late-parsed attributes so we can attach a Decl to them later.
   LateParsedAttrList LateParsedAttrs;
   SmallVector<Decl *, 8> DeclsInGroup;
   ExprResult BitfieldSize;
   ExprResult TrailingRequiresClause;
-  ParseTraitMemberDeclaratorBeforeInitializer(DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs);
-  while(1) {
-    NamedDecl *ThisDecl = Actions.ActOnTraitMemberDeclarator(
-      getCurScope(), DeclaratorInfo);
+  ParseTraitMemberDeclaratorBeforeInitializer(DeclaratorInfo, VS, BitfieldSize,
+                                              LateParsedAttrs);
+  while (1) {
+    NamedDecl *ThisDecl =
+        Actions.ActOnTraitMemberDeclarator(getCurScope(), DeclaratorInfo);
     if (ThisDecl) {
       Actions.ProcessDeclAttributeList(getCurScope(), ThisDecl, AccessAttrs);
       if (!ThisDecl->isInvalidDecl()) {
-        //Set the Decl for any late parsed attributes
+        // Set the Decl for any late parsed attributes
         for (unsigned i = 0, ni = CommonLateParsedAttrs.size(); i < ni; ++i)
           CommonLateParsedAttrs[i]->addDecl(ThisDecl);
-        for (unsigned i = 0, ni = LateParsedAttrs.size(); i< ni; ++i)
+        for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i)
           LateParsedAttrs[i]->addDecl(ThisDecl);
       }
       Actions.FinalizeDeclaration(ThisDecl);
-      DeclsInGroup.push_back(ThisDecl); //Put each Decl inside struct Foo
+      DeclsInGroup.push_back(ThisDecl); // Put each Decl inside struct Foo
       if (DeclaratorInfo.isFunctionDeclarator() &&
           DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
-          DeclSpec::SCS_typedef)
+              DeclSpec::SCS_typedef)
         HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
     }
     LateParsedAttrs.clear();
@@ -4753,21 +4759,24 @@ Parser::DeclGroupPtrTy Parser::ParseTraitMemberDeclaration(ParsedAttributes &Acc
       break;
     if (Tok.isAtStartOfLine() &&
         !MightBeDeclarator(DeclaratorContext::Member)) {
-          Diag(CommaLoc, diag::err_expected_semi_declaration) << FixItHint::CreateReplacement(CommaLoc, ";");
-          break;
-        }
+      Diag(CommaLoc, diag::err_expected_semi_declaration)
+          << FixItHint::CreateReplacement(CommaLoc, ";");
+      break;
+    }
     // Parse the next declarator
     DeclaratorInfo.clear();
     VS.clear();
     BitfieldSize = ExprResult(false);
     DeclaratorInfo.setCommaLoc(CommaLoc);
-    if (ParseTraitMemberDeclaratorBeforeInitializer(DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))
+    if (ParseTraitMemberDeclaratorBeforeInitializer(
+            DeclaratorInfo, VS, BitfieldSize, LateParsedAttrs))
       break;
   }
   return Actions.FinalizeDeclaratorGroup(getCurScope(), DS, DeclsInGroup);
 }
 
-void Parser::ParseTraitBody(SourceLocation TraitLoc, SourceLocation AttrFixitLoc, Decl *TagDecl) {
+void Parser::ParseTraitBody(SourceLocation TraitLoc,
+                            SourceLocation AttrFixitLoc, Decl *TagDecl) {
   PrettyDeclStackTraceEntry CrashInfo(Actions.Context, TagDecl, TraitLoc,
                                       "parsing trait body");
   bool NonNestedClass = true;
@@ -4788,7 +4797,8 @@ void Parser::ParseTraitBody(SourceLocation TraitLoc, SourceLocation AttrFixitLoc
   ParsedAttributes AccessAttrs(AttrFactory);
   if (TagDecl) {
     // While we still have something to read. read the member-decls
-    while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
+    while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
+           Tok.isNot(tok::eof)) {
       // Each iter of this loop reads one member-declaration
       if (Tok.is(tok::semi)) {
         ConsumeExtraSemi(InsideStruct, DeclSpec::TST_trait);
@@ -4797,7 +4807,7 @@ void Parser::ParseTraitBody(SourceLocation TraitLoc, SourceLocation AttrFixitLoc
       ParseTraitMemberDeclaration(AccessAttrs);
       MaybeDestroyTemplateIds();
       if (TryConsumeToken(tok::semi))
-         continue;
+        continue;
     }
     T.consumeClose();
   } else {
@@ -5227,7 +5237,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteTag(getCurScope(), TagType);
     return cutOffParsing();
-  }                                                                                                                                           
+  }
   ParsedAttributes attrs(AttrFactory);
   SourceLocation AttrFixitLoc = Tok.getLocation();
 
@@ -5277,7 +5287,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       // A semicolon was missing after this declaration. Diagnose and recover.
       ExpectAndConsume(tok::semi, diag::err_expected_after,
                        DeclSpec::getSpecifierName(TagType, PPol));
-      PP.EnterToken(Tok, /*IsReinject*/true);
+      PP.EnterToken(Tok, /*IsReinject*/ true);
       Tok.setKind(tok::semi);
     } else
       Diag(StartLoc, diag::err_invalid_trait) << Name;
@@ -5289,15 +5299,15 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     if (AttrRange.isValid()) {
       Diag(AttrRange.getBegin(), diag::err_attributes_not_allowed)
           << AttrRange
-          << FixItHint::CreateInsertionFromRange(AttrFixitLoc,
-                                                 CharSourceRange(AttrRange, true))
+          << FixItHint::CreateInsertionFromRange(
+                 AttrFixitLoc, CharSourceRange(AttrRange, true))
           << FixItHint::CreateRemoval(AttrRange);
       attrs.takeAllFrom(Attributes);
     }
   }
 
   if (!Name && (DS.getTypeSpecType() == DeclSpec::TST_error ||
-                               TUK != Sema::TUK_Definition)) {
+                TUK != Sema::TUK_Definition)) {
     if (DS.getTypeSpecType() != DeclSpec::TST_error) {
       Diag(StartLoc, diag::err_anon_type_definition)
           << DeclSpec::getSpecifierName(TagType, Policy);
@@ -5310,7 +5320,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   }
 
   DeclResult TagOrTempResult = true; // invalid
-  TypeResult TypeResult = true; // invalid
+  TypeResult TypeResult = true;      // invalid
 
   bool Owned = false;
   Sema::SkipBodyInfo SkipBody;
@@ -5323,25 +5333,24 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
   TagOrTempResult = Actions.ActOnTag(
-      getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs, AS_public,
-      DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
+      getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs,
+      AS_public, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
       SourceLocation(), false, clang::TypeResult(),
       DSC == DeclSpecContext::DSC_type_specifier,
       DSC == DeclSpecContext::DSC_template_param ||
-      DSC == DeclSpecContext::DSC_template_type_arg,
+          DSC == DeclSpecContext::DSC_template_type_arg,
       &SkipBody);
   if (IsDependent) {
     assert(TUK == Sema::TUK_Reference);
-    TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK,
-                                            SS, Name, StartLoc, NameLoc);
+    TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK, SS,
+                                           Name, StartLoc, NameLoc);
   }
-  
+
   if (TUK == Sema::TUK_Definition) {
     assert(Tok.is(tok::l_brace));
     ParseTraitBody(StartLoc, AttrFixitLoc, TagOrTempResult.get());
     if (SkipBody.CheckSameAsPrevious &&
-        !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(),
-                                          SkipBody)) {
+        !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(), SkipBody)) {
       DS.SetTypeSpecError();
       return;
     }
@@ -5358,10 +5367,9 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                 NameLoc.isValid() ? NameLoc : StartLoc,
                                 PrevSpec, DiagID, TypeResult.get(), Policy);
   } else if (!TagOrTempResult.isInvalid()) {
-    Result = DS.SetTypeSpecType(TagType, StartLoc,
-                                 NameLoc.isValid() ? NameLoc : StartLoc,
-                                PrevSpec, DiagID, TagOrTempResult.get(), Owned,
-                                Policy);
+    Result = DS.SetTypeSpecType(
+        TagType, StartLoc, NameLoc.isValid() ? NameLoc : StartLoc, PrevSpec,
+        DiagID, TagOrTempResult.get(), Owned, Policy);
   } else {
     DS.SetTypeSpecError();
     return;
@@ -5370,35 +5378,38 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   if (Result)
     Diag(StartLoc, DiagID) << PrevSpec;
 
-  if (TUK == Sema::TUK_Definition &&
-      (!isTypeSpecifier(DSC)) &&
-      (!isValidAfterTypeSpecifier(false))) {
-    if (Tok.isNot(tok::semi)) {
-      const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
-      ExpectAndConsume(tok::semi, diag::err_expected_after,
-                       DeclSpec::getSpecifierName(TagType, PPol));
-      PP.EnterToken(Tok, /*IsReinject=*/true);
-      Tok.setKind(tok::semi);
-    }
-  }
   if (TUK == Sema::TUK_Definition) {
-    TraitDecl *find = Actions.ActOnDesugarFind(Name);
+    if (!isTypeSpecifier(DSC) && !isValidAfterTypeSpecifier(false)) {
+      if (Tok.isNot(tok::semi)) {
+        const PrintingPolicy &PPol =
+            Actions.getASTContext().getPrintingPolicy();
+        ExpectAndConsume(tok::semi, diag::err_expected_after,
+                         DeclSpec::getSpecifierName(TagType, PPol));
+        PP.EnterToken(Tok, /*IsReinject=*/true);
+        Tok.setKind(tok::semi);
+      }
+    }
+
+    TraitDecl *find = Actions.FindTraitDecl(Name);
     assert(find && "No corresponding trait found");
-    RecordDecl *TraitVtableRecord = Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
-    RecordDecl *TraitRecord = Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
+    RecordDecl *TraitVtableRecord =
+        Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
+    RecordDecl *TraitRecord =
+        Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
     find->setTrait(TraitRecord);
     find->setVtable(TraitVtableRecord);
     // FIXME: Why is it necessary to repeatedly desugar? When will it be empty?
     if (TraitVtableRecord) {
-      ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
+      ParseScope StructScope(this, Scope::ClassScope | Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitVtableRecord);
       Actions.ActOnDesugarTraitVtable(find, StartLoc, NameLoc, Name, DS);
       StructScope.Exit();
-      Actions.ActOnTagFinishDefinition(getCurScope(), TraitVtableRecord, StartLoc);
+      Actions.ActOnTagFinishDefinition(getCurScope(), TraitVtableRecord,
+                                       StartLoc);
     }
     if (TraitRecord) {
       TraitRecord->setDesugaredTraitDecl(find);
-      ParseScope StructScope(this, Scope::ClassScope|Scope::DeclScope);
+      ParseScope StructScope(this, Scope::ClassScope | Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitRecord);
       Actions.ActOnDesugarTrait(TraitVtableRecord, StartLoc, NameLoc);
       StructScope.Exit();
@@ -6931,7 +6942,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       if (IsFunctionDeclaration)
         Actions.ActOnStartFunctionDeclarationDeclarator(D,
                                                         TemplateParameterDepth);
-      bool isTraitMem = D.getIsTraitMem();
+      bool isTraitMem = D.getIsTraitMember();
       ParseFunctionDeclarator(D, attrs, T, IsAmbiguous, false, isTraitMem);
       if (IsFunctionDeclaration)
         Actions.ActOnFinishFunctionDeclarationDeclarator(D);
@@ -7199,8 +7210,7 @@ void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
 void Parser::ParseFunctionDeclarator(Declarator &D,
                                      ParsedAttributes &FirstArgAttrs,
                                      BalancedDelimiterTracker &Tracker,
-                                     bool IsAmbiguous,
-                                     bool RequiresArg,
+                                     bool IsAmbiguous, bool RequiresArg,
                                      bool isTraitMem) {
   assert(getCurScope()->isFunctionPrototypeScope() &&
          "Should call from a Function scope");
@@ -7717,11 +7727,12 @@ void Parser::ParseParameterDeclarationClause(
           }
         }
       }
-      // the trait's function params must begin with This * this 
+      // the trait's function params must begin with This * this
       if (ParamInfo.empty() && isTraitMem) {
         if (DS.getTypeSpecType() != TST_This ||
             ParmDeclarator.getIdentifier()->getName() != "this") {
-          Diag(ParmDeclarator.getIdentifierLoc(), diag::invalid_param_for_trait_member);
+          Diag(ParmDeclarator.getIdentifierLoc(),
+               diag::invalid_param_for_trait_member);
         }
       }
 

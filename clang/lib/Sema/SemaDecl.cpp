@@ -17,8 +17,8 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CommentDiagnostic.h"
-#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclBSC.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
@@ -651,7 +651,8 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
       case TTK_Struct: return DeclSpec::TST_struct;
       case TTK_Interface: return DeclSpec::TST_interface;
       case TTK_Union:  return DeclSpec::TST_union;
-      case TTK_Trait: return DeclSpec::TST_trait;
+      case TTK_Trait:
+        return DeclSpec::TST_trait;
       case TTK_Class:  return DeclSpec::TST_class;
       case TTK_Enum:   return DeclSpec::TST_enum;
       }
@@ -6061,7 +6062,6 @@ bool Sema::DiagnoseClassNameShadow(DeclContext *DC,
   return false;
 }
 
-
 /// Diagnose a declaration whose declarator-id has the given
 /// nested-name-specifier.
 ///
@@ -6374,7 +6374,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                                   TemplateParamLists,
                                   AddToScope);
   } else {
-    if (D.getIsTraitMem()) {
+    if (D.getIsTraitMember()) {
       Diag(D.getIdentifierLoc(), diag::err_trait_member_not_func);
       D.setInvalidType(true);
     }
@@ -6384,10 +6384,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
 
   if (!New)
     return nullptr;
-  
-  const PointerType *PT = dyn_cast<PointerType>(TInfo->getType());
-  if (Context.getLangOpts().BSC &&
-      PT && PT->getPointeeType().getTypePtr()->isTraitType())
+
+  QualType T = TInfo->getType();
+  if (Context.getLangOpts().BSC && T->isTraitPointerType())
     AddToScope = false;
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
@@ -9504,7 +9503,6 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
     return false;
   }
 }
-
 
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
@@ -14422,10 +14420,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
     }
   }
 
-  const PointerType *PT = dyn_cast<PointerType>(parmDeclType);
-  if (getLangOpts().BSC && PT &&
-      PT->getPointeeType().getTypePtr()->isTraitType())
-    parmDeclType = DesugarTraitToStructTrait(PT->getPointeeType());
+  if (getLangOpts().BSC && parmDeclType->isTraitPointerType())
+    parmDeclType = DesugarTraitToStructTrait(parmDeclType->getPointeeType());
 
   // Temporarily put parameter variables in the translation unit, not
   // the enclosing context.  This prevents them from accidentally
@@ -17084,11 +17080,12 @@ CreateNewDecl:
       if (isStdBadAlloc && (!StdBadAlloc || getStdBadAlloc()->isImplicit()))
         StdBadAlloc = cast<CXXRecordDecl>(New);
     } else if (Kind == TTK_Trait) {
-        New = TraitDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
-                                    cast_or_null<TraitDecl>(PrevDecl));
-      }
-      else {New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
-                                     cast_or_null<RecordDecl>(PrevDecl));}
+      New = TraitDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
+                              cast_or_null<TraitDecl>(PrevDecl));
+    } else {
+      New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
+                               cast_or_null<RecordDecl>(PrevDecl));
+    }
   }
 
   // C++11 [dcl.type]p3:
@@ -17216,7 +17213,7 @@ CreateNewDecl:
     if (Name) // can be null along some error paths
       if (Scope *EnclosingScope = getScopeForDeclContext(S, DC))
         PushOnScopeChains(New, EnclosingScope, /* AddToContext = */ false);
-  }  else if (Name) {
+  } else if (Name) {
     S = getNonFieldDeclScope(S);
     PushOnScopeChains(New, S, true);
   } else {
@@ -17367,11 +17364,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       Tag->getDeclContext()->isFileContext())
     Tag->setTopLevelDeclInObjCContainer();
 
-  TraitDecl *TD = dyn_cast<TraitDecl>(Tag);
-  if (TD) {
-    return;
-  }
-
   // Notify the consumer that we've defined a tag.
   if (!Tag->isInvalidDecl())
     Consumer.HandleTagDeclDefinition(Tag);
@@ -17519,19 +17511,17 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
 /// to create a FieldDecl object for it.
 Decl *Sema::ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
                        Declarator &D, Expr *BitfieldWidth) {
-  FieldDecl *Res = HandleField(S, cast_or_null<TagDecl>(TagD),
-                               DeclStart, D, static_cast<Expr*>(BitfieldWidth),
+  FieldDecl *Res = HandleField(S, cast_or_null<TagDecl>(TagD), DeclStart, D,
+                               static_cast<Expr *>(BitfieldWidth),
                                /*InitStyle=*/ICIS_NoInit, AS_public);
   return Res;
 }
 
 /// HandleField - Analyze a field of a C struct or a C++ data member.
 ///
-FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag,
-                             SourceLocation DeclStart,
+FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag, SourceLocation DeclStart,
                              Declarator &D, Expr *BitWidth,
-                             InClassInitStyle InitStyle,
-                             AccessSpecifier AS) {
+                             InClassInitStyle InitStyle, AccessSpecifier AS) {
   if (D.isDecompositionDeclarator()) {
     const DecompositionDeclarator &Decomp = D.getDecompositionDeclarator();
     Diag(Decomp.getLSquareLoc(), diag::err_decomp_decl_context)
@@ -17605,9 +17595,8 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag,
   bool Mutable
     = (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_mutable);
   SourceLocation TSSL = D.getBeginLoc();
-  FieldDecl *NewFD
-    = CheckFieldDecl(II, T, TInfo, Tag, Loc, Mutable, BitWidth, InitStyle,
-                     TSSL, AS, PrevDecl, &D);
+  FieldDecl *NewFD = CheckFieldDecl(II, T, TInfo, Tag, Loc, Mutable, BitWidth,
+                                    InitStyle, TSSL, AS, PrevDecl, &D);
 
   if (NewFD->isInvalidDecl())
     Tag->setInvalidDecl();
@@ -17637,13 +17626,11 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag,
 ///
 /// \todo The Declarator argument is a hack. It will be removed once
 FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
-                                TypeSourceInfo *TInfo,
-                                TagDecl *Tag, SourceLocation Loc,
-                                bool Mutable, Expr *BitWidth,
-                                InClassInitStyle InitStyle,
-                                SourceLocation TSSL,
-                                AccessSpecifier AS, NamedDecl *PrevDecl,
-                                Declarator *D) {
+                                TypeSourceInfo *TInfo, TagDecl *Tag,
+                                SourceLocation Loc, bool Mutable,
+                                Expr *BitWidth, InClassInitStyle InitStyle,
+                                SourceLocation TSSL, AccessSpecifier AS,
+                                NamedDecl *PrevDecl, Declarator *D) {
   IdentifierInfo *II = Name.getAsIdentifierInfo();
   bool InvalidDecl = false;
   if (D) InvalidDecl = D->isInvalidType();
@@ -17724,9 +17711,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   // If this is declared as a bit-field, check the bit-field.
   if (BitWidth) {
     if (Tag->isTrait()) {
-    BitWidth = VerifyBitField(Loc, II, T, false, BitWidth).get();} else{
-    BitWidth = VerifyBitField(Loc, II, T, cast<RecordDecl>(Tag)->isMsStruct(Context), 
-                              BitWidth).get();
+      BitWidth = VerifyBitField(Loc, II, T, false, BitWidth).get();
+    } else {
+      BitWidth =
+          VerifyBitField(Loc, II, T, cast<RecordDecl>(Tag)->isMsStruct(Context),
+                         BitWidth)
+              .get();
     }
     if (!BitWidth) {
       InvalidDecl = true;

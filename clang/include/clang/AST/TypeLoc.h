@@ -737,9 +737,8 @@ public:
   EnumDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
-class TraitTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
-                                                      TraitTypeLoc,
-                                                      TraitType> {
+class TraitTypeLoc
+    : public InheritingConcreteTypeLoc<TagTypeLoc, TraitTypeLoc, TraitType> {
 public:
   TraitDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };

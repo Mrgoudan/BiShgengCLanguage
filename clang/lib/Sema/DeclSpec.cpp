@@ -549,7 +549,8 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   switch (T) {
   case DeclSpec::TST_unspecified: return "unspecified";
   case DeclSpec::TST_void:        return "void";
-  case DeclSpec::TST_This:        return "This";
+  case DeclSpec::TST_This:
+    return "This";
   case DeclSpec::TST_char:        return "char";
   case DeclSpec::TST_wchar:       return Policy.MSWChar ? "__wchar_t" : "wchar_t";
   case DeclSpec::TST_char8:       return "char8_t";
@@ -577,7 +578,8 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
   case DeclSpec::TST_typeofType:
-  case DeclSpec::TST_trait:       return "trait";
+  case DeclSpec::TST_trait:
+    return "trait";
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_auto:        return "auto";
   case DeclSpec::TST_auto_type:   return "__auto_type";

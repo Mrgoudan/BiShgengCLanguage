@@ -203,7 +203,7 @@ Retry:
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
     // found.
-    if (Next.isNot(tok::coloncolon)) { 
+    if (Next.isNot(tok::coloncolon)) {
       // Try to limit which sets of keywords should be included in typo
       // correction based on what the next token is.
       StatementFilterCCC CCC(Next);

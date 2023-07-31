@@ -1460,7 +1460,7 @@ ExprResult Parser::ParseCastExpression(
     Res = ParseCastExpression(AnyCastExpr);
     if (!Res.isInvalid())
       Res = Actions.ActOnAwaitExpr(AwaitLoc, Res.get());
-    return Res;  
+    return Res;
   }
 
   case tok::kw___extension__:{//unary-expression:'__extension__' cast-expr [GNU]
@@ -2232,10 +2232,11 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       } else {
         bool ArgsSizeOK = true;
         if (TraitParam == nullptr) {
-          ArgsSizeOK = ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size();
+          ArgsSizeOK =
+              ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size();
         } else {
-          ArgsSizeOK = ArgExprs.size() == 1 || ArgExprs.size() - 2 == CommaLocs.size();
-
+          ArgsSizeOK =
+              ArgExprs.size() == 1 || ArgExprs.size() - 2 == CommaLocs.size();
         }
         assert(ArgsSizeOK && "Unexpected number of commas!");
         Expr *Fn = LHS.get();
@@ -2266,8 +2267,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           //   t->foo(); // see '->', desugar to "t.vtable->foo()" immediately;
           // }
           // @endcode
-          TraitParam = Actions.AddAfterStructTrait(LHS, Loc, "data").get(); // "t.data"
-          LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable"); // "t.vtable"
+          TraitParam =
+              Actions.AddAfterStructTrait(LHS, Loc, "data").get(); // "t.data"
+          LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");   // "t.vtable"
         }
       }
       tok::TokenKind OpKind = Tok.getKind();

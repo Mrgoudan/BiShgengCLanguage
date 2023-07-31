@@ -3957,9 +3957,8 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     FnRetType = FD->getReturnType();
     if (ShouldDesugarTrait(FnRetType) &&
         !ShouldDesugarTrait(RetValExp->getType())) {
-      Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(RetValExp,
-                                                               FnRetType,
-                                                               RetValExp->getBeginLoc());
+      Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
+          RetValExp, FnRetType, RetValExp->getBeginLoc());
       if (TraitDesugaredExpr)
         RetValExp = TraitDesugaredExpr;
       else

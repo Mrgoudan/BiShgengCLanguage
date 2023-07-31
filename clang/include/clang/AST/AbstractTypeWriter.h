@@ -9,9 +9,10 @@
 #ifndef LLVM_CLANG_AST_ABSTRACTTYPEWRITER_H
 #define LLVM_CLANG_AST_ABSTRACTTYPEWRITER_H
 
-#include "clang/AST/Type.h"
 #include "clang/AST/AbstractBasicWriter.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 namespace serialization {

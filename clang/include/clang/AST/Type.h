@@ -2143,6 +2143,7 @@ public:
   bool isDependentSizedArrayType() const;
   bool isRecordType() const;
   bool isTraitType() const;
+  bool isTraitPointerType() const;
   bool isClassType() const;
   bool isStructureType() const;
   bool isObjCBoxableRecordType() const;
@@ -4743,7 +4744,8 @@ public:
   bool isBeingDefined() const;
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == Enum || T->getTypeClass() == Record || T->getTypeClass() == Trait;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record ||
+           T->getTypeClass() == Trait;
   }
 };
 
@@ -4789,13 +4791,13 @@ protected:
   friend class ASTContext; // ASTContext creates these.
 
   explicit TraitType(const TraitDecl *D)
-      : TagType(Trait, reinterpret_cast<const TagDecl*>(D), QualType()) {}
+      : TagType(Trait, reinterpret_cast<const TagDecl *>(D), QualType()) {}
   explicit TraitType(TypeClass TC, TraitDecl *D)
-      : TagType(TC, reinterpret_cast<const TagDecl*>(D), QualType()) {}
+      : TagType(TC, reinterpret_cast<const TagDecl *>(D), QualType()) {}
 
 public:
   TraitDecl *getDecl() const {
-    return reinterpret_cast<TraitDecl*>(TagType::getDecl());
+    return reinterpret_cast<TraitDecl *>(TagType::getDecl());
   }
 
   /// Recursively check all fields in the record for const-ness. If any field
@@ -7000,8 +7002,12 @@ inline bool Type::isEnumeralType() const {
   return isa<EnumType>(CanonicalType);
 }
 
-inline bool Type::isTraitType() const {
-  return isa<TraitType>(CanonicalType);
+inline bool Type::isTraitType() const { return isa<TraitType>(CanonicalType); }
+
+inline bool Type::isTraitPointerType() const {
+  if (CanonicalType->isPointerType())
+    return isa<TraitType>(CanonicalType->getPointeeType());
+  return false;
 }
 
 inline bool Type::isAnyComplexType() const {

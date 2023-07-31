@@ -1997,9 +1997,7 @@ public:
            getDeclKind() <= Decl::lastRecord;
   }
 
-  bool isTrait() const {
-    return getDeclKind() == Decl::Trait;
-  }
+  bool isTrait() const { return getDeclKind() == Decl::Trait; }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 

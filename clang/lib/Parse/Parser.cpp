@@ -773,6 +773,19 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
   return false;
 }
 
+static bool ShouldParseImplTraitDecl(Sema &S, const Token &Tok,
+                                     const Token &TokNext,
+                                     const Token &TokNext2) {
+  if (!S.getLangOpts().BSC)
+    return false;
+  if (Tok.is(tok::identifier) &&
+      Tok.getIdentifierInfo()->getName().equals("impl"))
+    if (TokNext.is(tok::kw_trait) ||
+        (TokNext.is(tok::identifier) && TokNext2.is(tok::kw_for)))
+      return true;
+  return false;
+}
+
 /// ParseExternalDeclaration:
 ///
 /// The `Attrs` that are passed in are C++11 attributes and appertain to the
@@ -1047,7 +1060,8 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       break;
     }
 
-    if (ShouldParseImplTraitDecl())
+    if (ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
+                                 GetLookAheadToken(2)))
       return ParseImplTraitDeclaration();
 
     if (Tok.isEditorPlaceholder()) {
@@ -1235,30 +1249,18 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   }
 }
 
-bool Parser::ShouldParseImplTraitDecl() {
-  if (!getLangOpts().BSC)
-    return false;
-  if (Tok.is(tok::identifier) &&
-             Tok.getIdentifierInfo()->getName().equals("impl"))
-    if (NextToken().is(tok::kw_trait) ||
-        (NextToken().is(tok::identifier) &&
-         GetLookAheadToken(2).is(tok::kw_for)))
-      return true;
-  return false;
-}
-
 /// ParseImplTraitDeclaration - Parse ImplTraitDecl, for example:
 /// "impl trait T for int;"
 Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
-  ConsumeToken(); // eat token "impl"
+  ConsumeToken(); // Eat the "impl"
   SourceLocation TraitLoc = Tok.getLocation();
   TraitDecl *Trait = nullptr;
-  IdentifierInfo* TraitII = nullptr;
+  IdentifierInfo *TraitII = nullptr;
 
   if (Tok.is(tok::kw_trait)) {
     ConsumeToken();
     TraitII = Tok.getIdentifierInfo();
-    Trait = Actions.ActOnTraitId(TraitII);
+    Trait = Actions.FindTraitDecl(TraitII);
   } else {
     ParsedType TypeRep = Actions.getTypeName(
         *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
@@ -1273,7 +1275,7 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   }
 
   if (!Trait) {
-    Diag(Tok.getLocation(), diag::unexpected_token_for_impl_trait_decl);
+    Diag(Tok.getLocation(), diag::err_unexpected_token_for_impl_trait_decl);
     SkipUntil(tok::semi);
     return nullptr;
   }
@@ -1282,7 +1284,7 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   if (Tok.is(tok::kw_for))
     ConsumeToken(); // eat token kw_for
   else {
-    Diag(Tok.getLocation(), diag::unexpected_token_for_impl_trait_decl);
+    Diag(Tok.getLocation(), diag::err_unexpected_token_for_impl_trait_decl);
     SkipUntil(tok::semi);
     return nullptr;
   }
@@ -1298,8 +1300,8 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
 
   SmallVector<Decl *, 8> DeclsInGroup;
   // Step 1: Always produce ImplTraitDecl
-  ImplTraitDecl* ITD = Actions.BuildImplTraitDecl(getCurScope(), D,
-                                                  BSS.getBeginLoc(), Trait);
+  ImplTraitDecl *ITD =
+      Actions.BuildImplTraitDecl(getCurScope(), D, BSS.getBeginLoc(), Trait);
   if (ITD == nullptr) {
     return Actions.FinalizeDeclaratorGroup(getCurScope(), BSS, DeclsInGroup);
   }

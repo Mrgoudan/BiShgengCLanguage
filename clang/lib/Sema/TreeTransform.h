@@ -6364,19 +6364,17 @@ QualType TreeTransform<Derived>::TransformRecordType(TypeLocBuilder &TLB,
   return Result;
 }
 
-template<typename Derived>
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformTraitType(TypeLocBuilder &TLB,
-                                                     TraitTypeLoc TL) {
+                                                    TraitTypeLoc TL) {
   const TraitType *T = TL.getTypePtr();
-  TraitDecl *Trait
-      = cast_or_null<TraitDecl>(getDerived().TransformDecl(TL.getNameLoc(),
-                                                            T->getDecl()));
+  TraitDecl *Trait = cast_or_null<TraitDecl>(
+      getDerived().TransformDecl(TL.getNameLoc(), T->getDecl()));
   if (!Trait)
     return QualType();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      Trait != T->getDecl()) {
+  if (getDerived().AlwaysRebuild() || Trait != T->getDecl()) {
     Result = getDerived().RebuildTraitType(Trait);
     if (Result.isNull())
       return QualType();

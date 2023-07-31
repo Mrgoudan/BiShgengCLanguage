@@ -22,7 +22,6 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Type.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -1611,7 +1610,6 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
 };
-
 
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
@@ -4014,12 +4012,10 @@ public:
   void setHasFlexibleArrayMember(bool V) {
     RecordDeclBits.HasFlexibleArrayMember = V;
   }
-  void setDesugaredTraitDecl(TraitDecl *TD) {
-    DesugaredTD = TD;
-  }
-  TraitDecl *getDesugaredTraitDecl() {
-    return DesugaredTD;
-  }
+
+  void setDesugaredTraitDecl(TraitDecl *TD) { DesugaredTD = TD; }
+
+  TraitDecl *getDesugaredTraitDecl() { return DesugaredTD; }
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
   /// there must be no objects of this type declared, e.g.,
@@ -4288,7 +4284,6 @@ private:
 
   TraitDecl *DesugaredTD = nullptr;
 };
-
 
 class FileScopeAsmDecl : public Decl {
   StringLiteral *AsmString;

@@ -18,9 +18,9 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CanonicalType.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
@@ -1715,7 +1715,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
         OS << "(anonymous " << ID->getKindName() << ')';
       else
         OS << *ID;
-    }else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
+    } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
         FT = dyn_cast<FunctionProtoType>(FD->getType()->castAs<FunctionType>());
@@ -4642,7 +4642,6 @@ SourceRange EnumDecl::getSourceRange() const {
   }
   return Res;
 }
-
 
 //===----------------------------------------------------------------------===//
 // RecordDecl Implementation

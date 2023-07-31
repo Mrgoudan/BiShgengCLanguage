@@ -12,6 +12,6 @@ impl trait F for int;
 
 int main() {
   int a = 1;
-  trait F f = &a; // expected-error {{only trait pointer type are allowed to be declared}}
+  trait F f = &a; // expected-error {{only trait pointer type is allowed to be declared}}
   return 0;
 }

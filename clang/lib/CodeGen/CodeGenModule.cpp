@@ -4672,9 +4672,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
 
-  if (getLangOpts().BSC && ASTTy->isPointerType())
-    if (ASTTy->getPointeeType()->isTraitType())
-      return;
+  if (getLangOpts().BSC && ASTTy->isTraitPointerType())
+    return;
 
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
@@ -6100,10 +6099,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   }
 
   if (auto *VD = dyn_cast<VarDecl>(D)) {
-    const Type *T = VD->getType().getTypePtr();
-    if (T && T->isPointerType())
-      if (T->getPointeeType()->isTraitType())
-        return;
+    QualType T = VD->getType();
+    if (T->isTraitPointerType())
+      return;
   }
 
   switch (D->getKind()) {

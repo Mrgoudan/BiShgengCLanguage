@@ -14,7 +14,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Linkage.h"
 
-
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -32,28 +31,27 @@ BSCMethodDecl *BSCMethodDecl::Create(
 }
 
 BSCMethodDecl *BSCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID)
-      BSCMethodDecl(BSCMethod, C, nullptr, SourceLocation(),
-                    DeclarationNameInfo(), QualType(), nullptr, SC_None, false, false,
-                    ConstexprSpecKind::Unspecified, SourceLocation(), nullptr);
+  return new (C, ID) BSCMethodDecl(
+      BSCMethod, C, nullptr, SourceLocation(), DeclarationNameInfo(),
+      QualType(), nullptr, SC_None, false, false,
+      ConstexprSpecKind::Unspecified, SourceLocation(), nullptr);
 }
 
 //===----------------------------------------------------------------------===//
 // ImplTraitDecl Implementation
 //===----------------------------------------------------------------------===//
-TraitDecl::TraitDecl(Kind DK, TagKind TK, const ASTContext &C,
-                       DeclContext *DC, SourceLocation StartLoc,
-                       SourceLocation IdLoc, IdentifierInfo *Id,
-                       TraitDecl *PrevDecl)
+TraitDecl::TraitDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
+                     SourceLocation StartLoc, SourceLocation IdLoc,
+                     IdentifierInfo *Id, TraitDecl *PrevDecl)
     : TagDecl(DK, TK, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
   assert(classof(static_cast<Decl *>(this)) && "Invalid Kind!");
 }
 
 TraitDecl *TraitDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
-                                     SourceLocation StartLoc, SourceLocation IdLoc,
-                                     IdentifierInfo *Id, TraitDecl* PrevDecl) {
-  TraitDecl *R = new (C, DC) TraitDecl(Trait, TK, C, DC,
-                                         StartLoc, IdLoc, Id, PrevDecl);
+                             SourceLocation StartLoc, SourceLocation IdLoc,
+                             IdentifierInfo *Id, TraitDecl *PrevDecl) {
+  TraitDecl *R =
+      new (C, DC) TraitDecl(Trait, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
 
   C.getTypeDeclType(R, PrevDecl);
@@ -81,11 +79,11 @@ ImplTraitDecl::ImplTraitDecl(Kind DK, ASTContext &C, DeclContext *DC,
       redeclarable_base(C) {}
 
 ImplTraitDecl *ImplTraitDecl::Create(ASTContext &C, DeclContext *DC,
-                         SourceLocation StartL, SourceLocation IdL,
-                         IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
-                         StorageClass S) {
-  return new (C, DC) ImplTraitDecl(ImplTrait,
-                                   C, DC, StartL, IdL, Id, T, TInfo, S);
+                                     SourceLocation StartL, SourceLocation IdL,
+                                     IdentifierInfo *Id, QualType T,
+                                     TypeSourceInfo *TInfo, StorageClass S) {
+  return new (C, DC)
+      ImplTraitDecl(ImplTrait, C, DC, StartL, IdL, Id, T, TInfo, S);
 }
 
 ImplTraitDecl *ImplTraitDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
@@ -102,9 +100,7 @@ LanguageLinkage ImplTraitDecl::getLanguageLinkage() const {
   return LanguageLinkage::CLanguageLinkage;
 }
 
-bool ImplTraitDecl::isInExternCContext() const {
-  return true;
-}
+bool ImplTraitDecl::isInExternCContext() const { return true; }
 
 void ImplTraitDecl::setTraitDecl(TraitDecl *D) { ImplTraitDecl::TD = D; }
 

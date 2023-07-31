@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/Expr.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
@@ -21,24 +21,10 @@
 using namespace clang;
 using namespace sema;
 
-TraitDecl *Sema::ActOnDesugarFind(IdentifierInfo *Name) {
-  TraitDecl *Result;
-  DeclContext::lookup_result Decls =
-      getASTContext().getTranslationUnitDecl()->lookup(
-          DeclarationName(&Context.Idents.get(Name->getName())));
-  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
-       I != E; ++I) {
-    if (isa<TraitDecl>(*I)) {
-      Result = dyn_cast<TraitDecl>(*I);
-    }
-  }
-  return Result;
-}
-
 RecordDecl *Sema::ActOnDesugarVtableRecord(SourceLocation StartLoc,
                                            SourceLocation NameLoc,
                                            IdentifierInfo *Name) {
-  RecordDecl *Result;
+  RecordDecl *Result = nullptr;
   std::string TraitVTableName = "__Trait_" + Name->getName().str() + "_Vtable";
   DeclContext::lookup_result VtableDecls =
       getASTContext().getTranslationUnitDecl()->lookup(
@@ -138,7 +124,7 @@ ImplTraitDecl *Sema::BuildImplTraitDecl(Scope *S, Declarator &D,
   return ITD;
 }
 
-TraitDecl *Sema::ActOnTraitId(IdentifierInfo *II) {
+TraitDecl *Sema::FindTraitDecl(IdentifierInfo *II) {
   DeclContext::lookup_result Decls =
       getASTContext().getTranslationUnitDecl()->lookup(II);
   for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
@@ -389,7 +375,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT,
 }
 
 NamedDecl *Sema::ActOnTraitMemberDeclarator(Scope *S, Declarator &D) {
-  D.setIsTraitMem(true);
+  D.setIsTraitMember(true);
   MultiTemplateParamsArg TemplateParams;
   NamedDecl *Member = HandleDeclarator(S, D, TemplateParams);
   return Member;
@@ -399,4 +385,47 @@ bool Sema::ShouldDesugarTrait(QualType T) {
   if (RecordDecl *RD = T.getTypePtr()->getAsRecordDecl())
     return RD->getDesugaredTraitDecl() != nullptr;
   return false;
+}
+
+// Handling reassignments of variable types with trait pointers:
+// trait F* f = &a;
+// f = &a;
+ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
+                                    BinaryOperatorKind Opc, RecordDecl *RD,
+                                    Expr *LHSExpr, Expr *RHSExpr) {
+  Expr *Bin1 = nullptr;
+  Expr *Bin2 = nullptr;
+  QualType T = RHSExpr->getType()->getPointeeType().getCanonicalType();
+  for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
+       I != E; ++I) {
+    Expr *NewLHSExpr = BuildMemberExpr(
+        LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+        SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()), false,
+        DeclarationNameInfo(), I->getType(), VK_LValue, OK_Ordinary);
+    Expr *NewRHSExpr = nullptr;
+    if (I->getNameAsString() == "data") {
+      NewRHSExpr =
+          ImplicitCastExpr::Create(Context, I->getType(), CK_BitCast, RHSExpr,
+                                   nullptr, VK_PRValue, FPOptionsOverride());
+    } else {
+      TraitDecl *TD = RD->getDesugaredTraitDecl();
+      RecordDecl *LookUpVtable = TD->getVtable();
+      VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
+      QualType VtableTy = Context.getRecordType(LookUpVtable);
+      QualType VtablePT = Context.getPointerType(VtableTy);
+      DeclRefExpr *VtableRef = BuildDeclRefExpr(LookUpVar, VtableTy, VK_LValue,
+                                                LookUpVar->getLocation());
+      NewRHSExpr = UnaryOperator::Create(
+          Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue, OK_Ordinary,
+          SourceLocation(), false, FPOptionsOverride());
+    }
+    if (Bin1 == nullptr)
+      Bin1 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
+                 .get(); // f.data = &a;WWWW
+    else
+      Bin2 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
+                 .get(); // f.vtable = &__int_trait_T;
+  }
+  return BuildBinOp(S, TokLoc, BO_Comma, Bin1,
+                    Bin2); // f.data = &a, f.vtable = &__int_trait_T;
 }

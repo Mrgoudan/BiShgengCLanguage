@@ -19,8 +19,8 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Availability.h"
 #include "clang/AST/ComparisonCategories.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclBSC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -2797,7 +2797,8 @@ public:
   void warnOnReservedIdentifier(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
-  ImplTraitDecl *BuildImplTraitDecl(Scope *S, Declarator &D, SourceLocation TypeLoc, TraitDecl *TD);
+  ImplTraitDecl *BuildImplTraitDecl(Scope *S, Declarator &D,
+                                    SourceLocation TypeLoc, TraitDecl *TD);
   TraitDecl *ActOnTraitId(IdentifierInfo *II);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
@@ -3287,8 +3288,7 @@ public:
 
   FieldDecl *HandleField(Scope *S, TagDecl *TagD, SourceLocation DeclStart,
                          Declarator &D, Expr *BitfieldWidth,
-                         InClassInitStyle InitStyle,
-                         AccessSpecifier AS);
+                         InClassInitStyle InitStyle, AccessSpecifier AS);
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
                                    SourceLocation DeclStart, Declarator &D,
                                    Expr *BitfieldWidth,
@@ -3297,13 +3297,11 @@ public:
                                    const ParsedAttr &MSPropertyAttr);
 
   FieldDecl *CheckFieldDecl(DeclarationName Name, QualType T,
-                            TypeSourceInfo *TInfo,
-                            TagDecl *Record, SourceLocation Loc,
-                            bool Mutable, Expr *BitfieldWidth,
-                            InClassInitStyle InitStyle,
-                            SourceLocation TSSL,
-                            AccessSpecifier AS, NamedDecl *PrevDecl,
-                            Declarator *D = nullptr);
+                            TypeSourceInfo *TInfo, TagDecl *Record,
+                            SourceLocation Loc, bool Mutable,
+                            Expr *BitfieldWidth, InClassInitStyle InitStyle,
+                            SourceLocation TSSL, AccessSpecifier AS,
+                            NamedDecl *PrevDecl, Declarator *D = nullptr);
 
   bool CheckNontrivialField(FieldDecl *FD);
   void DiagnoseNontrivial(const CXXRecordDecl *Record, CXXSpecialMember CSM);
@@ -5528,14 +5526,15 @@ public:
 
   bool IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
                               TraitDecl *TD);
-  VarDecl *DesugarImplTrait(ImplTraitDecl* ITD, Declarator &D);
+  VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &D);
   QualType DesugarTraitToStructTrait(QualType T);
   bool ShouldDesugarTrait(QualType T);
-  bool IsTraitEqaulExpr(QualType DstType, QualType SrcType);
-  ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc, StringRef ID);
+  ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
+                                 StringRef ID);
   VarDecl *ActOnDesugarTraitInstance(Declarator &D, QualType QT,
                                      VarDecl *VarDec);
-  Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType, SourceLocation DSLoc);
+  Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType,
+                                      SourceLocation DSLoc);
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                       LookupResult &R,
@@ -7510,7 +7509,7 @@ public:
                                          const ParsedAttributesView &AttrList);
   void ActOnFinishCXXMemberDecls();
   void ActOnFinishCXXNonNestedClass();
-  TraitDecl *ActOnDesugarFind(IdentifierInfo *Name);
+  TraitDecl *FindTraitDecl(IdentifierInfo *Name);
   RecordDecl *ActOnDesugarVtableRecord(SourceLocation StartLoc,
                                        SourceLocation NameLoc,
                                        IdentifierInfo *Name);
@@ -7522,6 +7521,9 @@ public:
                                       IdentifierInfo *Name);
   void ActOnDesugarTrait(RecordDecl *TraitVtableRecord, SourceLocation StartLoc,
                          SourceLocation NameLoc);
+  ExprResult ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
+                                BinaryOperatorKind Opc, RecordDecl *RD,
+                                Expr *LHSExpr, Expr *RHSExpr);
 
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,

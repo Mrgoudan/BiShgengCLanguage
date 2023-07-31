@@ -9,14 +9,15 @@
 //  This file implements type-related semantic analysis.
 //
 //===----------------------------------------------------------------------===//
+
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclBSC.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeLoc.h"
@@ -5112,11 +5113,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
     case DeclaratorChunk::Function: {
       bool TraitDesugarFlag = false;
-      const PointerType *PT = dyn_cast<PointerType>(T);
-      if (Context.getLangOpts().BSC &&
-          PT && PT->getPointeeType().getTypePtr()->isTraitType()) {
+      if (Context.getLangOpts().BSC && T->isTraitPointerType()) {
         TraitDesugarFlag = true;
-        T = S.DesugarTraitToStructTrait(PT->getPointeeType());
+        T = S.DesugarTraitToStructTrait(T->getPointeeType());
       }
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
@@ -9362,13 +9361,14 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
 
 // TODO: move this API to SemaBSCTrait.cpp. But now it relies on SemaType a lot.
 bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
-                                     TraitDecl *TD) {
+                                  TraitDecl *TD) {
   TypeProcessingState state(*this, D);
   CXXScopeSpec SS;
   NamedDecl *Def = nullptr;
   BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
-  
-  QualType T = ConvertDeclSpecToType(state, D.getMutableDeclSpec()); // the Type which might impl the trait.
+
+  QualType T = ConvertDeclSpecToType(
+      state, D.getMutableDeclSpec()); // the Type which might impl the trait.
   if (T->isIncompleteType(&Def))
     Diagnoser.diagnose(*this, TypeLoc, T);
 
@@ -9387,11 +9387,12 @@ bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
           New = D->getAsFunction();
     }
     if (!New) {
-      Diag(TypeLoc, diag::err_trait_impl) << FieldIt->getName()
-          << TD->getNameAsString() << T;
+      Diag(TypeLoc, diag::err_trait_impl)
+          << FieldIt->getName() << TD->getNameAsString() << T;
       return true;
     }
-    // Check whether function prototypes match in traitBody and type's member funcs
+    // Check whether function prototypes match in traitBody and type's member
+    // funcs
     BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
     bool TypeDiagFlag = false;
     if (!BS->getHasThisParam() ||
@@ -9413,7 +9414,7 @@ bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
     }
     if (TypeDiagFlag) {
       Diag(TypeLoc, diag::err_trait_impl_function_type_conflict)
-              << FieldIt->getName() << TD->getNameAsString();
+          << FieldIt->getName() << TD->getNameAsString();
       return true;
     }
   }

@@ -5,6 +5,6 @@ trait F {
 };
 
 int main() {
-  trait F a; // expected-error {{only trait pointer type are allowed to be declared}}
+  trait F a; // expected-error {{only trait pointer type is allowed to be declared}}
   return 0;
 }
