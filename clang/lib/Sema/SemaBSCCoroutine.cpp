@@ -379,16 +379,6 @@ bool IsRefactorStmt(Stmt *S) {
   return false;
 }
 
-bool IsFutureType(QualType T) {
-  std::string prefix = "struct __FatPointer_";
-  std::string string = T.getAsString();
-  bool isPrefix =
-      prefix.size() <= string.size() &&
-      std::mismatch(prefix.begin(), prefix.end(), string.begin(), string.end())
-              .first == prefix.end();
-  return isPrefix;
-}
-
 static QualType lookupPollResultType(Sema &S, SourceLocation SLoc, QualType T) {
   std::string PollResultName = "PollResult";
 
@@ -440,7 +430,7 @@ static RecordDecl *buildFutureRecordDecl(
 
   for (unsigned I = 0; I != Args.size(); ++I) {
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
-    if (!IsFutureType(AE->getType())) {
+    if (!AE->getType().getTypePtr()->isBSCFutureType()) {
       RecordDecl *FatPointerStruct = nullptr;
       const std::string FatPointerName =
           "__FatPointer_" + GetPrefix(AE->getType());
@@ -1967,31 +1957,33 @@ class AEFinder : public StmtVisitor<AEFinder> {
     if (isa<CallExpr>(AE)) {
       CallExpr *CE = const_cast<CallExpr *>(cast<CallExpr>(AE));
       FunctionDecl *CFD = CE->getDirectCallee();
-      std::vector<Expr *> CallArgs;
-      for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
-        if (auto *KReplaceAE = dyn_cast<AwaitExpr>(CE->getArg(I))) {
-          Expr *VReplaceAE = GetAEReplaceMap(KReplaceAE);
-          if (VReplaceAE != nullptr) {
-            CallArgs.push_back(VReplaceAE);
-            continue;
+      if (CFD) {
+        std::vector<Expr *> CallArgs;
+        for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
+          if (auto *KReplaceAE = dyn_cast<AwaitExpr>(CE->getArg(I))) {
+            Expr *VReplaceAE = GetAEReplaceMap(KReplaceAE);
+            if (VReplaceAE != nullptr) {
+              CallArgs.push_back(VReplaceAE);
+              continue;
+            }
           }
+          CallArgs.push_back(CE->getArg(I));
         }
-        CallArgs.push_back(CE->getArg(I));
-      }
-      Expr *FDRef =
-          SemaRef.BuildDeclRefExpr(CFD, CFD->getType().getNonReferenceType(),
-                                   VK_LValue, CFD->getLocation());
-      FDRef->HasBSCScopeSpec = true;
-      FDRef = SemaRef
-                  .ImpCastExprToType(
-                      FDRef, SemaRef.Context.getPointerType(CFD->getType()),
-                      CK_FunctionToPointerDecay)
-                  .get();
-      FDRef->HasBSCScopeSpec = true;
-      RHSExpr = SemaRef
-                    .BuildCallExpr(nullptr, FDRef, SourceLocation(), CallArgs,
-                                   SourceLocation())
+        Expr *FDRef =
+            SemaRef.BuildDeclRefExpr(CFD, CFD->getType().getNonReferenceType(),
+                                     VK_LValue, CFD->getLocation());
+        FDRef->HasBSCScopeSpec = true;
+        FDRef = SemaRef
+                    .ImpCastExprToType(
+                        FDRef, SemaRef.Context.getPointerType(CFD->getType()),
+                        CK_FunctionToPointerDecay)
                     .get();
+        FDRef->HasBSCScopeSpec = true;
+        RHSExpr = SemaRef
+                      .BuildCallExpr(nullptr, FDRef, SourceLocation(), CallArgs,
+                                     SourceLocation())
+                      .get();
+      }
     }
 
     Expr *ResultStmt = SemaRef
@@ -2301,7 +2293,7 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
   std::stack<RecordDecl::field_iterator> Futures;
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
        FieldIt != RD->field_end(); ++FieldIt) {
-    if (IsFutureType(FieldIt->getType())) {
+    if (FieldIt->getType().getTypePtr()->isBSCFutureType()) {
       Futures.push(FieldIt);
     }
   }
@@ -2607,16 +2599,22 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
   if (IsCall) {
     Decl *AwaitDecl = (dyn_cast<CallExpr>(E))->getCalleeDecl();
     FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(AwaitDecl);
-    if (!FDecl) {
-      return ExprError();
-    }
-    if (!FDecl->isAsyncSpecified() && !IsFutureType(AwaitReturnTy)) {
-      Diag(E->getExprLoc(), PDiag(diag::err_not_a_async_call)
-                                << getExprRange(E));
-      return ExprError();
+    if (FDecl) {
+      if (!FDecl->isAsyncSpecified() &&
+          !AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
+        Diag(E->getExprLoc(), PDiag(diag::err_not_a_async_call)
+                                  << getExprRange(E));
+        return ExprError();
+      }
+    } else {
+      if (!AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
+        Diag(E->getExprLoc(), PDiag(diag::err_not_a_async_call)
+                                  << getExprRange(E));
+        return ExprError();
+      }
     }
   } else {
-    if (!IsFutureType(AwaitReturnTy)) {
+    if (!AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
       Diag(E->getExprLoc(), PDiag(diag::err_not_a_async_call)
                                 << getExprRange(E));
       return ExprError();
@@ -2624,7 +2622,7 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
   }
 
   // TODO: After we use future in stdlib, get template argument directly.
-  if (IsFutureType(AwaitReturnTy)) {
+  if (AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
     const RecordType *FatPointerType =
         dyn_cast<RecordType>(AwaitReturnTy.getDesugaredType(Context));
     RecordDecl *FatPointer = FatPointerType->getDecl();
@@ -2683,7 +2681,7 @@ ExprResult Sema::ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
 
 SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
   SmallVector<Decl *, 8> decls;
-  if (!IsFutureType(FD->getReturnType())) {
+  if (!FD->getReturnType().getTypePtr()->isBSCFutureType()) {
     QualType ReturnTy = FD->getReturnType();
     ReturnTy.removeLocalConst();
     if (ReturnTy->isVoidType()) {
@@ -2717,7 +2715,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     if (FutureInitDef) {
       decls.push_back(FutureInitDef);
       Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
-    } 
+    }
   }
   return decls;
 }
@@ -2739,7 +2737,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   }
 
   // For leaf nodes, should not be modified async.
-  if (IsFutureType(FD->getReturnType())) {
+  if (FD->getReturnType().getTypePtr()->isBSCFutureType()) {
     Diag(FD->getBeginLoc(), diag::err_invalid_async_function);
     return decls;
   }

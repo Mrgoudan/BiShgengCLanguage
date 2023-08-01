@@ -2088,9 +2088,38 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
       isa<VarDecl>(D) &&
       NeedToCaptureVariable(cast<VarDecl>(D), NameInfo.getLoc());
 
+  ValueDecl *NewD = D;
+  NamedDecl *NewFoundD = FoundD;
+  QualType NewTy = Ty;
+
+  // Desugar for declRefExpr which refers to async function.
+  if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
+    if (FD->isAsyncSpecified()) {
+      QualType AwaitReturnTy = FD->getReturnType();
+      if (!AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
+        FunctionDecl *DesugaredFD = nullptr;
+        if (Context.BSCDesugaredMap.find(FD) != Context.BSCDesugaredMap.end()) {
+          for (auto &DesugaredDecl : Context.BSCDesugaredMap[FD]) {
+            if (DesugaredDecl->getDeclName().getAsString() ==
+                "__" + FD->getDeclName().getAsString()) {
+              DesugaredFD = cast<FunctionDecl>(DesugaredDecl);
+            }
+          }
+        }
+        // For nested async function call, DesugaredFD will be nullptr.
+        if (DesugaredFD) {
+          NewD = DesugaredFD;
+          NewFoundD = DesugaredFD;
+          NewTy = DesugaredFD->getType();
+        }
+      }
+    }
+  }
+
   DeclRefExpr *E = DeclRefExpr::Create(
-      Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
-      VK, FoundD, TemplateArgs, getNonOdrUseReasonInCurrentContext(D));
+      Context, NNS, TemplateKWLoc, NewD, RefersToCapturedVariable, NameInfo,
+      NewTy, VK, NewFoundD, TemplateArgs,
+      getNonOdrUseReasonInCurrentContext(NewD));
   MarkDeclRefReferenced(E);
 
   // C++ [except.spec]p17:
@@ -2105,20 +2134,21 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   //  b) if the function is a defaulted comparison, we can use the body we
   //     build when defining it as input to the exception specification
   //     computation rather than computing a new body.
-  if (auto *FPT = Ty->getAs<FunctionProtoType>()) {
+  if (auto *FPT = NewTy->getAs<FunctionProtoType>()) {
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
       if (auto *NewFPT = ResolveExceptionSpec(NameInfo.getLoc(), FPT))
-        E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
+        E->setType(Context.getQualifiedType(NewFPT, NewTy.getQualifiers()));
     }
   }
 
-  if (getLangOpts().ObjCWeak && isa<VarDecl>(D) &&
-      Ty.getObjCLifetime() == Qualifiers::OCL_Weak && !isUnevaluatedContext() &&
+  if (getLangOpts().ObjCWeak && isa<VarDecl>(NewD) &&
+      NewTy.getObjCLifetime() == Qualifiers::OCL_Weak &&
+      !isUnevaluatedContext() &&
       !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, E->getBeginLoc()))
     getCurFunction()->recordUseOfWeak(E);
 
-  FieldDecl *FD = dyn_cast<FieldDecl>(D);
-  if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(D))
+  FieldDecl *FD = dyn_cast<FieldDecl>(NewD);
+  if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(NewD))
     FD = IFD->getAnonField();
   if (FD) {
     UnusedPrivateFields.remove(FD);
@@ -2129,7 +2159,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
 
   // C++ [expr.prim]/8: The expression [...] is a bit-field if the identifier
   // designates a bit-field.
-  if (auto *BD = dyn_cast<BindingDecl>(D))
+  if (auto *BD = dyn_cast<BindingDecl>(NewD))
     if (auto *BE = BD->getBinding())
       E->setObjectKind(BE->getObjectKind());
 
@@ -4680,18 +4710,6 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
       ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
 }
 
-namespace {
-bool IsFutureType(QualType T) { // TODO: change after get
-  std::string prefix = "struct __FatPointer_";
-  std::string string = T.getAsString();
-  bool isPrefix =
-      prefix.size() <= string.size() &&
-      std::mismatch(prefix.begin(), prefix.end(), string.begin(), string.end())
-              .first == prefix.end();
-  return isPrefix;
-}
-} // namespace
-
 /// Build a sizeof or alignof expression given an expression
 /// operand.
 ExprResult
@@ -6908,48 +6926,28 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   } else if (isa<MemberExpr>(NakedFn))
     NDecl = cast<MemberExpr>(NakedFn)->getMemberDecl();
 
-  if (FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl)) {
-    if (FDecl->isAsyncSpecified()) {
-      QualType AwaitReturnTy = FDecl->getReturnType();
-      if (!IsFutureType(AwaitReturnTy)) {
-        FunctionDecl *TempCFD = nullptr;
-        std::string TempName =
-            "__" + FDecl->getDeclName().getAsString(); // TODO
-        DeclContext::lookup_result Decls = FDecl->getDeclContext()->lookup(
-            DeclarationName(&(getASTContext().Idents).get(TempName)));
-
-        if (Decls.isSingleResult()) {
-          for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                                    E = Decls.end();
-               I != E; ++I) {
-            if (isa<FunctionDecl>(*I)) {
-              TempCFD = dyn_cast<FunctionDecl>(*I);
-              break;
+  if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
+    // Desugar for BSC async function call
+    if (FD->isAsyncSpecified()) {
+      QualType AwaitReturnTy = FD->getReturnType();
+      if (!AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
+        FunctionDecl *DesugaredFD = nullptr;
+        if (Context.BSCDesugaredMap.find(FD) != Context.BSCDesugaredMap.end()) {
+          for (auto &DesugaredDecl : Context.BSCDesugaredMap[FD]) {
+            if (DesugaredDecl->getDeclName().getAsString() ==
+                "__" + FD->getDeclName().getAsString()) {
+              DesugaredFD = cast<FunctionDecl>(DesugaredDecl);
             }
           }
-        } else {
-          // todo: error report?
         }
-        if (TempCFD) {
-          if (dyn_cast<DeclRefExpr>(NakedFn)) {
-            ExprResult RHSER1 = BuildDeclRefExpr(
-                TempCFD, TempCFD->getType().getNonReferenceType(), VK_LValue,
-                TempCFD->getLocation());
-            Expr *RHSExpr1 = RHSER1.get();
-            RHSExpr1->HasBSCScopeSpec = NakedFn->HasBSCScopeSpec;
-            RHSExpr1->IsDesugaredBSCMethodCall =
-                NakedFn->IsDesugaredBSCMethodCall;
-            Fn = ImpCastExprToType(RHSExpr1,
-                                   Context.getPointerType(TempCFD->getType()),
-                                   CK_FunctionToPointerDecay)
-                     .get();
-          } else if (isa<MemberExpr>(NakedFn)) {
+        if (DesugaredFD) {
+          if (isa<MemberExpr>(NakedFn)) {
             MemberExpr *ME = dyn_cast<MemberExpr>(NakedFn);
             Fn = MemberExpr::Create(
                 Context, ME->getBase(), ME->isArrow(), ME->getOperatorLoc(),
-                ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), TempCFD,
-                DeclAccessPair::make(TempCFD, TempCFD->getAccess()),
-                DeclarationNameInfo(), nullptr, TempCFD->getType(),
+                ME->getQualifierLoc(), ME->getTemplateKeywordLoc(), DesugaredFD,
+                DeclAccessPair::make(DesugaredFD, DesugaredFD->getAccess()),
+                DeclarationNameInfo(), nullptr, DesugaredFD->getType(),
                 ME->getValueKind(), ME->getObjectKind(), ME->isNonOdrUse());
           }
           Fn->IsDesugaredBSCMethodCall = NakedFn->IsDesugaredBSCMethodCall;
@@ -6957,9 +6955,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         }
       }
     }
-  }
 
-  if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
     if (CallingNDeclIndirectly && !checkAddressOfFunctionIsAvailable(
                                       FD, /*Complain=*/true, Fn->getBeginLoc()))
       return ExprError();

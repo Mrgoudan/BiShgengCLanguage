@@ -4466,6 +4466,20 @@ bool Type::isCUDADeviceBuiltinSurfaceType() const {
   return false;
 }
 
+bool Type::isBSCFutureType() const {
+  if (const auto *RT = getAs<RecordType>()) {
+    RecordDecl *RD = RT->getAsRecordDecl();
+    std::string Prefix = "__FatPointer_";
+    std::string RecordName = RD->getNameAsString();
+    bool IsPrefix = Prefix.size() <= RecordName.size() &&
+                    std::mismatch(Prefix.begin(), Prefix.end(),
+                                  RecordName.begin(), RecordName.end())
+                            .first == Prefix.end();
+    return IsPrefix;
+  }
+  return false;
+}
+
 /// Check if the specified type is the CUDA device builtin texture type.
 bool Type::isCUDADeviceBuiltinTextureType() const {
   if (const auto *RT = getAs<RecordType>())

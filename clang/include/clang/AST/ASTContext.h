@@ -490,7 +490,8 @@ public:
   mutable llvm::DenseMap<const Type *, DeclContext *> BSCDeclContextMap;
 
   /// A mapping to contain the declaration and its desugared decls.
-  mutable llvm::DenseMap<const Decl *, SmallVector<Decl *>> BSCDesugaredMap;
+  mutable llvm::DenseMap<const Decl *, SmallVector<NamedDecl *>>
+      BSCDesugaredMap;
 
 private:
   friend class ASTDeclReader;

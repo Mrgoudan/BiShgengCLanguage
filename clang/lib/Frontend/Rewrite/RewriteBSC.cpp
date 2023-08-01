@@ -64,10 +64,7 @@ public:
 
   void RewriteBSCMethodDecl(FunctionDecl *BMD);
   void ReplaceDecl(Decl *D);
-  void InsertDecl(Decl *D);
   void RemoveDecl(Decl *D);
-  void RewriteGenericFunction(FunctionDecl *FD);
-  void RewriteBSCFunctionTemplateDecl(FunctionTemplateDecl *FTD);
   void RewriteBSCInstantialFunctionDecl(FunctionDecl *FD);
   void RewriteBSCClassTemplateDecl(ClassTemplateDecl *FTD);
   void RewriteBSCInstantialClassDecl(ClassTemplateSpecializationDecl *FD);
@@ -168,8 +165,7 @@ void RewriteBSC::HandleDeclInMainFile(Decl *D) {
     if (FD->getParent() && isa<RecordDecl>(FD->getParent())) {
       if (cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
         // Remove origin generic BSC member function.
-
-        RewriteGenericFunction(FD);
+        RemoveDecl(FD);
         RewrittenDecls.push_back(FD);
         break;
       }
@@ -197,7 +193,7 @@ void RewriteBSC::HandleDeclInMainFile(Decl *D) {
     FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(D);
     // Remove origin BSC template function.
     RewrittenDecls.push_back(FTD);
-    RewriteBSCFunctionTemplateDecl(FTD);
+    RemoveDecl(FTD);
     break;
   }
   case Decl::ClassTemplate: {
@@ -269,30 +265,9 @@ void RewriteBSC::ReplaceDecl(Decl *D) {
   ReplaceText(D->getBeginLoc(), range, Str);
 }
 
-void RewriteBSC::InsertDecl(Decl *D) {
-  std::string SStr;
-  llvm::raw_string_ostream Buf(SStr);
-  D->print(Buf, Policy, /*PrintInstantiation=*/true);
-  const std::string &Str = Buf.str();
-  InsertText(D->getBeginLoc(), Str + ";\n");
-}
-
 void RewriteBSC::RemoveDecl(Decl *D) {
   SourceRange range = D->getSourceRange();
-  range.setEnd(range.getEnd().getLocWithOffset(1));
   RemoveText(D->getBeginLoc(), range);
-}
-
-void RewriteBSC::RewriteGenericFunction(FunctionDecl *FD) {
-  // Remove the BSC template function source code;
-  SourceRange range = FD->getSourceRange();
-  RemoveText(FD->getBeginLoc(), range);
-}
-
-void RewriteBSC::RewriteBSCFunctionTemplateDecl(FunctionTemplateDecl *FTD) {
-  // Remove the BSC template function source code;
-  SourceRange range = FTD->getSourceRange();
-  RemoveText(FTD->getBeginLoc(), range);
 }
 
 void RewriteBSC::RewriteBSCInstantialFunctionDecl(FunctionDecl *FD) {
