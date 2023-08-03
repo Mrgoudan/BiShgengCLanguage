@@ -3258,13 +3258,33 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
          TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
 
     if (BSCMethodFlag) {
-      if (DS.hasTypeSpecifier())
+      // SwithTok cannot be tok::eof to avoid core dump
+      if (SwitchTok.isNot(tok::eof) && PP.LookAhead(0).is(tok::coloncolon))
         goto DoneWithDeclSpec;
-      // if the method is unsinged long long::getA(){...}, which causes a
-      // misunderstanding on whether the BSCScopeSpec is long long or long, it
-      // throws out an error.
-      if (IsBSCMethodAmbiguous())
-        Diag(Loc, diag::ambiguous_bscmethod_define);
+      if (SwitchTok.isOneOf(tok::kw_struct, tok::kw_union, tok::kw_enum)) {
+        if (DS.hasTypeSpecifier())
+          goto DoneWithDeclSpec;
+      }
+      if (SwitchTok.isOneOf(tok::kw_signed, tok::kw_unsigned)) {
+        if (DS.getTypeSpecSign() != TypeSpecifierSign::Unspecified)
+          goto DoneWithDeclSpec;
+      }
+      if (SwitchTok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict)) {
+        if (DS.getTypeQualifiers() != DeclSpec::TQ_unspecified)
+          goto DoneWithDeclSpec;
+      }
+      if (SwitchTok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int, tok::kw_float, tok::kw_double)) {
+        if (DS.getTypeSpecType() != DeclSpec::TST_unspecified)
+          goto DoneWithDeclSpec;
+      }
+      if (SwitchTok.is(tok::kw_short)) {
+        if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Unspecified)
+          goto DoneWithDeclSpec;
+      }
+      if (SwitchTok.is(tok::kw_long)) {
+        if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Short || DS.getTypeSpecWidth() == TypeSpecifierWidth::LongLong)
+          goto DoneWithDeclSpec;
+      }
     }
 
     switch (SwitchTok.getKind()) {
@@ -6336,26 +6356,6 @@ static bool isPipeDeclarator(const Declarator &D) {
     if (DeclaratorChunk::Pipe == D.getTypeObject(Idx).Kind)
       return true;
 
-  return false;
-}
-
-bool Parser::IsBSCMethodAmbiguous() {
-  if (GetLookAheadToken(2).isNot(tok::coloncolon)) {
-    bool FlagUnsigned = (Tok.is(tok::kw_unsigned) &&
-                         NextToken().isOneOf(tok::kw_int, tok::kw_short,
-                                             tok::kw_long, tok::kw_unsigned));
-    bool FlagLong =
-        (Tok.is(tok::kw_long) &&
-         NextToken().isOneOf(tok::kw_int, tok::kw_long, tok::kw_unsigned));
-    bool FlagShort =
-        (Tok.is(tok::kw_short) &&
-         NextToken().isOneOf(tok::kw_short, tok::kw_int, tok::kw_unsigned));
-    bool FlagInt =
-        (Tok.is(tok::kw_int) &&
-         NextToken().isOneOf(tok::kw_short, tok::kw_long, tok::kw_unsigned));
-    if (FlagUnsigned || FlagLong || FlagShort || FlagInt)
-      return true;
-  }
   return false;
 }
 

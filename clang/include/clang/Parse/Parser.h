@@ -2410,7 +2410,6 @@ private:
   int BSCGenericLookAhead;
   bool IsParsingBSCGenericParameters = false;
   void ParseBSCScopeSpecifiers(DeclSpec &DS);
-  bool IsBSCMethodAmbiguous();
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);

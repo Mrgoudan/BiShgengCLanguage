@@ -4,14 +4,26 @@
 // RUN: %clang_cc1 %t-rw.c -o %t-rw.output
 // expected-no-diagnostics
 
-unsigned long int::getA() {
-  return 1;
+struct _A {
 };
+
+typedef struct _A A;
+
+struct _A A::foo() {
+    A a;
+    return a;
+}
 
 int main() {
   return 0;
-};
+}
 
-// CHECK: unsigned long int_getA(void) {
-// CHECK-NEXT:   return 1;
+// CHECK: struct _A {
+// CHECK-NEXT: };
+
+// CHECK: typedef struct _A A;
+
+// CHECK: struct _A A_foo(void) {
+// CHECK-NEXT:   A a;
+// CHECK-NEXT:   return a;
 // CHECK-NEXT: }
