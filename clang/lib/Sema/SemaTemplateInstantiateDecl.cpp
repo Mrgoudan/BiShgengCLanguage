@@ -3993,7 +3993,17 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 Decl *TemplateDeclInstantiator::VisitRecordDecl(RecordDecl *D) {
-  llvm_unreachable("There are only CXXRecordDecls in C++");
+  if (SemaRef.getLangOpts().BSC) {
+    if (D->isCompleteDefinition() && D->isLocalClass()) {
+      SemaRef.Diag(D->getLocation(), diag::err_invalid_struct_definition);
+    }
+    return RecordDecl::Create(SemaRef.Context, D->getTagKind(), Owner,
+                                   D->getBeginLoc(), D->getLocation(),
+                                   D->getIdentifier(), /*prevDecl=*/nullptr,
+                                   /*prevDecl=*/false);
+  } else {
+    llvm_unreachable("There are only CXXRecordDecls in C++");
+  }
 }
 
 Decl *TemplateDeclInstantiator::VisitTraitDecl(TraitDecl *D) {

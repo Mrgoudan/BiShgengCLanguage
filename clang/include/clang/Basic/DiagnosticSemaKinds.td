@@ -11716,4 +11716,6 @@ def err_await_expression_not_found: Error <
   "await expression was not found in async function">;
 def err_invalid_async_function : Error <
   "function which returns 'Future' type should not be modified by 'async'">;
+def err_invalid_struct_definition : Error <
+  "struct definition in generic fuction is not supported in BSC">;
 } // end of sema component.
