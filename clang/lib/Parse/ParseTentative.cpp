@@ -1146,11 +1146,6 @@ bool Parser::isBSCTemplateDecl(Token tok) {
     
     switch (LookAheadTok.getKind()) {
     case tok::less:
-      // Not BSC template declaration syntax.
-      if (LookAheadTok.isAtStartOfLine() ||
-          PreTok.isAtStartOfLine())
-        return false;
-
       if (PreTok.is(tok::identifier)) {
         // If already found less, or it`s a bit operation 
         // case, like 'foo<(a<<b), int>;', skip it.
@@ -1181,9 +1176,6 @@ bool Parser::isBSCTemplateDecl(Token tok) {
       }
       break;
     case tok::greater:
-      // invalid syntax for BSC template
-      if (LookAheadTok.isAtStartOfLine())
-        return false;
       if (!FoundLess || (PreTok.is(tok::greater) ||
                          NextTok.is(tok::greater)))
         break;
