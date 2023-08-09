@@ -672,6 +672,7 @@ FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   }
   NewFD->setParams(ParmVarDecls);
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   S.PushFunctionScope();
   S.PushDeclContext(S.getCurScope(), NewFD);
 

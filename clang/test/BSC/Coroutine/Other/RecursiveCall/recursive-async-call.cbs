@@ -3,12 +3,35 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // since it's a recursive call, we will get a segv if we run it.
 
+// Test without serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -internal-isystem /usr/local/include \
+// RUN: -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/9/../../../../x86_64-linux-gnu/include \
+// RUN: -internal-externc-isystem /usr/include/x86_64-linux-gnu \
+// RUN: -internal-externc-isystem /include -internal-externc-isystem /usr/include -ast-dump %s \
+// RUN: | FileCheck --strict-whitespace %s
+//
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -internal-isystem /usr/local/include \
+// RUN: -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/9/../../../../x86_64-linux-gnu/include \
+// RUN: -internal-externc-isystem /usr/include/x86_64-linux-gnu \
+// RUN: -internal-externc-isystem /include -internal-externc-isystem /usr/include -emit-pch -o %t %s
+// RUN: %clang_cc1 -x bsc -triple x86_64-unknown-unknown -internal-isystem /usr/local/include \
+// RUN: -internal-isystem /usr/lib/gcc/x86_64-linux-gnu/9/../../../../x86_64-linux-gnu/include \
+// RUN: -internal-externc-isystem /usr/include/x86_64-linux-gnu \
+// RUN: -internal-externc-isystem /include -internal-externc-isystem /usr/include -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
+
 #include "../../async-func-read.hbs"
 
 async int f() {
     int a = await f();
     return a;
 }
+
+// Make sure that function `__f` has body.
+// CHECK: FunctionDecl 0x{{[^ ]*}} <col:1, col:11> col:11 used __f 'struct __FatPointer_int (void)'
+// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:1, col:11>
 
 int main() {
   struct __FatPointer_int this = f();
