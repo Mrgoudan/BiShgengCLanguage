@@ -101,14 +101,16 @@ public:
   friend class DeclContext;
 
 protected:
-  TraitDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
-            SourceLocation StartLoc, SourceLocation IdLoc, IdentifierInfo *Id,
-            TraitDecl *PrevDecl);
+  TraitDecl(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+            SourceLocation IdLoc, IdentifierInfo *Id, TraitDecl *PrevDecl);
 
 public:
-  static TraitDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
+  static TraitDecl *Create(const ASTContext &C, DeclContext *DC,
                            SourceLocation StartLoc, SourceLocation IdLoc,
                            IdentifierInfo *Id, TraitDecl *PrevDecl = nullptr);
+
+  static TraitDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
   TraitDecl *getPreviousDecl() {
     return cast_or_null<TraitDecl>(
         static_cast<TagDecl *>(this)->getPreviousDecl());
@@ -149,16 +151,26 @@ public:
 class ImplTraitDecl : public DeclaratorDecl,
                       public Redeclarable<ImplTraitDecl> {
 protected:
-  ImplTraitDecl(Kind DK, ASTContext &C, DeclContext *DC,
-                SourceLocation StartLoc, SourceLocation IdLoc,
-                IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
-                StorageClass SC);
+  ImplTraitDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                SourceLocation IdLoc, IdentifierInfo *Id, QualType T,
+                TypeSourceInfo *TInfo, StorageClass SC);
 
   using redeclarable_base = Redeclarable<ImplTraitDecl>;
+
+  ImplTraitDecl *getNextRedeclarationImpl() override {
+    return getNextRedeclaration();
+  }
+
+  ImplTraitDecl *getPreviousDeclImpl() override { return getPreviousDecl(); }
+
+  ImplTraitDecl *getMostRecentDeclImpl() override {
+    return getMostRecentDecl();
+  }
 
   TraitDecl *TD;
 
 public:
+  using redeclarable_base::getMostRecentDecl;
   using redeclarable_base::getPreviousDecl;
 
   static ImplTraitDecl *Create(ASTContext &C, DeclContext *DC,

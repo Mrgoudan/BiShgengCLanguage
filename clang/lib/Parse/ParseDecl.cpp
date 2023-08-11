@@ -2202,16 +2202,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   if (FirstDecl)
     DeclsInGroup.push_back(FirstDecl);
 
-  VarDecl *VD = dyn_cast_or_null<VarDecl>(FirstDecl);
-  if (getLangOpts().BSC && VD) {
-    QualType T = VD->getType();
-    if (T->isTraitPointerType()) {
-      VarDecl *NewVD =
-          Actions.ActOnDesugarTraitInstance(D, T->getPointeeType(), VD);
-      DeclsInGroup.push_back(NewVD);
-    }
-  }
-
   if (FirstDecl) {
     FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(FirstDecl);
     if (getLangOpts().BSC && FD && FD->isAsyncSpecified()) {

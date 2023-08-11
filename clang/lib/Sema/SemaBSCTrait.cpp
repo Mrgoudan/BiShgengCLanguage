@@ -305,23 +305,29 @@ QualType Sema::DesugarTraitToStructTrait(QualType T) {
 //  .data = &s;
 //  .vtable = *struct_S_Trait_I_Vtable;
 //`}
-VarDecl *Sema::ActOnDesugarTraitInstance(Declarator &D, QualType QT,
-                                         VarDecl *VarDec) {
+VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
+  VarDecl *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return nullptr;
+  QualType QT = VD->getType();
+  if (!QT->isTraitPointerType())
+    return nullptr;
+  QT = QT->getPointeeType();
   // build expr: .data = &s;
   TraitDecl *TD = dyn_cast<TraitDecl>(QT.getTypePtr()->getAsTagDecl());
   if (TD->getVtable() == nullptr) {
-    Diag(VarDec->getLocation(), diag::err_typecheck_decl_incomplete_type) << QT;
+    Diag(VD->getLocation(), diag::err_typecheck_decl_incomplete_type) << QT;
     return nullptr;
   }
   RecordDecl *LookUpTrait = TD->getTrait();
   RecordDecl *LookUpVtable = TD->getVtable();
   QualType RecordTy = Context.getRecordType(LookUpTrait);
   VarDecl *NewVD = VarDecl::Create(
-      Context, CurContext, D.getBeginLoc(), D.getIdentifierLoc(),
-      VarDec->getIdentifier(), RecordTy, Context.CreateTypeSourceInfo(RecordTy),
+      Context, CurContext, D->getBeginLoc(), SourceLocation(),
+      VD->getIdentifier(), RecordTy, Context.CreateTypeSourceInfo(RecordTy),
       StorageClass::SC_None);
   PushOnScopeChains(NewVD, getCurScope(), true);
-  Expr *exp = VarDec->getInit();
+  Expr *exp = VD->getInit();
   if (exp == nullptr) // trait I *a;
     return NewVD;
 

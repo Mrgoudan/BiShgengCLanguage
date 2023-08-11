@@ -337,8 +337,8 @@ namespace clang {
     void VisitRecordDecl(RecordDecl *RD);
     RedeclarableResult VisitCXXRecordDeclImpl(CXXRecordDecl *D);
     void VisitCXXRecordDecl(CXXRecordDecl *D) { VisitCXXRecordDeclImpl(D); }
-    RedeclarableResult VisitTraitDeclImpl(TraitDecl *TD);
-    void VisitTraitDecl(TraitDecl *TD) { VisitTraitDeclImpl(TD); }
+    void VisitTraitDecl(TraitDecl *TD);
+    void VisitImplTraitDecl(ImplTraitDecl *ITD);
     RedeclarableResult VisitClassTemplateSpecializationDeclImpl(
                                             ClassTemplateSpecializationDecl *D);
 
@@ -896,10 +896,11 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
   }
 }
 
-ASTDeclReader::RedeclarableResult
-ASTDeclReader::VisitTraitDeclImpl(TraitDecl *RD) {
-  RedeclarableResult Redecl = VisitTagDecl(RD);
-  return Redecl;
+void ASTDeclReader::VisitTraitDecl(TraitDecl *TD) { VisitTagDecl(TD); }
+
+void ASTDeclReader::VisitImplTraitDecl(ImplTraitDecl *ITD) {
+  VisitRedeclarable(ITD);
+  VisitDeclaratorDecl(ITD);
 }
 
 void ASTDeclReader::VisitValueDecl(ValueDecl *VD) {
@@ -3602,6 +3603,12 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_ENUM:
     D = EnumDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_TRAIT:
+    D = TraitDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_IMPL_TRAIT:
+    D = ImplTraitDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_RECORD:
     D = RecordDecl::CreateDeserialized(Context, ID);

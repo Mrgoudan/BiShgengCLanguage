@@ -1229,6 +1229,34 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifie
 
     if (R.isUsable())
       Stmts.push_back(R.get());
+
+    if (getLangOpts().BSC && R.isUsable()) {
+      // desugar for trait F *f = &a;
+      if (auto *DS = dyn_cast<DeclStmt>(R.get())) {
+        if (DS->isSingleDecl()) {
+          VarDecl *VD = Actions.ActOnDesugarTraitInstance(DS->getSingleDecl());
+          if (VD) {
+            DeclGroupRef DG(VD);
+            DeclStmt *DataDS = new (Actions.Context)
+                DeclStmt(DG, VD->getBeginLoc(), VD->getEndLoc());
+            Stmts.push_back(DataDS);
+          }
+        } else { // desugar for trait F *f = &a, *g = &a;
+          SmallVector<Decl *, 8> Decls;
+          for (auto *D : DS->getDeclGroup()) {
+            VarDecl *VD = Actions.ActOnDesugarTraitInstance(D);
+            if (VD)
+              Decls.push_back(VD);
+          }
+          if (Decls.size()) {
+            DeclGroupPtrTy DataPT = Actions.BuildDeclaratorGroup(Decls);
+            StmtResult SR = Actions.ActOnDeclStmt(DataPT, SourceLocation(),
+                                                  SourceLocation());
+            Stmts.push_back(SR.get());
+          }
+        }
+      }
+    }
   }
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using

@@ -521,6 +521,8 @@ private:
   unsigned DeclVarAbbrev = 0;
   unsigned DeclFieldAbbrev = 0;
   unsigned DeclEnumAbbrev = 0;
+  unsigned DeclTraitAbbrev = 0;
+  unsigned DeclImplTraitAbbrev = 0;
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
   unsigned DeclBSCMethodAbbrev = 0;
@@ -693,6 +695,8 @@ public:
   unsigned getDeclVarAbbrev() const { return DeclVarAbbrev; }
   unsigned getDeclFieldAbbrev() const { return DeclFieldAbbrev; }
   unsigned getDeclEnumAbbrev() const { return DeclEnumAbbrev; }
+  unsigned getDeclTraitAbbrev() const { return DeclTraitAbbrev; }
+  unsigned getDeclImplTraitAbbrev() const { return DeclImplTraitAbbrev; }
   unsigned getDeclObjCIvarAbbrev() const { return DeclObjCIvarAbbrev; }
   unsigned getDeclCXXMethodAbbrev() const { return DeclCXXMethodAbbrev; }
   unsigned getDeclBSCMethodAbbrev() const { return DeclBSCMethodAbbrev; }

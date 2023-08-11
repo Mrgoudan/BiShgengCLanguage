@@ -1246,6 +1246,9 @@ enum DeclCode {
   /// An EnumDecl record.
   DECL_ENUM,
 
+  /// An TraitDecl record.
+  DECL_TRAIT,
+
   /// A RecordDecl record.
   DECL_RECORD,
 
@@ -1302,6 +1305,9 @@ enum DeclCode {
 
   /// A VarDecl record.
   DECL_VAR,
+
+  /// An ImplTraitDecl record.
+  DECL_IMPL_TRAIT,
 
   /// An ImplicitParamDecl record.
   DECL_IMPLICIT_PARAM,

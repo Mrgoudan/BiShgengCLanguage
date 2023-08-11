@@ -72,6 +72,8 @@ namespace clang {
     void VisitUnresolvedUsingIfExistsDecl(UnresolvedUsingIfExistsDecl *D);
     void VisitTagDecl(TagDecl *D);
     void VisitEnumDecl(EnumDecl *D);
+    void VisitTraitDecl(TraitDecl *D);
+    void VisitImplTraitDecl(ImplTraitDecl *D);
     void VisitRecordDecl(RecordDecl *D);
     void VisitCXXRecordDecl(CXXRecordDecl *D);
     void VisitClassTemplateSpecializationDecl(
@@ -474,6 +476,37 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
     AbbrevToUse = Writer.getDeclEnumAbbrev();
 
   Code = serialization::DECL_ENUM;
+}
+
+void ASTDeclWriter::VisitTraitDecl(TraitDecl *D) {
+  VisitTagDecl(D);
+  if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->isImplicit() && !D->isUsed(false) && !D->hasExtInfo() &&
+      !D->getTypedefNameForAnonDecl() &&
+      D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
+      !D->isReferenced() && !D->isTopLevelDeclInObjCContainer() &&
+      D->getAccess() == AS_public && !D->isModulePrivate() &&
+      !CXXRecordDecl::classofKind(D->getKind()) &&
+      !needsAnonymousDeclarationNumber(D) &&
+      D->getDeclName().getNameKind() == DeclarationName::Identifier)
+    AbbrevToUse = Writer.getDeclTraitAbbrev();
+  Code = serialization::DECL_TRAIT;
+}
+
+void ASTDeclWriter::VisitImplTraitDecl(ImplTraitDecl *D) {
+  VisitRedeclarable(D);
+  VisitDeclaratorDecl(D);
+  if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
+      !D->isImplicit() && !D->isUsed(false) && !D->isInvalidDecl() &&
+      !D->isReferenced() && !D->isTopLevelDeclInObjCContainer() &&
+      D->getAccess() == AS_none && !D->isModulePrivate() &&
+      !needsAnonymousDeclarationNumber(D) &&
+      D->getDeclName().getNameKind() == DeclarationName::Identifier &&
+      !D->hasExtInfo() && D->getFirstDecl() == D->getMostRecentDecl() &&
+      D->getKind() == Decl::ImplTrait &&
+      !(D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()))
+    AbbrevToUse = Writer.getDeclImplTraitAbbrev();
+  Code = serialization::DECL_IMPL_TRAIT;
 }
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
@@ -2056,6 +2089,46 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
   DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
+  // Abbreviation for DECL_TRAIT
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_TRAIT));
+  // Redeclarable
+  Abv->Add(BitCodeAbbrevOp(0)); // No redeclaration
+  // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(1));                       // isInvalidDecl
+  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
+  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
+  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
+  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
+  Abv->Add(BitCodeAbbrevOp(0));         // TopLevelDeclInObjCContainer
+  Abv->Add(BitCodeAbbrevOp(AS_public)); // C++ AccessSpecifier
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SubmoduleID
+  // NamedDecl
+  Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Name
+  Abv->Add(BitCodeAbbrevOp(0));                       // AnonDeclNumber
+  // TypeDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type Ref
+  // TagDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IdentifierNamespace
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getTagKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isCompleteDefinition
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // EmbeddedInDeclarator
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFreeStanding
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
+                           1)); // IsCompleteDefinitionRequired
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SourceLocation
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // SourceLocation
+  Abv->Add(BitCodeAbbrevOp(0));                       // ExtInfoKind
+  // DC
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // VisibleOffset
+  DeclTraitAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
   // Abbreviation for DECL_RECORD
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_RECORD));
@@ -2250,6 +2323,38 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  // Abbreviation for DECL_IMPL_TRAIT
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_IMPL_TRAIT));
+  // Redeclarable
+  Abv->Add(BitCodeAbbrevOp(0)); // No redeclaration
+  // Decl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclContext
+  Abv->Add(BitCodeAbbrevOp(0));                       // LexicalDeclContext
+  Abv->Add(BitCodeAbbrevOp(0));                       // isInvalidDecl
+  Abv->Add(BitCodeAbbrevOp(0));                       // HasAttrs
+  Abv->Add(BitCodeAbbrevOp(0));                       // isImplicit
+  Abv->Add(BitCodeAbbrevOp(0));                       // isUsed
+  Abv->Add(BitCodeAbbrevOp(0));                       // isReferenced
+  Abv->Add(BitCodeAbbrevOp(0));       // TopLevelDeclInObjCContainer
+  Abv->Add(BitCodeAbbrevOp(AS_none)); // C++ AccessSpecifier
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // ModuleOwnershipKind
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // SubmoduleID
+  // NamedDecl
+  Abv->Add(BitCodeAbbrevOp(0));                       // NameKind = Identifier
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Name
+  Abv->Add(BitCodeAbbrevOp(0));                       // AnonDeclNumber
+  // ValueDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Type
+  // DeclaratorDecl
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // InnerStartLoc
+  Abv->Add(BitCodeAbbrevOp(0));                       // hasExtInfo
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TSIType
+  // Type Source Info
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
+  DeclImplTraitAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_CXX_METHOD
   Abv = std::make_shared<BitCodeAbbrev>();

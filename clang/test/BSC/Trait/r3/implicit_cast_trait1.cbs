@@ -7,13 +7,15 @@ trait F {
 };
 
 int int::foo(int* this) {
-  return 0;
+  return 2;
 }
 
 impl trait F for int;
 
 int main() {
   int a = 1;
-  trait F* f = &a;
-  return f->foo();
+  trait F* f = &a, *g = &a;
+  int b = f->foo();
+  int c = g->foo();
+  return b - c;
 }

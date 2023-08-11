@@ -17087,7 +17087,7 @@ CreateNewDecl:
       if (isStdBadAlloc && (!StdBadAlloc || getStdBadAlloc()->isImplicit()))
         StdBadAlloc = cast<CXXRecordDecl>(New);
     } else if (Kind == TTK_Trait) {
-      New = TraitDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
+      New = TraitDecl::Create(Context, SearchDC, KWLoc, Loc, Name,
                               cast_or_null<TraitDecl>(PrevDecl));
     } else {
       New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,

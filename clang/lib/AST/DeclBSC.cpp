@@ -40,22 +40,28 @@ BSCMethodDecl *BSCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 //===----------------------------------------------------------------------===//
 // ImplTraitDecl Implementation
 //===----------------------------------------------------------------------===//
-TraitDecl::TraitDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
+TraitDecl::TraitDecl(const ASTContext &C, DeclContext *DC,
                      SourceLocation StartLoc, SourceLocation IdLoc,
                      IdentifierInfo *Id, TraitDecl *PrevDecl)
-    : TagDecl(DK, TK, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
+    : TagDecl(Trait, TTK_Trait, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
   assert(classof(static_cast<Decl *>(this)) && "Invalid Kind!");
 }
 
-TraitDecl *TraitDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
+TraitDecl *TraitDecl::Create(const ASTContext &C, DeclContext *DC,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, TraitDecl *PrevDecl) {
-  TraitDecl *R =
-      new (C, DC) TraitDecl(Trait, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
+  TraitDecl *R = new (C, DC) TraitDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
 
   C.getTypeDeclType(R, PrevDecl);
   return R;
+}
+
+TraitDecl *TraitDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  TraitDecl *Trait = new (C, ID) TraitDecl(C, nullptr, SourceLocation(),
+                                           SourceLocation(), nullptr, nullptr);
+  Trait->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
+  return Trait;
 }
 
 TraitDecl::field_iterator TraitDecl::field_begin() const {
@@ -71,25 +77,24 @@ void TraitDecl::completeDefinition() {
 // ImplTraitDecl Implementation
 //===----------------------------------------------------------------------===//
 
-ImplTraitDecl::ImplTraitDecl(Kind DK, ASTContext &C, DeclContext *DC,
+ImplTraitDecl::ImplTraitDecl(ASTContext &C, DeclContext *DC,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              IdentifierInfo *Id, QualType T,
                              TypeSourceInfo *TInfo, StorageClass SC)
-    : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc),
+    : DeclaratorDecl(ImplTrait, DC, IdLoc, Id, T, TInfo, StartLoc),
       redeclarable_base(C) {}
 
 ImplTraitDecl *ImplTraitDecl::Create(ASTContext &C, DeclContext *DC,
                                      SourceLocation StartL, SourceLocation IdL,
                                      IdentifierInfo *Id, QualType T,
                                      TypeSourceInfo *TInfo, StorageClass S) {
-  return new (C, DC)
-      ImplTraitDecl(ImplTrait, C, DC, StartL, IdL, Id, T, TInfo, S);
+  return new (C, DC) ImplTraitDecl(C, DC, StartL, IdL, Id, T, TInfo, S);
 }
 
 ImplTraitDecl *ImplTraitDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID)
-      ImplTraitDecl(ImplTrait, C, nullptr, SourceLocation(), SourceLocation(),
-                    nullptr, QualType(), nullptr, SC_None);
+      ImplTraitDecl(C, nullptr, SourceLocation(), SourceLocation(), nullptr,
+                    QualType(), nullptr, SC_None);
 }
 
 SourceRange ImplTraitDecl::getSourceRange() const {
