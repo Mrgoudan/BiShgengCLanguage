@@ -17,7 +17,7 @@ struct PollResult<T> struct PollResult<T>::pending() {
 }
 
 _Bool struct PollResult<T>::is_completed(struct PollResult<T> *this, T *out)     {
-    out = &this->res;
+    *out = this->res;
     return !this->isPending;
 }
 

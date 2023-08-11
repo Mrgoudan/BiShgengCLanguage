@@ -2096,7 +2096,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (FD->isAsyncSpecified()) {
       QualType AwaitReturnTy = FD->getReturnType();
-      if (!AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
+      if (!IsBSCCompatibleFutureType(AwaitReturnTy)) {
         FunctionDecl *DesugaredFD = nullptr;
         if (Context.BSCDesugaredMap.find(FD) != Context.BSCDesugaredMap.end()) {
           for (auto &DesugaredDecl : Context.BSCDesugaredMap[FD]) {
@@ -6944,7 +6944,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     // Desugar for BSC async function call
     if (FD->isAsyncSpecified()) {
       QualType AwaitReturnTy = FD->getReturnType();
-      if (!AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
+      if (!IsBSCCompatibleFutureType(AwaitReturnTy)) {
         FunctionDecl *DesugaredFD = nullptr;
         if (Context.BSCDesugaredMap.find(FD) != Context.BSCDesugaredMap.end()) {
           for (auto &DesugaredDecl : Context.BSCDesugaredMap[FD]) {

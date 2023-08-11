@@ -1,0 +1,23 @@
+// RUN: %clang %s -o %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+
+#include "../../async-func-read.hbs"
+
+static async int f(int n) {
+
+    if (n == 3)
+        return 5;
+    else if (n < 3)
+        return 0;
+    
+    int a = await f(n-1);
+    return a;
+}
+
+int main() {
+  struct __FatPointer_int this = f(3);
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data); 
+  return 0;
+}

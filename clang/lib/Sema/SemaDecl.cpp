@@ -11600,6 +11600,13 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
   // Semantic checking for this function declaration (in isolation).
 
+  if (getLangOpts().BSC) {
+    if (!DeclIsDefn && NewFD->isAsyncSpecified() && NewFD->isStatic()) {
+      Diag(NewFD->getBeginLoc(), diag::err_async_func_unsupported)
+            << "static declaration";
+    }
+  }
+
   if (getLangOpts().CPlusPlus) {
     // C++-specific checks.
     if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(NewFD)) {

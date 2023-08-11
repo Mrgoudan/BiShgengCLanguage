@@ -3189,6 +3189,8 @@ public:
   SmallVector<Decl *, 8> ActOnAsyncFunctionDeclaration(FunctionDecl *FD);
   SmallVector<Decl *, 8> ActOnAsyncFunctionDefinition(FunctionDecl *FD);
 
+  bool IsBSCCompatibleFutureType(QualType Ty);
+
   /// We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
   /// and partial specializations are visible/reachable, and diagnose if not.
