@@ -2260,8 +2260,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (getLangOpts().BSC && LHS.get()) {
         // FIXME: Should we desugar right here after we see "->"?
         // Maybe we should consider doing "Desugar" at a more coarse level.
+        // FIXME: '(int)a->b' baseExpr should be 'a' rather than '(int)a'
         QualType T = LHS.get()->getType();
-        if (Actions.ShouldDesugarTrait(T)) {
+        if (!T.isNull() && Actions.ShouldDesugarTrait(T)) {
           // @code
           // void f(trait T* t) {
           //   t->foo(); // see '->', desugar to "t.vtable->foo()" immediately;
