@@ -10303,7 +10303,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
   }
 
   if (getLangOpts().BSC) {
-    if (RHS.get()->getType().isOwnedQualified() || LHSType.isOwnedQualified()) {
+    if (RHS.get()->getType().getCanonicalType().isOwnedQualified() || LHSType.getCanonicalType().isOwnedQualified()) {
       if (!CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
         return IncompatibleOwnedPointer;
     }

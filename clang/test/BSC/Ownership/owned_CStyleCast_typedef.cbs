@@ -1,0 +1,10 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+typedef int* owned myInt;
+
+void test () {
+    int x = 10;
+    int* p = &x;
+    myInt p1 = (myInt)p;
+}

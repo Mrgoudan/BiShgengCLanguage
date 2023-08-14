@@ -6731,11 +6731,11 @@ inline bool QualType::hasQualifiers() const {
 }
 
 inline QualType QualType::getUnqualifiedType() const {
-  int addOwned = isOwnedQualified() ? Qualifiers::Owned : 0;
+  int addOwned = getCanonicalType().isOwnedQualified() ? Qualifiers::Owned : 0;
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
     return QualType(getTypePtr(), addOwned);
 
-  return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, 0);
+  return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, addOwned);
 }
 
 inline SplitQualType QualType::getSplitUnqualifiedType() const {
