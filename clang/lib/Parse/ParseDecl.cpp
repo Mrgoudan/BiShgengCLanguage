@@ -3248,6 +3248,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
          TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
 
     if (BSCMethodFlag) {
+      bool Uncombinable = DS.getTypeSpecType() == DeclSpec::TST_bool
+                  || DS.getTypeSpecType() == DeclSpec::TST_struct
+                  || DS.getTypeSpecType() == DeclSpec::TST_union
+                  || DS.getTypeSpecType() == DeclSpec::TST_enum
+                  || DS.getTypeSpecType() == DeclSpec::TST_typename;
       // SwithTok cannot be tok::eof to avoid core dump
       if (SwitchTok.isNot(tok::eof) && PP.LookAhead(0).is(tok::coloncolon))
         goto DoneWithDeclSpec;
@@ -3256,23 +3261,30 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           goto DoneWithDeclSpec;
       }
       if (SwitchTok.isOneOf(tok::kw_signed, tok::kw_unsigned)) {
-        if (DS.getTypeSpecSign() != TypeSpecifierSign::Unspecified)
+        if (DS.getTypeSpecSign() != TypeSpecifierSign::Unspecified
+            || Uncombinable
+            || DS.getTypeSpecType() == DeclSpec::TST_float
+            || DS.getTypeSpecType() == DeclSpec::TST_double)
           goto DoneWithDeclSpec;
       }
       if (SwitchTok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict)) {
         if (DS.getTypeQualifiers() != DeclSpec::TQ_unspecified)
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int, tok::kw_float, tok::kw_double)) {
+      if (SwitchTok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int, tok::kw_float, 
+          tok::kw_double, tok::kw_bool, tok::kw__Bool)) {
         if (DS.getTypeSpecType() != DeclSpec::TST_unspecified)
           goto DoneWithDeclSpec;
       }
       if (SwitchTok.is(tok::kw_short)) {
-        if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Unspecified)
+        if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Unspecified
+            || Uncombinable)
           goto DoneWithDeclSpec;
       }
       if (SwitchTok.is(tok::kw_long)) {
-        if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Short || DS.getTypeSpecWidth() == TypeSpecifierWidth::LongLong)
+        if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Short 
+            || DS.getTypeSpecWidth() == TypeSpecifierWidth::LongLong
+            || Uncombinable)
           goto DoneWithDeclSpec;
       }
     }
