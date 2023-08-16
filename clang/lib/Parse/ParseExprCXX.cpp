@@ -432,29 +432,30 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     // "T max<T> (T a, T b) {...}"
     Token Next;
     // TODO: this could be missidentified from typo:// "intt"
-    bool ParsingBSCTemplateFunction = 
-                          IsBSCTemplateDeclaration(getLangOpts().BSC,
-                                                   Tok.is(tok::identifier),
-                                                   PP);
+    bool ParsingBSCTemplateFunction = false;
+    if (getCurScope()->getDepth() <= 1) {
+      ParsingBSCTemplateFunction = IsBSCTemplateDeclaration(getLangOpts().BSC,
+                                                            Tok.is(tok::identifier),
+                                                            PP);
 
-    if (ParsingBSCTemplateFunction) {
-      // Determine if '>' is followed by '{' or '('
-      int LGreaterOffset = 2;
-      Token TmpTok = PP.LookAhead(LGreaterOffset);
-      // Attention to case like: int a = foo<(1>>2)>(3);
-      // The case above is not parsing BSC template function.
-      while ((TmpTok.isNot(tok::greater) ||
-              (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
-               PP.LookAhead(LGreaterOffset - 1).is(tok::greater)
-              )) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
-        LGreaterOffset += 1;
-        TmpTok = PP.LookAhead(LGreaterOffset);
-      }
-      ParsingBSCTemplateFunction =
-          TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
+      if (ParsingBSCTemplateFunction) {
+        // Determine if '>' is followed by '{' or '('
+        int LGreaterOffset = 2;
+        Token TmpTok = PP.LookAhead(LGreaterOffset);
+        // Attention to case like: int a = foo<(1>>2)>(3);
+        // The case above is not parsing BSC template function.
+        while ((TmpTok.isNot(tok::greater) ||
+                (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
+                 PP.LookAhead(LGreaterOffset - 1).is(tok::greater)
+                )) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
+          LGreaterOffset += 1;
+          TmpTok = PP.LookAhead(LGreaterOffset);
+        } 
+        ParsingBSCTemplateFunction =
+            TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
                                           .isOneOf(tok::l_paren, tok::l_brace));
+      }
     }
-
     if (ParsingBSCTemplateFunction) {
       int LParenOffset = 0;
       while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
