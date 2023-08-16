@@ -85,7 +85,7 @@ buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
 }
 
 std::string GetPrefix(QualType T) {
-  std::string ExtendedTypeStr = T.getAsString();
+  std::string ExtendedTypeStr = T.getCanonicalType().getAsString();
   for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
     if (ExtendedTypeStr[i] == ' ') {
       ExtendedTypeStr.replace(i, 1, "_");

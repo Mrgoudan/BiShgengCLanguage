@@ -1,0 +1,39 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "../../async-func-read.hbs"
+
+typedef unsigned int UINT32;
+async UINT32 f() {
+    await read(1);
+    return 0;
+}
+
+struct __FatPointer_unsigned_int (*CallBack)() = f; 
+async UINT32 g() {
+    UINT32 i = 0;
+    i = await CallBack();
+    return i;
+}
+
+async unsigned int q() {
+    unsigned int i = 0;
+    i = await CallBack();
+    return i;
+}
+
+async UINT32 h() {
+    UINT32 i = 0;
+    i = await q();
+    return i;
+}
+
+int main() {
+    struct __FatPointer_unsigned_int this = g();
+    this.vtable->poll(this.data);
+    this.vtable->free(this.data); 
+    return 0;
+}
