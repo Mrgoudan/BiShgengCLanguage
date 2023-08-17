@@ -839,7 +839,7 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
       }
       ParsingBSCTemplateStruct =
           TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
-                                          .isOneOf(tok::l_paren, tok::l_brace));
+                                          .is(tok::l_brace));
     }
 
     if (ParsingBSCTemplateStruct) {
