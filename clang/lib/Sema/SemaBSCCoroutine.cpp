@@ -532,12 +532,13 @@ static RecordDecl *buildFutureRecordDecl(
   return RD;
 }
 
-static RecordDecl *generateVoidStruct(Sema &S, SourceLocation BLoc,
-                                      SourceLocation ELoc) {
+static std::pair<RecordDecl *, bool>
+generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
   std::string Recordname = "Void";
   DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
       DeclarationName(&(S.Context.Idents).get(Recordname)));
   RecordDecl *VoidRD = nullptr;
+  bool IsExisted = false;
 
   if (Decls.isSingleResult()) {
     for (DeclContext::lookup_result::iterator I = Decls.begin(),
@@ -548,6 +549,7 @@ static RecordDecl *generateVoidStruct(Sema &S, SourceLocation BLoc,
         break;
       }
     }
+    IsExisted = true;
   } else if (Decls.empty()) {
     VoidRD = buildAsyncDataRecord(S.Context, Recordname, BLoc, ELoc,
                                   clang::TagDecl::TagKind::TTK_Struct);
@@ -555,7 +557,7 @@ static RecordDecl *generateVoidStruct(Sema &S, SourceLocation BLoc,
     VoidRD->completeDefinition();
     S.PushOnScopeChains(VoidRD, S.getCurScope(), true);
   }
-  return VoidRD;
+  return std::make_pair(VoidRD, IsExisted);
 }
 
 /// TODO: will be removed after using Future in stdlib
@@ -2947,21 +2949,23 @@ ExprResult Sema::ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
 }
 
 SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
-  SmallVector<Decl *, 8> decls;
+  SmallVector<Decl *, 8> Decls;
   if (!IsBSCCompatibleFutureType(FD->getReturnType())) {
     QualType ReturnTy = FD->getReturnType();
     ReturnTy.removeLocalConst();
     if (ReturnTy->isVoidType()) {
-      RecordDecl *VoidRD =
+      std::pair<RecordDecl *, bool> VoidRD =
           generateVoidStruct(*this, FD->getBeginLoc(), FD->getEndLoc());
-      decls.push_back(VoidRD);
-      Context.BSCDesugaredMap[FD].push_back(VoidRD);
-      ReturnTy = Context.getRecordType(VoidRD);
+      if (!std::get<1>(VoidRD)) {
+        Decls.push_back(std::get<0>(VoidRD));
+        Context.BSCDesugaredMap[FD].push_back(std::get<0>(VoidRD));
+      }
+      ReturnTy = Context.getRecordType(std::get<0>(VoidRD));
     }
     QualType PollResultType =
         lookupPollResultType(*this, FD->getBeginLoc(), ReturnTy);
     if (PollResultType.isNull()) {
-      return decls;
+      return Decls;
     }
     RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
     std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
@@ -2969,11 +2973,11 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
                                                    PollResultRD, FD);
 
     if (!std::get<1>(std::get<0>(NewRDs))) {
-      decls.push_back(std::get<0>(std::get<0>(NewRDs)));
+      Decls.push_back(std::get<0>(std::get<0>(NewRDs)));
       Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<0>(NewRDs)));
     }
     if (!std::get<1>(std::get<1>(NewRDs))) {
-      decls.push_back(std::get<0>(std::get<1>(NewRDs)));
+      Decls.push_back(std::get<0>(std::get<1>(NewRDs)));
       Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
     }
 
@@ -2981,17 +2985,17 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
       FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
         *this, FD, std::get<0>(std::get<1>(NewRDs)));
       if (FutureInitDef) {
-        decls.push_back(FutureInitDef);
+        Decls.push_back(FutureInitDef);
         Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
       } 
     }
   }
-  return decls;
+  return Decls;
 }
 
 SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
-  SmallVector<Decl *, 8> decls;
-  decls.push_back(FD);
+  SmallVector<Decl *, 8> Decls;
+  Decls.push_back(FD);
 
   AwaitExprFinder finder = AwaitExprFinder(Context);
   finder.Visit(FD->getBody());
@@ -3002,37 +3006,39 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
       Diag(FD->getBeginLoc(), diag::err_await_invalid_scope)
           << "non-async function.";
     }
-    return decls;
+    return Decls;
   }
 
   // For leaf nodes, should not be modified async.
   if (IsBSCCompatibleFutureType(FD->getReturnType())) {
     Diag(FD->getBeginLoc(), diag::err_invalid_async_function);
-    return decls;
+    return Decls;
   }
 
   // Do not process desugar if we already met errors.
   if (Diags.hasErrorOccurred()) {
-    return decls;
+    return Decls;
   }
 
   IllegalAEFinder IAEFinder = IllegalAEFinder(*this);
   IAEFinder.Visit(FD->getBody());
-  if (IAEFinder.HasIllegalAwaitExpr()) return decls;
+  if (IAEFinder.HasIllegalAwaitExpr()) return Decls;
 
   QualType ReturnTy = FD->getReturnType();
   ReturnTy.removeLocalConst();
   if (ReturnTy->isVoidType()) {
-    RecordDecl *VoidRD =
+    std::pair<RecordDecl *, bool> VoidRD =
         generateVoidStruct(*this, FD->getBeginLoc(), FD->getEndLoc());
-    decls.push_back(VoidRD);
-    Context.BSCDesugaredMap[FD].push_back(VoidRD);
-    ReturnTy = Context.getRecordType(VoidRD);
+    if (!std::get<1>(VoidRD)) {
+      Decls.push_back(std::get<0>(VoidRD));
+      Context.BSCDesugaredMap[FD].push_back(std::get<0>(VoidRD));
+    }
+    ReturnTy = Context.getRecordType(std::get<0>(VoidRD));
   }
   QualType PollResultType =
       lookupPollResultType(*this, FD->getBeginLoc(), ReturnTy);
   if (PollResultType.isNull()) {
-    return decls;
+    return Decls;
   }
   RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
 
@@ -3041,12 +3047,12 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
           generateVtableAndFatPointerStruct(*this, ReturnTy, PollResultRD, FD);
 
   if (!std::get<1>(std::get<0>(NewRDs))) {
-    decls.push_back(std::get<0>(std::get<0>(NewRDs)));
+    Decls.push_back(std::get<0>(std::get<0>(NewRDs)));
     Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<0>(NewRDs)));
   }
 
   if (!std::get<1>(std::get<1>(NewRDs))) {
-    decls.push_back(std::get<0>(std::get<1>(NewRDs)));
+    Decls.push_back(std::get<0>(std::get<1>(NewRDs)));
     Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
   }
 
@@ -3058,45 +3064,45 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
       buildFutureRecordDecl(*this, FD, finder.GetAwaitExpr(),
                             finder.GetLocalVarList());
   if (!RD) {
-    return decls;
+    return Decls;
   }
   // Handle declaration first.
   FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
       *this, FD, IsOptimization ? RD : std::get<0>(std::get<1>(NewRDs)));
   if (!FutureInitDef) {
-    return decls;
+    return Decls;
   } else if (IsRecursiveCall) {
-    decls.push_back(FutureInitDef);
+    Decls.push_back(FutureInitDef);
     Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
   }
 
   const int FutureStateNumber = finder.GetAwaitExprNum() + 1;
 
-  decls.push_back(RD);
+  Decls.push_back(RD);
   Context.BSCDesugaredMap[FD].push_back(RD);
 
   BSCMethodDecl *PollDecl =
       buildPollFunction(*this, RD, PollResultRD, FD,
                         std::get<0>(std::get<1>(NewRDs)), FutureStateNumber);
   if (!PollDecl) {
-    return decls;
+    return Decls;
   }
-  decls.push_back(PollDecl);
+  Decls.push_back(PollDecl);
   Context.BSCDesugaredMap[FD].push_back(PollDecl);
   BSCMethodDecl *FreeDecl = buildFreeFunction(*this, RD, FD, IsOptimization);
   if (!FreeDecl) {
-    return decls;
+    return Decls;
   }
-  decls.push_back(FreeDecl);
+  Decls.push_back(FreeDecl);
   Context.BSCDesugaredMap[FD].push_back(FreeDecl);
 
   VarDecl *VtableDecl =
       buildVtableInitDecl(*this, FD, std::get<0>(std::get<0>(NewRDs)),
                           PollResultRD, PollDecl, FreeDecl);
   if (!VtableDecl) {
-    return decls;
+    return Decls;
   }
-  decls.push_back(VtableDecl);
+  Decls.push_back(VtableDecl);
   Context.BSCDesugaredMap[FD].push_back(VtableDecl);
 
   FunctionDecl *FutureInit = nullptr;
@@ -3110,11 +3116,11 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   }
   
   if (!FutureInit) {
-    return decls;
+    return Decls;
   }
-  decls.push_back(FutureInit);
+  Decls.push_back(FutureInit);
   Context.BSCDesugaredMap[FD].push_back(FutureInit);
 
-  return decls;
+  return Decls;
 }
 

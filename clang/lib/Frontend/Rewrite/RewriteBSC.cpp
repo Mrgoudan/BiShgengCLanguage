@@ -62,12 +62,9 @@ public:
     HandleTopLevelSingleDecl(D);
   }
 
-  void RewriteBSCMethodDecl(FunctionDecl *BMD);
   void ReplaceDecl(Decl *D);
   void RemoveDecl(Decl *D);
-  void RewriteBSCInstantialFunctionDecl(FunctionDecl *FD);
-  void RewriteBSCClassTemplateDecl(ClassTemplateDecl *FTD);
-  void RewriteBSCInstantialClassDecl(ClassTemplateSpecializationDecl *FD);
+  void InsertDecl(Decl *D);
 
   void InsertText(SourceLocation Loc, StringRef Str, bool InsertAfter = true) {
     // If insertion succeeded or warning disabled return with no warning.
@@ -166,49 +163,32 @@ void RewriteBSC::HandleDeclInMainFile(Decl *D) {
       if (cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
         // Remove origin generic BSC member function.
         RemoveDecl(FD);
-        RewrittenDecls.push_back(FD);
         break;
       }
     }
     if (FD->isAsyncSpecified()) {
-      RewrittenDecls.push_back(FD);
       ReplaceDecl(FD);
       break;
     }
     if (FD->isTemplateInstantiation()) {
-      RewriteBSCInstantialFunctionDecl(FD);
+      InsertDecl(FD);
     } else {
-      RewriteBSCMethodDecl(FD);
+      ReplaceDecl(FD);
     }
-    RewrittenDecls.push_back(FD);
     break;
   }
   case Decl::Record:
   case Decl::Var: {
-    RewrittenDecls.push_back(D);
     ReplaceDecl(D);
     break;
   }
-  case Decl::FunctionTemplate: {
-    FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(D);
-    // Remove origin BSC template function.
-    RewrittenDecls.push_back(FTD);
-    RemoveDecl(FTD);
-    break;
-  }
+  case Decl::FunctionTemplate:
   case Decl::ClassTemplate: {
-    ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(D);
-    // Remove origin BSC template struct.
-    RewrittenDecls.push_back(CTD);
-    RewriteBSCClassTemplateDecl(CTD);
+    RemoveDecl(D);
     break;
   }
   case Decl::ClassTemplateSpecialization: {
-    // Rewrite ClassTemplateSpecializationDecl
-    ClassTemplateSpecializationDecl *CTSD =
-        cast<ClassTemplateSpecializationDecl>(D);
-    RewrittenDecls.push_back(CTSD);
-    RewriteBSCInstantialClassDecl(CTSD);
+    InsertDecl(D);
     break;
   }
   default:
@@ -230,22 +210,10 @@ void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
   OutFile->flush();
 }
 
-void RewriteBSC::RewriteBSCMethodDecl(FunctionDecl *BMD) {
-  SourceRange range = BMD->getSourceRange();
-  RemoveText(BMD->getBeginLoc(), range);
-  // Rename the BSC instantial function template decl, and insert it
-  // at the end of the origin function template decl.
-  SourceLocation StartLoc = BMD->getBeginLoc();
-
-  std::string SStr;
-  llvm::raw_string_ostream Buf(SStr);
-  BMD->print(Buf, Policy, /*PrintInstantiation=*/true);
-  const std::string &Str = Buf.str();
-  InsertText(StartLoc, Str);
-}
-
 void RewriteBSC::ReplaceDecl(Decl *D) {
-  SourceRange range = D->getSourceRange();
+  RewrittenDecls.push_back(D);
+
+  SourceRange Range = D->getSourceRange();
   std::string SStr;
   llvm::raw_string_ostream Buf(SStr);
   if (Context->BSCDesugaredMap.find(D) != Context->BSCDesugaredMap.end()) {
@@ -262,48 +230,33 @@ void RewriteBSC::ReplaceDecl(Decl *D) {
     D->print(Buf, Policy, /*PrintInstantiation=*/true);
   }
   const std::string &Str = Buf.str();
-  ReplaceText(D->getBeginLoc(), range, Str);
+  ReplaceText(D->getBeginLoc(), Range, Str);
 }
 
 void RewriteBSC::RemoveDecl(Decl *D) {
-  SourceRange range = D->getSourceRange();
-  RemoveText(D->getBeginLoc(), range);
+  RewrittenDecls.push_back(D);
+
+  SourceRange Range = D->getSourceRange();
+  if (isa<ClassTemplateDecl>(D)) {
+    // somehow, the range doesn`t include the end semi ';' of the
+    // struct, so we need to shift end loc to right for 1.
+    Range.setEnd(Range.getEnd().getLocWithOffset(1));
+  }
+  RemoveText(D->getBeginLoc(), Range);
 }
 
-void RewriteBSC::RewriteBSCInstantialFunctionDecl(FunctionDecl *FD) {
-  // Rename the BSC instantial function template decl, and insert it
-  // at the end of the origin function template decl.
-  SourceLocation EndLoc = FD->getBeginLoc();
+void RewriteBSC::InsertDecl(Decl *D) {
+  RewrittenDecls.push_back(D);
+
+  SourceLocation BLoc = D->getBeginLoc();
   std::string SStr;
   llvm::raw_string_ostream Buf(SStr);
-  FD->print(Buf, Policy, /*PrintInstantiation=*/true);
-  const std::string &Str = Buf.str();
-  // Insert instantial function decl at the end of origin template function
-  // shift 2, in case the origin template function is at the beginning of
-  // source code.
-  InsertText(EndLoc, Str + "\n");
-}
+  D->print(Buf, Policy, /*PrintInstantiation=*/true);
 
-void RewriteBSC::RewriteBSCClassTemplateDecl(ClassTemplateDecl *CTD) {
-  // Remove the BSC template struct source code;
-  SourceRange range = CTD->getSourceRange();
-  // somehow, the range doesn`t include the end semi ';' of the
-  // struct, so we need to shift end loc to right for 1.
-  range.setEnd(range.getEnd().getLocWithOffset(1));
-  RemoveText(CTD->getBeginLoc(), range);
-}
-
-void RewriteBSC::RewriteBSCInstantialClassDecl(
-    ClassTemplateSpecializationDecl *CTSD) {
-  // Rename the BSC instantial struct template decl, and insert it
-  // at the end of the origin struct template decl.
-  SourceLocation EndLoc = CTSD->getEndLoc();
-  std::string SStr;
-  llvm::raw_string_ostream Buf(SStr);
-  CTSD->print(Buf, Policy, /*PrintInstantiation=*/true);
+  if (!isa<FunctionDecl>(D) || (isa<FunctionDecl>(D) && !D->hasBody())) {
+    Buf << ";\n";
+  }
+  Buf << "\n";
   const std::string &Str = Buf.str();
-  // Insert instantial struct decl at the end of origin template struct
-  // shift 2, in case the origin template struct is at the beginning of
-  // source code.
-  InsertText(EndLoc.getLocWithOffset(2), Str + ";" + "\n");
+  InsertText(BLoc, Str);
 }
