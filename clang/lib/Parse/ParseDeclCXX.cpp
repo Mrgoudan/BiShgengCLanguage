@@ -2057,14 +2057,20 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     else {
       Decl *D = nullptr;
       if (isParsingBSCTemplateStruct) {
+        if (!TagOrTempResult.get()) {
+          DS.SetTypeSpecError();
+          return;
+        }
         // TODO: add more check
         D = static_cast<ClassTemplateDecl *>(TagOrTempResult.get())
                 ->getTemplatedDecl();
       } else {
         D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
       }
+      
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
+
       if (SkipBody.CheckSameAsPrevious &&
           !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(), SkipBody)) {
         DS.SetTypeSpecError();

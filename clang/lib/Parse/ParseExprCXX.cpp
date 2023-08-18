@@ -828,7 +828,7 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
 
     int LGreaterOffset = 2;
     if (ParsingBSCTemplateStruct) {
-      // Determine if '>' is followed by '{' or '('
+      // Determine if '>' is followed by '{'
       Token TmpTok = PP.LookAhead(LGreaterOffset);
       while ((TmpTok.isNot(tok::greater) ||
               (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
