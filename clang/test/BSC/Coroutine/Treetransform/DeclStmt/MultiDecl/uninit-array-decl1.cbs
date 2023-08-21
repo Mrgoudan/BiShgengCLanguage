@@ -1,3 +1,5 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
@@ -37,7 +39,7 @@ int main() {
 // CHECK-NEXT:      float b;
 // CHECK-NEXT:      char c;
 // CHECK-NEXT:      char *p;
-// CHECK-NEXT:      float f_1[10];
+// CHECK-NEXT:      float f[10];
 // CHECK-NEXT:      struct Addr addr[10];
 // CHECK-NEXT:      int cc[10][3];
 // CHECK-NEXT:      int n[10];
@@ -60,7 +62,7 @@ int main() {
 // CHECK-NEXT:      float b;
 // CHECK-NEXT:      char c;
 // CHECK-NEXT:      char *p;
-// CHECK-NEXT:      float f_1[10];
+// CHECK-NEXT:      float f[10];
 // CHECK-NEXT:      struct Addr addr[10];
 // CHECK-NEXT:      this->a = 1;
 // CHECK-NEXT:      int cc[10][3] = {0};

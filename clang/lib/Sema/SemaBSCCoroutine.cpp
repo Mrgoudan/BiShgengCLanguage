@@ -135,7 +135,7 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
   int AwaitCount = 0;
   std::vector<Expr *> Args;
   std::vector<std::pair<DeclarationName, QualType>> LocalVarList;
-  llvm::DenseMap<StringRef, int> IdentifierNumber;
+  std::map<std::string, int> IdentifierNumber;
 
  public:
   AwaitExprFinder(ASTContext &Context) : Context(Context) {}
@@ -160,12 +160,10 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
                 VD->setType(QT);
               }
               std::string VDName = VD->getName().str();
-              SetIdentifierNumber(StringRef(VDName),
-                               GetIdentifierNumber(StringRef(VDName)) + 1);
-              if (GetIdentifierNumber(StringRef(VDName)) > 1) {
-                VDName =
-                    VDName + "_" +
-                    std::to_string(GetIdentifierNumber(StringRef(VDName)) - 1);
+              SetIdentifierNumber(VDName, GetIdentifierNumber(VDName) + 1);
+              if (GetIdentifierNumber(VDName) > 1) {
+                VDName = VDName + "_" +
+                         std::to_string(GetIdentifierNumber(VDName) - 1);
                 VD->setDeclName(&(Context.Idents).get(VDName));
               }
 
@@ -187,13 +185,13 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
     return LocalVarList;
   }
 
-  void SetIdentifierNumber(StringRef identifier, int index) {
+  void SetIdentifierNumber(std::string identifier, int index) {
     assert(!identifier.empty() && "Passed null name");
     IdentifierNumber[identifier] = index;
   }
 
-  int GetIdentifierNumber(StringRef identifier) {
-    llvm::DenseMap<StringRef, int>::iterator I = IdentifierNumber.find(identifier);
+  int GetIdentifierNumber(std::string identifier) {
+    std::map<std::string, int>::iterator I = IdentifierNumber.find(identifier);
     if (I != IdentifierNumber.end()) return I->second;
     return 0;
   }
