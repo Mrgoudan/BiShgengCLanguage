@@ -29,10 +29,10 @@ int main() {
 // CHECK-NEXT:       double t;
 // CHECK-NEXT:   };
 
-// CHECK: void struct_S_int_f(struct S_int *this) {
+// CHECK: void __attribute__((weak)) struct_S_int_f(struct S_int *this) {
 // CHECK-NEXT:   }
 
-// CHECK: void struct_S_double_f(struct S_double *this) {
+// CHECK: void __attribute__((weak)) struct_S_double_f(struct S_double *this) {
 // CHECK-NEXT:   }
 
 

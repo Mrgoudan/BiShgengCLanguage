@@ -37,7 +37,7 @@ int main() {
 // CHECK-NEXT:      return 0;
 // CHECK-NEXT:  }
 
-// CHECK: struct Foo_int max_struct_B(struct B a) {
+// CHECK: struct Foo_int __attribute__((weak)) max_struct_B(struct B a) {
 // CHECK-NEXT:       struct Foo_int f;
 // CHECK-NEXT:       struct B x;
 // CHECK-NEXT:       struct_B_increase(&x);

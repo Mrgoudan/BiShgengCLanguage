@@ -45,19 +45,19 @@ int main() {
 // CHECK-NEXT:        struct S_int s;
 // CHECK-NEXT:    };
 
-// CHECK: int struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
+// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
 // CHECK-NEXT:        this->res = a;
 // CHECK-NEXT:        return this->res;
 // CHECK-NEXT:    }
 
 
-// CHECK: int f1_int(int a) {
+// CHECK: int __attribute__((weak)) f1_int(int a) {
 // CHECK-NEXT:        struct MyStruct_int s = {.res = a};
 // CHECK-NEXT:        return struct_MyStruct_int_foo(&s, a);
 // CHECK-NEXT:    }
 
 
-// CHECK: int f2_int(int a) {
+// CHECK: int __attribute__((weak)) f2_int(int a) {
 // CHECK-NEXT:        struct MyStruct_int s = {.res = a};
 // CHECK-NEXT:        return struct_MyStruct_int_foo(&s, a);
 // CHECK-NEXT:    }

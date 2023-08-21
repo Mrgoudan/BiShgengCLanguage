@@ -36,12 +36,12 @@ int main() {
 // CHECK-NEXT:       int res;
 // CHECK-NEXT:   };
 
-// CHECK: int struct_MyStruct_int_foo(int a) {
+// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(int a) {
 // CHECK-NEXT:       return a;
 // CHECK-NEXT:   }
 
 
-// CHECK: int union_MyUnion_int_foo(int a) {
+// CHECK: int __attribute__((weak)) union_MyUnion_int_foo(int a) {
 // CHECK-NEXT:       return a;
 // CHECK-NEXT:   }
 

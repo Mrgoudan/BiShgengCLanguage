@@ -22,14 +22,14 @@ int main() {
 // CHECK-NEXT:  return *this += 1;
 // CHECK-NEXT:}
 
-// CHECK:int max_int_int(int a, int b)   {
+// CHECK:int __attribute__((weak)) max_int_int(int a, int b)   {
 // CHECK-NEXT:      int x = 1;
 // CHECK-NEXT:      int_increase(&x);
 // CHECK-NEXT:      int c = int_increase(&x);
 // CHECK-NEXT:      return a > b ? a : b;
 // CHECK-NEXT:  }
 
-// CHECK:float max_float_float(float a, float b)   {
+// CHECK:float __attribute__((weak)) max_float_float(float a, float b)   {
 // CHECK-NEXT:      int x = 1;
 // CHECK-NEXT:      int_increase(&x);
 // CHECK-NEXT:      int c = int_increase(&x);

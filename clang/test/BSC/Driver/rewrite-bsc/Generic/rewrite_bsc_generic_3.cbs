@@ -30,7 +30,7 @@ int main() {
 // CHECK-NEXT:  int blood;
 // CHECK-NEXT:};
 
-// CHECK:struct Block bar_int_int(int a, int b)   {
+// CHECK:struct Block __attribute__((weak)) bar_int_int(int a, int b)   {
 // CHECK-NEXT:      struct Block grass = {"green", 1};
 // CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
 // CHECK-NEXT:      struct Block oak;
@@ -39,7 +39,7 @@ int main() {
 // CHECK-NEXT:      return grass;
 // CHECK-NEXT:  }
 
-// CHECK:struct Block bar_double_float(double a, float b)   {
+// CHECK:struct Block __attribute__((weak)) bar_double_float(double a, float b)   {
 // CHECK-NEXT:      struct Block grass = {"green", 1};
 // CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
 // CHECK-NEXT:      struct Block oak;

@@ -47,7 +47,7 @@ int main() {
 // CHECK-NEXT:       return *a;
 // CHECK-NEXT:   }
 
-// CHECK: int struct_MyStruct_int_bar(struct MyStruct_int *this, int a) {
+// CHECK: int __attribute__((weak)) struct_MyStruct_int_bar(struct MyStruct_int *this, int a) {
 // CHECK-NEXT:       return a;
 // CHECK-NEXT:   }
 
@@ -59,7 +59,7 @@ int main() {
 // CHECK-NEXT:       return res1 + res2;
 // CHECK-NEXT:   }
 
-// CHECK: int struct_MyStruct_int_poll(struct MyStruct_int *this, int a) {
+// CHECK: int __attribute__((weak)) struct_MyStruct_int_poll(struct MyStruct_int *this, int a) {
 // CHECK-NEXT:       return a;
 // CHECK-NEXT:   }
 

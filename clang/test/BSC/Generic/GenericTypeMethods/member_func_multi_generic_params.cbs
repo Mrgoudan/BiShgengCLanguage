@@ -38,12 +38,12 @@ int main() {
 // CHECK-NEXT:       float res;
 // CHECK-NEXT:   };
 
-// CHECK: struct MyStruct_int_int_float struct_MyStruct_int_int_float_foo(struct MyStruct_int_int_float *this) {
+// CHECK: struct MyStruct_int_int_float __attribute__((weak)) struct_MyStruct_int_int_float_foo(struct MyStruct_int_int_float *this) {
 // CHECK-NEXT:       return *this;
 // CHECK-NEXT:   }
 
 
-// CHECK: union MyUnion_float_int_char union_MyUnion_float_int_char_foo(union MyUnion_float_int_char *this) {
+// CHECK: union MyUnion_float_int_char __attribute__((weak)) union_MyUnion_float_int_char_foo(union MyUnion_float_int_char *this) {
 // CHECK-NEXT:       return *this;
 // CHECK-NEXT:   }
 

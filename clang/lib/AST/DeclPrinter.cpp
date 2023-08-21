@@ -677,6 +677,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (!Policy.RewriteBSC) {
       D->getNameInfo().printName(OS, Policy);
     } else {
+      // For instantiated functions which have same template arg type
+      // in different source files, linker will report multi definition error.
+      // Hence, we add weak attribute to solve this.
+      if (D->isTemplateInstantiation())
+        OS << "__attribute__((weak)) ";
       if (const BSCMethodDecl *BMD = dyn_cast<BSCMethodDecl>(D)) {
         std::string FunctionNameStr =
             GetTypePrefix(BMD->getExtendedType(), false, SubPolicy);

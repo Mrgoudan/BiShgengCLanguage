@@ -40,13 +40,13 @@ int main() {
 // CHECK-NEXT:        int res;
 // CHECK-NEXT:    };
 
-// CHECK: int struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
+// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
 // CHECK-NEXT:        this->res = this->res + a;
 // CHECK-NEXT:        return this->res;
 // CHECK-NEXT:    }
 
 
-// CHECK: int union_MyUnion_int_foo(union MyUnion_int *this, int a) {
+// CHECK: int __attribute__((weak)) union_MyUnion_int_foo(union MyUnion_int *this, int a) {
 // CHECK-NEXT:        this->res = this->res + a;
 // CHECK-NEXT:        return this->res;
 // CHECK-NEXT:    }

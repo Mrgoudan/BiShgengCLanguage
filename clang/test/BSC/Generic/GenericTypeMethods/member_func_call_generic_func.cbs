@@ -27,12 +27,12 @@ int main() {
 // CHECK-NEXT:      int res;
 // CHECK-NEXT:   };
 
-// CHECK: int foo_int_int(int a, int b) {
+// CHECK: int __attribute__((weak)) foo_int_int(int a, int b) {
 // CHECK-NEXT:       return 42;
 // CHECK-NEXT:   }
 
 
-// CHECK: int struct_MyStruct_int_foo(void) {
+// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(void) {
 // CHECK-NEXT:       return foo_int_int(1, 2);
 // CHECK-NEXT:   }
 
