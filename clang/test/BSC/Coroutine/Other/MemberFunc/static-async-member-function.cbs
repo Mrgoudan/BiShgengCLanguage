@@ -7,7 +7,7 @@
 #include "../../async-func-read.hbs"
 
 static async int int::g() {
-    struct __FatPointer_int a = read(1);
+    struct __FatPointer<int> a = read(1);
     int tmp = await a;
     return tmp;
 }
@@ -18,7 +18,7 @@ async int int::f() {
 }
 
 int main() {
-  struct __FatPointer_int this = int::f();
+  struct __FatPointer<int> this = int::f();
   this.vtable->poll(this.data);
   this.vtable->free(this.data); 
   return 0;

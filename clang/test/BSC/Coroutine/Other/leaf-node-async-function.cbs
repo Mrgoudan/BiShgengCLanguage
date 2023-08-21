@@ -22,7 +22,7 @@ async int g() {
 }
 
 int main() {
-  struct __FatPointer_int this = g();
+  struct __FatPointer<int> this = g();
   this.vtable->poll(this.data);
   this.vtable->free(this.data); 
   return 0;

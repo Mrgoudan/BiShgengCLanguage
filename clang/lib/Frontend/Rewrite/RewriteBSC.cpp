@@ -219,8 +219,7 @@ void RewriteBSC::ReplaceDecl(Decl *D) {
   if (Context->BSCDesugaredMap.find(D) != Context->BSCDesugaredMap.end()) {
     for (auto &DesugaredDecl : Context->BSCDesugaredMap[D]) {
       DesugaredDecl->print(Buf, Policy, /*PrintInstantiation=*/true);
-      if (!isa<FunctionDecl>(DesugaredDecl) ||
-          (isa<FunctionDecl>(DesugaredDecl) && !DesugaredDecl->hasBody())) {
+      if (!isa<FunctionDecl>(DesugaredDecl) || !DesugaredDecl->hasBody()) {
         Buf << ";\n";
       }
       Buf << "\n";
@@ -238,7 +237,7 @@ void RewriteBSC::RemoveDecl(Decl *D) {
 
   SourceRange Range = D->getSourceRange();
   if (isa<ClassTemplateDecl>(D)) {
-    // somehow, the range doesn`t include the end semi ';' of the
+    // Somehow, the range doesn`t include the end semi ';' of the
     // struct, so we need to shift end loc to right for 1.
     Range.setEnd(Range.getEnd().getLocWithOffset(1));
   }
@@ -253,7 +252,7 @@ void RewriteBSC::InsertDecl(Decl *D) {
   llvm::raw_string_ostream Buf(SStr);
   D->print(Buf, Policy, /*PrintInstantiation=*/true);
 
-  if (!isa<FunctionDecl>(D) || (isa<FunctionDecl>(D) && !D->hasBody())) {
+  if (!isa<FunctionDecl>(D) || !D->hasBody()) {
     Buf << ";\n";
   }
   Buf << "\n";

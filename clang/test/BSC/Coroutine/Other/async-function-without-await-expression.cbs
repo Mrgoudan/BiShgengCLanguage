@@ -12,7 +12,7 @@ async int g() {
 }
 
 int main() {
-  struct __FatPointer_int a = g();
+  struct __FatPointer<int> a = g();
   a.vtable->poll(a.data);
   a.vtable->free(a.data);
   return 0;

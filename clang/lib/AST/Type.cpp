@@ -4493,13 +4493,9 @@ bool Type::isCUDADeviceBuiltinSurfaceType() const {
 bool Type::isBSCFutureType() const {
   if (const auto *RT = getAs<RecordType>()) {
     RecordDecl *RD = RT->getAsRecordDecl();
-    std::string Prefix = "__FatPointer_";
-    std::string RecordName = RD->getNameAsString();
-    bool IsPrefix = Prefix.size() <= RecordName.size() &&
-                    std::mismatch(Prefix.begin(), Prefix.end(),
-                                  RecordName.begin(), RecordName.end())
-                            .first == Prefix.end();
-    return IsPrefix;
+    if (isa<ClassTemplateSpecializationDecl>(RD)) {
+      return RD->getNameAsString() == "__FatPointer";
+    }
   }
   return false;
 }

@@ -414,11 +414,10 @@ static bool isRefactorStmt(Stmt *S) {
   return false;
 }
 
-static QualType lookupPollResultType(Sema &S, SourceLocation SLoc, QualType T) {
-  std::string PollResultName = "PollResult";
-
+static QualType lookupGenericType(Sema &S, SourceLocation SLoc, QualType T,
+                                  std::string GenericDeclName) {
   DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
-      DeclarationName(&(S.Context.Idents).get(PollResultName)));
+      DeclarationName(&(S.Context.Idents).get(GenericDeclName)));
   ClassTemplateDecl *CTD = nullptr;
   if (Decls.isSingleResult()) {
     for (DeclContext::lookup_result::iterator I = Decls.begin(),
@@ -431,7 +430,7 @@ static QualType lookupPollResultType(Sema &S, SourceLocation SLoc, QualType T) {
     }
   } else {
     S.Diag(SLoc, diag::err_function_not_found)
-        << PollResultName << "\"future.hbs\"";
+        << GenericDeclName << "\"future.hbs\"";
     return QualType();
   }
 
@@ -447,6 +446,7 @@ static QualType lookupPollResultType(Sema &S, SourceLocation SLoc, QualType T) {
     return QualType();
   return PollResultRecord;
 }
+
 }  // namespace
 
 // build struct Future for async function
@@ -466,23 +466,13 @@ static RecordDecl *buildFutureRecordDecl(
   for (unsigned I = 0; I != Args.size(); ++I) {
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
     if (!S.IsBSCCompatibleFutureType(AE->getType())) {
-      RecordDecl *FatPointerStruct = nullptr;
-      const std::string FatPointerName =
-          "__FatPointer_" + GetPrefix(AE->getType());
-      DeclContext::lookup_result FatPointerDecls =
-          S.Context.getTranslationUnitDecl()->lookup(
-              DeclarationName(&(S.Context.Idents).get(FatPointerName)));
-
-      if (FatPointerDecls.isSingleResult()) {
-        for (DeclContext::lookup_result::iterator I = FatPointerDecls.begin(),
-                                                  E = FatPointerDecls.end();
-             I != E; ++I) {
-          if (isa<RecordDecl>(*I)) {
-            FatPointerStruct = dyn_cast<RecordDecl>(*I);
-            break;
-          }
-        }
+      QualType FatPointerType = lookupGenericType(
+          S, FD->getBeginLoc(), AE->getType(), "__FatPointer");
+      if (FatPointerType.isNull()) {
+        return nullptr;
       }
+
+      RecordDecl *FatPointerStruct = FatPointerType->getAsRecordDecl();
       assert(FatPointerStruct != nullptr);
 
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
@@ -558,84 +548,6 @@ generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
     S.PushOnScopeChains(VoidRD, S.getCurScope(), true);
   }
   return std::make_pair(VoidRD, IsExisted);
-}
-
-/// TODO: will be removed after using Future in stdlib
-static std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
-generateVtableAndFatPointerStruct(Sema &S, QualType T, RecordDecl *PollResultRD,
-                                  FunctionDecl *FD) {
-  RecordDecl *VtableStruct = nullptr;
-  QualType ReturnTy = T;
-  std::string VtableStructName = "__Vtable_" + GetPrefix(ReturnTy);
-  bool IsVtableExisted = false;
-  DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
-      DeclarationName(&(S.Context.Idents).get(VtableStructName)));
-
-  if (Decls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                              E = Decls.end();
-         I != E; ++I) {
-      if (isa<RecordDecl>(*I)) {
-        VtableStruct = dyn_cast<RecordDecl>(*I);
-        break;
-      }
-    }
-    IsVtableExisted = true;
-    VtableStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
-  } else if (Decls.empty()) {
-    VtableStruct = buildAsyncDataRecord(S.Context, VtableStructName,
-                                        FD->getBeginLoc(), FD->getEndLoc(),
-                                        clang::TagDecl::TagKind::TTK_Struct);
-    VtableStruct->startDefinition();
-    SmallVector<QualType, 1> Args;
-    Args.push_back(S.Context.VoidPtrTy);
-    QualType PollFuncType = S.Context.getPointerType(S.Context.getFunctionType(
-        S.Context.getRecordType(PollResultRD), Args, {}));
-    QualType FreeFuncType = S.Context.getPointerType(
-        S.Context.getFunctionType(S.Context.VoidTy, Args, {}));
-    addAsyncRecordDecl(S.Context, "poll", PollFuncType, SourceLocation(),
-                       SourceLocation(), VtableStruct);
-    addAsyncRecordDecl(S.Context, "free", FreeFuncType, SourceLocation(),
-                       SourceLocation(), VtableStruct);
-    VtableStruct->completeDefinition();
-    VtableStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
-    S.PushOnScopeChains(VtableStruct, S.getCurScope(), true);
-  }
-  RecordDecl *FatPointerStruct = nullptr;
-  std::string FatPointerName = "__FatPointer_" + GetPrefix(ReturnTy);
-  bool IsFatPointerExisted = false;
-  DeclContext::lookup_result FatPointerDecls =
-      S.Context.getTranslationUnitDecl()->lookup(
-          DeclarationName(&(S.Context.Idents).get(FatPointerName)));
-
-  if (FatPointerDecls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = FatPointerDecls.begin(),
-                                              E = FatPointerDecls.end();
-         I != E; ++I) {
-      if (isa<RecordDecl>(*I)) {
-        FatPointerStruct = dyn_cast<RecordDecl>(*I);
-        break;
-      }
-    }
-    IsFatPointerExisted = true;
-    FatPointerStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
-  } else if (FatPointerDecls.empty()) {
-    FatPointerStruct = buildAsyncDataRecord(
-        S.Context, FatPointerName, FD->getBeginLoc(), FD->getEndLoc(),
-        clang::TagDecl::TagKind::TTK_Struct);
-    FatPointerStruct->startDefinition();
-    addAsyncRecordDecl(S.Context, "data", S.Context.VoidPtrTy, SourceLocation(),
-                       SourceLocation(), FatPointerStruct);
-    addAsyncRecordDecl(
-        S.Context, "vtable",
-        S.Context.getPointerType(S.Context.getRecordType(VtableStruct)),
-        SourceLocation(), SourceLocation(), FatPointerStruct);
-    FatPointerStruct->completeDefinition();
-    FatPointerStruct->addAttr(WeakAttr::CreateImplicit(S.Context));
-    S.PushOnScopeChains(FatPointerStruct, S.getCurScope(), true);
-  }
-  return std::make_tuple(std::make_pair(VtableStruct, IsVtableExisted),
-                         std::make_pair(FatPointerStruct, IsFatPointerExisted));
 }
 
 static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
@@ -799,9 +711,6 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
     Expr *RHSExpr =
         S.BuildDeclRefExpr(*pi, FieldIt->getType().getNonReferenceType(),
                            VK_LValue, (*pi)->getLocation());
-    RHSExpr = ImplicitCastExpr::Create(S.Context, (*pi)->getType(),
-                                       CK_LValueToRValue, RHSExpr, nullptr,
-                                       VK_PRValue, FPOptionsOverride());
 
     Expr *BO =
         S.CreateBuiltinBinOp((*pi)->getLocation(), BO_Assign, LHSExpr, RHSExpr)
@@ -847,9 +756,6 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
 
   SmallVector<Expr *, 2> InitExprs;
   Expr *FutureRefExpr = S.BuildDeclRefExpr(VD, VD->getType(), VK_LValue, NLoc);
-  FutureRefExpr = ImplicitCastExpr::Create(
-      S.Context, VD->getType(), CK_LValueToRValue, FutureRefExpr, nullptr,
-      VK_PRValue, FPOptionsOverride());
   FutureRefExpr =
       S.BuildCStyleCastExpr(
            NLoc, S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy), NLoc,
@@ -870,9 +776,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
 
   Expr *FatPointerRef = S.BuildDeclRefExpr(
       FatPointerVD, FatPointerVD->getType(), VK_LValue, NLoc);
-  FatPointerRef = ImplicitCastExpr::Create(
-      S.Context, FatPointerRef->getType(), CK_LValueToRValue, FatPointerRef,
-      nullptr, VK_PRValue, FPOptionsOverride());
+  // No need for ImplicitCastExpr since BuildReturnStmt will generate for us.
   Stmt *RS = S.BuildReturnStmt(NLoc, FatPointerRef).get();
   Stmts.push_back(RS);
 
@@ -1000,12 +904,10 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
     if (RHSER.isInvalid())
       return nullptr;
     Expr *RHSExpr = RHSER.get();
-    RHSExpr = ImplicitCastExpr::Create(S.Context, (*pi)->getType(),
-                                       CK_LValueToRValue, RHSExpr, nullptr,
-                                       VK_PRValue, FPOptionsOverride());
-    BinaryOperator *BO = BinaryOperator::Create(
-        S.Context, LHSExpr, RHSExpr, BO_Assign, (*pi)->getType(), VK_PRValue,
-        OK_Ordinary, SourceLocation(), S.CurFPFeatureOverrides());
+
+    Expr *BO =
+        S.CreateBuiltinBinOp((*pi)->getLocation(), BO_Assign, LHSExpr, RHSExpr)
+            .get();
     Stmts.push_back(BO);
   }
 
@@ -1028,17 +930,13 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   llvm::APInt ResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
   Expr *RHSExpr = IntegerLiteral::Create(S.Context, ResultVal, S.Context.IntTy,
                                          SourceLocation());
-
-  BinaryOperator *BO = BinaryOperator::Create(
-      S.Context, LHSExpr, RHSExpr, BO_Assign, (*FutureStateField)->getType(),
-      VK_PRValue, OK_Ordinary, (*FutureStateField)->getLocation(),
-      S.CurFPFeatureOverrides());
+  Expr *BO = S.CreateBuiltinBinOp((*FutureStateField)->getLocation(), BO_Assign,
+                                  LHSExpr, RHSExpr)
+                 .get();
   Stmts.push_back(BO);
 
-  // return fi;
-  StructFutureRef = ImplicitCastExpr::Create(
-      S.Context, StructFutureRef->getType(), CK_LValueToRValue, StructFutureRef,
-      nullptr, VK_PRValue, FPOptionsOverride());
+  // Generating `return fi;`.
+  // No need for ImplicitCastExpr since BuildReturnStmt will generate for us.
   Stmt *RS = S.BuildReturnStmt(NLoc, StructFutureRef).get();
   Stmts.push_back(RS);
 
@@ -1417,9 +1315,8 @@ class TransformToAP : public TreeTransform<TransformToAP> {
           RE = SemaRef.BuildDeclRefExpr(ArgVDNew,
                                         VD->getType().getNonReferenceType(),
                                         VK_LValue, SourceLocation());
-          RE = ImplicitCastExpr::Create(
-              SemaRef.Context, VD->getType().getNonReferenceType(),
-              CK_LValueToRValue, RE, nullptr, VK_PRValue, FPOptionsOverride());
+          // No need for ImplicitCastExpr which will be generated
+          // by RebuildBinaryOperator in future.
           DIndex++;
           CIndex++;
 
@@ -1430,12 +1327,6 @@ class TransformToAP : public TreeTransform<TransformToAP> {
             QualType Pty = SemaRef.Context.getPointerType(SubQT);
             Expr *AssignedRVExpr = SemaRef.BuildDeclRefExpr(
                 ArgVDNew, ArgVDNew->getType(), VK_LValue, SourceLocation());
-            AssignedRVExpr =
-                SemaRef
-                    .ImpCastExprToType(AssignedRVExpr,
-                                       SemaRef.Context.getArrayDecayedType(QT),
-                                       CK_ArrayToPointerDecay)
-                    .get();
             TypeSourceInfo *AssignedType =
                 SemaRef.Context.getTrivialTypeSourceInfo(Pty);
             Expr *AssignedCCE = BaseTransform::RebuildCStyleCastExpr(
@@ -1478,17 +1369,11 @@ class TransformToAP : public TreeTransform<TransformToAP> {
             DIndex++;
             CIndex++;
 
-            Expr *ArrayRVExpr =
-                SemaRef
-                    .ImpCastExprToType(LE,
-                                       SemaRef.Context.getArrayDecayedType(QT),
-                                       CK_ArrayToPointerDecay)
-                    .get();
             TypeSourceInfo *ArrayType =
                 SemaRef.Context.getTrivialTypeSourceInfo(Pty);
             Expr *ArrayCCE =
                 BaseTransform::RebuildCStyleCastExpr(
-                    SourceLocation(), ArrayType, SourceLocation(), ArrayRVExpr)
+                    SourceLocation(), ArrayType, SourceLocation(), LE)
                     .get();
 
             std::string ArrayPtrName = "__ARRAY_PTR_" + GetPrefix(SubQT);
@@ -1541,10 +1426,6 @@ class TransformToAP : public TreeTransform<TransformToAP> {
               Expr *IDRE =
                   SemaRef.BuildDeclRefExpr(IArgVDNew, SemaRef.Context.IntTy,
                                            VK_LValue, SourceLocation());
-              Expr *ILE = ImplicitCastExpr::Create(
-                  SemaRef.Context, SemaRef.Context.IntTy, CK_LValueToRValue,
-                  IDRE, nullptr, VK_PRValue, FPOptionsOverride());
-
               llvm::APInt ISize(
                   SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), Elements);
               Expr *IRE = IntegerLiteral::Create(SemaRef.Context, ISize,
@@ -1552,7 +1433,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
                                                  SourceLocation());
 
               Expr *Cond = BaseTransform::RebuildBinaryOperator(
-                               SourceLocation(), BO_LT, ILE, IRE)
+                               SourceLocation(), BO_LT, IDRE, IRE)
                                .getAs<Expr>();
 
               Expr *Inc = BaseTransform::RebuildUnaryOperator(SourceLocation(),
@@ -1580,11 +1461,6 @@ class TransformToAP : public TreeTransform<TransformToAP> {
               RHS =
                   SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_Deref, RHS)
                       .get();
-              RHS =
-                  SemaRef
-                      .ImpCastExprToType(RHS, LHS->getType(), CK_LValueToRValue)
-                      .get();
-
               Expr *BO = BaseTransform::RebuildBinaryOperator(
                              SourceLocation(), BO_Assign, LHS, RHS)
                              .getAs<Expr>();
@@ -2254,8 +2130,8 @@ class AEFinder : public StmtVisitor<AEFinder> {
           DeclAccessPair::make(FatPointerRD, VtableField->getAccess()), false,
           DeclarationNameInfo(), VtableField->getType(), VK_LValue, OK_Ordinary);
       VtableExpr = ImplicitCastExpr::Create(
-          SemaRef.Context, VtableExpr->getType(), CK_LValueToRValue, VtableExpr,
-          nullptr, VK_PRValue, FPOptionsOverride());
+          SemaRef.Context, VtableExpr->getType(), CK_NoOp, VtableExpr, nullptr,
+          VK_PRValue, FPOptionsOverride());
 
       RecordDecl::field_iterator PollFuncField, VtableFieldIt;
       const RecordType *RT = dyn_cast<RecordType>(
@@ -2573,9 +2449,9 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
         SourceLocation(), *VtableField,
         DeclAccessPair::make(FatPointerRD, VtableField->getAccess()), false,
         DeclarationNameInfo(), VtableField->getType(), VK_LValue, OK_Ordinary);
-    VtableExpr = ImplicitCastExpr::Create(
-        S.Context, VtableExpr->getType(), CK_LValueToRValue, VtableExpr,
-        nullptr, VK_PRValue, FPOptionsOverride());
+    VtableExpr = ImplicitCastExpr::Create(S.Context, VtableExpr->getType(),
+                                          CK_NoOp, VtableExpr, nullptr,
+                                          VK_PRValue, FPOptionsOverride());
 
     RecordDecl::field_iterator FreeFuncField, FreeFuncFieldIt;
     const RecordType *RT = dyn_cast<RecordType>(
@@ -2648,10 +2524,6 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
             .get();
     Expr *FutureObj =
         S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
-    FutureObj = ImplicitCastExpr::Create(S.Context, ParamType,
-                                         CK_LValueToRValue, FutureObj, nullptr,
-                                         VK_PRValue, FPOptionsOverride());
-
     FutureObj = S.BuildCStyleCastExpr(
                      SourceLocation(),
                      S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy),
@@ -2869,35 +2741,12 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
     const RecordType *FatPointerType =
         dyn_cast<RecordType>(AwaitReturnTy.getDesugaredType(Context));
     RecordDecl *FatPointer = FatPointerType->getDecl();
-    for (RecordDecl::field_iterator FieldIt = FatPointer->field_begin(),
-                                    Field_end = FatPointer->field_end();
-         FieldIt != Field_end; ++FieldIt) {
-      if (FieldIt->getDeclName().getAsString() == "vtable") {
-        const RecordType *VtableType = dyn_cast<RecordType>(
-            FieldIt->getType()->getPointeeType().getDesugaredType(Context));
-        RecordDecl *Vtable = VtableType->getDecl();
-        for (RecordDecl::field_iterator FieldIt = Vtable->field_begin(),
-                                        Field_end = Vtable->field_end();
-             FieldIt != Field_end; ++FieldIt) {
-          if (FieldIt->getDeclName().getAsString() == "poll") {
-            const RecordType *PollResultType = dyn_cast<RecordType>(
-                dyn_cast<FunctionType>(
-                    FieldIt->getType()->getPointeeType().getDesugaredType(
-                        Context))
-                    ->getReturnType()
-                    .getDesugaredType(Context));
-            RecordDecl *PollResult = PollResultType->getDecl();
-            for (RecordDecl::field_iterator FieldIt = PollResult->field_begin(),
-                                            Field_end = PollResult->field_end();
-                 FieldIt != Field_end; ++FieldIt) {
-              if (FieldIt->getDeclName().getAsString() == "res") {
-                AwaitReturnTy = FieldIt->getType();
-              }
-            }
-          }
-        }
-      }
-    }
+    assert(isa<ClassTemplateSpecializationDecl>(FatPointer));
+    ClassTemplateSpecializationDecl *CTSD =
+        cast<ClassTemplateSpecializationDecl>(FatPointer);
+    const TemplateArgumentList &args = CTSD->getTemplateArgs();
+    assert(args.size() == 1);
+    AwaitReturnTy = args[0].getAsType();
   } else if (implementedFutureType(*this, AwaitReturnTy)) {
     const RecordType *FutureType =
         dyn_cast<RecordType>(AwaitReturnTy.getDesugaredType(Context));
@@ -2952,7 +2801,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
   SmallVector<Decl *, 8> Decls;
   if (!IsBSCCompatibleFutureType(FD->getReturnType())) {
     QualType ReturnTy = FD->getReturnType();
-    ReturnTy.removeLocalConst();
+    ReturnTy.removeLocalConst(); // TODO: need to reconsider.
     if (ReturnTy->isVoidType()) {
       std::pair<RecordDecl *, bool> VoidRD =
           generateVoidStruct(*this, FD->getBeginLoc(), FD->getEndLoc());
@@ -2963,27 +2812,24 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
       ReturnTy = Context.getRecordType(std::get<0>(VoidRD));
     }
     QualType PollResultType =
-        lookupPollResultType(*this, FD->getBeginLoc(), ReturnTy);
+        lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "PollResult");
     if (PollResultType.isNull()) {
       return Decls;
     }
-    RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
-    std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
-        NewRDs = generateVtableAndFatPointerStruct(*this, ReturnTy,
-                                                   PollResultRD, FD);
-
-    if (!std::get<1>(std::get<0>(NewRDs))) {
-      Decls.push_back(std::get<0>(std::get<0>(NewRDs)));
-      Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<0>(NewRDs)));
+    QualType VtableType = lookupGenericType(*this, FD->getBeginLoc(), ReturnTy,
+                                            "__Trait_T_Vtable");
+    if (VtableType.isNull()) {
+      return Decls;
     }
-    if (!std::get<1>(std::get<1>(NewRDs))) {
-      Decls.push_back(std::get<0>(std::get<1>(NewRDs)));
-      Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
+    QualType FatPointerType =
+        lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__FatPointer");
+    if (FatPointerType.isNull()) {
+      return Decls;
     }
-
+    RecordDecl *FatPointerRD = FatPointerType->getAsRecordDecl();
     if (!FD->isStatic()) {
-      FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
-        *this, FD, std::get<0>(std::get<1>(NewRDs)));
+      FunctionDecl *FutureInitDef =
+          buildFutureInitFunctionDeclaration(*this, FD, FatPointerRD);
       if (FutureInitDef) {
         Decls.push_back(FutureInitDef);
         Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
@@ -3036,25 +2882,23 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
     ReturnTy = Context.getRecordType(std::get<0>(VoidRD));
   }
   QualType PollResultType =
-      lookupPollResultType(*this, FD->getBeginLoc(), ReturnTy);
+      lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "PollResult");
   if (PollResultType.isNull()) {
     return Decls;
   }
   RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
-
-  std::tuple<std::pair<RecordDecl *, bool>, std::pair<RecordDecl *, bool>>
-      NewRDs =
-          generateVtableAndFatPointerStruct(*this, ReturnTy, PollResultRD, FD);
-
-  if (!std::get<1>(std::get<0>(NewRDs))) {
-    Decls.push_back(std::get<0>(std::get<0>(NewRDs)));
-    Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<0>(NewRDs)));
+  QualType VtableType =
+      lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__Trait_T_Vtable");
+  if (VtableType.isNull()) {
+    return Decls;
   }
-
-  if (!std::get<1>(std::get<1>(NewRDs))) {
-    Decls.push_back(std::get<0>(std::get<1>(NewRDs)));
-    Context.BSCDesugaredMap[FD].push_back(std::get<0>(std::get<1>(NewRDs)));
+  RecordDecl *VtableRD = VtableType->getAsRecordDecl();
+  QualType FatPointerType =
+      lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__FatPointer");
+  if (FatPointerType.isNull()) {
+    return Decls;
   }
+  RecordDecl *FatPointerRD = FatPointerType->getAsRecordDecl();
 
   RecursiveCallVisitor RecursiveVisitor = RecursiveCallVisitor(FD);
   RecursiveVisitor.VisitStmt(FD->getBody());
@@ -3068,7 +2912,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   }
   // Handle declaration first.
   FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
-      *this, FD, IsOptimization ? RD : std::get<0>(std::get<1>(NewRDs)));
+      *this, FD, IsOptimization ? RD : FatPointerRD);
   if (!FutureInitDef) {
     return Decls;
   } else if (IsRecursiveCall) {
@@ -3081,9 +2925,8 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Decls.push_back(RD);
   Context.BSCDesugaredMap[FD].push_back(RD);
 
-  BSCMethodDecl *PollDecl =
-      buildPollFunction(*this, RD, PollResultRD, FD,
-                        std::get<0>(std::get<1>(NewRDs)), FutureStateNumber);
+  BSCMethodDecl *PollDecl = buildPollFunction(*this, RD, PollResultRD, FD,
+                                              FatPointerRD, FutureStateNumber);
   if (!PollDecl) {
     return Decls;
   }
@@ -3096,9 +2939,8 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Decls.push_back(FreeDecl);
   Context.BSCDesugaredMap[FD].push_back(FreeDecl);
 
-  VarDecl *VtableDecl =
-      buildVtableInitDecl(*this, FD, std::get<0>(std::get<0>(NewRDs)),
-                          PollResultRD, PollDecl, FreeDecl);
+  VarDecl *VtableDecl = buildVtableInitDecl(*this, FD, VtableRD, PollResultRD,
+                                            PollDecl, FreeDecl);
   if (!VtableDecl) {
     return Decls;
   }
@@ -3110,9 +2952,8 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
     FutureInit =
         buildFutureStructInitFunctionDefinition(*this, RD, FD);
   } else {
-    FutureInit = buildFutureInitFunctionDefinition(
-        *this, RD, FD, std::get<0>(std::get<1>(NewRDs)), VtableDecl,
-        FutureInitDef);
+    FutureInit = buildFutureInitFunctionDefinition(*this, RD, FD, FatPointerRD,
+                                                   VtableDecl, FutureInitDef);
   }
   
   if (!FutureInit) {

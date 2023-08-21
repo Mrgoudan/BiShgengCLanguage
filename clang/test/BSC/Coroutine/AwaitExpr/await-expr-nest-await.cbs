@@ -13,7 +13,7 @@ async int f(int start) {
 }
 
 int main() {
-  struct __FatPointer_int this = f(1);
+  struct __FatPointer<int> this = f(1);
   this.vtable->poll(this.data);
   this.vtable->free(this.data); 
   return 0;

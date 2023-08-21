@@ -15,13 +15,13 @@ async int f() {
 }
 
 async int g() {
-    struct __FatPointer_int a = read(1);
+    struct __FatPointer<int> a = read(1);
     await a;
     return 0;
 }
 
 int main() {
-  struct __FatPointer_int this = f();
+  struct __FatPointer<int> this = f();
   this.vtable->poll(this.data);
   this.vtable->free(this.data); 
   return 0;

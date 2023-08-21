@@ -28,16 +28,16 @@ struct PollResult<int> struct _Futuretest2::poll(__Futuretest2 *this)     {
 
 void struct _Futuretest2::free(struct _Futuretest2 *this) {}
 
-struct __Vtable_int _Futuretest2_vtable = {
+struct __Trait_T_Vtable<int> _Futuretest2_vtable = {
   .poll = struct _Futuretest2::poll,
   .free = struct _Futuretest2::free
 };
 
-struct __FatPointer_int test2(int a)     {
+struct __FatPointer<int> test2(int a)     {
   struct _Futuretest2* ptr = malloc(sizeof(struct _Futuretest2));
   ptr->a = a;
   ptr->__future_state = 0;
-  return (struct __FatPointer_int) { .data = ptr, .vtable = &_Futuretest2_vtable};
+  return (struct __FatPointer<int>) { .data = ptr, .vtable = &_Futuretest2_vtable};
 }
 
 async int f(int start) { 

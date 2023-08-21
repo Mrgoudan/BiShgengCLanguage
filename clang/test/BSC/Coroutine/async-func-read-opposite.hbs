@@ -5,15 +5,6 @@
 
 typedef struct PollResult<int> (*pollType)(void*);
 typedef void (*freeType)(void*);
-struct __Vtable_int {
-    struct PollResult<int> (*poll)(void*);
-    void (*free)(void*);
-};
-
-struct __FatPointer_int {
-    void* data;
-    struct __Vtable_int* vtable;     
-};
 
 struct _Futureread {
     int a;
@@ -36,16 +27,16 @@ struct PollResult<int> struct _Futureread::poll(__Futureread *this)     {
 
 void struct _Futureread::free(struct _Futureread *this) {}
 
-struct __Vtable_int _Futureread_vtable = {
+struct __Trait_T_Vtable<int> _Futureread_vtable = {
   .poll = (pollType)struct _Futureread::poll, 
   .free = (freeType)struct _Futureread::free 
 };
 
-struct __FatPointer_int read(int a)     {
+struct __FatPointer<int> read(int a)     {
   struct _Futureread* ptr;
   ptr->a = a;
   ptr->__future_state = 0;
-  return (struct __FatPointer_int) { .data = ptr, .vtable = &_Futureread_vtable};
+  return (struct __FatPointer<int>) { .data = ptr, .vtable = &_Futureread_vtable};
 }
 
 #endif

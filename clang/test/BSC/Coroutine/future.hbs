@@ -32,4 +32,14 @@ struct PollResult<T> struct PollResult<T>::completed(T result)     {
 //     struct PollResult<T> poll(This* this); 
 //     void free(This* this);                           
 // };
+
+struct __Trait_T_Vtable<T> {
+  struct PollResult<T> (*poll)(void *this);  
+  void (*free)(void *this);
+};
+
+struct __FatPointer<T> {
+  void *data;
+  struct __Trait_T_Vtable<T>* vtable;
+};
 #endif /* future.hbs */

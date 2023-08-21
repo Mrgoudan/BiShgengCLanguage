@@ -13,12 +13,12 @@ async int int::f() {
 }
 
 async void int::g(int* this) {
-    struct __FatPointer_int a = read(1);
+    struct __FatPointer<int> a = read(1);
     await a;
 }
 
 int main() {
-  struct __FatPointer_int this = int::f();
+  struct __FatPointer<int> this = int::f();
   this.vtable->poll(this.data);
   this.vtable->free(this.data); 
   return 0;
