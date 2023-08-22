@@ -691,8 +691,69 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
             CK_BitCast)
            .get();
   VD->setInit(CE);
-
   Expr *DataRef = S.BuildDeclRefExpr(VD, VD->getType(), VK_LValue, NLoc);
+
+  // if (data == 0)
+  llvm::APInt ZeroResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
+  Expr *Zero = IntegerLiteral::Create(S.Context, ZeroResultVal,
+                                             S.Context.IntTy, SourceLocation());
+  Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_EQ,
+                            /* LHSExpr=*/DataRef, /* RHSExpr=*/Zero)
+                   .get();
+
+  Sema::ConditionResult IfCond = S.ActOnCondition(
+      nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
+  
+  // exit(1);
+  std::string ExitName = "exit";
+
+  DeclContext::lookup_result ExitDecls =
+      S.Context.getTranslationUnitDecl()->lookup(
+          DeclarationName(&(S.Context.Idents).get(ExitName)));
+  FunctionDecl *ExitFunc = nullptr;
+  if (ExitDecls.isSingleResult()) {
+    for (DeclContext::lookup_result::iterator I = ExitDecls.begin(),
+                                              E = ExitDecls.end();
+         I != E; ++I) {
+      if (isa<FunctionDecl>(*I)) {
+        ExitFunc = dyn_cast<FunctionDecl>(*I);
+        break;
+      }
+    }
+  } else {
+    S.Diag(FD->getBeginLoc(), diag::err_function_not_found)
+        << ExitName << "<stdlib.h>";
+    return nullptr;
+  }
+
+  Expr *ExitRef =
+      S.BuildDeclRefExpr(ExitFunc, ExitFunc->getType(), VK_LValue, NLoc);
+  ExitRef =
+      S.ImpCastExprToType(ExitRef, S.Context.getPointerType(ExitRef->getType()),
+                          CK_FunctionToPointerDecay)
+          .get();
+  
+  llvm::APInt OneResultVal(S.Context.getTargetInfo().getIntWidth(), 1);
+  Expr *One = IntegerLiteral::Create(S.Context, OneResultVal,
+                                             S.Context.IntTy, SourceLocation());
+  SmallVector<Expr *, 1> ExitArgs = {One};
+  Expr *ExitCE = S.BuildCallExpr(nullptr, ExitRef, SourceLocation(), ExitArgs,
+                             SourceLocation())
+                 .get();
+  // Current code: if (data == 0) exit(1);
+  // TODO: before exit(1) function, hope there is printf("malloc failed\n")
+  // function to prompt for malloc failure. and it need to import header file
+  // "stdio.h".
+  SmallVector<Stmt *, 1> BodyStmts = {ExitCE};
+  Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
+                                    SourceLocation(), SourceLocation());
+  Stmt *If = S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
+                           /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
+                           /* RPL=*/SourceLocation(), /* Body=*/Body,
+                           SourceLocation(), nullptr)
+                 .get();
+  Stmts.push_back(If);
+
   DataRef = ImplicitCastExpr::Create(S.Context, DataRef->getType(),
                                      CK_LValueToRValue, DataRef, nullptr,
                                      VK_PRValue, FPOptionsOverride());
@@ -2424,6 +2485,10 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     }
   }
 
+  llvm::APInt ResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
+  Expr *IntegerExpr = IntegerLiteral::Create(
+      S.Context, ResultVal, S.Context.IntTy, SourceLocation());
+
   while (!Futures.empty()) {
     RecordDecl::field_iterator FtField = Futures.top();
     RecordDecl *FatPointerRD =
@@ -2501,7 +2566,22 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     Expr *RHSExpr = S.BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(),
                                     FreeArgs, SourceLocation())
                         .get();
-    Stmts.push_back(RHSExpr);
+    
+    Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
+                              /* LHSExpr=*/DataExpr, /* RHSExpr=*/IntegerExpr)
+                     .get();
+    // if (this.Ft_<x>.data != 0)  
+    Sema::ConditionResult IfCond = S.ActOnCondition(
+        nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
+    SmallVector<Stmt *, 1> BodyStmts = {RHSExpr};
+    Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
+                                      SourceLocation(), SourceLocation());
+    Stmt *If = S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
+                             /* LPL=*/SourceLocation(), /* Init=*/nullptr,
+                             IfCond, /* RPL=*/SourceLocation(), Body,
+                             SourceLocation(), nullptr)
+                   .get();
+    Stmts.push_back(If);
   }
 
   if (!IsOptimization) {
@@ -2532,12 +2612,12 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
                             S.Context.getPointerType(FreeFuncRef->getType()),
                             CK_FunctionToPointerDecay)
             .get();
-    Expr *FutureObj =
+    Expr *FutureObjDRE =
         S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
-    FutureObj = S.BuildCStyleCastExpr(
+    Expr *FutureObj = S.BuildCStyleCastExpr(
                      SourceLocation(),
                      S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy),
-                     SourceLocation(), FutureObj)
+                     SourceLocation(), FutureObjDRE)
                     .get();
 
     SmallVector<Expr *, 1> Args;
@@ -2546,7 +2626,33 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     Expr *CE = S.BuildCallExpr(nullptr, FreeFuncRef, SourceLocation(), Args,
                                SourceLocation())
                    .get();
-    Stmts.push_back(CE);
+    
+    Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
+                              /* LHSExpr=*/FutureObjDRE, /* RHSExpr=*/IntegerExpr)
+                     .get();
+    // this = 0;
+    QualType Ty = S.Context.getPointerType(S.Context.VoidTy);
+    Expr *RAssignExpr = CStyleCastExpr::Create(
+        S.Context, Ty, VK_PRValue, CK_NullToPointer, IntegerExpr, nullptr,
+        FPOptionsOverride(),
+        S.Context.getTrivialTypeSourceInfo(Ty, SourceLocation()),
+        SourceLocation(), SourceLocation());
+    Expr *NullptrAssign =
+        S.BuildBinOp(nullptr, SourceLocation(), BO_Assign,
+                     /* LHSExpr=*/FutureObjDRE, /* RHSExpr=*/RAssignExpr)
+            .get();
+    // if (this != 0)
+    Sema::ConditionResult IfCond = S.ActOnCondition(
+        nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
+    SmallVector<Stmt *, 2> BodyStmts = {CE, NullptrAssign};
+    Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
+                                      SourceLocation(), SourceLocation());
+    Stmt *If = S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
+                             /* LPL=*/SourceLocation(), /* Init=*/nullptr,
+                             IfCond, /* RPL=*/SourceLocation(), Body,
+                             SourceLocation(), nullptr)
+                   .get();
+    Stmts.push_back(If);
   }
 
   CompoundStmt *CS =

@@ -1,0 +1,45 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "../async-func-read.hbs"
+
+async int f(int n) {
+  int tmp1 = await read(n-1);
+  int tmp2 = await read(n);
+  return tmp2 + tmp1 + 42;
+}
+
+int main() {
+  struct __FatPointer<int> this = f(3);
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data); 
+  return 0;
+}
+
+// CHECK:void struct__Futuref_free(struct _Futuref *this) {
+// CHECK-NEXT:      if (this->Ft_2.data != 0) {
+// CHECK-NEXT:          this->Ft_2.vtable->free(this->Ft_2.data);
+// CHECK-NEXT:      }
+// CHECK-NEXT:      if (this->Ft_1.data != 0) {
+// CHECK-NEXT:          this->Ft_1.vtable->free(this->Ft_1.data);
+// CHECK-NEXT:      }
+// CHECK-NEXT:      if (this != 0) {
+// CHECK-NEXT:          free((void *)this);
+// CHECK-NEXT:          this = (void *)0;
+// CHECK-NEXT:      }
+// CHECK-NEXT:  }
+
+// CHECK:struct __FatPointer_int __f(int n) {
+// CHECK-NEXT:      struct _Futuref *data = malloc(sizeof(struct _Futuref));
+// CHECK-NEXT:      if (data == 0) {
+// CHECK-NEXT:          exit(1);
+// CHECK-NEXT:      }
+// CHECK-NEXT:      data->n = n;
+// CHECK-NEXT:      data->__future_state = 0;
+// CHECK-NEXT:      struct __FatPointer_int fp = {(void *)data, &__Trait_T_Vtablef};
+// CHECK-NEXT:      return fp;
+// CHECK-NEXT:  }
