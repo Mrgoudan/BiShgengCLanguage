@@ -21,6 +21,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/Lookup.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 
@@ -103,7 +104,7 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 }
 
 // To judge if the syntax is a BSC template declaration.
-static bool IsBSCTemplateDeclaration(bool IsBSC,
+static bool IsBSCTemplateDeclaration(bool IsBSC, 
                                      bool IsIdentifier,
                                      Preprocessor &PP) {
   
@@ -432,12 +433,21 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     // "T max<T> (T a, T b) {...}"
     Token Next;
     // TODO: this could be missidentified from typo:// "intt"
+    
     bool ParsingBSCTemplateFunction = false;
-    if (getCurScope()->getDepth() <= 1) {
+    // lookup if identifier is a name of a function   
+    IdentifierInfo *CurName = Tok.getIdentifierInfo();
+    SourceLocation CurNameLoc = Tok.getLocation();    
+    LookupResult LookupPreviousFunction(Actions, CurName, CurNameLoc, 
+                                        Sema::LookupOrdinaryName, 
+                                        Sema::NotForRedeclaration);    
+    Actions.LookupName(LookupPreviousFunction, getCurScope());
+
+    if (getCurScope()->getDepth() <= 1 && LookupPreviousFunction.empty()) {
       ParsingBSCTemplateFunction = IsBSCTemplateDeclaration(getLangOpts().BSC,
                                                             Tok.is(tok::identifier),
                                                             PP);
-
+      
       if (ParsingBSCTemplateFunction) {
         // Determine if '>' is followed by '{' or '('
         int LGreaterOffset = 2;

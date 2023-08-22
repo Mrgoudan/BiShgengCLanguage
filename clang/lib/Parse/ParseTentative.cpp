@@ -14,6 +14,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Sema/ParsedTemplate.h"
+#include "clang/Sema/Lookup.h"
 using namespace clang;
 
 /// isCXXDeclarationStatement - C++-specialized function that disambiguates
@@ -1143,7 +1144,21 @@ bool Parser::isBSCTemplateDecl(Token tok) {
     } else {
       PreTok = Tok;
     }
-    
+    IdentifierInfo *CurName = LookAheadTok.getIdentifierInfo();
+    SourceLocation CurNameLoc = LookAheadTok.getLocation();
+    // lookup if identifier is a name of a struct/enum/union
+    // for example:
+    //     struct S {};
+    //     struct T<struct S> foo(){}    
+    LookupResult LookupPreviousTag(Actions, CurName, CurNameLoc, 
+                                      Sema::LookupTagName, Sema::NotForRedeclaration);
+    // lookup if identifier is a name of a typedef
+    // for example:
+    //     struct S {};
+    //     typedef S S1;
+    //     struct T<S1> foo(){}                          
+    LookupResult LookupPreviousTypedef(Actions, CurName, CurNameLoc, 
+                                       Sema::LookupOrdinaryName, Sema::NotForRedeclaration);                  
     switch (LookAheadTok.getKind()) {
     case tok::less:
       if (PreTok.is(tok::identifier)) {
@@ -1188,14 +1203,22 @@ bool Parser::isBSCTemplateDecl(Token tok) {
       }
       break;
     case tok::identifier:
-      if (FoundLess && !FoundGreater)  // check if there is an identifier in "<>""
+      // lookup this identifier
+      Actions.LookupName(LookupPreviousTag, getCurScope());
+      Actions.LookupName(LookupPreviousTypedef, getCurScope());
+      
+      // check if there is an identifier in "<>"
+      // check if this identifier not found before
+      if (LookupPreviousTag.empty() && LookupPreviousTypedef.empty() && 
+          FoundLess && !FoundGreater) {
         HasValidParameter = true;
+      }
       break;
     default:
       break;
     }
   }
-  
+
   return false;
 }
 
