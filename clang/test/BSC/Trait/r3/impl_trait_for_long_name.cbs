@@ -1,0 +1,26 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+trait Shape_Shape_Shape {
+    int getSideLen(This* this);
+};
+
+struct Rectangle_Rectangle_Rectangle {
+    int width;
+    int hight;
+};
+
+int struct Rectangle_Rectangle_Rectangle::getSideLen(struct Rectangle_Rectangle_Rectangle* this) {
+    int length = (this->width + this->hight) * 2;
+    return length;
+}
+
+impl trait Shape_Shape_Shape for struct Rectangle_Rectangle_Rectangle;
+
+int main() {
+    struct Rectangle_Rectangle_Rectangle r = {.width = 2, .hight = 3};
+    trait Shape_Shape_Shape* shape = &r;
+    int len = shape->getSideLen();
+    return len - 10;
+}

@@ -5532,7 +5532,7 @@ public:
   QualType DesugarTraitToStructTrait(QualType T);
   bool ShouldDesugarTrait(QualType T);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
-                                 StringRef ID);
+                                 std::string ID);
   VarDecl *ActOnDesugarTraitInstance(Decl *VarDec);
   Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType,
                                       SourceLocation DSLoc);

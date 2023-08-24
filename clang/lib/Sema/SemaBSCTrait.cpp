@@ -183,7 +183,7 @@ void Sema::ActOnFinishTraitMemberSpecification(Decl *TagDecl) {
 }
 
 ExprResult Sema::AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
-                                     StringRef ID) {
+                                     std::string ID) {
   CXXScopeSpec SS;
   SourceLocation TemplateKWLoc;
   UnqualifiedId Name;
@@ -256,16 +256,15 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &D) {
     return nullptr;
   PrintingPolicy PrintPolicy = LangOptions();
   SplitQualType T_split = T.split();
-  StringRef Ty = T.getAsString(T_split, PrintPolicy);
+  std::string Ty = T.getAsString(T_split, PrintPolicy);
   int n = Ty.find(' ');
   std::string Tmp;
   if (n > 0)
-    Tmp = Ty.str().substr(0, n) + "_" + Ty.str().substr(n + 1, -1);
+    Tmp = Ty.substr(0, n) + "_" + Ty.substr(n + 1, -1);
   else
-    Tmp = Ty.str();
-  StringRef Prof = Tmp;
-  Tmp = "__" + Prof.str() + "_trait_" + D.getIdentifier()->getName().str();
-  StringRef ImplTraitName = Tmp;
+    Tmp = Ty;
+  std::string ImplTraitName =
+      "__" + Tmp + "_trait_" + D.getIdentifier()->getName().str();
   IdentifierInfo *ITII = &Context.Idents.get(ImplTraitName);
   StorageClass SC = clang::SC_None;
   VarDecl *NewVD = VarDecl::Create(Context, DC, TraitLoc, D.getIdentifierLoc(),
