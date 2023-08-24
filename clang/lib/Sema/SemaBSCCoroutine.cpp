@@ -2111,6 +2111,18 @@ class AEFinder : public StmtVisitor<AEFinder> {
           dyn_cast<RecordType>(
               LHSExpr->getType().getDesugaredType(SemaRef.Context))
               ->getDecl();
+      assert(isa<ClassTemplateSpecializationDecl>(FatPointerRD));
+      ClassTemplateSpecializationDecl *CTSD =
+          cast<ClassTemplateSpecializationDecl>(FatPointerRD);
+      const TemplateArgumentList &args = CTSD->getTemplateArgs();
+      assert(args.size() == 1);
+      // Make sure these three generic types are fully instantiated.
+      (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
+                                             "PollResult");  
+      (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
+                                            "__Trait_T_Vtable");  
+      (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
+                                            "__FatPointer");           
       RecordDecl::field_iterator PtrField, VtableField, FPFieldIt;
       for (FPFieldIt = FatPointerRD->field_begin();
           FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {

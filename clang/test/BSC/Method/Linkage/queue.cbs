@@ -1,5 +1,5 @@
 // test .hbs header file 
-// RUN: %clang %S/queue.hbs
+// RUN: %clang %S/queue.hbs -o %t
 
 // test linkage
 // RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
