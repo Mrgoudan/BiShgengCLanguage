@@ -5420,22 +5420,24 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
         Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
     find->setTrait(TraitRecord);
     find->setVtable(TraitVtableRecord);
-    // FIXME: Why is it necessary to repeatedly desugar? When will it be empty?
     if (TraitVtableRecord) {
       ParseScope StructScope(this, Scope::ClassScope | Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitVtableRecord);
-      Actions.ActOnDesugarTraitVtable(find, StartLoc, NameLoc, Name, DS);
+      Actions.ActOnDesugarTraitVtable(find, TraitVtableRecord, StartLoc,
+                                      NameLoc, Name, DS);
       StructScope.Exit();
       Actions.ActOnTagFinishDefinition(getCurScope(), TraitVtableRecord,
-                                       StartLoc);
+                                       find->getSourceRange());
     }
     if (TraitRecord) {
       TraitRecord->setDesugaredTraitDecl(find);
       ParseScope StructScope(this, Scope::ClassScope | Scope::DeclScope);
       Actions.ActOnTagStartDefinition(getCurScope(), TraitRecord);
-      Actions.ActOnDesugarTrait(TraitVtableRecord, StartLoc, NameLoc);
+      Actions.ActOnDesugarTrait(TraitVtableRecord, TraitRecord, StartLoc,
+                                NameLoc);
       StructScope.Exit();
-      Actions.ActOnTagFinishDefinition(getCurScope(), TraitRecord, StartLoc);
+      Actions.ActOnTagFinishDefinition(getCurScope(), TraitRecord,
+                                       find->getSourceRange());
     }
   }
 }

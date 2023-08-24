@@ -32,17 +32,9 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(SourceLocation StartLoc,
   if (VtableDecls.empty()) {
     Result = RecordDecl::Create(Context, TTK_Struct, CurContext, StartLoc,
                                 NameLoc, &Context.Idents.get(TraitVTableName));
-    Result->startDefinition();
-    Result->completeDefinition();
+    Result->setLexicalDeclContext(CurContext);
+
     PushOnScopeChains(Result, getCurScope());
-  } else if (VtableDecls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = VtableDecls.begin(),
-                                              E = VtableDecls.end();
-         I != E; ++I) {
-      if (isa<RecordDecl>(*I)) {
-        Result = dyn_cast<RecordDecl>(*I);
-      }
-    }
   } else {
     // todo: error report?
   }
@@ -50,42 +42,89 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(SourceLocation StartLoc,
 }
 
 // when we saw a trait like:
-// ` trait I {int g(char a);};
+// ` trait I {int g(This *this);};
 // we should generate two struct in ast:
 // |--RecordDecl  struct Trait_I_Vtable
-// |----FieldDecl  g 'int (*)(char)'
+// |----FieldDecl  g 'int (*)(void *this)'
 // |--RecordDecl  struct Trait_I
 // |----FieldDecl  data (*)(void)
 // |----FieldDecl  vtable struct (*)Trait_I_Vtable
-void Sema::ActOnDesugarTraitVtable(TraitDecl *Find, SourceLocation StartLoc,
+void Sema::ActOnDesugarTraitVtable(TraitDecl *Find, RecordDecl *TraitVtableRD,
+                                   SourceLocation StartLoc,
                                    SourceLocation NameLoc, IdentifierInfo *Name,
                                    DeclSpec &DS) {
+  TraitVtableRD->startDefinition();
   for (TraitDecl::field_iterator FieldIt = Find->field_begin();
        FieldIt != Find->field_end(); ++FieldIt) {
     QualType FT = FieldIt->getType();
-    QualType PT = Context.getPointerType(FT);
-    FieldDecl *NewFD = FieldDecl::Create(
-        Context, CurContext, StartLoc, NameLoc, FieldIt->getIdentifier(), PT,
-        Context.CreateTypeSourceInfo(PT), nullptr, false, ICIS_CopyInit);
-    PushOnScopeChains(NewFD, getCurScope());
+    if (auto *FPT = FT->getAs<FunctionProtoType>()) {
+      SmallVector<QualType, 4> Args;
+      for (unsigned i = 0; i < FPT->getNumParams(); i++) {
+        QualType T = FPT->getParamType(i);
+        if (T->isPointerType() &&
+            T->getPointeeType().getCanonicalType() == Context.ThisTy) {
+          QualType ThisPT = Context.getPointerType(Context.VoidTy);
+          Args.push_back(ThisPT);
+        } else {
+          Args.push_back(T);
+        }
+      }
+      SourceLocation BL = FieldIt->getBeginLoc();
+      SourceLocation EL = FieldIt->getEndLoc();
+
+      QualType FunctionTy = BuildFunctionType(FPT->getReturnType(), Args, BL,
+                                              Name, FPT->getExtProtoInfo());
+      QualType PT = BuildPointerType(FunctionTy, BL, Name);
+
+      // Set SourceLocation and Param information for TypeSourceInfo to use
+      // during serialization
+      TypeSourceInfo *TInfo = Context.CreateTypeSourceInfo(PT);
+      UnqualTypeLoc CurrTL = TInfo->getTypeLoc().getUnqualifiedLoc();
+      CurrTL.getAs<PointerTypeLoc>().setStarLoc(BL);
+      CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
+      FunctionTypeLoc FTL = CurrTL.getAs<FunctionTypeLoc>();
+      FTL.setLocalRangeBegin(BL);
+      FTL.setLocalRangeEnd(EL);
+      FTL.setLParenLoc(BL);
+      FTL.setRParenLoc(EL);
+      int ParamIndex = 0;
+      for (auto Param : FieldIt->parameters()) {
+        FTL.setParam(ParamIndex++, Param);
+      }
+      FTL.setExceptionSpecRange(FieldIt->getExceptionSpecSourceRange());
+
+      FieldDecl *NewFD = FieldDecl::Create(Context, CurContext, BL, EL,
+                                           FieldIt->getIdentifier(), PT, TInfo,
+                                           nullptr, false, ICIS_CopyInit);
+      NewFD->setAccess(AS_public);
+      PushOnScopeChains(NewFD, getCurScope());
+    }
   }
+  TraitVtableRD->completeDefinition();
 }
 
 RecordDecl *Sema::ActOnDesugarTraitRecord(SourceLocation StartLoc,
                                           SourceLocation NameLoc,
                                           IdentifierInfo *Name) {
+  RecordDecl *NewTrait = nullptr;
   std::string TraitName = "__Trait_" + Name->getName().str();
-  RecordDecl *NewTrait =
-      RecordDecl::Create(Context, TTK_Struct, CurContext, StartLoc, NameLoc,
-                         &Context.Idents.get(TraitName));
-  NewTrait->startDefinition();
-  NewTrait->completeDefinition();
-  PushOnScopeChains(NewTrait, getCurScope());
+  DeclContext::lookup_result TraitDecls =
+      getASTContext().getTranslationUnitDecl()->lookup(
+          DeclarationName(&Context.Idents.get(TraitName)));
+  if (TraitDecls.empty()) {
+    NewTrait = RecordDecl::Create(Context, TTK_Struct, CurContext, StartLoc,
+                                  NameLoc, &Context.Idents.get(TraitName));
+    NewTrait->setLexicalDeclContext(CurContext);
+    PushOnScopeChains(NewTrait, getCurScope());
+  } else {
+    // todo: error report?
+  }
   return NewTrait;
 }
 
-void Sema::ActOnDesugarTrait(RecordDecl *TraitVtableRecord,
+void Sema::ActOnDesugarTrait(RecordDecl *TraitVtableRecord, RecordDecl *TraitRD,
                              SourceLocation StartLoc, SourceLocation NameLoc) {
+  TraitRD->startDefinition();
   std::string DataName = "data";
   std::string VtableName = "vtable";
   QualType DataPT = Context.getPointerType(Context.VoidTy);
@@ -99,8 +138,11 @@ void Sema::ActOnDesugarTrait(RecordDecl *TraitVtableRecord,
       Context, CurContext, StartLoc, NameLoc, &Context.Idents.get(VtableName),
       VtablePT, Context.CreateTypeSourceInfo(VtablePT), nullptr, false,
       ICIS_CopyInit);
+  DataFD->setAccess(AS_public);
+  VtableFD->setAccess(AS_public);
   PushOnScopeChains(DataFD, getCurScope());
   PushOnScopeChains(VtableFD, getCurScope());
+  TraitRD->completeDefinition();
 }
 
 ImplTraitDecl *Sema::BuildImplTraitDecl(Scope *S, Declarator &D,

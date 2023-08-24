@@ -7514,14 +7514,14 @@ public:
   RecordDecl *ActOnDesugarVtableRecord(SourceLocation StartLoc,
                                        SourceLocation NameLoc,
                                        IdentifierInfo *Name);
-  void ActOnDesugarTraitVtable(TraitDecl *Find, SourceLocation StartLoc,
-                               SourceLocation NameLoc, IdentifierInfo *Name,
-                               DeclSpec &DS);
+  void ActOnDesugarTraitVtable(TraitDecl *Find, RecordDecl *TraitVtableRD,
+                               SourceLocation StartLoc, SourceLocation NameLoc,
+                               IdentifierInfo *Name, DeclSpec &DS);
   RecordDecl *ActOnDesugarTraitRecord(SourceLocation StartLoc,
                                       SourceLocation NameLoc,
                                       IdentifierInfo *Name);
-  void ActOnDesugarTrait(RecordDecl *TraitVtableRecord, SourceLocation StartLoc,
-                         SourceLocation NameLoc);
+  void ActOnDesugarTrait(RecordDecl *TraitVtableRecord, RecordDecl *TraitRD,
+                         SourceLocation StartLoc, SourceLocation NameLoc);
   ExprResult ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
                                 BinaryOperatorKind Opc, RecordDecl *RD,
                                 Expr *LHSExpr, Expr *RHSExpr);

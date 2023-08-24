@@ -19,9 +19,9 @@ trait F {
 // CHECK-NEXT: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-3]]:3, col:28> col:7 foo 'int (This *, int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:11, col:17> col:17 this 'This *'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:23, col:27> col:27 a 'int'
-// CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:1> col:7 struct __Trait_F_Vtable definition
-// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:1, <invalid sloc>> col:7 foo 'int (*)(This *, int)'
-// CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <col:1> col:7 struct __Trait_F definition
+// CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:1, line:[[@LINE-5]]:1> line:[[@LINE-7]]:7 struct __Trait_F_Vtable definition
+// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <line:[[@LINE-7]]:3, col:28> col:28 foo 'int (*)(void *, int)'
+// CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-9]]:1, line:[[@LINE-7]]:1> line:[[@LINE-9]]:7 struct __Trait_F definition
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:1, col:7> col:7 data 'void *'
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:1, col:7> col:7 vtable 'struct __Trait_F_Vtable *
 
@@ -46,7 +46,7 @@ impl trait F for union S_2;
 // CHECK: ImplTraitDecl 0x{{[^ ]*}} <col:18, col:6> col:6 F 'union S_2':'union S_2'
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:6> col:6 __union_S_2_trait_F 'struct __Trait_F_Vtable' cinit
 // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:6> 'struct __Trait_F_Vtable'
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:6> 'int (*)(This *, int)' <BitCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:6> 'int (*)(void *, int)' <BitCast>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:6> 'int (*)(union S_2 *, int)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:6> 'int (union S_2 *, int)' BSCMethod 0x{{[^ ]*}} 'foo' 'int (union S_2 *, int)'
 

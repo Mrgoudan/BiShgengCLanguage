@@ -2368,6 +2368,11 @@ public:
     DeclTypeInfo.erase(DeclTypeInfo.begin());
   }
 
+  void DropTypeObject(unsigned i) {
+    assert(i < DeclTypeInfo.size() && "Invalid type chunk");
+    DeclTypeInfo.erase(DeclTypeInfo.begin() + i);
+  }
+
   /// Return the innermost (closest to the declarator) chunk of this
   /// declarator that is not a parens chunk, or null if there are no
   /// non-parens chunks.

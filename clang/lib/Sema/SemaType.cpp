@@ -5112,10 +5112,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
     case DeclaratorChunk::Function: {
-      bool TraitDesugarFlag = false;
-      if (Context.getLangOpts().BSC && T->isTraitPointerType()) {
-        TraitDesugarFlag = true;
+      if (LangOpts.BSC && T->isTraitPointerType()) {
         T = S.DesugarTraitToStructTrait(T->getPointeeType());
+        // The trait pointer type has been desugar, so we need to remove it.
+        // And no need to obtain the source code information for trait pointer
+        // type.
+        D.DropTypeObject(chunkIndex + 1);
       }
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
@@ -5565,8 +5567,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         }
         T = Context.getFunctionType(T, ParamTys, EPI);
       }
-      if (TraitDesugarFlag)
-        return Context.CreateTypeSourceInfo(T);
       break;
     }
     case DeclaratorChunk::MemberPointer: {
