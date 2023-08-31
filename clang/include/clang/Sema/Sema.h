@@ -4921,6 +4921,7 @@ public:
 
 private:
   SafeScopeSpecifier PragmaSafeInfo = SS_None;
+  PreferInlineScopeSpecifier PragmaPreferInlineInfo = PI_None;
 
 public:
   enum PragmaSafeStatus {
@@ -4938,6 +4939,21 @@ public:
     PragmaSafeInfo = SafeSpec;
   }
 
+
+  enum PragmaPreferInlineStatus {
+    PPI_On,
+    PPI_Off,
+  };
+
+  void ActOnPragmaPreferInline(PragmaPreferInlineStatus St);
+
+  PreferInlineScopeSpecifier GetPragmaPreferInlineInfo() {
+    return PragmaPreferInlineInfo;
+  }
+
+  void SetPragmaPreferInlineInfo(PreferInlineScopeSpecifier PreferInlineSpec) {
+    PragmaPreferInlineInfo = PreferInlineSpec;
+  }
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:

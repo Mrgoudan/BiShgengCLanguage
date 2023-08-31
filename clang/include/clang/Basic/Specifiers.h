@@ -398,6 +398,12 @@ namespace clang {
     SS_Safe = 1,
     SS_Unsafe = 2,
   };
+  
+  enum PreferInlineScopeSpecifier {
+    PI_None = 0,
+    PI_PreferInline = 1,
+    PI_PreferNoInline = 2,
+  };
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_SPECIFIERS_H

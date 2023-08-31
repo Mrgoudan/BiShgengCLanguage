@@ -1126,6 +1126,8 @@ def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
 def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>;
 def fPIE : Flag<["-"], "fPIE">, Group<f_Group>;
 def fno_PIE : Flag<["-"], "fno-PIE">, Group<f_Group>;
+def opt_string : Joined<["-"], "opt-string=">, Flags<[CC1Option]>,
+  MarshallingInfoString<PreprocessorOpts<"OptString">>;
 defm access_control : BoolFOption<"access-control",
   LangOpts<"AccessControl">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Disable C++ access control">,

@@ -344,6 +344,12 @@ struct PragmaSafeHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaPreferInlineHandler : public PragmaHandler {
+  PragmaPreferInlineHandler() : PragmaHandler("prefer_inline") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 struct PragmaMaxTokensHereHandler : public PragmaHandler {
   PragmaMaxTokensHereHandler() : PragmaHandler("max_tokens_here") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
@@ -517,6 +523,9 @@ void Parser::initializePragmaHandlers() {
 
   SafeHandler.reset(new PragmaSafeHandler());
   PP.AddPragmaHandler(SafeHandler.get());
+
+  PreferInlineHandler.reset(new PragmaPreferInlineHandler());
+  PP.AddPragmaHandler(PreferInlineHandler.get());
 }
 
 void Parser::resetPragmaHandlers() {
@@ -649,6 +658,9 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler(SafeHandler.get());
   SafeHandler.reset();
+
+  PP.RemovePragmaHandler(PreferInlineHandler.get());
+  PreferInlineHandler.reset();  
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -1914,6 +1926,14 @@ void Parser::HandlePragmaSafe() {
     reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
   (void)ConsumeAnnotationToken();
   Actions.ActOnPragmaSafe(St);
+}
+
+void Parser::HandlePragmaPreferInline() {
+  assert(Tok.is(tok::annot_pragma_prefer_inline));
+  Sema::PragmaPreferInlineStatus St = static_cast<Sema::PragmaPreferInlineStatus>(
+    reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+  (void)ConsumeAnnotationToken();
+  Actions.ActOnPragmaPreferInline(St);
 }
 
 // #pragma GCC visibility comes in two variants:
@@ -3937,6 +3957,46 @@ void PragmaSafeHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer Introduc
   Toks[0].setAnnotationEndLoc(Tok.getLocation());
   Toks[0].setAnnotationValue(
       reinterpret_cast<void *>(static_cast<uintptr_t>(St)));
+  PP.EnterTokenStream(Toks, true, false);
+}
+
+// #pragma prefer_inline ON
+// #pragma prefer_inline OFF
+void PragmaPreferInlineHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer, Token &PPITok) {
+  Sema::PragmaPreferInlineStatus St = Sema::PPI_On;
+
+  Token Tok;
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_prefer_inline);
+    return;
+  }
+  SourceLocation EndLoc = Tok.getLocation();
+  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (II->isStr("ON")) {
+    St = Sema::PPI_On;
+    PP.Lex(Tok);
+  }
+  else if (II->isStr("OFF")) {
+    St = Sema::PPI_Off;
+    PP.Lex(Tok);
+  } else {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_prefer_inline);
+    return;
+  }
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_prefer_inline);
+    return;
+  }
+
+  MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
+  Toks[0].startToken();
+  Toks[0].setKind(tok::annot_pragma_prefer_inline);
+  Toks[0].setLocation(PPITok.getLocation());
+  Toks[0].setAnnotationEndLoc(EndLoc);
+  Toks[0].setAnnotationValue(reinterpret_cast<void*>(
+                             static_cast<uintptr_t>(St)));
   PP.EnterTokenStream(Toks, true, false);
 }
 

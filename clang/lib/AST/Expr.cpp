@@ -1379,6 +1379,8 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
+
+  CallExprBits.PreferInlineSpecifier = PI_None;
 }
 
 CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,

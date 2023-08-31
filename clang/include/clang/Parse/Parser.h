@@ -217,6 +217,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
   std::unique_ptr<PragmaHandler> SafeHandler;
+  std::unique_ptr<PragmaHandler> PreferInlineHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -295,6 +296,11 @@ class Parser : public CodeCompletionHandler {
       DestroyTemplateIds();
   }
   void DestroyTemplateIds();
+
+  /// Reset "#pragma prefer_inline ON/OFF"
+  void ResetPreferInlineScopeToNone() {
+    Actions.SetPragmaPreferInlineInfo(PI_None);
+  }
 
   /// RAII object to destroy TemplateIdAnnotations where possible, from a
   /// likely-good position during parsing.
@@ -792,6 +798,7 @@ private:
   void HandlePragmaAttribute();
 
   void HandlePragmaSafe();
+  void HandlePragmaPreferInline();
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)

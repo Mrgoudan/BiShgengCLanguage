@@ -8679,6 +8679,10 @@ static void handleReturnsCountIndexFuncPtr(Sema &S, Decl *D, const ParsedAttr &A
     D->addAttr(::new (S.Context) ReturnsCountIndexAttr(S.Context, AL, LenVarIdx));
 }
 
+static void handleFunctionLikeMacro(Sema &S, Decl *D, const ParsedAttr &Attrs) {
+  D->addAttr(::new (S.Context) FunctionLikeMacroAttr(S.Context, Attrs));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -9537,6 +9541,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
       handleReturnsCountIndexFuncPtr(S, D, AL, true);
     else
       handleReturnsCountIndexAttr(S, D, AL, true);
+    break;
+  case ParsedAttr::AT_FunctionLikeMacro:
+    handleFunctionLikeMacro(S, D, AL);
     break;
   }
 }

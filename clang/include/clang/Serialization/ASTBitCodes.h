@@ -363,6 +363,9 @@ enum ControlRecordTypes {
 
   /// Record code for the module build directory.
   MODULE_DIRECTORY,
+
+  /// Recode code for the bishengc lto opt string
+  OPT_STRING,
 };
 
 /// Record types that occur within the options block inside

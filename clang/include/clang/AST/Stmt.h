@@ -470,9 +470,10 @@ protected:
     /// True if the call expression has some floating-point features.
     unsigned HasFPFeatures : 1;
 
-    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 3 - NumExprBits;
+    uint64_t PreferInlineSpecifier : 2;
 
+    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
+    unsigned : 24 - 5 - NumExprBits;
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized
     /// for faster access.

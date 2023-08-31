@@ -461,6 +461,16 @@ void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
   SetPragmaSafeInfo(spec);
 }
 
+void Sema::ActOnPragmaPreferInline(PragmaPreferInlineStatus St) {
+  PreferInlineScopeSpecifier spec = PI_None;
+  if (St == PSS_On) {
+    spec = PI_PreferInline;
+  } else if (St == PSS_Off) {
+    spec = PI_PreferNoInline;
+  }
+  SetPragmaPreferInlineInfo(spec);
+}
+
 ExprResult
 Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
   if (!Val.get())

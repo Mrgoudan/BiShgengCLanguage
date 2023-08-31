@@ -1609,7 +1609,11 @@ def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
   InGroup<HLSLExtension>;
-  
+
+def warn_pragma_prefer_inline : Warning<
+  "incorrect use of '#pragma prefer_inline on|off' - ignored">,
+  InGroup<IgnoredPragmas>;
+
 // BSC Parser Diagnostics 
 def invalid_param_for_trait_member : Error<"the first parameter of trait member function must be 'This* this'">;
 def err_unexpected_token_for_impl_trait_decl : Error<"unexpected token for ImplTraitDecl">;
