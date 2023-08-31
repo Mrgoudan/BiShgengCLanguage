@@ -41,14 +41,17 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(SourceLocation StartLoc,
   return Result;
 }
 
-// when we saw a trait like:
-// ` trait I {int g(This *this);};
-// we should generate two struct in ast:
+// When we see a trait like:
+// trait I {
+//   int g(This *this);
+// };
+//
+// We generate two structs in ast:
 // |--RecordDecl  struct Trait_I_Vtable
-// |----FieldDecl  g 'int (*)(void *this)'
+//  `---FieldDecl  g 'int (*)(void *this)'
 // |--RecordDecl  struct Trait_I
-// |----FieldDecl  data (*)(void)
-// |----FieldDecl  vtable struct (*)Trait_I_Vtable
+//  `---FieldDecl  data (*)(void)
+//  `---FieldDecl  vtable struct (*)Trait_I_Vtable
 void Sema::ActOnDesugarTraitVtable(TraitDecl *Find, RecordDecl *TraitVtableRD,
                                    SourceLocation StartLoc,
                                    SourceLocation NameLoc, IdentifierInfo *Name,
@@ -156,7 +159,6 @@ ImplTraitDecl *Sema::BuildImplTraitDecl(Scope *S, Declarator &D,
   DeclarationName Name = GetNameForDeclarator(D).getName();
   IdentifierInfo *II = Name.getAsIdentifierInfo();
 
-  // We should move this piece of code.
   ImplTraitDecl *ITD = nullptr;
   ITD =
       ImplTraitDecl::Create(Context, DC, D.getBeginLoc(), D.getIdentifierLoc(),
@@ -250,10 +252,9 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &D) {
   QualType QT = TraitRecord->getTypeForDecl()->getCanonicalTypeInternal();
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType T = TInfo->getType().getCanonicalType();
-  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(
-      T); // If we have the same ImplTraitDecl before, return nullptr
-  if (LookUpVar)
-    return nullptr;
+  VarDecl *LookUpVar = TD->getTypeImpledVarDecl(T);
+  // If we have the same ImplTraitDecl before, return nullptr
+  if (LookUpVar) return nullptr;
   PrintingPolicy PrintPolicy = LangOptions();
   SplitQualType T_split = T.split();
   std::string Ty = T.getAsString(T_split, PrintPolicy);

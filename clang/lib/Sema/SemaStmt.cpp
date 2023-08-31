@@ -463,9 +463,9 @@ void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
 
 void Sema::ActOnPragmaPreferInline(PragmaPreferInlineStatus St) {
   PreferInlineScopeSpecifier spec = PI_None;
-  if (St == PSS_On) {
+  if (St == PPI_On) {
     spec = PI_PreferInline;
-  } else if (St == PSS_Off) {
+  } else if (St == PPI_Off) {
     spec = PI_PreferNoInline;
   }
   SetPragmaPreferInlineInfo(spec);
