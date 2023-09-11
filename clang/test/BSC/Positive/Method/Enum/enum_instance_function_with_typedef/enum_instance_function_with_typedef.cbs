@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -verify %s
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang_cc1 %t-rw.c -o %t-rw.output
+// expected-no-diagnostics
+
+typedef enum E {
+  X3,
+  X4
+}E;
+
+int E::getX4_1(E* this) {
+  return X4;
+}
+
+int E::getX4_2(enum E* this) {
+  return X4;
+}
+
+int enum E::getX4_3(enum E* this) {
+  return X4;
+}
+
+// CHECK: typedef enum E {
+// CHECK-NEXT:   X3,
+// CHECK-NEXT:   X4
+// CHECK-NEXT: }E;
+
+// CHECK: int E_getX4_1(E *this) {
+// CHECK-NEXT:   return X4;
+// CHECK-NEXT: }
+
+// CHECK: int E_getX4_2(enum E *this) {
+// CHECK-NEXT:   return X4;
+// CHECK-NEXT: }
+
+// CHECK: int enum_E_getX4_3(enum E *this) {
+// CHECK-NEXT:   return X4;
+// CHECK-NEXT: }
+
+int main() {
+  E obj;
+  obj.getX4_1();
+  obj.getX4_2();
+  obj.getX4_3();
+  return 0;
+}

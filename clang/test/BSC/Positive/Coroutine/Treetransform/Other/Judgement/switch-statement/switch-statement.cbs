@@ -1,0 +1,35 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include "../../../../async-func-read.hbs"
+
+async int f(int start) {
+  char grade = 'B';
+  int result = await read(1);
+  switch (grade) {
+  case 'A':
+    result = 1;
+    break;
+  case 'B':
+  case 'C':
+    result = 2;
+    break;
+  case 'D':
+  case 'F':
+    result = 3;
+    break;
+  default:
+    result = -1;
+  } 
+  return result;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

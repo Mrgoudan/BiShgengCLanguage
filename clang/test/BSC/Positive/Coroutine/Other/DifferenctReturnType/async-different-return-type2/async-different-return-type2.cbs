@@ -1,0 +1,28 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "../../../async-func-read.hbs"
+#include <stdbool.h>
+
+async bool int::g();
+
+async int int::f() {
+    await int::g();
+    return 0;
+}
+
+async bool int::g() {
+    struct __FatPointer<int> a = read(1);
+    await a;
+    return false;
+}
+
+int main() {
+  struct __FatPointer<int> this = int::f();
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data); 
+  return 0;
+}

@@ -1,0 +1,21 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include "../../../../async-func-read.hbs"
+
+async int f(int start) {
+  int array[] = {1,2,3,4,5};
+  int length = sizeof(array)/sizeof(array[0]);
+  int result = await read(1);
+  return result;
+}
+
+int main() {
+    struct _Futuref this = {}; 
+    struct _Futuref::poll(&this);
+    return 0;
+}

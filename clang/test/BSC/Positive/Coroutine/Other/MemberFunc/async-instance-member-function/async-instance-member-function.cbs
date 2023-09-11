@@ -1,0 +1,25 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+
+#include "../../../async-func-read.hbs"
+
+async void int::g(int* this);
+
+async int int::f() {
+    int i = 1;
+    await int::g(&i);
+    await i.g();
+    return 0;
+}
+
+async void int::g(int* this) {
+    struct __FatPointer<int> a = read(1);
+    await a;
+}
+
+int main() {
+  struct __FatPointer<int> this = int::f();
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data); 
+  return 0;
+}

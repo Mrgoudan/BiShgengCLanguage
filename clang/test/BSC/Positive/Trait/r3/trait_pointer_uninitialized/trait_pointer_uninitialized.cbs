@@ -1,0 +1,21 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+trait F {
+  int foo(This* this);
+};
+
+int int::foo(int *this) {
+  return 10;
+};
+
+impl trait F for int;
+
+int main() {
+  int a = 1;
+  trait F* f;
+  f = &a;
+  int b = f->foo();
+  return b - 10;
+}

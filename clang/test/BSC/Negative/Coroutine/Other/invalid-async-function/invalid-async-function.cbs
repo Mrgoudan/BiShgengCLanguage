@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -verify %s 
+
+#include "../../async-func-read-opposite.hbs"
+
+async struct __FatPointer<int> f1() { // expected-error {{function which returns 'Future' type should not be modified by 'async'}}    
+    struct __FatPointer<int> f;
+    int a = await read(1);
+    return f;
+}
+
+int main() {
+  return 0;
+}

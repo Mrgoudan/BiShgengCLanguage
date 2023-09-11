@@ -1,0 +1,18 @@
+// RUN: %clang %s -Werror -Wno-incompatible-function-pointer-types -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "../../async-func-read.hbs"
+
+async int f(int start) {
+    await read(await read(1));
+    return start;
+}
+
+int main() {
+  struct _Futuref this = {}; 
+  struct _Futuref::poll(&this);
+  return 0;
+}

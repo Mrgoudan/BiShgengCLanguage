@@ -1,0 +1,28 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+
+#include "../../../async-func-read.hbs"
+
+async int g();
+
+async int f() {
+    int a = await g();
+    return a;
+}
+
+async int g() {
+    struct __FatPointer<int> a = read(1);
+    await a;
+    return 0;
+}
+
+int main() {
+  struct __FatPointer<int> this = f();
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data); 
+  return 0;
+}

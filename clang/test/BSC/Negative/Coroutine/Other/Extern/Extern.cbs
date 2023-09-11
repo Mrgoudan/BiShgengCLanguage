@@ -1,0 +1,16 @@
+// RUN: %clang %S/*.cbs -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %T/extern-file.cbs.tmp-rw.c %t-rw.c -o %T/rw.output
+// RUN: %T/rw.output
+
+#include "../../future.hbs"
+
+extern async int f(int n);
+
+int main() {
+  struct __FatPointer<int> this = f(5);
+  this.vtable->poll(this.data);
+  this.vtable->free(this.data);
+  return 0;
+}
