@@ -236,7 +236,7 @@ private:
 public:
   /// Used to mark parameters that include 'this'.
   bool HasThisParam = false;
-
+  
   QualType getExtendedType() const { return ExtendedType; }
   void setExtendedType(QualType ExtendedType) {
     this->ExtendedType = ExtendedType;

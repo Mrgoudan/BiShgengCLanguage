@@ -4186,10 +4186,16 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
 
   // Construct an elaborated type containing the nested-name-specifier (if any)
   // and tag keyword.
-  Result = Context.getElaboratedType(Keyword, SS.getScopeRep(), Result);
-  ElaboratedTypeLoc ElabTL = TLB.push<ElaboratedTypeLoc>(Result);
-  ElabTL.setElaboratedKeywordLoc(TagLoc);
-  ElabTL.setQualifierLoc(SS.getWithLocInContext(Context));
+  if (Context.getLangOpts().BSC) {
+    Result = Context.getElaboratedType(Keyword, nullptr, Result);
+    ElaboratedTypeLoc ElabTL = TLB.push<ElaboratedTypeLoc>(Result);
+    ElabTL.setElaboratedKeywordLoc(TagLoc);
+  } else {
+    Result = Context.getElaboratedType(Keyword, SS.getScopeRep(), Result);
+    ElaboratedTypeLoc ElabTL = TLB.push<ElaboratedTypeLoc>(Result);
+    ElabTL.setElaboratedKeywordLoc(TagLoc);
+    ElabTL.setQualifierLoc(SS.getWithLocInContext(Context));
+  }
   return CreateParsedType(Result, TLB.getTypeSourceInfo(Context, Result));
 }
 

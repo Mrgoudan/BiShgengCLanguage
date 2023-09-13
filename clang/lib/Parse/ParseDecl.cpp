@@ -7267,15 +7267,13 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren)) {
-      const Type *TypePtr = nullptr;
+      QualType ExtendedType;
       if (D.getBSCScopeSpec().isNotEmpty() &&
           !D.getBSCScopeSpec().getExtendedType().isNull()) {
-        TypePtr = D.getBSCScopeSpec().getExtendedType().getTypePtrOrNull();
-        if (TypePtr)
-          TypePtr = TypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
+        ExtendedType = D.getBSCScopeSpec().getExtendedType();
       }
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
-                                      EllipsisLoc, TypePtr, isTraitMem);
+                                      EllipsisLoc, ExtendedType, isTraitMem);
     } else if (isTraitMem)
       Diag(Tok.getLocation(), diag::invalid_param_for_trait_member);
     else if (RequiresArg)
@@ -7546,7 +7544,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, const Type *typePtr, bool isTraitMem) {
+    SourceLocation &EllipsisLoc, QualType ExtendedType, bool isTraitMem) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7672,7 +7670,7 @@ void Parser::ParseParameterDeclarationClause(
       // Inform the actions module about the parameter declarator, so it gets
       // added to the current scope.
       Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator,
-                                                 ParamInfo.size(), typePtr);
+                                                 ParamInfo.size(), ExtendedType);
       // Parse the default argument, if any. We parse the default
       // arguments in all dialects; the semantic analysis in
       // ActOnParamDefaultArgument will reject the default argument in

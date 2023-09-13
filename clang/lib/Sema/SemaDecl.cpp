@@ -14337,7 +14337,7 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
-                                 const Type *TypePtr) {
+                                 QualType ExtendedType) {
   const DeclSpec &DS = D.getDeclSpec();
 
   // Verify C99 6.7.5.3p2: The only SCS allowed is 'register'.
@@ -14383,6 +14383,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
   IdentifierInfo *II = D.getIdentifier();
   bool IsThisParam = false;
+  const Type* TypePtr = ExtendedType.getTypePtrOrNull();
+  if (TypePtr)
+    TypePtr = TypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
   // if TypePtr is nullptr, it is not a BSCMethod
   if (TypePtr && DeclarationName(II).getAsString() == "this") {
     if (ParamSize == 0) {
@@ -14393,7 +14396,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
           ThisTypePtr =
               ThisTypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
       }
-      if (TypePtr != ThisTypePtr) {
+      if (DS.getTypeSpecType() != clang::TST_This && TypePtr != ThisTypePtr) {
         Diag(D.getBeginLoc(), diag::err_type_unsupported)
             << parmDeclType.getAsString();
       }
@@ -14433,6 +14436,29 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
   // Temporarily put parameter variables in the translation unit, not
   // the enclosing context.  This prevents them from accidentally
   // looking like class members in C++.
+
+  // Use This* as BSCMethod parameter,
+  // For example   void struct S::f(This* this);
+  if (getLangOpts().BSC && TypePtr && DS.getTypeSpecType() == clang::TST_This) {
+    parmDeclType = Context.getPointerType(ExtendedType);
+    TInfo = Context.CreateTypeSourceInfo(parmDeclType);
+    // if EntendedType is a generic type,
+    // TemplateArgumentLocInfo is needed when instantiation,
+    if (TypePtr->isDependentType()) {
+      UnqualTypeLoc CurrTL = TInfo->getTypeLoc().getUnqualifiedLoc();
+      CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
+      CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
+      TemplateSpecializationTypeLoc SpecTL = 
+                CurrTL.getAs<TemplateSpecializationTypeLoc>();
+      const TemplateSpecializationType* SpecType = SpecTL.getTypePtr();
+      for (unsigned i = 0, e = SpecTL.getNumArgs(); i != e; ++i) {
+        QualType TemplateArg = SpecType->getArg(i).getAsType();
+        TypeSourceInfo *TemplateArgTypeInfo = 
+            Context.getTrivialTypeSourceInfo(TemplateArg, DS.getBeginLoc());
+        SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgTypeInfo));
+      }
+    }
+  }
   ParmVarDecl *New =
       CheckParameter(Context.getTranslationUnitDecl(), D.getBeginLoc(),
                      D.getIdentifierLoc(), II, parmDeclType, TInfo, SC);

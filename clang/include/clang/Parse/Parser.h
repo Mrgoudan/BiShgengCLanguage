@@ -3055,7 +3055,7 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, const Type *typePtr = nullptr,
+      SourceLocation &EllipsisLoc, QualType ExtendedType = QualType(),
       bool isTraitMem = false);
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);

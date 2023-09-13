@@ -199,3 +199,5 @@ BSC/Positive/Driver/rewrite-bsc/Generic/rewrite_bsc_generic_7/rewrite_bsc_generi
 BSC/Positive/Driver/rewrite-bsc/Generic/rewrite_bsc_generic_6/rewrite_bsc_generic_6.cbs
 BSC/Positive/Driver/rewrite-bsc/Generic/rewrite_bsc_generic_3/rewrite_bsc_generic_3.cbs
 BSC/Positive/Driver/rewrite-bsc/Generic/rewrite_bsc_generic_1/rewrite_bsc_generic_1.cbs
+BSC/Positive/Method/This/use_This_as_BSCMethod_parameter/use_This_as_BSCMethod_parameter.cbs
+BSC/Positive/Method/This/use_This_as_BSCMethod_parameter_with_trait/use_This_as_BSCMethod_parameter_with_trait.cbs

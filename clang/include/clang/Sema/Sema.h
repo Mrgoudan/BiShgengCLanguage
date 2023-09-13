@@ -2911,7 +2911,7 @@ public:
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
   // FIXME: Not good enough to add two extra args.
   Decl *ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize = 0,
-                             const Type *TypePtr = nullptr);
+                             QualType ExtendedType = QualType());
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
