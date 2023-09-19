@@ -102,6 +102,7 @@ TYPE("plist",                    Plist,        INVALID,         "plist",  phases
 TYPE("rewritten-objc",           RewrittenObjC,INVALID,         "cpp",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("rewritten-legacy-objc",    RewrittenLegacyObjC,INVALID,   "cpp",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("rewritten-bsc",            RewrittenBSC, INVALID,         "c",      phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("rewritten-bsc-header",     RewrittenBSCHeader,INVALID,    "h",      phases::Preprocess, phases::Precompile)
 TYPE("remap",                    Remap,        INVALID,         "remap",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("precompiled-header",       PCH,          INVALID,         "gch",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("object",                   Object,       INVALID,         "o",      phases::Link)

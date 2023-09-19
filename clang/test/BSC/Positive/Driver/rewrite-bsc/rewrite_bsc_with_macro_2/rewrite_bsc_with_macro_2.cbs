@@ -1,0 +1,13 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "rewrite_bsc_with_macro_2.h"
+
+static inline void f() {
+    if (BSC_LIKELY(true)) {}
+}
+
+int main() {
+    return 0;
+}

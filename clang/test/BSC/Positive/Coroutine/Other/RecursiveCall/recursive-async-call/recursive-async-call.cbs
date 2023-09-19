@@ -1,6 +1,9 @@
 // RUN: %clang %s -o %test.output
+// RUN: %clang -rewrite-bsc %S/../../../future.hbs -o %T/../../../future.h
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: %clang %t-rw.c -o %t-rw.output
+// expected-no-diagnostics
+
 // since it's a recursive call, we will get a segv if we run it.
 
 // Test without serialization:
@@ -19,16 +22,22 @@
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
 // RUN: | FileCheck --strict-whitespace %s
 
-#include "../../../async-func-read.hbs"
+#include "../../../future.hbs"
+#include <stdlib.h>
 
 async int f() {
     int a = await f();
     return a;
 }
 
+
+// Declaration
+// CHECK: |-FunctionDecl {{.*}} <line:28:1, col:11> col:11 used __f 'struct __FatPointer<int> (void)' 
+
 // Make sure that function `__f` has body.
-// CHECK: FunctionDecl 0x{{[^ ]*}} <col:1, col:11> col:11 used __f 'struct __FatPointer<int> (void)'
-// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:1, col:11>
+// CHECK: |-FunctionDecl {{.*}} <line:28:1, col:11> col:11 used __f 'struct __FatPointer<int> (void)' 
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:1, col:11>
+// CHECK-NEXT: |   |-DeclStmt {{.*}} <col:11>
 
 int main() {
   struct __FatPointer<int> this = f();

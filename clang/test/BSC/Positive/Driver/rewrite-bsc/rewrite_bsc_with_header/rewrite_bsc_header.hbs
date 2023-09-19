@@ -5,12 +5,8 @@ struct Foo {
   int a;
 };
 
-int struct Foo::getA(struct Foo* this) {
-  return this->a;
-}
+int struct Foo::getA(struct Foo* this);
 
-void int::increase(int *this) {
-  *this = *this + 1;
-}
+void int::increase(int *this);
 
 #endif

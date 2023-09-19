@@ -118,6 +118,7 @@ bool types::canTypeBeUserSpecified(ID Id) {
       TY_RewrittenObjC,
       TY_RewrittenLegacyObjC,
       TY_RewrittenBSC,
+      TY_RewrittenBSCHeader,
       TY_Remap,
       TY_PCH,
       TY_Object,

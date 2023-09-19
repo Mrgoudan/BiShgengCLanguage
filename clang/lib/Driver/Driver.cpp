@@ -3905,7 +3905,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   if (RewriteBSCArg) {
     for (auto &I : Inputs) {
       types::ID InputType = I.first;
-      if (InputType != types::TY_BSC) {
+      // We only support rewriting files with suffixes 'hbs' and 'cbs'.
+      if (InputType != types::TY_BSC && InputType != types::TY_BSCHeader) {
         Diag(clang::diag::warn_target_unsupported_non_bsc_file)
             << types::getTypeName(InputType);
         Args.eraseArg(options::OPT_rewrite_bsc);
@@ -4598,6 +4599,13 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
+    // While rewriting hbs files, we have to treat them as cbs files to do
+    // compilation.
+    if (Args.hasArg(options::OPT_rewrite_bsc)) {
+      return C.MakeAction<CompileJobAction>(Input,
+                                            types::TY_RewrittenBSCHeader);
+    }
+
     types::ID OutputTy = getPrecompiledType(Input->getType());
     assert(OutputTy != types::TY_INVALID &&
            "Cannot precompile this input type!");
@@ -4942,8 +4950,7 @@ class ToolSelector final {
   bool canCollapsePreprocessorAction() const {
     return !C.getArgs().hasArg(options::OPT_no_integrated_cpp) &&
            !C.getArgs().hasArg(options::OPT_traditional_cpp) && !SaveTemps &&
-           !C.getArgs().hasArg(options::OPT_rewrite_objc) &&
-           !C.getArgs().hasArg(options::OPT_rewrite_bsc);
+           !C.getArgs().hasArg(options::OPT_rewrite_objc);
   }
 
   /// Struct that relates an action with the offload actions that would be

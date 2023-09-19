@@ -29,27 +29,31 @@ int main() {
 // CHECK-NEXT:  char *color;
 // CHECK-NEXT:  int blood;
 // CHECK-NEXT:};
-
-// CHECK:struct Block __attribute__((weak)) bar_int_int(int a, int b)   {
-// CHECK-NEXT:      struct Block grass = {"green", 1};
-// CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
-// CHECK-NEXT:      struct Block oak;
-// CHECK-NEXT:      oak.color = "yellow";
-// CHECK-NEXT:      oak.blood = 15;
-// CHECK-NEXT:      return grass;
-// CHECK-NEXT:  }
-
-// CHECK:struct Block __attribute__((weak)) bar_double_float(double a, float b)   {
-// CHECK-NEXT:      struct Block grass = {"green", 1};
-// CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
-// CHECK-NEXT:      struct Block oak;
-// CHECK-NEXT:      oak.color = "yellow";
-// CHECK-NEXT:      oak.blood = 15;
-// CHECK-NEXT:      return grass;
-// CHECK-NEXT:  }
-
-// CHECK:int main(void) {
+// CHECK-EMPTY:
+// CHECK-NEXT:struct Block __attribute__((weak)) bar_int_int(int a, int b);
+// CHECK-EMPTY:
+// CHECK-NEXT:struct Block __attribute__((weak)) bar_double_float(double a, float b);
+// CHECK-EMPTY:
+// CHECK-NEXT:int main(void) {
 // CHECK-NEXT:  struct Block br1 = bar_int_int(1, 2);
 // CHECK-NEXT:  struct Block br2 = bar_double_float(1., 2.);
 // CHECK-NEXT:  return 0;
 // CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:struct Block __attribute__((weak)) bar_int_int(int a, int b)   {
+// CHECK-NEXT:      struct Block grass = {"green", 1};
+// CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
+// CHECK-NEXT:      struct Block oak;
+// CHECK-NEXT:      oak.color = "yellow";
+// CHECK-NEXT:      oak.blood = 15;
+// CHECK-NEXT:      return grass;
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT:struct Block __attribute__((weak)) bar_double_float(double a, float b)   {
+// CHECK-NEXT:      struct Block grass = {"green", 1};
+// CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
+// CHECK-NEXT:      struct Block oak;
+// CHECK-NEXT:      oak.color = "yellow";
+// CHECK-NEXT:      oak.blood = 15;
+// CHECK-NEXT:      return grass;
+// CHECK-NEXT:  }

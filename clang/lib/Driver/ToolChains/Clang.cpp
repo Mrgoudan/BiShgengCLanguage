@@ -4747,7 +4747,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
-    } else if (JA.getType() == types::TY_RewrittenBSC) {
+    } else if (JA.getType() == types::TY_RewrittenBSC ||
+               JA.getType() == types::TY_RewrittenBSCHeader) {
       CmdArgs.push_back("-rewrite-bsc");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");

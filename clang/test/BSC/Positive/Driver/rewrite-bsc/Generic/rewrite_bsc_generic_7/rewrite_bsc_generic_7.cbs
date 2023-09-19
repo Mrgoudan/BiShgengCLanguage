@@ -41,31 +41,29 @@ int main() {
   return 0;
 }
 
-// CHECK: struct Foo_struct_B {
-// CHECK-NEXT:      struct B a;
-// CHECK-NEXT:    };
-
-// CHECK: struct Goo_struct_B_struct_B {
+// CHECK: struct B {
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Foo_struct_B {
+// CHECK-NEXT:       struct B a;
+// CHECK-NEXT:   };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Goo_struct_B_struct_B {
 // CHECK-NEXT:       struct B a;
 // CHECK-NEXT:       struct B b;
 // CHECK-NEXT:   };
-
-// CHECK: int struct_B_increase(struct B *this) {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Foo_struct_B __attribute__((weak)) max_struct_B(struct B a, struct Foo_struct_B foo);
+// CHECK-EMPTY:
+// CHECK-NEXT: int struct_B_increase(struct B *this) {
 // CHECK-NEXT:       return 0;
 // CHECK-NEXT:   }
-
-// CHECK: struct Foo_struct_B __attribute__((weak)) max_struct_B(struct B a, struct Foo_struct_B foo) {
-// CHECK-NEXT:       struct B x;
-// CHECK-NEXT:       struct_B_increase(&x);
-// CHECK-NEXT:       int b = struct_B_increase(&x);
-// CHECK-NEXT:       return foo;
-// CHECK-NEXT:   }
-
-// CHECK: struct Goo_struct_B_struct_B poo(struct Goo_struct_B_struct_B goo) {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Goo_struct_B_struct_B poo(struct Goo_struct_B_struct_B goo) {
 // CHECK-NEXT:       return goo;
 // CHECK-NEXT:   }
-
-// CHECK: int main(void) {
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
 // CHECK-NEXT:       struct B a1;
 // CHECK-NEXT:       struct B b1;
 // CHECK-NEXT:       struct_B_increase(&b1);
@@ -76,4 +74,10 @@ int main() {
 // CHECK-NEXT:       p = poo(p);
 // CHECK-NEXT:       return 0;
 // CHECK-NEXT:   }
-
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Foo_struct_B __attribute__((weak)) max_struct_B(struct B a, struct Foo_struct_B foo) {
+// CHECK-NEXT:       struct B x;
+// CHECK-NEXT:       struct_B_increase(&x);
+// CHECK-NEXT:       int b = struct_B_increase(&x);
+// CHECK-NEXT:       return foo;
+// CHECK-NEXT:   }

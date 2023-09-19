@@ -560,7 +560,7 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
       FD->getEndLoc(), &(S.Context.Idents).get(IName),
       S.Context.getRecordType(VtableRD), nullptr, SC_None);
   DeclGroupRef DG(VD);
-  S.PushOnScopeChains(VD, S.getCurScope(), false);
+  S.PushOnScopeChains(VD, S.getCurScope(), true);
   SmallVector<Expr *, 2> InitExprs;
 
   SmallVector<QualType, 1> Args;
@@ -1017,6 +1017,7 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
   std::vector<Stmt *> BodyStmts;
   std::vector<Stmt *> ElseStmts;
   Expr *IfCond = nullptr;
+  SourceLocation BLoc = NewFD->getBeginLoc();
 
   RecordDecl::field_iterator TheField;
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
@@ -1062,7 +1063,7 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
 
   if (IsCompletedFD) {
     Expr *IsCompletedFDRef = S.BuildDeclRefExpr(
-        IsCompletedFD, IsCompletedFD->getType(), VK_LValue, SourceLocation());
+        IsCompletedFD, IsCompletedFD->getType(), VK_LValue, BLoc);
     IsCompletedFDRef->HasBSCScopeSpec = true;
     IsCompletedFDRef =
         S.ImpCastExprToType(
@@ -1073,22 +1074,19 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
 
     if (PollResultRD) {
       Expr *PollResultVarRef = S.BuildDeclRefExpr(
-          PollResultVar, PollResultVar->getType(), VK_LValue, SourceLocation());
+          PollResultVar, PollResultVar->getType(), VK_LValue, BLoc);
       PollResultVarRef =
-          S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, PollResultVarRef)
-              .get();
+          S.CreateBuiltinUnaryOp(BLoc, UO_AddrOf, PollResultVarRef).get();
       Expr *AwaitResultRef = S.BuildDeclRefExpr(
-          AwaitResult, AwaitResult->getType(), VK_LValue, SourceLocation());
+          AwaitResult, AwaitResult->getType(), VK_LValue, BLoc);
       AwaitResultRef =
-          S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, AwaitResultRef)
-              .get();
+          S.CreateBuiltinUnaryOp(BLoc, UO_AddrOf, AwaitResultRef).get();
 
       SmallVector<Expr *, 2> Args;
       Args.push_back(PollResultVarRef);
       Args.push_back(AwaitResultRef);
-      IfCond = S.BuildCallExpr(nullptr, IsCompletedFDRef, SourceLocation(),
-                               Args, SourceLocation())
-                   .get();
+      IfCond =
+          S.BuildCallExpr(nullptr, IsCompletedFDRef, BLoc, Args, BLoc).get();
     }
   }
 
@@ -1096,9 +1094,7 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
       NewFD->getReturnType()->getAsRecordDecl();
   std::string PendingFDName = "pending";
   LookupResult PendingFDResult(
-      S,
-      DeclarationNameInfo(&(S.Context.Idents).get(PendingFDName),
-                          SourceLocation()),
+      S, DeclarationNameInfo(&(S.Context.Idents).get(PendingFDName), BLoc),
       S.LookupOrdinaryName);
   S.LookupQualifiedName(PendingFDResult, PollResultRDForPending);
   BSCMethodDecl *PendingFD = nullptr;
@@ -1106,31 +1102,29 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
     PendingFD = dyn_cast_or_null<BSCMethodDecl>(PendingFDResult.getFoundDecl());
 
   if (PendingFD) {
-    Expr *PendingFDRef = S.BuildDeclRefExpr(PendingFD, PendingFD->getType(),
-                                            VK_LValue, SourceLocation());
+    Expr *PendingFDRef =
+        S.BuildDeclRefExpr(PendingFD, PendingFD->getType(), VK_LValue, BLoc);
     PendingFDRef->HasBSCScopeSpec = true;
     PendingFDRef =
         S.ImpCastExprToType(PendingFDRef,
                             S.Context.getPointerType(PendingFDRef->getType()),
                             CK_FunctionToPointerDecay)
             .get();
-    Expr *PendingCall = S.BuildCallExpr(nullptr, PendingFDRef, SourceLocation(),
-                                        {}, SourceLocation())
-                            .get();
-    Stmt *RS = S.BuildReturnStmt(SourceLocation(), PendingCall).get();
+    Expr *PendingCall =
+        S.BuildCallExpr(nullptr, PendingFDRef, BLoc, {}, BLoc).get();
+    Stmt *RS = S.BuildReturnStmt(BLoc, PendingCall).get();
     ElseStmts.push_back(RS);
   }
 
   Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
-                                    SourceLocation(), SourceLocation());
+                                    BLoc, BLoc);
   Stmt *Else = CompoundStmt::Create(S.Context, ElseStmts, FPOptionsOverride(),
-                                    SourceLocation(), SourceLocation());
-  auto *If =
-      IfStmt::Create(S.Context, SourceLocation(), IfStatementKind::Ordinary,
-                     /* Init=*/nullptr,
-                     /* Var=*/nullptr, IfCond,
-                     /* LPL=*/SourceLocation(),
-                     /* RPL=*/SourceLocation(), Body, SourceLocation(), Else);
+                                    BLoc, BLoc);
+  auto *If = IfStmt::Create(S.Context, BLoc, IfStatementKind::Ordinary,
+                            /* Init=*/nullptr,
+                            /* Var=*/nullptr, IfCond,
+                            /* LPL=*/BLoc,
+                            /* RPL=*/BLoc, Body, BLoc, Else);
   return If;
 }
 
@@ -1842,6 +1836,7 @@ class ARFinder : public StmtVisitor<ARFinder> {
                            cast<ReturnStmt>(S)->getRetValue(), nullptr);
     const Expr *RetVal = RSS->getRetValue();
     Expr *RHSExpr = const_cast<Expr *>(RetVal);
+    SourceLocation BLoc = FD->getBeginLoc();
 
     RecordDecl::field_iterator FutureStateField, TheFieldIt;
     for (TheFieldIt = FutureRD->field_begin();
@@ -1915,7 +1910,7 @@ class ARFinder : public StmtVisitor<ARFinder> {
           dyn_cast_or_null<BSCMethodDecl>(CompletedFDResult.getFoundDecl());
 
     Expr *CompletedRef = SemaRef.BuildDeclRefExpr(
-        CompletedFD, CompletedFD->getType(), VK_LValue, SourceLocation());
+        CompletedFD, CompletedFD->getType(), VK_LValue, BLoc);
     CompletedRef->HasBSCScopeSpec = true;
     CompletedRef =
         SemaRef
@@ -1925,11 +1920,9 @@ class ARFinder : public StmtVisitor<ARFinder> {
                 CK_FunctionToPointerDecay)
             .get();
 
-    Expr *CE = SemaRef
-                   .BuildCallExpr(nullptr, CompletedRef, SourceLocation(), Args,
-                                  SourceLocation())
-                   .get();
-    Stmt *RS = SemaRef.BuildReturnStmt(SourceLocation(), CE).get();
+    Expr *CE =
+        SemaRef.BuildCallExpr(nullptr, CompletedRef, BLoc, Args, BLoc).get();
+    Stmt *RS = SemaRef.BuildReturnStmt(BLoc, CE).get();
     ReturnStmts.push_back(RS);
     return;
   }
@@ -2477,10 +2470,18 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
 
   std::vector<Stmt *> Stmts;
 
+  auto StartsWith = [](const std::string &str, const std::string &prefix) {
+    if (str.length() >= prefix.length()) {
+      return 0 == str.compare(0, prefix.length(), prefix);
+    }
+    return false;
+  };
+
   std::stack<RecordDecl::field_iterator> Futures;
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
        FieldIt != RD->field_end(); ++FieldIt) {
-    if (FieldIt->getType().getTypePtr()->isBSCFutureType()) {
+    if (FieldIt->getType().getTypePtr()->isBSCFutureType() &&
+        StartsWith(FieldIt->getDeclName().getAsString(), "Ft_")) {
       Futures.push(FieldIt);
     }
   }
@@ -3031,10 +3032,10 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
       *this, FD, IsOptimization ? RD : FatPointerRD);
   if (!FutureInitDef) {
     return Decls;
-  } else if (IsRecursiveCall) {
-    Decls.push_back(FutureInitDef);
-    Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
   }
+
+  Decls.push_back(FutureInitDef);
+  Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
 
   const int FutureStateNumber = finder.GetAwaitExprNum() + 1;
 

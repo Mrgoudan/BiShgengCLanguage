@@ -2696,12 +2696,22 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     if (MemberSpecializationInfo *MSInfo =
             (static_cast<RecordDecl *>(Instantiation))
                 ->getMemberSpecializationInfo()) {
-      MSInfo->setTemplateSpecializationKind(TSK);
-      MSInfo->setPointOfInstantiation(PointOfInstantiation);
+      // Since for BSC, we may enter InstantiateClass multi times for the same
+      // class template specialization, we only update pointOfInstantiation at
+      // the first time.
+      if (MSInfo->getPointOfInstantiation().isInvalid()) {
+        MSInfo->setTemplateSpecializationKind(TSK);
+        MSInfo->setPointOfInstantiation(PointOfInstantiation);
+      }
     } else if (ClassTemplateSpecializationDecl *Spec =
                    dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
-      Spec->setTemplateSpecializationKind(TSK);
-      Spec->setPointOfInstantiation(PointOfInstantiation);
+      // Since for BSC, we may enter InstantiateClass multi times for the same
+      // class template specialization, we only update pointOfInstantiation at
+      // the first time.
+      if (Spec->getPointOfInstantiation().isInvalid()) {
+        Spec->setTemplateSpecializationKind(TSK);
+        Spec->setPointOfInstantiation(PointOfInstantiation);
+      }
     }
   } else if (ClassTemplateSpecializationDecl *Spec =
                  dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {

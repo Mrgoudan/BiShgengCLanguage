@@ -1,9 +1,15 @@
+// RUN: %clang -rewrite-bsc %S/rewrite_bsc_generic_header.hbs -o %T/rewrite_bsc_generic_header.h
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
+
 #include "rewrite_bsc_generic_header.hbs"
+
+int int::increase(int* this) {
+  return *this += 1;
+}
 
 int main() {
   int a1 = 1;
@@ -17,34 +23,25 @@ int main() {
   return 0;
 }
 
-
-// CHECK:int int_increase(int *this) {
-// CHECK-NEXT:  return *this += 1;
-// CHECK-NEXT:}
-
-// CHECK:int __attribute__((weak)) max_int_int(int a, int b)   {
-// CHECK-NEXT:      int x = 1;
-// CHECK-NEXT:      int_increase(&x);
-// CHECK-NEXT:      int c = int_increase(&x);
-// CHECK-NEXT:      return a > b ? a : b;
-// CHECK-NEXT:  }
-
-// CHECK:float __attribute__((weak)) max_float_float(float a, float b)   {
-// CHECK-NEXT:      int x = 1;
-// CHECK-NEXT:      int_increase(&x);
-// CHECK-NEXT:      int c = int_increase(&x);
-// CHECK-NEXT:      return a > b ? a : b;
-// CHECK-NEXT:  }
-
-// CHECK:struct Foo_int {
+// CHECK: #include "rewrite_bsc_generic_header.h"
+// CHECK-EMPTY:
+// CHECK-NEXT:struct Foo_int {
 // CHECK-NEXT:  int a;
 // CHECK-NEXT:};
-
-// CHECK:struct Foo_float {
+// CHECK-EMPTY:
+// CHECK-NEXT:struct Foo_float {
 // CHECK-NEXT:  float a;
 // CHECK-NEXT:};
-
-// CHECK:int main(void) {
+// CHECK-EMPTY:
+// CHECK-NEXT: int __attribute__((weak)) max_int_int(int a, int b);
+// CHECK-EMPTY:
+// CHECK-NEXT:float __attribute__((weak)) max_float_float(float a, float b);
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_increase(int *this) {
+// CHECK-NEXT:  return *this += 1;
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:int main(void) {
 // CHECK-NEXT:  int a1 = 1;
 // CHECK-NEXT:  int b1 = 2;
 // CHECK-NEXT:  int_increase(&b1);
@@ -55,3 +52,17 @@ int main() {
 // CHECK-NEXT:  struct Foo_float foo_2 = {.a = 1.5};
 // CHECK-NEXT:  return 0;
 // CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT: int __attribute__((weak)) max_int_int(int a, int b)   {
+// CHECK-NEXT:      int x = 1;
+// CHECK-NEXT:      int_increase(&x);
+// CHECK-NEXT:      int c = int_increase(&x);
+// CHECK-NEXT:      return a > b ? a : b;
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT:float __attribute__((weak)) max_float_float(float a, float b)   {
+// CHECK-NEXT:      int x = 1;
+// CHECK-NEXT:      int_increase(&x);
+// CHECK-NEXT:      int c = int_increase(&x);
+// CHECK-NEXT:      return a > b ? a : b;
+// CHECK-NEXT:  }

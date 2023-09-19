@@ -849,9 +849,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         Indentation -= Policy.Indentation;
       }
 
-      if (D->getBody())
-        D->getBody()->printPrettyControlled(Out, nullptr, SubPolicy, Indentation, "\n",
-                                  &Context);
+      if (!Policy.FunctionDeclaraionOnly) {
+        if (D->getBody())
+          D->getBody()->printPrettyControlled(Out, nullptr, SubPolicy,
+                                              Indentation, "\n", &Context);
+      }
     } else {
       if (!Policy.TerseOutput && isa<CXXConstructorDecl>(*D))
         Out << " {}";

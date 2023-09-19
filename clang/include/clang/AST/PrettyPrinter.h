@@ -75,7 +75,8 @@ struct PrintingPolicy {
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true), RewriteBSC(false) {}
+        UseEnumerators(true), RewriteBSC(false), FunctionDeclaraionOnly(false) {
+  }
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -91,6 +92,7 @@ struct PrintingPolicy {
   void adjustForRewritingBSC() {
     Bool = false;
     RewriteBSC = true;
+    PrintCanonicalTypes = true;
   }
 
   /// The number of spaces to use to indent each line.
@@ -303,6 +305,10 @@ struct PrintingPolicy {
 
   /// Whether rewriting BSC source code to C source code.
   unsigned RewriteBSC : 1;
+
+  /// Whether printing function declaration only while rewriting BSC source
+  /// code.
+  unsigned FunctionDeclaraionOnly : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;
