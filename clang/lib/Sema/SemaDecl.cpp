@@ -14452,10 +14452,16 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
                 CurrTL.getAs<TemplateSpecializationTypeLoc>();
       const TemplateSpecializationType* SpecType = SpecTL.getTypePtr();
       for (unsigned i = 0, e = SpecTL.getNumArgs(); i != e; ++i) {
-        QualType TemplateArg = SpecType->getArg(i).getAsType();
-        TypeSourceInfo *TemplateArgTypeInfo = 
-            Context.getTrivialTypeSourceInfo(TemplateArg, DS.getBeginLoc());
-        SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgTypeInfo));
+        TemplateArgument TemplateArg = SpecType->getArg(i);
+        if (TemplateArg.getKind() == clang::TemplateArgument::Expression) {
+          Expr *TemplateArgExpr = TemplateArg.getAsExpr();
+          SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgExpr));
+        } else if (TemplateArg.getKind() == clang::TemplateArgument::Type){
+          QualType TemplateArgType = TemplateArg.getAsType();
+          TypeSourceInfo *TemplateArgTypeInfo = 
+              Context.getTrivialTypeSourceInfo(TemplateArgType, DS.getBeginLoc());
+          SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgTypeInfo));
+        }
       }
     }
   }

@@ -1949,6 +1949,24 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
   };
 
   do {
+    if (getLangOpts().BSC && !Tok.isOneOf(tok::kw_struct, 
+                                          tok::kw_enum,
+                                          tok::kw_union)) {
+      // if template argument list like <T, int N> or <T, MyInt N>
+      // we should only parse <T, N>, ignore the type of constant template
+      // so we will consume builtin type 'int' or typedef type 'MyInt'
+      if (PP.LookAhead(0).is(tok::identifier)) ConsumeToken();
+      // if template argument list like <T, unsigned long int N>
+      // should consume tokens 'unsigned long int'
+      int ShouldConsumeCnt = 0;  
+      while (PP.LookAhead(ShouldConsumeCnt).isOneOf(tok::kw_int, tok::kw_long,
+                                                    tok::kw_short, tok::kw_unsigned,
+                                                    tok::kw_signed)) 
+        ShouldConsumeCnt++;
+      if (PP.LookAhead(ShouldConsumeCnt).is(tok::identifier)) {
+        for (int i = 0; i <= ShouldConsumeCnt; i++) ConsumeToken();
+      } 
+    }
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
     ParsedTemplateArgument Arg = ParseTemplateArgument();
     SourceLocation EllipsisLoc;

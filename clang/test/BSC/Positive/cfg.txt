@@ -205,3 +205,4 @@ BSC/Positive/Driver/rewrite-bsc/Generic/rewrite_bsc_generic_9/rewrite_bsc_generi
 BSC/Positive/Driver/rewrite-bsc/rewrite_static_func/rewrite_static_func.cbs
 BSC/Positive/Coroutine/Other/async-func-pointer-2/async-func-pointer-2.cbs
 BSC/Positive/Driver/rewrite-bsc/rewrite_bsc_with_macro/rewrite_bsc_with_macro.cbs
+BSC/Positive/Generic/Constant/Constant_member_function/Constant_member_function.cbs

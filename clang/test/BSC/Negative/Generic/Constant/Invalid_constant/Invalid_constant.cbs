@@ -16,8 +16,7 @@ int foo_3<long int C>(int a) {   // expected-note {{candidate template ignored: 
     return x;
 }
 
-float foo_4<float F>(int a) {   /*  expected-error {{a non-type template parameter cannot have type 'float' before C++20}}
-                                    expected-error {{type-id cannot have a name}}  */
+float foo_4<float F>(int a) {   //  expected-error {{a non-type template parameter cannot have type 'float' before C++20}}
     float x = F;
     return x;
 }
