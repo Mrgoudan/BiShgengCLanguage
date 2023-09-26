@@ -35,6 +35,8 @@ namespace clang {
   class QualType;
   class RecordDecl;
   class TagDecl;
+  class TraitTemplateDecl;
+  class TraitTemplateSpecializationDecl;
   class ValueDecl;
   class VarDecl;
   class VarTemplateDecl;
@@ -60,6 +62,12 @@ public:
   /// template declaration.
   virtual void AddedCXXTemplateSpecialization(const ClassTemplateDecl *TD,
                                     const ClassTemplateSpecializationDecl *D) {}
+
+  /// A template specialization (or partial one) was added to the
+  /// template declaration.
+  virtual void
+  AddedCXXTemplateSpecialization(const TraitTemplateDecl *TD,
+                                 const TraitTemplateSpecializationDecl *D) {}
 
   /// A template specialization (or partial one) was added to the
   /// template declaration.

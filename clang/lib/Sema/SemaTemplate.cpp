@@ -301,7 +301,8 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
       // We'll do this lookup again later.
       R.suppressDiagnostics();
     } else {
-      assert(isa<ClassTemplateDecl>(TD) || isa<TemplateTemplateParmDecl>(TD) ||
+      assert(isa<ClassTemplateDecl>(TD) || isa<TraitTemplateDecl>(TD) ||
+             isa<TemplateTemplateParmDecl>(TD) ||
              isa<TypeAliasTemplateDecl>(TD) || isa<VarTemplateDecl>(TD) ||
              isa<BuiltinTemplateDecl>(TD) || isa<ConceptDecl>(TD));
       TemplateKind =
@@ -2014,6 +2015,26 @@ DeclResult Sema::CheckClassTemplate(
     AddMsStructLayoutForRecord(NewClass);
   }
 
+  if (Kind == TTK_Trait) {
+    TraitDecl *NewTrait =
+        TraitDecl::Create(Context, SemanticContext, KWLoc, NameLoc, Name,
+                          nullptr, /*DelayTypeCreation=*/true);
+    TraitTemplateDecl *NewTemplate = TraitTemplateDecl::Create(
+        Context, SemanticContext, NameLoc, DeclarationName(Name),
+        TemplateParams, NewTrait);
+    NewTrait->setDescribedTraitTemplate(NewTemplate);
+    QualType T = NewTemplate->getInjectedTraitNameSpecialization();
+    T = Context.getInjectedTraitNameType(NewTrait, T);
+    assert(T->isDependentType() && "Trait template type is not dependent?");
+    if (TUK != TUK_Friend) {
+      Scope *Outer = S;
+      while ((Outer->getFlags() & Scope::TemplateParamScope) != 0)
+        Outer = Outer->getParent();
+      PushOnScopeChains(NewTemplate, Outer);
+    }
+    return NewTemplate;
+  }
+
   ClassTemplateDecl *NewTemplate = ClassTemplateDecl::Create(
       Context, SemanticContext, NameLoc, DeclarationName(Name), TemplateParams,
       NewClass);
@@ -3061,6 +3082,10 @@ struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
   bool TraverseInjectedClassNameType(const InjectedClassNameType *T) {
     return TraverseType(T->getInjectedSpecializationType());
   }
+
+  bool TraverseInjectedTraitNameType(const InjectedTraitNameType *T) {
+    return TraverseType(T->getInjectedSpecializationType());
+  }
 };
 } // end anonymous namespace
 
@@ -3907,6 +3932,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
           ClassTemplate->getDeclContext(),
           ClassTemplate->getTemplatedDecl()->getBeginLoc(),
           ClassTemplate->getLocation(), ClassTemplate, Converted, nullptr);
+      if (TraitDecl *TD =
+              ClassTemplate->getTemplatedDecl()->getDesugaredTraitDecl())
+        Decl->setDesugaredTraitDecl(TD);
       ClassTemplate->AddSpecialization(Decl, InsertPos);
       if (ClassTemplate->isOutOfLine())
         Decl->setLexicalDeclContext(ClassTemplate->getLexicalDeclContext());
@@ -3929,6 +3957,44 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     CanonType = Context.getTypeDeclType(Decl);
     assert(isa<RecordType>(CanonType) &&
            "type of non-dependent specialization is not a RecordType");
+  } else if (TraitTemplateDecl *TraitTemplate =
+                 dyn_cast<TraitTemplateDecl>(Template)) {
+    // Find the class template specialization declaration that
+    // corresponds to these arguments.
+    void *InsertPos = nullptr;
+    TraitTemplateSpecializationDecl *Decl =
+        TraitTemplate->findSpecialization(Converted, InsertPos);
+    if (!Decl) {
+      // This is the first time we have referenced this class template
+      // specialization. Create the canonical declaration and add it to
+      // the set of specializations.
+      Decl = TraitTemplateSpecializationDecl::Create(
+          Context, TraitTemplate->getTemplatedDecl()->getTagKind(),
+          TraitTemplate->getDeclContext(),
+          TraitTemplate->getTemplatedDecl()->getBeginLoc(),
+          TraitTemplate->getLocation(), TraitTemplate, Converted, nullptr);
+      TraitTemplate->AddSpecialization(Decl, InsertPos);
+      if (TraitTemplate->isOutOfLine())
+        Decl->setLexicalDeclContext(TraitTemplate->getLexicalDeclContext());
+    }
+
+    if (Decl->getSpecializationKind() == TSK_Undeclared &&
+        TraitTemplate->getTemplatedDecl()->hasAttrs()) {
+      InstantiatingTemplate Inst(*this, TemplateLoc, Decl);
+      if (!Inst.isInvalid()) {
+        MultiLevelTemplateArgumentList TemplateArgLists;
+        TemplateArgLists.addOuterTemplateArguments(Converted);
+        InstantiateAttrsForDecl(TemplateArgLists,
+                                TraitTemplate->getTemplatedDecl(), Decl);
+      }
+    }
+
+    // Diagnose uses of this specialization.
+    (void)DiagnoseUseOfDecl(Decl, TemplateLoc);
+
+    CanonType = Context.getTypeDeclType(Decl);
+    assert(isa<TraitType>(CanonType) &&
+           "type of non-dependent specialization is not a TraitType");
   } else if (auto *BTD = dyn_cast<BuiltinTemplateDecl>(Template)) {
     CanonType = checkBuiltinTemplateIdType(*this, BTD, Converted, TemplateLoc,
                                            TemplateArgs);
@@ -6215,6 +6281,11 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateSpecializationType(
 
 bool UnnamedLocalNoLinkageFinder::VisitInjectedClassNameType(
                                               const InjectedClassNameType* T) {
+  return VisitTagDecl(T->getDecl());
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitInjectedTraitNameType(
+    const InjectedTraitNameType *T) {
   return VisitTagDecl(T->getDecl());
 }
 

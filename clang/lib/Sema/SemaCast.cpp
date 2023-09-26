@@ -2870,9 +2870,10 @@ void CastOperation::CheckCStyleCast() {
   }
 
   // bsc owned type CStyleCast
-  if (Self.getLangOpts().BSC
-      && (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() || DestType.getCanonicalType().isOwnedQualified())) {
-    if(!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get())) {
+  if (Self.getLangOpts().BSC &&
+      (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() ||
+       DestType.getCanonicalType().isOwnedQualified())) {
+    if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get())) {
       SrcExpr = ExprError();
       return;
     }

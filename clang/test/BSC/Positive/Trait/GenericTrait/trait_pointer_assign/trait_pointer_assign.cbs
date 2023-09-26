@@ -1,0 +1,21 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+trait Future<T> {
+    T poll(This* this);
+};
+
+int int::poll(int* this) {
+    return *this;
+}
+
+impl trait Future<int> for int;
+
+int main() {
+    int m = 0;
+    trait Future<int> *f = &m, *g = &m;
+    int a = f->poll();
+    int b = g->poll();
+    return a - b;
+}

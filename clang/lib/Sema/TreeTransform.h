@@ -6423,6 +6423,19 @@ QualType TreeTransform<Derived>::TransformInjectedClassNameType(
   return T;
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformInjectedTraitNameType(
+    TypeLocBuilder &TLB, InjectedTraitNameTypeLoc TL) {
+  Decl *D =
+      getDerived().TransformDecl(TL.getNameLoc(), TL.getTypePtr()->getDecl());
+  if (!D)
+    return QualType();
+
+  QualType T = SemaRef.Context.getTypeDeclType(cast<TypeDecl>(D));
+  TLB.pushTypeSpec(T).setNameLoc(TL.getNameLoc());
+  return T;
+}
+
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformTemplateTypeParmType(
                                                 TypeLocBuilder &TLB,

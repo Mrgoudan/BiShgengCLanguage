@@ -139,6 +139,10 @@ void ASTDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpTemplateDecl(D, false);
 }
 
+void ASTDumper::VisitTraitTemplateDecl(const TraitTemplateDecl *D) {
+  dumpTemplateDecl(D, false);
+}
+
 void ASTDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpTemplateDecl(D, false);
 }

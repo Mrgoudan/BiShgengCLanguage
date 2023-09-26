@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -443,6 +444,82 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   Base::Common = PrevCommon;
 }
 
+//===----------------------------------------------------------------------===//
+// TraitTemplateDecl Implementation
+//===----------------------------------------------------------------------===//
+
+TraitTemplateDecl *TraitTemplateDecl::Create(ASTContext &C, DeclContext *DC,
+                                             SourceLocation L,
+                                             DeclarationName Name,
+                                             TemplateParameterList *Params,
+                                             NamedDecl *Decl) {
+  bool Invalid = AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
+  auto *TD = new (C, DC) TraitTemplateDecl(C, DC, L, Name, Params, Decl);
+  if (Invalid)
+    TD->setInvalidDecl();
+  return TD;
+}
+
+TraitTemplateDecl *TraitTemplateDecl::CreateDeserialized(ASTContext &C,
+                                                         unsigned ID) {
+  return new (C, ID) TraitTemplateDecl(C, nullptr, SourceLocation(),
+                                       DeclarationName(), nullptr, nullptr);
+}
+
+void TraitTemplateDecl::LoadLazySpecializations() const {
+  loadLazySpecializationsImpl();
+}
+
+TraitTemplateSpecializationDecl *
+TraitTemplateDecl::findSpecialization(ArrayRef<TemplateArgument> Args,
+                                      void *&InsertPos) {
+  return findSpecializationImpl(getSpecializations(), InsertPos, Args);
+}
+
+void TraitTemplateDecl::AddSpecialization(TraitTemplateSpecializationDecl *D,
+                                          void *InsertPos) {
+  addSpecializationImpl<TraitTemplateDecl>(getSpecializations(), D, InsertPos);
+}
+
+llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
+TraitTemplateDecl::getSpecializations() const {
+  LoadLazySpecializations();
+  return getCommonPtr()->Specializations;
+}
+
+llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
+TraitTemplateDecl::getPartialSpecializations() const {
+  LoadLazySpecializations();
+  return getCommonPtr()->Specializations;
+}
+
+RedeclarableTemplateDecl::CommonBase *
+TraitTemplateDecl::newCommon(ASTContext &C) const {
+  auto *CommonPtr = new (C) Common;
+  C.addDestruction(CommonPtr);
+  return CommonPtr;
+}
+
+QualType TraitTemplateDecl::getInjectedTraitNameSpecialization() {
+  Common *CommonPtr = getCommonPtr();
+  if (!CommonPtr->InjectedTraitNameType.isNull())
+    return CommonPtr->InjectedTraitNameType;
+
+  // C++0x [temp.dep.type]p2:
+  //  The template argument list of a primary template is a template argument
+  //  list in which the nth template argument has the value of the nth template
+  //  parameter of the class template. If the nth template parameter is a
+  //  template parameter pack (14.5.3), the nth template argument is a pack
+  //  expansion (14.5.3) whose pattern is the name of the template parameter
+  //  pack.
+  ASTContext &Context = getASTContext();
+  TemplateParameterList *Params = getTemplateParameters();
+  SmallVector<TemplateArgument, 16> TemplateArgs;
+  Context.getInjectedTemplateArgs(Params, TemplateArgs);
+  CommonPtr->InjectedTraitNameType =
+      Context.getTemplateSpecializationType(TemplateName(this), TemplateArgs);
+  return CommonPtr->InjectedTraitNameType;
+}
 //===----------------------------------------------------------------------===//
 // ClassTemplateDecl Implementation
 //===----------------------------------------------------------------------===//

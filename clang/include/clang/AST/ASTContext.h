@@ -1614,6 +1614,8 @@ public:
 
   QualType getInjectedClassNameType(RecordDecl *Decl, QualType TST) const;
 
+  QualType getInjectedTraitNameType(TraitDecl *Decl, QualType TST) const;
+
   QualType getAttributedType(attr::Kind attrKind, QualType modifiedType,
                              QualType equivalentType) const;
 

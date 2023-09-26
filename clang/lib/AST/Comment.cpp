@@ -9,6 +9,7 @@
 #include "clang/AST/Comment.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
@@ -270,6 +271,13 @@ void DeclInfo::fill() {
     TemplateParameters = FTD->getTemplateParameters();
     IsVariadic = FD->isVariadic();
     assert(involvesFunctionType());
+    break;
+  }
+  case Decl::TraitTemplate: {
+    const TraitTemplateDecl *TTD = cast<TraitTemplateDecl>(CommentDecl);
+    Kind = ClassKind;
+    TemplateKind = Template;
+    TemplateParameters = TTD->getTemplateParameters();
     break;
   }
   case Decl::ClassTemplate: {

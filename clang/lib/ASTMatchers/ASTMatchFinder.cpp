@@ -749,6 +749,12 @@ public:
         D);
   }
 
+  bool TraverseTemplateInstantiations(TraitTemplateDecl *D) {
+    ASTNodeNotSpelledInSourceScope RAII(this, true);
+    return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(
+        D);
+  }
+
   bool TraverseTemplateInstantiations(VarTemplateDecl *D) {
     ASTNodeNotSpelledInSourceScope RAII(this, true);
     return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateInstantiations(

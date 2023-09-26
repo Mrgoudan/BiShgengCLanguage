@@ -6,7 +6,7 @@ trait F {
 
 trait F* get() {
   int a = 1;
-  return &a; // expected-error {{expected a pointer type which has implemented 'trait F' or 'trait F*', found 'int'}}
+  return &a; // expected-error {{expected a pointer type which has implemented 'trait F', found 'int'}}
 };
 
 int int::foo(int* this) {

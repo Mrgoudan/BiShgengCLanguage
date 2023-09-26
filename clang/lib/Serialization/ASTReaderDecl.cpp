@@ -337,7 +337,8 @@ namespace clang {
     void VisitRecordDecl(RecordDecl *RD);
     RedeclarableResult VisitCXXRecordDeclImpl(CXXRecordDecl *D);
     void VisitCXXRecordDecl(CXXRecordDecl *D) { VisitCXXRecordDeclImpl(D); }
-    void VisitTraitDecl(TraitDecl *TD);
+    RedeclarableResult VisitTraitDeclImpl(TraitDecl *TD);
+    void VisitTraitDecl(TraitDecl *TD) { VisitTraitDeclImpl(TD); }
     void VisitImplTraitDecl(ImplTraitDecl *ITD);
     RedeclarableResult VisitClassTemplateSpecializationDeclImpl(
                                             ClassTemplateSpecializationDecl *D);
@@ -351,6 +352,12 @@ namespace clang {
                                      ClassTemplatePartialSpecializationDecl *D);
     void VisitClassScopeFunctionSpecializationDecl(
                                        ClassScopeFunctionSpecializationDecl *D);
+    RedeclarableResult VisitTraitTemplateSpecializationDeclImpl(
+        TraitTemplateSpecializationDecl *D);
+    void
+    VisitTraitTemplateSpecializationDecl(TraitTemplateSpecializationDecl *D) {
+      VisitTraitTemplateSpecializationDeclImpl(D);
+    }
     RedeclarableResult
     VisitVarTemplateSpecializationDeclImpl(VarTemplateSpecializationDecl *D);
 
@@ -390,6 +397,7 @@ namespace clang {
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     RedeclarableResult VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
+    void VisitTraitTemplateDecl(TraitTemplateDecl *D);
     void VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D);
     void VisitVarTemplateDecl(VarTemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
@@ -896,7 +904,11 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
   }
 }
 
-void ASTDeclReader::VisitTraitDecl(TraitDecl *TD) { VisitTagDecl(TD); }
+ASTDeclReader::RedeclarableResult
+ASTDeclReader::VisitTraitDeclImpl(TraitDecl *TD) {
+  RedeclarableResult Redecl = VisitTagDecl(TD);
+  return Redecl;
+}
 
 void ASTDeclReader::VisitImplTraitDecl(ImplTraitDecl *ITD) {
   VisitRedeclarable(ITD);
@@ -2278,6 +2290,23 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   }
 }
 
+void ASTDeclReader::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
+  RedeclarableResult Redecl = VisitRedeclarableTemplateDecl(D);
+
+  if (ThisDeclID == Redecl.getFirstID()) {
+    // This TraitTemplateDecl owns a CommonPtr; read it to keep track of all of
+    // the specializations.
+    SmallVector<serialization::DeclID, 32> SpecIDs;
+    readDeclIDList(SpecIDs);
+    ASTDeclReader::AddLazySpecializations(D, SpecIDs);
+  }
+
+  if (D->getTemplatedDecl()->TemplateOrInstantiation) {
+    Reader.getContext().getInjectedTraitNameType(
+        D->getTemplatedDecl(), D->getInjectedTraitNameSpecialization());
+  }
+}
+
 void ASTDeclReader::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   llvm_unreachable("BuiltinTemplates are not serialized");
 }
@@ -2405,6 +2434,49 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
     readDeclIDList(SpecIDs);
     ASTDeclReader::AddLazySpecializations(D, SpecIDs);
   }
+}
+
+ASTDeclReader::RedeclarableResult
+ASTDeclReader::VisitTraitTemplateSpecializationDeclImpl(
+    TraitTemplateSpecializationDecl *D) {
+  RedeclarableResult Redecl = VisitTraitDeclImpl(D);
+
+  ASTContext &C = Reader.getContext();
+  if (Decl *InstD = readDecl()) {
+    if (auto *CTD = dyn_cast<TraitTemplateDecl>(InstD)) {
+      D->SpecializedTemplate = CTD;
+    }
+  }
+
+  SmallVector<TemplateArgument, 8> TemplArgs;
+  Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
+  D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
+  D->PointOfInstantiation = readSourceLocation();
+  D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
+
+  bool writtenAsCanonicalDecl = Record.readInt();
+  if (writtenAsCanonicalDecl) {
+    auto *CanonPattern = readDeclAs<TraitTemplateDecl>();
+    if (D->isCanonicalDecl()) {
+      TraitTemplateSpecializationDecl *CanonSpec =
+          CanonPattern->getCommonPtr()->Specializations.GetOrInsertNode(D);
+      if (CanonSpec != D) {
+        mergeRedeclarable<TagDecl>(D, CanonSpec, Redecl);
+      }
+    }
+  }
+
+  // Explicit info.
+  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
+    auto *ExplicitInfo =
+        new (C) TraitTemplateSpecializationDecl::ExplicitSpecializationInfo;
+    ExplicitInfo->TypeAsWritten = TyInfo;
+    ExplicitInfo->ExternLoc = readSourceLocation();
+    ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
+    D->ExplicitInfo = ExplicitInfo;
+  }
+
+  return Redecl;
 }
 
 /// TODO: Unify with ClassTemplateSpecializationDecl version?
@@ -3699,6 +3771,12 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION:
     D = ClassTemplatePartialSpecializationDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_TRAIT_TEMPLATE:
+    D = TraitTemplateDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_TRAIT_TEMPLATE_SPECIALIZATION:
+    D = TraitTemplateSpecializationDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_VAR_TEMPLATE:
     D = VarTemplateDecl::CreateDeserialized(Context, ID);

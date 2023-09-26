@@ -81,6 +81,9 @@ namespace {
     void VisitLinkageSpecDecl(LinkageSpecDecl *D);
     void VisitTemplateDecl(const TemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
+    void VisitTraitTemplateDecl(TraitTemplateDecl *D);
+    void
+    VisitTraitTemplateSpecializationDecl(TraitTemplateSpecializationDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
     void VisitClassTemplateSpecializationDecl(
                                             ClassTemplateSpecializationDecl *D);
@@ -1268,6 +1271,26 @@ void DeclPrinter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
         Visit(I);
       }
   }
+}
+
+void DeclPrinter::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
+  VisitRedeclarableTemplateDecl(D);
+
+  if (PrintInstantiation) {
+    for (auto *I : D->specializations())
+      if (I->getSpecializationKind() == TSK_ImplicitInstantiation) {
+        if (D->isThisDeclarationADefinition())
+          Out << ";";
+        Out << "\n";
+        Indent();
+        Visit(I);
+      }
+  }
+}
+
+void DeclPrinter::VisitTraitTemplateSpecializationDecl(
+    TraitTemplateSpecializationDecl *D) {
+  VisitTraitDecl(D);
 }
 
 void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {

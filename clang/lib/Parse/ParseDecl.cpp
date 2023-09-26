@@ -4289,7 +4289,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_trait: {
       ConsumeToken();
       ParsedAttributes Attributes(AttrFactory);
-      ParseTraitSpecifier(Loc, DS, EnteringContext, DSContext, Attributes);
+      ParseTraitSpecifier(Loc, DS, TemplateInfo, EnteringContext, DSContext,
+                          Attributes);
       continue;
     }
 
@@ -5253,15 +5254,22 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
 // FIXME: ParseTraitSpecifier can be refactored, remove useless code
 void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
+                                 const ParsedTemplateInfo &TemplateInfo,
                                  bool EnteringContext, DeclSpecContext DSC,
                                  ParsedAttributes &Attributes) {
+  assert(getLangOpts().BSC &&
+         "Error enter bsc trait specifier parsing function.");
   DeclSpec::TST TagType = DeclSpec::TST_trait;
+  tok::TokenKind TagTokKind = tok::kw_trait;
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteTag(getCurScope(), TagType);
     return cutOffParsing();
   }
   ParsedAttributes attrs(AttrFactory);
   SourceLocation AttrFixitLoc = Tok.getLocation();
+  IdentifierInfo *Name = nullptr;
+  if (Tok.is(tok::identifier))
+    Name = Tok.getIdentifierInfo();
 
   struct PreserveAtomicIdentifierInfoRAII {
     PreserveAtomicIdentifierInfoRAII(Token &Tok, bool Enabled)
@@ -5282,12 +5290,109 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   };
 
   CXXScopeSpec &SS = DS.getTypeSpecScope();
+  ColonProtectionRAIIObject X(*this);
+  CXXScopeSpec Spec;
+  bool HasValidSpec = true;
 
-  IdentifierInfo *Name = nullptr;
+  if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
+                                       /*ObjectHadErrors=*/false,
+                                       EnteringContext)) {
+    DS.SetTypeSpecError();
+    HasValidSpec = false;
+  }
+
+  if (Spec.isSet())
+    if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id)) {
+      Diag(Tok, diag::err_expected) << tok::identifier;
+      HasValidSpec = false;
+    }
+  if (HasValidSpec)
+    SS = Spec;
+
+  TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
+
+  auto RecoverFromUndeclaredTemplateName = [&](IdentifierInfo *Name,
+                                               SourceLocation NameLoc,
+                                               SourceRange TemplateArgRange,
+                                               bool KnownUndeclared) {
+    Diag(NameLoc, diag::err_explicit_spec_non_template)
+        << (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+        << TagTokKind << Name << TemplateArgRange << KnownUndeclared;
+
+    // Strip off the last template parameter list if it was empty, since
+    // we've removed its template argument list.
+    if (TemplateParams && TemplateInfo.LastParameterListWasEmpty) {
+      if (TemplateParams->size() > 1) {
+        TemplateParams->pop_back();
+      } else {
+        TemplateParams = nullptr;
+        const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
+            ParsedTemplateInfo::NonTemplate;
+      }
+    } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+      // Pretend this is just a forward declaration.
+      TemplateParams = nullptr;
+      const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
+          ParsedTemplateInfo::NonTemplate;
+      const_cast<ParsedTemplateInfo &>(TemplateInfo).TemplateLoc =
+          SourceLocation();
+      const_cast<ParsedTemplateInfo &>(TemplateInfo).ExternLoc =
+          SourceLocation();
+    }
+  };
+
   SourceLocation NameLoc;
+  TemplateIdAnnotation *TemplateId = nullptr;
+  bool isParsingBSCTemplateTrait =
+      Tok.is(tok::identifier) && NextToken().is(tok::less);
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
+
+    // BSC Trait Template Declaration may have "<T>" syntax.
+    //      This param list must been parsed, skip it.
+    if (isParsingBSCTemplateTrait) {
+      while (Tok.getKind() != tok::greater) {
+        ConsumeToken();
+      }
+      if (Tok.is(tok::greater)) {
+        ConsumeToken();
+      } else {
+        Diag(Tok.getLocation(), diag::err_expected_comma_greater);
+      }
+    }
+  } else if (Tok.is(tok::annot_template_id)) {
+    TemplateId = takeTemplateIdAnnotation(Tok);
+    NameLoc = ConsumeAnnotationToken();
+
+    if (TemplateId->Kind == TNK_Undeclared_template) {
+      // Try to resolve the template name to a type template. May update Kind.
+      Actions.ActOnUndeclaredTypeTemplateName(
+          getCurScope(), TemplateId->Template, TemplateId->Kind, NameLoc, Name);
+      if (TemplateId->Kind == TNK_Undeclared_template) {
+        RecoverFromUndeclaredTemplateName(
+            Name, NameLoc,
+            SourceRange(TemplateId->LAngleLoc, TemplateId->RAngleLoc), true);
+        TemplateId = nullptr;
+      }
+    }
+
+    if (TemplateId && !TemplateId->mightBeType()) {
+      // The template-name in the simple-template-id refers to
+      // something other than a type template. Give an appropriate
+      // error message and skip to the ';'.
+      SourceRange Range(NameLoc);
+      if (SS.isNotEmpty())
+        Range.setBegin(SS.getBeginLoc());
+
+      // FIXME: Name may be null here.
+      Diag(TemplateId->LAngleLoc, diag::err_template_spec_syntax_non_template)
+          << TemplateId->Name << static_cast<int>(TemplateId->Kind) << Range;
+
+      DS.SetTypeSpecError();
+      SkipUntil(tok::semi, StopBeforeMatch);
+      return;
+    }
   }
 
   const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
@@ -5296,7 +5401,9 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace)) {
     TUK = Sema::TUK_Definition;
-    if (Actions.getCurScope()->getDepth() > 0) {
+    if (Actions.getCurScope()->getDepth() > 0 &&
+        !(isParsingBSCTemplateTrait &&
+          Actions.getCurScope()->getDepth() == 1)) {
       Diag(StartLoc, diag::err_trait_def_not_at_top_level);
       return;
     }
@@ -5311,8 +5418,12 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                        DeclSpec::getSpecifierName(TagType, PPol));
       PP.EnterToken(Tok, /*IsReinject*/ true);
       Tok.setKind(tok::semi);
-    } else
-      Diag(StartLoc, diag::err_invalid_trait) << Name;
+    } else {
+      std::string TraitName = "(null)";
+      if (Name)
+        TraitName = Name->getName().str();
+      Diag(StartLoc, diag::err_invalid_trait) << TraitName;
+    }
   } else
     TUK = Sema::TUK_Reference;
 
@@ -5328,8 +5439,9 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     }
   }
 
-  if (!Name && (DS.getTypeSpecType() == DeclSpec::TST_error ||
-                TUK != Sema::TUK_Definition)) {
+  if (!Name && !TemplateId &&
+      (DS.getTypeSpecType() == DeclSpec::TST_error ||
+       TUK != Sema::TUK_Definition)) {
     if (DS.getTypeSpecType() != DeclSpec::TST_error) {
       Diag(StartLoc, diag::err_anon_type_definition)
           << DeclSpec::getSpecifierName(TagType, Policy);
@@ -5343,29 +5455,45 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   DeclResult TagOrTempResult = true; // invalid
   TypeResult TypeResult = true;      // invalid
-
   bool Owned = false;
   Sema::SkipBodyInfo SkipBody;
-  if (TUK != Sema::TUK_Declaration && TUK != Sema::TUK_Definition)
-    ProhibitAttributes(attrs);
-
   bool IsDependent = false;
-
   MultiTemplateParamsArg TParams;
+  if (TUK != Sema::TUK_Reference && TemplateParams)
+    TParams =
+        MultiTemplateParamsArg(&(*TemplateParams)[0], TemplateParams->size());
 
-  stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
-  TagOrTempResult = Actions.ActOnTag(
-      getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs,
-      AS_public, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
-      SourceLocation(), false, clang::TypeResult(),
-      DSC == DeclSpecContext::DSC_type_specifier,
-      DSC == DeclSpecContext::DSC_template_param ||
-          DSC == DeclSpecContext::DSC_template_type_arg,
-      &SkipBody);
-  if (IsDependent) {
-    assert(TUK == Sema::TUK_Reference);
-    TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK, SS,
-                                           Name, StartLoc, NameLoc);
+  if (TemplateId) {
+    ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                       TemplateId->NumArgs);
+    if (TemplateId->isInvalid()) {
+      // Can't build the declaration.
+    } else if (TUK == Sema::TUK_Reference) {
+      ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
+                              /*DiagnoseEmptyAttrs=*/true);
+      TypeResult = Actions.ActOnTagTemplateIdType(
+          TUK, TagType, StartLoc, SS, TemplateId->TemplateKWLoc,
+          TemplateId->Template, TemplateId->TemplateNameLoc,
+          TemplateId->LAngleLoc, TemplateArgsPtr, TemplateId->RAngleLoc);
+    }
+  } else {
+    if (TUK != Sema::TUK_Declaration && TUK != Sema::TUK_Definition)
+      ProhibitAttributes(attrs);
+
+    stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
+    TagOrTempResult = Actions.ActOnTag(
+        getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs,
+        AS_public, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
+        SourceLocation(), false, clang::TypeResult(),
+        DSC == DeclSpecContext::DSC_type_specifier,
+        DSC == DeclSpecContext::DSC_template_param ||
+            DSC == DeclSpecContext::DSC_template_type_arg,
+        &SkipBody);
+    if (IsDependent) {
+      assert(TUK == Sema::TUK_Reference);
+      TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK, SS,
+                                             Name, StartLoc, NameLoc);
+    }
   }
 
   if (TUK == Sema::TUK_Definition) {
@@ -5400,45 +5528,34 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   if (Result)
     Diag(StartLoc, DiagID) << PrevSpec;
 
-  if (TUK == Sema::TUK_Definition) {
-    if (!isTypeSpecifier(DSC) && !isValidAfterTypeSpecifier(false)) {
-      if (Tok.isNot(tok::semi)) {
-        const PrintingPolicy &PPol =
-            Actions.getASTContext().getPrintingPolicy();
-        ExpectAndConsume(tok::semi, diag::err_expected_after,
-                         DeclSpec::getSpecifierName(TagType, PPol));
-        PP.EnterToken(Tok, /*IsReinject=*/true);
-        Tok.setKind(tok::semi);
-      }
+  // In a template-declaration which defines a class, no declarator is
+  // permitted. eg. trait F<T> {}G; should report an error.
+  if (TUK == Sema::TUK_Definition && !isTypeSpecifier(DSC) &&
+      (TemplateInfo.Kind || !isValidAfterTypeSpecifier(false))) {
+    if (Tok.isNot(tok::semi)) {
+      const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
+      ExpectAndConsume(tok::semi, diag::err_expected_after,
+                       DeclSpec::getSpecifierName(TagType, PPol));
+      PP.EnterToken(Tok, /*IsReinject=*/true);
+      Tok.setKind(tok::semi);
     }
+  }
 
-    TraitDecl *find = Actions.FindTraitDecl(Name);
-    assert(find && "No corresponding trait found");
-    RecordDecl *TraitVtableRecord =
-        Actions.ActOnDesugarVtableRecord(StartLoc, NameLoc, Name);
-    RecordDecl *TraitRecord =
-        Actions.ActOnDesugarTraitRecord(StartLoc, NameLoc, Name);
-    find->setTrait(TraitRecord);
-    find->setVtable(TraitVtableRecord);
-    if (TraitVtableRecord) {
-      ParseScope StructScope(this, Scope::ClassScope | Scope::DeclScope);
-      Actions.ActOnTagStartDefinition(getCurScope(), TraitVtableRecord);
-      Actions.ActOnDesugarTraitVtable(find, TraitVtableRecord, StartLoc,
-                                      NameLoc, Name, DS);
-      StructScope.Exit();
-      Actions.ActOnTagFinishDefinition(getCurScope(), TraitVtableRecord,
-                                       find->getSourceRange());
+  // desugar
+  Decl *D = TagOrTempResult.get();
+  if (TUK == Sema::TUK_Definition && D != nullptr) {
+    TraitDecl *TD = nullptr;
+    if (auto *TTD = dyn_cast_or_null<TraitTemplateDecl>(D)) {
+      TD = TTD->getTemplatedDecl();
+    } else if (auto *TraitD = dyn_cast_or_null<TraitDecl>(D)) {
+      TD = TraitD;
     }
-    if (TraitRecord) {
-      TraitRecord->setDesugaredTraitDecl(find);
-      ParseScope StructScope(this, Scope::ClassScope | Scope::DeclScope);
-      Actions.ActOnTagStartDefinition(getCurScope(), TraitRecord);
-      Actions.ActOnDesugarTrait(TraitVtableRecord, TraitRecord, StartLoc,
-                                NameLoc);
-      StructScope.Exit();
-      Actions.ActOnTagFinishDefinition(getCurScope(), TraitRecord,
-                                       find->getSourceRange());
-    }
+    assert(TD && "No corresponding trait");
+
+    RecordDecl *TraitVtableRD = Actions.ActOnDesugarVtableRecord(TD);
+    RecordDecl *TraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD);
+    TD->setTrait(TraitRD);
+    TD->setVtable(TraitVtableRD);
   }
 }
 
@@ -6394,8 +6511,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     D.setExtension();
 
   // BSC
-  if (getLangOpts().BSC && FindUntil(tok::coloncolon)
-      && !IsParsingBSCGenericParameters) {
+  if (getLangOpts().BSC && FindUntil(tok::coloncolon) &&
+      !IsParsingBSCGenericParameters) {
     DeclSpec DS(AttrFactory);
     ParseBSCScopeSpecifiers(DS);
     TryConsumeToken(tok::coloncolon);

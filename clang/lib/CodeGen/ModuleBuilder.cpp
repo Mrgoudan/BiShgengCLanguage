@@ -239,6 +239,8 @@ namespace {
       // deserialization to emit deferred decls.
       HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
 
+      if (D->isTrait())
+        return;
       Builder->UpdateCompletedType(D);
 
       // For MSVC compatibility, treat declarations of static data members with

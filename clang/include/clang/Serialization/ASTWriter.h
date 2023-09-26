@@ -732,6 +732,9 @@ private:
       const ClassTemplateDecl *TD,
       const ClassTemplateSpecializationDecl *D) override;
   void AddedCXXTemplateSpecialization(
+      const TraitTemplateDecl *TD,
+      const TraitTemplateSpecializationDecl *D) override;
+  void AddedCXXTemplateSpecialization(
       const VarTemplateDecl *TD,
       const VarTemplateSpecializationDecl *D) override;
   void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,

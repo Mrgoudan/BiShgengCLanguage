@@ -13,7 +13,7 @@ struct S{
   int x;
 };
 
-impl trait F for struct S; // expected-error {{function foo in 'trait F' is not implemented for 'struct S'}} 
+impl trait F for struct S; // expected-error {{function 'foo' in 'trait F' is not implemented for 'struct S'}} 
 
 int main() {
   struct S s1 = { .x = 42 };

@@ -1121,6 +1121,16 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
+  case Type::InjectedTraitName: {
+    const auto *Inj1 = cast<InjectedTraitNameType>(T1);
+    const auto *Inj2 = cast<InjectedTraitNameType>(T2);
+    if (!IsStructurallyEquivalent(Context,
+                                  Inj1->getInjectedSpecializationType(),
+                                  Inj2->getInjectedSpecializationType()))
+      return false;
+    break;
+  }
+
   case Type::DependentName: {
     const auto *Typename1 = cast<DependentNameType>(T1);
     const auto *Typename2 = cast<DependentNameType>(T2);

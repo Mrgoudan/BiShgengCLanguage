@@ -1251,17 +1251,28 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
 
 /// ParseImplTraitDeclaration - Parse ImplTraitDecl, for example:
 /// "impl trait T for int;"
+/// or "impl trait Future<T> for int;"
 Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   ConsumeToken(); // Eat the "impl"
   SourceLocation TraitLoc = Tok.getLocation();
   TraitDecl *Trait = nullptr;
   IdentifierInfo *TraitII = nullptr;
 
-  if (Tok.is(tok::kw_trait)) {
-    ConsumeToken();
-    TraitII = Tok.getIdentifierInfo();
-    Trait = Actions.FindTraitDecl(TraitII);
-  } else {
+  if (Tok.is(tok::kw_trait) && PP.LookAhead(0).is(tok::identifier)) {
+    TraitII = PP.LookAhead(0).getIdentifierInfo();
+    DeclContext::lookup_result Decls =
+        Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
+    for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                              E = Decls.end();
+         I != E; ++I) {
+      if (isa<TraitDecl>(*I)) {
+        Trait = dyn_cast<TraitDecl>(*I);
+      } else if (isa<TraitTemplateDecl>(*I)) {
+        TraitTemplateDecl *TTD = dyn_cast<TraitTemplateDecl>(*I);
+        Trait = TTD->getTemplatedDecl();
+      }
+    }
+  } else { // for typedef
     ParsedType TypeRep = Actions.getTypeName(
         *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
         false, false, nullptr, false, false, true);
@@ -1279,7 +1290,11 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
     SkipUntil(tok::semi);
     return nullptr;
   }
-  ConsumeToken();
+  ParsingDeclSpec TraitDS(*this);
+  ParseDeclarationSpecifiers(TraitDS);
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  ParsingDeclarator TraitDeclarator(*this, TraitDS, EmptyDeclSpecAttrs,
+                                    DeclaratorContext::File);
 
   if (Tok.is(tok::kw_for))
     ConsumeToken(); // eat token kw_for
@@ -1289,38 +1304,38 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
     return nullptr;
   }
 
-  ParsingDeclSpec BSS(*this);
-  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-  ParseBSCScopeSpecifiers(BSS);
+  ParsingDeclSpec TypeDS(*this);
+  ParseDeclarationSpecifiers(TypeDS);
+  ParsingDeclarator TypeDeclarator(*this, TypeDS, EmptyDeclSpecAttrs,
+                                   DeclaratorContext::File);
   ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
 
-  ParsingDeclarator D(*this, BSS, EmptyDeclSpecAttrs, DeclaratorContext::File);
-  D.SetIdentifier(TraitII, TraitLoc);
-  D.SetRangeEnd(TraitLoc);
+  TraitDeclarator.SetIdentifier(TraitII, TraitLoc);
+  TraitDeclarator.SetRangeEnd(TraitLoc);
 
   SmallVector<Decl *, 8> DeclsInGroup;
   // Step 1: Always produce ImplTraitDecl
-  ImplTraitDecl *ITD =
-      Actions.BuildImplTraitDecl(getCurScope(), D, BSS.getBeginLoc(), Trait);
-  if (ITD == nullptr) {
-    return Actions.FinalizeDeclaratorGroup(getCurScope(), BSS, DeclsInGroup);
-  }
+  ImplTraitDecl *ITD = Actions.BuildImplTraitDecl(getCurScope(), TypeDeclarator,
+                                                  TraitDeclarator, Trait);
 
   // Step 2: Desugar the ImplTraitDecl if we see it for the first time.
   // @code
   // impl trait TR for int;
   // impl trait TR for int; // OK, but useless, we don't desugar this line.
   // @endcode
+  if (TraitDS.getTypeSpecType() == TST_error || TypeDS.getTypeSpecType() == TST_error)
+    return Actions.FinalizeDeclaratorGroup(getCurScope(), TypeDS, DeclsInGroup);
 
-  VarDecl *DesugaredDecl = Actions.DesugarImplTrait(ITD, D);
+  VarDecl *DesugaredDecl = Actions.DesugarImplTrait(
+      ITD, TypeDeclarator, TraitDeclarator, TypeDS.getBeginLoc());
+  if (DesugaredDecl == nullptr) {
+    return Actions.FinalizeDeclaratorGroup(getCurScope(), TypeDS, DeclsInGroup);
+  }
   Actions.FinalizeDeclaration(DesugaredDecl);
-  D.complete(DesugaredDecl);
+  TypeDeclarator.complete(DesugaredDecl);
+  DeclsInGroup.push_back(DesugaredDecl);
 
-  if (DesugaredDecl)
-    // Desugared VarDecl takes part in the codegen
-    DeclsInGroup.push_back(DesugaredDecl);
-
-  return Actions.FinalizeDeclaratorGroup(getCurScope(), BSS, DeclsInGroup);
+  return Actions.FinalizeDeclaratorGroup(getCurScope(), TypeDS, DeclsInGroup);
 }
 
 /// ParseFunctionDefinition - We parsed and verified that the specified

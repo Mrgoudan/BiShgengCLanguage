@@ -10,6 +10,7 @@
 #define LLVM_CLANG_AST_ABSTRACTTYPEREADER_H
 
 #include "clang/AST/AbstractBasicReader.h"
+#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
 

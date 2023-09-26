@@ -33,6 +33,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
             def ClassTemplatePartialSpecialization
               : DeclNode<ClassTemplateSpecialization>;
       def Trait : DeclNode<Tag, "Traits">;
+        def TraitTemplateSpecialization : DeclNode<Trait>;
     def TemplateTypeParm : DeclNode<Type>;
   def Value : DeclNode<Named, "value declarations", 1>;
     def EnumConstant : DeclNode<Value, "enumerators">;
@@ -70,6 +71,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
     def RedeclarableTemplate : DeclNode<Template, "redeclarable templates", 1>;
       def FunctionTemplate : DeclNode<RedeclarableTemplate>;
       def ClassTemplate : DeclNode<RedeclarableTemplate>;
+      def TraitTemplate : DeclNode<RedeclarableTemplate>;
       def VarTemplate : DeclNode<RedeclarableTemplate>;
       def TypeAliasTemplate : DeclNode<RedeclarableTemplate>;
     def TemplateTemplateParm : DeclNode<Template>;

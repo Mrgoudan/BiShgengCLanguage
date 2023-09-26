@@ -51,6 +51,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ExternCContext:
   case Decl::Namespace:
   case Decl::UnresolvedUsingTypename:
+  case Decl::TraitTemplateSpecialization: // trait X<int>; [bishengc]
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:
   case Decl::VarTemplateSpecialization:
@@ -71,6 +72,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ObjCAtDefsField:
   case Decl::ParmVar:
   case Decl::ImplicitParam:
+  case Decl::TraitTemplate: // trait X<T> {}; [bishengc]
   case Decl::ClassTemplate:
   case Decl::VarTemplate:
   case Decl::FunctionTemplate:
@@ -129,7 +131,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
-  case Decl::Trait:     // trait X; [bishengc]
+  case Decl::Trait:     // trait X {}; [bishengc]
   case Decl::ImplTrait: // impl trait X for struct S; [bishengc]
     // None of these decls require codegen support.
     return;

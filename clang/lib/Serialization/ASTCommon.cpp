@@ -363,6 +363,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Record:
   case Decl::Trait:
   case Decl::CXXRecord:
+  case Decl::TraitTemplateSpecialization:
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:
   case Decl::VarTemplateSpecialization:
@@ -379,6 +380,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::ImplTrait:
   case Decl::FunctionTemplate:
   case Decl::ClassTemplate:
+  case Decl::TraitTemplate:
   case Decl::VarTemplate:
   case Decl::TypeAliasTemplate:
   case Decl::ObjCProtocol:

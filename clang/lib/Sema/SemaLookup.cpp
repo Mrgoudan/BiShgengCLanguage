@@ -4152,8 +4152,9 @@ private:
       return;
     }
 
-    if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx))
-      Result.getSema().ForceDeclarationOfImplicitMembers(Class);
+    if (!Result.getSema().getLangOpts().BSC)
+      if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx))
+        Result.getSema().ForceDeclarationOfImplicitMembers(Class);
 
     llvm::SmallVector<NamedDecl *, 4> DeclsToVisit;
     // We sometimes skip loading namespace-level results (they tend to be huge).

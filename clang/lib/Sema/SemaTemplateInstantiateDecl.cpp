@@ -4010,6 +4010,15 @@ Decl *TemplateDeclInstantiator::VisitTraitDecl(TraitDecl *D) {
   llvm_unreachable("There are only TraitDecls in BSC");
 }
 
+Decl *TemplateDeclInstantiator::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
+  llvm_unreachable("There are only TraitTemplateDecls in BSC");
+}
+
+Decl *TemplateDeclInstantiator::VisitTraitTemplateSpecializationDecl(
+    TraitTemplateSpecializationDecl *D) {
+  llvm_unreachable("There are only TraitTemplateSpecializationDecls in BSC");
+}
+
 Decl *
 TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
     ClassTemplateSpecializationDecl *D) {

@@ -468,6 +468,7 @@ public:
 #define DEF_TRAVERSE_TMPL_INST(TMPLDECLKIND)                                   \
   bool TraverseTemplateInstantiations(TMPLDECLKIND##TemplateDecl *D);
   DEF_TRAVERSE_TMPL_INST(Class)
+  DEF_TRAVERSE_TMPL_INST(Trait)
   DEF_TRAVERSE_TMPL_INST(Var)
   DEF_TRAVERSE_TMPL_INST(Function)
 #undef DEF_TRAVERSE_TMPL_INST
@@ -1125,6 +1126,8 @@ DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPE(InjectedClassNameType, {})
 
+DEF_TRAVERSE_TYPE(InjectedTraitNameType, {})
+
 DEF_TRAVERSE_TYPE(AttributedType,
                   { TRY_TO(TraverseType(T->getModifiedType())); })
 
@@ -1409,6 +1412,8 @@ DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
 })
 
 DEF_TRAVERSE_TYPELOC(InjectedClassNameType, {})
+
+DEF_TRAVERSE_TYPELOC(InjectedTraitNameType, {})
 
 DEF_TRAVERSE_TYPELOC(ParenType, { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
@@ -1838,6 +1843,29 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
+    TraitTemplateDecl *D) {
+  for (auto *SD : D->specializations()) {
+    for (auto *RD : SD->redecls()) {
+      switch (
+          cast<TraitTemplateSpecializationDecl>(RD)->getSpecializationKind()) {
+      case TSK_Undeclared:
+      case TSK_ImplicitInstantiation:
+        TRY_TO(TraverseDecl(RD));
+        break;
+
+      case TSK_ExplicitInstantiationDeclaration:
+      case TSK_ExplicitInstantiationDefinition:
+      case TSK_ExplicitSpecialization:
+        break;
+      }
+    }
+  }
+
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
     VarTemplateDecl *D) {
   for (auto *SD : D->specializations()) {
     for (auto *RD : SD->redecls()) {
@@ -1912,6 +1940,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
   })
 
 DEF_TRAVERSE_TMPL_DECL(Class)
+DEF_TRAVERSE_TMPL_DECL(Trait)
 DEF_TRAVERSE_TMPL_DECL(Var)
 DEF_TRAVERSE_TMPL_DECL(Function)
 
@@ -2064,6 +2093,7 @@ DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
   })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)
+DEF_TRAVERSE_TMPL_SPEC_DECL(Trait, Trait)
 DEF_TRAVERSE_TMPL_SPEC_DECL(Var, Var)
 
 template <typename Derived>

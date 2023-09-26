@@ -2435,6 +2435,7 @@ private:
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
   void ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
+                           const ParsedTemplateInfo &TemplateInfo,
                            bool EnteringContext, DeclSpecContext DSC,
                            ParsedAttributes &Attributes);
 

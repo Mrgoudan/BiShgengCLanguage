@@ -1781,6 +1781,8 @@ TagDecl *Type::getAsTagDecl() const {
     return TT->getDecl();
   if (const auto *Injected = getAs<InjectedClassNameType>())
     return Injected->getDecl();
+  if (const auto *Injected = getAs<InjectedTraitNameType>())
+    return Injected->getDecl();
 
   return nullptr;
 }
@@ -3743,6 +3745,10 @@ RecordDecl *InjectedClassNameType::getDecl() const {
   return cast<RecordDecl>(getInterestingTagDecl(Decl));
 }
 
+TraitDecl *InjectedTraitNameType::getDecl() const {
+  return cast<TraitDecl>(getInterestingTagDecl(Decl));
+}
+
 IdentifierInfo *TemplateTypeParmType::getIdentifier() const {
   return isCanonicalUnqualified() ? nullptr : getDecl()->getIdentifier();
 }
@@ -4323,6 +4329,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Enum:
   case Type::Trait:
   case Type::InjectedClassName:
+  case Type::InjectedTraitName:
   case Type::PackExpansion:
   case Type::ObjCObject:
   case Type::ObjCInterface:

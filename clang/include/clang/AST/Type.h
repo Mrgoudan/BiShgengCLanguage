@@ -5522,6 +5522,48 @@ public:
   }
 };
 
+class InjectedTraitNameType : public Type {
+  friend class ASTContext; // ASTContext creates these.
+  friend class ASTNodeImporter;
+  friend class ASTReader; // FIXME: ASTContext::InjectedTraitNameType is not
+                          // currently suitable for AST reading, too much
+                          // interdependencies.
+  template <class T> friend class serialization::AbstractTypeReader;
+
+  TraitDecl *Decl;
+
+  QualType InjectedType;
+
+  InjectedTraitNameType(TraitDecl *D, QualType TST)
+      : Type(InjectedTraitName, QualType(),
+             TypeDependence::DependentInstantiation),
+        Decl(D), InjectedType(TST) {
+    assert(isa<TemplateSpecializationType>(TST));
+    assert(!TST.hasQualifiers());
+    assert(TST->isDependentType());
+  }
+
+public:
+  QualType getInjectedSpecializationType() const { return InjectedType; }
+
+  const TemplateSpecializationType *getInjectedTST() const {
+    return cast<TemplateSpecializationType>(InjectedType.getTypePtr());
+  }
+
+  TemplateName getTemplateName() const {
+    return getInjectedTST()->getTemplateName();
+  }
+
+  TraitDecl *getDecl() const;
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == InjectedTraitName;
+  }
+};
+
 /// The kind of a tag type.
 enum TagTypeKind {
   /// The "struct" keyword.

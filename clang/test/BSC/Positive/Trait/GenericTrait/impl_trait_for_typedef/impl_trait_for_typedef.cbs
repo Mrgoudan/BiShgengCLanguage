@@ -1,0 +1,24 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+trait F<T> {
+  T foo(This* this, int a);
+};
+
+typedef struct S{
+  int x;
+}MyS;
+
+int struct S::foo(struct S* this, int a) {
+  return this->x + a;
+}
+
+impl trait F<int> for MyS;
+
+int main() {
+  struct S s; 
+  int a = s.foo(1);
+  trait F<int>* f = &s;
+  return 0;
+}

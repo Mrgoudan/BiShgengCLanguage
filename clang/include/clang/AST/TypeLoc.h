@@ -695,6 +695,15 @@ public:
   RecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
+/// Wrapper for source info for injected trait names of trait
+/// templates.
+class InjectedTraitNameTypeLoc
+    : public InheritingConcreteTypeLoc<
+          TypeSpecTypeLoc, InjectedTraitNameTypeLoc, InjectedTraitNameType> {
+public:
+  TraitDecl *getDecl() const { return getTypePtr()->getDecl(); }
+};
+
 /// Wrapper for source info for unresolved typename using decls.
 class UnresolvedUsingTypeLoc :
     public InheritingConcreteTypeLoc<TypeSpecTypeLoc,

@@ -8688,6 +8688,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
       CurInit = CurInitExprRes;
 
       bool Complained;
+      if (S.getLangOpts().BSC && ConvTy == S.Incompatible &&
+          S.TryDesugarTrait(Step->Type)) {
+        if (!Step->Type->isTraitPointerType())
+          CurInit = S.ImpCastExprToType(Result.get(), Step->Type, CK_BitCast);
+        ConvTy = S.Compatible;
+      }
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
                                      Step->Type, SourceType,
                                      InitialCurInit.get(),

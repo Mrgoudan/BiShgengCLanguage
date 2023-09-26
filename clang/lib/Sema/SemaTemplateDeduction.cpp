@@ -1810,6 +1810,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     //     TT<T>
     //     TT<i>
     //     TT<>
+    case Type::InjectedTraitName:
     case Type::TemplateSpecialization: {
       // When Arg cannot be a derived class, we can just try to deduce template
       // arguments from the template-id.
@@ -5866,6 +5867,10 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                  Used);
     break;
   }
+
+  case Type::InjectedTraitName:
+    T = cast<InjectedTraitNameType>(T)->getInjectedSpecializationType();
+    break;
 
   case Type::Complex:
     if (!OnlyDeduced)

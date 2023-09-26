@@ -1430,6 +1430,12 @@ enum DeclCode {
   /// A ClassTemplatePartialSpecializationDecl record.
   DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION,
 
+  /// A TraitTemplateDecl record.
+  DECL_TRAIT_TEMPLATE,
+
+  /// A TraitTemplateSpecializationDecl record.
+  DECL_TRAIT_TEMPLATE_SPECIALIZATION,
+
   /// A VarTemplateDecl record.
   DECL_VAR_TEMPLATE,
 

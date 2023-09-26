@@ -430,6 +430,9 @@ public:
   void VisitClassTemplateDecl(const ClassTemplateDecl *CTD) {
     writeTemplateDecl(CTD, false);
   }
+  void VisitTraitTemplateDecl(const TraitTemplateDecl *TTD) {
+    writeTemplateDecl(TTD, false);
+  }
   void VisitVarTemplateDecl(const VarTemplateDecl *VTD) {
     writeTemplateDecl(VTD, false);
   }

@@ -815,6 +815,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ClassTemplate:
     case TemplateTemplateParm:
     case TypeAliasTemplate:
+    case TraitTemplate:
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
     case UnresolvedUsingIfExists:
@@ -848,6 +849,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
 
     case UsingDirective:
     case BuiltinTemplate:
+    case TraitTemplateSpecialization:
     case ClassTemplateSpecialization:
     case ClassTemplatePartialSpecialization:
     case ClassScopeFunctionSpecialization:
@@ -1305,7 +1307,8 @@ DeclContext *DeclContext::getPrimaryContext() {
         if (PossiblePartialDef->isBeingDefined())
           return PossiblePartialDef;
       } else {
-        assert(isa<InjectedClassNameType>(Tag->getTypeForDecl()));
+        assert(isa<InjectedClassNameType>(Tag->getTypeForDecl()) ||
+               isa<InjectedTraitNameType>(Tag->getTypeForDecl()));
       }
 
       return Tag;

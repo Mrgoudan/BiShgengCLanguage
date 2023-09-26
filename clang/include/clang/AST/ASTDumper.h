@@ -42,6 +42,7 @@ public:
 
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D);
   void VisitClassTemplateDecl(const ClassTemplateDecl *D);
+  void VisitTraitTemplateDecl(const TraitTemplateDecl *D);
   void VisitVarTemplateDecl(const VarTemplateDecl *D);
   void VisitCompoundStmt(const CompoundStmt *Node);
 };

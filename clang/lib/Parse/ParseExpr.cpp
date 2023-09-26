@@ -1895,55 +1895,55 @@ ExprResult Parser::ParseCastExpression(
 
   if (Res.get()) {
     QualType ResType = Res.get()->getType();
-    if (!ResType.isNull() && ResType->isPointerType()) {
-      const Type *BaseType =
-          ResType->getPointeeType().getCanonicalType().getTypePtr();
-      if (const TraitType *TTy = BaseType->getAs<TraitType>()) {
-        TraitDecl *TD = dyn_cast<TraitDecl>(TTy->getAsTagDecl());
-        if (UnaryOperator *UO =
-                dyn_cast<UnaryOperator>(Res.get()->IgnoreParenCasts())) {
-          if (auto UOT = UO->getType().getTypePtr()) {
-            QualType QT = UOT->getPointeeType().getCanonicalType();
-            if (VarDecl *LookUpVar = TD->getTypeImpledVarDecl(QT)) {
-              QualType VoidPT =
-                  Actions.Context.getPointerType(Actions.Context.VoidTy);
-              ImplicitCastExpr *TraitData = ImplicitCastExpr::Create(
-                  Actions.Context, VoidPT,
-                  /* CastKind=*/CK_BitCast,
-                  /* Expr=*/UO,
-                  /* CXXCastPath=*/nullptr,
-                  /* ExprValueKind=*/VK_PRValue,
-                  /* FPFeatures */ FPOptionsOverride());
+    if (TraitDecl *TD = Actions.TryDesugarTrait(ResType)) {
+      if (UnaryOperator *UO =
+              dyn_cast<UnaryOperator>(Res.get()->IgnoreParenCasts())) {
+        if (auto UOT = UO->getType().getTypePtr()) {
+          QualType QT = UOT->getPointeeType().getCanonicalType();
+          if (VarDecl *LookupVar = TD->getTypeImpledVarDecl(QT)) {
+            QualType VoidPT =
+                Actions.Context.getPointerType(Actions.Context.VoidTy);
+            ImplicitCastExpr *TraitData =
+                ImplicitCastExpr::Create(Actions.Context, VoidPT,
+                                         /* CastKind=*/CK_BitCast,
+                                         /* Expr=*/UO,
+                                         /* CXXCastPath=*/nullptr,
+                                         /* ExprValueKind=*/VK_PRValue,
+                                         /* FPFeatures */ FPOptionsOverride());
 
-              RecordDecl *LookUpVtable = TD->getVtable();
-              RecordDecl *LookUpTrait = TD->getTrait();
-              QualType VtableTy = Actions.Context.getRecordType(LookUpVtable);
-              QualType VtablePT = Actions.Context.getPointerType(VtableTy);
-              DeclRefExpr *VtableRef = Actions.BuildDeclRefExpr(
-                  LookUpVar, VtableTy, VK_LValue, LookUpVar->getLocation());
-              UnaryOperator *UOVtable = UnaryOperator::Create(
-                  Actions.Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
-                  OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
-
-              std::vector<Expr *> Exprs = {TraitData, UOVtable};
-              MutableArrayRef<Expr *> initExprs =
-                  MutableArrayRef<Expr *>(Exprs);
-              ExprResult TraitInit = Actions.ActOnInitList(
-                  SourceLocation(), initExprs, SourceLocation());
-              InitListExpr *ILE = dyn_cast<InitListExpr>(TraitInit.get());
-              ValueDecl *VD =
-                  dyn_cast_or_null<DeclRefExpr>(UO->getSubExpr())->getDecl();
-              QualType RecordTy = QualType(LookUpTrait->getTypeForDecl(), 0);
-              VarDecl *NewVD = VarDecl::Create(
-                  Actions.Context, Actions.CurContext, VD->getBeginLoc(),
-                  VD->getLocation(), VD->getIdentifier(), RecordTy,
-                  Actions.Context.CreateTypeSourceInfo(RecordTy), SC_None);
-              Actions.AddInitializerToDecl(NewVD, ILE, false);
-              TypeSourceInfo *TInfo =
-                  Actions.Context.getTrivialTypeSourceInfo(ILE->getType());
-              Res = Actions.BuildCompoundLiteralExpr(SourceLocation(), TInfo,
-                                                     SourceLocation(), ILE);
+            RecordDecl *LookupTrait = TD->getTrait();
+            QualType VtableTy = LookupVar->getType();
+            QualType RecordTy = Actions.Context.getRecordType(LookupTrait);
+            if (LookupTrait->getDescribedClassTemplate()) {
+              TypeSourceInfo *TInfo = Actions.Context.getTrivialTypeSourceInfo(
+                  ResType, Res.get()->getBeginLoc());
+              RecordTy = Actions.CompleteRecordType(LookupTrait, TInfo);
             }
+            RecordTy = Actions.Context.getElaboratedType(ETK_Struct, nullptr,
+                                                         RecordTy);
+            QualType VtablePT = Actions.Context.getPointerType(VtableTy);
+            DeclRefExpr *VtableRef = Actions.BuildDeclRefExpr(
+                LookupVar, VtableTy, VK_LValue, LookupVar->getLocation());
+            UnaryOperator *UOVtable = UnaryOperator::Create(
+                Actions.Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
+                OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+
+            std::vector<Expr *> Exprs = {TraitData, UOVtable};
+            MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
+            ExprResult TraitInit = Actions.ActOnInitList(
+                SourceLocation(), initExprs, SourceLocation());
+            InitListExpr *ILE = dyn_cast<InitListExpr>(TraitInit.get());
+            ValueDecl *VD =
+                dyn_cast_or_null<DeclRefExpr>(UO->getSubExpr())->getDecl();
+            VarDecl *NewVD = VarDecl::Create(
+                Actions.Context, Actions.CurContext, VD->getBeginLoc(),
+                VD->getLocation(), VD->getIdentifier(), RecordTy,
+                Actions.Context.getTrivialTypeSourceInfo(RecordTy), SC_None);
+            Actions.AddInitializerToDecl(NewVD, ILE, false);
+            TypeSourceInfo *TInfo =
+                Actions.Context.getTrivialTypeSourceInfo(ILE->getType());
+            Res = Actions.BuildCompoundLiteralExpr(SourceLocation(), TInfo,
+                                                   SourceLocation(), ILE);
           }
         }
       }
@@ -2262,7 +2262,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         // Maybe we should consider doing "Desugar" at a more coarse level.
         // FIXME: '(int)a->b' baseExpr should be 'a' rather than '(int)a'
         QualType T = LHS.get()->getType();
-        if (!T.isNull() && Actions.ShouldDesugarTrait(T)) {
+        if (!T.isNull() && Actions.TryDesugarTrait(T)) {
           // @code
           // void f(trait T* t) {
           //   t->foo(); // see '->', desugar to "t.vtable->foo()" immediately;

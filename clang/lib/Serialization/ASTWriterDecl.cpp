@@ -80,6 +80,8 @@ namespace clang {
                                             ClassTemplateSpecializationDecl *D);
     void VisitClassTemplatePartialSpecializationDecl(
                                      ClassTemplatePartialSpecializationDecl *D);
+    void
+    VisitTraitTemplateSpecializationDecl(TraitTemplateSpecializationDecl *D);
     void VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D);
     void VisitVarTemplatePartialSpecializationDecl(
         VarTemplatePartialSpecializationDecl *D);
@@ -114,6 +116,7 @@ namespace clang {
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
+    void VisitTraitTemplateDecl(TraitTemplateDecl *D);
     void VisitVarTemplateDecl(VarTemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
     void VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
@@ -1645,6 +1648,43 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
   }
 
   Code = serialization::DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION;
+}
+
+void ASTDeclWriter::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
+  VisitRedeclarableTemplateDecl(D);
+
+  if (D->isFirstDecl())
+    AddTemplateSpecializations(D);
+  Code = serialization::DECL_TRAIT_TEMPLATE;
+}
+
+void ASTDeclWriter::VisitTraitTemplateSpecializationDecl(
+    TraitTemplateSpecializationDecl *D) {
+  RegisterTemplateSpecialization(D->getSpecializedTemplate(), D);
+
+  VisitTraitDecl(D);
+
+  TraitTemplateDecl *TTD = D->getSpecializedTemplate();
+  Record.AddDeclRef(TTD);
+
+  Record.AddTemplateArgumentList(&D->getTemplateArgs());
+  Record.AddSourceLocation(D->getPointOfInstantiation());
+  Record.push_back(D->getSpecializationKind());
+  Record.push_back(D->isCanonicalDecl());
+
+  if (D->isCanonicalDecl()) {
+    // When reading, we'll add it to the folding set of the following template.
+    Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
+  }
+
+  // Explicit info.
+  Record.AddTypeSourceInfo(D->getTypeAsWritten());
+  if (D->getTypeAsWritten()) {
+    Record.AddSourceLocation(D->getExternLoc());
+    Record.AddSourceLocation(D->getTemplateKeywordLoc());
+  }
+
+  Code = serialization::DECL_TRAIT_TEMPLATE_SPECIALIZATION;
 }
 
 void ASTDeclWriter::VisitVarTemplateDecl(VarTemplateDecl *D) {

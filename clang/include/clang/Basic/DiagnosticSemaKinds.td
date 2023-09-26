@@ -5799,7 +5799,7 @@ def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
   "type|typedef|type alias|template|type alias template|template "
   "template argument}1 %0 cannot be referenced with a "
-  "%select{struct|interface|union|class|enum}2 specifier">;
+  "%select{struct|interface|union|class|enum|trait}2 specifier">;
 def err_tag_reference_conflict : Error<
   "implicit declaration introduced by elaborated type conflicts with a "
   "%select{non-struct type|non-class type|non-union type|non-enum "
@@ -11697,11 +11697,11 @@ def err_cast_from_randomized_struct : Error<
 
 // BSC warnings and errors
 def err_variables_not_trait_pointer : Error<"only trait pointer type is allowed to be declared">;
-def err_trait_impl : Error<"function %0 in 'trait %1' is not implemented for %2">;
+def err_trait_impl : Error<"function %0 in %1 is not implemented for %2">;
 def err_trait_impl_function_type_conflict : Error<
-  "type of '%0' conflicts with that of 'trait %1'">;
+  "type of %0 conflicts with that of %1">;
 def err_type_has_not_impl_trait : Error<
-  "expected a pointer type which has implemented 'trait %0' or 'trait %0*', found %1">;
+  "expected a pointer type which has implemented %0, found %1">;
 def err_trait_member_not_func : Error<
   "only function declarations can be trait member">;
 def err_await_invalid_scope : Error<

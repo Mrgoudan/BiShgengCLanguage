@@ -256,6 +256,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::DeducedTemplateSpecialization:
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
+    case Type::InjectedTraitName:
     case Type::DependentName:
     case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
@@ -1544,6 +1545,19 @@ void TypePrinter::printInjectedClassNameBefore(const InjectedClassNameType *T,
 
 void TypePrinter::printInjectedClassNameAfter(const InjectedClassNameType *T,
                                                raw_ostream &OS) {}
+
+void TypePrinter::printInjectedTraitNameBefore(const InjectedTraitNameType *T,
+                                               raw_ostream &OS) {
+  if (Policy.PrintInjectedTraitNameWithArguments)
+    return printTemplateSpecializationBefore(T->getInjectedTST(), OS);
+
+  IncludeStrongLifetimeRAII Strong(Policy);
+  T->getTemplateName().print(OS, Policy);
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printInjectedTraitNameAfter(const InjectedTraitNameType *T,
+                                              raw_ostream &OS) {}
 
 void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
                                         raw_ostream &OS) {

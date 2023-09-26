@@ -5112,12 +5112,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
     case DeclaratorChunk::Function: {
-      if (LangOpts.BSC && T->isTraitPointerType()) {
-        T = S.DesugarTraitToStructTrait(T->getPointeeType());
-        // The trait pointer type has been desugar, so we need to remove it.
-        // And no need to obtain the source code information for trait pointer
-        // type.
-        D.DropTypeObject(chunkIndex + 1);
+      if (LangOpts.BSC) {
+        if (TraitDecl *TD = S.TryDesugarTrait(T)) {
+          T = S.DesugarTraitToStructTrait(TD, T);
+          // The trait pointer type has been desugar, so we need to remove it.
+          // And no need to obtain the source code information for trait pointer
+          // type.
+          D.DropTypeObject(chunkIndex + 1);
+        }
       }
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
@@ -9357,66 +9359,4 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
 
   // Build the pointer type.
   return Context.getAtomicType(T);
-}
-
-// TODO: move this API to SemaBSCTrait.cpp. But now it relies on SemaType a lot.
-bool Sema::IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
-                                  TraitDecl *TD) {
-  TypeProcessingState state(*this, D);
-  CXXScopeSpec SS;
-  NamedDecl *Def = nullptr;
-  BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
-
-  QualType T = ConvertDeclSpecToType(
-      state, D.getMutableDeclSpec()); // the Type which might impl the trait.
-  if (T->isIncompleteType(&Def))
-    Diagnoser.diagnose(*this, TypeLoc, T);
-
-  IdentifierInfo *FunctionID = nullptr;
-  for (TraitDecl::field_iterator FieldIt = TD->field_begin();
-       FieldIt != TD->field_end(); ++FieldIt) { // traverse the traitBody
-    FunctionID = FieldIt->getIdentifier();
-    FunctionDecl *Old = FieldIt->getAsFunction(); // method in traitBody
-    FunctionDecl *New = nullptr;
-    DeclContext *DC = // The Type's member functions
-        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
-    if (DC) {
-      DeclContext::lookup_result DR = DC->lookup(FunctionID);
-      for (NamedDecl *D : DR)
-        if (D)
-          New = D->getAsFunction();
-    }
-    if (!New) {
-      Diag(TypeLoc, diag::err_trait_impl)
-          << FieldIt->getName() << TD->getNameAsString() << T;
-      return true;
-    }
-    // Check whether function prototypes match in traitBody and type's member
-    // funcs
-    BSCMethodDecl *BS = dyn_cast<BSCMethodDecl>(New);
-    bool TypeDiagFlag = false;
-    if (!BS->getHasThisParam() ||
-        !Context.hasSameFunctionTypeIgnoringPtrSizes(Old->getReturnType(),
-                                                     New->getReturnType()))
-      TypeDiagFlag = true;
-    else {
-      int n = Old->getNumParams();
-      int m = New->getNumParams();
-      if (n == m)
-        for (int i = 1; i < n; ++i) {
-          QualType T1 = Old->getParamDecl(i)->getType();
-          QualType T2 = New->getParamDecl(i)->getType();
-          if (!Context.hasSameFunctionTypeIgnoringPtrSizes(T1, T2))
-            TypeDiagFlag = true;
-        }
-      else
-        TypeDiagFlag = true;
-    }
-    if (TypeDiagFlag) {
-      Diag(TypeLoc, diag::err_trait_impl_function_type_conflict)
-          << FieldIt->getName() << TD->getNameAsString();
-      return true;
-    }
-  }
-  return false;
 }

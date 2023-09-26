@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+trait F<T> {
+};
+
+impl trait F<int> for struct S; // expected-error {{variable has incomplete type 'struct S'}}

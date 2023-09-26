@@ -322,6 +322,7 @@ public:
       const DeducedTemplateSpecializationType *T);
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T);
   void VisitInjectedClassNameType(const InjectedClassNameType *T);
+  void VisitInjectedTraitNameType(const InjectedTraitNameType *T);
   void VisitObjCInterfaceType(const ObjCInterfaceType *T);
   void VisitPackExpansionType(const PackExpansionType *T);
 
@@ -351,6 +352,7 @@ public:
   void VisitTypeAliasTemplateDecl(const TypeAliasTemplateDecl *D);
   void VisitCXXRecordDecl(const CXXRecordDecl *D);
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D);
+  void VisitTraitTemplateDecl(const TraitTemplateDecl *D);
   void VisitClassTemplateDecl(const ClassTemplateDecl *D);
   void VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D);
   void VisitVarTemplateDecl(const VarTemplateDecl *D);

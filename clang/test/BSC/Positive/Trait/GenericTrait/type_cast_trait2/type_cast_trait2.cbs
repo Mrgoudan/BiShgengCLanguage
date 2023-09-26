@@ -1,0 +1,19 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+trait F<T> {
+  T foo(This* this);
+};
+
+int int::foo(int* this) {
+  return 0;
+}
+
+impl trait F<int> for int;
+
+int main() {
+  int a = 1;
+  trait F<int>* f = (trait F<int>*)&a;
+  return f->foo();
+}

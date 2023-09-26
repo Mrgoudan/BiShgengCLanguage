@@ -206,6 +206,11 @@ public:
                                     ParentDC, SymbolRoleSet(), Relations);
   }
 
+  bool VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
+    return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
+                                    ParentDC, SymbolRoleSet(), Relations);
+  }
+
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
     const DependentNameType *DNT = TL.getTypePtr();
     const NestedNameSpecifier *NNS = DNT->getQualifier();

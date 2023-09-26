@@ -12,6 +12,7 @@
 
 #include "clang/AST/DeclBSC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/Linkage.h"
 
 using namespace clang;
@@ -40,28 +41,58 @@ BSCMethodDecl *BSCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 //===----------------------------------------------------------------------===//
 // ImplTraitDecl Implementation
 //===----------------------------------------------------------------------===//
-TraitDecl::TraitDecl(const ASTContext &C, DeclContext *DC,
+TraitDecl::TraitDecl(Kind DK, const ASTContext &C, DeclContext *DC,
                      SourceLocation StartLoc, SourceLocation IdLoc,
                      IdentifierInfo *Id, TraitDecl *PrevDecl)
-    : TagDecl(Trait, TTK_Trait, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
+    : TagDecl(DK, TTK_Trait, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
   assert(classof(static_cast<Decl *>(this)) && "Invalid Kind!");
 }
 
 TraitDecl *TraitDecl::Create(const ASTContext &C, DeclContext *DC,
                              SourceLocation StartLoc, SourceLocation IdLoc,
-                             IdentifierInfo *Id, TraitDecl *PrevDecl) {
-  TraitDecl *R = new (C, DC) TraitDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl);
+                             IdentifierInfo *Id, TraitDecl *PrevDecl,
+                             bool DelayTypeCreation) {
+  TraitDecl *R =
+      new (C, DC) TraitDecl(Trait, C, DC, StartLoc, IdLoc, Id, PrevDecl);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
 
-  C.getTypeDeclType(R, PrevDecl);
+  if (!DelayTypeCreation)
+    C.getTypeDeclType(R, PrevDecl);
   return R;
 }
 
 TraitDecl *TraitDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  TraitDecl *Trait = new (C, ID) TraitDecl(C, nullptr, SourceLocation(),
-                                           SourceLocation(), nullptr, nullptr);
-  Trait->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return Trait;
+  TraitDecl *R = new (C, ID) TraitDecl(Trait, C, nullptr, SourceLocation(),
+                                       SourceLocation(), nullptr, nullptr);
+  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
+  return R;
+}
+
+TraitTemplateDecl *TraitDecl::getDescribedTraitTemplate() const {
+  return TemplateOrInstantiation.dyn_cast<TraitTemplateDecl *>();
+}
+
+void TraitDecl::setDescribedTraitTemplate(TraitTemplateDecl *Template) {
+  TemplateOrInstantiation = Template;
+}
+
+MemberSpecializationInfo *TraitDecl::getMemberSpecializationInfo() const {
+  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
+}
+
+TemplateSpecializationKind TraitDecl::getTemplateSpecializationKind() const {
+  if (const auto *Spec = dyn_cast<TraitTemplateSpecializationDecl>(this))
+    return Spec->getSpecializationKind();
+
+  if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo())
+    return MSInfo->getTemplateSpecializationKind();
+
+  return TSK_Undeclared;
+}
+
+bool TraitDecl::isInjectedClassName() const {
+  return isImplicit() && getDeclName() && getDeclContext()->isTrait() &&
+         cast<TraitDecl>(getDeclContext())->getDeclName() == getDeclName();
 }
 
 TraitDecl::field_iterator TraitDecl::field_begin() const {
@@ -112,3 +143,52 @@ void ImplTraitDecl::setTraitDecl(TraitDecl *D) { ImplTraitDecl::TD = D; }
 TraitDecl *ImplTraitDecl::getTraitDecl() { return ImplTraitDecl::TD; }
 
 ImplTraitDecl *ImplTraitDecl::getCanonicalDecl() { return getFirstDecl(); }
+
+//===----------------------------------------------------------------------===//
+// TraitTemplateSpecializationDecl Implementation
+//===----------------------------------------------------------------------===//
+
+TraitTemplateSpecializationDecl::TraitTemplateSpecializationDecl(
+    ASTContext &Context, Kind DK, TagKind TK, DeclContext *DC,
+    SourceLocation StartLoc, SourceLocation IdLoc,
+    TraitTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
+    TraitTemplateSpecializationDecl *PrevDecl)
+    : TraitDecl(DK, Context, DC, StartLoc, IdLoc,
+                SpecializedTemplate->getIdentifier(), PrevDecl),
+      SpecializedTemplate(SpecializedTemplate),
+      TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
+      SpecializationKind(TSK_Undeclared) {}
+
+TraitTemplateSpecializationDecl::TraitTemplateSpecializationDecl(ASTContext &C,
+                                                                 Kind DK)
+    : TraitDecl(DK, C, nullptr, SourceLocation(), SourceLocation(), nullptr,
+                nullptr),
+      SpecializationKind(TSK_Undeclared) {}
+
+TraitTemplateSpecializationDecl *TraitTemplateSpecializationDecl::Create(
+    ASTContext &Context, TagKind TK, DeclContext *DC, SourceLocation StartLoc,
+    SourceLocation IdLoc, TraitTemplateDecl *SpecializedTemplate,
+    ArrayRef<TemplateArgument> Args,
+    TraitTemplateSpecializationDecl *PrevDecl) {
+  auto *Result = new (Context, DC) TraitTemplateSpecializationDecl(
+      Context, TraitTemplateSpecialization, TK, DC, StartLoc, IdLoc,
+      SpecializedTemplate, Args, PrevDecl);
+  Result->setMayHaveOutOfDateDef(false);
+
+  Context.getTypeDeclType(Result, PrevDecl);
+  return Result;
+}
+
+TraitTemplateSpecializationDecl *
+TraitTemplateSpecializationDecl::CreateDeserialized(ASTContext &C,
+                                                    unsigned ID) {
+  auto *Result = new (C, ID)
+      TraitTemplateSpecializationDecl(C, TraitTemplateSpecialization);
+  Result->setMayHaveOutOfDateDef(false);
+  return Result;
+}
+
+TraitTemplateDecl *
+TraitTemplateSpecializationDecl::getSpecializedTemplate() const {
+  return SpecializedTemplate.get<TraitTemplateDecl *>();
+}

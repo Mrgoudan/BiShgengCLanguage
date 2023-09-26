@@ -101,6 +101,7 @@ def DeducedType : TypeNode<Type, 1>;
 def AutoType : TypeNode<DeducedType>;
 def DeducedTemplateSpecializationType : TypeNode<DeducedType>;
 def InjectedClassNameType : TypeNode<Type>, AlwaysDependent, LeafType;
+def InjectedTraitNameType : TypeNode<Type>, AlwaysDependent, LeafType;
 def DependentNameType : TypeNode<Type>, AlwaysDependent;
 def DependentTemplateSpecializationType : TypeNode<Type>, AlwaysDependent;
 def PackExpansionType : TypeNode<Type>, AlwaysDependent;

@@ -4672,9 +4672,6 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
 
-  if (getLangOpts().BSC && ASTTy->isTraitPointerType())
-    return;
-
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
   if (LangOpts.OpenMPIsDevice && OpenMPRuntime &&
@@ -6098,12 +6095,6 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       return;
   }
 
-  if (auto *VD = dyn_cast<VarDecl>(D)) {
-    QualType T = VD->getType();
-    if (T->isTraitPointerType())
-      return;
-  }
-
   switch (D->getKind()) {
   case Decl::CXXConversion:
   case Decl::CXXMethod:
@@ -6167,6 +6158,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // No code generation needed.
   case Decl::UsingShadow:
   case Decl::ClassTemplate:
+  case Decl::TraitTemplate:
   case Decl::VarTemplate:
   case Decl::Concept:
   case Decl::VarTemplatePartialSpecialization:

@@ -183,7 +183,6 @@ BSC/Positive/Generic/StructAndFunction/call_member_func/call_member_func.cbs
 BSC/Positive/Generic/StructAndFunction/tempalte_argument_has_identifiers_defined_before/tempalte_argument_has_identifiers_defined_before.cbs
 BSC/Positive/Generic/StructAndFunction/multi_type_params/multi_type_params.cbs
 BSC/Positive/Generic/StructAndFunction/single_type_param/single_type_param.cbs
-BSC/Positive/cfg.txt
 BSC/Positive/Driver/rewrite-bsc/rewrite_bsc_option/rewrite_bsc_option.cbs
 BSC/Positive/Driver/rewrite-bsc/GenericBSCMethod/rewrite_generic_bscmethod/rewrite_generic_bscmethod.cbs
 BSC/Positive/Driver/rewrite-bsc/rewrite_bsc_with_header/rewrite_bsc_with_header.cbs
@@ -206,3 +205,14 @@ BSC/Positive/Driver/rewrite-bsc/rewrite_static_func/rewrite_static_func.cbs
 BSC/Positive/Coroutine/Other/async-func-pointer-2/async-func-pointer-2.cbs
 BSC/Positive/Driver/rewrite-bsc/rewrite_bsc_with_macro/rewrite_bsc_with_macro.cbs
 BSC/Positive/Generic/Constant/Constant_member_function/Constant_member_function.cbs
+BSC/Positive/Trait/GenericTrait/basic_trait/basic_trait.cbs
+BSC/Positive/Trait/GenericTrait/impl_multi_times/impl_multi_times.cbs
+BSC/Positive/Trait/GenericTrait/impl_trait_for_typedef/impl_trait_for_typedef.cbs
+BSC/Positive/Trait/GenericTrait/implicit_cast_trait1/implicit_cast_trait1.cbs
+BSC/Positive/Trait/GenericTrait/implicit_cast_trait2/implicit_cast_trait2.cbs
+BSC/Positive/Trait/GenericTrait/return_generic_trait/return_generic_trait.cbs
+BSC/Positive/Trait/GenericTrait/trait_pointer_assign/trait_pointer_assign.cbs
+BSC/Positive/Trait/GenericTrait/trait_pointer_reassign/trait_pointer_reassign.cbs
+BSC/Positive/Trait/GenericTrait/trait_pointer_uninitialized/trait_pointer_uninitialized.cbs
+BSC/Positive/Trait/GenericTrait/type_cast_trait1/type_cast_trait1.cbs
+BSC/Positive/Trait/GenericTrait/type_cast_trait2/type_cast_trait2.cbs

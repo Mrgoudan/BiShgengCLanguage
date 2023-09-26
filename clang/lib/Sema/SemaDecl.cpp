@@ -6386,7 +6386,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     return nullptr;
 
   QualType T = TInfo->getType();
-  if (Context.getLangOpts().BSC && T->isTraitPointerType())
+  if (Context.getLangOpts().BSC && TryDesugarTrait(T))
     AddToScope = false;
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
@@ -7423,7 +7423,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
     NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(), D.getIdentifierLoc(),
                             II, R, TInfo, SC);
-
     if (R->getContainedDeducedType())
       ParsingInitForAutoVars.insert(NewVD);
 
@@ -14430,8 +14429,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
     }
   }
 
-  if (getLangOpts().BSC && parmDeclType->isTraitPointerType())
-    parmDeclType = DesugarTraitToStructTrait(parmDeclType->getPointeeType());
+  if (getLangOpts().BSC)
+    if (TraitDecl *TD = TryDesugarTrait(parmDeclType))
+      parmDeclType = DesugarTraitToStructTrait(TD, parmDeclType);
 
   // Temporarily put parameter variables in the translation unit, not
   // the enclosing context.  This prevents them from accidentally
@@ -14585,6 +14585,15 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       lifetime = T->getObjCARCImplicitLifetime();
     }
     T = Context.getLifetimeQualifiedType(T, lifetime);
+  }
+
+  if (TraitDecl *TD = TryDesugarTrait(T)) {
+    RecordDecl *LookupTrait = TD->getTrait();
+    if (LookupTrait && LookupTrait->getDescribedClassTemplate()) {
+      T = CompleteRecordType(LookupTrait, TSInfo);
+      T = Context.getElaboratedType(ETK_Struct, nullptr, T);
+    }
+    TSInfo = Context.getTrivialTypeSourceInfo(T);
   }
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
@@ -16124,6 +16133,8 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
   else if (isa<TypeAliasDecl>(PrevDecl))
     return NTK_TypeAlias;
   else if (isa<ClassTemplateDecl>(PrevDecl))
+    return NTK_Template;
+  else if (isa<TraitTemplateDecl>(PrevDecl))
     return NTK_Template;
   else if (isa<TypeAliasTemplateDecl>(PrevDecl))
     return NTK_TypeAliasTemplate;

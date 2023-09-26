@@ -2797,8 +2797,8 @@ public:
   void warnOnReservedIdentifier(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
-  ImplTraitDecl *BuildImplTraitDecl(Scope *S, Declarator &D,
-                                    SourceLocation TypeLoc, TraitDecl *TD);
+  ImplTraitDecl *BuildImplTraitDecl(Scope *S, Declarator &TypeDeclarator,
+                                    Declarator &TraitDeclarator, TraitDecl *TD);
   TraitDecl *ActOnTraitId(IdentifierInfo *II);
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
@@ -5536,17 +5536,18 @@ public:
                                     bool IsAddressOfOperand, const Scope *S,
                                     TypeSourceInfo **RecoveryTSI = nullptr);
 
-  ExprResult BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
-                                       SourceLocation TemplateKWLoc,
-                                const DeclarationNameInfo &NameInfo,
-                                const TemplateArgumentListInfo *TemplateArgs,
-                                QualType ExtendedTy = QualType());
-
-  bool IsImplTraitDeclIllegal(Declarator &D, SourceLocation TypeLoc,
-                              TraitDecl *TD);
-  VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &D);
-  QualType DesugarTraitToStructTrait(QualType T);
-  bool ShouldDesugarTrait(QualType T);
+  ExprResult
+  BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
+                            SourceLocation TemplateKWLoc,
+                            const DeclarationNameInfo &NameInfo,
+                            const TemplateArgumentListInfo *TemplateArgs,
+                            QualType ExtendedTy = QualType());
+  QualType CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo);
+  VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
+                            Declarator &TraitDeclarator,
+                            SourceLocation TypeLoc);
+  QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T);
+  TraitDecl *TryDesugarTrait(QualType T);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
                                  std::string ID);
   VarDecl *ActOnDesugarTraitInstance(Decl *VarDec);
@@ -7526,18 +7527,8 @@ public:
                                          const ParsedAttributesView &AttrList);
   void ActOnFinishCXXMemberDecls();
   void ActOnFinishCXXNonNestedClass();
-  TraitDecl *FindTraitDecl(IdentifierInfo *Name);
-  RecordDecl *ActOnDesugarVtableRecord(SourceLocation StartLoc,
-                                       SourceLocation NameLoc,
-                                       IdentifierInfo *Name);
-  void ActOnDesugarTraitVtable(TraitDecl *Find, RecordDecl *TraitVtableRD,
-                               SourceLocation StartLoc, SourceLocation NameLoc,
-                               IdentifierInfo *Name, DeclSpec &DS);
-  RecordDecl *ActOnDesugarTraitRecord(SourceLocation StartLoc,
-                                      SourceLocation NameLoc,
-                                      IdentifierInfo *Name);
-  void ActOnDesugarTrait(RecordDecl *TraitVtableRecord, RecordDecl *TraitRD,
-                         SourceLocation StartLoc, SourceLocation NameLoc);
+  RecordDecl *ActOnDesugarVtableRecord(TraitDecl *TD);
+  RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD);
   ExprResult ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
                                 BinaryOperatorKind Opc, RecordDecl *RD,
                                 Expr *LHSExpr, Expr *RHSExpr);

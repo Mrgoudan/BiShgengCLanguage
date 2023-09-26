@@ -282,6 +282,11 @@ struct PrintingPolicy {
   /// invalid C++ code.
   unsigned PrintInjectedClassNameWithArguments : 1;
 
+  /// Whether to print an InjectedTraitNameType with template arguments or as
+  /// written. When a template argument is unnamed, printing it results in
+  /// invalid BSC code.
+  unsigned PrintInjectedTraitNameWithArguments : 1;
+
   /// Whether to use C++ template preferred_name attributes when printing
   /// templates.
   unsigned UsePreferredNames : 1;

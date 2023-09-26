@@ -1606,6 +1606,11 @@ void TextNodeDumper::VisitInjectedClassNameType(
   dumpDeclRef(T->getDecl());
 }
 
+void TextNodeDumper::VisitInjectedTraitNameType(
+    const InjectedTraitNameType *T) {
+  dumpDeclRef(T->getDecl());
+}
+
 void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
   dumpDeclRef(T->getDecl());
 }
@@ -2098,6 +2103,10 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 }
 
 void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
+  dumpName(D);
+}
+
+void TextNodeDumper::VisitTraitTemplateDecl(const TraitTemplateDecl *D) {
   dumpName(D);
 }
 

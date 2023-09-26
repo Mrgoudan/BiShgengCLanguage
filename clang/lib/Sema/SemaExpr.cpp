@@ -6289,8 +6289,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
-      if (getLangOpts().BSC && ShouldDesugarTrait(ProtoArgType) &&
-          !ShouldDesugarTrait(Arg->getType())) {
+      if (getLangOpts().BSC && TryDesugarTrait(ProtoArgType) &&
+          !TryDesugarTrait(Arg->getType())) {
         Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
             Arg, ProtoArgType, Arg->getBeginLoc());
         if (TraitDesugaredExpr)
@@ -10279,6 +10279,17 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
     }
   }
   return true;
+}
+
+static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType) {
+  if (TraitDecl *TD = S.TryDesugarTrait(DstType)) {
+    if (SrcType->isPointerType()) {
+      QualType T = SrcType->getPointeeType().getCanonicalType();
+      if (TD->getTypeImpledVarDecl(T))
+        return true;
+    }
+  }
+  return false;
 }
 
 Sema::AssignConvertType
@@ -15730,7 +15741,7 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
 
   // Handling reassignments of variable types with trait pointers:
   if (getLangOpts().BSC && LHSExpr->getType() != RHSExpr->getType()) {
-    if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getTypePtr())) {
+    if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())) {
       RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());
       if (RD && RD->getDesugaredTraitDecl())
         return ActOnTraitReassign(S, TokLoc, Opc, RD, LHSExpr, RHSExpr);
@@ -17285,13 +17296,6 @@ static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,
                                               SrcExpr->getBeginLoc());
 }
 
-static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType) {
-  if (DstType->isTraitPointerType())
-    if (S.ShouldDesugarTrait(SrcType))
-      return true;
-  return false;
-}
-
 bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
                                     SourceLocation Loc,
                                     QualType DstType, QualType SrcType,
@@ -17336,10 +17340,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatibleFunctionPointer:
-    if (getLangOpts().BSC)
-      if (auto ULE = dyn_cast<UnresolvedLookupExpr>(SrcExpr))
-        if (ULE->isOverloaded())
-          return false;
     if (getLangOpts().CPlusPlus) {
       DiagKind = diag::err_typecheck_convert_incompatible_function_pointer;
       isInvalid = true;
@@ -17350,9 +17350,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointer:
-    if (getLangOpts().BSC)
-      if (DstType->isTraitPointerType())
-        return false;
+    // int a = 1; trait F* f = &a;
+    if (getLangOpts().BSC && IsTraitEqualExpr(*this, DstType, SrcType))
+      return false;
     if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {
@@ -17492,11 +17492,6 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     isInvalid = true;
     break;
   case Incompatible:
-    if (getLangOpts().BSC && IsTraitEqualExpr(*this, DstType, SrcType)) {
-      DiagnoseAssignmentEnum(DstType, SrcType, SrcExpr);
-      *Complained = true;
-      return false;
-    }
     if (maybeDiagnoseAssignmentToFunction(*this, DstType, SrcExpr)) {
       if (Complained)
         *Complained = true;
@@ -17538,6 +17533,22 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   AssignmentAction ActionForDiag = Action;
   if (Action == AA_Passing_CFAudited)
     ActionForDiag = AA_Passing;
+  if (TraitDecl *TD = TryDesugarTrait(SecondType)) {
+    QualType QT = Context.getTraitType(TD);
+    if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
+      TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
+      const TemplateSpecializationType *TST =
+          dyn_cast<TemplateSpecializationType>(
+              SecondType->getLocallyUnqualifiedSingleStepDesugaredType());
+      for (auto T : TST->template_arguments())
+        Args.addArgument(
+            TemplateArgumentLoc(T, Context.getTrivialTypeSourceInfo(
+                                       T.getAsType(), TTD->getBeginLoc())));
+      QT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
+      QT = Context.getElaboratedType(ETK_Trait, nullptr, QT);
+    }
+    SecondType = QT;
+  }
 
   FDiag << FirstType << SecondType << ActionForDiag
         << SrcExpr->getSourceRange();

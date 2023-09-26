@@ -16,6 +16,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
@@ -99,18 +100,20 @@ public:
   }
 
   friend class DeclContext;
+  llvm::PointerUnion<TraitTemplateDecl *, MemberSpecializationInfo *>
+      TemplateOrInstantiation;
 
 protected:
-  TraitDecl(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-            SourceLocation IdLoc, IdentifierInfo *Id, TraitDecl *PrevDecl);
+  TraitDecl(Kind DK, const ASTContext &C, DeclContext *DC,
+            SourceLocation StartLoc, SourceLocation IdLoc, IdentifierInfo *Id,
+            TraitDecl *PrevDecl);
 
 public:
   static TraitDecl *Create(const ASTContext &C, DeclContext *DC,
                            SourceLocation StartLoc, SourceLocation IdLoc,
-                           IdentifierInfo *Id, TraitDecl *PrevDecl = nullptr);
-
+                           IdentifierInfo *Id, TraitDecl *PrevDecl = nullptr,
+                           bool DelayTypeCreation = false);
   static TraitDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-
   TraitDecl *getPreviousDecl() {
     return cast_or_null<TraitDecl>(
         static_cast<TagDecl *>(this)->getPreviousDecl());
@@ -144,8 +147,40 @@ public:
     return cast_or_null<TraitDecl>(TagDecl::getDefinition());
   }
 
+  TraitTemplateDecl *getDescribedTraitTemplate() const;
+
+  void setDescribedTraitTemplate(TraitTemplateDecl *Template);
+
+  TemplateSpecializationKind getTemplateSpecializationKind() const;
+
+  MemberSpecializationInfo *getMemberSpecializationInfo() const;
+
+  bool isInjectedClassName() const;
+
+  TraitDecl *getMostRecentDecl() {
+    return cast<TraitDecl>(static_cast<TagDecl *>(this)->getMostRecentDecl());
+  }
+
+  const TraitDecl *getMostRecentDecl() const {
+    return const_cast<TraitDecl *>(this)->getMostRecentDecl();
+  }
+
+  TraitDecl *getMostRecentNonInjectedDecl() {
+    TraitDecl *Recent = static_cast<TraitDecl *>(this)->getMostRecentDecl();
+    while (Recent->isInjectedClassName()) {
+      // FIXME: Does injected class name need to be in the redeclarations chain?
+      assert(Recent->getPreviousDecl());
+      Recent = Recent->getPreviousDecl();
+    }
+    return Recent;
+  }
+
+  const TraitDecl *getMostRecentNonInjectedDecl() const {
+    return const_cast<TraitDecl *>(this)->getMostRecentNonInjectedDecl();
+  }
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) { return K == Trait; }
+  static bool classofKind(Kind K) { return K >= firstTrait && K <= lastTrait; }
 };
 
 class ImplTraitDecl : public DeclaratorDecl,
@@ -191,6 +226,245 @@ public:
   TraitDecl *getTraitDecl();
 
   ImplTraitDecl *getCanonicalDecl() override;
+};
+
+/// Declaration of a trait template.
+class TraitTemplateDecl : public RedeclarableTemplateDecl {
+protected:
+  // Data that is common to all of the declarations of a given
+  // trait template.
+  struct Common : CommonBase {
+    // The trait template specializations for this trait
+    // template, including explicit specializations and instantiations.
+    llvm::FoldingSetVector<TraitTemplateSpecializationDecl> Specializations;
+
+    /// The trait template partial specializations for this trait
+    /// template.
+    llvm::FoldingSetVector<TraitTemplateSpecializationDecl>
+        PartialSpecializations;
+
+    // The injected-class-name type for this class template.
+    QualType InjectedTraitNameType;
+
+    Common() = default;
+  };
+
+  /// Retrieve the set of specializations of this class template.
+  llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
+  getSpecializations() const;
+
+  /// Retrieve the set of partial specializations of this trait
+  /// template.
+  llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
+  getPartialSpecializations() const;
+
+  CommonBase *newCommon(ASTContext &C) const override;
+
+  Common *getCommonPtr() const {
+    return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
+  }
+
+  TraitTemplateDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
+                    DeclarationName Name, TemplateParameterList *Params,
+                    NamedDecl *Decl)
+      : RedeclarableTemplateDecl(TraitTemplate, C, DC, L, Name, Params, Decl) {}
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  /// Load any lazily-loaded specializations from the external source.
+  void LoadLazySpecializations() const;
+
+  /// Get the underlying trait declarations of the template.
+  TraitDecl *getTemplatedDecl() const {
+    return static_cast<TraitDecl *>(TemplatedDecl);
+  }
+
+  /// Returns whether this template declaration defines the primary
+  /// class pattern.
+  bool isThisDeclarationADefinition() const {
+    return getTemplatedDecl()->isThisDeclarationADefinition();
+  }
+
+  /// \brief Create a trait template node.
+  static TraitTemplateDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation L, DeclarationName Name,
+                                   TemplateParameterList *Params,
+                                   NamedDecl *Decl);
+
+  /// Create an empty trait template node.
+  static TraitTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  TraitTemplateDecl *getMostRecentDecl() {
+    return cast<TraitTemplateDecl>(
+        static_cast<RedeclarableTemplateDecl *>(this)->getMostRecentDecl());
+  }
+  const TraitTemplateDecl *getMostRecentDecl() const {
+    return const_cast<TraitTemplateDecl *>(this)->getMostRecentDecl();
+  }
+
+  /// Return the specialization with the provided arguments if it exists,
+  /// otherwise return the insertion point.
+  TraitTemplateSpecializationDecl *
+  findSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
+
+  /// Insert the specified specialization knowing that it is not already
+  /// in. InsertPos must be obtained from findSpecialization.
+  void AddSpecialization(TraitTemplateSpecializationDecl *D, void *InsertPos);
+
+  QualType getInjectedTraitNameSpecialization();
+
+  using spec_iterator = SpecIterator<TraitTemplateSpecializationDecl>;
+  using spec_range = llvm::iterator_range<spec_iterator>;
+
+  spec_range specializations() const {
+    return spec_range(spec_begin(), spec_end());
+  }
+
+  spec_iterator spec_begin() const {
+    return makeSpecIterator(getSpecializations(), false);
+  }
+
+  spec_iterator spec_end() const {
+    return makeSpecIterator(getSpecializations(), true);
+  }
+
+  // Implement isa/cast/dyncast support
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == TraitTemplate; }
+};
+
+/// Represents a trait template specialization, which refers to
+/// a trait template with a given set of template arguments.
+///
+/// Trait template specializations represent both explicit
+/// specialization of trait templates, as in the example below, and
+/// implicit instantiations of trait templates.
+///
+/// \code
+/// trait X<T> {};
+///
+/// trait X<int>; // trait template specialization X<int>
+/// \endcode
+class TraitTemplateSpecializationDecl : public TraitDecl,
+                                        public llvm::FoldingSetNode {
+  /// Further info for explicit template specialization/instantiation.
+  struct ExplicitSpecializationInfo {
+    /// The type-as-written.
+    TypeSourceInfo *TypeAsWritten = nullptr;
+
+    /// The location of the extern keyword.
+    SourceLocation ExternLoc;
+
+    /// The location of the template keyword.
+    SourceLocation TemplateKeywordLoc;
+
+    ExplicitSpecializationInfo() = default;
+  };
+
+  /// Further info for explicit template specialization/instantiation.
+  /// Does not apply to implicit specializations.
+  ExplicitSpecializationInfo *ExplicitInfo = nullptr;
+
+  /// The template that this specialization specializes.
+  llvm::PointerUnion<TraitTemplateDecl *> SpecializedTemplate;
+
+  /// The template arguments used to describe this specialization.
+  const TemplateArgumentList *TemplateArgs;
+
+  /// The point where this template was instantiated (if any)
+  SourceLocation PointOfInstantiation;
+
+  /// The kind of specialization this declaration refers to.
+  /// Really a value of type TemplateSpecializationKind.
+  unsigned SpecializationKind : 3;
+
+protected:
+  TraitTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
+                                  DeclContext *DC, SourceLocation StartLoc,
+                                  SourceLocation IdLoc,
+                                  TraitTemplateDecl *SpecializedTemplate,
+                                  ArrayRef<TemplateArgument> Args,
+                                  TraitTemplateSpecializationDecl *PrevDecl);
+
+  explicit TraitTemplateSpecializationDecl(ASTContext &C, Kind DK);
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  static TraitTemplateSpecializationDecl *
+  Create(ASTContext &Context, TagKind TK, DeclContext *DC,
+         SourceLocation StartLoc, SourceLocation IdLoc,
+         TraitTemplateDecl *SpecializedTemplate,
+         ArrayRef<TemplateArgument> Args,
+         TraitTemplateSpecializationDecl *PrevDecl);
+  static TraitTemplateSpecializationDecl *CreateDeserialized(ASTContext &C,
+                                                             unsigned ID);
+
+  TraitTemplateSpecializationDecl *getMostRecentDecl() {
+    return cast<TraitTemplateSpecializationDecl>(
+        getMostRecentNonInjectedDecl());
+  }
+
+  /// Retrieve the template arguments of the class template
+  /// specialization.
+  const TemplateArgumentList &getTemplateArgs() const { return *TemplateArgs; }
+
+  void setTemplateArgs(TemplateArgumentList *Args) { TemplateArgs = Args; }
+
+  /// Get the point of instantiation (if any), or null if none.
+  SourceLocation getPointOfInstantiation() const {
+    return PointOfInstantiation;
+  }
+
+  void setPointOfInstantiation(SourceLocation Loc) {
+    assert(Loc.isValid() && "point of instantiation must be valid!");
+    PointOfInstantiation = Loc;
+  }
+
+  TemplateSpecializationKind getSpecializationKind() const {
+    return static_cast<TemplateSpecializationKind>(SpecializationKind);
+  }
+
+  void setTypeAsWritten(TypeSourceInfo *T) {
+    if (!ExplicitInfo)
+      ExplicitInfo = new (getASTContext()) ExplicitSpecializationInfo;
+    ExplicitInfo->TypeAsWritten = T;
+  }
+
+  TypeSourceInfo *getTypeAsWritten() const {
+    return ExplicitInfo ? ExplicitInfo->TypeAsWritten : nullptr;
+  }
+
+  /// Gets the location of the extern keyword, if present.
+  SourceLocation getExternLoc() const {
+    return ExplicitInfo ? ExplicitInfo->ExternLoc : SourceLocation();
+  }
+
+  /// Retrieve the template that this specialization specializes.
+  TraitTemplateDecl *getSpecializedTemplate() const;
+
+  SourceLocation getTemplateKeywordLoc() const {
+    return ExplicitInfo ? ExplicitInfo->TemplateKeywordLoc : SourceLocation();
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, TemplateArgs->asArray(), getASTContext());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      ArrayRef<TemplateArgument> TemplateArgs,
+                      ASTContext &Context) {
+    ID.AddInteger(TemplateArgs.size());
+    for (const TemplateArgument &TemplateArg : TemplateArgs)
+      TemplateArg.Profile(ID, Context);
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+
+  static bool classofKind(Kind K) { return K == TraitTemplateSpecialization; }
 };
 
 } // namespace clang

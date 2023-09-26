@@ -540,6 +540,10 @@ void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 
+void TypeLocWriter::VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
+  addSourceLocation(TL.getNameLoc());
+}
+
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   addSourceLocation(TL.getElaboratedKeywordLoc());
   Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
@@ -934,6 +938,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_UNRESOLVED_USING);
   RECORD(TYPE_INJECTED_CLASS_NAME);
+  RECORD(TYPE_INJECTED_TRAIT_NAME);
   RECORD(TYPE_OBJC_OBJECT);
   RECORD(TYPE_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_TEMPLATE_SPECIALIZATION);
@@ -6156,6 +6161,18 @@ void ASTWriter::AddedAttributeToRecord(const Attr *Attr,
 
 void ASTWriter::AddedCXXTemplateSpecialization(
     const ClassTemplateDecl *TD, const ClassTemplateSpecializationDecl *D) {
+  assert(!WritingAST && "Already writing the AST!");
+
+  if (!TD->getFirstDecl()->isFromASTFile())
+    return;
+  if (Chain && Chain->isProcessingUpdateRecords())
+    return;
+
+  DeclsToEmitEvenIfUnreferenced.push_back(D);
+}
+
+void ASTWriter::AddedCXXTemplateSpecialization(
+    const TraitTemplateDecl *TD, const TraitTemplateSpecializationDecl *D) {
   assert(!WritingAST && "Already writing the AST!");
 
   if (!TD->getFirstDecl()->isFromASTFile())

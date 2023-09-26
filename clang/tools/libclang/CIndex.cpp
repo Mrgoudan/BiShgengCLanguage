@@ -1870,6 +1870,10 @@ bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
+bool CursorVisitor::VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
+  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
+}
+
 bool CursorVisitor::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
   return Visit(TL.getValueLoc());
 }
@@ -6740,6 +6744,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
 
   case Decl::Var:
   case Decl::ImplTrait:
+  case Decl::TraitTemplateSpecialization:
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Decomposition: {
@@ -6760,6 +6765,14 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
     if (RecordDecl *Def =
             cast<ClassTemplateDecl>(D)->getTemplatedDecl()->getDefinition())
       return MakeCXCursor(cast<CXXRecordDecl>(Def)->getDescribedClassTemplate(),
+                          TU);
+    return clang_getNullCursor();
+  }
+
+  case Decl::TraitTemplate: {
+    if (TraitDecl *Def =
+            cast<TraitTemplateDecl>(D)->getTemplatedDecl()->getDefinition())
+      return MakeCXCursor(cast<TraitDecl>(Def)->getDescribedTraitTemplate(),
                           TU);
     return clang_getNullCursor();
   }

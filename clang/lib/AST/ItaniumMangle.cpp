@@ -2427,6 +2427,10 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
         cast<InjectedClassNameType>(Ty)->getDecl());
     break;
 
+  case Type::InjectedTraitName:
+    mangleSourceNameWithAbiTags(cast<InjectedTraitNameType>(Ty)->getDecl());
+    break;
+
   case Type::DependentName:
     mangleSourceName(cast<DependentNameType>(Ty)->getIdentifier());
     break;
@@ -3872,6 +3876,13 @@ void CXXNameMangler::mangleType(const BlockPointerType *T) {
 }
 
 void CXXNameMangler::mangleType(const InjectedClassNameType *T) {
+  // Mangle injected class name types as if the user had written the
+  // specialization out fully.  It may not actually be possible to see
+  // this mangling, though.
+  mangleType(T->getInjectedSpecializationType());
+}
+
+void CXXNameMangler::mangleType(const InjectedTraitNameType *T) {
   // Mangle injected class name types as if the user had written the
   // specialization out fully.  It may not actually be possible to see
   // this mangling, though.

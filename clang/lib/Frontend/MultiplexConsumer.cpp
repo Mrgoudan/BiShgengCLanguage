@@ -90,6 +90,9 @@ public:
   void AddedCXXImplicitMember(const CXXRecordDecl *RD, const Decl *D) override;
   void AddedCXXTemplateSpecialization(const ClassTemplateDecl *TD,
                             const ClassTemplateSpecializationDecl *D) override;
+  void AddedCXXTemplateSpecialization(
+      const TraitTemplateDecl *TD,
+      const TraitTemplateSpecializationDecl *D) override;
   void AddedCXXTemplateSpecialization(const VarTemplateDecl *TD,
                                const VarTemplateSpecializationDecl *D) override;
   void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
@@ -143,6 +146,11 @@ void MultiplexASTMutationListener::AddedCXXImplicitMember(
 }
 void MultiplexASTMutationListener::AddedCXXTemplateSpecialization(
     const ClassTemplateDecl *TD, const ClassTemplateSpecializationDecl *D) {
+  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    Listeners[i]->AddedCXXTemplateSpecialization(TD, D);
+}
+void MultiplexASTMutationListener::AddedCXXTemplateSpecialization(
+    const TraitTemplateDecl *TD, const TraitTemplateSpecializationDecl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->AddedCXXTemplateSpecialization(TD, D);
 }

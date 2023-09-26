@@ -3965,8 +3965,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
     FnRetType = FD->getReturnType();
-    if (ShouldDesugarTrait(FnRetType) &&
-        !ShouldDesugarTrait(RetValExp->getType())) {
+    if (TryDesugarTrait(FnRetType) && !TryDesugarTrait(RetValExp->getType())) {
       Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
           RetValExp, FnRetType, RetValExp->getBeginLoc());
       if (TraitDesugaredExpr)

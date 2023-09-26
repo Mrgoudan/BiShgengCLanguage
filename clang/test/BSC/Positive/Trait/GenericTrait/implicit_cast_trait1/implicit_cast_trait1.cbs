@@ -1,0 +1,32 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include<stdlib.h>
+struct PollResult<T> {
+    int c;
+};
+
+trait Future<T> {
+    struct PollResult<T> poll(This* this, T a);
+};
+
+struct PollResult<int> int::poll(int* this, int a) {
+    struct PollResult<int> p;
+    p.c = a;
+    return p;
+}
+
+impl trait Future<int> for int;
+
+trait Future<int> *f() {
+    int* c = malloc(sizeof(int));
+    *c = 3;
+    return c;
+}
+
+int main() {
+    trait Future<int> *a = f();
+    int c = a->poll(0).c;
+    return c;
+}

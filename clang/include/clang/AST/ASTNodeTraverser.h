@@ -557,6 +557,15 @@ public:
     dumpTemplateDecl(D);
   }
 
+  void VisitTraitTemplateDecl(const TraitTemplateDecl *D) {
+    dumpTemplateDecl(D);
+  }
+
+  void VisitTraitTemplateSpecializationDecl(
+      const TraitTemplateSpecializationDecl *D) {
+    dumpTemplateArgumentList(D->getTemplateArgs());
+  }
+
   void VisitClassTemplateDecl(const ClassTemplateDecl *D) {
     dumpTemplateDecl(D);
   }

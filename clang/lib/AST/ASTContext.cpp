@@ -3613,6 +3613,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::UnaryTransform:
   case Type::DependentName:
   case Type::InjectedClassName:
+  case Type::InjectedTraitName:
   case Type::TemplateSpecialization:
   case Type::DependentTemplateSpecialization:
   case Type::TemplateTypeParm:
@@ -4603,6 +4604,33 @@ QualType ASTContext::getInjectedClassNameType(RecordDecl *Decl,
   return QualType(Decl->TypeForDecl, 0);
 }
 
+#ifndef NDEBUG
+static bool NeedsInjectedTraitNameType(const TraitDecl *TD) {
+  if (TD->getDescribedTraitTemplate())
+    return true;
+  return false;
+}
+#endif
+
+/// getInjectedTraitNameType - Return the unique reference to the
+/// injected trait name type for the specified templated declaration.
+QualType ASTContext::getInjectedTraitNameType(TraitDecl *Decl,
+                                              QualType TST) const {
+  assert(NeedsInjectedTraitNameType(Decl));
+  if (Decl->TypeForDecl) {
+    assert(isa<InjectedTraitNameType>(Decl->TypeForDecl));
+  } else if (TraitDecl *PrevDecl = Decl->getPreviousDecl()) {
+    assert(PrevDecl->TypeForDecl && "previous declaration has no type");
+    Decl->TypeForDecl = PrevDecl->TypeForDecl;
+    assert(isa<InjectedTraitNameType>(Decl->TypeForDecl));
+  } else {
+    Type *newType = new (*this, TypeAlignment) InjectedTraitNameType(Decl, TST);
+    Decl->TypeForDecl = newType;
+    Types.push_back(newType);
+  }
+  return QualType(Decl->TypeForDecl, 0);
+}
+
 /// getTypeDeclType - Return the unique reference to the type for the
 /// specified type declaration.
 QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
@@ -4624,6 +4652,7 @@ QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
     return getEnumType(Enum);
   } else if (const auto *Trait = dyn_cast<TraitDecl>(Decl)) {
     assert(Trait->isFirstDecl() && "Trait has previous declaration");
+    assert(!NeedsInjectedTraitNameType(Trait));
     return getTraitType(Trait);
   } else if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl)) {
     return getUnresolvedUsingType(Using);
