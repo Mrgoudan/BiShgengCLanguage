@@ -257,6 +257,19 @@ void StmtPrinter::VisitNullStmt(NullStmt *Node) {
 }
 
 void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
+  if (Policy.RewriteBSC) {
+    if (Node->isSingleDecl()) {
+      if (auto *VD = dyn_cast<VarDecl>(Node->getSingleDecl()))
+        if (VD->getType()->isTraitPointerType())
+          return;
+    } else {
+      for (auto N : Node->getDeclGroup()) {
+        if (auto *VD = dyn_cast<VarDecl>(N))
+          if (VD->getType()->isTraitPointerType())
+            return;
+      }
+    }
+  }
   Indent();
   PrintRawDeclStmt(Node);
   OS << ";" << NL;

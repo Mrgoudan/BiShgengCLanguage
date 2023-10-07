@@ -1,5 +1,9 @@
 // RUN: %clang %s -o %t.output
 // RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
 // expected-no-diagnostics
 
 #include <stdio.h>
@@ -16,6 +20,14 @@ struct Leah{
 trait TR { // define a trait
   void sayHi(This* this); // ThisType
 };
+// CHECK: struct __Trait_TR_Vtable {
+// CHECK-NEXT: void (*sayHi)(void *);
+// CHECK-NEXT: };
+
+// CHECK: struct __Trait_TR {
+// CHECK-NEXT:  void *data;
+// CHECK-NEXT: struct __Trait_TR_Vtable *vtable;
+// CHECK-NEXT: };
 
 void int::sayHi(int* this) {
   printf("Hi I'm int\n");
@@ -30,12 +42,18 @@ void struct Leah::sayHi(struct Leah* this) {
 }
 
 impl trait TR for int;
+// CHECK: struct __Trait_TR_Vtable __int_trait_TR = {.sayHi = (void (*)(void *))int_sayHi};
 impl trait TR for struct S;
+// CHECK: struct __Trait_TR_Vtable __struct_S_trait_TR = {.sayHi = (void (*)(void *))struct_S_sayHi};
 impl trait TR for struct Leah;
+// CHECK: struct __Trait_TR_Vtable __struct_Leah_trait_TR = {.sayHi = (void (*)(void *))struct_Leah_sayHi};
 
 void greet(trait TR* t) {
   t->sayHi();
 }
+// CHECK: void greet(struct __Trait_TR t) {
+// CHECK-NEXT: t.vtable->sayHi(t.data);
+// CHECK-NEXT: }
 
 int main() {
   int x = 42;
@@ -47,3 +65,10 @@ int main() {
   greet(&leah);
   return 0;
 }
+// CHECK: int x = 42;
+// CHECK-NEXT: greet((struct __Trait_TR){.data = &x, .vtable = &__int_trait_TR});
+// CHECK-NEXT: struct S *s1 = malloc(sizeof(struct S));
+// CHECK-NEXT: s1->x = 42;
+// CHECK-NEXT: greet((struct __Trait_TR){.data = s1, .vtable = &__struct_S_trait_TR});
+// CHECK-NEXT: struct Leah leah = {.age = 1};
+// CHECK-NEXT: greet((struct __Trait_TR){.data = &leah, .vtable = &__struct_Leah_trait_TR});

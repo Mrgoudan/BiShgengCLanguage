@@ -288,17 +288,24 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
     return ExprError().get();
   QualType VtableTy = VtablePT->getPointeeType();
 
-  ImplicitCastExpr *TraitData =
+  ExprResult TraitData =
       ImplicitCastExpr::Create(Context, VoidPT, CK_BitCast, UO, nullptr,
                                VK_PRValue, FPOptionsOverride());
+  Designation Desig;
+  Desig.AddDesignator(
+      Designator::getField(&Context.Idents.get("data"), DSLoc, DSLoc));
+  TraitData = ActOnDesignatedInitializer(Desig, DSLoc, false, TraitData);
   DeclRefExpr *VtableRef =
-      DeclRefExpr::Create(Context, NestedNameSpecifierLoc(), DSLoc, LookupVar,
-                          false, DSLoc, VtableTy, VK_LValue);
-  UnaryOperator *UOVtable =
+      DeclRefExpr::Create(Context, NestedNameSpecifierLoc(), SourceLocation(),
+                          LookupVar, false, DSLoc, VtableTy, VK_LValue);
+  ExprResult UOVtable =
       UnaryOperator::Create(Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
                             OK_Ordinary, DSLoc, false, FPOptionsOverride());
-
-  std::vector<Expr *> Exprs = {TraitData, UOVtable};
+  Designation Desig1;
+  Desig1.AddDesignator(
+      Designator::getField(&Context.Idents.get("vtable"), DSLoc, DSLoc));
+  UOVtable = ActOnDesignatedInitializer(Desig1, DSLoc, false, UOVtable);
+  std::vector<Expr *> Exprs = {TraitData.get(), UOVtable.get()};
   MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
   ExprResult Result = ActOnInitList(DSLoc, initExprs, DSLoc);
   TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(ProtoArgType);
@@ -325,8 +332,15 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
   if (TST) {
     ClassTemplateDecl *CTD = VT->getDescribedClassTemplate();
     void *InsertPos = nullptr;
+    TemplateArgumentListInfo Args(TypeLoc, TypeLoc);
+    for (auto T : TST->template_arguments())
+      Args.addArgument(TemplateArgumentLoc(
+          T, S.Context.getTrivialTypeSourceInfo(T.getAsType(), TypeLoc)));
+    SmallVector<TemplateArgument, 4> Converted;
+    S.CheckTemplateArgumentList(CTD, CTD->getBeginLoc(), Args, false, Converted,
+                                /*UpdateArgsWithConversions=*/true);
     if (ClassTemplateSpecializationDecl *CTSD =
-            CTD->findSpecialization(TST->template_arguments(), InsertPos))
+            CTD->findSpecialization(Converted, InsertPos))
       VT = CTSD;
   }
 
@@ -472,23 +486,19 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
       QualType ParenTy = Context.getParenType(FuncTy);
       QualType PointerTy = Context.getPointerType(ParenTy);
       TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(PointerTy);
-      std::string FPName = "__" + II->getName().str();
-      TypedefDecl *TDecl = TypedefDecl::Create(
-          Context, Context.getTranslationUnitDecl(), ITD->getBeginLoc(),
-          ITD->getLocation(), &Context.Idents.get(FPName), TInfo);
-      PushOnScopeChains(TDecl, getCurScope(), true);
-
-      Expr *ImplExpr = BuildDeclRefExpr(MD, MD->getType(), VK_LValue, TraitLoc);
-      ImplExpr = ImplicitCastExpr::Create(
-          Context, Context.getPointerType(ImplExpr->getType()),
-          CK_FunctionToPointerDecay, ImplExpr, nullptr, VK_PRValue,
+      ExprResult Res = BuildDeclRefExpr(MD, MD->getType(), VK_LValue, TraitLoc);
+      Res.get()->HasBSCScopeSpec = true;
+      Res = ImplicitCastExpr::Create(
+          Context, Context.getPointerType(Res.get()->getType()),
+          CK_FunctionToPointerDecay, Res.get(), nullptr, VK_PRValue,
           FPOptionsOverride());
-      ImplExpr = BuildCStyleCastExpr(ITD->getLocation(),
-                                     Context.getTrivialTypeSourceInfo(
-                                         Context.getTypedefType(TDecl)),
-                                     ITD->getLocation(), ImplExpr)
-                     .get();
-      InitExprs.push_back(ImplExpr);
+      Res = BuildCStyleCastExpr(ITD->getLocation(), TInfo, ITD->getLocation(),
+                                Res.get())
+                .get();
+      Designation Desig;
+      Desig.AddDesignator(Designator::getField(II, TraitLoc, TraitLoc));
+      Res = ActOnDesignatedInitializer(Desig, TraitLoc, false, Res);
+      InitExprs.push_back(Res.get());
     } else {
       Diag(TypeLoc, diag::err_trait_impl)
           << II << TraitInfo->getType() << ImplQT;

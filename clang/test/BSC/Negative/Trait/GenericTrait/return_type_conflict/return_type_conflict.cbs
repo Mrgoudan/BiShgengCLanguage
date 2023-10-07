@@ -12,6 +12,5 @@ float struct S::foo(struct S* this, int a) {
   return this->x;
 }
 
-impl trait F<int> for struct S; // expected-warning {{incompatible function pointer types initializing 'int (*)(void *, int)' with an expression of type '__foo' (aka 'float (*)(void *, int)')}} 
+impl trait F<int> for struct S; // expected-warning {{incompatible function pointer types initializing 'int (*)(void *, int)' with an expression of type 'float (*)(void *, int)'}} 
                                 // expected-error@-1 {{type of 'foo' conflicts with that of 'trait F<int>'}}
-                                // FIXME: should not show '__foo'

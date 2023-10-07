@@ -59,6 +59,7 @@ BSC/Positive/Trait/r3/type_cast_trait/type_cast_trait.cbs
 BSC/Positive/Trait/r3/impl_trait_for_typedef/impl_trait_for_typedef.cbs
 BSC/Positive/Trait/r3/impl_trait_for_long_name/impl_trait_for_long_name.cbs
 BSC/Positive/Trait/r3/trait_point_reassign/trait_point_reassign.cbs
+BSC/Positive/Trait/r3/trait_point_reassign/trait_pointer_assign.cbs
 BSC/Positive/Trait/r3/trait_pointer_uninitialized/trait_pointer_uninitialized.cbs
 BSC/Positive/Trait/r3/implicit_cast_trait/implicit_cast_trait.cbs
 BSC/Positive/Trait/r3/type_cast_trait1/type_cast_trait1.cbs
@@ -214,5 +215,7 @@ BSC/Positive/Trait/GenericTrait/return_generic_trait/return_generic_trait.cbs
 BSC/Positive/Trait/GenericTrait/trait_pointer_assign/trait_pointer_assign.cbs
 BSC/Positive/Trait/GenericTrait/trait_pointer_reassign/trait_pointer_reassign.cbs
 BSC/Positive/Trait/GenericTrait/trait_pointer_uninitialized/trait_pointer_uninitialized.cbs
+BSC/Positive/Trait/GenericTrait/type_cast_trait1/trait.hbs
 BSC/Positive/Trait/GenericTrait/type_cast_trait1/type_cast_trait1.cbs
 BSC/Positive/Trait/GenericTrait/type_cast_trait2/type_cast_trait2.cbs
+BSC/Positive/Trait/GenericTrait/trait_struct_instance/trait_struct_instance.cbs

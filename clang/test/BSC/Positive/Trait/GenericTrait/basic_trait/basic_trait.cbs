@@ -108,32 +108,12 @@ void int::free(int* this) {}
 
 impl trait Future<int> for int;
 // CHECK: ImplTraitDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:6, col:28> col:28 Future_int 'int'
-// CHECK-NEXT: TypedefDecl 0x{{[^ ]*}} <col:6, <invalid sloc>> col:28 __poll 'struct PollResult<int> (*)(void *, int)'
-// CHECK-NEXT: PointerType 0x{{[^ ]*}} 'struct PollResult<int> (*)(void *, int)'
-// CHECK-NEXT: ParenType 0x{{[^ ]*}} 'struct PollResult<int> (void *, int)' sugar
-// CHECK-NEXT: FunctionProtoType 0x{{[^ ]*}} 'struct PollResult<int> (void *, int)' cdecl
-// CHECK-NEXT: ElaboratedType 0x{{[^ ]*}} 'struct PollResult<int>' sugar
-// CHECK-NEXT: TemplateSpecializationType 0x{{[^ ]*}} 'PollResult<int>' sugar PollResult
-// CHECK-NEXT: TemplateArgument type 'int'
-// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'int'
-// CHECK-NEXT: RecordType 0x{{[^ ]*}} 'struct PollResult<int>'
-// CHECK-NEXT: ClassTemplateSpecialization 0x{{[^ ]*}} 'PollResult'
-// CHECK-NEXT: PointerType 0x{{[^ ]*}} 'void *'
-// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
-// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'int'
-// CHECK-NEXT: TypedefDecl 0x{{[^ ]*}} <col:6, <invalid sloc>> col:28 __free 'void (*)(void *)'
-// CHECK-NEXT: PointerType 0x{{[^ ]*}} 'void (*)(void *)'
-// CHECK-NEXT: ParenType 0x{{[^ ]*}} 'void (void *)' sugar
-// CHECK-NEXT: FunctionProtoType 0x{{[^ ]*}} 'void (void *)' cdecl
-// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
-// CHECK-NEXT: PointerType 0x{{[^ ]*}} 'void *'
-// CHECK-NEXT: BuiltinType 0x{{[^ ]*}} 'void'
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:6, col:28> col:28 __int_trait_Future 'struct __Trait_Future_Vtable<int>':'struct __Trait_Future_Vtable<int>' cinit 
 // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:6, col:28> 'struct __Trait_Future_Vtable<int>':'struct __Trait_Future_Vtable<int>'
-// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:28> '__poll':'struct PollResult<int> (*)(void *, int)' <BitCast>
+// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:28> 'struct PollResult<int> (*)(void *, int)' <BitCast>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:28> 'struct PollResult<int> (*)(int *, int)' <FunctionToPointerDecay> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:28> 'struct PollResult<int> (int *, int)' lvalue BSCMethod 0x{{[^ ]*}} 'poll' 'struct PollResult<int> (int *, int)'
-// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:28> '__free':'void (*)(void *)' <BitCast>
+// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:28> 'void (*)(void *)' <BitCast>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:28> 'void (*)(int *)' <FunctionToPointerDecay> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:28> 'void (int *)' lvalue BSCMethod 0x{{[^ ]*}} 'free' 'void (int *)'
 

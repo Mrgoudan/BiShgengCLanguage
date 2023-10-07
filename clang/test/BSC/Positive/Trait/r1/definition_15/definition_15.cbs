@@ -1,5 +1,9 @@
 // RUN: %clang %s -o %t.output
 // RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
 // expected-no-diagnostics
 
 trait F {
@@ -21,3 +25,28 @@ int main() {
   trait F* f = get(&a);
   return 0;
 }
+
+// CHECK: struct __Trait_F_Vtable {
+// CHECK-NEXT: int (*foo)(void *);
+// CHECK-NEXT: };
+
+// CHECK: struct __Trait_F {
+// CHECK-NEXT: void *data;
+// CHECK-NEXT: struct __Trait_F_Vtable *vtable;
+// CHECK-NEXT: };
+
+// CHECK: struct __Trait_F get(struct __Trait_F f) {
+// CHECK-NEXT: return f;
+// CHECK-NEXT: }
+
+// CHECK: int int_foo(int *this) {
+// CHECK-NEXT: return 0;
+// CHECK-NEXT: }
+
+// CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *))int_foo};
+
+// CHECK: int main(void) {
+// CHECK-NEXT: int a = 1;
+// CHECK-NEXT: struct __Trait_F f_1 = get((struct __Trait_F){.data = &a, .vtable = &__int_trait_F});
+// CHECK-NEXT: return 0;
+// CHECK-NEXT: }

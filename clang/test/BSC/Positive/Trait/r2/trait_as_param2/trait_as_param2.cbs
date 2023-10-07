@@ -1,5 +1,9 @@
 // RUN: %clang %s -o %t.output
 // RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
 // expected-no-diagnostics
 
 #include <stdio.h>
@@ -11,6 +15,14 @@ struct S{
 trait TR {
   void sayHi(This* this);
 };
+// CHECK: struct __Trait_TR_Vtable {
+// CHECK-NEXT: void (*sayHi)(void *);
+// CHECK-NEXT: };
+
+// CHECK: struct __Trait_TR {
+// CHECK-NEXT: void *data;
+// CHECK-NEXT: struct __Trait_TR_Vtable *vtable;
+// CHECK-NEXT: };
 
 void int::sayHi(int* this) {
   printf("int says Hi\n");
@@ -21,11 +33,17 @@ void struct S::sayHi(struct S* this) {
 }
 
 impl trait TR for int;
+// CHECK: struct __Trait_TR_Vtable __int_trait_TR = {.sayHi = (void (*)(void *))int_sayHi};
 impl trait TR for struct S;
+// CHECK: struct __Trait_TR_Vtable __struct_S_trait_TR = {.sayHi = (void (*)(void *))struct_S_sayHi};
 
 void greet(trait TR* t) {
   t->sayHi();
 }
+// CHECK: void greet(struct __Trait_TR t) {
+// CHECK-NEXT: t.vtable->sayHi(t.data);
+// CHECK-NEXT: }
+
 
 int main() {
   int x = 42;
@@ -36,3 +54,9 @@ int main() {
   greet(t2);
   return 0;
 }
+// CHECK: int x = 42;
+// CHECK-NEXT: struct __Trait_TR t1_1 = {&x, &__int_trait_TR};
+// CHECK-NEXT: greet(t1_1);
+// CHECK-NEXT: struct S s1 = {.x = 42};
+// CHECK-NEXT: struct __Trait_TR t2_1 = {&s1, &__struct_S_trait_TR};
+// CHECK-NEXT: greet(t2_1);
