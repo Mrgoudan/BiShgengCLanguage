@@ -646,31 +646,35 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   std::vector<Stmt *> Stmts;
   Stmts.push_back(DataDS);
 
-  std::string MallocName = "malloc";
+  std::string CallocName = "calloc";
 
-  DeclContext::lookup_result MallocDecls =
+  DeclContext::lookup_result CallocDecls =
       S.Context.getTranslationUnitDecl()->lookup(
-          DeclarationName(&(S.Context.Idents).get(MallocName)));
-  FunctionDecl *MallocFunc = nullptr;
-  if (MallocDecls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = MallocDecls.begin(),
-                                              E = MallocDecls.end();
+          DeclarationName(&(S.Context.Idents).get(CallocName)));
+  FunctionDecl *CallocFunc = nullptr;
+  if (CallocDecls.isSingleResult()) {
+    for (DeclContext::lookup_result::iterator I = CallocDecls.begin(),
+                                              E = CallocDecls.end();
          I != E; ++I) {
       if (isa<FunctionDecl>(*I)) {
-        MallocFunc = dyn_cast<FunctionDecl>(*I);
+        CallocFunc = dyn_cast<FunctionDecl>(*I);
         break;
       }
     }
   } else {
     S.Diag(FD->getBeginLoc(), diag::err_function_not_found)
-        << MallocName << "<stdlib.h>";
+        << CallocName << "<stdlib.h>";
     return nullptr;
   }
 
-  Expr *MallocRef =
-      S.BuildDeclRefExpr(MallocFunc, MallocFunc->getType(), VK_LValue, NLoc);
-  MallocRef = S.ImpCastExprToType(
-                   MallocRef, S.Context.getPointerType(MallocRef->getType()),
+  llvm::APInt OneResultVal(S.Context.getTargetInfo().getIntWidth(), 1);
+  Expr *One = IntegerLiteral::Create(S.Context, OneResultVal, S.Context.IntTy,
+                                     SourceLocation());
+
+  Expr *CallocRef =
+      S.BuildDeclRefExpr(CallocFunc, CallocFunc->getType(), VK_LValue, NLoc);
+  CallocRef = S.ImpCastExprToType(
+                   CallocRef, S.Context.getPointerType(CallocRef->getType()),
                    CK_FunctionToPointerDecay)
                   .get();
   // sizeof(struct __Futurex)
@@ -679,11 +683,12 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
            S.Context.getTrivialTypeSourceInfo(S.Context.getRecordType(RD)),
            NLoc, UETT_SizeOf, SourceRange())
           .get();
-  SmallVector<Expr *, 1> Args;
+  SmallVector<Expr *, 2> Args;
+  Args.push_back(One);
   Args.push_back(SizeOfExpr);
 
-  // malloc(sizeof(struct __Futurex))
-  Expr *CE = S.BuildCallExpr(nullptr, MallocRef, SourceLocation(), Args,
+  // calloc(1, sizeof(struct __Futurex))
+  Expr *CE = S.BuildCallExpr(nullptr, CallocRef, SourceLocation(), Args,
                              SourceLocation())
                  .get();
   CE = S.ImpCastExprToType(
@@ -732,17 +737,14 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
       S.ImpCastExprToType(ExitRef, S.Context.getPointerType(ExitRef->getType()),
                           CK_FunctionToPointerDecay)
           .get();
-  
-  llvm::APInt OneResultVal(S.Context.getTargetInfo().getIntWidth(), 1);
-  Expr *One = IntegerLiteral::Create(S.Context, OneResultVal,
-                                             S.Context.IntTy, SourceLocation());
+
   SmallVector<Expr *, 1> ExitArgs = {One};
   Expr *ExitCE = S.BuildCallExpr(nullptr, ExitRef, SourceLocation(), ExitArgs,
                              SourceLocation())
                  .get();
   // Current code: if (data == 0) exit(1);
-  // TODO: before exit(1) function, hope there is printf("malloc failed\n")
-  // function to prompt for malloc failure. and it need to import header file
+  // TODO: before exit(1) function, hope there is printf("calloc failed\n")
+  // function to prompt for calloc failure. and it need to import header file
   // "stdio.h".
   SmallVector<Stmt *, 1> BodyStmts = {ExitCE};
   Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
@@ -935,7 +937,10 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   VarDecl *VD = VarDecl::Create(S.Context, NewFD, SLoc, SLoc,
                                 &(S.Context.Idents).get(IName), FuncRetType,
                                 nullptr, SC_None);
-  S.ActOnUninitializedDecl(VD);
+  InitListExpr *ILE = new (S.Context)
+      InitListExpr(S.Context, SourceLocation(), {}, SourceLocation());
+  ILE->setType(FuncRetType);
+  S.AddInitializerToDecl(VD, ILE, /*DirectInit=*/false);
   DeclGroupRef FutureDG(VD);
   DeclStmt *FutureDS = new (S.Context) DeclStmt(FutureDG, NLoc, NLoc);
   std::vector<Stmt *> Stmts;
