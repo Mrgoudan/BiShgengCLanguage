@@ -62,11 +62,13 @@ protected:
                                                  StringRef InFile) override;
 };
 
+#if ENABLE_BSC
 class RewriteBSCAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 };
+#endif
 
 class RewriteMacrosAction : public PreprocessorFrontendAction {
 protected:

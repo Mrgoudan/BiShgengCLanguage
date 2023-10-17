@@ -16,8 +16,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
@@ -337,9 +339,11 @@ namespace clang {
     void VisitRecordDecl(RecordDecl *RD);
     RedeclarableResult VisitCXXRecordDeclImpl(CXXRecordDecl *D);
     void VisitCXXRecordDecl(CXXRecordDecl *D) { VisitCXXRecordDeclImpl(D); }
+    #if ENABLE_BSC
     RedeclarableResult VisitTraitDeclImpl(TraitDecl *TD);
     void VisitTraitDecl(TraitDecl *TD) { VisitTraitDeclImpl(TD); }
     void VisitImplTraitDecl(ImplTraitDecl *ITD);
+    #endif
     RedeclarableResult VisitClassTemplateSpecializationDeclImpl(
                                             ClassTemplateSpecializationDecl *D);
 
@@ -352,12 +356,14 @@ namespace clang {
                                      ClassTemplatePartialSpecializationDecl *D);
     void VisitClassScopeFunctionSpecializationDecl(
                                        ClassScopeFunctionSpecializationDecl *D);
+    #if ENABLE_BSC
     RedeclarableResult VisitTraitTemplateSpecializationDeclImpl(
         TraitTemplateSpecializationDecl *D);
     void
     VisitTraitTemplateSpecializationDecl(TraitTemplateSpecializationDecl *D) {
       VisitTraitTemplateSpecializationDeclImpl(D);
     }
+    #endif
     RedeclarableResult
     VisitVarTemplateSpecializationDeclImpl(VarTemplateSpecializationDecl *D);
 
@@ -374,7 +380,9 @@ namespace clang {
     void VisitDeclaratorDecl(DeclaratorDecl *DD);
     void VisitFunctionDecl(FunctionDecl *FD);
     void VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *GD);
+    #if ENABLE_BSC
     void VisitBSCMethodDecl(BSCMethodDecl *D);
+    #endif
     void VisitCXXMethodDecl(CXXMethodDecl *D);
     void VisitCXXConstructorDecl(CXXConstructorDecl *D);
     void VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -397,7 +405,9 @@ namespace clang {
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     RedeclarableResult VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
+    #if ENABLE_BSC
     void VisitTraitTemplateDecl(TraitTemplateDecl *D);
+    #endif
     void VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D);
     void VisitVarTemplateDecl(VarTemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
@@ -832,6 +842,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setParamDestroyedInCallee(Record.readInt());
   RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
 
+  #if ENABLE_BSC
   ASTContext &C = Reader.getContext();
 
   enum CXXRecKind {
@@ -872,6 +883,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
     break;
   }
   }
+  #endif
 
   return Redecl;
 }
@@ -904,6 +916,7 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
   }
 }
 
+#if ENABLE_BSC
 ASTDeclReader::RedeclarableResult
 ASTDeclReader::VisitTraitDeclImpl(TraitDecl *TD) {
   RedeclarableResult Redecl = VisitTagDecl(TD);
@@ -914,6 +927,7 @@ void ASTDeclReader::VisitImplTraitDecl(ImplTraitDecl *ITD) {
   VisitRedeclarable(ITD);
   VisitDeclaratorDecl(ITD);
 }
+#endif
 
 void ASTDeclReader::VisitValueDecl(ValueDecl *VD) {
   VisitNamedDecl(VD);
@@ -974,10 +988,14 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   // after everything else is read.
 
   FD->setStorageClass(static_cast<StorageClass>(Record.readInt()));
+  #if ENABLE_BSC
   FD->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
+  #endif
   FD->setInlineSpecified(Record.readInt());
   FD->setImplicitlyInline(Record.readInt());
+  #if ENABLE_BSC
   FD->setAsyncSpecified(Record.readInt());
+  #endif
   FD->setVirtualAsWritten(Record.readInt());
   // We defer calling `FunctionDecl::setPure()` here as for methods of
   // `CXXTemplateSpecializationDecl`s, we may not have connected up the
@@ -2084,6 +2102,44 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
 
   ASTContext &C = Reader.getContext();
 
+  #if !ENABLE_BSC
+  enum CXXRecKind {
+    CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization
+  };
+  switch ((CXXRecKind)Record.readInt()) {
+  case CXXRecNotTemplate:
+    // Merged when we merge the folding set entry in the primary template.
+    if (!isa<ClassTemplateSpecializationDecl>(D))
+      mergeRedeclarable(D, Redecl);
+    break;
+  case CXXRecTemplate: {
+    // Merged when we merge the template.
+    auto *Template = readDeclAs<ClassTemplateDecl>();
+    D->TemplateOrInstantiation = Template;
+    if (!Template->getTemplatedDecl()) {
+      // We've not actually loaded the ClassTemplateDecl yet, because we're
+      // currently being loaded as its pattern. Rely on it to set up our
+      // TypeForDecl (see VisitClassTemplateDecl).
+      //
+      // Beware: we do not yet know our canonical declaration, and may still
+      // get merged once the surrounding class template has got off the ground.
+      DeferredTypeID = 0;
+    }
+    break;
+  }
+  case CXXRecMemberSpecialization: {
+    auto *RD = readDeclAs<CXXRecordDecl>();
+    auto TSK = (TemplateSpecializationKind)Record.readInt();
+    SourceLocation POI = readSourceLocation();
+    MemberSpecializationInfo *MSI = new (C) MemberSpecializationInfo(RD, TSK);
+    MSI->setPointOfInstantiation(POI);
+    D->TemplateOrInstantiation = MSI;
+    mergeRedeclarable(D, Redecl);
+    break;
+  }
+  }
+  #endif
+
   bool WasDefinition = Record.readInt();
   if (WasDefinition)
     ReadCXXRecordDefinition(D, /*Update*/false);
@@ -2112,11 +2168,13 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   D->setIsCopyDeductionCandidate(Record.readInt());
 }
 
+#if ENABLE_BSC
 void ASTDeclReader::VisitBSCMethodDecl(BSCMethodDecl *D) {
   VisitFunctionDecl(D);
   D->setExtendedType(Record.readQualType());
   D->setHasThisParam(Record.readInt());
 }
+#endif
 
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {
   VisitFunctionDecl(D);
@@ -2290,6 +2348,7 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   }
 }
 
+#if ENABLE_BSC
 void ASTDeclReader::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarableTemplateDecl(D);
 
@@ -2306,6 +2365,7 @@ void ASTDeclReader::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
         D->getTemplatedDecl(), D->getInjectedTraitNameSpecialization());
   }
 }
+#endif
 
 void ASTDeclReader::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   llvm_unreachable("BuiltinTemplates are not serialized");
@@ -2436,6 +2496,7 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   }
 }
 
+#if ENABLE_BSC
 ASTDeclReader::RedeclarableResult
 ASTDeclReader::VisitTraitTemplateSpecializationDeclImpl(
     TraitTemplateSpecializationDecl *D) {
@@ -2478,6 +2539,7 @@ ASTDeclReader::VisitTraitTemplateSpecializationDeclImpl(
 
   return Redecl;
 }
+#endif
 
 /// TODO: Unify with ClassTemplateSpecializationDecl version?
 ///       May require unifying ClassTemplate(Partial)SpecializationDecl and
@@ -3676,12 +3738,14 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_ENUM:
     D = EnumDecl::CreateDeserialized(Context, ID);
     break;
+  #if ENABLE_BSC
   case DECL_TRAIT:
     D = TraitDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_IMPL_TRAIT:
     D = ImplTraitDecl::CreateDeserialized(Context, ID);
     break;
+  #endif
   case DECL_RECORD:
     D = RecordDecl::CreateDeserialized(Context, ID);
     break;
@@ -3691,9 +3755,11 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_FUNCTION:
     D = FunctionDecl::CreateDeserialized(Context, ID);
     break;
+  #if ENABLE_BSC
   case DECL_BSC_METHOD:
     D = BSCMethodDecl::CreateDeserialized(Context, ID);
     break;
+  #endif
   case DECL_LINKAGE_SPEC:
     D = LinkageSpecDecl::CreateDeserialized(Context, ID);
     break;
@@ -3772,12 +3838,14 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION:
     D = ClassTemplatePartialSpecializationDecl::CreateDeserialized(Context, ID);
     break;
+  #if ENABLE_BSC
   case DECL_TRAIT_TEMPLATE:
     D = TraitTemplateDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_TRAIT_TEMPLATE_SPECIALIZATION:
     D = TraitTemplateSpecializationDecl::CreateDeserialized(Context, ID);
     break;
+  #endif
   case DECL_VAR_TEMPLATE:
     D = VarTemplateDecl::CreateDeserialized(Context, ID);
     break;

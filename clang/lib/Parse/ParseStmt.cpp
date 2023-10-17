@@ -225,7 +225,9 @@ Retry:
     LLVM_FALLTHROUGH;
   }
 
+#if ENABLE_BSC
 Default:
+#endif
   default: {
     bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
@@ -233,12 +235,17 @@ Default:
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
     // FIXME: if-cond is too complex here.
     if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
+         #if ENABLE_BSC
          getLangOpts().BSC ||
+         #endif
          (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
              ParsedStmtContext()) &&
         ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
-         (isDeclarationStatement() &&
-         !(getLangOpts().BSC && FindUntil(tok::coloncolon))))) {
+         (isDeclarationStatement()
+         #if ENABLE_BSC
+         && !(getLangOpts().BSC && FindUntil(tok::coloncolon))
+         #endif
+         ))) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
       if (GNUAttributeLoc.isValid()) {
@@ -268,6 +275,7 @@ Default:
     return ParseExprStatement(StmtCtx);
   }
 
+  #if ENABLE_BSC
   case tok::kw___Safe__:
   case tok::kw___Unsafe__: {
     Token Next = NextToken();
@@ -275,6 +283,7 @@ Default:
       return ParseCompoundStatement();
     goto Default;
   }
+  #endif
 
   case tok::kw___attribute: {
     GNUAttributeLoc = Tok.getLocation();
@@ -496,9 +505,11 @@ Default:
     HandlePragmaAttribute();
     return StmtEmpty();
 
+  #if ENABLE_BSC
   case tok::annot_pragma_safe:
     HandlePragmaSafe();
     return StmtEmpty();
+  #endif
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -973,6 +984,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
                                           unsigned ScopeFlags) {
   // Add security scope identification processing.
+  #if ENABLE_BSC
   SafeScopeSpecifier SafeSpec = SS_None;
   SourceLocation SafeLoc;
 
@@ -985,6 +997,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   }
 
   ResetPreferInlineScopeToNone();
+  #endif
 
   assert(Tok.is(tok::l_brace) && "Not a compount stmt!");
 
@@ -993,7 +1006,11 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr, SafeSpec, SafeLoc);
+  return ParseCompoundStatementBody(isStmtExpr
+                                    #if ENABLE_BSC
+                                    , SafeSpec, SafeLoc
+                                    #endif
+                                    );
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1055,12 +1072,14 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_dump:
       HandlePragmaDump();
       break;
+    #if ENABLE_BSC
     case tok::annot_pragma_safe:
       HandlePragmaSafe();
       break;
     case tok::annot_pragma_prefer_inline:
       HandlePragmaPreferInline();
-      break;   
+      break;
+    #endif   
     default:
       checkForPragmas = false;
       break;
@@ -1122,7 +1141,11 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
 /// ActOnCompoundStmt action.  This expects the '{' to be the current token, and
 /// consume the '}' at the end of the block.  It does not manipulate the scope
 /// stack.
-StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc) {
+StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr
+                                              #if ENABLE_BSC
+                                              , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
+                                              #endif
+                                              ) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
                                 Tok.getLocation(),
                                 "in compound statement ('{}')");
@@ -1191,9 +1214,11 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifie
     StmtResult R;
     if (Tok.isNot(tok::kw___extension__)) {
       R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
+      #if ENABLE_BSC
       if (Tok.isNot(tok::annot_pragma_prefer_inline) && R.get() != nullptr) {
         ResetPreferInlineScopeToNone();
       }
+      #endif
     } else {
       // __extension__ can start declarations and it can also be a unary
       // operator for expressions.  Consume multiple __extension__ markers here
@@ -1238,6 +1263,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifie
     if (R.isUsable())
       Stmts.push_back(R.get());
 
+    #if ENABLE_BSC
     if (getLangOpts().BSC && R.isUsable()) {
       // desugar for trait F *f = &a;
       if (auto *DS = dyn_cast<DeclStmt>(R.get())) {
@@ -1265,6 +1291,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifie
         }
       }
     }
+    #endif
   }
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using
@@ -1294,7 +1321,11 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr, SafeScopeSpecifie
     CloseLoc = T.getCloseLocation();
 
   return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,
-                                   Stmts, isStmtExpr, SafeSpec, SafeLoc);
+                                   Stmts, isStmtExpr
+                                   #if ENABLE_BSC
+                                   , SafeSpec, SafeLoc
+                                   #endif
+                                   );
 }
 
 /// ParseParenExprOrCondition:
@@ -1541,7 +1572,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                                   /*MissingOK=*/false, &LParen, &RParen))
       return StmtError();
 
+    #if ENABLE_BSC
     ResetPreferInlineScopeToNone();
+    #endif
 
     if (IsConstexpr)
       ConstexprCondition = Cond.getKnownValue();
@@ -1635,7 +1668,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
     ElseStmt = ParseStatement();
 
+    #if ENABLE_BSC
     ResetPreferInlineScopeToNone();
+    #endif
 
     if (ElseStmt.isUsable())
       MIChecker.Check();
@@ -1741,7 +1776,9 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
                                 /*MissingOK=*/false, &LParen, &RParen))
     return StmtError();
 
+  #if ENABLE_BSC
   ResetPreferInlineScopeToNone();
+  #endif
 
   StmtResult Switch = Actions.ActOnStartOfSwitchStmt(
       SwitchLoc, LParen, InitStmt.get(), Cond, RParen);
@@ -1834,7 +1871,9 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
                                 /*MissingOK=*/false, &LParen, &RParen))
     return StmtError();
 
+  #if ENABLE_BSC
   ResetPreferInlineScopeToNone();
+  #endif
 
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1895,6 +1934,7 @@ StmtResult Parser::ParseDoStatement() {
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
+  #if ENABLE_BSC
   bool IsPreferInlineStatement = false;
   PreferInlineScopeSpecifier PreferInlineState;
   if (Actions.GetPragmaPreferInlineInfo() != PI_None) {
@@ -1902,6 +1942,7 @@ StmtResult Parser::ParseDoStatement() {
     PreferInlineState = Actions.GetPragmaPreferInlineInfo();
     Actions.SetPragmaPreferInlineInfo(PI_None);
   }
+  #endif
 
   // Read the body statement.
   StmtResult Body(ParseStatement());
@@ -1909,7 +1950,9 @@ StmtResult Parser::ParseDoStatement() {
   // Pop the body scope if needed.
   InnerScope.Exit();
 
+  #if ENABLE_BSC
   ResetPreferInlineScopeToNone();
+  #endif
 
   if (IsPreferInlineStatement) {
     Actions.SetPragmaPreferInlineInfo(PreferInlineState);

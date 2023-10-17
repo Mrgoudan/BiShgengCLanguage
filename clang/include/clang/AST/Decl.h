@@ -54,7 +54,9 @@ namespace clang {
 class ASTContext;
 struct ASTTemplateArgumentListInfo;
 class CompoundStmt;
+#if ENABLE_BSC
 class ClassTemplateDecl;
+#endif
 class DependentFunctionTemplateSpecializationInfo;
 class EnumDecl;
 class Expr;
@@ -1706,7 +1708,9 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
+  #if ENABLE_BSC
   bool IsThisParam = false;
+  #endif
 
   void setObjCMethodScopeInfo(unsigned parameterIndex) {
     ParmVarDeclBits.IsObjCMethodParam = true;
@@ -2017,8 +2021,11 @@ protected:
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool UsesFPIntrin,
                bool isInlineSpecified, ConstexprSpecKind ConstexprKind,
-               Expr *TrailingRequiresClause = nullptr,
-               bool isAsyncSpecified = false);
+               Expr *TrailingRequiresClause = nullptr
+               #if ENABLE_BSC
+               , bool isAsyncSpecified = false
+               #endif
+               );
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2054,13 +2061,20 @@ public:
          TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin = false,
          bool isInlineSpecified = false, bool hasWrittenPrototype = true,
          ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified,
-         Expr *TrailingRequiresClause = nullptr,
-         bool isAsyncSpecified = false) {
+         Expr *TrailingRequiresClause = nullptr
+         #if ENABLE_BSC
+         , bool isAsyncSpecified = false
+         #endif
+         ) {
     DeclarationNameInfo NameInfo(N, NLoc);
     return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 UsesFPIntrin, isInlineSpecified,
                                 hasWrittenPrototype, ConstexprKind,
-                                TrailingRequiresClause, isAsyncSpecified);
+                                TrailingRequiresClause
+                                #if ENABLE_BSC
+                                , isAsyncSpecified
+                                #endif
+                                );
   }
 
   static FunctionDecl *
@@ -2068,7 +2082,11 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInlineSpecified,
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause, bool isAsyncSpecified = false);
+         Expr *TrailingRequiresClause
+         #if ENABLE_BSC
+         , bool isAsyncSpecified = false
+         #endif
+         );
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2117,6 +2135,7 @@ public:
     return hasBody(Definition);
   }
 
+  #if ENABLE_BSC
   void setSafeSpecifier(SafeScopeSpecifier SafeSpec) {
     FunctionDeclBits.SafeSpecifier = SafeSpec;
   }
@@ -2124,6 +2143,7 @@ public:
   SafeScopeSpecifier getSafeSpecifier() const {
     return (SafeScopeSpecifier) FunctionDeclBits.SafeSpecifier;
   }
+  #endif
 
   /// Returns whether the function has a trivial body that does not require any
   /// specific codegen.
@@ -2563,7 +2583,11 @@ public:
   /// may be fewer than the number of function parameters, if some of the
   /// parameters have default arguments (in C++) or contain "this" parameter (in
   /// BSC).
-  unsigned getMinRequiredArguments(bool HasBSCScopeSpec = false) const;
+  unsigned getMinRequiredArguments(
+                                  #if ENABLE_BSC
+                                  bool HasBSCScopeSpec = false
+                                  #endif
+                                  ) const;
 
   /// Determine whether this function has a single parameter, or multiple
   /// parameters where all but the first have default arguments.
@@ -2631,12 +2655,14 @@ public:
     FunctionDeclBits.SClass = SClass;
   }
 
+  #if ENABLE_BSC
   /// Determine whether the "async" keyword was specified for this
   /// function.
   bool isAsyncSpecified() const { return FunctionDeclBits.IsAsyncSpecified; }
 
   /// Set whether the "async" keyword was specified for this function.
   void setAsyncSpecified(bool I) { FunctionDeclBits.IsAsyncSpecified = I; }
+  #endif
 
   /// Determine whether the "inline" keyword was specified for this
   /// function.
@@ -3592,7 +3618,9 @@ public:
   bool isClass()  const { return getTagKind() == TTK_Class; }
   bool isUnion()  const { return getTagKind() == TTK_Union; }
   bool isEnum()   const { return getTagKind() == TTK_Enum; }
+  #if ENABLE_BSC
   bool isTrait() const { return getTagKind() == TTK_Trait; }
+  #endif
 
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?
@@ -3975,8 +4003,10 @@ public:
   /// classes of class template specializations, this will be the
   /// MemberSpecializationInfo referring to the member class that was
   /// instantiated or specialized.
+  #if ENABLE_BSC
   llvm::PointerUnion<ClassTemplateDecl *, MemberSpecializationInfo *>
       TemplateOrInstantiation;
+  #endif
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -3986,8 +4016,11 @@ protected:
 public:
   static RecordDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                             SourceLocation StartLoc, SourceLocation IdLoc,
-                            IdentifierInfo *Id, RecordDecl *PrevDecl = nullptr,
-                            bool DelayTypeCreation = false);
+                            IdentifierInfo *Id, RecordDecl *PrevDecl = nullptr
+                            #if ENABLE_BSC
+                            , bool DelayTypeCreation = false
+                            #endif
+                            );
   static RecordDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
   RecordDecl *getPreviousDecl() {
@@ -4013,9 +4046,12 @@ public:
     RecordDeclBits.HasFlexibleArrayMember = V;
   }
 
+  #if ENABLE_BSC
   void setDesugaredTraitDecl(TraitDecl *TD) { DesugaredTD = TD; }
 
   TraitDecl *getDesugaredTraitDecl() { return DesugaredTD; }
+  #endif
+
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
   /// there must be no objects of this type declared, e.g.,
@@ -4101,6 +4137,7 @@ public:
     RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion = V;
   }
 
+  #if ENABLE_BSC
   /// The declaration for X<int>::A is a (non-templated) CXXRecordDecl
   /// whose parent is the class template specialization X<int>. For
   /// this declaration, getInstantiatedFromMemberClass() will return
@@ -4164,6 +4201,7 @@ public:
     return const_cast<FunctionDecl *>(
         const_cast<const RecordDecl *>(this)->isLocalClass());
   }
+  #endif
 
   /// Determine whether this class can be passed in registers. In C++ mode,
   /// it must have at least one trivial, non-deleted copy or move constructor.
@@ -4282,7 +4320,9 @@ private:
   /// Deserialize just the fields.
   void LoadFieldsFromExternalStorage() const;
 
+  #if ENABLE_BSC
   TraitDecl *DesugaredTD = nullptr;
+  #endif
 };
 
 class FileScopeAsmDecl : public Decl {

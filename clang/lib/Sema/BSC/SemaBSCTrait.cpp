@@ -10,10 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ENABLE_BSC
+
 #include "TypeLocBuilder.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/Expr.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
@@ -715,3 +717,5 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
   return BuildBinOp(S, TokLoc, BO_Comma, Bin1,
                     Bin2); // f.data = &a, f.vtable = &__int_trait_T;
 }
+
+#endif // ENABLE_BSC

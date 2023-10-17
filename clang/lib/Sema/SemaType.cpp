@@ -15,8 +15,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -1254,14 +1256,21 @@ getImageAccess(const ParsedAttributesView &Attrs) {
 /// to be converted, along with other associated processing state.
 /// \returns The type described by the declaration specifiers.  This function
 /// never returns null.
-static QualType ConvertDeclSpecToType(TypeProcessingState &state,
-                                      DeclSpec &PDS) {
+static QualType ConvertDeclSpecToType(TypeProcessingState &state
+                                      #if ENABLE_BSC
+                                      , DeclSpec &PDS
+                                      #endif
+                                      ) {
   // FIXME: Should move the logic from DeclSpec::Finish to here for validity
   // checking.
 
   Sema &S = state.getSema();
   Declarator &declarator = state.getDeclarator();
+  #if ENABLE_BSC
   DeclSpec &DS = PDS;
+  #else
+  DeclSpec &DS = declarator.getMutableDeclSpec();
+  #endif
   SourceLocation DeclLoc = declarator.getIdentifierLoc();
   if (DeclLoc.isInvalid())
     DeclLoc = DS.getBeginLoc();
@@ -1316,9 +1325,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
            "Unknown TSS value");
     Result = Context.Char32Ty;
     break;
+  #if ENABLE_BSC
   case DeclSpec::TST_This:
     Result = Context.ThisTy;
     break;
+  #endif
   case DeclSpec::TST_unspecified:
     // If this is a missing declspec in a block literal return context, then it
     // is inferred from the return statements inside the block.
@@ -1559,7 +1570,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
     break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
+  #if ENABLE_BSC
   case DeclSpec::TST_trait:
+  #endif
   case DeclSpec::TST_union:
   case DeclSpec::TST_struct:
   case DeclSpec::TST_interface: {
@@ -1882,9 +1895,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
       // produce a warning in this case.
     }
 
+    #if ENABLE_BSC
     if(S.getLangOpts().BSC && (TypeQuals & DeclSpec::TQ_owned) && DS.getTypeSpecType() == DeclSpec::TST_union) {
       S.Diag(DS.getOwnedSpecLoc(), diag::err_owned_union_spec) << "owned";
     }
+    #endif
 
     QualType Qualified = S.BuildQualifiedType(Result, DeclLoc, TypeQuals, &DS);
 
@@ -1899,6 +1914,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state,
   return Result;
 }
 
+#if ENABLE_BSC
 QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
                                          bool AddToContextMap,
                                          BSCScopeSpec &BSS, DeclSpec &DS) {
@@ -1943,6 +1959,7 @@ QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
   }
   return T;
 }
+#endif
 
 static std::string getPrintableNameForEntity(DeclarationName Entity) {
   if (Entity)
@@ -3449,7 +3466,11 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
   case UnqualifiedIdKind::IK_Identifier:
   case UnqualifiedIdKind::IK_LiteralOperatorId:
   case UnqualifiedIdKind::IK_TemplateId:
+    #if ENABLE_BSC
     T = ConvertDeclSpecToType(state, D.getMutableDeclSpec());
+    #else
+    T = ConvertDeclSpecToType(state);
+    #endif
 
     if (!D.isInvalidType() && D.getDeclSpec().isTypeSpecOwned()) {
       OwnedTagDecl = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
@@ -3564,7 +3585,9 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       } else {
         switch (cast<TagDecl>(SemaRef.CurContext)->getTagKind()) {
         case TTK_Enum: llvm_unreachable("unhandled tag kind");
+        #if ENABLE_BSC
         case TTK_Trait:
+        #endif
         case TTK_Struct: Error = Cxx ? 1 : 2; /* Struct member */ break;
         case TTK_Union:  Error = Cxx ? 3 : 4; /* Union member */ break;
         case TTK_Class:  Error = 5; /* Class member */ break;
@@ -5056,8 +5079,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       }
 
       // BSC rules: ele of array cannot be qualified by owned or owned-like
+      #if ENABLE_BSC
       if (LangOpts.BSC)
         S.CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "array");
+      #endif
 
       // C99 6.7.5.2p1: The optional type qualifiers and the keyword static
       // shall appear only in a declaration of a function parameter with an
@@ -5112,6 +5137,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
     case DeclaratorChunk::Function: {
+      #if ENABLE_BSC
       if (LangOpts.BSC) {
         if (TraitDecl *TD = S.TryDesugarTrait(T)) {
           T = S.DesugarTraitToStructTrait(TD, T);
@@ -5120,6 +5146,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // type.
           D.DropTypeObject(chunkIndex + 1);
         }
+      #endif
       }
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
@@ -5364,7 +5391,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // strict prototypes as in C2x because it allows a function definition to
       // have an identifier list. See OpenCL 3.0 6.11/g for more details.
       //
-      if (!FTI.NumParams && !FTI.isVariadic && !LangOpts.BSC &&
+      if (!FTI.NumParams && !FTI.isVariadic &&
+          #if ENABLE_BSC
+          !LangOpts.BSC &&
+          #endif
           !LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL) {
         // Simple void foo(), where the incoming T is the result type.
         T = Context.getFunctionNoProtoType(T, EI);
@@ -8727,7 +8757,11 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
+  #if ENABLE_BSC
   } else if (auto *RD = dyn_cast<RecordDecl>(D)) {
+  #else
+  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+  #endif
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -8955,6 +8989,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   // If we have a class template specialization or a class member of a
   // class template specialization, or an array with known size of such,
   // try to instantiate it.
+  #if ENABLE_BSC
   RecordDecl *RD = nullptr;
   if (getLangOpts().BSC) {
     RD = dyn_cast_or_null<RecordDecl>(Tag);
@@ -8962,6 +8997,9 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
     RD = dyn_cast_or_null<CXXRecordDecl>(Tag);
   }
   if (RD) {
+  #else
+  if (auto *RD = dyn_cast_or_null<CXXRecordDecl>(Tag)) {
+  #endif
     bool Instantiated = false;
     bool Diagnosed = false;
     if (RD->isDependentContext()) {
@@ -8979,18 +9017,32 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         Instantiated = true;
       }
     } else {
+      #if ENABLE_BSC
       RecordDecl *Pattern =
           (static_cast<RecordDecl *>(RD))->getInstantiatedFromMemberClass();
+      #else
+      CXXRecordDecl *Pattern = RD->getInstantiatedFromMemberClass();
+      #endif
       if (!RD->isBeingDefined() && Pattern) {
+        #if ENABLE_BSC
         MemberSpecializationInfo *MSI =
             (static_cast<CXXRecordDecl *>(RD))->getMemberSpecializationInfo();
+        #else
+        MemberSpecializationInfo *MSI = RD->getMemberSpecializationInfo();
+        #endif
         assert(MSI && "Missing member specialization information?");
         // This record was instantiated from a class within a template.
         if (MSI->getTemplateSpecializationKind() !=
             TSK_ExplicitSpecialization) {
           runWithSufficientStackSpace(Loc, [&] {
             Diagnosed = InstantiateClass(
-                Loc, (static_cast<CXXRecordDecl *>(RD)), Pattern,
+                Loc,
+                #if ENABLE_BSC
+                (static_cast<CXXRecordDecl *>(RD)),
+                #else
+                RD,
+                #endif
+                Pattern,
                 getTemplateInstantiationArgs(RD), TSK_ImplicitInstantiation,
                 /*Complain=*/Diagnoser);
           });

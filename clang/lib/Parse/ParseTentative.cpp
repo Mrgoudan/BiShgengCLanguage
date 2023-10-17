@@ -175,7 +175,9 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
   case tok::kw_class:
   case tok::kw_struct:
   case tok::kw_union:
+  #if ENABLE_BSC
   case tok::kw_trait:
+  #endif
   case tok::kw___interface:
   case tok::kw_enum:
     // elaborated-type-specifier:
@@ -1118,6 +1120,7 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
 //   1. find template parameter list syntax structure "identifier <T, ..>"
 //   2. find declaration syntax(different from spcialization syntax)
 //     "<T, ..> ()" in template function or "<T, ..> {}" in template structure
+#if ENABLE_BSC
 bool Parser::isBSCTemplateDecl(Token tok) {
   // 1. check language
   if (!getLangOpts().BSC)
@@ -1221,6 +1224,7 @@ bool Parser::isBSCTemplateDecl(Token tok) {
 
   return false;
 }
+#endif
 
 namespace {
 class TentativeParseCCC final : public CorrectionCandidateCallback {
@@ -1484,7 +1488,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw__Thread_local:
     // function-specifier
   case tok::kw_inline:
+  #if ENABLE_BSC
   case tok::kw_async:
+  #endif
   case tok::kw_virtual:
   case tok::kw_explicit:
 
@@ -1507,7 +1513,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_class:
   case tok::kw_struct:
   case tok::kw_union:
+  #if ENABLE_BSC
   case tok::kw_trait:
+  #endif
   case tok::kw___interface:
     // enum-specifier
   case tok::kw_enum:
@@ -1846,7 +1854,9 @@ bool Parser::isCXXDeclarationSpecifierAType() {
     // elaborated-type-specifier
   case tok::kw_class:
   case tok::kw_struct:
+  #if ENABLE_BSC
   case tok::kw_trait:
+  #endif
   case tok::kw_union:
   case tok::kw___interface:
   case tok::kw_enum:

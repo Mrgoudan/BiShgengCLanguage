@@ -14,9 +14,11 @@
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -837,6 +839,7 @@ const ObjCObjectPointerType *ObjCObjectPointerType::stripObjCKindOfTypeAndQuals(
   return ctx.getObjCObjectPointerType(obj)->castAs<ObjCObjectPointerType>();
 }
 
+#if ENABLE_BSC
 bool PointerType::hasOwnedFields() const {
   QualType R = getPointeeType();
   if (R.isOwnedQualified()) {
@@ -847,6 +850,7 @@ bool PointerType::hasOwnedFields() const {
   }
   return false;
 }
+#endif
 
 namespace {
 
@@ -1781,8 +1785,10 @@ TagDecl *Type::getAsTagDecl() const {
     return TT->getDecl();
   if (const auto *Injected = getAs<InjectedClassNameType>())
     return Injected->getDecl();
+  #if ENABLE_BSC
   if (const auto *Injected = getAs<InjectedTraitNameType>())
     return Injected->getDecl();
+  #endif
 
   return nullptr;
 }
@@ -2006,6 +2012,7 @@ bool Type::isChar32Type() const {
   return false;
 }
 
+#if ENABLE_BSC
 bool Type::hasOwnedFields() const {
   if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
     return RecTy->hasOwnedFields();
@@ -2014,6 +2021,7 @@ bool Type::hasOwnedFields() const {
   }
   return false;
 }
+#endif
 
 /// Determine whether this type is any of the built-in character
 /// types.
@@ -2278,12 +2286,14 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
+  #if ENABLE_BSC
   case Trait: {
     TraitDecl *Rec = cast<TraitType>(CanonicalType)->getDecl();
     if (Def)
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
+  #endif
   case ConstantArray:
   case VariableArray:
     // An array is incomplete if its element type is incomplete
@@ -2873,8 +2883,10 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   case TST_interface: return ETK_Interface;
   case TST_union: return ETK_Union;
   case TST_enum: return ETK_Enum;
+  #if ENABLE_BSC
   case TST_trait:
     return ETK_Trait;
+  #endif
   }
 }
 
@@ -2886,8 +2898,10 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   case TST_interface: return TTK_Interface;
   case TST_union: return TTK_Union;
   case TST_enum: return TTK_Enum;
+  #if ENABLE_BSC
   case TST_trait:
     return TTK_Trait;
+  #endif
   }
 
   llvm_unreachable("Type specifier is not a tag type kind.");
@@ -2901,8 +2915,10 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   case TTK_Interface: return ETK_Interface;
   case TTK_Union: return ETK_Union;
   case TTK_Enum: return ETK_Enum;
+  #if ENABLE_BSC
   case TTK_Trait:
     return ETK_Trait;
+  #endif
   }
   llvm_unreachable("Unknown tag type kind.");
 }
@@ -2915,8 +2931,10 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   case ETK_Interface: return TTK_Interface;
   case ETK_Union: return TTK_Union;
   case ETK_Enum: return TTK_Enum;
+  #if ENABLE_BSC
   case ETK_Trait:
     return TTK_Trait;
+  #endif
   case ETK_None: // Fall through.
   case ETK_Typename:
     llvm_unreachable("Elaborated type keyword is not a tag type kind.");
@@ -2934,7 +2952,9 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
   case ETK_Struct:
   case ETK_Interface:
   case ETK_Union:
+  #if ENABLE_BSC
   case ETK_Trait:
+  #endif
   case ETK_Enum:
     return true;
   }
@@ -2950,8 +2970,10 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   case ETK_Interface: return "__interface";
   case ETK_Union:  return "union";
   case ETK_Enum:   return "enum";
+  #if ENABLE_BSC
   case ETK_Trait:
     return "trait";
+  #endif
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3020,8 +3042,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   switch (getKind()) {
   case Void:
     return "void";
+  #if ENABLE_BSC
   case This:
     return "This";
+  #endif
   case Bool:
     return Policy.Bool ? "bool" : "_Bool";
   case Char_S:
@@ -3417,6 +3441,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
   return false;
 }
 
+#if ENABLE_BSC
 bool FunctionProtoType::hasOwnedRetOrParams() const {
   if (getReturnType().isOwnedQualified()) {
     return true;
@@ -3428,6 +3453,7 @@ bool FunctionProtoType::hasOwnedRetOrParams() const {
   }
   return false;
 }
+#endif
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
@@ -3631,6 +3657,7 @@ bool RecordType::hasConstFields() const {
   return false;
 }
 
+#if ENABLE_BSC
 void RecordType::initOwnedStatus() const {
   if (hasOwn != ownedStatus::unInit) return;
   std::vector<const RecordType*> RecordTypeList;
@@ -3676,6 +3703,7 @@ bool RecordType::hasOwnedFields() const {
     return true;
   return false;
 }
+#endif
 
 bool AttributedType::isQualifier() const {
   // FIXME: Generate this with TableGen.
@@ -3741,13 +3769,21 @@ bool AttributedType::isCallingConv() const {
   llvm_unreachable("invalid attr kind");
 }
 
+#if ENABLE_BSC
 RecordDecl *InjectedClassNameType::getDecl() const {
   return cast<RecordDecl>(getInterestingTagDecl(Decl));
 }
+#else
+CXXRecordDecl *InjectedClassNameType::getDecl() const {
+  return cast<CXXRecordDecl>(getInterestingTagDecl(Decl));
+}
+#endif
 
+#if ENABLE_BSC
 TraitDecl *InjectedTraitNameType::getDecl() const {
   return cast<TraitDecl>(getInterestingTagDecl(Decl));
 }
+#endif
 
 IdentifierInfo *TemplateTypeParmType::getIdentifier() const {
   return isCanonicalUnqualified() ? nullptr : getDecl()->getIdentifier();
@@ -4019,7 +4055,10 @@ static CachedProperties computeCachedProperties(const Type *T) {
 
   case Type::Record:
   case Type::Enum:
-  case Type::Trait: {
+  #if ENABLE_BSC
+  case Type::Trait:
+  #endif
+  {
     const TagDecl *Tag = cast<TagType>(T)->getDecl();
 
     // C++ [basic.link]p8:
@@ -4121,7 +4160,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
 
   case Type::Record:
   case Type::Enum:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
     return getDeclLinkageAndVisibility(cast<TagType>(T)->getDecl());
 
   case Type::Complex:
@@ -4274,7 +4315,9 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
       return ResultIfUnknown;
 
     case BuiltinType::Void:
+    #if ENABLE_BSC
     case BuiltinType::This:
+    #endif
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:
     case BuiltinType::ObjCSel:
@@ -4327,9 +4370,13 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Record:
   case Type::DeducedTemplateSpecialization:
   case Type::Enum:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
   case Type::InjectedClassName:
+  #if ENABLE_BSC
   case Type::InjectedTraitName:
+  #endif
   case Type::PackExpansion:
   case Type::ObjCObject:
   case Type::ObjCInterface:
@@ -4497,6 +4544,7 @@ bool Type::isCUDADeviceBuiltinSurfaceType() const {
   return false;
 }
 
+#if ENABLE_BSC
 bool Type::isBSCFutureType() const {
   if (const auto *RT = getAs<RecordType>()) {
     RecordDecl *RD = RT->getAsRecordDecl();
@@ -4506,6 +4554,7 @@ bool Type::isBSCFutureType() const {
   }
   return false;
 }
+#endif
 
 /// Check if the specified type is the CUDA device builtin texture type.
 bool Type::isCUDADeviceBuiltinTextureType() const {

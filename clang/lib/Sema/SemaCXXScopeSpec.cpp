@@ -38,8 +38,12 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
 
     return nullptr;
   } else if (isa<InjectedClassNameType>(Ty))
+    #if ENABLE_BSC
     return dyn_cast_or_null<CXXRecordDecl>(
         cast<InjectedClassNameType>(Ty)->getDecl());
+    #else
+    return cast<InjectedClassNameType>(Ty)->getDecl();
+    #endif
   else
     return nullptr;
 }
@@ -220,17 +224,23 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 
   SourceLocation loc = SS.getLastQualifierNameLoc();
   if (loc.isInvalid()) {
+    #if ENABLE_BSC
     if (!LangOpts.BSC) 
+    #endif
       loc = SS.getRange().getBegin();
+    #if ENABLE_BSC
     else  
       loc = tag->getBeginLoc(); // FIXME: not same as SS.getRange().getBegin()
+    #endif
   }
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
     // For BSC, SS.getRange() is invalid
+    #if ENABLE_BSC
     if (!LangOpts.BSC)
+    #endif
       SS.SetInvalid(SS.getRange());
     return true;
   }
@@ -966,8 +976,10 @@ bool Sema::ActOnCXXNestedNameSpecifier(
   // For the case of "struct MyStruct11<T>: foo()", if the name of 
   // the struct is incorrect, correct it in a timely manner to 
   // prevent duplicate errors from being reported.
+  #if ENABLE_BSC
   if (getLangOpts().BSC)
     OpaqueTemplate = TemplateTy::make(Template);
+  #endif
 
   TemplateDecl *TD = Template.getAsTemplateDecl();
   if (Template.getAsOverloadedTemplate() || DTN ||

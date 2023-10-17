@@ -62,7 +62,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
@@ -1034,7 +1037,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   case Type::Record:
   case Type::Enum:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
     if (!IsStructurallyEquivalent(Context, cast<TagType>(T1)->getDecl(),
                                   cast<TagType>(T2)->getDecl()))
       return false;
@@ -1121,6 +1126,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     break;
   }
 
+  #if ENABLE_BSC
   case Type::InjectedTraitName: {
     const auto *Inj1 = cast<InjectedTraitNameType>(T1);
     const auto *Inj2 = cast<InjectedTraitNameType>(T2);
@@ -1130,6 +1136,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
   }
+  #endif
 
   case Type::DependentName: {
     const auto *Typename1 = cast<DependentNameType>(T1);

@@ -46,14 +46,17 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
   }
   // Parse BSC template declaration
   // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
+  #if ENABLE_BSC
   if (isBSCTemplateDecl(Tok)) {
     return ParseBSCGenericDeclaration(Context, DeclEnd, AccessAttrs, AS);
   }
+  #endif
   return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
                                                   AS);
 }
 
 // DIY rewrite ParseTemplateDeclarationOrSpecialization for BSC
+#if ENABLE_BSC
 Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
                                          SourceLocation &DeclEnd,
                                          ParsedAttributes &AccessAttrs,
@@ -177,6 +180,7 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
       ParsedTemplateInfo(&ParamLists, isSpecialization, LastParamListWasEmpty),
       ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
 }
+#endif
 
 /// Parse a template declaration or an explicit specialization.
 ///
@@ -624,6 +628,7 @@ bool Parser::ParseTemplateParameters(
 
 // ParseBSCTemplateParameters - rewrite ParseTemplateParameters for cross-order
 // BSC syntax, use Peeking
+#if ENABLE_BSC
 bool Parser::ParseBSCTemplateParameters(
     MultiParseScope &TemplateScopes, unsigned Depth,
     SmallVectorImpl<NamedDecl *> &TemplateParams, SourceLocation &LAngleLoc,
@@ -661,6 +666,7 @@ bool Parser::ParseBSCTemplateParameters(
 
   return false;
 }
+#endif
 
 /// ParseTemplateParameterList - Parse a template parameter list. If
 /// the parsing fails badly (i.e., closing bracket was left out), this
@@ -706,6 +712,7 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
 
 // ParseBSCTemplateParameterList - rewrite ParseTemplateParameterList, for
 // cross-order BSC syntax, use Peeking
+#if ENABLE_BSC
 bool Parser::ParseBSCTemplateParameterList(
     const unsigned Depth, SmallVectorImpl<NamedDecl *> &TemplateParams) {
   Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
@@ -749,6 +756,7 @@ bool Parser::ParseBSCTemplateParameterList(
   }
   return true;
 }
+#endif
 
 /// Determine whether the parser is at the start of a template
 /// type parameter.
@@ -1082,6 +1090,7 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 
 // ParseBSCTypeParameter - rewrite ParseTypeParameter for cross-order BSC
 // syntax, use Peeking
+#if ENABLE_BSC
 NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
   // Check Tok location
   Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
@@ -1200,6 +1209,7 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
 
   return NewDecl;
 }
+#endif
 
 /// ParseTemplateTemplateParameter - Handle the parsing of template
 /// template parameters.
@@ -1661,8 +1671,12 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
                                      UnqualifiedId &TemplateName,
                                      bool AllowTypeAnnotation,
                                      bool TypeConstraint) {
+  #if ENABLE_BSC
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "Can only annotate template-ids in C++ and BSC");
+  #else
+  assert(getLangOpts().CPlusPlus && "Can only annotate template-ids in C++");
+  #endif
   assert((Tok.is(tok::less) || TypeConstraint) &&
          "Parser isn't at the beginning of a template-id");
   assert(!(TypeConstraint && AllowTypeAnnotation) && "type-constraint can't be "
@@ -1949,6 +1963,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
   };
 
   do {
+    #if ENABLE_BSC
     if (getLangOpts().BSC && !Tok.isOneOf(tok::kw_struct, 
                                           tok::kw_enum,
                                           tok::kw_union)) {
@@ -1967,6 +1982,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
         for (int i = 0; i <= ShouldConsumeCnt; i++) ConsumeToken();
       } 
     }
+    #endif
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
     ParsedTemplateArgument Arg = ParseTemplateArgument();
     SourceLocation EllipsisLoc;

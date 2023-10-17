@@ -470,10 +470,17 @@ protected:
     /// True if the call expression has some floating-point features.
     unsigned HasFPFeatures : 1;
 
+    #if ENABLE_BSC
     uint64_t PreferInlineSpecifier : 2;
+    #endif
 
     /// Padding used to align OffsetToTrailingObjects to a byte multiple.
+    #if ENABLE_BSC
     unsigned : 24 - 5 - NumExprBits;
+    #else
+    unsigned : 24 - 3 - NumExprBits;
+    #endif
+
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized
     /// for faster access.
@@ -1416,6 +1423,7 @@ class CompoundStmt final
   /// The location of the closing "}".
   SourceLocation RBraceLoc;
 
+  #if ENABLE_BSC
   SafeScopeSpecifier SafeSpec;
   SourceLocation SafeLoc;
 
@@ -1423,6 +1431,7 @@ class CompoundStmt final
                SafeScopeSpecifier SafeSpec = SS_None, SourceLocation SafeLoc = SourceLocation());
   explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty),
                                             SafeSpec(SS_None), SafeLoc() {}
+  #endif
 
   void setStmts(ArrayRef<Stmt *> Stmts);
 
@@ -1439,13 +1448,22 @@ class CompoundStmt final
 public:
   static CompoundStmt *Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                               FPOptionsOverride FPFeatures, SourceLocation LB,
-                              SourceLocation RB,
-                              SafeScopeSpecifier SafeSpec = SS_None,
-                              SourceLocation SafeLoc = SourceLocation());
+                              SourceLocation RB
+                              #if ENABLE_BSC
+                              , SafeScopeSpecifier SafeSpec = SS_None,
+                              SourceLocation SafeLoc = SourceLocation()
+                              #endif
+                              );
 
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), RBraceLoc(Loc), SafeSpec(SS_None), SafeLoc() {
+      : Stmt(CompoundStmtClass), 
+      #if ENABLE_BSC
+      RBraceLoc(Loc), SafeSpec(SS_None), SafeLoc()
+      #else
+      LBraceLoc(Loc), RBraceLoc(Loc)
+      #endif
+      {
     CompoundStmtBits.NumStmts = 0;
     CompoundStmtBits.HasFPFeatures = 0;
   }
@@ -1539,6 +1557,7 @@ public:
     return const_cast<CompoundStmt *>(this)->getStmtExprResult();
   }
 
+  #if ENABLE_BSC
   SafeScopeSpecifier getSafeSpecifier() const {
     return SafeSpec;
   }
@@ -1550,6 +1569,7 @@ public:
   SourceLocation getSafeSpecifierLoc() const {
     return SafeLoc;
   }
+  #endif
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }
   SourceLocation getEndLoc() const { return RBraceLoc; }

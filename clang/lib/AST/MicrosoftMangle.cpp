@@ -2409,7 +2409,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
   case BuiltinType::Dependent:
+  #if ENABLE_BSC
   case BuiltinType::This:
+  #endif
     llvm_unreachable("placeholder types shouldn't get to name mangling");
 
   case BuiltinType::ObjCId:
@@ -2837,8 +2839,10 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
     case TTK_Enum:
       Out << "W4";
       break;
+    #if ENABLE_BSC
     case TTK_Trait:
       break;
+    #endif
   }
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
@@ -2849,10 +2853,12 @@ void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
                                          SourceRange) {
   mangleType(cast<TagType>(T)->getDecl());
 }
+#if ENABLE_BSC
 void MicrosoftCXXNameMangler::mangleType(const TraitType *T, Qualifiers,
                                          SourceRange) {
   llvm_unreachable("type is illegal to mangle");
 }
+#endif
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   mangleTagTypeKind(TD->getTagKind());
   mangleName(TD);
@@ -3230,10 +3236,12 @@ void MicrosoftCXXNameMangler::mangleType(const InjectedClassNameType *,
   llvm_unreachable("Cannot mangle injected class name type.");
 }
 
+#if ENABLE_BSC
 void MicrosoftCXXNameMangler::mangleType(const InjectedTraitNameType *,
                                          Qualifiers, SourceRange) {
   llvm_unreachable("Cannot mangle injected trait name type.");
 }
+#endif
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateSpecializationType *T,
                                          Qualifiers, SourceRange Range) {

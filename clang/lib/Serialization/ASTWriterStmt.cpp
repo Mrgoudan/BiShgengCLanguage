@@ -82,7 +82,9 @@ void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
   Record.push_back(S->size());
   Record.push_back(S->hasStoredFPFeatures());
+  #if ENABLE_BSC
   Record.push_back(S->getSafeSpecifier());
+  #endif
   for (auto *CS : S->body())
     Record.AddStmt(CS);
   if (S->hasStoredFPFeatures())
@@ -873,7 +875,9 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
   Code = serialization::EXPR_CALL;
+  #if ENABLE_BSC
   Record.push_back(E->getPreferInlineScopeSpecifier());
+  #endif
 }
 
 void ASTStmtWriter::VisitRecoveryExpr(RecoveryExpr *E) {
@@ -1523,6 +1527,7 @@ void ASTStmtWriter::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E)
 //===----------------------------------------------------------------------===//
 // BSC Expressions.
 //===----------------------------------------------------------------------===//
+#if ENABLE_BSC
 void ASTStmtWriter::VisitAwaitExpr(AwaitExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getBeginLoc());
@@ -1530,6 +1535,7 @@ void ASTStmtWriter::VisitAwaitExpr(AwaitExpr *E) {
     Record.AddStmt(S);
   Code = serialization::EXPR_BSC_AWAIT;
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // C++ Expressions and Statements.

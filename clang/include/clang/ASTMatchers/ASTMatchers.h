@@ -7755,9 +7755,11 @@ AST_MATCHER_P(FunctionDecl, hasExplicitSpecifier, internal::Matcher<Expr>,
 ///   async void g();
 /// \endcode
 /// functionDecl(isAsyncSpecified()) will match ::g().
+#if ENABLE_BSC
 AST_MATCHER(FunctionDecl, isAsyncSpecified) {
   return (dyn_cast<FunctionDecl>(&Node))->isAsyncSpecified();
 }
+#endif
 
 /// Matches functions, variables and namespace declarations that are marked with
 /// the inline keyword.

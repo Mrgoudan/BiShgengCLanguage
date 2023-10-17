@@ -206,10 +206,12 @@ public:
                                     ParentDC, SymbolRoleSet(), Relations);
   }
 
+  #if ENABLE_BSC
   bool VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
     return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
                                     ParentDC, SymbolRoleSet(), Relations);
   }
+  #endif
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
     const DependentNameType *DNT = TL.getTypePtr();

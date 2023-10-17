@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ENABLE_BSC
+
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -511,3 +513,5 @@ const std::string RewriteBSC::GetRewrittenString() {
   }
   return Buf.str();
 }
+
+#endif

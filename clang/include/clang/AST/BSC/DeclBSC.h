@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_AST_DECLBSC_H
 #define LLVM_CLANG_AST_DECLBSC_H
 
+# if ENABLE_BSC
+
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
@@ -468,5 +470,7 @@ public:
 };
 
 } // namespace clang
+
+#endif // ENABLE_BSC
 
 #endif // LLVM_CLANG_AST_DECLBSC_H

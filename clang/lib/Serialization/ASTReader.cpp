@@ -2990,8 +2990,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.NumUserInputFiles = NumUserInputs;
       break;
 
+    #if ENABLE_BSC
     case OPT_STRING:
       break;
+    #endif
     }
   }
 }
@@ -6745,9 +6747,11 @@ void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
 
+#if ENABLE_BSC
 void TypeLocReader::VisitTraitTypeLoc(TraitTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
+#endif
 
 void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   TL.setAttr(ReadAttr());
@@ -6798,9 +6802,11 @@ void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
 
+#if ENABLE_BSC
 void TypeLocReader::VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
+#endif
 
 void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   TL.setElaboratedKeywordLoc(readSourceLocation());
@@ -6906,9 +6912,11 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_VOID_ID:
       T = Context.VoidTy;
       break;
+    #if ENABLE_BSC
     case PREDEF_TYPE_THIS_ID:
       T = Context.ThisTy;
       break;
+    #endif
     case PREDEF_TYPE_BOOL_ID:
       T = Context.BoolTy;
       break;

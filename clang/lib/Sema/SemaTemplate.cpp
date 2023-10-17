@@ -179,8 +179,12 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
                                       TemplateTy &TemplateResult,
                                       bool &MemberOfUnknownSpecialization,
                                       bool Disambiguation) {
+  #if ENABLE_BSC
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "No template names in C!");
+  #else
+  assert(getLangOpts().CPlusPlus && "No template names in C!");
+  #endif
 
   DeclarationName TName;
   MemberOfUnknownSpecialization = false;
@@ -301,10 +305,16 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
       // We'll do this lookup again later.
       R.suppressDiagnostics();
     } else {
+      #if ENABLE_BSC
       assert(isa<ClassTemplateDecl>(TD) || isa<TraitTemplateDecl>(TD) ||
              isa<TemplateTemplateParmDecl>(TD) ||
              isa<TypeAliasTemplateDecl>(TD) || isa<VarTemplateDecl>(TD) ||
              isa<BuiltinTemplateDecl>(TD) || isa<ConceptDecl>(TD));
+      #else
+      assert(isa<ClassTemplateDecl>(TD) || isa<TemplateTemplateParmDecl>(TD) ||
+             isa<TypeAliasTemplateDecl>(TD) || isa<VarTemplateDecl>(TD) ||
+             isa<BuiltinTemplateDecl>(TD) || isa<ConceptDecl>(TD));
+      #endif
       TemplateKind =
           isa<VarTemplateDecl>(TD) ? TNK_Var_template :
           isa<ConceptDecl>(TD) ? TNK_Concept_template :
@@ -730,8 +740,11 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  SourceLocation TemplateKWLoc,
                                  const DeclarationNameInfo &NameInfo,
                                  bool isAddressOfOperand,
-                           const TemplateArgumentListInfo *TemplateArgs,
-                           QualType ExtendedTy) {
+                           const TemplateArgumentListInfo *TemplateArgs
+                           #if ENABLE_BSC
+                           , QualType ExtendedTy
+                           #endif
+                           ) {
   DeclContext *DC = getFunctionLevelDeclContext();
 
   // C++11 [expr.prim.general]p12:
@@ -767,22 +780,31 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
         FirstQualifierInScope, NameInfo, TemplateArgs);
   }
 
-  return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs, ExtendedTy);
+  return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs
+                                   #if ENABLE_BSC
+                                   , ExtendedTy
+                                   #endif
+                                   );
 }
 
 ExprResult
 Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                 SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
-                                const TemplateArgumentListInfo *TemplateArgs,
-                                QualType ExtendedTy) {
+                                const TemplateArgumentListInfo *TemplateArgs
+                                #if ENABLE_BSC
+                                , QualType ExtendedTy
+                                #endif
+                                ) {
   // DependentScopeDeclRefExpr::Create requires a valid QualifierLoc
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
+  #if ENABLE_BSC
   if (!ExtendedTy.isNull()) {
     TagDecl *TD = dyn_cast_or_null<TagDecl>(getASTContext().BSCDeclContextMap[ExtendedTy.getCanonicalType().getTypePtr()]);
     assert(TD && "no corresponding DeclContext found for this type");
     QualifierLoc = TD->getQualifierLoc();
   }
+  #endif
   if (!QualifierLoc)
     return ExprError();
 
@@ -1986,6 +2008,7 @@ DeclResult Sema::CheckClassTemplate(
   bool ShouldAddRedecl
     = !(TUK == TUK_Friend && CurContext->isDependentContext());
 
+  #if ENABLE_BSC
   RecordDecl *NewClass;
   if (getLangOpts().CPlusPlus) {
     NewClass = CXXRecordDecl::Create(Context, Kind, SemanticContext, KWLoc,
@@ -2002,6 +2025,13 @@ DeclResult Sema::CheckClassTemplate(
                                : nullptr,
                            /*DelayTypeCreation=*/true);
   }
+  #else
+  CXXRecordDecl *NewClass =
+    CXXRecordDecl::Create(Context, Kind, SemanticContext, KWLoc, NameLoc, Name,
+                          PrevClassTemplate && ShouldAddRedecl ?
+                            PrevClassTemplate->getTemplatedDecl() : nullptr,
+                          /*DelayTypeCreation=*/true);
+  #endif
   SetNestedNameSpecifier(*this, NewClass, SS);
   if (NumOuterTemplateParamLists > 0)
     NewClass->setTemplateParameterListsInfo(
@@ -2015,6 +2045,7 @@ DeclResult Sema::CheckClassTemplate(
     AddMsStructLayoutForRecord(NewClass);
   }
 
+  #if ENABLE_BSC
   if (Kind == TTK_Trait) {
     TraitDecl *NewTrait =
         TraitDecl::Create(Context, SemanticContext, KWLoc, NameLoc, Name,
@@ -2034,6 +2065,7 @@ DeclResult Sema::CheckClassTemplate(
     }
     return NewTemplate;
   }
+  #endif
 
   ClassTemplateDecl *NewTemplate = ClassTemplateDecl::Create(
       Context, SemanticContext, NameLoc, DeclarationName(Name), TemplateParams,
@@ -2076,9 +2108,11 @@ DeclResult Sema::CheckClassTemplate(
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
 
   AddPushedVisibilityAttribute(NewClass);
+  #if ENABLE_BSC
   if (!getLangOpts().BSC) {
     inferGslOwnerPointerAttribute(static_cast<CXXRecordDecl *>(NewClass));
   }
+  #endif
 
   if (TUK != TUK_Friend) {
     // Per C++ [basic.scope.temp]p2, skip the template parameter scopes.
@@ -3083,9 +3117,11 @@ struct DependencyChecker : RecursiveASTVisitor<DependencyChecker> {
     return TraverseType(T->getInjectedSpecializationType());
   }
 
+  #if ENABLE_BSC
   bool TraverseInjectedTraitNameType(const InjectedTraitNameType *T) {
     return TraverseType(T->getInjectedSpecializationType());
   }
+  #endif
 };
 } // end anonymous namespace
 
@@ -3160,8 +3196,11 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     SourceLocation DeclStartLoc, SourceLocation DeclLoc, const CXXScopeSpec &SS,
     TemplateIdAnnotation *TemplateId,
     ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
-    bool &IsMemberSpecialization, bool &Invalid, bool SuppressDiagnostic,
-    QualType ExtendedTy) {
+    bool &IsMemberSpecialization, bool &Invalid, bool SuppressDiagnostic
+    #if ENABLE_BSC
+    , QualType ExtendedTy
+    #endif
+    ) {
   IsMemberSpecialization = false;
   Invalid = false;
 
@@ -3176,6 +3215,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       T = Context.getTypeDeclType(Record);
     else
       T = QualType(SS.getScopeRep()->getAsType(), 0);
+  #if ENABLE_BSC
   } else if (!ExtendedTy.isNull()) {
     DeclContext *DC =
         getASTContext()
@@ -3186,6 +3226,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     } else {
       T = QualType(ExtendedTy.getTypePtr(), 0);
     }
+  #endif
   }
 
   // If we found an explicit specialization that prevents us from needing
@@ -3197,7 +3238,11 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     NestedTypes.push_back(T);
 
     // Retrieve the parent of a record type.
+    #if ENABLE_BSC
     if (RecordDecl *Record = T->getAsRecordDecl()) {
+    #else
+    if (CXXRecordDecl *Record = T->getAsCXXRecordDecl()) {
+    #endif
       // If this type is an explicit specialization, we're done.
       if (ClassTemplateSpecializationDecl *Spec
           = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
@@ -3329,7 +3374,11 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     //   class templates. In an explicit specialization for such a member, the
     //   member declaration shall be preceded by a template<> for each
     //   enclosing class template that is explicitly specialized.
+    #if ENABLE_BSC
     if (RecordDecl *Record = T->getAsRecordDecl()) {
+    #else
+    if (CXXRecordDecl *Record = T->getAsCXXRecordDecl()) {
+    #endif
       if (ClassTemplatePartialSpecializationDecl *Partial
             = dyn_cast<ClassTemplatePartialSpecializationDecl>(Record)) {
         ExpectedTemplateParams = Partial->getTemplateParameters();
@@ -3932,9 +3981,11 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
           ClassTemplate->getDeclContext(),
           ClassTemplate->getTemplatedDecl()->getBeginLoc(),
           ClassTemplate->getLocation(), ClassTemplate, Converted, nullptr);
+      #if ENABLE_BSC
       if (TraitDecl *TD =
               ClassTemplate->getTemplatedDecl()->getDesugaredTraitDecl())
         Decl->setDesugaredTraitDecl(TD);
+      #endif
       ClassTemplate->AddSpecialization(Decl, InsertPos);
       if (ClassTemplate->isOutOfLine())
         Decl->setLexicalDeclContext(ClassTemplate->getLexicalDeclContext());
@@ -3957,6 +4008,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     CanonType = Context.getTypeDeclType(Decl);
     assert(isa<RecordType>(CanonType) &&
            "type of non-dependent specialization is not a RecordType");
+  #if ENABLE_BSC
   } else if (TraitTemplateDecl *TraitTemplate =
                  dyn_cast<TraitTemplateDecl>(Template)) {
     // Find the class template specialization declaration that
@@ -3995,6 +4047,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     CanonType = Context.getTypeDeclType(Decl);
     assert(isa<TraitType>(CanonType) &&
            "type of non-dependent specialization is not a TraitType");
+  #endif
   } else if (auto *BTD = dyn_cast<BuiltinTemplateDecl>(Template)) {
     CanonType = checkBuiltinTemplateIdType(*this, BTD, Converted, TemplateLoc,
                                            TemplateArgs);
@@ -4252,16 +4305,20 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
 
   // Construct an elaborated type containing the nested-name-specifier (if any)
   // and tag keyword.
+  #if ENABLE_BSC
   if (Context.getLangOpts().BSC) {
     Result = Context.getElaboratedType(Keyword, nullptr, Result);
     ElaboratedTypeLoc ElabTL = TLB.push<ElaboratedTypeLoc>(Result);
     ElabTL.setElaboratedKeywordLoc(TagLoc);
   } else {
+  #endif
     Result = Context.getElaboratedType(Keyword, SS.getScopeRep(), Result);
     ElaboratedTypeLoc ElabTL = TLB.push<ElaboratedTypeLoc>(Result);
     ElabTL.setElaboratedKeywordLoc(TagLoc);
     ElabTL.setQualifierLoc(SS.getWithLocInContext(Context));
+  #if ENABLE_BSC
   }
+  #endif
   return CreateParsedType(Result, TLB.getTypeSourceInfo(Context, Result));
 }
 
@@ -6265,9 +6322,11 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateTypeParmType(
   return false;
 }
 
+#if ENABLE_BSC
 bool UnnamedLocalNoLinkageFinder::VisitTraitType(const TraitType *T) {
   return VisitTagDecl(T->getDecl());
 }
+#endif
 
 bool UnnamedLocalNoLinkageFinder::VisitSubstTemplateTypeParmPackType(
                                         const SubstTemplateTypeParmPackType *) {
@@ -6284,10 +6343,12 @@ bool UnnamedLocalNoLinkageFinder::VisitInjectedClassNameType(
   return VisitTagDecl(T->getDecl());
 }
 
+#if ENABLE_BSC
 bool UnnamedLocalNoLinkageFinder::VisitInjectedTraitNameType(
     const InjectedTraitNameType *T) {
   return VisitTagDecl(T->getDecl());
 }
+#endif
 
 bool UnnamedLocalNoLinkageFinder::VisitDependentNameType(
                                                    const DependentNameType* T) {
@@ -10056,8 +10117,13 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   if (Tag->isInvalidDecl())
     return true;
 
+  #if ENABLE_BSC
   RecordDecl *Record = cast<RecordDecl>(Tag);
   RecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
+  #else
+  CXXRecordDecl *Record = cast<CXXRecordDecl>(Tag);
+  CXXRecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
+  #endif
   if (!Pattern) {
     Diag(TemplateLoc, diag::err_explicit_instantiation_nontemplate_type)
       << Context.getTypeDeclType(Record);
@@ -10086,7 +10152,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   CheckExplicitInstantiation(*this, Record, NameLoc, true, TSK);
 
   // Verify that it is okay to explicitly instantiate here.
+  #if ENABLE_BSC
   RecordDecl *PrevDecl = cast_or_null<RecordDecl>(Record->getPreviousDecl());
+  #else
+  CXXRecordDecl *PrevDecl
+    = cast_or_null<CXXRecordDecl>(Record->getPreviousDecl());
+  #endif
   if (!PrevDecl && Record->getDefinition())
     PrevDecl = Record;
   if (PrevDecl) {

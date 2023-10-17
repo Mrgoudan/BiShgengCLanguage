@@ -64,8 +64,11 @@ StringRef AArch64TargetInfo::getArchProfile() const {
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
-  if (getTriple().isOSOpenBSD() ||
-      getTriple().getEnvironment() == llvm::Triple::GNUILP32) {
+  if (getTriple().isOSOpenBSD()
+      #if ENABLE_BSC
+      || getTriple().getEnvironment() == llvm::Triple::GNUILP32
+      #endif
+      ) {
     Int64Type = SignedLongLong;
     IntMaxType = SignedLongLong;
   } else {

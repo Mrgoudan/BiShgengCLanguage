@@ -407,8 +407,11 @@ sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
 }
 
 StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                                   ArrayRef<Stmt *> Elts, bool isStmtExpr,
-                                   SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc) {
+                                   ArrayRef<Stmt *> Elts, bool isStmtExpr
+                                   #if ENABLE_BSC
+                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
+                                   #endif
+                                   ) {
   const unsigned NumElts = Elts.size();
 
   // If we're in C mode, check that we don't have any decls after stmts.  If
@@ -453,9 +456,14 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
 
   // return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
-  return CompoundStmt::Create(Context, Elts, FPDiff, L, R, SafeSpec, SafeLoc);
+  return CompoundStmt::Create(Context, Elts, FPDiff, L, R
+                              #if ENABLE_BSC
+                              , SafeSpec, SafeLoc
+                              #endif
+                              );
 }
 
+#if ENABLE_BSC
 void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
   SafeScopeSpecifier spec = St == PSS_On ? SS_Safe : SS_Unsafe;
   SetPragmaSafeInfo(spec);
@@ -470,6 +478,7 @@ void Sema::ActOnPragmaPreferInline(PragmaPreferInlineStatus St) {
   }
   SetPragmaPreferInlineInfo(spec);
 }
+#endif
 
 ExprResult
 Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
@@ -3965,6 +3974,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
     FnRetType = FD->getReturnType();
+    #if ENABLE_BSC
     if (TryDesugarTrait(FnRetType) && !TryDesugarTrait(RetValExp->getType())) {
       Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
           RetValExp, FnRetType, RetValExp->getBeginLoc());
@@ -3973,6 +3983,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       else
         return StmtError();
     }
+    #endif
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
     if (FD->isNoReturn())

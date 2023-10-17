@@ -521,11 +521,15 @@ private:
   unsigned DeclVarAbbrev = 0;
   unsigned DeclFieldAbbrev = 0;
   unsigned DeclEnumAbbrev = 0;
+  #if ENABLE_BSC
   unsigned DeclTraitAbbrev = 0;
   unsigned DeclImplTraitAbbrev = 0;
+  #endif
   unsigned DeclObjCIvarAbbrev = 0;
   unsigned DeclCXXMethodAbbrev = 0;
+  #if ENABLE_BSC
   unsigned DeclBSCMethodAbbrev = 0;
+  #endif
 
   unsigned DeclRefExprAbbrev = 0;
   unsigned CharacterLiteralAbbrev = 0;
@@ -695,11 +699,15 @@ public:
   unsigned getDeclVarAbbrev() const { return DeclVarAbbrev; }
   unsigned getDeclFieldAbbrev() const { return DeclFieldAbbrev; }
   unsigned getDeclEnumAbbrev() const { return DeclEnumAbbrev; }
+  #if ENABLE_BSC
   unsigned getDeclTraitAbbrev() const { return DeclTraitAbbrev; }
   unsigned getDeclImplTraitAbbrev() const { return DeclImplTraitAbbrev; }
+  #endif
   unsigned getDeclObjCIvarAbbrev() const { return DeclObjCIvarAbbrev; }
   unsigned getDeclCXXMethodAbbrev() const { return DeclCXXMethodAbbrev; }
+  #if ENABLE_BSC
   unsigned getDeclBSCMethodAbbrev() const { return DeclBSCMethodAbbrev; }
+  #endif
 
   unsigned getDeclRefExprAbbrev() const { return DeclRefExprAbbrev; }
   unsigned getCharacterLiteralAbbrev() const { return CharacterLiteralAbbrev; }
@@ -731,9 +739,11 @@ private:
   void AddedCXXTemplateSpecialization(
       const ClassTemplateDecl *TD,
       const ClassTemplateSpecializationDecl *D) override;
+  #if ENABLE_BSC
   void AddedCXXTemplateSpecialization(
       const TraitTemplateDecl *TD,
       const TraitTemplateSpecializationDecl *D) override;
+  #endif
   void AddedCXXTemplateSpecialization(
       const VarTemplateDecl *TD,
       const VarTemplateSpecializationDecl *D) override;

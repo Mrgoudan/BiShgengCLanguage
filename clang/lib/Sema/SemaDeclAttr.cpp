@@ -1577,6 +1577,7 @@ static bool attrNonNullArgCheck(Sema &S, QualType T, const ParsedAttr &AL,
 }
 
 // EnhanceC
+#if ENABLE_BSC
 template <typename AttrInfo>
 static bool checkFunctionTypeIndex(
     Sema &S, const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
@@ -1646,6 +1647,7 @@ static void handleNonNullAttrVarAndField(Sema &S, Decl *D, const ParsedAttr &AL)
   else
     D->addAttr(::new (S.Context) NonNullAttr(S.Context, AL, nullptr, 0));
 }
+#endif
 
 static void handleNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<ParamIdx, 8> NonNullArgs;
@@ -1710,6 +1712,7 @@ static void handleNonNullAttrParameter(Sema &S, ParmVarDecl *D,
   D->addAttr(::new (S.Context) NonNullAttr(S.Context, AL, nullptr, 0));
 }
 
+#if ENABLE_BSC
 static void handleReturnsNonNullFuncPtr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *VD = dyn_cast<clang::ValueDecl>(D);
   if (VD == nullptr || !VD->getType()->isFunctionPointerType()) {
@@ -1725,6 +1728,7 @@ static void handleReturnsNonNullFuncPtr(Sema &S, Decl *D, const ParsedAttr &AL) 
   }
   D->addAttr(::new (S.Context) ReturnsNonNullAttr(S.Context, AL));
 }
+#endif
 
 static void handleReturnsNonNullAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   QualType ResultType = getFunctionOrMethodResultType(D);
@@ -8389,6 +8393,7 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
 // If no indexs were specified to `count` attribute and only one pointer argument in function
 // then the argument have the attribute; warn if there aren't any or more than one pointer argument.
 // Skip this check if the attribute came from a macro expansion or a template instantiation.
+#if ENABLE_BSC
 static void checkPtrArgsInDefaultAttrIdx(SmallVector<ParamIdx, 8> &Args, Sema &S, Decl *D, const ParsedAttr &AL) {
   if (Args.empty() && AL.getLoc().isFileID() && !S.inTemplateInstantiation()) {
     bool AnyPointers = isFunctionOrMethodVariadic(D);
@@ -8682,6 +8687,7 @@ static void handleReturnsCountIndexFuncPtr(Sema &S, Decl *D, const ParsedAttr &A
 static void handleFunctionLikeMacro(Sema &S, Decl *D, const ParsedAttr &Attrs) {
   D->addAttr(::new (S.Context) FunctionLikeMacroAttr(S.Context, Attrs));
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
@@ -9013,15 +9019,19 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NonNull:
     if (auto *PVD = dyn_cast<ParmVarDecl>(D))
       handleNonNullAttrParameter(S, PVD, AL);
+    #if ENABLE_BSC
     else if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)
       handleNonNullAttrVarAndField(S, D, AL);
+    #endif
     else
       handleNonNullAttr(S, D, AL);
     break;
   case ParsedAttr::AT_ReturnsNonNull:
+    #if ENABLE_BSC
     if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)
       handleReturnsNonNullFuncPtr(S, D, AL);
     else
+    #endif
       handleReturnsNonNullAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NoEscape:
@@ -9487,6 +9497,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
     break;
   // EnhanceC attribute
+  #if ENABLE_BSC
   case ParsedAttr::AT_Count:
     if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)
       handleCountAttr(S, D, AL);
@@ -9545,6 +9556,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_FunctionLikeMacro:
     handleFunctionLikeMacro(S, D, AL);
     break;
+  #endif
   }
 }
 

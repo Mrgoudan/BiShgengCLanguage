@@ -256,7 +256,9 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::IncompleteArray:
     case Type::VariableArray:
     case Type::Record:
+    #if ENABLE_BSC
     case Type::Trait:
+    #endif
     case Type::ObjCObject:
     case Type::ObjCInterface:
       return TEK_Aggregate;
@@ -2215,7 +2217,9 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ConstantMatrix:
     case Type::Record:
     case Type::Enum:
+    #if ENABLE_BSC
     case Type::Trait:
+    #endif
     case Type::Elaborated:
     case Type::Using:
     case Type::TemplateSpecialization:

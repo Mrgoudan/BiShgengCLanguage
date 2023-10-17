@@ -452,10 +452,12 @@ KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
 KEYWORD(__auto_type                 , KEYALL)
 
 // BSC keywords
+#if ENABLE_BSC
 KEYWORD(async                       , KEYBSC)
 KEYWORD(await                       , KEYBSC)
 KEYWORD(owned                       , KEYBSC)
 KEYWORD(trait                       , KEYBSC)
+#endif
 
 // GNU Extensions (outside impl-reserved namespace)
 KEYWORD(typeof                      , KEYGNU)
@@ -722,8 +724,10 @@ ALIAS("_virtual_inheritance", __virtual_inheritance, KEYMSCOMPAT)
 ALIAS("_w64"             , __w64        , KEYMSCOMPAT)
 
 // safe region key word
+#if ENABLE_BSC
 KEYWORD(__Safe__                      , KEYALL)
 KEYWORD(__Unsafe__                    , KEYALL)
+#endif
 
 // Borland Extensions which should be disabled in strict conformance mode.
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)
@@ -808,12 +812,14 @@ PRAGMA_ANNOTATION(pragma_unused)
 // Annotations for SAFE pragma
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma SAFE ... directives.
+#if ENABLE_BSC
 PRAGMA_ANNOTATION(pragma_safe)
 
 // Annotations for pragma prefer_inline (ON/OFF)
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma prefer_inline ... directives.
 PRAGMA_ANNOTATION(pragma_prefer_inline)
+#endif
 
 // Annotation for #pragma GCC visibility...
 // The lexer produces these so that they only take effect when the parser

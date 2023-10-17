@@ -430,9 +430,11 @@ public:
   void VisitClassTemplateDecl(const ClassTemplateDecl *CTD) {
     writeTemplateDecl(CTD, false);
   }
+  #if ENABLE_BSC
   void VisitTraitTemplateDecl(const TraitTemplateDecl *TTD) {
     writeTemplateDecl(TTD, false);
   }
+  #endif
   void VisitVarTemplateDecl(const VarTemplateDecl *VTD) {
     writeTemplateDecl(VTD, false);
   }

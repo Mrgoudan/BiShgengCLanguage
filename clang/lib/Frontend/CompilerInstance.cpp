@@ -1117,8 +1117,10 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
     return Language::CUDA;
   if (LangOpts.ObjC)
     return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
+  #if ENABLE_BSC
   if (LangOpts.BSC)
     return Language::BSC;
+  #endif
   return LangOpts.CPlusPlus ? Language::CXX : Language::C;
 }
 

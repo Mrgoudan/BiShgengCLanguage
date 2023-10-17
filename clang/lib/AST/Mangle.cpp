@@ -12,8 +12,10 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -106,9 +108,11 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
 bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   const ASTContext &ASTContext = getASTContext();
 
+  #if ENABLE_BSC
   const auto *MD = dyn_cast<BSCMethodDecl>(D);
   if (MD && !MD->getExtendedType().isNull())
     return true;
+  #endif
 
   CCMangling CC = getCallingConvMangling(ASTContext, D);
   if (CC != CCM_Other)
@@ -126,12 +130,14 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
     return true;
 
   // In BSC, generic function always does mangling.
+  #if ENABLE_BSC
   if (getASTContext().getLangOpts().BSC) {
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       return FD->getTemplatedKind() ==
              FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization;
     }
   }
+  #endif
 
   // In C, functions with no attributes never need to be mangled. Fastpath them.
   if (!getASTContext().getLangOpts().CPlusPlus && !D->hasAttrs())
@@ -196,6 +202,7 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     return;
   }
 
+  #if ENABLE_BSC
   const auto *MD = dyn_cast<BSCMethodDecl>(D);
   if (MD && !MD->getExtendedType().isNull()) {
     Out << "_ZN";
@@ -203,6 +210,7 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     Out << D->getIdentifier()->getName();
     return;
   }
+  #endif
 
   bool MCXX = shouldMangleCXXName(D);
   const TargetInfo &TI = Context.getTargetInfo();

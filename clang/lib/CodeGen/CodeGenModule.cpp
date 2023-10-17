@@ -1390,7 +1390,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
     const auto *FD = dyn_cast<FunctionDecl>(ND);
+    #if ENABLE_BSC
     const auto *MD = dyn_cast<BSCMethodDecl>(ND);
+    #endif
 
     if (FD &&
         FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
@@ -1398,10 +1400,12 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__device_stub__" << II->getName();
+    #if ENABLE_BSC
     } else if (MD && !MD->getExtendedType().isNull()) {
       Out << "_ZN";
       MC.mangleTypeName(MD->getExtendedType(), Out); // TODO: change mangle rule
       Out << II->getName();
+    #endif
     } else {
       Out << II->getName();
     }
@@ -6091,14 +6095,18 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isConsteval())
       return;
+    #if ENABLE_BSC
     if (FD->isAsyncSpecified())
       return;
+    #endif
   }
 
   switch (D->getKind()) {
   case Decl::CXXConversion:
   case Decl::CXXMethod:
+  #if ENABLE_BSC
   case Decl::BSCMethod:
+  #endif
   case Decl::Function:
     EmitGlobal(cast<FunctionDecl>(D));
     // Always provide some coverage mapping
@@ -6106,9 +6114,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     AddDeferredUnusedCoverageMapping(D);
     break;
 
+  #if ENABLE_BSC
   case Decl::ImplTrait:
     // impl-trait decls, do not result in codegen.
     break;
+  #endif
   case Decl::CXXDeductionGuide:
     // Function-like, but does not result in code emission.
     break;
@@ -6158,7 +6168,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     // No code generation needed.
   case Decl::UsingShadow:
   case Decl::ClassTemplate:
+  #if ENABLE_BSC
   case Decl::TraitTemplate:
+  #endif
   case Decl::VarTemplate:
   case Decl::Concept:
   case Decl::VarTemplatePartialSpecialization:
@@ -6393,7 +6405,9 @@ void CodeGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
     return;
   switch (D->getKind()) {
   case Decl::CXXConversion:
+  #if ENABLE_BSC
   case Decl::BSCMethod:
+  #endif
   case Decl::CXXMethod:
   case Decl::Function:
   case Decl::ObjCMethod:

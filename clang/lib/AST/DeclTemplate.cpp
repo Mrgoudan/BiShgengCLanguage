@@ -13,7 +13,9 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -447,7 +449,7 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
 //===----------------------------------------------------------------------===//
 // TraitTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
-
+#if ENABLE_BSC
 TraitTemplateDecl *TraitTemplateDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation L,
                                              DeclarationName Name,
@@ -520,6 +522,7 @@ QualType TraitTemplateDecl::getInjectedTraitNameSpecialization() {
       Context.getTemplateSpecializationType(TemplateName(this), TemplateArgs);
   return CommonPtr->InjectedTraitNameType;
 }
+#endif
 //===----------------------------------------------------------------------===//
 // ClassTemplateDecl Implementation
 //===----------------------------------------------------------------------===//

@@ -2322,9 +2322,11 @@ public:
     return static_cast<CXXRecordDecl *>(TemplatedDecl);
   }
 
+  #if ENABLE_BSC
   RecordDecl *getBSCTemplatedDecl() const {
     return static_cast<RecordDecl *>(TemplatedDecl);
   }
+  #endif
 
   /// Returns whether this template declaration defines the primary
   /// class pattern.

@@ -52,7 +52,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
       def MSProperty : DeclNode<Declarator>;
       def Function : DeclNode<Declarator, "functions">, DeclContext;
         def CXXDeductionGuide : DeclNode<Function>;
-        def BSCMethod : DeclNode<Function>;
+        // def BSCMethod : DeclNode<Function>;
         def CXXMethod : DeclNode<Function>;
           def CXXConstructor : DeclNode<CXXMethod>;
           def CXXDestructor : DeclNode<CXXMethod>;
@@ -114,3 +114,5 @@ def Empty : DeclNode<Decl>;
 def RequiresExprBody : DeclNode<Decl>, DeclContext;
 def LifetimeExtendedTemporary : DeclNode<Decl>;
 
+// BSC Extensions.
+include "clang/Basic/BSC/BSCDeclNodes.td"

@@ -18,8 +18,11 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Availability.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/ComparisonCategories.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -2538,8 +2541,11 @@ public:
                          bool IsCtorOrDtorName = false,
                          bool WantNontrivialTypeSourceInfo = false,
                          bool IsClassTemplateDeductionContext = true,
-                         IdentifierInfo **CorrectedII = nullptr,
-                         QualType ExtendedTy = QualType());
+                         IdentifierInfo **CorrectedII = nullptr
+                         #if ENABLE_BSC
+                         , QualType ExtendedTy = QualType()
+                         #endif
+                         );
   TypeSpecifierType isTagName(IdentifierInfo &II, Scope *S);
   bool isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S);
   void DiagnoseUnknownTypeName(IdentifierInfo *&II,
@@ -2797,9 +2803,11 @@ public:
   void warnOnReservedIdentifier(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
+  #if ENABLE_BSC
   ImplTraitDecl *BuildImplTraitDecl(Scope *S, Declarator &TypeDeclarator,
                                     Declarator &TraitDeclarator, TraitDecl *TD);
   TraitDecl *ActOnTraitId(IdentifierInfo *II);
+  #endif
 
   NamedDecl *HandleDeclarator(Scope *S, Declarator &D,
                               MultiTemplateParamsArg TemplateParameterLists);
@@ -2903,15 +2911,21 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
+  #if ENABLE_BSC
   QualType ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
                                      bool AddToContextMap, BSCScopeSpec &BSS,
                                      DeclSpec &DS);
+  #endif
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
   // FIXME: Not good enough to add two extra args.
-  Decl *ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize = 0,
-                             QualType ExtendedType = QualType());
+  Decl *ActOnParamDeclarator(Scope *S, Declarator &D
+                             #if ENABLE_BSC
+                             , int ParamSize = 0,
+                             QualType ExtendedType = QualType()
+                             #endif
+                             );
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
@@ -3182,6 +3196,7 @@ public:
   /// The parser has processed a await declaration.
   /// \param AwaitLoc The location of the await token in the declaration.
   /// \param E await expression
+  #if ENABLE_BSC
   ExprResult BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E);
   ExprResult ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E);
 
@@ -3190,6 +3205,7 @@ public:
   SmallVector<Decl *, 8> ActOnAsyncFunctionDefinition(FunctionDecl *FD);
 
   bool IsBSCCompatibleFutureType(QualType Ty);
+  #endif
 
   /// We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
@@ -4328,7 +4344,11 @@ private:
                              CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
                              DeclContext *MemberContext, bool EnteringContext,
                              const ObjCObjectPointerType *OPT,
-                             bool ErrorRecovery, QualType ET = QualType());
+                             bool ErrorRecovery
+                             #if ENABLE_BSC
+                             , QualType ET = QualType()
+                             #endif
+                             );
 
 public:
   const TypoExprState &getTypoExprState(TypoExpr *TE) const;
@@ -4356,7 +4376,11 @@ public:
                            CXXScopeSpec &SS);
   bool LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
                         bool AllowBuiltinCreation = false,
-                        bool EnteringContext = false, QualType T = QualType());
+                        bool EnteringContext = false
+                        #if ENABLE_BSC
+                        , QualType T = QualType()
+                        #endif
+                        );
   ObjCProtocolDecl *LookupProtocol(IdentifierInfo *II, SourceLocation IdLoc,
                                    RedeclarationKind Redecl
                                      = NotForRedeclaration);
@@ -4436,8 +4460,11 @@ public:
       Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
       TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC,
       CorrectTypoKind Mode, DeclContext *MemberContext = nullptr,
-      bool EnteringContext = false, const ObjCObjectPointerType *OPT = nullptr,
-      QualType ET = QualType());
+      bool EnteringContext = false, const ObjCObjectPointerType *OPT = nullptr
+      #if ENABLE_BSC
+      , QualType ET = QualType()
+      #endif
+      );
 
   /// Process any TypoExprs in the given Expr and its children,
   /// generating diagnostics as appropriate and returning a new Expr if there
@@ -4915,10 +4942,14 @@ public:
   void ActOnAfterCompoundStatementLeadingPragmas();
   void ActOnFinishOfCompoundStmt();
   StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                               ArrayRef<Stmt *> Elts, bool isStmtExpr,
-                               SafeScopeSpecifier SafeSpec = SS_None,
-                               SourceLocation SafeLoc = SourceLocation());
+                               ArrayRef<Stmt *> Elts, bool isStmtExpr
+                               #if ENABLE_BSC
+                               , SafeScopeSpecifier SafeSpec = SS_None,
+                               SourceLocation SafeLoc = SourceLocation()
+                               #endif
+                               );
 
+#if ENABLE_BSC
 private:
   SafeScopeSpecifier PragmaSafeInfo = SS_None;
   PreferInlineScopeSpecifier PragmaPreferInlineInfo = PI_None;
@@ -4954,6 +4985,8 @@ public:
   void SetPragmaPreferInlineInfo(PreferInlineScopeSpecifier PreferInlineSpec) {
     PragmaPreferInlineInfo = PreferInlineSpec;
   }
+#endif
+
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:
@@ -5453,8 +5486,11 @@ public:
       Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
       UnqualifiedId &Id, bool HasTrailingLParen, bool IsAddressOfOperand,
       CorrectionCandidateCallback *CCC = nullptr,
-      bool IsInlineAsmIdentifier = false, Token *KeywordReplacement = nullptr,
-      QualType T = QualType());
+      bool IsInlineAsmIdentifier = false, Token *KeywordReplacement = nullptr
+      #if ENABLE_BSC
+      , QualType T = QualType()
+      #endif
+      );
 
   void DecomposeUnqualifiedId(const UnqualifiedId &Id,
                               TemplateArgumentListInfo &Buffer,
@@ -5467,8 +5503,11 @@ public:
   DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
-                      ArrayRef<Expr *> Args = None, TypoExpr **Out = nullptr,
-                      QualType ET = QualType());
+                      ArrayRef<Expr *> Args = None, TypoExpr **Out = nullptr
+                      #if ENABLE_BSC
+                      , QualType ET = QualType()
+                      #endif
+                      );
 
   DeclResult LookupIvarInObjCMethod(LookupResult &Lookup, Scope *S,
                                     IdentifierInfo *II);
@@ -5482,8 +5521,11 @@ public:
                                         SourceLocation TemplateKWLoc,
                                         const DeclarationNameInfo &NameInfo,
                                         bool isAddressOfOperand,
-                                const TemplateArgumentListInfo *TemplateArgs,
-                                QualType ExtendedTy = QualType());
+                                const TemplateArgumentListInfo *TemplateArgs
+                                #if ENABLE_BSC
+                                , QualType ExtendedTy = QualType()
+                                #endif
+                                );
 
   /// If \p D cannot be odr-used in the current expression evaluation context,
   /// return a reason explaining why. Otherwise, return NOUR_None.
@@ -5540,8 +5582,12 @@ public:
   BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                             SourceLocation TemplateKWLoc,
                             const DeclarationNameInfo &NameInfo,
-                            const TemplateArgumentListInfo *TemplateArgs,
-                            QualType ExtendedTy = QualType());
+                            const TemplateArgumentListInfo *TemplateArgs
+                            #if ENABLE_BSC
+                            , QualType ExtendedTy = QualType()
+                            #endif
+                            );
+  #if ENABLE_BSC
   QualType CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo);
   VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
                             Declarator &TraitDeclarator,
@@ -5553,6 +5599,7 @@ public:
   VarDecl *ActOnDesugarTraitInstance(Decl *VarDec);
   Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType,
                                       SourceLocation DSLoc);
+  #endif
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                       LookupResult &R,
@@ -7519,19 +7566,25 @@ public:
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
   NamedDecl *ActOnTraitMemberDeclarator(Scope *S, Declarator &D);
 
+  #if ENABLE_BSC
   void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
 
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
                                          SourceLocation RBrac,
                                          const ParsedAttributesView &AttrList);
+  #endif
+
   void ActOnFinishCXXMemberDecls();
   void ActOnFinishCXXNonNestedClass();
+
+  #if ENABLE_BSC
   RecordDecl *ActOnDesugarVtableRecord(TraitDecl *TD);
   RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD);
   ExprResult ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
                                 BinaryOperatorKind Opc, RecordDecl *RD,
                                 Expr *LHSExpr, Expr *RHSExpr);
+  #endif
 
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,
@@ -7970,7 +8023,11 @@ public:
       const CXXScopeSpec &SS, TemplateIdAnnotation *TemplateId,
       ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
       bool &IsMemberSpecialization, bool &Invalid,
-      bool SuppressDiagnostic = false, QualType ExtendedTy = QualType());
+      bool SuppressDiagnostic = false
+      #if ENABLE_BSC
+      , QualType ExtendedTy = QualType()
+      #endif
+      );
 
   DeclResult CheckClassTemplate(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
@@ -12021,9 +12078,12 @@ public:
                               SmallVectorImpl<Expr *> &AllArgs,
                               VariadicCallType CallType = VariadicDoesNotApply,
                               bool AllowExplicit = false,
-                              bool IsListInitialization = false,
-                              bool IsBSCInstanceFunc = false,
-                              CallExpr *Call = nullptr);
+                              bool IsListInitialization = false
+                              #if ENABLE_BSC
+                              , bool IsBSCInstanceFunc = false,
+                              CallExpr *Call = nullptr
+                              #endif
+                              );
 
   // DefaultVariadicArgumentPromotion - Like DefaultArgumentPromotion, but
   // will create a runtime trap if the resulting type is not a POD type.
@@ -12133,7 +12193,9 @@ public:
     /// IncompatibleOwnedPointer - The assignment is between a owned qualified pointer
     /// type with a unOwned qualified pointer type or two owned qualified pointer type
     /// with different base types
+    #if ENABLE_BSC
     IncompatibleOwnedPointer,
+    #endif
 
     /// Incompatible - We reject this conversion outright, it is invalid to
     /// represent it in the AST.
@@ -12198,10 +12260,12 @@ public:
   AssignConvertType CheckTransparentUnionArgumentConstraints(QualType ArgType,
                                                              ExprResult &RHS);
 
+  #if ENABLE_BSC
   bool CheckOwnedQualTypeCStyleCast(QualType LHSType, Expr* RHSExpr);
   bool CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
+  #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);
 

@@ -12,7 +12,9 @@
 
 #include "ASTCommon.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
@@ -72,16 +74,20 @@ namespace clang {
     void VisitUnresolvedUsingIfExistsDecl(UnresolvedUsingIfExistsDecl *D);
     void VisitTagDecl(TagDecl *D);
     void VisitEnumDecl(EnumDecl *D);
+    #if ENABLE_BSC
     void VisitTraitDecl(TraitDecl *D);
     void VisitImplTraitDecl(ImplTraitDecl *D);
+    #endif
     void VisitRecordDecl(RecordDecl *D);
     void VisitCXXRecordDecl(CXXRecordDecl *D);
     void VisitClassTemplateSpecializationDecl(
                                             ClassTemplateSpecializationDecl *D);
     void VisitClassTemplatePartialSpecializationDecl(
                                      ClassTemplatePartialSpecializationDecl *D);
+    #if ENABLE_BSC
     void
     VisitTraitTemplateSpecializationDecl(TraitTemplateSpecializationDecl *D);
+    #endif
     void VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D);
     void VisitVarTemplatePartialSpecializationDecl(
         VarTemplatePartialSpecializationDecl *D);
@@ -94,7 +100,9 @@ namespace clang {
     void VisitDeclaratorDecl(DeclaratorDecl *D);
     void VisitFunctionDecl(FunctionDecl *D);
     void VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D);
+    #if ENABLE_BSC
     void VisitBSCMethodDecl(BSCMethodDecl *D);
+    #endif
     void VisitCXXMethodDecl(CXXMethodDecl *D);
     void VisitCXXConstructorDecl(CXXConstructorDecl *D);
     void VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -116,7 +124,9 @@ namespace clang {
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
+    #if ENABLE_BSC
     void VisitTraitTemplateDecl(TraitTemplateDecl *D);
+    #endif
     void VisitVarTemplateDecl(VarTemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
     void VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
@@ -481,6 +491,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   Code = serialization::DECL_ENUM;
 }
 
+#if ENABLE_BSC
 void ASTDeclWriter::VisitTraitDecl(TraitDecl *D) {
   VisitTagDecl(D);
   if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
@@ -511,6 +522,7 @@ void ASTDeclWriter::VisitImplTraitDecl(ImplTraitDecl *D) {
     AbbrevToUse = Writer.getDeclImplTraitAbbrev();
   Code = serialization::DECL_IMPL_TRAIT;
 }
+#endif
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   VisitTagDecl(D);
@@ -527,6 +539,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->isParamDestroyedInCallee());
   Record.push_back(D->getArgPassingRestrictions());
 
+  #if ENABLE_BSC
   enum { CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization };
   if (ClassTemplateDecl *TemplD = D->getDescribedClassTemplate()) {
     Record.push_back(CXXRecTemplate);
@@ -541,6 +554,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
     Record.push_back(CXXRecNotTemplate);
     Record.AddDeclRef(nullptr);
   }
+  #endif
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -600,10 +614,14 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FunctionDecl's body is handled last at ASTWriterDecl::Visit,
   // after everything else is written.
   Record.push_back(static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
+  #if ENABLE_BSC
   Record.push_back(D->getSafeSpecifier());
+  #endif
   Record.push_back(D->isInlineSpecified());
   Record.push_back(D->isInlined());
+  #if ENABLE_BSC
   Record.push_back(D->isAsyncSpecified());
+  #endif
   Record.push_back(D->isVirtualAsWritten());
   Record.push_back(D->isPure());
   Record.push_back(D->hasInheritedPrototype());
@@ -1419,6 +1437,24 @@ void ASTDeclWriter::VisitUnresolvedUsingIfExistsDecl(
 void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   VisitRecordDecl(D);
 
+  #if !ENABLE_BSC
+  enum {
+    CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization
+  };
+  if (ClassTemplateDecl *TemplD = D->getDescribedClassTemplate()) {
+    Record.push_back(CXXRecTemplate);
+    Record.AddDeclRef(TemplD);
+  } else if (MemberSpecializationInfo *MSInfo
+               = D->getMemberSpecializationInfo()) {
+    Record.push_back(CXXRecMemberSpecialization);
+    Record.AddDeclRef(MSInfo->getInstantiatedFrom());
+    Record.push_back(MSInfo->getTemplateSpecializationKind());
+    Record.AddSourceLocation(MSInfo->getPointOfInstantiation());
+  } else {
+    Record.push_back(CXXRecNotTemplate);
+  }
+  #endif
+
   Record.push_back(D->isThisDeclarationADefinition());
   if (D->isThisDeclarationADefinition())
     Record.AddCXXDefinitionData(D);
@@ -1431,6 +1467,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   Code = serialization::DECL_CXX_RECORD;
 }
 
+#if ENABLE_BSC
 void ASTDeclWriter::VisitBSCMethodDecl(BSCMethodDecl *D) {
   VisitFunctionDecl(D);
   Record.AddTypeRef(D->getExtendedType());
@@ -1446,6 +1483,7 @@ void ASTDeclWriter::VisitBSCMethodDecl(BSCMethodDecl *D) {
 
   Code = serialization::DECL_BSC_METHOD;
 }
+#endif
 
 void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
   VisitFunctionDecl(D);
@@ -1650,6 +1688,7 @@ void ASTDeclWriter::VisitClassTemplatePartialSpecializationDecl(
   Code = serialization::DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
 
+#if ENABLE_BSC
 void ASTDeclWriter::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
   VisitRedeclarableTemplateDecl(D);
 
@@ -1686,6 +1725,7 @@ void ASTDeclWriter::VisitTraitTemplateSpecializationDecl(
 
   Code = serialization::DECL_TRAIT_TEMPLATE_SPECIALIZATION;
 }
+#endif
 
 void ASTDeclWriter::VisitVarTemplateDecl(VarTemplateDecl *D) {
   VisitRedeclarableTemplateDecl(D);
@@ -2130,6 +2170,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_TRAIT
+  #if ENABLE_BSC
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_TRAIT));
   // Redeclarable
@@ -2168,6 +2209,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // VisibleOffset
   DeclTraitAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  #endif
 
   // Abbreviation for DECL_RECORD
   Abv = std::make_shared<BitCodeAbbrev>();
@@ -2226,9 +2268,11 @@ void ASTWriter::WriteDeclAbbrevs() {
   // getArgPassingRestrictions
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
   // CXXRecNotTemplate/CXXRecTemplate/CXXRecMemberSpecialization
+  #if ENABLE_BSC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   // InstantiatedMembRecord
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+  #endif
 
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
@@ -2365,6 +2409,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   DeclVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_IMPL_TRAIT
+  #if ENABLE_BSC
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_IMPL_TRAIT));
   // Redeclarable
@@ -2395,6 +2440,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclImplTraitAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  #endif
 
   // Abbreviation for DECL_CXX_METHOD
   Abv = std::make_shared<BitCodeAbbrev>();
@@ -2426,10 +2472,14 @@ void ASTWriter::WriteDeclAbbrevs() {
   // FunctionDecl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // StorageClass
+  #if ENABLE_BSC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // SafeSpecifier
+  #endif
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Inline
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InlineSpecified
+  #if ENABLE_BSC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // AsyncSpecified
+  #endif
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // VirtualAsWritten
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Pure
   Abv->Add(BitCodeAbbrevOp(0));                         // HasInheritedProto
@@ -2465,6 +2515,7 @@ void ASTWriter::WriteDeclAbbrevs() {
 
   // FIXME: I dont know why this looks like a lot of repeated code.
   // Abbreviation for BSCMethodDecl.
+  #if ENABLE_BSC
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_BSC_METHOD));
   // RedeclarableDecl
@@ -2525,6 +2576,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
   DeclBSCMethodAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  #endif
 
   // Abbreviation for EXPR_DECL_REF
   Abv = std::make_shared<BitCodeAbbrev>();

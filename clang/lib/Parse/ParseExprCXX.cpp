@@ -104,6 +104,7 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 }
 
 // To judge if the syntax is a BSC template declaration.
+#if ENABLE_BSC
 static bool IsBSCTemplateDeclaration(bool IsBSC, 
                                      bool IsIdentifier,
                                      Preprocessor &PP) {
@@ -142,6 +143,7 @@ static bool IsBSCTemplateDeclaration(bool IsBSC,
 
   return IsBSCTemplateDecl;
 }
+#endif
 
 /// Parse global scope or nested-name-specifier if present.
 ///
@@ -196,9 +198,16 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
-  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
-         "Call sites of this function should be guarded by checking for C++ or "
-         "BSC");
+  assert((getLangOpts().CPlusPlus
+         #if ENABLE_BSC
+         || getLangOpts().BSC
+         #endif
+         ) &&
+         "Call sites of this function should be guarded by checking for C++ "
+         #if ENABLE_BSC
+         "or BSC"
+         #endif
+         );
 
   if (Tok.is(tok::annot_cxxscope)) {
     assert(!LastII && "want last identifier but have already annotated scope");
@@ -428,7 +437,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     //   type-name '::'
     //   namespace-name '::'
     //   nested-name-specifier identifier '::'
-
+    #if !ENABLE_BSC
+    Token Next = NextToken();
+    #else
     // Skip param list "<T>" in template function declaration:
     // "T max<T> (T a, T b) {...}"
     Token Next;
@@ -475,6 +486,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     } else {
       Next = NextToken();
     }
+    #endif
 
     Sema::NestedNameSpecInfo IdInfo(&II, Tok.getLocation(), Next.getLocation(),
                                     ObjectType);
@@ -645,6 +657,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 
 // Parse instation for bsc struct part of generic, to avoid affecting
 // the original logic of C++.
+#if ENABLE_BSC
 bool Parser::ParseOptionalBSCGenericSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
@@ -941,6 +954,7 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
 
   return false;
 }
+#endif
 
 ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
                                            bool isAddressOfOperand,
@@ -3217,6 +3231,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       // @Code:k
       //  T max<T>(T a, T b) {...}
       // @EndCode
+      #if ENABLE_BSC
       if (Actions.getCurScope()->isTemplateParamScope() && 
           (getLangOpts().BSC && Tok.is(tok::less))) {
         // TODO: we should refactoring check logic, abandon assert.
@@ -3231,6 +3246,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
         }
         assert(Tok.is(tok::l_paren) && "expected 'l_paren' token");
       }
+      #endif
 
       // If we're not in C++, only identifiers matter. Record the
       // identifier and return.

@@ -13,6 +13,9 @@
 #ifndef LLVM_CLANG_AST_STMTVISITOR_H
 #define LLVM_CLANG_AST_STMTVISITOR_H
 
+#if ENABLE_BSC
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"

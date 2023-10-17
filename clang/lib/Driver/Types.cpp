@@ -107,7 +107,9 @@ bool types::canTypeBeUserSpecified(ID Id) {
       TY_CUDA_DEVICE,
       TY_HIP_DEVICE,
       TY_PP_CHeader,
+      #if ENABLE_BSC
       TY_PP_BSCHeader,
+      #endif
       TY_PP_ObjCHeader,
       TY_PP_CXXHeader,
       TY_PP_ObjCXXHeader,
@@ -117,8 +119,10 @@ bool types::canTypeBeUserSpecified(ID Id) {
       TY_Plist,
       TY_RewrittenObjC,
       TY_RewrittenLegacyObjC,
+      #if ENABLE_BSC
       TY_RewrittenBSC,
       TY_RewrittenBSCHeader,
+      #endif
       TY_Remap,
       TY_PCH,
       TY_Object,
@@ -153,8 +157,10 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
   // 1
+  #if ENABLE_BSC
   case TY_BSC:
   case TY_PP_BSC:
+  #endif
   case TY_HIP:
   case TY_PP_HIP:
   case TY_HIP_DEVICE:
@@ -164,8 +170,10 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CHeader: case TY_PP_CHeader:
   case TY_CLHeader:
   // 2
+  #if ENABLE_BSC
   case TY_BSCHeader:
   case TY_PP_BSCHeader:
+  #endif
   case TY_ObjCHeader: case TY_PP_ObjCHeader:
   case TY_CXXHeader: case TY_PP_CXXHeader:
   case TY_CXXSHeader:
@@ -339,8 +347,10 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("mi", TY_PP_ObjC)
            .Case("mm", TY_ObjCXX)
            .Case("rs", TY_RenderScript)
+           #if ENABLE_BSC
            .Case("cbs", TY_BSC)
            .Case("hbs", TY_BSCHeader)
+           #endif
            .Case("adb", TY_Ada)
            .Case("ads", TY_Ada)
            .Case("asm", TY_PP_Asm)
@@ -438,8 +448,10 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
   case types::TY_CXX:
   case types::TY_CXXModule:
     return types::TY_CXXHeader;
+  #if ENABLE_BSC
   case types::TY_BSC:
     return types::TY_BSCHeader;
+  #endif
   case types::TY_ObjC:
     return types::TY_ObjCHeader;
   case types::TY_ObjCXX:

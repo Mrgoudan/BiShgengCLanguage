@@ -418,6 +418,10 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   endif()
 endif ()
 
+# We are building BSC version of clang
+# Put -DENABLE_BSC=0 if you would like to remove BSC support
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_BSC=1")
+
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION)
 if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")

@@ -1870,9 +1870,11 @@ bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
+#if ENABLE_BSC
 bool CursorVisitor::VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
   return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
+#endif
 
 bool CursorVisitor::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
   return Visit(TL.getValueLoc());
@@ -1902,7 +1904,9 @@ DEFAULT_TYPELOC_IMPL(DependentSizedMatrix, MatrixType)
 DEFAULT_TYPELOC_IMPL(FunctionProto, FunctionType)
 DEFAULT_TYPELOC_IMPL(FunctionNoProto, FunctionType)
 DEFAULT_TYPELOC_IMPL(Record, TagType)
+#if ENABLE_BSC
 DEFAULT_TYPELOC_IMPL(Trait, TagType)
+#endif
 DEFAULT_TYPELOC_IMPL(Enum, TagType)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParm, Type)
 DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
@@ -6722,7 +6726,9 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
 
   case Decl::Enum:
   case Decl::Record:
+  #if ENABLE_BSC
   case Decl::Trait:
+  #endif
   case Decl::CXXRecord:
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:
@@ -6731,7 +6737,9 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
     return clang_getNullCursor();
 
   case Decl::Function:
+  #if ENABLE_BSC
   case Decl::BSCMethod:
+  #endif
   case Decl::CXXMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
@@ -6743,8 +6751,10 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   }
 
   case Decl::Var:
+  #if ENABLE_BSC
   case Decl::ImplTrait:
   case Decl::TraitTemplateSpecialization:
+  #endif
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Decomposition: {
@@ -6769,6 +6779,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
     return clang_getNullCursor();
   }
 
+  #if ENABLE_BSC
   case Decl::TraitTemplate: {
     if (TraitDecl *Def =
             cast<TraitTemplateDecl>(D)->getTemplatedDecl()->getDefinition())
@@ -6776,6 +6787,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
                           TU);
     return clang_getNullCursor();
   }
+  #endif
 
   case Decl::VarTemplate: {
     if (VarDecl *Def =

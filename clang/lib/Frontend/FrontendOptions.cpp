@@ -33,6 +33,8 @@ InputKind FrontendOptions::getInputKindForExtension(StringRef Extension) {
       .Cases("cu", "cuh", Language::CUDA)
       .Case("hip", Language::HIP)
       .Cases("ll", "bc", Language::LLVM_IR)
+      #if ENABLE_BSC
       .Cases("cbs", "hbs", Language::BSC)
+      #endif
       .Default(Language::Unknown);
 }

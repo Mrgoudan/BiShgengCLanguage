@@ -31,6 +31,9 @@ add_clang_library(clangAST
   ASTTypeTraits.cpp
   AttrDocTable.cpp
   AttrImpl.cpp
+  BSC/DeclBSC.cpp
+  BSC/ExprBSC.cpp
+  BSC/StmtBSC.cpp
   Comment.cpp
   CommentBriefParser.cpp
   CommentCommandTraits.cpp
@@ -45,7 +48,6 @@ add_clang_library(clangAST
   DeclarationName.cpp
   DeclBase.cpp
   DeclCXX.cpp
-  DeclBSC.cpp
   DeclFriend.cpp
   DeclGroup.cpp
   DeclObjC.cpp

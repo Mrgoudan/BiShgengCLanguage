@@ -1308,7 +1308,9 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::BinaryOperatorClass:
+  #if ENABLE_BSC
   case Expr::AwaitExprClass:
+  #endif
   case Expr::DependentCoawaitExprClass:
   case Expr::CompoundAssignOperatorClass:
   case Expr::CStyleCastExprClass:

@@ -58,7 +58,9 @@
 BUILTIN_TYPE(Void, VoidTy)
 
 // This
+#if ENABLE_BSC
 BUILTIN_TYPE(This, ThisTy)
+#endif
 
 //===- Unsigned Types -----------------------------------------------------===//
 

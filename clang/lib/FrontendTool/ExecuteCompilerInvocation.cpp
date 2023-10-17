@@ -113,8 +113,10 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #else
   case RewriteObjC:            Action = "RewriteObjC"; break;
 #endif
+  #if ENABLE_BSC
   case RewriteBSC:
     return std::make_unique<RewriteBSCAction>();
+  #endif
 #if CLANG_ENABLE_ARCMT
   case MigrateSource:
     return std::make_unique<arcmt::MigrateSourceAction>();

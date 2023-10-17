@@ -137,15 +137,19 @@ protected:
   friend class ASTImporter; // Sets dependence dircetly.
   friend class ASTStmtReader; // Sets dependence dircetly.
 
+  #if ENABLE_BSC
   SourceLocation EBLoc;
+  #endif
 
 public:
+  #if ENABLE_BSC
   bool HasBSCScopeSpec = false;
   // Add BSC Member func desugar flag.
   bool IsDesugaredBSCMethodCall = false;
 
   SourceLocation getExtendedTypeBeginLoc() { return EBLoc; }
   void setExtendedTypeBeginLoc(SourceLocation L) { EBLoc = L; }
+  #endif
 
   QualType getType() const { return TR; }
   void setType(QualType t) {
@@ -2867,6 +2871,7 @@ public:
   static constexpr ADLCallKind NotADL = ADLCallKind::NotADL;
   static constexpr ADLCallKind UsesADL = ADLCallKind::UsesADL;
 
+  #if ENABLE_BSC
   void setPreferInlineScopeSpecifier(PreferInlineScopeSpecifier PreferInlineSpec) {
     CallExprBits.PreferInlineSpecifier = PreferInlineSpec;
   }
@@ -2874,6 +2879,7 @@ public:
   PreferInlineScopeSpecifier getPreferInlineScopeSpecifier() const {
     return (PreferInlineScopeSpecifier) CallExprBits.PreferInlineSpecifier;
   }
+  #endif
   
 protected:
   /// Build a call expression, assuming that appropriate storage has been
@@ -6475,40 +6481,6 @@ private:
   SourceLocation BeginLoc, EndLoc;
   unsigned NumExprs;
   friend TrailingObjects;
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
-};
-
-class AwaitExpr final : public Expr {
-protected:
-  Stmt *SubExpr;
-
-public:
-  explicit AwaitExpr(SourceLocation AwaitLoc, Expr *Se, QualType Ty)
-      : Expr(AwaitExprClass, Ty, VK_PRValue, OK_Ordinary), AwaitLoc(AwaitLoc) {
-    SubExpr = Se;
-  }
-
-  explicit AwaitExpr(EmptyShell Empty) : Expr(AwaitExprClass, Empty) {}
-
-  SourceLocation getBeginLoc() const { return AwaitLoc; }
-  SourceLocation getEndLoc() const { return SubExpr->getEndLoc(); }
-
-  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
-  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == AwaitExprClass;
-  }
-
-  // Iterators
-  child_range children() { return child_range(&SubExpr, &SubExpr + 1); }
-  const_child_range children() const {
-    return const_child_range(&SubExpr, &SubExpr + 1);
-  }
-
-private:
-  SourceLocation AwaitLoc;
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 };

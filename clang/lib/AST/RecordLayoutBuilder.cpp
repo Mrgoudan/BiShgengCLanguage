@@ -189,8 +189,10 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
   for (const CXXBaseSpecifier &Base : Class->bases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
+    #if ENABLE_BSC
     if (!BaseDecl->getASTContext().getLangOpts().CPlusPlus)
       continue;
+    #endif
 
     CharUnits EmptySize;
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(BaseDecl);
@@ -215,8 +217,10 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
     if (!RT)
       continue;
 
+    #if ENABLE_BSC
     if (!FD->getASTContext().getLangOpts().CPlusPlus)
       continue;
+    #endif
 
     CharUnits EmptySize;
     const CXXRecordDecl *MemberDecl = RT->getAsCXXRecordDecl();
@@ -453,8 +457,10 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
 
     const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
     // For RecordDecl, no need to track empty subobjects.
+    #if ENABLE_BSC
     if (!RD)
       return true;
+    #endif
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
@@ -561,8 +567,10 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
 
     const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
     // For RecordDecl, no need to track empty subobjects.
+    #if ENABLE_BSC
     if (!RD)
       return;
+    #endif
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 

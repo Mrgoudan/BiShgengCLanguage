@@ -1938,8 +1938,10 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
             return "union <anonymous>";
           case TTK_Enum:
             return "enum <anonymous>";
+          #if ENABLE_BSC
           case TTK_Trait:
             return "trait <anonymous>";
+          #endif
           }
         }
   }
@@ -3266,7 +3268,11 @@ static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
     if (const auto *RecordTy = Ty->getAs<RecordType>())
       Record = cast<CXXRecordDecl>(RecordTy->getDecl());
     else if (const auto *InjectedTy = Ty->getAs<InjectedClassNameType>())
+      #if ENABLE_BSC
       Record = cast<CXXRecordDecl>(InjectedTy->getDecl());
+      #else
+      Record = InjectedTy->getDecl();
+      #endif
     else {
       Result.AddTypedTextChunk(
           Result.getAllocator().CopyString(ND->getNameAsString()));
@@ -4060,7 +4066,9 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
       switch (TD->getTagKind()) {
       case TTK_Interface: // fall through
       case TTK_Struct:
+      #if ENABLE_BSC
       case TTK_Trait:
+      #endif
         return CXCursor_StructDecl;
       case TTK_Class:
         return CXCursor_ClassDecl;
@@ -5765,7 +5773,9 @@ void Sema::CodeCompleteTag(Scope *S, unsigned TagSpec) {
   case DeclSpec::TST_struct:
   case DeclSpec::TST_class:
   case DeclSpec::TST_interface:
+  #if ENABLE_BSC
   case DeclSpec::TST_trait:
+  #endif
     Filter = &ResultBuilder::IsClassOrStruct;
     ContextKind = CodeCompletionContext::CCC_ClassOrStructTag;
     break;

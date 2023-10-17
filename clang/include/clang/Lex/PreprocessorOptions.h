@@ -97,7 +97,9 @@ public:
   std::string ImplicitPCHInclude;
 
   /// Opt string for lto
+  #if ENABLE_BSC
   std::string OptString;
+  #endif
 
   /// Headers that will be converted to chained PCHs in memory.
   std::vector<std::string> ChainedIncludes;
@@ -254,7 +256,9 @@ public:
     ChainedIncludes.clear();
     DumpDeserializedPCHDecls = false;
     ImplicitPCHInclude.clear();
+    #if ENABLE_BSC
     OptString.clear();
+    #endif
     SingleFileParseMode = false;
     LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;

@@ -341,11 +341,13 @@ public:
     Inherited::VisitFunctionDecl(D);
   }
 
+  #if ENABLE_BSC
   void VisitBSCMethodDecl(const BSCMethodDecl *D) {
     // Handled by the ODRHash for FunctionDecl
 
     Inherited::VisitBSCMethodDecl(D);
   }
+  #endif
 
   void VisitCXXMethodDecl(const CXXMethodDecl *D) {
     // Handled by the ODRHash for FunctionDecl
@@ -560,7 +562,9 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
 
   ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
+  #if ENABLE_BSC
   AddBoolean(Function->isAsyncSpecified());
+  #endif
   AddBoolean(Function->isVirtualAsWritten());
   AddBoolean(Function->isPure());
   AddBoolean(Function->isDeletedAsWritten());
@@ -1020,7 +1024,9 @@ public:
 
   void VisitRecordType(const RecordType *T) { VisitTagType(T); }
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }
+  #if ENABLE_BSC
   void VisitTraitType(const TraitType *T) { VisitTagType(T); }
+  #endif
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
     ID.AddInteger(T->getNumArgs());

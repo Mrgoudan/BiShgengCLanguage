@@ -640,8 +640,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 #include "clang/AST/BuiltinTypes.def"
   case BuiltinType::Dependent:
     llvm_unreachable("Unexpected builtin type");
+  #if ENABLE_BSC
   case BuiltinType::This:
     llvm_unreachable("Unexpected builtin type");
+  #endif
   case BuiltinType::NullPtr:
     return DBuilder.createNullPtrType();
   case BuiltinType::Void:
@@ -3437,8 +3439,10 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 #include "clang/AST/TypeNodes.inc"
     llvm_unreachable("Dependent types cannot show up in debug information");
 
+  #if ENABLE_BSC
   case Type::Trait:
     llvm_unreachable("Trait types cannot show up in debug information");
+  #endif
   case Type::ExtVector:
   case Type::Vector:
     return CreateType(cast<VectorType>(Ty), Unit);

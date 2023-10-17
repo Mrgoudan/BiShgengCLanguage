@@ -203,9 +203,6 @@ def TypoExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
 
-// BSC Extensions
-def AwaitExpr : StmtNode<Expr>;
-
 // Microsoft Extensions.
 def MSPropertyRefExpr : StmtNode<Expr>;
 def MSPropertySubscriptExpr : StmtNode<Expr>;
@@ -295,3 +292,6 @@ def OMPTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
+
+// BSC Extensions.
+include "clang/Basic/BSC/BSCStmtNodes.td"

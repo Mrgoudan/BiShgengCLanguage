@@ -51,7 +51,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ExternCContext:
   case Decl::Namespace:
   case Decl::UnresolvedUsingTypename:
+  #if ENABLE_BSC
   case Decl::TraitTemplateSpecialization: // trait X<int>; [bishengc]
+  #endif
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:
   case Decl::VarTemplateSpecialization:
@@ -61,7 +63,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::NonTypeTemplateParm:
   case Decl::CXXDeductionGuide:
   case Decl::CXXMethod:
+  #if ENABLE_BSC
   case Decl::BSCMethod:
+  #endif
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
   case Decl::CXXConversion:
@@ -72,7 +76,9 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ObjCAtDefsField:
   case Decl::ParmVar:
   case Decl::ImplicitParam:
+  #if ENABLE_BSC
   case Decl::TraitTemplate: // trait X<T> {}; [bishengc]
+  #endif
   case Decl::ClassTemplate:
   case Decl::VarTemplate:
   case Decl::FunctionTemplate:
@@ -131,8 +137,10 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
+  #if ENABLE_BSC
   case Decl::Trait:     // trait X {}; [bishengc]
   case Decl::ImplTrait: // impl trait X for struct S; [bishengc]
+  #endif
     // None of these decls require codegen support.
     return;
 
@@ -212,8 +220,10 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     return EmitStaticVarDecl(D, Linkage);
   }
 
+  #if ENABLE_BSC
   if (getLangOpts().BSC && D.getType()->isTraitPointerType())
     return;
+  #endif
 
   if (D.getType().getAddressSpace() == LangAS::opencl_local)
     return CGM.getOpenCLRuntime().EmitWorkGroupLocalVarDecl(*this, D);

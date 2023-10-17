@@ -38,8 +38,10 @@ std::string getTagType(TagTypeKind AS) {
     return "struct";
   case TagTypeKind::TTK_Enum:
     return "enum";
+  #if ENABLE_BSC
   case TagTypeKind::TTK_Trait:
     return "trait";
+  #endif
   }
   llvm_unreachable("Unknown TagTypeKind");
 }

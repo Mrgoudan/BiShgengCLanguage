@@ -16,8 +16,10 @@
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclFriend.h"
@@ -738,7 +740,9 @@ bool Decl::isWeakImported() const {
 unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
   switch (DeclKind) {
     case Function:
+    #if ENABLE_BSC
     case BSCMethod:
+    #endif
     case CXXDeductionGuide:
     case CXXMethod:
     case CXXConstructor:
@@ -747,7 +751,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case CXXConversion:
     case EnumConstant:
     case Var:
+    #if ENABLE_BSC
     case ImplTrait:
+    #endif
     case ImplicitParam:
     case ParmVar:
     case ObjCMethod:
@@ -802,7 +808,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case Record:
     case CXXRecord:
     case Enum:
+    #if ENABLE_BSC
     case Trait:
+    #endif
       return IDNS_Tag | IDNS_Type;
 
     case Namespace:
@@ -815,7 +823,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ClassTemplate:
     case TemplateTemplateParm:
     case TypeAliasTemplate:
+    #if ENABLE_BSC
     case TraitTemplate:
+    #endif
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
     case UnresolvedUsingIfExists:
@@ -849,7 +859,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
 
     case UsingDirective:
     case BuiltinTemplate:
+    #if ENABLE_BSC
     case TraitTemplateSpecialization:
+    #endif
     case ClassTemplateSpecialization:
     case ClassTemplatePartialSpecialization:
     case ClassScopeFunctionSpecialization:
@@ -994,8 +1006,11 @@ bool Decl::AccessDeclContextCheck() const {
       // AS_none as access specifier.
       isa<CXXRecordDecl>(this) ||
       isa<ClassScopeFunctionSpecializationDecl>(this) ||
-      isa<LifetimeExtendedTemporaryDecl>(this) ||
-      isa<RecordDecl>(getDeclContext()))
+      isa<LifetimeExtendedTemporaryDecl>(this)
+      #if ENABLE_BSC
+      || isa<RecordDecl>(getDeclContext())
+      #endif
+      )
     return true;
 
   assert(Access != AS_none &&
@@ -1173,10 +1188,12 @@ bool DeclContext::isDependentContext() const {
     if (Record->isNeverDependentLambda())
       return false;
   }
+  #if ENABLE_BSC
   if (const auto *Record = dyn_cast<RecordDecl>(this)) {
     if (Record->getDescribedClassTemplate())
       return true;
   }
+  #endif
 
   if (const auto *Function = dyn_cast<FunctionDecl>(this)) {
     if (Function->getDescribedFunctionTemplate())
@@ -1307,8 +1324,12 @@ DeclContext *DeclContext::getPrimaryContext() {
         if (PossiblePartialDef->isBeingDefined())
           return PossiblePartialDef;
       } else {
+        #if ENABLE_BSC
         assert(isa<InjectedClassNameType>(Tag->getTypeForDecl()) ||
                isa<InjectedTraitNameType>(Tag->getTypeForDecl()));
+        #else
+        assert(isa<InjectedClassNameType>(Tag->getTypeForDecl()));
+        #endif
       }
 
       return Tag;
@@ -1579,12 +1600,16 @@ void DeclContext::addHiddenDecl(Decl *D) {
   // supports template-structure,
   //      BSC template-structure reuses CXX.. logic, each RecordDecl need to be
   //      checked.
+  #if ENABLE_BSC
   if (D->getASTContext()
           .getLangOpts()
           .CPlusPlus) { // LangOpts().CPlusPlus does not work at here
+  #endif
     if (auto *Record = dyn_cast<CXXRecordDecl>(this))
       Record->addedMember(D);
+  #if ENABLE_BSC
   }
+  #endif
 
   // If this is a newly-created (not de-serialized) import declaration, wire
   // it in to the list of local import declarations.
@@ -1913,6 +1938,7 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
     // There may be instances before extending member functions for
     // structs in BSC. Therefore, we need to add member functions
     // to the already instantiated map when defining them.
+    #if ENABLE_BSC
     if (getParentASTContext().getLangOpts().BSC && dyn_cast<BSCMethodDecl>(D)) {
       if (RecordDecl *RD = dyn_cast<RecordDecl>(this)) {
         if (ClassTemplateDecl *DCT = RD->getDescribedClassTemplate()) {
@@ -1923,6 +1949,7 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
         }
       }
     }
+    #endif
   } else {
     setHasLazyLocalLexicalLookups(true);
   }

@@ -1594,7 +1594,9 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::FunctionNoProto:
     case Type::Record:
     case Type::Enum:
+    #if ENABLE_BSC
     case Type::Trait:
+    #endif
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
@@ -1810,7 +1812,9 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     //     TT<T>
     //     TT<i>
     //     TT<>
+    #if ENABLE_BSC
     case Type::InjectedTraitName:
+    #endif
     case Type::TemplateSpecialization: {
       // When Arg cannot be a derived class, we can just try to deduce template
       // arguments from the template-id.
@@ -5868,9 +5872,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     break;
   }
 
+  #if ENABLE_BSC
   case Type::InjectedTraitName:
     T = cast<InjectedTraitNameType>(T)->getInjectedSpecializationType();
     break;
+  #endif
 
   case Type::Complex:
     if (!OnlyDeduced)
@@ -5970,7 +5976,9 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::FunctionNoProto:
   case Type::Record:
   case Type::Enum:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
   case Type::ObjCInterface:
   case Type::ObjCObject:
   case Type::ObjCObjectPointer:

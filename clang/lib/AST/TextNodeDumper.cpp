@@ -1004,11 +1004,13 @@ void TextNodeDumper::VisitCallExpr(const CallExpr *Node) {
     OS << " adl";
   if (Node->hasStoredFPFeatures())
     printFPOptions(Node->getFPFeatures());
+  #if ENABLE_BSC
   if (Node->getPreferInlineScopeSpecifier() == PI_PreferInline) {
     OS << " prefer_inline";
   } else if (Node->getPreferInlineScopeSpecifier() == PI_PreferNoInline) {
     OS << " prefer_no_inline";
   }
+  #endif
 }
 
 void TextNodeDumper::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node) {
@@ -1606,10 +1608,12 @@ void TextNodeDumper::VisitInjectedClassNameType(
   dumpDeclRef(T->getDecl());
 }
 
+#if ENABLE_BSC
 void TextNodeDumper::VisitInjectedTraitNameType(
     const InjectedTraitNameType *T) {
   dumpDeclRef(T->getDecl());
 }
+#endif
 
 void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
   dumpDeclRef(T->getDecl());
@@ -1674,8 +1678,10 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
     OS << ' ' << VarDecl::getStorageClassSpecifierString(SC);
   if (D->isInlineSpecified())
     OS << " inline";
+  #if ENABLE_BSC
   if (D->isAsyncSpecified())
     OS << " async";
+  #endif
   if (D->isVirtualAsWritten())
     OS << " virtual";
   if (D->isModulePrivate())
@@ -1696,11 +1702,13 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (D->isIneligibleOrNotSelected())
     OS << (isa<CXXDestructorDecl>(D) ? " not_selected" : " ineligible");
 
+  #if ENABLE_BSC
   if (D->getSafeSpecifier() == SS_Safe) {
     OS << " safe";
   } else if (D->getSafeSpecifier() == SS_Unsafe) {
     OS << " unsafe";
   }
+  #endif
 
   if (const auto *FPT = D->getType()->getAs<FunctionProtoType>()) {
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
@@ -1822,10 +1830,12 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
   }
 }
 
+#if ENABLE_BSC
 void TextNodeDumper::VisitImplTraitDecl(const ImplTraitDecl *D) {
   dumpName(D);
   dumpType(D->getType());
 }
+#endif
 
 void TextNodeDumper::VisitBindingDecl(const BindingDecl *D) {
   dumpName(D);
@@ -2106,9 +2116,11 @@ void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
   dumpName(D);
 }
 
+#if ENABLE_BSC
 void TextNodeDumper::VisitTraitTemplateDecl(const TraitTemplateDecl *D) {
   dumpName(D);
 }
+#endif
 
 void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpName(D);

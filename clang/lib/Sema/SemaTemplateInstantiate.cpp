@@ -2668,9 +2668,14 @@ namespace clang {
 ///
 /// \returns true if an error occurred, false otherwise.
 bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
+                            #if ENABLE_BSC
                             RecordDecl *Instantiation, RecordDecl *Pattern,
+                            #else
+                            CXXRecordDecl *Instantiation, CXXRecordDecl *Pattern,
+                            #endif
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                             TemplateSpecializationKind TSK, bool Complain) {
+  #if ENABLE_BSC
   RecordDecl *PatternDef = cast_or_null<RecordDecl>(Pattern->getDefinition());
   if (getLangOpts().CPlusPlus) {
     if (DiagnoseUninstantiableTemplate(
@@ -2680,6 +2685,14 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
             Pattern, PatternDef, TSK, Complain))
       return true;
   }
+  #else
+  CXXRecordDecl *PatternDef
+    = cast_or_null<CXXRecordDecl>(Pattern->getDefinition());
+  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Instantiation,
+                                Instantiation->getInstantiatedFromMemberClass(),
+                                     Pattern, PatternDef, TSK, Complain))
+    return true;
+  #endif
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
     std::string Name;
@@ -2692,6 +2705,7 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   Pattern = PatternDef;
 
   // Record the point of instantiation.
+  #if ENABLE_BSC
   if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
     if (MemberSpecializationInfo *MSInfo =
             (static_cast<RecordDecl *>(Instantiation))
@@ -2699,22 +2713,38 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       // Since for BSC, we may enter InstantiateClass multi times for the same
       // class template specialization, we only update pointOfInstantiation at
       // the first time.
+      #if ENABLE_BSC
       if (MSInfo->getPointOfInstantiation().isInvalid()) {
+      #endif
         MSInfo->setTemplateSpecializationKind(TSK);
         MSInfo->setPointOfInstantiation(PointOfInstantiation);
+      #if ENABLE_BSC
       }
+      #endif
     } else if (ClassTemplateSpecializationDecl *Spec =
                    dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
       // Since for BSC, we may enter InstantiateClass multi times for the same
       // class template specialization, we only update pointOfInstantiation at
       // the first time.
+      #if ENABLE_BSC
       if (Spec->getPointOfInstantiation().isInvalid()) {
+      #endif
         Spec->setTemplateSpecializationKind(TSK);
         Spec->setPointOfInstantiation(PointOfInstantiation);
+      #if ENABLE_BSC
       }
+      #endif
     }
   } else if (ClassTemplateSpecializationDecl *Spec =
                  dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
+  #else
+  if (MemberSpecializationInfo *MSInfo
+        = Instantiation->getMemberSpecializationInfo()) {
+    MSInfo->setTemplateSpecializationKind(TSK);
+    MSInfo->setPointOfInstantiation(PointOfInstantiation);
+  } else if (ClassTemplateSpecializationDecl *Spec
+        = dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
+  #endif
     Spec->setTemplateSpecializationKind(TSK);
     Spec->setPointOfInstantiation(PointOfInstantiation);
   }
@@ -2758,12 +2788,17 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   Instantiation->setTagKind(Pattern->getTagKind());
 
   // Do substitution on the base class specifiers.
+  #if ENABLE_BSC
   if(getLangOpts().CPlusPlus) {
     if (SubstBaseSpecifiers(static_cast<CXXRecordDecl *>(Instantiation),
                             static_cast<CXXRecordDecl *>(Pattern),
                             TemplateArgs))
       Instantiation->setInvalidDecl();
   }
+  #else
+  if (SubstBaseSpecifiers(Instantiation, Pattern, TemplateArgs))
+    Instantiation->setInvalidDecl();
+  #endif
 
   TemplateDeclInstantiator Instantiator(*this, Instantiation, TemplateArgs);
   SmallVector<Decl*, 4> Fields;
@@ -2771,6 +2806,7 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   LateInstantiatedAttrVec LateAttrs;
   Instantiator.enableLateAttributeInstantiation(&LateAttrs);
 
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     StoredDeclsMap *Map = Instantiation->getLookupPtr();
     for (auto *Member : getASTContext().getTranslationUnitDecl()->decls()) {
@@ -2789,6 +2825,7 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       return Instantiation->isInvalidDecl();
     }
   }
+  #endif
 
   bool MightHaveConstexprVirtualFunctions = false;
   for (auto *Member : Pattern->decls()) {
@@ -2841,10 +2878,15 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
           break;
         }
       } else if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewMember)) {
+        #if ENABLE_BSC
         if (getLangOpts().CPlusPlus && MD->isConstexpr() &&
             !MD->getFriendObjectKind() &&
             (MD->isVirtualAsWritten() ||
              (static_cast<CXXRecordDecl *>(Instantiation))->getNumBases()))
+        #else
+        if (MD->isConstexpr() && !MD->getFriendObjectKind() &&
+            (MD->isVirtualAsWritten() || Instantiation->getNumBases()))
+        #endif
           MightHaveConstexprVirtualFunctions = true;
       }
 
@@ -2861,11 +2903,15 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   // Finish checking fields.
   ActOnFields(nullptr, Instantiation->getLocation(), Instantiation, Fields,
               SourceLocation(), SourceLocation(), ParsedAttributesView());
+  #if ENABLE_BSC
   if (getLangOpts().CPlusPlus) {
     CheckCompletedCXXClass(
         nullptr, (static_cast<CXXRecordDecl *>(
                      Instantiation))); // FIXME: make it work for BSC RecordDecl
   }
+  #else
+  CheckCompletedCXXClass(nullptr, Instantiation);
+  #endif
 
   // Default arguments are parsed, if not instantiated. We can go instantiate
   // default arg exprs for default constructors if necessary now. Unless we're
@@ -2908,7 +2954,11 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
   if (!Instantiation->isInvalidDecl()) {
     // Perform any dependent diagnostics from the pattern.
-    if (getLangOpts().CPlusPlus && Pattern->isDependentContext())
+    if (
+        #if ENABLE_BSC
+        getLangOpts().CPlusPlus &&
+        #endif
+        Pattern->isDependentContext())
       PerformDependentDiagnostics(Pattern, TemplateArgs);
 
     // Instantiate any out-of-line class template partial
@@ -2946,6 +2996,7 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     // of a polymorphic class template specialization. Otherwise, eagerly
     // instantiate only constexpr virtual functions in preparation for their use
     // in constant evaluation.
+    #if ENABLE_BSC
     if (getLangOpts().CPlusPlus) {
       if (TSK == TSK_ExplicitInstantiationDefinition)
         MarkVTableUsed(PointOfInstantiation,
@@ -2955,6 +3006,13 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
             PointOfInstantiation, static_cast<CXXRecordDecl *>(Instantiation),
             /*ConstexprOnly*/ true);
     }
+    #else
+    if (TSK == TSK_ExplicitInstantiationDefinition)
+      MarkVTableUsed(PointOfInstantiation, Instantiation, true);
+    else if (MightHaveConstexprVirtualFunctions)
+      MarkVirtualMembersReferenced(PointOfInstantiation, Instantiation,
+                                   /*ConstexprOnly*/ true);
+    #endif
   }
 
   Consumer.HandleTagDeclDefinition(Instantiation);
@@ -3137,7 +3195,11 @@ bool Sema::usesPartialOrExplicitSpecialization(
 /// Get the instantiation pattern to use to instantiate the definition of a
 /// given ClassTemplateSpecializationDecl (either the pattern of the primary
 /// template or of a partial specialization).
+#if ENABLE_BSC
 static ActionResult<RecordDecl *> getPatternForClassTemplateSpecialization(
+#else
+static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
+#endif
     Sema &S, SourceLocation PointOfInstantiation,
     ClassTemplateSpecializationDecl *ClassTemplateSpec,
     TemplateSpecializationKind TSK) {
@@ -3253,7 +3315,11 @@ static ActionResult<RecordDecl *> getPatternForClassTemplateSpecialization(
     }
   }
 
+  #if ENABLE_BSC
   RecordDecl *Pattern = nullptr;
+  #else
+  CXXRecordDecl *Pattern = nullptr;
+  #endif
   Specialized = ClassTemplateSpec->getSpecializedTemplateOrPartial();
   if (auto *PartialSpec =
           Specialized.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
@@ -3277,11 +3343,15 @@ static ActionResult<RecordDecl *> getPatternForClassTemplateSpecialization(
 
       Template = Template->getInstantiatedFromMemberTemplate();
     }
+    #if ENABLE_BSC
     if (S.Context.getLangOpts().BSC) {
       Pattern = Template->getBSCTemplatedDecl();
     } else {
+    #endif
       Pattern = Template->getTemplatedDecl();
+    #if ENABLE_BSC
     }
+    #endif
   }
 
   return Pattern;
@@ -3297,8 +3367,13 @@ bool Sema::InstantiateClassTemplateSpecialization(
   if (ClassTemplateSpec->isInvalidDecl())
     return true;
 
+  #if ENABLE_BSC
   ActionResult<RecordDecl *> Pattern = getPatternForClassTemplateSpecialization(
       *this, PointOfInstantiation, ClassTemplateSpec, TSK);
+  #else
+  ActionResult<CXXRecordDecl *> Pattern = getPatternForClassTemplateSpecialization(
+      *this, PointOfInstantiation, ClassTemplateSpec, TSK);
+  #endif
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
@@ -3311,7 +3386,12 @@ bool Sema::InstantiateClassTemplateSpecialization(
 /// of the given class, which is an instantiation of a class template
 /// or a member class of a template.
 void Sema::InstantiateClassMembers(
-    SourceLocation PointOfInstantiation, RecordDecl *Instantiation,
+    SourceLocation PointOfInstantiation,
+    #if ENABLE_BSC
+    RecordDecl *Instantiation,
+    #else
+    CXXRecordDecl *Instantiation,
+    #endif
     const MultiLevelTemplateArgumentList &TemplateArgs,
     TemplateSpecializationKind TSK) {
   // FIXME: We need to notify the ASTMutationListener that we did all of these
@@ -3456,7 +3536,11 @@ void Sema::InstantiateClassMembers(
           SuppressNew)
         continue;
 
+      #if ENABLE_BSC
       RecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
+      #else
+      CXXRecordDecl *Pattern = Record->getInstantiatedFromMemberClass();
+      #endif
       assert(Pattern && "Missing instantiated-from-template information");
 
       if (!Record->getDefinition()) {
@@ -3525,8 +3609,13 @@ void Sema::InstantiateClassMembers(
       // No need to instantiate in-class initializers during explicit
       // instantiation.
       if (Field->hasInClassInitializer() && TSK == TSK_ImplicitInstantiation) {
+        #if ENABLE_BSC
         RecordDecl *ClassPattern =
             Instantiation->getTemplateInstantiationPattern();
+        #else
+        CXXRecordDecl *ClassPattern =
+            Instantiation->getTemplateInstantiationPattern();
+        #endif
         DeclContext::lookup_result Lookup =
             ClassPattern->lookup(Field->getDeclName());
         FieldDecl *Pattern = Lookup.find_first<FieldDecl>();

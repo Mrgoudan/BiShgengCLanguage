@@ -14,6 +14,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Expr.h"
@@ -362,9 +365,16 @@ int64_t Stmt::getID(const ASTContext &Context) const {
 }
 
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
-                           SourceLocation LB, SourceLocation RB,
-                           SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc)
-    : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB), SafeSpec(SafeSpec), SafeLoc(SafeLoc) {
+                           SourceLocation LB, SourceLocation RB
+                           #if ENABLE_BSC
+                           , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
+                           #endif
+                           )
+    : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB)
+    #if ENABLE_BSC
+    , SafeSpec(SafeSpec), SafeLoc(SafeLoc)
+    #endif
+    {
   CompoundStmtBits.NumStmts = Stmts.size();
   CompoundStmtBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   setStmts(Stmts);
@@ -381,12 +391,19 @@ void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
 
 CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                                    FPOptionsOverride FPFeatures,
-                                   SourceLocation LB, SourceLocation RB,
-                                   SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc) {
+                                   SourceLocation LB, SourceLocation RB
+                                   #if ENABLE_BSC
+                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc)
+                                   #endif
+                                   {
   void *Mem =
       C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(Stmts.size(),  FPFeatures.requiresTrailingStorage()),
       alignof(CompoundStmt));
-  return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB, SafeSpec, SafeLoc);
+  return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB
+                                #if ENABLE_BSC
+                                , SafeSpec, SafeLoc
+                                #endif
+                                );
 }
 
 CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C, unsigned NumStmts,

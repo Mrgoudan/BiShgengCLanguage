@@ -396,7 +396,11 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline, bool is_async = false);
+      clang::StorageClass storage, bool is_inline
+      #if ENABLE_BSC
+      , bool is_async = false
+      #endif
+      );
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,

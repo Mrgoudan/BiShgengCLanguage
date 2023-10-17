@@ -14,6 +14,9 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -102,9 +105,12 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
       }
     } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
-        assert(ME->getBase()->getType()->isRecordType() ||
-               ME->getBase()->getType()->isEnumeralType() ||
-               ME->getBase()->getType()->isBuiltinType());
+        assert(ME->getBase()->getType()->isRecordType()
+               #if ENABLE_BSC
+               || ME->getBase()->getType()->isEnumeralType() ||
+               ME->getBase()->getType()->isBuiltinType()
+               #endif
+               );
         if (FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();
@@ -1380,7 +1386,9 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
 
+  #if ENABLE_BSC
   CallExprBits.PreferInlineSpecifier = PI_None;
+  #endif
 }
 
 CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
@@ -2665,10 +2673,12 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     return false;
   }
 
+  #if ENABLE_BSC
   case AwaitExprClass: {
     return cast<AwaitExpr>(this)->getSubExpr()->isUnusedResultAWarning(
         WarnE, Loc, R1, R2, Ctx);
   }
+  #endif
 
   // If we don't know precisely what we're looking at, let's not warn.
   case UnresolvedLookupExprClass:
@@ -3532,7 +3542,9 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CoawaitExprClass:
   case DependentCoawaitExprClass:
   case CoyieldExprClass:
+  #if ENABLE_BSC
   case AwaitExprClass:
+  #endif
     // These always have a side-effect.
     return true;
 

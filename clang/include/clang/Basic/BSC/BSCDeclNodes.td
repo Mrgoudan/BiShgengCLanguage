@@ -1,0 +1,1 @@
+def BSCMethod : DeclNode<Function>;

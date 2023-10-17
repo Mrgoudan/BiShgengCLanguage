@@ -14,7 +14,9 @@
 #define LLVM_CLANG_AST_DECLVISITOR_H
 
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"

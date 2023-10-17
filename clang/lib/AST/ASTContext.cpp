@@ -19,10 +19,12 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/AttrIterator.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
@@ -892,7 +894,11 @@ TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
 }
 
 CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
-  if (!(LangOpts.CPlusPlus || LangOpts.BSC)) return nullptr;
+  if (!(LangOpts.CPlusPlus
+      #if ENABLE_BSC
+      || LangOpts.BSC
+      #endif
+      )) return nullptr;
 
   switch (getCXXABIKind()) {
   case TargetCXXABI::AppleARM64:
@@ -1293,7 +1299,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // C99 6.2.5p19.
   InitBuiltinType(VoidTy,              BuiltinType::Void);
   // BSC
+  #if ENABLE_BSC
   InitBuiltinType(ThisTy, BuiltinType::This);
+  #endif
   // C99 6.2.5p2.
   InitBuiltinType(BoolTy,              BuiltinType::Bool);
   // C99 6.2.5p3.
@@ -1375,8 +1383,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   // C++20 (proposed)
   InitBuiltinType(Char8Ty,              BuiltinType::Char8);
+  #if ENABLE_BSC
   if (LangOpts.BSC)
     InitBuiltinType(ThisTy, BuiltinType::This);
+  #endif
   if (LangOpts.CPlusPlus) // C++0x 3.9.1p5, extension for C++
     InitBuiltinType(Char16Ty,           BuiltinType::Char16);
   else // C99
@@ -2032,11 +2042,13 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::Builtin:
     switch (cast<BuiltinType>(T)->getKind()) {
     default: llvm_unreachable("Unknown builtin type!");
+    #if ENABLE_BSC
     case BuiltinType::This:
       // BSC ThisType for Trait
       Width = 0;
       Align = 8;
       break;
+    #endif
     case BuiltinType::Void:
       // GCC extension: alignof(void) = 8 bits.
       Width = 0;
@@ -2318,7 +2330,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
   }
   case Type::Record:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
   case Type::Enum: {
     const auto *TT = cast<TagType>(T);
 
@@ -3605,7 +3619,9 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::ObjCObjectPointer:
   case Type::Record:
   case Type::Enum:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
   case Type::UnresolvedUsing:
   case Type::TypeOfExpr:
   case Type::TypeOf:
@@ -3613,7 +3629,9 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::UnaryTransform:
   case Type::DependentName:
   case Type::InjectedClassName:
+  #if ENABLE_BSC
   case Type::InjectedTraitName:
+  #endif
   case Type::TemplateSpecialization:
   case Type::DependentTemplateSpecialization:
   case Type::TemplateTypeParm:
@@ -4575,6 +4593,10 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 
 #ifndef NDEBUG
 static bool NeedsInjectedClassNameType(const RecordDecl *RD) {
+  #if !ENABLE_BSC
+  if (!isa<CXXRecordDecl>(D)) return false;
+  const auto *RD = cast<CXXRecordDecl>(D);
+  #endif
   if (isa<ClassTemplatePartialSpecializationDecl>(RD))
     return true;
   if (RD->getDescribedClassTemplate() &&
@@ -4586,12 +4608,23 @@ static bool NeedsInjectedClassNameType(const RecordDecl *RD) {
 
 /// getInjectedClassNameType - Return the unique reference to the
 /// injected class name type for the specified templated declaration.
-QualType ASTContext::getInjectedClassNameType(RecordDecl *Decl,
+QualType ASTContext::getInjectedClassNameType(
+                                              #if ENABLE_BSC
+                                              RecordDecl *Decl,
+                                              #else
+                                              CXXRecordDecl *Decl,
+                                              #endif
                                               QualType TST) const {
   assert(NeedsInjectedClassNameType(Decl));
   if (Decl->TypeForDecl) {
     assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
-  } else if (RecordDecl *PrevDecl = Decl->getPreviousDecl()) {
+  } else if (
+            #if ENABLE_BSC
+            RecordDecl *PrevDecl = Decl->getPreviousDecl()
+            #else
+            CXXRecordDecl *PrevDecl = Decl->getPreviousDecl()
+            #endif
+            ) {
     assert(PrevDecl->TypeForDecl && "previous declaration has no type");
     Decl->TypeForDecl = PrevDecl->TypeForDecl;
     assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
@@ -4604,6 +4637,7 @@ QualType ASTContext::getInjectedClassNameType(RecordDecl *Decl,
   return QualType(Decl->TypeForDecl, 0);
 }
 
+#if ENABLE_BSC
 #ifndef NDEBUG
 static bool NeedsInjectedTraitNameType(const TraitDecl *TD) {
   if (TD->getDescribedTraitTemplate())
@@ -4630,6 +4664,7 @@ QualType ASTContext::getInjectedTraitNameType(TraitDecl *Decl,
   }
   return QualType(Decl->TypeForDecl, 0);
 }
+#endif
 
 /// getTypeDeclType - Return the unique reference to the type for the
 /// specified type declaration.
@@ -4650,10 +4685,14 @@ QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
   } else if (const auto *Enum = dyn_cast<EnumDecl>(Decl)) {
     assert(Enum->isFirstDecl() && "enum has previous declaration");
     return getEnumType(Enum);
+  #if ENABLE_BSC
   } else if (const auto *Trait = dyn_cast<TraitDecl>(Decl)) {
     assert(Trait->isFirstDecl() && "Trait has previous declaration");
+    #if ENABLE_BSC
     assert(!NeedsInjectedTraitNameType(Trait));
+    #endif
     return getTraitType(Trait);
+  #endif
   } else if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl)) {
     return getUnresolvedUsingType(Using);
   } else
@@ -4712,6 +4751,7 @@ QualType ASTContext::getRecordType(const RecordDecl *Decl) const {
   return QualType(newType, 0);
 }
 
+#if ENABLE_BSC
 QualType ASTContext::getTraitType(const TraitDecl *Decl) const {
   if (Decl->TypeForDecl)
     return QualType(Decl->TypeForDecl, 0);
@@ -4725,6 +4765,7 @@ QualType ASTContext::getTraitType(const TraitDecl *Decl) const {
   Types.push_back(newType);
   return QualType(newType, 0);
 }
+#endif
 
 QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
@@ -7971,7 +8012,9 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::SatUShortFract:
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
+    #if ENABLE_BSC
     case BuiltinType::This:
+    #endif
       // FIXME: potentially need @encodes for these!
       return ' ';
 
@@ -8306,8 +8349,10 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
   }
 
+  #if ENABLE_BSC
   case Type::Trait:
     return;
+  #endif
 
   case Type::BlockPointer: {
     const auto *BT = T->castAs<BlockPointerType>();
@@ -10631,7 +10676,9 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified);
   case Type::Record:
   case Type::Enum:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
     return {};
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.

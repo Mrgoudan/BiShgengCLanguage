@@ -2870,6 +2870,7 @@ void CastOperation::CheckCStyleCast() {
   }
 
   // bsc owned type CStyleCast
+  #if ENABLE_BSC
   if (Self.getLangOpts().BSC &&
       (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() ||
        DestType.getCanonicalType().isOwnedQualified())) {
@@ -2878,15 +2879,22 @@ void CastOperation::CheckCStyleCast() {
       return;
     }
   }
+  #endif
 
   // If the type is dependent, we won't do any other semantic analysis now.
   if (Self.getASTContext().isDependenceAllowed() &&
       (DestType->isDependentType() || SrcExpr.get()->isTypeDependent() ||
        SrcExpr.get()->isValueDependent())) {
+    #if ENABLE_BSC
     assert((Self.getLangOpts().BSC ||
             (DestType->containsErrors() || SrcExpr.get()->containsErrors() ||
              SrcExpr.get()->containsErrors())) &&
            "should only occur in error-recovery path for non BSC.");
+    #else
+    assert((DestType->containsErrors() || SrcExpr.get()->containsErrors() ||
+            SrcExpr.get()->containsErrors()) &&
+           "should only occur in error-recovery path.");
+    #endif
     assert(Kind == CK_Dependent);
     return;
   }
@@ -3284,11 +3292,15 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getEndLoc());
 
   // Try to use C-Style cast check for BSC generic.
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     Op.CheckCStyleCast();
   } else {
+  #endif
     Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
+  #if ENABLE_BSC
   }
+  #endif
   if (Op.SrcExpr.isInvalid())
     return ExprError();
 

@@ -16,8 +16,10 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -2319,7 +2321,9 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::MacroQualified:
   case Type::BitInt:
   case Type::DependentBitInt:
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
     llvm_unreachable("type is illegal as a nested name specifier");
 
   case Type::SubstTemplateTypeParmPack:
@@ -2427,9 +2431,11 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
         cast<InjectedClassNameType>(Ty)->getDecl());
     break;
 
+  #if ENABLE_BSC
   case Type::InjectedTraitName:
     mangleSourceNameWithAbiTags(cast<InjectedTraitNameType>(Ty)->getDecl());
     break;
+  #endif
 
   case Type::DependentName:
     mangleSourceName(cast<DependentNameType>(Ty)->getIdentifier());
@@ -3078,7 +3084,9 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
   case BuiltinType::Dependent:
+  #if ENABLE_BSC
   case BuiltinType::This:
+  #endif
     if (!NullOut)
       llvm_unreachable("mangling a placeholder type");
     break;
@@ -3375,9 +3383,11 @@ void CXXNameMangler::mangleType(const EnumType *T) {
 void CXXNameMangler::mangleType(const RecordType *T) {
   mangleType(static_cast<const TagType*>(T));
 }
+#if ENABLE_BSC
 void CXXNameMangler::mangleType(const TraitType *T) {
   llvm_unreachable("type is illegal to mangle");
 }
+#endif
 void CXXNameMangler::mangleType(const TagType *T) {
   mangleName(T->getDecl());
 }
@@ -3882,12 +3892,14 @@ void CXXNameMangler::mangleType(const InjectedClassNameType *T) {
   mangleType(T->getInjectedSpecializationType());
 }
 
+#if ENABLE_BSC
 void CXXNameMangler::mangleType(const InjectedTraitNameType *T) {
   // Mangle injected class name types as if the user had written the
   // specialization out fully.  It may not actually be possible to see
   // this mangling, though.
   mangleType(T->getInjectedSpecializationType());
 }
+#endif
 
 void CXXNameMangler::mangleType(const TemplateSpecializationType *T) {
   if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl()) {
@@ -3920,7 +3932,9 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   switch (T->getKeyword()) {
     case ETK_None:
     case ETK_Typename:
+    #if ENABLE_BSC
     case ETK_Trait:
+    #endif
       break;
     case ETK_Struct:
     case ETK_Class:
@@ -4265,7 +4279,9 @@ recurse:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
   case Expr::CXXInheritedCtorInitExprClass:
+  #if ENABLE_BSC
   case Expr::AwaitExprClass:
+  #endif
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

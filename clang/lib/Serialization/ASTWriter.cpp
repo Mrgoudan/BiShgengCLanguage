@@ -17,8 +17,10 @@
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/AbstractTypeWriter.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
@@ -485,9 +487,11 @@ void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 
+#if ENABLE_BSC
 void TypeLocWriter::VisitTraitTypeLoc(TraitTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+#endif
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
@@ -540,9 +544,11 @@ void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 
+#if ENABLE_BSC
 void TypeLocWriter::VisitInjectedTraitNameTypeLoc(InjectedTraitNameTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
+#endif
 
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   addSourceLocation(TL.getElaboratedKeywordLoc());
@@ -789,7 +795,9 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // Control Block.
   BLOCK(CONTROL_BLOCK);
+  #if ENABLE_BSC
   RECORD(OPT_STRING);
+  #endif
   RECORD(METADATA);
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
@@ -938,7 +946,9 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_UNRESOLVED_USING);
   RECORD(TYPE_INJECTED_CLASS_NAME);
+  #if ENABLE_BSC
   RECORD(TYPE_INJECTED_TRAIT_NAME);
+  #endif
   RECORD(TYPE_OBJC_OBJECT);
   RECORD(TYPE_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_TEMPLATE_SPECIALIZATION);
@@ -1206,6 +1216,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   RecordData Record;
 
   // add lto opt string
+  #if ENABLE_BSC
   std::string OptString = PP.getPreprocessorOpts().OptString;
   if (!OptString.empty()) {
     OptString = OptString + '\0';
@@ -1217,6 +1228,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     Stream.EmitRecordWithBlob(AbbrevCode, Record, OptString);
     Record.clear();
   }
+  #endif
   // Metadata
   auto MetadataAbbrev = std::make_shared<BitCodeAbbrev>();
   MetadataAbbrev->Add(BitCodeAbbrevOp(METADATA));
@@ -6171,6 +6183,7 @@ void ASTWriter::AddedCXXTemplateSpecialization(
   DeclsToEmitEvenIfUnreferenced.push_back(D);
 }
 
+#if ENABLE_BSC
 void ASTWriter::AddedCXXTemplateSpecialization(
     const TraitTemplateDecl *TD, const TraitTemplateSpecializationDecl *D) {
   assert(!WritingAST && "Already writing the AST!");
@@ -6182,6 +6195,7 @@ void ASTWriter::AddedCXXTemplateSpecialization(
 
   DeclsToEmitEvenIfUnreferenced.push_back(D);
 }
+#endif
 
 void ASTWriter::AddedCXXTemplateSpecialization(
     const VarTemplateDecl *TD, const VarTemplateSpecializationDecl *D) {

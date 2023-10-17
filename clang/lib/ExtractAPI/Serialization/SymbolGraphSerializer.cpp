@@ -178,7 +178,9 @@ StringRef getLanguageName(Language Lang) {
   case Language::RenderScript:
   case Language::HIP:
   case Language::HLSL:
+  #if ENABLE_BSC
   case Language::BSC:
+  #endif
 
   // Languages that the frontend cannot parse and compile
   case Language::Unknown:

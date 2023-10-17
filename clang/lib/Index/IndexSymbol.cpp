@@ -106,7 +106,9 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(D)) {
     switch (TD->getTagKind()) {
+    #if ENABLE_BSC
     case TTK_Trait:
+    #endif
     case TTK_Struct:
       Info.Kind = SymbolKind::Struct; break;
     case TTK_Union:

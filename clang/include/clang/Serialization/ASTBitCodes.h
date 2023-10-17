@@ -365,7 +365,9 @@ enum ControlRecordTypes {
   MODULE_DIRECTORY,
 
   /// Recode code for the bishengc lto opt string
+  #if ENABLE_BSC
   OPT_STRING,
+  #endif
 };
 
 /// Record types that occur within the options block inside
@@ -1098,7 +1100,9 @@ enum PredefinedTypeIDs {
 #include "clang/Basic/RISCVVTypes.def"
 
   /// \brief This type in bishengc
+  #if ENABLE_BSC
   PREDEF_TYPE_THIS_ID,
+  #endif
 };
 
 /// The number of predefined type IDs that are reserved for
@@ -1250,7 +1254,9 @@ enum DeclCode {
   DECL_ENUM,
 
   /// An TraitDecl record.
+  #if ENABLE_BSC
   DECL_TRAIT,
+  #endif
 
   /// A RecordDecl record.
   DECL_RECORD,
@@ -1310,7 +1316,9 @@ enum DeclCode {
   DECL_VAR,
 
   /// An ImplTraitDecl record.
+  #if ENABLE_BSC
   DECL_IMPL_TRAIT,
+  #endif
 
   /// An ImplicitParamDecl record.
   DECL_IMPLICIT_PARAM,
@@ -1398,7 +1406,9 @@ enum DeclCode {
   DECL_CXX_DEDUCTION_GUIDE,
 
   /// A BSCMethodDecl record.
+  #if ENABLE_BSC
   DECL_BSC_METHOD,
+  #endif
 
   /// A CXXMethodDecl record.
   DECL_CXX_METHOD,
@@ -1431,10 +1441,12 @@ enum DeclCode {
   DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION,
 
   /// A TraitTemplateDecl record.
+  #if ENABLE_BSC
   DECL_TRAIT_TEMPLATE,
 
   /// A TraitTemplateSpecializationDecl record.
   DECL_TRAIT_TEMPLATE_SPECIALIZATION,
+  #endif
 
   /// A VarTemplateDecl record.
   DECL_VAR_TEMPLATE,
@@ -2012,7 +2024,9 @@ enum StmtCode {
   EXPR_COAWAIT,
   EXPR_COYIELD,
   EXPR_DEPENDENT_COAWAIT,
+  #if ENABLE_BSC
   EXPR_BSC_AWAIT,
+  #endif
 
   // FixedPointLiteral
   EXPR_FIXEDPOINT_LITERAL,

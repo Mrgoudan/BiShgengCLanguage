@@ -58,26 +58,49 @@ public:
 
   TypoCorrection(const DeclarationName &Name, NamedDecl *NameDecl,
                  NestedNameSpecifier *NNS = nullptr, unsigned CharDistance = 0,
-                 unsigned QualifierDistance = 0, Type *ET = nullptr)
+                 unsigned QualifierDistance = 0
+                 #if ENABLE_BSC
+                 , Type *ET = nullptr
+                 #endif
+                 )
       : CorrectionName(Name), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), QualifierDistance(QualifierDistance),
-        ExtendedType(ET) {
+        CharDistance(CharDistance), QualifierDistance(QualifierDistance)
+        #if ENABLE_BSC
+        , ExtendedType(ET)
+        #endif
+        {
     if (NameDecl)
       CorrectionDecls.push_back(NameDecl);
   }
 
   TypoCorrection(NamedDecl *Name, NestedNameSpecifier *NNS = nullptr,
-                 unsigned CharDistance = 0, Type *ET = nullptr)
+                 unsigned CharDistance = 0
+                 #if ENABLE_BSC
+                 , Type *ET = nullptr
+                 #endif
+                 )
       : CorrectionName(Name->getDeclName()), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), ExtendedType(ET) {
+        CharDistance(CharDistance)
+        #if ENABLE_BSC
+        , ExtendedType(ET)
+        #endif
+        {
     if (Name)
       CorrectionDecls.push_back(Name);
   }
 
   TypoCorrection(DeclarationName Name, NestedNameSpecifier *NNS = nullptr,
-                 unsigned CharDistance = 0, Type *ET = nullptr)
+                 unsigned CharDistance = 0
+                 #if ENABLE_BSC
+                 , Type *ET = nullptr
+                 #endif
+                 )
       : CorrectionName(Name), CorrectionNameSpec(NNS),
-        CharDistance(CharDistance), ExtendedType(ET) {}
+        CharDistance(CharDistance)
+        #if ENABLE_BSC
+        , ExtendedType(ET)
+        #endif
+        {}
 
   TypoCorrection() = default;
 
@@ -99,9 +122,11 @@ public:
   }
 
   /// Gets the QualType needed to use the typo correction for BSC
+  #if ENABLE_BSC
   Type *getExtendedType() const { return ExtendedType; }
 
   void setExtendedType(Type *ET) { ExtendedType = ET; }
+  #endif
 
   void WillReplaceSpecifier(bool ForceReplacement) {
     ForceSpecifierReplacement = ForceReplacement;
@@ -274,7 +299,9 @@ private:
   SmallVector<NamedDecl *, 1> CorrectionDecls;
   unsigned CharDistance = 0;
   unsigned QualifierDistance = 0;
+  #if ENABLE_BSC
   Type *ExtendedType = nullptr;
+  #endif
   unsigned CallbackDistance = 0;
   SourceRange CorrectionRange;
   bool ForceSpecifierReplacement = false;
@@ -290,9 +317,16 @@ public:
   static const unsigned InvalidDistance = TypoCorrection::InvalidDistance;
 
   explicit CorrectionCandidateCallback(IdentifierInfo *Typo = nullptr,
-                                       NestedNameSpecifier *TypoNNS = nullptr,
-                                       const Type *ExtendedType = nullptr)
-      : Typo(Typo), TypoNNS(TypoNNS), ExtendedType(ExtendedType) {}
+                                       NestedNameSpecifier *TypoNNS = nullptr
+                                       #if ENABLE_BSC
+                                       , const Type *ExtendedType = nullptr
+                                       #endif
+                                       )
+      : Typo(Typo), TypoNNS(TypoNNS)
+      #if ENABLE_BSC
+      , ExtendedType(ExtendedType)
+      #endif
+      {}
 
   virtual ~CorrectionCandidateCallback() = default;
 
@@ -329,7 +363,9 @@ public:
 
   void setTypoName(IdentifierInfo *II) { Typo = II; }
   void setTypoNNS(NestedNameSpecifier *NNS) { TypoNNS = NNS; }
+  #if ENABLE_BSC
   void setExtendType(const Type *ET) { ExtendedType = ET; }
+  #endif
 
   // Flags for context-dependent keywords. WantFunctionLikeCasts is only
   // used/meaningful when WantCXXNamedCasts is false.
@@ -351,13 +387,18 @@ protected:
            candidate.getCorrectionAsIdentifierInfo() == Typo &&
            // FIXME: This probably does not return true when both
            // NestedNameSpecifiers have the same textual representation.
-           candidate.getCorrectionSpecifier() == TypoNNS &&
-           candidate.getExtendedType() == ExtendedType;
+           candidate.getCorrectionSpecifier() == TypoNNS
+           #if ENABLE_BSC
+           && candidate.getExtendedType() == ExtendedType
+           #endif
+           ;
   }
 
   IdentifierInfo *Typo;
   NestedNameSpecifier *TypoNNS;
+  #if ENABLE_BSC
   const Type *ExtendedType;
+  #endif
 };
 
 class DefaultFilterCCC final : public CorrectionCandidateCallback {

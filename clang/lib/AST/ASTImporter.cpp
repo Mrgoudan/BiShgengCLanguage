@@ -17,9 +17,11 @@
 #include "clang/AST/ASTImporterSharedState.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclAccessPair.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
@@ -404,7 +406,9 @@ namespace clang {
     ExpectedType VisitInjectedClassNameType(const InjectedClassNameType *T);
     // FIXME: DependentDecltypeType
     ExpectedType VisitRecordType(const RecordType *T);
+    #if ENABLE_BSC
     ExpectedType VisitTraitType(const TraitType *T);
+    #endif
     ExpectedType VisitEnumType(const EnumType *T);
     ExpectedType VisitAttributedType(const AttributedType *T);
     ExpectedType VisitTemplateTypeParmType(const TemplateTypeParmType *T);
@@ -529,7 +533,9 @@ namespace clang {
     ExpectedDecl VisitRecordDecl(RecordDecl *D);
     ExpectedDecl VisitEnumConstantDecl(EnumConstantDecl *D);
     ExpectedDecl VisitFunctionDecl(FunctionDecl *D);
+    #if ENABLE_BSC
     ExpectedDecl VisitBSCMethodDecl(BSCMethodDecl *D);
+    #endif
     ExpectedDecl VisitCXXMethodDecl(CXXMethodDecl *D);
     ExpectedDecl VisitCXXConstructorDecl(CXXConstructorDecl *D);
     ExpectedDecl VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -1463,7 +1469,11 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
+  #if ENABLE_BSC
   Expected<RecordDecl *> ToDeclOrErr = import(T->getDecl());
+  #else
+  Expected<CXXRecordDecl *> ToDeclOrErr = import(T->getDecl());
+  #endif
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
@@ -1491,6 +1501,7 @@ ExpectedType ASTNodeImporter::VisitRecordType(const RecordType *T) {
   return Importer.getToContext().getTagDeclType(*ToDeclOrErr);
 }
 
+#if ENABLE_BSC
 ExpectedType ASTNodeImporter::VisitTraitType(const TraitType *T) {
   Expected<TraitDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)
@@ -1498,6 +1509,7 @@ ExpectedType ASTNodeImporter::VisitTraitType(const TraitType *T) {
 
   return Importer.getToContext().getTagDeclType(*ToDeclOrErr);
 }
+#endif
 
 ExpectedType ASTNodeImporter::VisitEnumType(const EnumType *T) {
   Expected<EnumDecl *> ToDeclOrErr = import(T->getDecl());
@@ -2997,9 +3009,19 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
                    DCXX->getMemberSpecializationInfo()) {
         TemplateSpecializationKind SK =
             MemberInfo->getTemplateSpecializationKind();
+        #if ENABLE_BSC
         RecordDecl *FromInst = DCXX->getInstantiatedFromMemberClass();
+        #else
+        CXXRecordDecl *FromInst = DCXX->getInstantiatedFromMemberClass();
+        #endif
 
-        if (Expected<RecordDecl *> ToInstOrErr = import(FromInst))
+        if (
+            #if ENABLE_BSC
+            Expected<RecordDecl *> ToInstOrErr = import(FromInst)
+            #else
+            Expected<CXXRecordDecl *> ToInstOrErr = import(FromInst)
+            #endif
+            )
           D2CXX->setInstantiationOfMemberClass(*ToInstOrErr, SK);
         else
           return ToInstOrErr.takeError();
@@ -3579,7 +3601,11 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
                                 D->getStorageClass(), D->UsesFPIntrin(),
                                 D->isInlineSpecified(),
                                 D->hasWrittenPrototype(), D->getConstexprKind(),
-                                TrailingRequiresClause, D->isAsyncSpecified()))
+                                TrailingRequiresClause
+                                #if ENABLE_BSC
+                                , D->isAsyncSpecified()
+                                #endif
+                                ))
       return ToFunction;
   }
 
@@ -3691,9 +3717,11 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   return ToFunction;
 }
 
+#if ENABLE_BSC
 ExpectedDecl ASTNodeImporter::VisitBSCMethodDecl(BSCMethodDecl *D) {
   return VisitFunctionDecl(D);
 }
+#endif
 
 ExpectedDecl ASTNodeImporter::VisitCXXMethodDecl(CXXMethodDecl *D) {
   return VisitFunctionDecl(D);
@@ -6384,17 +6412,22 @@ ExpectedStmt ASTNodeImporter::VisitCompoundStmt(CompoundStmt *S) {
   if (!ToRBracLocOrErr)
     return ToRBracLocOrErr.takeError();
 
+  #if ENABLE_BSC
   ExpectedSLoc ToSafeSpecifierLocOrErr = import(S->getSafeSpecifierLoc());
   if (!ToSafeSpecifierLocOrErr)
     return ToSafeSpecifierLocOrErr.takeError();
+  #endif
 
   FPOptionsOverride FPO =
       S->hasStoredFPFeatures() ? S->getStoredFPFeatures() : FPOptionsOverride();
 
   return CompoundStmt::Create(
       Importer.getToContext(), ToStmts, FPO,
-      *ToLBracLocOrErr, *ToRBracLocOrErr,
-      S->getSafeSpecifier(), *ToSafeSpecifierLocOrErr);
+      *ToLBracLocOrErr, *ToRBracLocOrErr
+      #if ENABLE_BSC
+      , S->getSafeSpecifier(), *ToSafeSpecifierLocOrErr
+      #endif
+      );
 }
 
 ExpectedStmt ASTNodeImporter::VisitCaseStmt(CaseStmt *S) {

@@ -16,7 +16,10 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
@@ -468,7 +471,9 @@ public:
 #define DEF_TRAVERSE_TMPL_INST(TMPLDECLKIND)                                   \
   bool TraverseTemplateInstantiations(TMPLDECLKIND##TemplateDecl *D);
   DEF_TRAVERSE_TMPL_INST(Class)
+  #if ENABLE_BSC
   DEF_TRAVERSE_TMPL_INST(Trait)
+  #endif
   DEF_TRAVERSE_TMPL_INST(Var)
   DEF_TRAVERSE_TMPL_INST(Function)
 #undef DEF_TRAVERSE_TMPL_INST
@@ -499,13 +504,17 @@ private:
                                           unsigned Count);
   bool TraverseArrayTypeLocHelper(ArrayTypeLoc TL);
   bool TraverseRecordHelper(RecordDecl *D);
+  #if ENABLE_BSC
   bool TraverseTraitHelper(TraitDecl *D);
+  #endif
   bool TraverseCXXRecordHelper(CXXRecordDecl *D);
   bool TraverseDeclaratorHelper(DeclaratorDecl *D);
   bool TraverseDeclContextHelper(DeclContext *DC);
   bool TraverseFunctionHelper(FunctionDecl *D);
   bool TraverseVarHelper(VarDecl *D);
+  #if ENABLE_BSC
   bool TraverseImplTraitHelper(ImplTraitDecl *D);
+  #endif
   bool TraverseOMPExecutableDirective(OMPExecutableDirective *S);
   bool TraverseOMPLoopDirective(OMPLoopDirective *S);
   bool TraverseOMPClause(OMPClause *C);
@@ -1109,7 +1118,9 @@ DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
 })
 
 DEF_TRAVERSE_TYPE(RecordType, {})
+#if ENABLE_BSC
 DEF_TRAVERSE_TYPE(TraitType, {})
+#endif
 DEF_TRAVERSE_TYPE(EnumType, {})
 DEF_TRAVERSE_TYPE(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {
@@ -1126,7 +1137,9 @@ DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPE(InjectedClassNameType, {})
 
+#if ENABLE_BSC
 DEF_TRAVERSE_TYPE(InjectedTraitNameType, {})
+#endif
 
 DEF_TRAVERSE_TYPE(AttributedType,
                   { TRY_TO(TraverseType(T->getModifiedType())); })
@@ -1394,7 +1407,9 @@ DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPELOC(RecordType, {})
 DEF_TRAVERSE_TYPELOC(EnumType, {})
+#if ENABLE_BSC
 DEF_TRAVERSE_TYPELOC(TraitType, {})
+#endif
 DEF_TRAVERSE_TYPELOC(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {
   TRY_TO(TraverseType(TL.getTypePtr()->getReplacementType()));
@@ -1413,7 +1428,9 @@ DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
 
 DEF_TRAVERSE_TYPELOC(InjectedClassNameType, {})
 
+#if ENABLE_BSC
 DEF_TRAVERSE_TYPELOC(InjectedTraitNameType, {})
+#endif
 
 DEF_TRAVERSE_TYPELOC(ParenType, { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
@@ -1841,6 +1858,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
   return true;
 }
 
+#if ENABLE_BSC
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
     TraitTemplateDecl *D) {
@@ -1863,6 +1881,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
 
   return true;
 }
+#endif
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
@@ -1940,7 +1959,9 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
   })
 
 DEF_TRAVERSE_TMPL_DECL(Class)
+#if ENABLE_BSC
 DEF_TRAVERSE_TMPL_DECL(Trait)
+#endif
 DEF_TRAVERSE_TMPL_DECL(Var)
 DEF_TRAVERSE_TMPL_DECL(Function)
 
@@ -2030,12 +2051,14 @@ bool RecursiveASTVisitor<Derived>::TraverseRecordHelper(RecordDecl *D) {
   return true;
 }
 
+#if ENABLE_BSC
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseTraitHelper(TraitDecl *D) {
   TRY_TO(TraverseDeclTemplateParameterLists(D));
   TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   return true;
 }
+#endif
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseCXXBaseSpecifier(
@@ -2060,7 +2083,9 @@ bool RecursiveASTVisitor<Derived>::TraverseCXXRecordHelper(CXXRecordDecl *D) {
 
 DEF_TRAVERSE_DECL(RecordDecl, { TRY_TO(TraverseRecordHelper(D)); })
 
+#if ENABLE_BSC
 DEF_TRAVERSE_DECL(TraitDecl, { TRY_TO(TraverseTraitHelper(D)); })
+#endif
 
 DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
 
@@ -2093,7 +2118,9 @@ DEF_TRAVERSE_DECL(CXXRecordDecl, { TRY_TO(TraverseCXXRecordHelper(D)); })
   })
 
 DEF_TRAVERSE_TMPL_SPEC_DECL(Class, CXXRecord)
+#if ENABLE_BSC
 DEF_TRAVERSE_TMPL_SPEC_DECL(Trait, Trait)
+#endif
 DEF_TRAVERSE_TMPL_SPEC_DECL(Var, Var)
 
 template <typename Derived>
@@ -2281,12 +2308,14 @@ DEF_TRAVERSE_DECL(FunctionDecl, {
   ReturnValue = TraverseFunctionHelper(D);
 })
 
+#if ENABLE_BSC
 DEF_TRAVERSE_DECL(BSCMethodDecl, {
   // We skip decls_begin/decls_end, which are already covered by
   // TraverseFunctionHelper().
   ShouldVisitChildren = false;
   ReturnValue = TraverseFunctionHelper(D);
 })
+#endif
 
 DEF_TRAVERSE_DECL(CXXDeductionGuideDecl, {
   // We skip decls_begin/decls_end, which are already covered by
@@ -2335,14 +2364,18 @@ bool RecursiveASTVisitor<Derived>::TraverseVarHelper(VarDecl *D) {
   return true;
 }
 
+#if ENABLE_BSC
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseImplTraitHelper(ImplTraitDecl *D) {
   return true;
 }
+#endif
 
 DEF_TRAVERSE_DECL(VarDecl, { TRY_TO(TraverseVarHelper(D)); })
 
+#if ENABLE_BSC
 DEF_TRAVERSE_DECL(ImplTraitDecl, { TRY_TO(TraverseImplTraitHelper(D)); })
+#endif
 
 DEF_TRAVERSE_DECL(ImplicitParamDecl, { TRY_TO(TraverseVarHelper(D)); })
 
@@ -2463,7 +2496,9 @@ DEF_TRAVERSE_STMT(ObjCAtThrowStmt, {})
 DEF_TRAVERSE_STMT(ObjCAtTryStmt, {})
 DEF_TRAVERSE_STMT(ObjCForCollectionStmt, {})
 DEF_TRAVERSE_STMT(ObjCAutoreleasePoolStmt, {})
+#if ENABLE_BSC
 DEF_TRAVERSE_STMT(AwaitExpr, {})
+#endif
 
 DEF_TRAVERSE_STMT(CXXForRangeStmt, {
   if (!getDerived().shouldVisitImplicitCode()) {

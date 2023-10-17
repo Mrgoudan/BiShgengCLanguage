@@ -81,9 +81,11 @@ namespace {
     void VisitLinkageSpecDecl(LinkageSpecDecl *D);
     void VisitTemplateDecl(const TemplateDecl *D);
     void VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
+    #if ENABLE_BSC
     void VisitTraitTemplateDecl(TraitTemplateDecl *D);
     void
     VisitTraitTemplateSpecializationDecl(TraitTemplateSpecializationDecl *D);
+    #endif
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
     void VisitClassTemplateSpecializationDecl(
                                             ClassTemplateSpecializationDecl *D);
@@ -188,6 +190,7 @@ static QualType getDeclType(Decl* D) {
 
 // To prefix the type by jointing '_' between types and function name.
 // Arg 'isFront' determines weather to prefix '_' at the front of type or not.
+#if ENABLE_BSC
 static std::string GetTypePrefix(QualType T, bool isFront,
                                  const PrintingPolicy &PP) {
   std::string ExtendedTypeStr;
@@ -210,6 +213,7 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   }
   return ExtendedTypeStr;
 }
+#endif
 
 void Decl::printGroup(Decl** Begin, unsigned NumDecls,
                       raw_ostream &Out, const PrintingPolicy &Policy,
@@ -427,8 +431,10 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
           !isa<ClassTemplateSpecializationDecl>(DC))
         continue;
       // Skip member functions for BSC.
+      #if ENABLE_BSC
       if (Context.getLangOpts().BSC && isa<RecordDecl>(FD->getParent()))
         continue;
+      #endif
     }
 
     // The next bits of code handle stuff like "struct {int x;} a,b"; we're
@@ -630,7 +636,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   if (D->isFunctionTemplateSpecialization()) {
     // We don`t need to print this in BSC generic.
+    #if ENABLE_BSC
     if (!Context.getLangOpts().BSC)
+    #endif
       Out << "template<> ";
   } else if (!D->getDescribedFunctionTemplate()) {
     for (unsigned I = 0, NumTemplateParams = D->getNumTemplateParameterLists();
@@ -652,8 +660,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
 
     if (D->isInlineSpecified())  Out << "inline ";
+    #if ENABLE_BSC
     if (D->isAsyncSpecified())
       Out << "async ";
+    #endif
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
     if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
@@ -677,8 +687,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         NS->print(OS, Policy);
       }
     }
+    #if ENABLE_BSC
     if (!Policy.RewriteBSC) {
+    #endif
       D->getNameInfo().printName(OS, Policy);
+    #if ENABLE_BSC
     } else {
       // For instantiated functions which have same template arg type
       // in different source files, linker will report multi definition error.
@@ -705,6 +718,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         D->getNameInfo().printName(OS, Policy);
       }
     }
+    #endif
   }
 
   if (GuideDecl)
@@ -717,7 +731,9 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs()){
+      #if ENABLE_BSC
       if(!(Context.getLangOpts().BSC && D->isTemplateInstantiation()))
+      #endif
         TArgPrinter.printTemplateArguments(TArgs->asArray(), nullptr);
     }
   }
@@ -852,11 +868,15 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         Indentation -= Policy.Indentation;
       }
 
+      #if ENABLE_BSC
       if (!Policy.FunctionDeclaraionOnly) {
+      #endif
         if (D->getBody())
           D->getBody()->printPrettyControlled(Out, nullptr, SubPolicy,
                                               Indentation, "\n", &Context);
+      #if ENABLE_BSC
       }
+      #endif
     } else {
       if (!Policy.TerseOutput && isa<CXXConstructorDecl>(*D))
         Out << " {}";
@@ -1061,11 +1081,14 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
   prettyPrintAttributes(D);
 
   if (D->getIdentifier()) {
+    #if ENABLE_BSC
     if (!Context.getLangOpts().BSC)
+    #endif
       Out << ' ' << *D;
 
     if (auto S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();
+      #if ENABLE_BSC
       if (Policy.RewriteBSC) {
         std::string FunctionNameStr = S->getDeclName().getAsString();
         for (size_t i = 0; i < Args.size(); i++) {
@@ -1075,6 +1098,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
         }
         Out << ' ' + FunctionNameStr;
       } else {
+      #endif
         if (!Policy.PrintCanonicalTypes) 
           if (const auto* TSI = S->getTypeAsWritten())
             if (const auto *TST =
@@ -1082,7 +1106,9 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
               Args = TST->template_arguments();
         printTemplateArguments(
             Args, S->getSpecializedTemplate()->getTemplateParameters());
+      #if ENABLE_BSC
       }
+      #endif
     }
   }
 
@@ -1273,6 +1299,7 @@ void DeclPrinter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   }
 }
 
+#if ENABLE_BSC
 void DeclPrinter::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
   VisitRedeclarableTemplateDecl(D);
 
@@ -1287,6 +1314,7 @@ void DeclPrinter::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
       }
   }
 }
+#endif
 
 void DeclPrinter::VisitTraitTemplateSpecializationDecl(
     TraitTemplateSpecializationDecl *D) {
@@ -1310,7 +1338,9 @@ void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
 void DeclPrinter::VisitClassTemplateSpecializationDecl(
                                            ClassTemplateSpecializationDecl *D) {
+  #if ENABLE_BSC
   if (!Context.getLangOpts().BSC)
+  #endif
     Out << "template<> ";
   VisitCXXRecordDecl(D);
 }

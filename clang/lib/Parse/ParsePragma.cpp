@@ -338,11 +338,13 @@ struct PragmaAttributeHandler : public PragmaHandler {
   ParsedAttributes AttributesForPragmaAttribute;
 };
 
+#if ENABLE_BSC
 struct PragmaSafeHandler : public PragmaHandler {
   PragmaSafeHandler() : PragmaHandler("SAFE") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
 };
+#endif
 
 struct PragmaPreferInlineHandler : public PragmaHandler {
   PragmaPreferInlineHandler() : PragmaHandler("prefer_inline") {}
@@ -521,11 +523,13 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
 
+  #if ENABLE_BSC
   SafeHandler.reset(new PragmaSafeHandler());
   PP.AddPragmaHandler(SafeHandler.get());
 
   PreferInlineHandler.reset(new PragmaPreferInlineHandler());
   PP.AddPragmaHandler(PreferInlineHandler.get());
+  #endif
 }
 
 void Parser::resetPragmaHandlers() {
@@ -656,11 +660,13 @@ void Parser::resetPragmaHandlers() {
     RISCVPragmaHandler.reset();
   }
 
+  #if ENABLE_BSC
   PP.RemovePragmaHandler(SafeHandler.get());
   SafeHandler.reset();
 
   PP.RemovePragmaHandler(PreferInlineHandler.get());
   PreferInlineHandler.reset();  
+  #endif
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -1920,6 +1926,7 @@ void Parser::HandlePragmaAttribute() {
   }
 }
 
+#if ENABLE_BSC
 void Parser::HandlePragmaSafe() {
   assert(Tok.is(tok::annot_pragma_safe));
   Sema::PragmaSafeStatus St = static_cast<Sema::PragmaSafeStatus>(
@@ -1935,6 +1942,7 @@ void Parser::HandlePragmaPreferInline() {
   (void)ConsumeAnnotationToken();
   Actions.ActOnPragmaPreferInline(St);
 }
+#endif
 
 // #pragma GCC visibility comes in two variants:
 //   'push' '(' [visibility] ')'
@@ -3929,6 +3937,7 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
+#if ENABLE_BSC
 void PragmaSafeHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                                      Token &Tok) {
   PP.Lex(Tok);
@@ -3999,6 +4008,7 @@ void PragmaPreferInlineHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer 
                              static_cast<uintptr_t>(St)));
   PP.EnterTokenStream(Toks, true, false);
 }
+#endif
 
 // Handle '#pragma clang max_tokens 12345'.
 void PragmaMaxTokensHereHandler::HandlePragma(Preprocessor &PP,

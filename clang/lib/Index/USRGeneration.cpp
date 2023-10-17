@@ -511,7 +511,9 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
 
       switch (D->getTagKind()) {
       case TTK_Interface:
+      #if ENABLE_BSC
       case TTK_Trait:
+      #endif
       case TTK_Class:
       case TTK_Struct: Out << "@ST"; break;
       case TTK_Union:  Out << "@UT"; break;
@@ -524,7 +526,9 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
 
       switch (D->getTagKind()) {
       case TTK_Interface:
+      #if ENABLE_BSC
       case TTK_Trait:
+      #endif
       case TTK_Class:
       case TTK_Struct: Out << "@SP"; break;
       case TTK_Union:  Out << "@UP"; break;
@@ -538,7 +542,9 @@ void USRGenerator::VisitTagDecl(const TagDecl *D) {
     switch (D->getTagKind()) {
       case TTK_Interface:
       case TTK_Class:
+      #if ENABLE_BSC
       case TTK_Trait:
+      #endif
       case TTK_Struct: Out << "@S"; break;
       case TTK_Union:  Out << "@U"; break;
       case TTK_Enum:   Out << "@E"; break;
@@ -720,7 +726,9 @@ void USRGenerator::VisitType(QualType T) {
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
         case BuiltinType::Dependent:
+        #if ENABLE_BSC
         case BuiltinType::This:
+        #endif
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
         case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"

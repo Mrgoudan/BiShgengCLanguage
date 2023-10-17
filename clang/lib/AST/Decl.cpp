@@ -17,8 +17,10 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/CanonicalType.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -946,7 +948,9 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
   // a template template argument that way. If we do, we need to
   // consider its linkage.
   if (!(isa<CXXMethodDecl>(D) ||
+        #if ENABLE_BSC
         isa<BSCMethodDecl>(D) ||
+        #endif
         isa<VarDecl>(D) ||
         isa<FieldDecl>(D) ||
         isa<IndirectFieldDecl>(D) ||
@@ -1172,8 +1176,18 @@ getExplicitVisibilityAux(const NamedDecl *ND,
 
   // If this is a member class of a specialization of a class template
   // and the corresponding decl has explicit visibility, use that.
-  if (const auto *RD = dyn_cast<RecordDecl>(ND)) {
+  if (
+    #if ENABLE_BSC
+    const auto *RD = dyn_cast<RecordDecl>(ND)
+    #else
+    const auto *RD = dyn_cast<CXXRecordDecl>(ND)
+    #endif
+    ) {
+    #if ENABLE_BSC
     RecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
+    #else
+    CXXRecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
+    #endif
     if (InstantiatedFrom)
       return getVisibilityOf(InstantiatedFrom, kind);
   }
@@ -1710,11 +1724,13 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
+    #if ENABLE_BSC
     } else if (const auto *ID = dyn_cast<TraitDecl>(DC)) {
       if (!ID->getIdentifier())
         OS << "(anonymous " << ID->getKindName() << ')';
       else
         OS << *ID;
+    #endif
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
@@ -2146,8 +2162,11 @@ static bool isDeclExternC(const T &D) {
   // language linkage or no language linkage.
   const DeclContext *DC = D.getDeclContext();
   if (DC->isRecord()) {
-    assert(D.getASTContext().getLangOpts().CPlusPlus ||
-           D.getASTContext().getLangOpts().BSC);
+    assert(D.getASTContext().getLangOpts().CPlusPlus
+          #if ENABLE_BSC
+          || D.getASTContext().getLangOpts().BSC
+          #endif
+          );
     return false;
   }
 
@@ -2947,7 +2966,11 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            TypeSourceInfo *TInfo, StorageClass S,
                            bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
-                           Expr *TrailingRequiresClause, bool isAsyncSpecified)
+                           Expr *TrailingRequiresClause
+                           #if ENABLE_BSC
+                           , bool isAsyncSpecified
+                           #endif
+                           )
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
@@ -2956,7 +2979,9 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.SClass = S;
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
+  #if ENABLE_BSC
   FunctionDeclBits.IsAsyncSpecified = isAsyncSpecified;
+  #endif
   FunctionDeclBits.IsVirtualAsWritten = false;
   FunctionDeclBits.IsPure = false;
   FunctionDeclBits.HasInheritedPrototype = false;
@@ -2976,7 +3001,9 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.UsesFPIntrin = UsesFPIntrin;
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
+  #if ENABLE_BSC
   FunctionDeclBits.SafeSpecifier = SS_None;
+  #endif
   FunctionDeclBits.IsMultiVersion = false;
   FunctionDeclBits.IsCopyDeductionCandidate = false;
   FunctionDeclBits.HasODRHash = false;
@@ -3309,8 +3336,10 @@ bool FunctionDecl::isGlobal() const {
   if (const auto *Method = dyn_cast<CXXMethodDecl>(this))
     return Method->isStatic();
 
+  #if ENABLE_BSC
   if (const auto *Method = dyn_cast<BSCMethodDecl>(this))
     return Method->isStatic();
+  #endif
 
   if (getCanonicalDecl()->getStorageClass() == SC_Static)
     return false;
@@ -3479,7 +3508,12 @@ void FunctionDecl::setParams(ASTContext &C,
 /// function parameters, if some of the parameters have default
 /// arguments (in C++) or are parameter packs (C++11) or contain "this"
 /// parameter (in BSC).
-unsigned FunctionDecl::getMinRequiredArguments(bool HasBSCScopeSpec) const {
+unsigned FunctionDecl::getMinRequiredArguments(
+                                              #if ENABLE_BSC
+                                              bool HasBSCScopeSpec
+                                              #endif
+                                              ) const {
+  #if ENABLE_BSC
   if (getASTContext().getLangOpts().BSC && !HasBSCScopeSpec) {
     int num = getNumParams();
     if (num > 0 && parameters()[0] && parameters()[0]->IsThisParam) {
@@ -3487,6 +3521,7 @@ unsigned FunctionDecl::getMinRequiredArguments(bool HasBSCScopeSpec) const {
     }
     return num;
   }
+  #endif
 
   if (!getASTContext().getLangOpts().CPlusPlus)
     return getNumParams();
@@ -4671,13 +4706,18 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
-                               IdentifierInfo *Id, RecordDecl *PrevDecl,
-                               bool DelayTypeCreation) {
+                               IdentifierInfo *Id, RecordDecl *PrevDecl
+                               #if ENABLE_BSC
+                               , bool DelayTypeCreation
+                               #endif
+                               ) {
   RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
                                          StartLoc, IdLoc, Id, PrevDecl);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
 
+  #if ENABLE_BSC
   if (!DelayTypeCreation)
+  #endif
     C.getTypeDeclType(R, PrevDecl);
   return R;
 }
@@ -4690,6 +4730,7 @@ RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C, unsigned ID) {
   return R;
 }
 
+#if ENABLE_BSC
 RecordDecl *RecordDecl::getInstantiatedFromMemberClass() const {
   if (MemberSpecializationInfo *MSInfo = getMemberSpecializationInfo())
     return cast<RecordDecl>(MSInfo->getInstantiatedFrom());
@@ -4785,6 +4826,7 @@ void RecordDecl::setInstantiationOfMemberClass(RecordDecl *RD,
   TemplateOrInstantiation =
       new (getASTContext()) MemberSpecializationInfo(RD, TSK);
 }
+#endif
 
 bool RecordDecl::isInjectedClassName() const {
   return isImplicit() && getDeclName() && getDeclContext()->isRecord() &&
@@ -5113,11 +5155,19 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                      TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                      bool isInlineSpecified, bool hasWrittenPrototype,
                      ConstexprSpecKind ConstexprKind,
-                     Expr *TrailingRequiresClause, bool isAsyncSpecified) {
+                     Expr *TrailingRequiresClause
+                     #if ENABLE_BSC
+                     , bool isAsyncSpecified
+                     #endif
+                     ) {
   FunctionDecl *New = new (C, DC)
       FunctionDecl(Function, C, DC, StartLoc, NameInfo, T, TInfo, SC,
                    UsesFPIntrin, isInlineSpecified, ConstexprKind,
-                   TrailingRequiresClause, isAsyncSpecified);
+                   TrailingRequiresClause
+                   #if ENABLE_BSC
+                   , isAsyncSpecified
+                   #endif
+                   );
   New->setHasWrittenPrototype(hasWrittenPrototype);
   return New;
 }

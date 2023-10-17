@@ -13,7 +13,9 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DependentDiagnostic.h"
@@ -1096,9 +1098,11 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
   return VisitVarDecl(D, /*InstantiatingVarTemplate=*/false);
 }
 
+#if ENABLE_BSC
 Decl *TemplateDeclInstantiator::VisitImplTraitDecl(ImplTraitDecl *D) {
   llvm_unreachable("ImplTraitDecl not supported yet");
 }
+#endif
 
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                                              bool InstantiatingVarTemplate,
@@ -1838,10 +1842,12 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (CXXMethodDecl *DMethod = dyn_cast<CXXMethodDecl>(D->getTemplatedDecl()))
     Instantiated = cast_or_null<FunctionDecl>(VisitCXXMethodDecl(DMethod,
                                                                  InstParams));
+  #if ENABLE_BSC
   else if (BSCMethodDecl *DMethod =
                dyn_cast<BSCMethodDecl>(D->getTemplatedDecl()))
     Instantiated =
         cast_or_null<FunctionDecl>(VisitBSCMethodDecl(DMethod, InstParams));
+  #endif
   else
     Instantiated = cast_or_null<FunctionDecl>(VisitFunctionDecl(
                                                           D->getTemplatedDecl(),
@@ -2338,6 +2344,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   return Function;
 }
 
+#if ENABLE_BSC
 Decl *TemplateDeclInstantiator::VisitBSCMethodDecl(
     BSCMethodDecl *D, TemplateParameterList *TemplateParams,
     Optional<const ASTTemplateArgumentListInfo *> ClassScopeSpecializationArgs,
@@ -2662,6 +2669,7 @@ Decl *TemplateDeclInstantiator::VisitBSCMethodDecl(
 
   return Method;
 }
+#endif
 
 Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     CXXMethodDecl *D, TemplateParameterList *TemplateParams,
@@ -3976,9 +3984,11 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D) {
   return VisitFunctionDecl(D, nullptr);
 }
 
+#if ENABLE_BSC
 Decl *TemplateDeclInstantiator::VisitBSCMethodDecl(BSCMethodDecl *D) {
   return VisitBSCMethodDecl(D, nullptr);
 }
+#endif
 
 Decl *
 TemplateDeclInstantiator::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
@@ -3993,6 +4003,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 Decl *TemplateDeclInstantiator::VisitRecordDecl(RecordDecl *D) {
+  #if ENABLE_BSC
   if (SemaRef.getLangOpts().BSC) {
     if (D->isCompleteDefinition() && D->isLocalClass()) {
       SemaRef.Diag(D->getLocation(), diag::err_invalid_struct_definition);
@@ -4004,12 +4015,16 @@ Decl *TemplateDeclInstantiator::VisitRecordDecl(RecordDecl *D) {
   } else {
     llvm_unreachable("There are only CXXRecordDecls in C++");
   }
+  #else
+  llvm_unreachable("There are only CXXRecordDecls in C++");
+  #endif
 }
 
 Decl *TemplateDeclInstantiator::VisitTraitDecl(TraitDecl *D) {
   llvm_unreachable("There are only TraitDecls in BSC");
 }
 
+#if ENABLE_BSC
 Decl *TemplateDeclInstantiator::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
   llvm_unreachable("There are only TraitTemplateDecls in BSC");
 }
@@ -4018,6 +4033,7 @@ Decl *TemplateDeclInstantiator::VisitTraitTemplateSpecializationDecl(
     TraitTemplateSpecializationDecl *D) {
   llvm_unreachable("There are only TraitTemplateSpecializationDecls in BSC");
 }
+#endif
 
 Decl *
 TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
@@ -5081,6 +5097,7 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
   return false;
 }
 
+#if ENABLE_BSC
 bool TemplateDeclInstantiator::InitMethodInstantiation(BSCMethodDecl *New,
                                                        BSCMethodDecl *Tmpl) {
   if (InitFunctionInstantiation(New, Tmpl))
@@ -5093,6 +5110,7 @@ bool TemplateDeclInstantiator::InitMethodInstantiation(BSCMethodDecl *New,
   // FIXME: New needs a pointer to Tmpl
   return false;
 }
+#endif
 
 bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                                                       FunctionDecl *Tmpl) {
@@ -6173,11 +6191,21 @@ isInstantiationOf(ClassTemplatePartialSpecializationDecl *Pattern,
   return false;
 }
 
+#if ENABLE_BSC
 static bool isInstantiationOf(RecordDecl *Pattern, RecordDecl *Instance) {
   Pattern = dyn_cast<RecordDecl>(Pattern->getCanonicalDecl());
+#else
+static bool isInstantiationOf(CXXRecordDecl *Pattern,
+                              CXXRecordDecl *Instance) {
+  Pattern = Pattern->getCanonicalDecl();
+#endif
 
   do {
+    #if ENABLE_BSC
     Instance = dyn_cast<RecordDecl>(Instance->getCanonicalDecl());
+    #else
+    Instance = Instance->getCanonicalDecl();
+    #endif
     if (Pattern == Instance) return true;
     Instance = Instance->getInstantiatedFromMemberClass();
   } while (Instance);

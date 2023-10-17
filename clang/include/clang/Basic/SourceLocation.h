@@ -133,7 +133,9 @@ public:
   /// SourceLocation.
   SourceLocation getLocWithOffset(IntTy Offset) const {
     // TODO: For BSC, some scenes about trait will hang on asserts during deserialization.
-    // assert(((getOffset()+Offset) & MacroIDBit) == 0 && "offset overflow");
+    #if !ENABLE_BSC
+    assert(((getOffset()+Offset) & MacroIDBit) == 0 && "offset overflow");
+    #endif
     SourceLocation L;
     L.ID = ID+Offset;
     return L;

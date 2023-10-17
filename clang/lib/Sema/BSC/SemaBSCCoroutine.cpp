@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if ENABLE_BSC
+
 #include <algorithm>
 #include <cstring>
 #include <functional>
@@ -3087,3 +3089,5 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   return Decls;
 }
 
+
+#endif // ENABLE_BSC

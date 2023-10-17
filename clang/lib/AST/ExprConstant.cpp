@@ -10686,8 +10686,10 @@ static bool EvaluateArrayNewConstructExpr(EvalInfo &Info, LValue &This,
 
 // Return true iff the given array filler may depend on the element index.
 static bool MaybeElementDependentArrayFiller(const Expr *FillerExpr) {
+  #if ENABLE_BSC
   if (!FillerExpr)
     return false;
+  #endif
   // For now, just allow non-class value-initialization and initialization
   // lists comprised of them.
   if (isa<ImplicitValueInitExpr>(FillerExpr))
@@ -11263,7 +11265,9 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     case BuiltinType::SatUShortFract:
     case BuiltinType::SatUFract:
     case BuiltinType::SatULongFract:
+    #if ENABLE_BSC
     case BuiltinType::This:
+    #endif
       return GCCTypeClass::None;
 
     case BuiltinType::NullPtr:
@@ -11320,8 +11324,10 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
     return CanTy->isUnionType() ? GCCTypeClass::Union
                                 : GCCTypeClass::ClassOrStruct;
 
+  #if ENABLE_BSC
   case Type::Trait:
     return GCCTypeClass::ClassOrStruct;
+  #endif
 
   case Type::Atomic:
     // GCC classifies _Atomic T the same as T.
@@ -14849,8 +14855,10 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
 /// an object can indirectly refer to subobjects which were initialized earlier.
 static bool EvaluateInPlace(APValue &Result, EvalInfo &Info, const LValue &This,
                             const Expr *E, bool AllowNonLiteralTypes) {
+  #if ENABLE_BSC
   if (!E)
     return false;
+  #endif
   assert(!E->isValueDependent());
 
   if (!AllowNonLiteralTypes && !CheckLiteralType(Info, E, &This))
@@ -15429,7 +15437,9 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::AtomicExprClass:
   case Expr::LambdaExprClass:
   case Expr::CXXFoldExprClass:
+  #if ENABLE_BSC
   case Expr::AwaitExprClass:
+  #endif
   case Expr::CoawaitExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CoyieldExprClass:

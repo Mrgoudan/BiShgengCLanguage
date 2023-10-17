@@ -848,7 +848,9 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   if (SC != SC_None)
     JOS.attribute("storageClass", VarDecl::getStorageClassSpecifierString(SC));
   attributeOnlyIfTrue("inline", FD->isInlineSpecified());
+  #if ENABLE_BSC
   attributeOnlyIfTrue("async", FD->isAsyncSpecified());
+  #endif
   attributeOnlyIfTrue("virtual", FD->isVirtualAsWritten());
   attributeOnlyIfTrue("pure", FD->isPure());
   attributeOnlyIfTrue("explicitlyDeleted", FD->isDeletedAsWritten());

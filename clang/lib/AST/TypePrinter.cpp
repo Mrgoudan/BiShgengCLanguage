@@ -12,8 +12,10 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -84,23 +86,32 @@ namespace {
   class DefaultTemplateArgsPolicyRAII {
     PrintingPolicy &Policy;
     bool Old;
+    #if ENABLE_BSC
     bool SuppressTagKeyword;
+    #endif
 
   public:
     explicit DefaultTemplateArgsPolicyRAII(PrintingPolicy &Policy)
-        : Policy(Policy), Old(Policy.SuppressDefaultTemplateArgs),
-          SuppressTagKeyword(Policy.SuppressTagKeyword) {
+        : Policy(Policy), Old(Policy.SuppressDefaultTemplateArgs)
+          #if ENABLE_BSC
+          , SuppressTagKeyword(Policy.SuppressTagKeyword)
+          #endif
+          {
       Policy.SuppressDefaultTemplateArgs = false;
+      #if ENABLE_BSC
       if (Policy.RewriteBSC) { // FIXME: quite hack
         Policy.SuppressTagKeyword = false;
       }
+      #endif
     }
 
     ~DefaultTemplateArgsPolicyRAII() {
       Policy.SuppressDefaultTemplateArgs = Old;
+      #if ENABLE_BSC
       if (Policy.RewriteBSC) {
         Policy.SuppressTagKeyword = SuppressTagKeyword;
       }
+      #endif
     }
   };
 
@@ -169,11 +180,13 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
     OS << "const";
     appendSpace = true;
   }
+  #if ENABLE_BSC
   if (TypeQuals & Qualifiers::Owned) {
     if (appendSpace) OS << ' ';
     OS << "owned";
     appendSpace = true;
   }
+  #endif
   if (TypeQuals & Qualifiers::Volatile) {
     if (appendSpace) OS << ' ';
     OS << "volatile";
@@ -249,14 +262,18 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::UnaryTransform:
     case Type::Record:
     case Type::Enum:
+    #if ENABLE_BSC
     case Type::Trait:
+    #endif
     case Type::Elaborated:
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
     case Type::DeducedTemplateSpecialization:
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
+    #if ENABLE_BSC
     case Type::InjectedTraitName:
+    #endif
     case Type::DependentName:
     case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
@@ -1447,9 +1464,11 @@ void TypePrinter::printEnumBefore(const EnumType *T, raw_ostream &OS) {
 
 void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
 
+#if ENABLE_BSC
 void TypePrinter::printTraitBefore(const TraitType *T, raw_ostream &OS) {
   printTag(T->getDecl(), OS);
 }
+#endif
 
 void TypePrinter::printTraitAfter(const TraitType *T, raw_ostream &OS) {}
 
@@ -1546,6 +1565,7 @@ void TypePrinter::printInjectedClassNameBefore(const InjectedClassNameType *T,
 void TypePrinter::printInjectedClassNameAfter(const InjectedClassNameType *T,
                                                raw_ostream &OS) {}
 
+#if ENABLE_BSC
 void TypePrinter::printInjectedTraitNameBefore(const InjectedTraitNameType *T,
                                                raw_ostream &OS) {
   if (Policy.PrintInjectedTraitNameWithArguments)
@@ -1555,6 +1575,7 @@ void TypePrinter::printInjectedTraitNameBefore(const InjectedTraitNameType *T,
   T->getTemplateName().print(OS, Policy);
   spaceBeforePlaceHolder(OS);
 }
+#endif
 
 void TypePrinter::printInjectedTraitNameAfter(const InjectedTraitNameType *T,
                                               raw_ostream &OS) {}
@@ -2124,11 +2145,15 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
   if (!IsPack) {
+    #if ENABLE_BSC
     if (Policy.RewriteBSC) {
       OS << '_';
     } else {
+    #endif
       OS << '<';
+    #if ENABLE_BSC
     }
+    #endif
   }
 
   bool NeedSpace = false;
@@ -2145,10 +2170,14 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
               /*IsPack*/ true, ParmIndex);
     } else {
       if (!FirstArg) {
+        #if ENABLE_BSC
         if (!Policy.RewriteBSC)
+        #endif
           OS << Comma;
+        #if ENABLE_BSC
         else
           OS << '_';
+        #endif
       }
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
@@ -2165,6 +2194,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
     std::string NewArgString = ArgString.str();
 
+    #if ENABLE_BSC
     if (Policy.RewriteBSC) {
       for (int i = NewArgString.length() - 1; i >= 0; i--) {
         if (NewArgString[i] == ' ') {
@@ -2177,6 +2207,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
         }
       }
     }
+    #endif
 
     OS << NewArgString;
 
@@ -2193,11 +2224,15 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
   }
 
   if (!IsPack) {
+    #if ENABLE_BSC
     if (!Policy.RewriteBSC) {
+    #endif
       if (NeedSpace)
         OS << ' ';
       OS << '>';
+    #if ENABLE_BSC
     }
+    #endif
   }
 }
 

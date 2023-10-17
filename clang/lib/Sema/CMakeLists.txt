@@ -12,6 +12,8 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
 
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
+  BSC/SemaBSCCoroutine.cpp
+  BSC/SemaBSCTrait.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp
@@ -26,8 +28,6 @@ add_clang_library(clangSema
   SemaAccess.cpp
   SemaAttr.cpp
   SemaAvailability.cpp
-  SemaBSCCoroutine.cpp
-  SemaBSCTrait.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp

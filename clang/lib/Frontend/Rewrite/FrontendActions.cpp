@@ -178,6 +178,7 @@ RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 #endif
 
+#if ENABLE_BSC
 std::unique_ptr<ASTConsumer>
 RewriteBSCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (std::unique_ptr<raw_ostream> OS =
@@ -187,6 +188,7 @@ RewriteBSCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   }
   return nullptr;
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Preprocessor Actions

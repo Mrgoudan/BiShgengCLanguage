@@ -139,14 +139,17 @@ void ASTDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpTemplateDecl(D, false);
 }
 
+#if ENABLE_BSC
 void ASTDumper::VisitTraitTemplateDecl(const TraitTemplateDecl *D) {
   dumpTemplateDecl(D, false);
 }
+#endif
 
 void ASTDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpTemplateDecl(D, false);
 }
 
+#if ENABLE_BSC
 void ASTDumper::VisitCompoundStmt(const CompoundStmt *Node) {
   VisitStmt(Node);
   SafeScopeSpecifier SafeSpec = Node->getSafeSpecifier();
@@ -157,6 +160,7 @@ void ASTDumper::VisitCompoundStmt(const CompoundStmt *Node) {
     OS << " unsafe";
   }
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Type method implementations

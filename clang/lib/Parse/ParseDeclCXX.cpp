@@ -1609,6 +1609,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   }
 
   // Generic struct 'struct S<int> s1' should enter here.
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     ColonProtectionRAIIObject X(*this);
 
@@ -1628,6 +1629,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     if (HasValidSpec)
       SS = Spec;
   }
+  #endif
 
   TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
 
@@ -1665,14 +1667,17 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   IdentifierInfo *Name = nullptr;
   SourceLocation NameLoc;
   TemplateIdAnnotation *TemplateId = nullptr;
+  #if ENABLE_BSC
   bool isParsingBSCTemplateStruct =
       getLangOpts().BSC && Tok.is(tok::identifier) && NextToken().is(tok::less);
+  #endif
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
 
     // BSC Sturct Template Declaration may have "<T>" syntax.
     //      This param list must been parsed, skip it.
+    #if ENABLE_BSC
     if (isParsingBSCTemplateStruct) {
       while (Tok.getKind() != tok::greater) {
         ConsumeToken();
@@ -1683,6 +1688,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         Diag(Tok.getLocation(), diag::err_expected_comma_greater);
       }
     }
+    #endif
 
     if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
       // The name was supposed to refer to a template, but didn't.
@@ -2055,6 +2061,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       ParseCXXMemberSpecification(StartLoc, AttrFixitLoc, attrs, TagType,
                                   TagOrTempResult.get());
     else {
+      #if ENABLE_BSC
       Decl *D = nullptr;
       if (isParsingBSCTemplateStruct) {
         if (!TagOrTempResult.get()) {
@@ -2065,8 +2072,11 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         D = static_cast<ClassTemplateDecl *>(TagOrTempResult.get())
                 ->getTemplatedDecl();
       } else {
+      #endif
         D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
+      #if ENABLE_BSC
       }
+      #endif
       
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));

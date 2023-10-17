@@ -729,41 +729,6 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 };
 }
 
-ExprResult Parser::ParseOptionalBSCScopeSpecifier(
-    CastParseKind ParseKind, bool isAddressOfOperand, bool &NotCastExpr,
-    TypeCastState isTypeCast, bool isVectorLiteral, bool *NotPrimaryExpression,
-    bool HasBSCScopeSpec) {
-  ParsingDeclSpec DS(*this);
-  ParseBSCScopeSpecifiers(DS);
-  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-  ParsingDeclarator D(*this, DS, EmptyDeclSpecAttrs, DeclaratorContext::File);
-
-  BSCScopeSpec BSS;
-  BSS.setBeginLoc(DS.getBeginLoc());
-  QualType T =
-      Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), false, BSS, DS);
-  // For generic member functions, if the generic 'T' comes from a scope when
-  // called, we need to obtain the NestedNameSpecifier from the scope and store
-  // it in QualType to facilitate the creation of 'DependentScopeDeclRefExpr'
-  // ast nodes.
-  auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T.getCanonicalType().getTypePtr());
-  if (Tok.is(tok::coloncolon) && TST) {
-    TagDecl *TD = dyn_cast_or_null<TagDecl>(Actions.getASTContext().BSCDeclContextMap[TST]);
-    if (TD)
-      TD->setQualifierInfo(DS.getTypeSpecScope().getWithLocInContext(Actions.getASTContext()));
-  }
-  HasBSCScopeSpec = TryConsumeToken(tok::coloncolon);
-  D.getBSCScopeSpec() = BSS;
-
-  if (Tok.isNot(tok::identifier)) {
-    Diag(Tok, diag::err_expected_unqualified_id) << 0;
-    return ExprError();
-  }
-  return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
-                             isTypeCast, isVectorLiteral, NotPrimaryExpression,
-                             T, HasBSCScopeSpec, DS.getBeginLoc());
-}
-
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
 /// a unary-expression.
 ///
@@ -947,8 +912,11 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
 ///
 ExprResult Parser::ParseCastExpression(
     CastParseKind ParseKind, bool isAddressOfOperand, bool &NotCastExpr,
-    TypeCastState isTypeCast, bool isVectorLiteral, bool *NotPrimaryExpression,
-    QualType T, bool HasBSCScopeSpec, SourceLocation BL) {
+    TypeCastState isTypeCast, bool isVectorLiteral, bool *NotPrimaryExpression
+    #if ENABLE_BSC
+    , QualType T, bool HasBSCScopeSpec, SourceLocation BL
+    #endif
+    ) {
   ExprResult Res;
   tok::TokenKind SavedKind = Tok.getKind();
   auto SavedType = PreferredType;
@@ -1071,6 +1039,7 @@ ExprResult Parser::ParseCastExpression(
     return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                isVectorLiteral, NotPrimaryExpression);
 
+  #if ENABLE_BSC
   case tok::kw_union:
   case tok::kw_enum:
   case tok::kw_struct:
@@ -1084,18 +1053,25 @@ ExprResult Parser::ParseCastExpression(
     }
     // Fall through; this isn't a message send.
     LLVM_FALLTHROUGH;
+  #endif
 
   case tok::identifier: {      // primary-expression: identifier
                                // unqualified-id: identifier
                                // constant: enumeration-constant
+    #if ENABLE_BSC
     if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);
     }
+    #endif
     // Turn a potentially qualified name into a annot_typename or
     // annot_cxxscope if it would be valid.  This handles things like x::y, etc.
-    if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
+    if (getLangOpts().CPlusPlus
+        #if ENABLE_BSC
+        || getLangOpts().BSC
+        #endif
+        ) {
       // Avoid the unnecessary parse-time lookup in the common case
       // where the syntax forbids a type.
       const Token &Next = NextToken();
@@ -1186,7 +1162,11 @@ ExprResult Parser::ParseCastExpression(
           Next.isOneOf(tok::coloncolon, tok::less, tok::l_paren,
                        tok::l_brace)) {
         // If TryAnnotateTypeOrScopeToken annotates the token, tail recurse.
-        if (TryAnnotateTypeOrScopeToken(T))
+        if (TryAnnotateTypeOrScopeToken(
+                                        #if ENABLE_BSC
+                                        T
+                                        #endif
+                                        ))
           return ExprError();
         if (!Tok.is(tok::identifier))
           return ParseCastExpression(ParseKind, isAddressOfOperand,
@@ -1300,14 +1280,20 @@ ExprResult Parser::ParseCastExpression(
     } else {
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
+    #if ENABLE_BSC
     if (!T.isNull())
       Validator.setExtendType(T.getTypePtr());
+    #endif
     Name.setIdentifier(&II, ILoc);
     Res = Actions.ActOnIdExpression(
         getCurScope(), ScopeSpec, TemplateKWLoc, Name, Tok.is(tok::l_paren),
         isAddressOfOperand, &Validator,
         /*IsInlineAsmIdentifier=*/false,
-        Tok.is(tok::r_paren) ? nullptr : &Replacement, T);
+        Tok.is(tok::r_paren) ? nullptr : &Replacement
+        #if ENABLE_BSC
+        , T
+        #endif
+        );
     if (!Res.isInvalid() && Res.isUnset()) {
       UnconsumeToken(Replacement);
       return ParseCastExpression(ParseKind, isAddressOfOperand,
@@ -1453,6 +1439,7 @@ ExprResult Parser::ParseCastExpression(
     return Res;
   }
 
+  #if ENABLE_BSC
   case tok::kw_await: { // unary-expression: 'await' cast-expression
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
@@ -1462,6 +1449,7 @@ ExprResult Parser::ParseCastExpression(
       Res = Actions.ActOnAwaitExpr(AwaitLoc, Res.get());
     return Res;
   }
+  #endif
 
   case tok::kw___extension__:{//unary-expression:'__extension__' cast-expr [GNU]
     // __extension__ silences extension warnings in the subexpression.
@@ -1599,6 +1587,7 @@ ExprResult Parser::ParseCastExpression(
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
   {
+    #if ENABLE_BSC
     if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
@@ -1606,6 +1595,9 @@ ExprResult Parser::ParseCastExpression(
     }
     // Enter the type-cast check in bsc generic.
     if (!(getLangOpts().CPlusPlus || getLangOpts().BSC)) {
+    #else
+    if (!getLangOpts().CPlusPlus) {
+    #endif
       Diag(Tok, diag::err_expected_expression);
       return ExprError();
     }
@@ -1886,6 +1878,7 @@ ExprResult Parser::ParseCastExpression(
 
   // These can be followed by postfix-expr pieces.
   PreferredType = SavedType;
+  #if ENABLE_BSC
   if (Res.get()) {
     if (HasBSCScopeSpec && BL.isValid()) {
       Res.get()->HasBSCScopeSpec = HasBSCScopeSpec;
@@ -1949,6 +1942,7 @@ ExprResult Parser::ParseCastExpression(
       }
     }
   }
+  #endif
 
   Res = ParsePostfixExpressionSuffix(Res);
   if (getLangOpts().OpenCL &&
@@ -1992,7 +1986,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
   // Now that the primary-expression piece of the postfix-expression has been
   // parsed, see if there are any postfix-expression pieces here.
   SourceLocation Loc;
+  #if ENABLE_BSC
   Expr *TraitParam = nullptr;
+  #endif
   auto SavedType = PreferredType;
   while (true) {
     // Each iteration relies on preferred type for the whole expression.
@@ -2181,8 +2177,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       ExprVector ArgExprs;
+      #if ENABLE_BSC
       if (TraitParam)
         ArgExprs.push_back(TraitParam);
+      #endif
       CommaLocsTy CommaLocs;
       auto RunSignatureHelp = [&]() -> QualType {
         QualType PreferredType = Actions.ProduceCallSignatureHelp(
@@ -2230,6 +2228,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           PT.consumeClose();
         LHS = ExprError();
       } else {
+        #if ENABLE_BSC
         bool ArgsSizeOK = true;
         if (TraitParam == nullptr) {
           ArgsSizeOK =
@@ -2239,6 +2238,11 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
               ArgExprs.size() == 1 || ArgExprs.size() - 2 == CommaLocs.size();
         }
         assert(ArgsSizeOK && "Unexpected number of commas!");
+        #else
+        assert(
+            (ArgExprs.size() == 0 || ArgExprs.size() - 1 == CommaLocs.size()) &&
+            "Unexpected number of commas!");
+        #endif
         Expr *Fn = LHS.get();
         SourceLocation RParLoc = Tok.getLocation();
         LHS = Actions.ActOnCallExpr(getCurScope(), Fn, Loc, ArgExprs, RParLoc,
@@ -2257,6 +2261,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
     case tok::period: {
       // postfix-expression: p-e '->' template[opt] id-expression
       // postfix-expression: p-e '.' template[opt] id-expression
+      #if ENABLE_BSC
       if (getLangOpts().BSC && LHS.get()) {
         // FIXME: Should we desugar right here after we see "->"?
         // Maybe we should consider doing "Desugar" at a more coarse level.
@@ -2273,6 +2278,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");   // "t.vtable"
         }
       }
+      #endif
       tok::TokenKind OpKind = Tok.getKind();
       SourceLocation OpLoc = ConsumeToken();  // Eat the "." or "->" token.
 

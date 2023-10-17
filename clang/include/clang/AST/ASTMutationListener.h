@@ -35,8 +35,10 @@ namespace clang {
   class QualType;
   class RecordDecl;
   class TagDecl;
+  #if ENABLE_BSC
   class TraitTemplateDecl;
   class TraitTemplateSpecializationDecl;
+  #endif
   class ValueDecl;
   class VarDecl;
   class VarTemplateDecl;
@@ -65,9 +67,11 @@ public:
 
   /// A template specialization (or partial one) was added to the
   /// template declaration.
+  #if ENABLE_BSC
   virtual void
   AddedCXXTemplateSpecialization(const TraitTemplateDecl *TD,
                                  const TraitTemplateSpecializationDecl *D) {}
+  #endif
 
   /// A template specialization (or partial one) was added to the
   /// template declaration.

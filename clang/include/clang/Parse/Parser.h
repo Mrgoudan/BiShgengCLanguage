@@ -216,8 +216,10 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  #if ENABLE_BSC
   std::unique_ptr<PragmaHandler> SafeHandler;
   std::unique_ptr<PragmaHandler> PreferInlineHandler;
+  #endif
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -298,9 +300,11 @@ class Parser : public CodeCompletionHandler {
   void DestroyTemplateIds();
 
   /// Reset "#pragma prefer_inline ON/OFF"
+  #if ENABLE_BSC
   void ResetPreferInlineScopeToNone() {
     Actions.SetPragmaPreferInlineInfo(PI_None);
   }
+  #endif
 
   /// RAII object to destroy TemplateIdAnnotations where possible, from a
   /// likely-good position during parsing.
@@ -797,8 +801,10 @@ private:
 
   void HandlePragmaAttribute();
 
+  #if ENABLE_BSC
   void HandlePragmaSafe();
   void HandlePragmaPreferInline();
+  #endif
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
@@ -864,10 +870,17 @@ private:
 public:
   // If NeedType is true, then TryAnnotateTypeOrScopeToken will try harder to
   // find a type name by attempting typo correction.
-  bool TryAnnotateTypeOrScopeToken(QualType ExtendedTy = QualType());
+  bool TryAnnotateTypeOrScopeToken(
+                    #if ENABLE_BSC
+                    QualType ExtendedTy = QualType()
+                    #endif
+                    );
   bool
-  TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS, bool IsNewScope,
-                                            QualType ExtendedTy = QualType());
+  TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS, bool IsNewScope
+                                            #if ENABLE_BSC
+                                            , QualType ExtendedTy = QualType()
+                                            #endif
+                                            );
   bool TryAnnotateCXXScopeToken(bool EnteringContext = false);
 
   bool MightBeCXXScopeToken() {
@@ -1039,7 +1052,9 @@ private:
   };
 
   /// Judge whether there is a \param FindToken before StopTokens.
+  #if ENABLE_BSC
   bool FindUntil(tok::TokenKind FindToken);
+  #endif
 
   /// ExpectAndConsume - The parser expects that 'ExpectedTok' is next in the
   /// input.  If so, it is consumed and false is returned.
@@ -1616,7 +1631,9 @@ private:
   DeclGroupPtrTy ParseDeclOrFunctionDefInternal(ParsedAttributes &Attrs,
                                                 ParsingDeclSpec &DS,
                                                 AccessSpecifier AS);
+  #if ENABLE_BSC
   DeclGroupPtrTy ParseImplTraitDeclaration();
+  #endif
 
   void SkipFunctionBody();
   Decl *ParseFunctionDefinition(ParsingDeclarator &D,
@@ -1795,6 +1812,7 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+  #if ENABLE_BSC
   ExprResult ParseOptionalBSCScopeSpecifier(
       CastParseKind ParseKind, bool isAddressOfOperand, bool &NotCastExpr,
       TypeCastState isTypeCast, bool isVectorLiteral = false,
@@ -1804,6 +1822,14 @@ private:
       TypeCastState isTypeCast, bool isVectorLiteral = false,
       bool *NotPrimaryExpression = nullptr, QualType T = QualType(),
       bool HasBSCScopeSpec = false, SourceLocation BL = SourceLocation());
+  #else
+  ExprResult ParseCastExpression(CastParseKind ParseKind,
+                                 bool isAddressOfOperand,
+                                 bool &NotCastExpr,
+                                 TypeCastState isTypeCast,
+                                 bool isVectorLiteral = false,
+                                 bool *NotPrimaryExpression = nullptr);
+  #endif
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand = false,
                                  TypeCastState isTypeCast = NotTypeCast,
@@ -1897,6 +1923,7 @@ private:
                                   bool EnteringContext, IdentifierInfo &II,
                                   CXXScopeSpec &SS);
 
+  #if ENABLE_BSC
   static bool IsBSCTemplateBlackList(tok::TokenKind TmpKind) {
     switch (TmpKind) 
     {
@@ -1913,6 +1940,7 @@ private:
 
     return false;
   }
+  #endif
 
   bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
                                       ParsedType ObjectType,
@@ -1924,11 +1952,13 @@ private:
                                       bool OnlyNamespace = false,
                                       bool InUsingDeclaration = false);
 
+  #if ENABLE_BSC
   bool ParseOptionalBSCGenericSpecifier(
       CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHasErrors,
       bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
       bool IsTypename = false, IdentifierInfo **LastII = nullptr,
       bool OnlyNamespace = false, bool InUsingDeclaration = false);
+  #endif
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions
@@ -2133,9 +2163,12 @@ private:
                                     unsigned ScopeFlags);
   void ParseCompoundStatementLeadingPragmas();
   bool ConsumeNullStmt(StmtVector &Stmts);
-  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false,
-                                        SafeScopeSpecifier SafeSpec = SS_None,
-                                        SourceLocation SafeLoc = SourceLocation());
+  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false
+                                        #if ENABLE_BSC
+                                        , SafeScopeSpecifier SafeSpec = SS_None,
+                                        SourceLocation SafeLoc = SourceLocation()
+                                        #endif
+                                        );
   bool ParseParenExprOrCondition(StmtResult *InitStmt,
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,
@@ -2412,11 +2445,17 @@ private:
       const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
       AccessSpecifier AS = AS_none,
       DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-      LateParsedAttrList *LateAttrs = nullptr, bool BSCScopeSpecFlag = false);
+      LateParsedAttrList *LateAttrs = nullptr
+      #if ENABLE_BSC
+      , bool BSCScopeSpecFlag = false
+      #endif
+      );
   // Record BSC Generic Look-Ahead when parsing '<>'
+  #if ENABLE_BSC
   int BSCGenericLookAhead;
   bool IsParsingBSCGenericParameters = false;
   void ParseBSCScopeSpecifiers(DeclSpec &DS);
+  #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);
@@ -2434,16 +2473,20 @@ private:
   void ParseEnumBody(SourceLocation StartLoc, Decl *TagDecl);
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
+  #if ENABLE_BSC
   void ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                            const ParsedTemplateInfo &TemplateInfo,
                            bool EnteringContext, DeclSpecContext DSC,
                            ParsedAttributes &Attributes);
+  #endif
 
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
       llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
+  #if ENABLE_BSC
   void ParseTraitBody(SourceLocation StartLoc, SourceLocation AttrFixitLoc,
                       Decl *TagDecl);
+  #endif
 
   bool isDeclarationSpecifier(bool DisambiguatingWithExpression = false);
   bool isTypeSpecifierQualifier();
@@ -2617,7 +2660,9 @@ private:
   /// during a tentative parse, but also should not be annotated as a non-type.
   bool isTentativelyDeclared(IdentifierInfo *II);
 
+  #if ENABLE_BSC
   bool isBSCTemplateDecl(Token tok);
+  #endif
 
   // "Tentative parsing" functions, used for disambiguation. If a parsing error
   // is encountered they will return TPResult::Error.
@@ -3042,8 +3087,11 @@ private:
   void ParseParenDeclarator(Declarator &D);
   void ParseFunctionDeclarator(Declarator &D, ParsedAttributes &FirstArgAttrs,
                                BalancedDelimiterTracker &Tracker,
-                               bool IsAmbiguous, bool RequiresArg = false,
-                               bool isTraitMem = false);
+                               bool IsAmbiguous, bool RequiresArg = false
+                               #if ENABLE_BSC
+                               , bool isTraitMem = false
+                               #endif
+                               );
   void InitCXXThisScopeForDeclaratorIfRelevant(
       const Declarator &D, const DeclSpec &DS,
       llvm::Optional<Sema::CXXThisScopeRAII> &ThisScope);
@@ -3056,8 +3104,12 @@ private:
   void ParseParameterDeclarationClause(
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-      SourceLocation &EllipsisLoc, QualType ExtendedType = QualType(),
-      bool isTraitMem = false);
+      SourceLocation &EllipsisLoc
+      #if ENABLE_BSC
+      , QualType ExtendedType = QualType(),
+      bool isTraitMem = false
+      #endif
+      );
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);
 
@@ -3151,10 +3203,12 @@ private:
                                    SourceLocation AttrFixitLoc,
                                    ParsedAttributes &Attrs, unsigned TagType,
                                    Decl *TagDecl);
+  #if ENABLE_BSC
   bool ParseTraitMemberDeclaratorBeforeInitializer(
       Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
       LateParsedAttrList &LateAttrs);
   DeclGroupPtrTy ParseTraitMemberDeclaration(ParsedAttributes &Attr);
+  #endif
   ExprResult ParseCXXMemberInitializer(Decl *D, bool IsFunction,
                                        SourceLocation &EqualLoc);
   bool
@@ -3442,6 +3496,7 @@ private:
                                                  ParsedAttributes &AccessAttrs,
                                                  AccessSpecifier AS);
   // BSC style ParseTemplateDeclarationOrSpecialization
+  #if ENABLE_BSC
   Decl *ParseBSCGenericDeclaration(DeclaratorContext Context,
                                    SourceLocation &DeclEnd,
                                    ParsedAttributes &AccessAttrs,
@@ -3449,6 +3504,7 @@ private:
   Decl *ParseTemplateDeclarationOrSpecializationBSCCompact(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);
+  #endif
   Decl *ParseSingleDeclarationAfterTemplate(
       DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject &DiagsFromParams, SourceLocation &DeclEnd,
@@ -3457,20 +3513,26 @@ private:
                                SmallVectorImpl<NamedDecl *> &TemplateParams,
                                SourceLocation &LAngleLoc,
                                SourceLocation &RAngleLoc);
+  #if ENABLE_BSC
   bool ParseBSCTemplateParameters(MultiParseScope &TemplateScopes,
                                   unsigned Depth,
                                   SmallVectorImpl<NamedDecl *> &TemplateParams,
                                   SourceLocation &LAngleLoc,
                                   SourceLocation &RAngleLoc);
+  #endif
   bool ParseTemplateParameterList(unsigned Depth,
                                   SmallVectorImpl<NamedDecl*> &TemplateParams);
+  #if ENABLE_BSC
   bool
   ParseBSCTemplateParameterList(unsigned Depth,
                                 SmallVectorImpl<NamedDecl *> &TemplateParams);
+  #endif
   TPResult isStartOfTemplateTypeParameter();
   NamedDecl *ParseTemplateParameter(unsigned Depth, unsigned Position);
   NamedDecl *ParseTypeParameter(unsigned Depth, unsigned Position);
+  #if ENABLE_BSC
   NamedDecl *ParseBSCTypeParameter(unsigned Depth, unsigned Position);
+  #endif
   NamedDecl *ParseTemplateTemplateParameter(unsigned Depth, unsigned Position);
   NamedDecl *ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position);
   bool isTypeConstraintAnnotation();

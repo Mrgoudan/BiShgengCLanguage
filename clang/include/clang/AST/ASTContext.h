@@ -487,11 +487,13 @@ public:
   using TemplateOrSpecializationInfo =
       llvm::PointerUnion<VarTemplateDecl *, MemberSpecializationInfo *>;
 
+  #if ENABLE_BSC
   mutable llvm::DenseMap<const Type *, DeclContext *> BSCDeclContextMap;
 
   /// A mapping to contain the declaration and its desugared decls.
   mutable llvm::DenseMap<const Decl *, SmallVector<NamedDecl *>>
       BSCDesugaredMap;
+  #endif
 
 private:
   friend class ASTDeclReader;
@@ -1110,7 +1112,9 @@ public:
 
   // Builtin Types.
   CanQualType VoidTy;
+  #if ENABLE_BSC
   CanQualType ThisTy;
+  #endif
   CanQualType BoolTy;
   CanQualType CharTy;
   CanQualType WCharTy;  // [C++ 3.9.1p5].
@@ -1612,9 +1616,11 @@ public:
   QualType
   getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
 
+  #if ENABLE_BSC
   QualType getInjectedClassNameType(RecordDecl *Decl, QualType TST) const;
 
   QualType getInjectedTraitNameType(TraitDecl *Decl, QualType TST) const;
+  #endif
 
   QualType getAttributedType(attr::Kind attrKind, QualType modifiedType,
                              QualType equivalentType) const;
@@ -1622,7 +1628,9 @@ public:
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped);
 
+  #if ENABLE_BSC
   QualType getTraitType(const TraitDecl *Decl) const;
+  #endif
 
   QualType getSubstTemplateTypeParmType(const TemplateTypeParmType *Replaced,
                                         QualType Replacement) const;

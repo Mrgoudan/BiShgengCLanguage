@@ -692,17 +692,25 @@ class InjectedClassNameTypeLoc :
                                      InjectedClassNameTypeLoc,
                                      InjectedClassNameType> {
 public:
+  #if ENABLE_BSC
   RecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
+  #else
+  CXXRecordDecl *getDecl() const {
+    return getTypePtr()->getDecl();
+  }
+  #endif
 };
 
 /// Wrapper for source info for injected trait names of trait
 /// templates.
+#if ENABLE_BSC
 class InjectedTraitNameTypeLoc
     : public InheritingConcreteTypeLoc<
           TypeSpecTypeLoc, InjectedTraitNameTypeLoc, InjectedTraitNameType> {
 public:
   TraitDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
+#endif
 
 /// Wrapper for source info for unresolved typename using decls.
 class UnresolvedUsingTypeLoc :
@@ -746,11 +754,13 @@ public:
   EnumDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
+#if ENABLE_BSC
 class TraitTypeLoc
     : public InheritingConcreteTypeLoc<TagTypeLoc, TraitTypeLoc, TraitType> {
 public:
   TraitDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
+#endif
 
 /// Wrapper for template type parameters.
 class TemplateTypeParmTypeLoc :

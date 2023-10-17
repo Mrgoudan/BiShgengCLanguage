@@ -29,9 +29,11 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::Void:
     ID = PREDEF_TYPE_VOID_ID;
     break;
+  #if ENABLE_BSC
   case BuiltinType::This:
     ID = PREDEF_TYPE_THIS_ID;
     break;
+  #endif
   case BuiltinType::Bool:
     ID = PREDEF_TYPE_BOOL_ID;
     break;
@@ -314,7 +316,9 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
 
   // Each function, method, and block declaration is its own DeclContext.
   case Decl::Function:
+  #if ENABLE_BSC
   case Decl::BSCMethod:
+  #endif
   case Decl::CXXMethod:
   case Decl::CXXConstructor:
   case Decl::CXXDestructor:
@@ -361,9 +365,13 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::TypeAlias:
   case Decl::Enum:
   case Decl::Record:
+  #if ENABLE_BSC
   case Decl::Trait:
+  #endif
   case Decl::CXXRecord:
+  #if ENABLE_BSC
   case Decl::TraitTemplateSpecialization:
+  #endif
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:
   case Decl::VarTemplateSpecialization:
@@ -377,10 +385,14 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::UsingShadow:
   case Decl::ConstructorUsingShadow:
   case Decl::Var:
+  #if ENABLE_BSC
   case Decl::ImplTrait:
+  #endif
   case Decl::FunctionTemplate:
   case Decl::ClassTemplate:
+  #if ENABLE_BSC
   case Decl::TraitTemplate:
+  #endif
   case Decl::VarTemplate:
   case Decl::TypeAliasTemplate:
   case Decl::ObjCProtocol:
@@ -389,7 +401,9 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
     return true;
 
   // Never redeclarable.
+  #if ENABLE_BSC
   case Decl::BSCMethod:
+  #endif
   case Decl::UsingDirective:
   case Decl::Label:
   case Decl::UnresolvedUsingTypename:

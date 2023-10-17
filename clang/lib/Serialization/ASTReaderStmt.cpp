@@ -154,7 +154,9 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned NumStmts = Record.readInt();
   unsigned HasFPFeatures = Record.readInt();
   assert(S->hasStoredFPFeatures() == HasFPFeatures);
+  #if ENABLE_BSC
   S->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
+  #endif
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
   S->setStmts(Stmts);
@@ -500,11 +502,13 @@ void ASTStmtReader::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
 //===----------------------------------------------------------------------===//
 // BSC Expressions
 //===----------------------------------------------------------------------===//
+#if ENABLE_BSC
 void ASTStmtReader::VisitAwaitExpr(AwaitExpr *E) {
   VisitExpr(E);
   E->AwaitLoc = readSourceLocation();
   E->SubExpr = Record.readSubStmt();
 }
+#endif
 
 void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
   VisitStmt(S);
@@ -1013,7 +1017,9 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   if (HasFPFeatures)
     E->setStoredFPFeatures(
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
+  #if ENABLE_BSC
   E->setPreferInlineScopeSpecifier(static_cast<PreferInlineScopeSpecifier>(Record.readInt()));
+  #endif
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
@@ -4009,9 +4015,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) DependentCoawaitExpr(Empty);
       break;
 
+    #if ENABLE_BSC
     case EXPR_BSC_AWAIT:
       S = new (Context) AwaitExpr(Empty);
       break;
+    #endif
 
     case EXPR_CONCEPT_SPECIALIZATION: {
       unsigned numTemplateArgs = Record[ASTStmtReader::NumExprFields];

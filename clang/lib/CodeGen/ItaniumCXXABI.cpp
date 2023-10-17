@@ -3291,7 +3291,9 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
       return false;
 
     case BuiltinType::Dependent:
+    #if ENABLE_BSC
     case BuiltinType::This:
+    #endif
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
     case BuiltinType::Id:
@@ -3510,7 +3512,9 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     VTableName = "_ZTVN10__cxxabiv120__function_type_infoE";
     break;
 
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
   case Type::Enum:
     // abi::__enum_type_info.
     VTableName = "_ZTVN10__cxxabiv116__enum_type_infoE";
@@ -3776,7 +3780,9 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     // abi::__function_type_info adds no data members to std::type_info.
     break;
 
+  #if ENABLE_BSC
   case Type::Trait:
+  #endif
   case Type::Enum:
     // Itanium C++ ABI 2.9.5p5:
     // abi::__enum_type_info adds no data members to std::type_info.

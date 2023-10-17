@@ -109,8 +109,12 @@ namespace {
     KEYMSCOMPAT   = 0x800000,
     KEYSYCL       = 0x1000000,
     KEYCUDA       = 0x2000000,
+    #if ENABLE_BSC
     KEYBSC        = 0x4000000,
     KEYMAX        = KEYBSC, // The maximum key
+    #else
+    KEYMAX        = KEYCUDA,
+    #endif
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
     KEYALL = (KEYMAX | (KEYMAX-1)) & ~KEYNOMS18 &
              ~KEYNOOPENCL // KEYNOMS18 and KEYNOOPENCL are used to exclude.
@@ -135,8 +139,10 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus11 && (Flags & KEYCXX11)) return KS_Enabled;
   if (LangOpts.CPlusPlus20 && (Flags & KEYCXX20)) return KS_Enabled;
   if (LangOpts.C99 && (Flags & KEYC99)) return KS_Enabled;
+  #if ENABLE_BSC
   if (LangOpts.BSC && (Flags & KEYBSC))
     return KS_Enabled;
+  #endif
   if (LangOpts.GNUKeywords && (Flags & KEYGNU)) return KS_Extension;
   if (LangOpts.MicrosoftExt && (Flags & KEYMS)) return KS_Extension;
   if (LangOpts.MSVCCompat && (Flags & KEYMSCOMPAT)) return KS_Enabled;
@@ -165,7 +171,9 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
     return KS_Enabled;
   if (LangOpts.CUDA && (Flags & KEYCUDA))
     return KS_Enabled;
+  #if ENABLE_BSC
   if (LangOpts.BSC && (Flags & KEYBSC)) return KS_Enabled;
+  #endif
   return KS_Disabled;
 }
 

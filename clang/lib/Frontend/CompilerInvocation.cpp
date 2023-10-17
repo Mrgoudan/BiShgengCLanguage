@@ -2464,7 +2464,9 @@ static const auto &getFrontendActionTable() {
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
       {frontend::EmitCodeGenOnly, OPT_emit_codegen_only},
       {frontend::EmitObj, OPT_emit_obj},
+      #if ENABLE_BSC
       {frontend::RewriteBSC, OPT_rewrite_bsc},
+      #endif
       {frontend::ExtractAPI, OPT_extract_api},
 
       {frontend::FixIt, OPT_fixit_EQ},
@@ -2650,9 +2652,11 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
     case Language::CUDA:
       Lang = "cuda";
       break;
+    #if ENABLE_BSC
     case Language::BSC:
       Lang = "bsc";
       break;
+    #endif
     case Language::HIP:
       Lang = "hip";
       break;
@@ -2864,7 +2868,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
                 .Case("clcpp", Language::OpenCLCXX)
                 .Case("cuda", Language::CUDA)
                 .Case("hip", Language::HIP)
+                #if ENABLE_BSC
                 .Case("bsc", Language::BSC)
+                #endif
                 .Case("c++", Language::CXX)
                 .Case("objective-c", Language::ObjC)
                 .Case("objective-c++", Language::ObjCXX)
@@ -3248,8 +3254,10 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
   case Language::HIP:
     return S.getLanguage() == Language::CXX || S.getLanguage() == Language::HIP;
 
+  #if ENABLE_BSC
   case Language::BSC:
     return S.getLanguage() == Language::C || S.getLanguage() == Language::BSC;
+  #endif
 
   case Language::Asm:
     // Accept (and ignore) all -std= values.
@@ -3285,8 +3293,10 @@ static StringRef GetInputKindName(InputKind IK) {
     return "RenderScript";
   case Language::HIP:
     return "HIP";
+  #if ENABLE_BSC
   case Language::BSC:
     return "BSC";
+  #endif
 
   case Language::Asm:
     return "Asm";
@@ -4147,7 +4157,9 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::PluginAction:
   case frontend::RewriteObjC:
   case frontend::RewriteTest:
+  #if ENABLE_BSC
   case frontend::RewriteBSC:
+  #endif
   case frontend::RunAnalysis:
   case frontend::TemplightDump:
   case frontend::MigrateSource:

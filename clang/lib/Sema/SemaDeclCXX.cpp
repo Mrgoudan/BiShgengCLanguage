@@ -15558,7 +15558,11 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(Field->getParent());
 
   if (isTemplateInstantiation(ParentRD->getTemplateSpecializationKind())) {
+    #if ENABLE_BSC
     RecordDecl *ClassPattern = ParentRD->getTemplateInstantiationPattern();
+    #else
+    CXXRecordDecl *ClassPattern = ParentRD->getTemplateInstantiationPattern();
+    #endif
     DeclContext::lookup_result Lookup =
         ClassPattern->lookup(Field->getDeclName());
 

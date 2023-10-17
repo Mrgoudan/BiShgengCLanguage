@@ -9,7 +9,9 @@
 #include "clang/AST/Comment.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
@@ -273,6 +275,7 @@ void DeclInfo::fill() {
     assert(involvesFunctionType());
     break;
   }
+  #if ENABLE_BSC
   case Decl::TraitTemplate: {
     const TraitTemplateDecl *TTD = cast<TraitTemplateDecl>(CommentDecl);
     Kind = ClassKind;
@@ -280,6 +283,7 @@ void DeclInfo::fill() {
     TemplateParameters = TTD->getTemplateParameters();
     break;
   }
+  #endif
   case Decl::ClassTemplate: {
     const ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(CommentDecl);
     Kind = ClassKind;

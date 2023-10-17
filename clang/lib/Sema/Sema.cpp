@@ -1116,7 +1116,11 @@ void Sema::ActOnEndOfTranslationUnit() {
   // When generating .ast file at serialization part, TUKind will be TU_Prefix.
   // This may be caused by compilation opts. So we need this BSC language judge
   // to instantiate BSC generic noramlly.
-  if ((TUKind != TU_Prefix || getLangOpts().BSC)) {
+  if ((TUKind != TU_Prefix
+      #if ENABLE_BSC
+      || getLangOpts().BSC
+      #endif
+      )) {
     DiagnoseUseOfUnimplementedSelectors();
 
     ActOnEndOfTranslationUnitFragment(

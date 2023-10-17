@@ -1,4 +1,4 @@
-//===- DeclCXX.cpp - C++ Declaration AST Node Implementation --------------===//
+//===- DeclBSC.cpp - BSC Declaration AST Node Implementation --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the C++ related Decl classes.
+// This file implements the BSC related Decl classes.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/DeclBSC.h"
+#if ENABLE_BSC
+
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/Linkage.h"
 
@@ -192,3 +194,5 @@ TraitTemplateDecl *
 TraitTemplateSpecializationDecl::getSpecializedTemplate() const {
   return SpecializedTemplate.get<TraitTemplateDecl *>();
 }
+
+#endif // ENABLE_BSC

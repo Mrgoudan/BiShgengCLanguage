@@ -37,10 +37,12 @@ CreateModernObjCRewriter(const std::string &InFile,
                          bool SilenceRewriteMacroWarning, bool LineInfo);
 
 // BSC rewriter: attempts to rewrite BSC constructs into pure C code.
+#if ENABLE_BSC
 std::unique_ptr<ASTConsumer> CreateBSCRewriter(const std::string &InFile,
                                                std::unique_ptr<raw_ostream> OS,
                                                DiagnosticsEngine &Diags,
                                                const LangOptions &LOpts);
+#endif
 
 /// CreateHTMLPrinter - Create an AST consumer which rewrites source code to
 /// HTML with syntax highlighting suitable for viewing in a web-browser.

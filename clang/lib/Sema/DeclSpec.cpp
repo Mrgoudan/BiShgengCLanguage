@@ -369,11 +369,15 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_struct:
     case TST_interface:
     case TST_union:
+    #if ENABLE_BSC
     case TST_trait:
+    #endif
     case TST_unknown_anytype:
     case TST_unspecified:
     case TST_void:
+    #if ENABLE_BSC
     case TST_This:
+    #endif
     case TST_wchar:
     case TST_BFloat16:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
@@ -428,8 +432,10 @@ void DeclSpec::forEachCVRUQualifier(
     llvm::function_ref<void(TQ, StringRef, SourceLocation)> Handle) {
   if (TypeQualifiers & TQ_const)
     Handle(TQ_const, "const", TQ_constLoc);
+  #if ENABLE_BSC
   if (TypeQualifiers & TQ_owned)
     Handle(TQ_owned, "owned", TQ_ownedLoc);
+  #endif
   if (TypeQualifiers & TQ_volatile)
     Handle(TQ_volatile, "volatile", TQ_volatileLoc);
   if (TypeQualifiers & TQ_restrict)
@@ -466,8 +472,11 @@ unsigned DeclSpec::getParsedSpecifiers() const {
     Res |= PQ_TypeSpecifier;
 
   if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
-      FS_noreturn_specified || FS_forceinline_specified || FS_safe_specified ||
-      FS_async_specified)
+      FS_noreturn_specified || FS_forceinline_specified
+      #if ENABLE_BSC
+      || FS_safe_specified || FS_async_specified
+      #endif
+      )
     Res |= PQ_FunctionSpecifier;
   return Res;
 }
@@ -549,8 +558,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   switch (T) {
   case DeclSpec::TST_unspecified: return "unspecified";
   case DeclSpec::TST_void:        return "void";
+  #if ENABLE_BSC
   case DeclSpec::TST_This:
     return "This";
+  #endif
   case DeclSpec::TST_char:        return "char";
   case DeclSpec::TST_wchar:       return Policy.MSWChar ? "__wchar_t" : "wchar_t";
   case DeclSpec::TST_char8:       return "char8_t";
@@ -578,8 +589,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
   case DeclSpec::TST_typeofType:
+  #if ENABLE_BSC
   case DeclSpec::TST_trait:
     return "trait";
+  #endif
   case DeclSpec::TST_typeofExpr:  return "typeof";
   case DeclSpec::TST_auto:        return "auto";
   case DeclSpec::TST_auto_type:   return "__auto_type";
@@ -616,7 +629,9 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   switch (T) {
   case DeclSpec::TQ_unspecified: return "unspecified";
   case DeclSpec::TQ_const:       return "const";
+  #if ENABLE_BSC
   case DeclSpec::TQ_owned:         return "owned";
+  #endif
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
   case DeclSpec::TQ_atomic:      return "_Atomic";
@@ -985,7 +1000,9 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   switch (T) {
   case TQ_unspecified: break;
   case TQ_const:    TQ_constLoc = Loc; return false;
+  #if ENABLE_BSC
   case TQ_owned:   TQ_ownedLoc = Loc; return false;
+  #endif
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
   case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
@@ -1021,6 +1038,7 @@ bool DeclSpec::setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevS
   return false;
 }
 
+#if ENABLE_BSC
 bool DeclSpec::setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
                                     unsigned &DiagID) {
   if (FS_async_specified) {
@@ -1032,6 +1050,7 @@ bool DeclSpec::setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
   FS_asyncLoc = Loc;
   return false;
 }
+#endif
 
 bool DeclSpec::setFunctionSpecVirtual(SourceLocation Loc,
                                       const char *&PrevSpec,
@@ -1082,6 +1101,7 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   return false;
 }
 
+#if ENABLE_BSC
 bool DeclSpec::setFunctionSafeSpecifier(SourceLocation Loc,
                                         const char *&PrevSpec,
                                         unsigned &DiagID,
@@ -1099,6 +1119,7 @@ bool DeclSpec::setFunctionSafeSpecifier(SourceLocation Loc,
   }
   return true;
 }
+#endif
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {

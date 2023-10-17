@@ -14,10 +14,12 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CommentDiagnostic.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -290,8 +292,11 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              bool IsCtorOrDtorName,
                              bool WantNontrivialTypeSourceInfo,
                              bool IsClassTemplateDeductionContext,
-                             IdentifierInfo **CorrectedII,
-                             QualType ExtendedTy) {
+                             IdentifierInfo **CorrectedII
+                             #if ENABLE_BSC
+                             , QualType ExtendedTy
+                             #endif
+                             ) {
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
                               getLangOpts().CPlusPlus17 && !IsCtorOrDtorName &&
@@ -337,6 +342,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     if (!LookupCtx->isDependentContext() &&
         RequireCompleteDeclContext(*SS, LookupCtx))
       return nullptr;
+  #if ENABLE_BSC
   } else if (getLangOpts().BSC && !ExtendedTy.isNull()) {
     const Type *BasedType = ExtendedTy.getCanonicalType().getTypePtr();
     if (dyn_cast_or_null<ClassTemplateSpecializationDecl>(
@@ -345,6 +351,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       if (LookupCtx && RequireCompleteDeclContext(*SS, LookupCtx))
         return nullptr;
     }
+  #endif
   }
 
   // FIXME: LookupNestedNameSpecifierName isn't the right kind of
@@ -651,8 +658,10 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
       case TTK_Struct: return DeclSpec::TST_struct;
       case TTK_Interface: return DeclSpec::TST_interface;
       case TTK_Union:  return DeclSpec::TST_union;
+      #if ENABLE_BSC
       case TTK_Trait:
         return DeclSpec::TST_trait;
+      #endif
       case TTK_Class:  return DeclSpec::TST_class;
       case TTK_Enum:   return DeclSpec::TST_enum;
       }
@@ -846,9 +855,11 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
         FixItTagName = "__interface ";
         break;
 
+      #if ENABLE_BSC
       case TTK_Trait:
         FixItTagName = "trait ";
         break;
+      #endif
 
       case TTK_Union:
         FixItTagName = "union ";
@@ -935,7 +946,11 @@ Corrected:
       // In C++, this is an ADL-only call.
       // FIXME: Reference?
       // In BSC, this is the key of check undefined function name.
-      if (getLangOpts().CPlusPlus || getLangOpts().BSC)
+      if (getLangOpts().CPlusPlus
+          #if ENABLE_BSC
+          || getLangOpts().BSC
+          #endif
+          )
         return NameClassification::UndeclaredNonType();
 
       // C90 6.3.2.2:
@@ -1252,8 +1267,12 @@ ExprResult
 Sema::ActOnNameClassifiedAsUndeclaredNonType(IdentifierInfo *Name,
                                              SourceLocation NameLoc) {
   // In BSC, this is the entrance of checking undefined function name.
+  #if ENABLE_BSC
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "ADL-only call in C?");
+  #else
+  assert(getLangOpts().CPlusPlus && "ADL-only call in C?");
+  #endif
   CXXScopeSpec SS;
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
   return BuildDeclarationNameExpr(SS, Result, /*ADL=*/true);
@@ -1543,9 +1562,11 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
     return;
 
   // BSCMethodDecls shouldn't be pushed into scope in BSC.
+  #if ENABLE_BSC
   if (getLangOpts().BSC && isa<BSCMethodDecl>(D)) {
     return;
   }
+  #endif
 
   // Template instantiations should also not be pushed into scope.
   if (isa<FunctionDecl>(D) &&
@@ -4043,7 +4064,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   // C: Function types need to be compatible, not identical. This handles
   // duplicate function decls like "void f(int); void f(enum X);" properly.
-  if (!getLangOpts().CPlusPlus && !getLangOpts().BSC) {
+  if (!getLangOpts().CPlusPlus 
+      #if ENABLE_BSC
+      && !getLangOpts().BSC
+      #endif
+      ) {
     // C99 6.7.5.3p15: ...If one type has a parameter type list and the other
     // type is specified by a function definition that contains a (possibly
     // empty) identifier list, both shall agree in the number of parameters
@@ -5006,8 +5031,11 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       DS.getTypeSpecType() == DeclSpec::TST_struct ||
       DS.getTypeSpecType() == DeclSpec::TST_interface ||
       DS.getTypeSpecType() == DeclSpec::TST_union ||
-      DS.getTypeSpecType() == DeclSpec::TST_enum ||
-      DS.getTypeSpecType() == DeclSpec::TST_trait) {
+      DS.getTypeSpecType() == DeclSpec::TST_enum
+      #if ENABLE_BSC
+      || DS.getTypeSpecType() == DeclSpec::TST_trait
+      #endif
+      ) {
     TagD = DS.getRepAsDecl();
 
     if (!TagD) // We probably had an error
@@ -5227,8 +5255,10 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (DS.getTypeQualifiers()) {
     if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
+    #if ENABLE_BSC
     if (DS.getTypeQualifiers() & DeclSpec::TQ_owned)
       Diag(DS.getOwnedSpecLoc(), DiagID) << "owned";
+    #endif
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
     // Restrict is covered above.
@@ -6246,12 +6276,14 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
       if (RebuildDeclaratorInCurrentInstantiation(*this, D, Name))
         D.setInvalidType();
     }
+  #if ENABLE_BSC
   } else if (D.getBSCScopeSpec().isNotEmpty() &&
              !D.getBSCScopeSpec().getExtendedType().isNull()) {
     DC = getASTContext().BSCDeclContextMap[D.getBSCScopeSpec()
                                                .getExtendedType()
                                                .getCanonicalType()
                                                .getTypePtr()];
+  #endif
   }
 
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
@@ -6294,10 +6326,12 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     }
 
     LookupName(Previous, S, CreateBuiltins);
+    #if ENABLE_BSC
     if (D.getBSCScopeSpec().isNotEmpty() &&
         !D.getBSCScopeSpec().getExtendedType().isNull()) { // BSCMethod only
       LookupQualifiedName(Previous, DC); // Lookup for struct / union members.
     }
+    #endif
   } else { // Something like "int foo::x;"
     LookupQualifiedName(Previous, DC);
 
@@ -6374,10 +6408,12 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
                                   TemplateParamLists,
                                   AddToScope);
   } else {
+    #if ENABLE_BSC
     if (D.getIsTraitMember()) {
       Diag(D.getIdentifierLoc(), diag::err_trait_member_not_func);
       D.setInvalidType(true);
     }
+    #endif
     New = ActOnVariableDeclarator(S, D, DC, TInfo, Previous, TemplateParamLists,
                                   AddToScope);
   }
@@ -6385,9 +6421,11 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
+  #if ENABLE_BSC
   QualType T = TInfo->getType();
   if (Context.getLangOpts().BSC && TryDesugarTrait(T))
     AddToScope = false;
+  #endif
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)
@@ -6596,8 +6634,10 @@ void Sema::DiagnoseFunctionSpecifiers(const DeclSpec &DS) {
     Diag(DS.getNoreturnSpecLoc(),
          diag::err_noreturn_non_function);
 
+  #if ENABLE_BSC
   if (DS.isAsyncSpecified())
     Diag(DS.getAsyncSpecLoc(), diag::err_async_non_function);
+  #endif
 }
 
 NamedDecl*
@@ -7157,7 +7197,11 @@ static bool shouldConsiderLinkage(const VarDecl *VD) {
     return VD->hasExternalStorage();
   if (DC->isFileContext())
     return true;
+  #if ENABLE_BSC
   if (DC->isRecord() || DC->isTrait())
+  #else
+  if (DC->isRecord())
+  #endif
     return false;
   if (isa<RequiresExprBodyDecl>(DC))
     return false;
@@ -7169,7 +7213,11 @@ static bool shouldConsiderLinkage(const FunctionDecl *FD) {
   if (DC->isFileContext() || DC->isFunctionOrMethod() ||
       isa<OMPDeclareReductionDecl>(DC) || isa<OMPDeclareMapperDecl>(DC))
     return true;
+  #if ENABLE_BSC
   if (DC->isRecord() || DC->isTrait())
+  #else
+  if (DC->isRecord())
+  #endif
     return false;
   llvm_unreachable("Unexpected context");
 }
@@ -7415,12 +7463,14 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   VarTemplateDecl *NewTemplate = nullptr;
   TemplateParameterList *TemplateParams = nullptr;
   if (!getLangOpts().CPlusPlus) {
+    #if ENABLE_BSC
     const TraitType *TT =
         dyn_cast<TraitType>(R.getCanonicalType().getTypePtr());
     if (TT != nullptr) {
       Diag(D.getIdentifierLoc(), diag::err_variables_not_trait_pointer);
       return nullptr;
     }
+    #endif
     NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(), D.getIdentifierLoc(),
                             II, R, TInfo, SC);
     if (R->getContainedDeducedType())
@@ -8003,10 +8053,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   // BSC global variable owned type check
   // 'typedef owned int myInt;' is legal
+  #if ENABLE_BSC
   bool IsTypedefName = D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef;
   if (!IsTypedefName && getLangOpts().BSC && NewVD
       && NewVD->getDeclContext()->isFileContext())
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), R, "global variable");
+  #endif
 
   return NewVD;
 }
@@ -8977,7 +9029,9 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
 
   FunctionDecl *NewFD = nullptr;
   bool isInline = D.getDeclSpec().isInlineSpecified();
+  #if ENABLE_BSC
   bool isAsync = D.getDeclSpec().isAsyncSpecified();
+  #endif
 
   if (!SemaRef.getLangOpts().CPlusPlus) {
     // Determine whether the function was written with a prototype. This is
@@ -8991,6 +9045,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     //       typedef void func(int a);
     //       __attribute__((noreturn)) func other_func; // This has a prototype
 
+    #if ENABLE_BSC
     if (SemaRef.getLangOpts().BSC && D.getBSCScopeSpec().isNotEmpty()) {
       ConstexprSpecKind ConstexprKind = D.getDeclSpec().getConstexprSpecifier();
       if (ConstexprKind == ConstexprSpecKind::Constinit) {
@@ -9013,6 +9068,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
       Ret->setExtentedTypeBeginLoc(D.getBSCScopeSpec().getBeginLoc());
       return Ret;
     }
+    #endif
 
     bool HasPrototype =
         (D.isFunctionDeclarator() && D.getFunctionTypeInfo().hasPrototype) ||
@@ -9027,7 +9083,11 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
         SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
         ConstexprSpecKind::Unspecified,
-        /*TrailingRequiresClause=*/nullptr, isAsync);
+        /*TrailingRequiresClause=*/nullptr
+        #if ENABLE_BSC
+        , isAsync
+        #endif
+        );
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
 
@@ -9556,11 +9616,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                               isVirtualOkay);
   if (!NewFD) return nullptr;
 
+  #if ENABLE_BSC
   SafeScopeSpecifier FuncSpec = D.getDeclSpec().getSafeSpecifier();
   if (FuncSpec == SS_None) {
     FuncSpec = GetPragmaSafeInfo();
   }
   NewFD->setSafeSpecifier(FuncSpec);
+  #endif
 
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer())
     NewFD->setTopLevelDeclInObjCContainer();
@@ -9573,7 +9635,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (IsLocalExternDecl)
     NewFD->setLocalExternDecl();
 
-  if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
+  if (getLangOpts().CPlusPlus
+      #if ENABLE_BSC
+      || getLangOpts().BSC
+      #endif
+      ) {
     // The rules for implicit inlines changed in C++20 for methods and friends
     // with an in-class definition (when such a definition is not attached to
     // the global module).  User-specified 'inline' overrides this (set when
@@ -9636,8 +9702,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
                 ? D.getName().TemplateId
                 : nullptr,
-            TemplateParamLists, isFriend, isMemberSpecialization, Invalid,
-            false, D.getBSCScopeSpec().getExtendedType());
+            TemplateParamLists, isFriend, isMemberSpecialization, Invalid
+            #if ENABLE_BSC
+            , false, D.getBSCScopeSpec().getExtendedType()
+            #endif
+            );
     if (TemplateParams) {
       // Check that we can declare a template here.
       if (CheckTemplateDeclScope(S, TemplateParams))
@@ -10130,6 +10199,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // We need this API for BSC template situation.
     // If we have a function template, check the template parameter
     // list. This will check and merge default template arguments.
+    #if ENABLE_BSC
     if (FunctionTemplate) {
       FunctionTemplateDecl *PrevTemplate = FunctionTemplate->getPreviousDecl();
       CheckTemplateParameterList(
@@ -10148,6 +10218,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       if (isa<RecordDecl>(NewFD->getDeclContext()))
         NewFD->setAccess(AS_public);
     }
+    #endif
   } else {
     // C++11 [replacement.functions]p3:
     //  The program's definitions shall not be specified as inline.
@@ -10556,6 +10627,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   // This can return a 'FunctionTemplateDecl' for the AST Context.
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     if (FunctionTemplate) {
       if (NewFD->isInvalidDecl())
@@ -10563,6 +10635,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       return FunctionTemplate;
     }
   }
+  #endif
 
   for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
@@ -11599,12 +11672,14 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
   // Semantic checking for this function declaration (in isolation).
 
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     if (!DeclIsDefn && NewFD->isAsyncSpecified() && NewFD->isStatic()) {
       Diag(NewFD->getBeginLoc(), diag::err_async_func_unsupported)
             << "static declaration";
     }
   }
+  #endif
 
   if (getLangOpts().CPlusPlus) {
     // C++-specific checks.
@@ -11758,9 +11833,11 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
   if (FD->isInlineSpecified())
     Diag(DS.getInlineSpecLoc(), diag::err_inline_main)
       << FixItHint::CreateRemoval(DS.getInlineSpecLoc());
+  #if ENABLE_BSC
   if (FD->isAsyncSpecified())
     Diag(DS.getAsyncSpecLoc(), diag::err_async_main)
         << FixItHint::CreateRemoval(DS.getAsyncSpecLoc());
+  #endif
   if (DS.isNoreturnSpecified()) {
     SourceLocation NoreturnLoc = DS.getNoreturnSpecLoc();
     SourceRange NoreturnRange(NoreturnLoc, getLocForEndOfToken(NoreturnLoc));
@@ -14335,8 +14412,11 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
 
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
-Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
-                                 QualType ExtendedType) {
+Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize
+                                 #if ENABLE_BSC
+                                 , QualType ExtendedType
+                                 #endif
+                                 ) {
   const DeclSpec &DS = D.getDeclSpec();
 
   // Verify C99 6.7.5.3p2: The only SCS allowed is 'register'.
@@ -14381,6 +14461,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
 
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
   IdentifierInfo *II = D.getIdentifier();
+  #if ENABLE_BSC
   bool IsThisParam = false;
   const Type* TypePtr = ExtendedType.getTypePtrOrNull();
   if (TypePtr)
@@ -14405,6 +14486,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
           << GetNameForDeclarator(D).getName();
     }
   }
+  #endif
 
   if (II) {
     LookupResult R(*this, II, D.getIdentifierLoc(), LookupOrdinaryName,
@@ -14429,9 +14511,11 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
     }
   }
 
+  #if ENABLE_BSC
   if (getLangOpts().BSC)
     if (TraitDecl *TD = TryDesugarTrait(parmDeclType))
       parmDeclType = DesugarTraitToStructTrait(TD, parmDeclType);
+  #endif
 
   // Temporarily put parameter variables in the translation unit, not
   // the enclosing context.  This prevents them from accidentally
@@ -14439,6 +14523,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
 
   // Use This* as BSCMethod parameter,
   // For example   void struct S::f(This* this);
+  #if ENABLE_BSC
   if (getLangOpts().BSC && TypePtr && DS.getTypeSpecType() == clang::TST_This) {
     parmDeclType = Context.getPointerType(ExtendedType);
     TInfo = Context.CreateTypeSourceInfo(parmDeclType);
@@ -14465,10 +14550,13 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize,
       }
     }
   }
+  #endif
   ParmVarDecl *New =
       CheckParameter(Context.getTranslationUnitDecl(), D.getBeginLoc(),
                      D.getIdentifierLoc(), II, parmDeclType, TInfo, SC);
+  #if ENABLE_BSC
   New->IsThisParam = IsThisParam;
+  #endif
 
   if (D.isInvalidType())
     New->setInvalidDecl();
@@ -14587,6 +14675,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     T = Context.getLifetimeQualifiedType(T, lifetime);
   }
 
+  #if ENABLE_BSC
   if (TraitDecl *TD = TryDesugarTrait(T)) {
     RecordDecl *LookupTrait = TD->getTrait();
     if (LookupTrait && LookupTrait->getDescribedClassTemplate()) {
@@ -14595,6 +14684,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     }
     TSInfo = Context.getTrivialTypeSourceInfo(T);
   }
+  #endif
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
@@ -16134,14 +16224,18 @@ Sema::NonTagKind Sema::getNonTagTypeDeclKind(const Decl *PrevDecl,
     return NTK_TypeAlias;
   else if (isa<ClassTemplateDecl>(PrevDecl))
     return NTK_Template;
+  #if ENABLE_BSC
   else if (isa<TraitTemplateDecl>(PrevDecl))
     return NTK_Template;
+  #endif
   else if (isa<TypeAliasTemplateDecl>(PrevDecl))
     return NTK_TypeAliasTemplate;
   else if (isa<TemplateTemplateParmDecl>(PrevDecl))
     return NTK_TemplateTemplateArgument;
   switch (TTK) {
+  #if ENABLE_BSC
   case TTK_Trait:
+  #endif
   case TTK_Struct:
   case TTK_Interface:
   case TTK_Class:
@@ -16775,7 +16869,11 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
     // technically forbidden by the current standard but which is
     // okay according to the likely resolution of an open issue;
     // see http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#407
-    if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
+    if (getLangOpts().CPlusPlus
+        #if ENABLE_BSC
+        || getLangOpts().BSC
+        #endif
+        ) {
       if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(PrevDecl)) {
         if (const TagType *TT = TD->getUnderlyingType()->getAs<TagType>()) {
           TagDecl *Tag = TT->getDecl();
@@ -17129,9 +17227,11 @@ CreateNewDecl:
 
       if (isStdBadAlloc && (!StdBadAlloc || getStdBadAlloc()->isImplicit()))
         StdBadAlloc = cast<CXXRecordDecl>(New);
+    #if ENABLE_BSC
     } else if (Kind == TTK_Trait) {
       New = TraitDecl::Create(Context, SearchDC, KWLoc, Loc, Name,
                               cast_or_null<TraitDecl>(PrevDecl));
+    #endif
     } else {
       New = RecordDecl::Create(Context, Kind, SearchDC, KWLoc, Loc, Name,
                                cast_or_null<RecordDecl>(PrevDecl));
@@ -17386,8 +17486,10 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
     assert(Tag->isInvalidDecl() && "We should already have completed it");
     if (RecordDecl *RD = dyn_cast<RecordDecl>(Tag))
       RD->completeDefinition();
+    #if ENABLE_BSC
     if (TraitDecl *TD = dyn_cast<TraitDecl>(Tag))
       TD->completeDefinition();
+    #endif
   }
 
   if (auto *RD = dyn_cast<CXXRecordDecl>(Tag)) {
@@ -17561,15 +17663,25 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
 /// to create a FieldDecl object for it.
 Decl *Sema::ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
                        Declarator &D, Expr *BitfieldWidth) {
+  #if ENABLE_BSC
   FieldDecl *Res = HandleField(S, cast_or_null<TagDecl>(TagD), DeclStart, D,
                                static_cast<Expr *>(BitfieldWidth),
                                /*InitStyle=*/ICIS_NoInit, AS_public);
+  #else
+  FieldDecl *Res = HandleField(S, cast_or_null<RecordDecl>(TagD),
+                               DeclStart, D, static_cast<Expr*>(BitfieldWidth),
+                               /*InitStyle=*/ICIS_NoInit, AS_public);
+  #endif
   return Res;
 }
 
 /// HandleField - Analyze a field of a C struct or a C++ data member.
 ///
+#if ENABLE_BSC
 FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag, SourceLocation DeclStart,
+#else
+FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclStart,
+#endif
                              Declarator &D, Expr *BitWidth,
                              InClassInitStyle InitStyle, AccessSpecifier AS) {
   if (D.isDecompositionDeclarator()) {
@@ -17607,8 +17719,10 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag, SourceLocation DeclStart,
       << DeclSpec::getSpecifierName(TSCS);
 
   // BSC union fileds owned type check
+  #if ENABLE_BSC
   if (getLangOpts().BSC && Tag->isUnion())
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "union field");
+  #endif
 
   // Check to see if this name was declared as a member previously
   NamedDecl *PrevDecl = nullptr;
@@ -17639,17 +17753,30 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag, SourceLocation DeclStart,
     PrevDecl = nullptr;
   }
 
+  #if ENABLE_BSC
   if (PrevDecl && !isDeclInScope(PrevDecl, Tag, S))
+  #else
+  if (PrevDecl && !isDeclInScope(PrevDecl, Record, S))
+  #endif
     PrevDecl = nullptr;
 
   bool Mutable
     = (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_mutable);
   SourceLocation TSSL = D.getBeginLoc();
+  #if ENABLE_BSC
   FieldDecl *NewFD = CheckFieldDecl(II, T, TInfo, Tag, Loc, Mutable, BitWidth,
                                     InitStyle, TSSL, AS, PrevDecl, &D);
+  #else
+  FieldDecl *NewFD = CheckFieldDecl(II, T, TInfo, Record, Loc, Mutable, BitWidth,
+                                    InitStyle, TSSL, AS, PrevDecl, &D);
+  #endif
 
   if (NewFD->isInvalidDecl())
+    #if ENABLE_BSC
     Tag->setInvalidDecl();
+    #else
+    Record->setInvalidDecl();
+    #endif
 
   if (D.getDeclSpec().isModulePrivateSpecified())
     NewFD->setModulePrivate();
@@ -17660,7 +17787,11 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag, SourceLocation DeclStart,
   } else if (II) {
     PushOnScopeChains(NewFD, S);
   } else
+    #if ENABLE_BSC
     Tag->addDecl(NewFD);
+    #else
+    Record->addDecl(NewFD);
+    #endif
 
   return NewFD;
 }
@@ -17676,7 +17807,12 @@ FieldDecl *Sema::HandleField(Scope *S, TagDecl *Tag, SourceLocation DeclStart,
 ///
 /// \todo The Declarator argument is a hack. It will be removed once
 FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
-                                TypeSourceInfo *TInfo, TagDecl *Tag,
+                                TypeSourceInfo *TInfo, 
+                                #if ENABLE_BSC
+                                TagDecl *Tag,
+                                #else
+                                RecordDecl *Record,
+                                #endif
                                 SourceLocation Loc, bool Mutable,
                                 Expr *BitWidth, InClassInitStyle InitStyle,
                                 SourceLocation TSSL, AccessSpecifier AS,
@@ -17697,13 +17833,21 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     if (RequireCompleteSizedType(Loc, EltTy,
                                  diag::err_field_incomplete_or_sizeless)) {
       // Fields of incomplete type force their record to be invalid.
+      #if ENABLE_BSC
       Tag->setInvalidDecl();
+      #else
+      Record->setInvalidDecl();
+      #endif
       InvalidDecl = true;
     } else {
       NamedDecl *Def;
       EltTy->isIncompleteType(&Def);
       if (Def && Def->isInvalidDecl()) {
+        #if ENABLE_BSC
         Tag->setInvalidDecl();
+        #else
+        Record->setInvalidDecl();
+        #endif
         InvalidDecl = true;
       }
     }
@@ -17713,7 +17857,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (T.hasAddressSpace() || T->isDependentAddressSpaceType() ||
       T->getBaseElementTypeUnsafe()->isDependentAddressSpaceType()) {
     Diag(Loc, diag::err_field_with_address_space);
+    #if ENABLE_BSC
     Tag->setInvalidDecl();
+    #else
+    Record->setInvalidDecl();
+    #endif
     InvalidDecl = true;
   }
 
@@ -17723,7 +17871,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     if (T->isEventT() || T->isImageType() || T->isSamplerT() ||
         T->isBlockPointerType()) {
       Diag(Loc, diag::err_opencl_type_struct_or_union_field) << T;
+      #if ENABLE_BSC
       Tag->setInvalidDecl();
+      #else
+      Record->setInvalidDecl();
+      #endif
       InvalidDecl = true;
     }
     // OpenCL v1.2 s6.9.c: bitfields are not supported, unless Clang extension
@@ -17760,6 +17912,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     BitWidth = nullptr;
   // If this is declared as a bit-field, check the bit-field.
   if (BitWidth) {
+    #if ENABLE_BSC
     if (Tag->isTrait()) {
       BitWidth = VerifyBitField(Loc, II, T, false, BitWidth).get();
     } else {
@@ -17768,6 +17921,10 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
                          BitWidth)
               .get();
     }
+    #else
+    BitWidth =
+        VerifyBitField(Loc, II, T, Record->isMsStruct(Context), BitWidth).get();
+    #endif
     if (!BitWidth) {
       InvalidDecl = true;
       BitWidth = nullptr;
@@ -17799,10 +17956,19 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   //   At most one variant member of a union may have a
   //   brace-or-equal-initializer.
   if (InitStyle != ICIS_NoInit)
+    #if ENABLE_BSC
     checkDuplicateDefaultInit(*this, cast<CXXRecordDecl>(Tag), Loc);
+    #else
+    checkDuplicateDefaultInit(*this, cast<CXXRecordDecl>(Record), Loc);
+    #endif
 
+  #if ENABLE_BSC
   FieldDecl *NewFD = FieldDecl::Create(Context, Tag, TSSL, Loc, II, T, TInfo,
                                        BitWidth, Mutable, InitStyle);
+  #else
+  FieldDecl *NewFD = FieldDecl::Create(Context, Record, TSSL, Loc, II, T, TInfo,
+                                       BitWidth, Mutable, InitStyle);
+  #endif
   if (InvalidDecl)
     NewFD->setInvalidDecl();
 
@@ -17813,7 +17979,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   }
 
   if (!InvalidDecl && getLangOpts().CPlusPlus) {
+    #if ENABLE_BSC
     if (Tag->isUnion()) {
+    #else
+    if (Record->isUnion()) {
+    #endif
       if (const RecordType *RT = EltTy->getAs<RecordType>()) {
         CXXRecordDecl* RDecl = cast<CXXRecordDecl>(RT->getDecl());
         if (RDecl->getDefinition()) {
@@ -18558,13 +18728,17 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         } else {
           ++NonBitFields;
           QualType FieldType = I->getType();
+          #if ENABLE_BSC
           if (getLangOpts().BSC) {
             ZeroSize = false;
           } else {
+          #endif
             if (FieldType->isIncompleteType() ||
                 !Context.getTypeSizeInChars(FieldType).isZero())
               ZeroSize = false;
+          #if ENABLE_BSC
           }
+          #endif
         }
       }
 

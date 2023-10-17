@@ -7977,7 +7977,9 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
   unsigned BaseCVR = PointeeTy.getCVRQualifiers();
   bool hasVolatile = VisibleQuals.hasVolatile();
   bool hasRestrict = VisibleQuals.hasRestrict();
+  #if ENABLE_BSC
   bool hasOwned = VisibleQuals.hasOwned();
+  #endif
 
   // Iterate through all strict supersets of BaseCVR.
   for (unsigned CVR = BaseCVR+1; CVR <= Qualifiers::CVRMask; ++CVR) {
@@ -7986,7 +7988,9 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
     if ((CVR & Qualifiers::Volatile) && !hasVolatile) continue;
 
     // Skip over owned if no owned found anywhere in the types.
+    #if ENABLE_BSC
     if ((CVR & Qualifiers::Owned) && !hasOwned) continue;
+    #endif
 
     // Skip over restrict if no restrict found anywhere in the types, or if
     // the type cannot be restrict-qualified.
@@ -8123,7 +8127,9 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
       return;
 
     // Don`t do anything here to avoid cast if is BSC.
+    #if ENABLE_BSC
     if (!SemaRef.getLangOpts().BSC) {
+    #endif
       CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
       for (NamedDecl *D : ClassDecl->getVisibleConversionFunctions()) {
         if (isa<UsingShadowDecl>(D))
@@ -8140,7 +8146,9 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
                                 VisibleQuals);
         }
       }
+    #if ENABLE_BSC
     }
+    #endif
   }
 }
 /// Helper function for adjusting address spaces for the pointer or reference
@@ -8195,7 +8203,9 @@ static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
     }
 
     // Don`t do anything here to avoid cast if is BSC.
+    #if ENABLE_BSC
     if (!Context.getLangOpts().BSC) {
+    #endif
       CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
       if (!ClassDecl->hasDefinition())
         return VRQuals;
@@ -8227,7 +8237,9 @@ static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
           }
         }
       }
+    #if ENABLE_BSC
     }
+    #endif
     return VRQuals;
 }
 
@@ -13155,8 +13167,12 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
       llvm_unreachable("performing ADL for builtin");
 
     // We don't perform ADL in C.
+    #if ENABLE_BSC
     assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
            "ADL enabled in C");
+    #else
+    assert(getLangOpts().CPlusPlus && "ADL enabled in C");
+    #endif
   }
 #endif
 

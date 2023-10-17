@@ -66,7 +66,11 @@ class TemplateParameterList;
 class Type;
 
 enum {
+  #if ENABLE_BSC
   TypeAlignmentInBits = 5,
+  #else
+  TypeAlignmentInBits = 4,
+  #endif
   TypeAlignment = 1 << TypeAlignmentInBits
 };
 
@@ -122,7 +126,9 @@ class ObjCProtocolDecl;
 class ObjCTypeParamDecl;
 struct PrintingPolicy;
 class RecordDecl;
+#if ENABLE_BSC
 class TraitDecl;
+#endif
 class Stmt;
 class TagDecl;
 class TemplateArgument;
@@ -151,8 +157,12 @@ public:
     Const    = 0x1,
     Restrict = 0x2,
     Volatile = 0x4,
+    #if ENABLE_BSC
     Owned      = 0x8,
     CVRMask = Const | Volatile | Restrict | Owned
+    #else
+    CVRMask = Const | Volatile | Restrict
+    #endif
   };
 
   enum GC {
@@ -186,10 +196,18 @@ public:
   enum {
     /// The maximum supported address space number.
     /// 22 bits should be enough for anyone.
+    #if ENABLE_BSC
     MaxAddressSpace = 0x3fffffu,
+    #else
+    MaxAddressSpace = 0x7fffffu,
+    #endif
 
     /// The width of the "fast" qualifier mask.
+    #if ENABLE_BSC
     FastWidth = 4,
+    #else
+    FastWidth = 3,
+    #endif
 
     /// The fast qualifier mask.
     FastMask = (1 << FastWidth) - 1
@@ -273,6 +291,7 @@ public:
     return Qs;
   }
 
+  #if ENABLE_BSC
   bool hasOwned() const { return Mask & Owned; }
   bool hasOnlyOwned() const { return Mask == Owned; }
   void removeOwned() { Mask &= ~Owned; }
@@ -282,6 +301,7 @@ public:
     Qs.addOwned();
     return Qs;
   }
+  #endif
 
   bool hasVolatile() const { return Mask & Volatile; }
   bool hasOnlyVolatile() const { return Mask == Volatile; }
@@ -625,15 +645,28 @@ private:
   //           |C R V O|U|GCAttr|Lifetime|AddressSpace|
   uint32_t Mask = 0;
 
+  #if ENABLE_BSC
   static const uint32_t UMask = 0x10;
   static const uint32_t UShift = 4;
   static const uint32_t GCAttrMask = 0x60;
   static const uint32_t GCAttrShift = 5;
   static const uint32_t LifetimeMask = 0x380;
   static const uint32_t LifetimeShift = 7;
+  #else
+  static const uint32_t UMask = 0x8;
+  static const uint32_t UShift = 3;
+  static const uint32_t GCAttrMask = 0x30;
+  static const uint32_t GCAttrShift = 4;
+  static const uint32_t LifetimeMask = 0x1C0;
+  static const uint32_t LifetimeShift = 6;
+  #endif
   static const uint32_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
+  #if ENABLE_BSC
   static const uint32_t AddressSpaceShift = 10;
+  #else
+  static const uint32_t AddressSpaceShift = 9;
+  #endif
 };
 
 class QualifiersAndAtomic {
@@ -649,19 +682,25 @@ public:
 
   bool hasVolatile() const { return Quals.hasVolatile(); }
   bool hasConst() const { return Quals.hasConst(); }
+  #if ENABLE_BSC
   bool hasOwned() const { return Quals.hasOwned(); }
+  #endif
   bool hasRestrict() const { return Quals.hasRestrict(); }
   bool hasAtomic() const { return HasAtomic; }
 
   void addVolatile() { Quals.addVolatile(); }
   void addConst() { Quals.addConst(); }
+  #if ENABLE_BSC
   void addOwned() { Quals.addOwned(); }
+  #endif
   void addRestrict() { Quals.addRestrict(); }
   void addAtomic() { HasAtomic = true; }
 
   void removeVolatile() { Quals.removeVolatile(); }
   void removeConst() { Quals.removeConst(); }
+  #if ENABLE_BSC
   void removeOwned() { Quals.removeOwned(); }
+  #endif
   void removeRestrict() { Quals.removeRestrict(); }
   void removeAtomic() { HasAtomic = false; }
 
@@ -669,7 +708,9 @@ public:
     return {Quals.withVolatile(), HasAtomic};
   }
   QualifiersAndAtomic withConst() { return {Quals.withConst(), HasAtomic}; }
+  #if ENABLE_BSC
   QualifiersAndAtomic withOwned() { return {Quals.withOwned(), HasAtomic}; }
+  #endif
   QualifiersAndAtomic withRestrict() {
     return {Quals.withRestrict(), HasAtomic};
   }
@@ -826,12 +867,14 @@ public:
   /// Determine whether this particular QualType instance has the
   /// "owned" qualifier set, without looking through typedefs that may have
   /// added "owned" at a different level.
+  #if ENABLE_BSC
   bool isLocalOwnedQualified() const {
     return (getLocalFastQualifiers() & Qualifiers::Owned);
   }
 
   /// Determine whether this type is owned-qualified.
   bool isOwnedQualified() const;
+  #endif
 
   /// Determine whether this particular QualType instance has the
   /// "restrict" qualifier set, without looking through typedefs that may have
@@ -933,12 +976,14 @@ public:
   }
 
   /// Add the `owned` type qualifier to this QualType.
+  #if ENABLE_BSC
   void addOwned() {
     addFastQualifiers(Qualifiers::Owned);
   }
   QualType withOwned() const {
     return withFastQualifiers(Qualifiers::Owned);
   }
+  #endif
 
   /// Add the `volatile` type qualifier to this QualType.
   void addVolatile() {
@@ -967,7 +1012,9 @@ public:
   }
 
   void removeLocalConst();
+  #if ENABLE_BSC
   void removeLocalOwned();
+  #endif
   void removeLocalVolatile();
   void removeLocalRestrict();
   void removeLocalCVRQualifiers(unsigned Mask);
@@ -2057,7 +2104,9 @@ public:
   /// Returns true if the type is a builtin type.
   bool isBuiltinType() const;
 
+  #if ENABLE_BSC
   bool hasOwnedFields() const;
+  #endif
 
   /// Test for a particular builtin type.
   bool isSpecificBuiltinType(unsigned K) const;
@@ -2142,8 +2191,10 @@ public:
   bool isVariableArrayType() const;
   bool isDependentSizedArrayType() const;
   bool isRecordType() const;
+  #if ENABLE_BSC
   bool isTraitType() const;
   bool isTraitPointerType() const;
+  #endif
   bool isClassType() const;
   bool isStructureType() const;
   bool isObjCBoxableRecordType() const;
@@ -2251,7 +2302,9 @@ public:
   bool isCUDADeviceBuiltinTextureType() const;
 
   /// Check if the type is the BSC future type.
+  #if ENABLE_BSC
   bool isBSCFutureType() const;
+  #endif
 
   /// Return the implicit lifetime for this type, which must not be dependent.
   Qualifiers::ObjCLifetime getObjCARCImplicitLifetime() const;
@@ -2775,7 +2828,9 @@ public:
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Pointer; }
+  #if ENABLE_BSC
   bool hasOwnedFields() const;
+  #endif
 };
 
 /// Represents a type which was implicitly adjusted by the semantic
@@ -3939,7 +3994,9 @@ public:
                 "the fast qualifiers.");
 
   bool isConst() const { return getFastTypeQuals().hasConst(); }
+  #if ENABLE_BSC
   bool isOwned() const { return getFastTypeQuals().hasOwned(); }
+  #endif
   bool isVolatile() const { return getFastTypeQuals().hasVolatile(); }
   bool isRestrict() const { return getFastTypeQuals().hasRestrict(); }
 
@@ -4259,7 +4316,9 @@ public:
   bool hasInstantiationDependentExceptionSpec() const;
 
   // return true if any 'owned' here
+  #if ENABLE_BSC
   bool hasOwnedRetOrParams() const;
+  #endif
 
   /// Return all the available information about this type's exception spec.
   ExceptionSpecInfo getExceptionSpecInfo() const {
@@ -4744,8 +4803,11 @@ public:
   bool isBeingDefined() const;
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == Enum || T->getTypeClass() == Record ||
-           T->getTypeClass() == Trait;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record
+    #if ENABLE_BSC
+    || T->getTypeClass() == Trait
+    #endif
+    ;
   }
 };
 
@@ -4760,12 +4822,14 @@ protected:
   explicit RecordType(TypeClass TC, RecordDecl *D)
       : TagType(TC, reinterpret_cast<const TagDecl*>(D), QualType()) {}
 
+  #if ENABLE_BSC
   enum ownedStatus {
     unInit,
     withOwned,
     withoutOwned
   };
   mutable ownedStatus hasOwn = ownedStatus::unInit;
+  #endif
 
 public:
   RecordDecl *getDecl() const {
@@ -4776,9 +4840,11 @@ public:
   /// is declared const, return true. Otherwise, return false.
   bool hasConstFields() const;
 
+  #if ENABLE_BSC
   bool hasOwnedFields() const;
 
   void initOwnedStatus() const;
+  #endif
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -4786,6 +4852,7 @@ public:
   static bool classof(const Type *T) { return T->getTypeClass() == Record; }
 };
 
+#if ENABLE_BSC
 class TraitType : public TagType {
 protected:
   friend class ASTContext; // ASTContext creates these.
@@ -4809,6 +4876,7 @@ public:
 
   static bool classof(const Type *T) { return T->getTypeClass() == Trait; }
 };
+#endif
 
 /// A helper class that allows the use of isa/cast/dyncast
 /// to detect TagType objects of enums.
@@ -5479,7 +5547,11 @@ class InjectedClassNameType : public Type {
                           // interdependencies.
   template <class T> friend class serialization::AbstractTypeReader;
 
+  #if ENABLE_BSC
   RecordDecl *Decl;
+  #else
+  CXXRecordDecl *Decl;
+  #endif
 
   /// The template specialization which this type represents.
   /// For example, in
@@ -5492,7 +5564,13 @@ class InjectedClassNameType : public Type {
   /// and always dependent.
   QualType InjectedType;
 
-  InjectedClassNameType(RecordDecl *D, QualType TST)
+  InjectedClassNameType(
+      #if ENABLE_BSC
+      RecordDecl *D
+      #else
+      CXXRecordDecl *D
+      #endif
+      , QualType TST)
       : Type(InjectedClassName, QualType(),
              TypeDependence::DependentInstantiation),
         Decl(D), InjectedType(TST) {
@@ -5512,7 +5590,11 @@ public:
     return getInjectedTST()->getTemplateName();
   }
 
+  #if ENABLE_BSC
   RecordDecl *getDecl() const;
+  #else
+  CXXRecordDecl *getDecl() const;
+  #endif
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -5522,6 +5604,7 @@ public:
   }
 };
 
+#if ENABLE_BSC
 class InjectedTraitNameType : public Type {
   friend class ASTContext; // ASTContext creates these.
   friend class ASTNodeImporter;
@@ -5563,6 +5646,7 @@ public:
     return T->getTypeClass() == InjectedTraitName;
   }
 };
+#endif
 
 /// The kind of a tag type.
 enum TagTypeKind {
@@ -5579,10 +5663,12 @@ enum TagTypeKind {
   TTK_Class,
 
   /// The "enum" keyword.
-  TTK_Enum,
+  TTK_Enum
 
   /// The "trait" keyword.
-  TTK_Trait
+  #if ENABLE_BSC
+  , TTK_Trait
+  #endif
 };
 
 /// The elaboration keyword that precedes a qualified type name or
@@ -5604,7 +5690,9 @@ enum ElaboratedTypeKeyword {
   ETK_Enum,
 
   /// The "trait" keyword introduces the elaborated-type-specifier.
+  #if ENABLE_BSC
   ETK_Trait,
+  #endif
 
   /// The "typename" keyword precedes the qualified type name, e.g.,
   /// \c typename T::type.
@@ -6751,10 +6839,12 @@ inline bool QualType::isConstQualified() const {
          getCommonPtr()->CanonicalType.isLocalConstQualified();
 }
 
+#if ENABLE_BSC
 inline bool QualType::isOwnedQualified() const {
   return isLocalOwnedQualified() ||
          getCommonPtr()->CanonicalType.isLocalOwnedQualified();
 }
+#endif
 
 inline bool QualType::isRestrictQualified() const {
   return isLocalRestrictQualified() ||
@@ -6773,7 +6863,11 @@ inline bool QualType::hasQualifiers() const {
 }
 
 inline QualType QualType::getUnqualifiedType() const {
+  #if ENABLE_BSC
   int addOwned = getCanonicalType().isOwnedQualified() ? Qualifiers::Owned : 0;
+  #else
+  int addOwned = 0;
+  #endif
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
     return QualType(getTypePtr(), addOwned);
 
@@ -6791,10 +6885,11 @@ inline void QualType::removeLocalConst() {
   removeLocalFastQualifiers(Qualifiers::Const);
 }
 
-
+#if ENABLE_BSC
 inline void QualType::removeLocalOwned() {
   removeLocalFastQualifiers(Qualifiers::Owned);
 }
+#endif
 
 inline void QualType::removeLocalRestrict() {
   removeLocalFastQualifiers(Qualifiers::Restrict);
@@ -7044,6 +7139,7 @@ inline bool Type::isEnumeralType() const {
   return isa<EnumType>(CanonicalType);
 }
 
+#if ENABLE_BSC
 inline bool Type::isTraitType() const { return isa<TraitType>(CanonicalType); }
 
 inline bool Type::isTraitPointerType() const {
@@ -7051,6 +7147,7 @@ inline bool Type::isTraitPointerType() const {
     return isa<TraitType>(CanonicalType->getPointeeType());
   return false;
 }
+#endif
 
 inline bool Type::isAnyComplexType() const {
   return isa<ComplexType>(CanonicalType);

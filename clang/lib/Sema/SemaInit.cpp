@@ -500,7 +500,11 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   //   members in the aggregate, then each member not explicitly initialized
   //   ...
   bool EmptyInitList =
-      (SemaRef.getLangOpts().CPlusPlus11 || SemaRef.getLangOpts().BSC) &&
+      (SemaRef.getLangOpts().CPlusPlus11
+      #if ENABLE_BSC
+      || SemaRef.getLangOpts().BSC
+      #endif
+      ) &&
       Entity.getType()->getBaseElementTypeUnsafe()->isRecordType();
   if (EmptyInitList) {
     // C++1y / DR1070:
@@ -1846,8 +1850,10 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
   if (!CXXRD)
     return false;
 
+  #if ENABLE_BSC
   if (SemaRef.getLangOpts().BSC)
     return false;
+  #endif
 
   CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(CXXRD);
   SemaRef.CheckDestructorAccess(Loc, Destructor,
@@ -8688,12 +8694,14 @@ ExprResult InitializationSequence::Perform(Sema &S,
       CurInit = CurInitExprRes;
 
       bool Complained;
+      #if ENABLE_BSC
       if (S.getLangOpts().BSC && ConvTy == S.Incompatible &&
           S.TryDesugarTrait(Step->Type)) {
         if (!Step->Type->isTraitPointerType())
           CurInit = S.ImpCastExprToType(Result.get(), Step->Type, CK_BitCast);
         ConvTy = S.Compatible;
       }
+      #endif
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
                                      Step->Type, SourceType,
                                      InitialCurInit.get(),

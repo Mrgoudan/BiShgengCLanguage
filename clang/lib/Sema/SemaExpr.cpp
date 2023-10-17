@@ -718,8 +718,10 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
   CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
+  #if ENABLE_BSC
   if (getLangOpts().BSC && !T->isNullPtrType() && T->getAsCXXRecordDecl())
     CK = CK_NoOp;
+  #endif
   Res = ImplicitCastExpr::Create(Context, T, CK, E, nullptr, VK_PRValue,
                                  CurFPFeatureOverrides());
 
@@ -2088,6 +2090,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
       isa<VarDecl>(D) &&
       NeedToCaptureVariable(cast<VarDecl>(D), NameInfo.getLoc());
 
+  #if ENABLE_BSC
   ValueDecl *NewD = D;
   NamedDecl *NewFoundD = FoundD;
   QualType NewTy = Ty;
@@ -2120,6 +2123,11 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
       Context, NNS, TemplateKWLoc, NewD, RefersToCapturedVariable, NameInfo,
       NewTy, VK, NewFoundD, TemplateArgs,
       getNonOdrUseReasonInCurrentContext(NewD));
+  #else
+  DeclRefExpr *E = DeclRefExpr::Create(
+      Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
+      VK, FoundD, TemplateArgs, getNonOdrUseReasonInCurrentContext(D));
+  #endif
   MarkDeclRefReferenced(E);
 
   // C++ [except.spec]p17:
@@ -2134,21 +2142,38 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   //  b) if the function is a defaulted comparison, we can use the body we
   //     build when defining it as input to the exception specification
   //     computation rather than computing a new body.
+  #if ENABLE_BSC
   if (auto *FPT = NewTy->getAs<FunctionProtoType>()) {
+  #else
+  if (auto *FPT = Ty->getAs<FunctionProtoType>()) {
+  #endif
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
       if (auto *NewFPT = ResolveExceptionSpec(NameInfo.getLoc(), FPT))
+        #if ENABLE_BSC
         E->setType(Context.getQualifiedType(NewFPT, NewTy.getQualifiers()));
+        #else
+        E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
+        #endif
     }
   }
 
+  #if ENABLE_BSC
   if (getLangOpts().ObjCWeak && isa<VarDecl>(NewD) &&
+  #else
+  if (getLangOpts().ObjCWeak && isa<VarDecl>(D) &&
+  #endif
       NewTy.getObjCLifetime() == Qualifiers::OCL_Weak &&
       !isUnevaluatedContext() &&
       !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, E->getBeginLoc()))
     getCurFunction()->recordUseOfWeak(E);
 
+  #if ENABLE_BSC
   FieldDecl *FD = dyn_cast<FieldDecl>(NewD);
   if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(NewD))
+  #else
+  FieldDecl *FD = dyn_cast<FieldDecl>(D);
+  if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(D))
+  #endif
     FD = IFD->getAnonField();
   if (FD) {
     UnusedPrivateFields.remove(FD);
@@ -2159,7 +2184,11 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
 
   // C++ [expr.prim]/8: The expression [...] is a bit-field if the identifier
   // designates a bit-field.
+  #if ENABLE_BSC
   if (auto *BD = dyn_cast<BindingDecl>(NewD))
+  #else
+  if (auto *BD = dyn_cast<BindingDecl>(D))
+  #endif
     if (auto *BE = BD->getBinding())
       E->setObjectKind(BE->getObjectKind());
 
@@ -2199,7 +2228,10 @@ Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
 }
 
 static void emitEmptyLookupTypoDiagnostic(
-    const TypoCorrection &TC, Sema &SemaRef, const CXXScopeSpec &SS, QualType ET,
+    const TypoCorrection &TC, Sema &SemaRef, const CXXScopeSpec &SS,
+    #if ENABLE_BSC
+    QualType ET,
+    #endif
     DeclarationName Typo, SourceLocation TypoLoc, ArrayRef<Expr *> Args,
     unsigned DiagnosticID, unsigned DiagnosticSuggestID) {
   DeclContext *Ctx =
@@ -2221,6 +2253,7 @@ static void emitEmptyLookupTypoDiagnostic(
   unsigned NoteID = TC.getCorrectionDeclAs<ImplicitParamDecl>()
                         ? diag::note_implicit_param_decl
                         : diag::note_previous_decl;
+  #if ENABLE_BSC
   if (!ET.isNull() && SemaRef.getLangOpts().BSC) {
     const Type *BasedType = ET.getCanonicalType().getTypePtr();
     if (const RecordType *RTy = dyn_cast<const RecordType>(
@@ -2241,6 +2274,7 @@ static void emitEmptyLookupTypoDiagnostic(
       return;
     }
   }
+  #endif
   if (!Ctx)
     SemaRef.diagnoseTypo(TC, SemaRef.PDiag(DiagnosticSuggestID) << Typo,
                          SemaRef.PDiag(NoteID));
@@ -2324,8 +2358,11 @@ bool Sema::DiagnoseDependentMemberLookup(LookupResult &R) {
 bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                                CorrectionCandidateCallback &CCC,
                                TemplateArgumentListInfo *ExplicitTemplateArgs,
-                               ArrayRef<Expr *> Args, TypoExpr **Out,
-                               QualType ET) {
+                               ArrayRef<Expr *> Args, TypoExpr **Out
+                               #if ENABLE_BSC
+                               , QualType ET
+                               #endif
+                               ) {
   DeclarationName Name = R.getLookupName();
 
   unsigned diagnostic = diag::err_undeclared_var_use;
@@ -2342,9 +2379,11 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   // original lookup would not have found something because it was a
   // dependent name.
   DeclContext *DC = SS.isEmpty() ? CurContext : nullptr;
+  #if ENABLE_BSC
   if (!ET.isNull()) {
     DC = getASTContext().BSCDeclContextMap[ET.getCanonicalType().getTypePtr()];
   }
+  #endif
   while (DC) {
     if (isa<CXXRecordDecl>(DC)) {
       LookupQualifiedName(R, DC);
@@ -2384,10 +2423,18 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     *Out = CorrectTypoDelayed(
         R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
         [=](const TypoCorrection &TC) {
-          emitEmptyLookupTypoDiagnostic(TC, *this, SS, ET, Name, TypoLoc, Args,
+          emitEmptyLookupTypoDiagnostic(TC, *this, SS, 
+                                        #if ENABLE_BSC
+                                        ET,
+                                        #endif
+                                        Name, TypoLoc, Args,
                                         diagnostic, diagnostic_suggest);
         },
-        nullptr, CTK_ErrorRecovery, nullptr, false, nullptr, ET);
+        nullptr, CTK_ErrorRecovery
+        #if ENABLE_BSC
+        , nullptr, false, nullptr, ET
+        #endif
+        );
     if (*Out)
       return true;
   } else if (S &&
@@ -2543,8 +2590,11 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                         SourceLocation TemplateKWLoc, UnqualifiedId &Id,
                         bool HasTrailingLParen, bool IsAddressOfOperand,
                         CorrectionCandidateCallback *CCC,
-                        bool IsInlineAsmIdentifier, Token *KeywordReplacement,
-                        QualType T) {
+                        bool IsInlineAsmIdentifier, Token *KeywordReplacement
+                        #if ENABLE_BSC
+                        , QualType T
+                        #endif
+                        ) {
   assert(!(IsAddressOfOperand && HasTrailingLParen) &&
          "cannot be direct & operand and have a trailing lparen");
   if (SS.isInvalid())
@@ -2589,14 +2639,20 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     } else {
       DependentID = true;
     }
+  #if ENABLE_BSC
   } else if (!T.isNull()) {
     if (dyn_cast_or_null<TemplateSpecializationType>(T.getCanonicalType().getTypePtr()))
       DependentID = true;
+  #endif
   }
 
   if (DependentID)
     return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
-                                      IsAddressOfOperand, TemplateArgs, T);
+                                      IsAddressOfOperand, TemplateArgs
+                                      #if ENABLE_BSC
+                                      , T
+                                      #endif
+                                      );
   // Perform the required lookup.
   LookupResult R(*this, NameInfo,
                  (Id.getKind() == UnqualifiedIdKind::IK_ImplicitSelfParam)
@@ -2621,7 +2677,11 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                         IsAddressOfOperand, TemplateArgs);
   } else {
     bool IvarLookupFollowUp = II && !SS.isSet() && getCurMethodDecl();
-    LookupParsedName(R, S, &SS, !IvarLookupFollowUp, false, T);
+    LookupParsedName(R, S, &SS, !IvarLookupFollowUp
+                      #if ENABLE_BSC
+                      , false, T
+                      #endif
+                      );
 
     // If the result might be in a dependent base class, this is a dependent
     // id-expression.
@@ -2647,7 +2707,11 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // This could be an implicitly declared function reference if the language
   // mode allows it as a feature.
   if (R.empty() && HasTrailingLParen && II &&
-      (getLangOpts().implicitFunctionsAllowed()) && !getLangOpts().BSC) {
+      (getLangOpts().implicitFunctionsAllowed())
+      #if ENABLE_BSC
+      && !getLangOpts().BSC
+      #endif
+      ) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }
@@ -2685,7 +2749,11 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            None, &TE, T)) {
+                            None, &TE
+                            #if ENABLE_BSC
+                            , T
+                            #endif
+                            )) {
       if (TE && KeywordReplacement) {
         auto &State = getTypoExprState(TE);
         auto BestTC = State.Consumer->getNextCorrection();
@@ -3440,7 +3508,9 @@ ExprResult Sema::BuildDeclarationNameExpr(
   }
 
   case Decl::Var:
+  #if ENABLE_BSC
   case Decl::ImplTrait:
+  #endif
   case Decl::VarTemplateSpecialization:
   case Decl::VarTemplatePartialSpecialization:
   case Decl::Decomposition:
@@ -3540,6 +3610,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     valueKind = VK_LValue;
     break;
 
+  #if ENABLE_BSC
   case Decl::BSCMethod:
     if (const FunctionProtoType *proto =
             dyn_cast<FunctionProtoType>(VD->getType()))
@@ -3554,6 +3625,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
       valueKind = VK_LValue;
     }
     break;
+  #endif
 
   case Decl::CXXMethod:
     // If we're referring to a method with an __unknown_anytype
@@ -4579,7 +4651,9 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::ConstantMatrix:
     case Type::Record:
     case Type::Enum:
+    #if ENABLE_BSC
     case Type::Trait:
+    #endif
     case Type::Elaborated:
     case Type::TemplateSpecialization:
     case Type::ObjCObject:
@@ -5031,11 +5105,13 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   }
 
   // BSC owned pointer index check
+  #if ENABLE_BSC
   if (getLangOpts().BSC && base->getType()->isPointerType() && base->getType().isOwnedQualified()) {
      Diag(lbLoc, diag::err_typecheck_invalid_owned_arrsub)
     << base->getType() << base->getSourceRange();
     return ExprError();
   }
+  #endif
 
   ExprResult Res =
       CreateBuiltinArraySubscriptExpr(base, lbLoc, ArgExprs.front(), rbLoc);
@@ -6107,11 +6183,16 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   unsigned NumParams = Proto->getNumParams();
   bool Invalid = false;
   unsigned MinArgs =
-      FDecl ? FDecl->getMinRequiredArguments(Fn->HasBSCScopeSpec) : NumParams;
+      FDecl ? FDecl->getMinRequiredArguments(
+                                            #if ENABLE_BSC
+                            Fn->HasBSCScopeSpec
+                                            #endif
+                                            ) : NumParams;
   unsigned FnKind = Fn->getType()->isBlockPointerType()
                        ? 1 /* block */
                        : (IsExecConfig ? 3 /* kernel function (exec config) */
                                        : 0 /* function */);
+  #if ENABLE_BSC
   bool IsBSCInstanceFunc = false;
   int ParamIndex = 0;
   if (FDecl && !Fn->HasBSCScopeSpec) {
@@ -6124,6 +6205,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
         NumParams = NumParams - 1;
     }
   }
+  #endif
 
   // If too few arguments are available (and we don't have default
   // arguments for the remaining parameters), don't make the call.
@@ -6138,13 +6220,21 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
         diagnoseTypo(TC, PDiag(diag_id) << FnKind << MinArgs
                                         << static_cast<unsigned>(Args.size())
                                         << TC.getCorrectionRange());
+      #if ENABLE_BSC
       } else if (MinArgs == 1 && FDecl &&
                  FDecl->getParamDecl(ParamIndex)->getDeclName())
+      #else
+      } else if (MinArgs == 1 && FDecl && FDecl->getParamDecl(0)->getDeclName())
+      #endif
         Diag(RParenLoc,
              MinArgs == NumParams && !Proto->isVariadic()
                  ? diag::err_typecheck_call_too_few_args_one
                  : diag::err_typecheck_call_too_few_args_at_least_one)
+            #if ENABLE_BSC
             << FnKind << FDecl->getParamDecl(ParamIndex)
+            #else
+            << FnKind << FDecl->getParamDecl(0)
+            #endif
             << Fn->getSourceRange();
       else
         Diag(RParenLoc, MinArgs == NumParams && !Proto->isVariadic()
@@ -6211,8 +6301,12 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   VariadicCallType CallType = getVariadicCallType(FDecl, Proto, Fn);
 
   Invalid = GatherArgumentsForCall(Call->getBeginLoc(), FDecl, Proto, 0, Args,
-                                   AllArgs, CallType, false, false,
-                                   IsBSCInstanceFunc, Call);
+                                   AllArgs, CallType
+                                   #if ENABLE_BSC
+                                   , false, false,
+                                   IsBSCInstanceFunc, Call
+                                   #endif
+                                   );
   if (Invalid)
     return true;
   unsigned TotalNumArgs = AllArgs.size();
@@ -6228,8 +6322,11 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   unsigned FirstParam, ArrayRef<Expr *> Args,
                                   SmallVectorImpl<Expr *> &AllArgs,
                                   VariadicCallType CallType, bool AllowExplicit,
-                                  bool IsListInitialization,
-                                  bool IsBSCInstanceFunc, CallExpr *Call) {
+                                  bool IsListInitialization
+                                  #if ENABLE_BSC
+                                  , bool IsBSCInstanceFunc, CallExpr *Call
+                                  #endif
+                                  ) {
   unsigned NumParams = Proto->getNumParams();
   bool Invalid = false;
   size_t ArgIx = 0;
@@ -6239,6 +6336,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
   // calling, So we need to build an ast for `this` parameter.
   // Flag IsDesugaredBSCMethodCall is to jugde if this func call has already desugared,
   // so that we don`t need to desugar again.
+  #if ENABLE_BSC
   if (IsBSCInstanceFunc && !(Call->getCallee()->IsDesugaredBSCMethodCall)) {
     Expr *Callee = Call->getCallee();
     if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(
@@ -6280,6 +6378,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       FirstParam = FirstParam + 1;
     }
   }
+  #endif
 
   // Continue to check argument types (even if we have too few/many args).
   for (unsigned i = FirstParam; i < NumParams; i++) {
@@ -6289,6 +6388,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
+      #if ENABLE_BSC
       if (getLangOpts().BSC && TryDesugarTrait(ProtoArgType) &&
           !TryDesugarTrait(Arg->getType())) {
         Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
@@ -6298,6 +6398,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         else
           return true;
       }
+      #endif
       if (RequireCompleteType(Arg->getBeginLoc(), ProtoArgType,
                               diag::err_call_incomplete_argument, Arg))
         return true;
@@ -6788,11 +6889,13 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     if (CE)
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
   }
+  #if ENABLE_BSC
   CallExpr *CE = dyn_cast<CallExpr>(Call.get());
   if (CE) {
     PreferInlineScopeSpecifier CallExprSpec = GetPragmaPreferInlineInfo();
     CE->setPreferInlineScopeSpecifier(CallExprSpec);
   }
+  #endif
   return Call;
 }
 
@@ -6875,6 +6978,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   //    {
   //      a.foo();
   //    }
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     // Determine whether this is a dependent call inside a C++ template,
     // in which case we won't do any semantic analysis now.
@@ -6886,6 +6990,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                               VK_PRValue, RParenLoc, CurFPFeatureOverrides());
     }
   }
+  #endif
 
   // Check for overloaded calls.  This can happen even in C due to extensions.
   if (Fn->getType() == Context.OverloadTy) {
@@ -6947,6 +7052,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
     // Desugar for BSC async function call
+    #if ENABLE_BSC
     if (FD->isAsyncSpecified()) {
       QualType AwaitReturnTy = FD->getReturnType();
       if (!IsBSCCompatibleFutureType(AwaitReturnTy)) {
@@ -6974,6 +7080,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         }
       }
     }
+    #endif
 
     if (CallingNDeclIndirectly && !checkAddressOfFunctionIsAvailable(
                                       FD, /*Complain=*/true, Fn->getBeginLoc()))
@@ -7125,8 +7232,10 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                                        ArrayRef<Expr *> Args,
                                        SourceLocation RParenLoc, Expr *Config,
                                        bool IsExecConfig, ADLCallKind UsesADL) {
+  #if ENABLE_BSC
   bool HasBSCScopeSpec = Fn->HasBSCScopeSpec;
   bool IsDesugaredBSCMethodCall = Fn->IsDesugaredBSCMethodCall;
+  #endif
   FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
@@ -7181,8 +7290,10 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   if (Result.isInvalid())
     return ExprError();
   Fn = Result.get();
+  #if ENABLE_BSC
   Fn->HasBSCScopeSpec = HasBSCScopeSpec;
   Fn->IsDesugaredBSCMethodCall = IsDesugaredBSCMethodCall;
+  #endif
 
   // Check for a valid function type, but only if it is not a builtin which
   // requires custom type checking. These will be handled by
@@ -7233,8 +7344,10 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
         CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
                          CurFPFeatureOverrides(), NumParams, UsesADL);
     // Keep flag unchanged in transformation.
+    #if ENABLE_BSC
     TheCall->getCallee()->IsDesugaredBSCMethodCall = Fn->IsDesugaredBSCMethodCall;
     TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
+    #endif
   }
 
   if (!Context.isDependenceAllowed()) {
@@ -8844,10 +8957,12 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return CXXCheckConditionalOperands(Cond, LHS, RHS, VK, OK, QuestionLoc);
 
   // BSC will do type check after instantiation
+  #if ENABLE_BSC
   bool IsTyDependent = Cond.get()->isTypeDependent() || LHS.get()->isTypeDependent() ||
                          RHS.get()->isTypeDependent();
   if (getLangOpts().BSC && IsTyDependent)
     return CXXCheckConditionalOperands(Cond, LHS, RHS, VK, OK, QuestionLoc);
+  #endif
 
   VK = VK_PRValue;
   OK = OK_Ordinary;
@@ -10135,6 +10250,7 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
 }
 
 // for union fields/array/global variable type check
+#if ENABLE_BSC
 void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env) {
   enum {
     ownedQualified,
@@ -10291,6 +10407,7 @@ static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType) {
   }
   return false;
 }
+#endif
 
 Sema::AssignConvertType
 Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
@@ -10318,6 +10435,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     }
   }
 
+  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     if (RHS.get()->getType().getCanonicalType().isOwnedQualified() || LHSType.getCanonicalType().isOwnedQualified()) {
       if (!CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
@@ -10329,6 +10447,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
         return IncompatibleOwnedPointer;
     }
   }
+  #endif
 
   if (getLangOpts().CPlusPlus) {
     if (!LHSType->isRecordType() && !LHSType->isAtomicType()) {
@@ -15666,6 +15785,7 @@ static void DiagnoseShiftCompare(Sema &S, SourceLocation OpLoc,
       SourceRange(OCE->getArg(1)->getBeginLoc(), RHSExpr->getEndLoc()));
 }
 
+#if ENABLE_BSC
 static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
                                     SourceLocation OpLoc, Expr *LHSExpr,
                                     Expr *RHSExpr) {
@@ -15683,6 +15803,7 @@ static void DiagnoseOwnedPointerUnaryOp(Sema &Self, UnaryOperatorKind Opc,
     << Input->getType() << Input->getSourceRange();
   }
 }
+#endif
 
 /// DiagnoseBinOpPrecedence - Emit warnings for expressions with tricky
 /// precedence.
@@ -15720,11 +15841,13 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
 
   //bsc owned pointer type check
+  #if ENABLE_BSC
   if (Self.getLangOpts().BSC
       && ((LHSExpr->getType()->isPointerType() && LHSExpr->getType().isOwnedQualified())
       || (RHSExpr->getType()->isPointerType() && RHSExpr->getType().isOwnedQualified()))) {
     DiagnoseOwnedPointerBinaryOp(Self, Opc, OpLoc, LHSExpr, RHSExpr);
   }
+  #endif
 
 }
 
@@ -15740,6 +15863,7 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
   // Handling reassignments of variable types with trait pointers:
+  #if ENABLE_BSC
   if (getLangOpts().BSC && LHSExpr->getType() != RHSExpr->getType()) {
     if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())) {
       RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());
@@ -15747,6 +15871,7 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
         return ActOnTraitReassign(S, TokLoc, Opc, RD, LHSExpr, RHSExpr);
     }
   }
+  #endif
 
   return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 }
@@ -15883,14 +16008,20 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
 
   // Add BSC judgement, this will help we delay the check if
   // the expression is type-dependent.
-  if (getLangOpts().CPlusPlus || getLangOpts().BSC) {
+  if (getLangOpts().CPlusPlus
+      #if ENABLE_BSC
+      || getLangOpts().BSC
+      #endif
+      ) {
     // If either expression is type-dependent, always build an
     // overloaded op.
     if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
+  #if ENABLE_BSC
   }
 
   if (getLangOpts().CPlusPlus) {
+  #endif
     // Otherwise, build an overloaded op if either expression has an
     // overloadable type.
     if (LHSExpr->getType()->isOverloadableType() ||
@@ -16263,10 +16394,12 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
 
     return CreateOverloadedUnaryOp(OpLoc, Opc, Functions, Input);
   }
+  #if ENABLE_BSC
   if (getLangOpts().BSC && Input->getType()->isPointerType()
       && Input->getType().isOwnedQualified()) {
     DiagnoseOwnedPointerUnaryOp(*this, Opc, OpLoc, Input);
   }
+  #endif
 
   return CreateBuiltinUnaryOp(OpLoc, Opc, Input);
 }
@@ -17350,9 +17483,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointer:
+    #if ENABLE_BSC
     // int a = 1; trait F* f = &a;
     if (getLangOpts().BSC && IsTraitEqualExpr(*this, DstType, SrcType))
       return false;
+    #endif
     if (Action == AA_Passing_CFAudited) {
       DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
     } else if (getLangOpts().CPlusPlus) {
@@ -17504,8 +17639,10 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     isInvalid = true;
     MayHaveFunctionDiff = true;
     break;
+  #if ENABLE_BSC
   case IncompatibleOwnedPointer:
     return false;
+  #endif
   }
 
   QualType FirstType, SecondType;
@@ -17533,6 +17670,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   AssignmentAction ActionForDiag = Action;
   if (Action == AA_Passing_CFAudited)
     ActionForDiag = AA_Passing;
+  #if ENABLE_BSC
   if (TraitDecl *TD = TryDesugarTrait(SecondType)) {
     QualType QT = Context.getTraitType(TD);
     if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
@@ -17549,6 +17687,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     SecondType = QT;
   }
+  #endif
 
   FDiag << FirstType << SecondType << ActionForDiag
         << SrcExpr->getSourceRange();

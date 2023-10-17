@@ -138,9 +138,11 @@ public:
     return Stored.isLocalConstQualified();
   }
 
-   bool isOwnedQualified() const {
+  #if ENABLE_BSC
+  bool isOwnedQualified() const {
     return Stored.isLocalOwnedQualified();
   }
+  #endif
 
   bool isVolatileQualified() const {
     return Stored.isLocalVolatileQualified();

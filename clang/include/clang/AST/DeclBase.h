@@ -1571,6 +1571,7 @@ class DeclContext {
   /// Number of non-inherited bits in RecordDeclBitfields.
   enum { NumRecordDeclBits = 15 };
 
+  #if ENABLE_BSC
   class TraitDeclBitfields {
     friend class TraitDecl;
     /// For the bits in DeclContextBitfields.
@@ -1578,6 +1579,7 @@ class DeclContext {
     /// For the bits in TagDeclBitfields.
     uint64_t : NumTagDeclBits;
   };
+  #endif
 
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor
@@ -1609,7 +1611,9 @@ class DeclContext {
     uint64_t SClass : 3;
     uint64_t IsInline : 1;
     uint64_t IsInlineSpecified : 1;
+    #if ENABLE_BSC
     uint64_t IsAsyncSpecified : 1;
+    #endif
 
     uint64_t IsVirtualAsWritten : 1;
     uint64_t IsPure : 1;
@@ -1651,7 +1655,9 @@ class DeclContext {
     /// have a body, once we're done parsing it.
     uint64_t WillHaveBody : 1;
 
+    #if ENABLE_BSC
     uint64_t SafeSpecifier : 2;
+    #endif
 
     /// Indicates that this function is a multiversioned
     /// function using attribute 'target'.
@@ -1670,7 +1676,11 @@ class DeclContext {
   };
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
+  #if ENABLE_BSC
   enum { NumFunctionDeclBits = 29 };
+  #else
+  enum { NumFunctionDeclBits = 28};
+  #endif
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1687,7 +1697,11 @@ class DeclContext {
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
+    #if ENABLE_BSC
     uint64_t NumCtorInitializers : 19;
+    #else
+    uint64_t NumCtorInitializers : 20;
+    #endif
     uint64_t IsInheritingConstructor : 1;
 
     /// Whether this constructor has a trail-allocated explicit specifier.
@@ -1859,7 +1873,9 @@ protected:
     ObjCContainerDeclBitfields ObjCContainerDeclBits;
     LinkageSpecDeclBitfields LinkageSpecDeclBits;
     BlockDeclBitfields BlockDeclBits;
+    #if ENABLE_BSC
     TraitDeclBitfields TraitDeclBits;
+    #endif
 
     static_assert(sizeof(DeclContextBitfields) <= 8,
                   "DeclContextBitfields is larger than 8 bytes!");
@@ -1997,7 +2013,9 @@ public:
            getDeclKind() <= Decl::lastRecord;
   }
 
+  #if ENABLE_BSC
   bool isTrait() const { return getDeclKind() == Decl::Trait; }
+  #endif
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 

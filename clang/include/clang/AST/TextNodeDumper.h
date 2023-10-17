@@ -322,7 +322,9 @@ public:
       const DeducedTemplateSpecializationType *T);
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T);
   void VisitInjectedClassNameType(const InjectedClassNameType *T);
+  #if ENABLE_BSC
   void VisitInjectedTraitNameType(const InjectedTraitNameType *T);
+  #endif
   void VisitObjCInterfaceType(const ObjCInterfaceType *T);
   void VisitPackExpansionType(const PackExpansionType *T);
 
@@ -335,7 +337,9 @@ public:
   void VisitFunctionDecl(const FunctionDecl *D);
   void VisitFieldDecl(const FieldDecl *D);
   void VisitVarDecl(const VarDecl *D);
+  #if ENABLE_BSC
   void VisitImplTraitDecl(const ImplTraitDecl *D);
+  #endif
   void VisitBindingDecl(const BindingDecl *D);
   void VisitCapturedDecl(const CapturedDecl *D);
   void VisitImportDecl(const ImportDecl *D);
@@ -352,7 +356,9 @@ public:
   void VisitTypeAliasTemplateDecl(const TypeAliasTemplateDecl *D);
   void VisitCXXRecordDecl(const CXXRecordDecl *D);
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D);
+  #if ENABLE_BSC
   void VisitTraitTemplateDecl(const TraitTemplateDecl *D);
+  #endif
   void VisitClassTemplateDecl(const ClassTemplateDecl *D);
   void VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D);
   void VisitVarTemplateDecl(const VarTemplateDecl *D);

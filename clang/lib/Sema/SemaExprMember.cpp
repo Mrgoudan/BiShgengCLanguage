@@ -638,6 +638,7 @@ private:
 // Callback to only accept typo corrections that are either a ValueDecl or a
 // and are declared in the current enum or, for a C++ classes, one of its
 // base classes.
+#if ENABLE_BSC
 class EnumMemberExprValidatorCCC final : public CorrectionCandidateCallback {
 public:
   explicit EnumMemberExprValidatorCCC(const EnumType *ETy)
@@ -672,6 +673,7 @@ public:
 private:
   const EnumDecl *const Enum;
 };
+#endif
 }
 
 static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
@@ -835,6 +837,7 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
                                   false, ExtraArgs);
 }
 
+#if ENABLE_BSC
 static bool LookupMemberExprInEnum(Sema &SemaRef, LookupResult &R,
                                    Expr *BaseExpr, const EnumType *ETy,
                                    SourceLocation OpLoc, bool IsArrow,
@@ -894,6 +897,7 @@ static bool LookupMemberExprInEnum(Sema &SemaRef, LookupResult &R,
 
   return false;
 }
+#endif
 
 ExprResult
 Sema::BuildAnonymousStructUnionMemberReference(const CXXScopeSpec &SS,
@@ -1090,6 +1094,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   if (R.empty()) {
     // Rederive where we looked up.
+    #if ENABLE_BSC
     DeclContext *DC = nullptr;
     std::string BuiltinName = "";
     if (const BuiltinType *BTy = BaseType->getAs<BuiltinType>()) {
@@ -1103,6 +1108,11 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       DC = (SS.isSet() ? computeDeclContext(SS, false)
                        : BaseType->castAs<RecordType>()->getDecl());
     }
+    #else
+    DeclContext *DC = (SS.isSet()
+                       ? computeDeclContext(SS, false)
+                       : BaseType->castAs<RecordType>()->getDecl());
+    #endif
 
     if (ExtraArgs) {
       ExprResult RetryExpr;
@@ -1123,27 +1133,35 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
           RetryExpr = ExprError();
       }
       if (RetryExpr.isUsable()) {
+        #if ENABLE_BSC
         if (DC) {
+        #endif
           Diag(OpLoc, diag::err_no_member_overloaded_arrow)
               << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
           return RetryExpr;
+        #if ENABLE_BSC
         } else {
           Diag(OpLoc, diag::err_no_member_overloaded_arrow)
               << MemberName << "type '" + BuiltinName + "'"
               << FixItHint::CreateReplacement(OpLoc, "->");
           return RetryExpr;
         }
+        #endif
       }
     }
+    #if ENABLE_BSC
     if (DC) {
+    #endif
       Diag(R.getNameLoc(), diag::err_no_member)
           << MemberName << DC
           << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
+    #if ENABLE_BSC
     } else {
       Diag(R.getNameLoc(), diag::err_no_member)
           << MemberName << "type '" + BuiltinName + "'"
           << (BaseExpr ? BaseExpr->getSourceRange() : SourceRange());
     }
+    #endif
     return ExprError();
   }
 
@@ -1251,6 +1269,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                            MemberNameInfo, type, valueKind, OK_Ordinary);
   }
 
+  #if ENABLE_BSC
   if (BSCMethodDecl *MemberFn = dyn_cast<BSCMethodDecl>(MemberDecl)) {
     ExprValueKind valueKind;
     QualType type;
@@ -1285,6 +1304,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                            MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, type, valueKind, OK_Ordinary);
   }
+  #endif
 
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
@@ -1476,6 +1496,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     return ExprResult(TE);
   }
 
+  #if ENABLE_BSC
   if (S.getLangOpts().BSC) {
     if (const BuiltinType *BTy = BaseType->getAs<BuiltinType>()) {
       TypoExpr *TE = nullptr;
@@ -1522,6 +1543,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       return ExprResult(TE);
     }
   }
+  #endif
 
   // Handle ivar access to Objective-C objects.
   if (const ObjCObjectType *OTy = BaseType->getAs<ObjCObjectType>()) {
@@ -2043,9 +2065,11 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
 
     // BSC ownership: unlike other quals, owned cannot inherit from base
     // struct A owned a; a.b has not owned if b is not owned qualified
+    #if ENABLE_BSC
     if (BaseQuals.hasOwned()) {
       BaseQuals.removeOwned();
     }
+    #endif
     Qualifiers Combined = BaseQuals + MemberQuals;
     if (Combined != MemberQuals)
       MemberType = Context.getQualifiedType(MemberType, Combined);

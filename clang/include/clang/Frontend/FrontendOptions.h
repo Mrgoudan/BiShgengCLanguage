@@ -127,7 +127,9 @@ enum ActionKind {
   RewriteObjC,
 
   /// BSC->C Rewriter.
+  #if ENABLE_BSC
   RewriteBSC,
+  #endif
 
   /// Rewriter playground
   RewriteTest,

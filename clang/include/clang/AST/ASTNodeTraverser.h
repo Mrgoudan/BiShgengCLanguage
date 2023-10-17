@@ -557,6 +557,7 @@ public:
     dumpTemplateDecl(D);
   }
 
+  #if ENABLE_BSC
   void VisitTraitTemplateDecl(const TraitTemplateDecl *D) {
     dumpTemplateDecl(D);
   }
@@ -565,6 +566,7 @@ public:
       const TraitTemplateSpecializationDecl *D) {
     dumpTemplateArgumentList(D->getTemplateArgs());
   }
+  #endif
 
   void VisitClassTemplateDecl(const ClassTemplateDecl *D) {
     dumpTemplateDecl(D);

@@ -15,6 +15,9 @@
 
 #include "CoroutineStmtBuilder.h"
 #include "TypeLocBuilder.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -953,9 +956,11 @@ public:
   QualType RebuildRecordType(RecordDecl *Record) {
     return SemaRef.Context.getTypeDeclType(Record);
   }
+  #if ENABLE_BSC
   QualType RebuildTraitType(TraitDecl *Trait) {
     return SemaRef.Context.getTypeDeclType(Trait);
   }
+  #endif
   /// Build a new Enum type.
   QualType RebuildEnumType(EnumDecl *Enum) {
     return SemaRef.Context.getTypeDeclType(Enum);
@@ -3801,9 +3806,11 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
+  #if ENABLE_BSC
   ExprResult RebuildAwaitExpr(SourceLocation BuiltinLoc, Expr *SubExprs) {
     return getSema().BuildAwaitExpr(BuiltinLoc, SubExprs);
   }
+  #endif
 
   ExprResult RebuildRecoveryExpr(SourceLocation BeginLoc, SourceLocation EndLoc,
                                  ArrayRef<Expr *> SubExprs, QualType Type) {
@@ -6364,6 +6371,7 @@ QualType TreeTransform<Derived>::TransformRecordType(TypeLocBuilder &TLB,
   return Result;
 }
 
+#if ENABLE_BSC
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformTraitType(TypeLocBuilder &TLB,
                                                     TraitTypeLoc TL) {
@@ -6385,6 +6393,7 @@ QualType TreeTransform<Derived>::TransformTraitType(TypeLocBuilder &TLB,
 
   return Result;
 }
+#endif
 
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformEnumType(TypeLocBuilder &TLB,
@@ -6423,6 +6432,7 @@ QualType TreeTransform<Derived>::TransformInjectedClassNameType(
   return T;
 }
 
+#if ENABLE_BSC
 template <typename Derived>
 QualType TreeTransform<Derived>::TransformInjectedTraitNameType(
     TypeLocBuilder &TLB, InjectedTraitNameTypeLoc TL) {
@@ -6435,6 +6445,7 @@ QualType TreeTransform<Derived>::TransformInjectedTraitNameType(
   TLB.pushTypeSpec(T).setNameLoc(TL.getNameLoc());
   return T;
 }
+#endif
 
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformTemplateTypeParmType(
@@ -11097,10 +11108,12 @@ TreeTransform<Derived>::TransformCallExpr(CallExpr *E) {
     return ExprError();
   
   // Keep flag unchanged in transformation.
+  #if ENABLE_BSC
   Callee.get()->IsDesugaredBSCMethodCall = E->getCallee()->IsDesugaredBSCMethodCall;
   Callee.get()->HasBSCScopeSpec = E->getCallee()->HasBSCScopeSpec;
   Callee.get()->IgnoreImplicit()->HasBSCScopeSpec =
       E->getCallee()->IgnoreImplicit()->HasBSCScopeSpec;
+  #endif
 
   // Transform arguments.
   bool ArgChanged = false;
@@ -14500,6 +14513,7 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
 //===----------------------------------------------------------------------===//
 // BSC await expression transform
 //===----------------------------------------------------------------------===//
+#if ENABLE_BSC
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformAwaitExpr(AwaitExpr *E) {
   ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
@@ -14512,6 +14526,7 @@ ExprResult TreeTransform<Derived>::TransformAwaitExpr(AwaitExpr *E) {
 
   return getDerived().RebuildAwaitExpr(E->getBeginLoc(), SubExpr.get());
 }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Type reconstruction

@@ -451,6 +451,20 @@ private:
     return static_cast<LambdaDefinitionData&>(*DD);
   }
 
+  /// The template or declaration that this declaration
+  /// describes or was instantiated from, respectively.
+  ///
+  /// For non-templates, this value will be null. For record
+  /// declarations that describe a class template, this will be a
+  /// pointer to a ClassTemplateDecl. For member
+  /// classes of class template specializations, this will be the
+  /// MemberSpecializationInfo referring to the member class that was
+  /// instantiated or specialized.
+  #if !ENABLE_BSC
+  llvm::PointerUnion<ClassTemplateDecl *, MemberSpecializationInfo *>
+      TemplateOrInstantiation;
+  #endif
+
   /// Called from setBases and addedMember to notify the class that a
   /// direct or virtual base class or a member of class type has been added.
   void addedClassSubobject(CXXRecordDecl *Base);
@@ -1435,6 +1449,58 @@ public:
   ///   struct A { };
   /// };
   /// \endcode
+  ///
+  /// The declaration for X<int>::A is a (non-templated) CXXRecordDecl
+  /// whose parent is the class template specialization X<int>. For
+  /// this declaration, getInstantiatedFromMemberClass() will return
+  /// the CXXRecordDecl X<T>::A. When a complete definition of
+  /// X<int>::A is required, it will be instantiated from the
+  /// declaration returned by getInstantiatedFromMemberClass().
+  #if !ENABLE_BSC
+  CXXRecordDecl *getInstantiatedFromMemberClass() const;
+
+  /// If this class is an instantiation of a member class of a
+  /// class template specialization, retrieves the member specialization
+  /// information.
+  MemberSpecializationInfo *getMemberSpecializationInfo() const;
+
+  /// Specify that this record is an instantiation of the
+  /// member class \p RD.
+  void setInstantiationOfMemberClass(CXXRecordDecl *RD,
+                                     TemplateSpecializationKind TSK);
+
+  /// Retrieves the class template that is described by this
+  /// class declaration.
+  ///
+  /// Every class template is represented as a ClassTemplateDecl and a
+  /// CXXRecordDecl. The former contains template properties (such as
+  /// the template parameter lists) while the latter contains the
+  /// actual description of the template's
+  /// contents. ClassTemplateDecl::getTemplatedDecl() retrieves the
+  /// CXXRecordDecl that from a ClassTemplateDecl, while
+  /// getDescribedClassTemplate() retrieves the ClassTemplateDecl from
+  /// a CXXRecordDecl.
+  ClassTemplateDecl *getDescribedClassTemplate() const;
+
+  void setDescribedClassTemplate(ClassTemplateDecl *Template);
+
+  /// Determine whether this particular class is a specialization or
+  /// instantiation of a class template or member class of a class template,
+  /// and how it was instantiated or specialized.
+  TemplateSpecializationKind getTemplateSpecializationKind() const;
+
+  /// Set the kind of specialization or template instantiation this is.
+  void setTemplateSpecializationKind(TemplateSpecializationKind TSK);
+
+  /// Retrieve the record declaration from which this record could be
+  /// instantiated. Returns null if this class is not a template instantiation.
+  const CXXRecordDecl *getTemplateInstantiationPattern() const;
+
+  CXXRecordDecl *getTemplateInstantiationPattern() {
+    return const_cast<CXXRecordDecl *>(const_cast<const CXXRecordDecl *>(this)
+                                           ->getTemplateInstantiationPattern());
+  }
+  #endif
 
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
@@ -1443,6 +1509,22 @@ public:
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
+  /// If the class is a local class [class.local], returns
+  /// the enclosing function declaration.
+  #if !ENABLE_BSC
+  const FunctionDecl *isLocalClass() const {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
+      return RD->isLocalClass();
+
+    return dyn_cast<FunctionDecl>(getDeclContext());
+  }
+
+  FunctionDecl *isLocalClass() {
+    return const_cast<FunctionDecl*>(
+        const_cast<const CXXRecordDecl*>(this)->isLocalClass());
+  }
+  #endif
+  
   /// Determine whether this dependent class is a current instantiation,
   /// when viewed from within the given context.
   bool isCurrentInstantiation(const DeclContext *CurContext) const;
@@ -1911,9 +1993,17 @@ protected:
                 QualType T, TypeSourceInfo *TInfo, StorageClass SC,
                 bool UsesFPIntrin, bool isInline,
                 ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr, bool isAsync = false)
+                Expr *TrailingRequiresClause = nullptr
+                #if ENABLE_BSC
+                , bool isAsync = false
+                #endif
+                )
       : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-                     isInline, ConstexprKind, TrailingRequiresClause, isAsync) {
+                     isInline, ConstexprKind, TrailingRequiresClause
+                     #if ENABLE_BSC
+                     , isAsync
+                     #endif
+                     ) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
   }

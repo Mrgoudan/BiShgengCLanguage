@@ -13,8 +13,10 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/DeclBSC.h"
+#endif
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclBSC.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -257,6 +259,7 @@ void StmtPrinter::VisitNullStmt(NullStmt *Node) {
 }
 
 void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
+  #if ENABLE_BSC
   if (Policy.RewriteBSC) {
     if (Node->isSingleDecl()) {
       if (auto *VD = dyn_cast<VarDecl>(Node->getSingleDecl()))
@@ -270,6 +273,7 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
       }
     }
   }
+  #endif
   Indent();
   PrintRawDeclStmt(Node);
   OS << ";" << NL;
@@ -1149,6 +1153,7 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
 
 // To prefix the type by jointing '_' between types and function name.
 // Arg 'isFront' determines weather to prefix '_' at the front of type or not.
+#if ENABLE_BSC
 static std::string GetTypePrefix(QualType T, bool isFront,
                                  const PrintingPolicy &PP) {
   std::string ExtendedTypeStr;
@@ -1171,8 +1176,10 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   }
   return ExtendedTypeStr;
 }
+#endif
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
+  #if ENABLE_BSC
   if (Policy.RewriteBSC) {
     if (Node->HasBSCScopeSpec) {
       if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
@@ -1196,6 +1203,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       return;
     }
   }
+  #endif
   if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
@@ -1616,11 +1624,14 @@ static bool isImplicitThis(const Expr *E) {
 }
 
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
+  #if ENABLE_BSC
   if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
     std::string ExtendedTypeStr =
         GetTypePrefix(BD->getExtendedType(), false, Policy);
     OS << ExtendedTypeStr;
-  } else if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
+  } else
+  #endif
+  if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
     PrintExpr(Node->getBase());
 
     auto *ParentMember = dyn_cast<MemberExpr>(Node->getBase());
@@ -2098,13 +2109,17 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
 }
 
 void StmtPrinter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *Node) {
+  #if ENABLE_BSC
   if (Policy.RewriteBSC) {
     OS << (Node->getValue()
                ? "1"
                : "0"); // FIXME: a little bit weird. why enter here.
   } else {
+  #endif
     OS << (Node->getValue() ? "true" : "false");
+  #if ENABLE_BSC
   }
+  #endif
 }
 
 void StmtPrinter::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *Node) {
@@ -2624,10 +2639,12 @@ void StmtPrinter::VisitCoyieldExpr(CoyieldExpr *S) {
 }
 
 // BSC
+#if ENABLE_BSC
 void StmtPrinter::VisitAwaitExpr(AwaitExpr *S) {
   OS << "await ";
   PrintExpr(S->getSubExpr());
 }
+#endif
 
 // Obj-C
 

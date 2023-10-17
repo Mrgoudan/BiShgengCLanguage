@@ -92,16 +92,22 @@ public:
                          Sema::LookupNameKind LookupKind, Scope *S,
                          CXXScopeSpec *SS,
                          std::unique_ptr<CorrectionCandidateCallback> CCC,
-                         DeclContext *MemberContext, bool EnteringContext,
-                         QualType ET = QualType())
+                         DeclContext *MemberContext, bool EnteringContext
+                         #if ENABLE_BSC
+                         , QualType ET = QualType()
+                         #endif
+                         )
       : Typo(TypoName.getName().getAsIdentifierInfo()), CurrentTCIndex(0),
         SavedTCIndex(0), SemaRef(SemaRef), S(S),
         SS(SS ? std::make_unique<CXXScopeSpec>(*SS) : nullptr),
         CorrectionValidator(std::move(CCC)), MemberContext(MemberContext),
         Result(SemaRef, TypoName, LookupKind),
         Namespaces(SemaRef.Context, SemaRef.CurContext, SS),
-        EnteringContext(EnteringContext), SearchNamespaces(false),
-        ExtendedType(ET) {
+        EnteringContext(EnteringContext), SearchNamespaces(false)
+        #if ENABLE_BSC
+        , ExtendedType(ET)
+        #endif
+        {
     Result.suppressDiagnostics();
     // Arrange for ValidatedCorrections[0] to always be an empty correction.
     ValidatedCorrections.push_back(TypoCorrection());
@@ -316,7 +322,9 @@ private:
   SmallVector<TypoCorrection, 2> QualifiedResults;
   bool EnteringContext;
   bool SearchNamespaces;
+  #if ENABLE_BSC
   QualType ExtendedType;
+  #endif
 };
 
 inline Sema::TypoExprState::TypoExprState() {}

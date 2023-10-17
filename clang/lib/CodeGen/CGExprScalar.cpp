@@ -447,7 +447,9 @@ public:
   Value *VisitUnaryCoawait(const UnaryOperator *E) {
     return Visit(E->getSubExpr());
   }
+  #if ENABLE_BSC
   Value *VisitAwaitExpr(AwaitExpr *E) { return Visit(E->getSubExpr()); }
+  #endif
 
   // Leaves.
   Value *VisitIntegerLiteral(const IntegerLiteral *E) {
