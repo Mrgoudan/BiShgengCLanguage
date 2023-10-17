@@ -41,8 +41,8 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_F f_1;
-// CHECK-NEXT: f_1.data = &a , f_1.vtable = &__int_trait_F;
-// CHECK-NEXT: int b = f_1.vtable->foo(f_1.data);
+// CHECK-NEXT: struct __Trait_F f;
+// CHECK-NEXT: f.data = &a , f.vtable = &__int_trait_F;
+// CHECK-NEXT: int b = f.vtable->foo(f.data);
 // CHECK-NEXT: return b - 10;
 // CHECK-NEXT: }

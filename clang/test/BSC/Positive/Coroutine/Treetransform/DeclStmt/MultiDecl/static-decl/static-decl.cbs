@@ -25,13 +25,13 @@ async int f(int start) {
     static float myFloat = 3.14f;
     static double myDouble = 3.14159;
     static struct Addr addr = {1, "hello"};
-    
+
     int result = await read(2);
     return result + 5 + start;
 }
 
 int main() {
-  struct _Futuref this = {}; 
-  struct _Futuref::poll(&this);
+  trait Future<int>* this = f(1);
+  this->poll();
   return 0;
 }

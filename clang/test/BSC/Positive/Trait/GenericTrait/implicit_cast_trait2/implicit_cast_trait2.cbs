@@ -56,6 +56,6 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_Future_int b_1 = {get((struct __Trait_Future_int){.data = &a, .vtable = &__int_trait_Future}), &__int_trait_Future};
-// CHECK-NEXT: return b_1.vtable->poll(b_1.data, 0);
+// CHECK-NEXT: struct __Trait_Future_int b = {get((struct __Trait_Future_int){.data = &a, .vtable = &__int_trait_Future}), &__int_trait_Future};
+// CHECK-NEXT: return b.vtable->poll(b.data, 0);
 // CHECK-NEXT: }

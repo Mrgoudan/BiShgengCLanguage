@@ -11,9 +11,9 @@
 
 async int f() { return 0; }
 
-struct __FatPointer<int> (*pollFunc) () = f; 
+trait Future<int>* (*pollFunc) () = f;
 
-async void g() { 
+async void g() {
     await pollFunc();
 }
 

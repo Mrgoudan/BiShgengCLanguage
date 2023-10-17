@@ -48,7 +48,7 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_F f_1 = {&a, &__int_trait_F};
-// CHECK-NEXT: int b = get(f_1);
+// CHECK-NEXT: struct __Trait_F f = {&a, &__int_trait_F};
+// CHECK-NEXT: int b = get(f);
 // CHECK-NEXT: return 0;
 // CHECK-NEXT: }

@@ -15,13 +15,13 @@ async int read(int a) {
 
 async void f(int start) {
   int result = start;
-  for (int i = 0; i < start; i++) { 
+  for (int i = 0; i < start; i++) {
      int a = await read(1);
   }
 }
 
 int main() {
-  struct _Futuref this = {}; 
-  struct _Futuref::poll(&this);
+  trait Future<struct Void>* this = f(1);
+  this->poll();
   return 0;
 }

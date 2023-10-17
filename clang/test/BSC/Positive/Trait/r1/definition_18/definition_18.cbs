@@ -47,6 +47,6 @@ int main() {
 // CHECK-NEXT: }
 
 // CHECK: int main(void) {
-// CHECK-NEXT: struct __Trait_F f_1 = get();
+// CHECK-NEXT: struct __Trait_F f = get();
 // CHECK-NEXT: eturn 0;
 // CHECK-NEXT: }

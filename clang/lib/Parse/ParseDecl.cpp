@@ -3299,8 +3299,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         if (DS.getTypeQualifiers() != DeclSpec::TQ_unspecified)
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int, tok::kw_float, 
-          tok::kw_double, tok::kw_bool, tok::kw__Bool)) {
+      if (SwitchTok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int,
+                            tok::kw_float, tok::kw_double, tok::kw_bool,
+                            tok::kw__Bool)) {
         if (DS.getTypeSpecType() != DeclSpec::TST_unspecified)
           goto DoneWithDeclSpec;
       }
@@ -3310,9 +3311,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           goto DoneWithDeclSpec;
       }
       if (SwitchTok.is(tok::kw_long)) {
-        if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Short 
-            || DS.getTypeSpecWidth() == TypeSpecifierWidth::LongLong
-            || Uncombinable)
+        if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Short ||
+            DS.getTypeSpecWidth() == TypeSpecifierWidth::LongLong ||
+            Uncombinable)
           goto DoneWithDeclSpec;
       }
     }

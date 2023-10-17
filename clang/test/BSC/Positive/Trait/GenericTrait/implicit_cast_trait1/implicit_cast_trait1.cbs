@@ -63,7 +63,7 @@ int main() {
 // CHECK-NEXT: }
 
 // CHECK: int main(void) {
-// CHECK-NEXT: struct __Trait_Future_int a_1 = f();
-// CHECK-NEXT: int c = a_1.vtable->poll(a_1.data, 0).c;
+// CHECK-NEXT: struct __Trait_Future_int a = f();
+// CHECK-NEXT: int c = a.vtable->poll(a.data, 0).c;
 // CHECK-NEXT: return c;
 // CHECK-NEXT: }

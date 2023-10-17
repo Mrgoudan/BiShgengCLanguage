@@ -2880,7 +2880,7 @@ public:
     return (PreferInlineScopeSpecifier) CallExprBits.PreferInlineSpecifier;
   }
   #endif
-  
+
 protected:
   /// Build a call expression, assuming that appropriate storage has been
   /// allocated for the trailing objects.
@@ -4833,6 +4833,12 @@ class InitListExpr : public Expr {
   ///  field within the union will be initialized.
   llvm::PointerUnion<Expr *, FieldDecl *> ArrayFillerOrUnionFieldInit;
 
+#if ENABLE_BSC
+  // For BSC, it is used to determine whether it has been desugared,
+  // When assigning a value to the trait pointer type
+  bool HasDesugar = false;
+#endif
+
 public:
   InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
                ArrayRef<Expr*> initExprs, SourceLocation rbraceloc);
@@ -4850,6 +4856,12 @@ public:
   Expr * const *getInits() const {
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
+
+#if ENABLE_BSC
+  bool getHasDesugar() { return HasDesugar; }
+
+  void setHasDesugar(bool Desugar) { HasDesugar = Desugar; }
+#endif
 
   ArrayRef<Expr *> inits() {
     return llvm::makeArrayRef(getInits(), getNumInits());

@@ -55,8 +55,8 @@ int main() {
   return 0;
 }
 // CHECK: int x = 42;
-// CHECK-NEXT: struct __Trait_TR t1_1 = {&x, &__int_trait_TR};
-// CHECK-NEXT: greet(t1_1);
+// CHECK-NEXT: struct __Trait_TR t1 = {&x, &__int_trait_TR};
+// CHECK-NEXT: greet(t1);
 // CHECK-NEXT: struct S s1 = {.x = 42};
-// CHECK-NEXT: struct __Trait_TR t2_1 = {&s1, &__struct_S_trait_TR};
-// CHECK-NEXT: greet(t2_1);
+// CHECK-NEXT: struct __Trait_TR t2 = {&s1, &__struct_S_trait_TR};
+// CHECK-NEXT: greet(t2);

@@ -21,14 +21,14 @@ async int f() {
 }
 
 async int g() {
-    struct __FatPointer<int> a = read(1);
+    trait Future<int>* a = read(1);
     await a;
     return 0;
 }
 
 int main() {
-  struct __FatPointer<int> this = f();
-  this.vtable->poll(this.data);
-  this.vtable->free(this.data); 
+  trait Future<int>* this = f();
+  this->poll();
+  this->free();
   return 0;
 }

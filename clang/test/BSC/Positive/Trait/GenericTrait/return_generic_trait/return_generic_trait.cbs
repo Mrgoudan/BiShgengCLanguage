@@ -65,8 +65,8 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int m = 0;
-// CHECK-NEXT: struct __Trait_Future_int a_1 = {&m, &__int_trait_Future};
-// CHECK-NEXT: f_int(a_1);
+// CHECK-NEXT: struct __Trait_Future_int a = {&m, &__int_trait_Future};
+// CHECK-NEXT: f_int(a);
 // CHECK-NEXT: return 0;
 // CHECK-NEXT: }
 

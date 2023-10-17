@@ -19,7 +19,7 @@ async UINT32 f() {
     return 0;
 }
 
-struct __FatPointer<unsigned int> (*CallBack)() = f; 
+trait Future<unsigned int>* (*CallBack)() = f;
 async UINT32 g() {
     UINT32 i = 0;
     i = await CallBack();
@@ -39,8 +39,8 @@ async UINT32 h() {
 }
 
 int main() {
-    struct __FatPointer<unsigned int> this = g();
-    this.vtable->poll(this.data);
-    this.vtable->free(this.data); 
+    trait Future<unsigned int>* this = g();
+    this->poll();
+    this->free();
     return 0;
 }

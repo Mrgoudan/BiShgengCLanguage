@@ -54,7 +54,7 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: struct Rectangle_Rectangle_Rectangle r = {.width = 2, .hight = 3};
-// CHECK-NEXT: struct __Trait_Shape_Shape_Shape shape_1 = {&r, &__struct_Rectangle_Rectangle_Rectangle_trait_Shape_Shape_Shape};
-// CHECK-NEXT: int len = shape_1.vtable->getSideLen(shape_1.data);
+// CHECK-NEXT: struct __Trait_Shape_Shape_Shape shape = {&r, &__struct_Rectangle_Rectangle_Rectangle_trait_Shape_Shape_Shape};
+// CHECK-NEXT: int len = shape.vtable->getSideLen(shape.data);
 // CHECK-NEXT: return len - 10;
 // CHECK-NEXT: }

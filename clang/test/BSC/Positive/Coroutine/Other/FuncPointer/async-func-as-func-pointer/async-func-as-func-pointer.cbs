@@ -13,8 +13,8 @@ async int g(int start) {
     return 0;
 }
 
-struct __FatPointer<int> (*CallBack)(int) = g;
-async int f(int start) {   
+trait Future<int>* (*CallBack)(int) = g;
+async int f(int start) {
   int result = await CallBack(1);
   return result;
 }

@@ -39,6 +39,6 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int a = 1;
-// CHECK-NEXT: truct __Trait_F f_1 = {&a, &__int_trait_F};
-// CHECK-NEXT: eturn f_1.vtable->foo(f_1.data);
+// CHECK-NEXT: truct __Trait_F f = {&a, &__int_trait_F};
+// CHECK-NEXT: eturn f.vtable->foo(f.data);
 // CHECK-NEXT: }

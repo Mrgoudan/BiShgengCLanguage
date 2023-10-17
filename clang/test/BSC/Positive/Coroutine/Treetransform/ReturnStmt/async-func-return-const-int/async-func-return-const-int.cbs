@@ -14,7 +14,7 @@ async int read(int a) {
 }
 
 async const int f(int start) {
-    int a = await read(1);  
+    int a = await read(1);
     int b = 2;
 
     if(a == 1) {
@@ -28,7 +28,7 @@ async const int f(int start) {
 }
 
 int main() {
-  struct _Futuref this = {}; 
-  struct _Futuref::poll(&this);
+  trait Future<int>* this = f(1);
+  this->poll();
   return 0;
 }

@@ -51,6 +51,6 @@ int main() {
 // CHECK: int main(void) {
 // CHECK-NEXT: struct S s = {1};
 // CHECK-NEXT: int a = struct_S_foo(&s, 1);
-// CHECK-NEXT: struct __Trait_F_int f_1 = {&s, &__struct_S_trait_F};
+// CHECK-NEXT: struct __Trait_F_int f = {&s, &__struct_S_trait_F};
 // CHECK-NEXT: return a - 2;
 // CHECK-NEXT: }

@@ -19,17 +19,17 @@ int max(int x, int y)
 }
 
 async int f(int start) {
-  int (* p)(int, int) = & max; 
+  int (* p)(int, int) = & max;
   int a = 1, b = 2, c = 3, d;
- 
-  d = p(p(a, b), c); 
- 
+
+  d = p(p(a, b), c);
+
   int result = await read(1);
   return d;
 }
 
 int main() {
-  struct _Futuref this = {}; 
-  struct _Futuref::poll(&this);
+  trait Future<int>* this = f(1);
+  this->poll();
   return 0;
 }

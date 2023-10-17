@@ -17,10 +17,10 @@ async int int::q(int* this) {
     return 0;
 }
 
-struct __FatPointer<int> (*CallBack)(int) = int::g;
-struct __FatPointer<int> (*CallBack2)(int*) = int::q;
+trait Future<int>* (*CallBack)(int) = int::g;
+trait Future<int>* (*CallBack2)(int*) = int::q;
 
-async int f(int start) {   
+async int f(int start) {
   int result = await CallBack(1);
   result = await CallBack2(&result);
   return result;

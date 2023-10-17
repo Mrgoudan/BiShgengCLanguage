@@ -5588,11 +5588,13 @@ public:
                             #endif
                             );
   #if ENABLE_BSC
+  QualType CompleteTraitType(TraitDecl *TD, QualType QT);
   QualType CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo);
   VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
                             Declarator &TraitDeclarator,
                             SourceLocation TypeLoc);
-  QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T);
+  QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
+                                     SourceLocation Loc);
   TraitDecl *TryDesugarTrait(QualType T);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
                                  std::string ID);

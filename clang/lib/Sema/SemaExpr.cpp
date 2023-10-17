@@ -2423,7 +2423,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     *Out = CorrectTypoDelayed(
         R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
         [=](const TypoCorrection &TC) {
-          emitEmptyLookupTypoDiagnostic(TC, *this, SS, 
+          emitEmptyLookupTypoDiagnostic(TC, *this, SS,
                                         #if ENABLE_BSC
                                         ET,
                                         #endif
@@ -17671,22 +17671,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (Action == AA_Passing_CFAudited)
     ActionForDiag = AA_Passing;
   #if ENABLE_BSC
-  if (TraitDecl *TD = TryDesugarTrait(SecondType)) {
-    QualType QT = Context.getTraitType(TD);
-    if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
-      TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
-      const TemplateSpecializationType *TST =
-          dyn_cast<TemplateSpecializationType>(
-              SecondType->getLocallyUnqualifiedSingleStepDesugaredType());
-      for (auto T : TST->template_arguments())
-        Args.addArgument(
-            TemplateArgumentLoc(T, Context.getTrivialTypeSourceInfo(
-                                       T.getAsType(), TTD->getBeginLoc())));
-      QT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
-      QT = Context.getElaboratedType(ETK_Trait, nullptr, QT);
-    }
-    SecondType = QT;
-  }
+  if (TraitDecl *TD = TryDesugarTrait(SecondType))
+    SecondType = CompleteTraitType(TD, SecondType);
   #endif
 
   FDiag << FirstType << SecondType << ActionForDiag

@@ -112,7 +112,7 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
 
       FieldDecl *NewFD = FieldDecl::Create(Context, TraitVtableRD, BL, EL,
                                            FieldIt->getIdentifier(), PT, TInfo,
-                                           nullptr, false, ICIS_CopyInit);
+                                           nullptr, false, ICIS_NoInit);
       NewFD->setAccess(AS_public);
       TraitVtableRD->addDecl(NewFD);
     }
@@ -179,10 +179,10 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
   FieldDecl *DataFD = FieldDecl::Create(
       Context, TraitRD, StartLoc, NameLoc, &Context.Idents.get(DataName),
       DataPT, Context.getTrivialTypeSourceInfo(DataPT), nullptr, false,
-      ICIS_CopyInit);
+      ICIS_NoInit);
   FieldDecl *VtableFD = FieldDecl::Create(
       Context, TraitRD, StartLoc, NameLoc, &Context.Idents.get(VtableName),
-      VtablePT, TInfo, nullptr, false, ICIS_CopyInit);
+      VtablePT, TInfo, nullptr, false, ICIS_NoInit);
   DataFD->setAccess(AS_public);
   VtableFD->setAccess(AS_public);
   TraitRD->addDecl(DataFD);
@@ -252,19 +252,7 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
   QualType T = UO->getType();
   const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
   TraitDecl *TD = TryDesugarTrait(ProtoArgType);
-  QualType QT = Context.getTraitType(TD);
-  if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
-    TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
-    const TemplateSpecializationType *TST =
-        dyn_cast<TemplateSpecializationType>(
-            ProtoArgType->getLocallyUnqualifiedSingleStepDesugaredType());
-    for (auto T : TST->template_arguments())
-      Args.addArgument(TemplateArgumentLoc(
-          T,
-          Context.getTrivialTypeSourceInfo(T.getAsType(), TTD->getBeginLoc())));
-    QT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
-    QT = Context.getElaboratedType(ETK_Trait, nullptr, QT);
-  }
+  QualType QT = CompleteTraitType(TD, ProtoArgType);
   if (!PT || !TD) {
     Diag(DSLoc, diag::err_type_has_not_impl_trait) << QT << T;
     return nullptr;
@@ -310,6 +298,7 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
   std::vector<Expr *> Exprs = {TraitData.get(), UOVtable.get()};
   MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
   ExprResult Result = ActOnInitList(DSLoc, initExprs, DSLoc);
+  dyn_cast<InitListExpr>(Result.getAs<Expr>())->setHasDesugar(true);
   TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(ProtoArgType);
   TypeResult TR = CreateParsedType(ProtoArgType, TInfo);
   Result = ActOnCompoundLiteral(DSLoc, TR.get(), DSLoc, Result.get());
@@ -390,6 +379,23 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
     }
   }
   return false;
+}
+
+QualType Sema::CompleteTraitType(TraitDecl *TD, QualType QT) {
+  QualType TraitQT = Context.getTraitType(TD);
+  if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
+    TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
+    const TemplateSpecializationType *TST =
+        dyn_cast<TemplateSpecializationType>(
+            QT->getLocallyUnqualifiedSingleStepDesugaredType());
+    for (auto T : TST->template_arguments())
+      Args.addArgument(TemplateArgumentLoc(
+          T,
+          Context.getTrivialTypeSourceInfo(T.getAsType(), TTD->getBeginLoc())));
+    TraitQT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
+    TraitQT = Context.getElaboratedType(ETK_Trait, nullptr, TraitQT);
+  }
+  return TraitQT;
 }
 
 QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
@@ -521,15 +527,15 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
   return NewVD;
 }
 
-QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T) {
+QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
+                                         SourceLocation Loc) {
   RecordDecl *RD = TD->getTrait();
   assert(RD && "The TraitDecl did not generate a corresponding TraitRecord");
   QualType RT = QualType();
   if (dyn_cast<TemplateSpecializationType>(
           T->getPointeeType()
               ->getLocallyUnqualifiedSingleStepDesugaredType())) {
-    TypeSourceInfo *TInfo =
-        Context.getTrivialTypeSourceInfo(T, TD->getLocation());
+    TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(T, Loc);
     RT = CompleteRecordType(RD, TInfo);
   } else {
     RT = RD->getTypeForDecl()->getCanonicalTypeInternal();
@@ -633,7 +639,6 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
   ExprResult TraitInit =
       ActOnInitList(SourceLocation(), initExprs, SourceLocation());
-
   AddInitializerToDecl(NewVD, TraitInit.get(), false);
   return NewVD;
 }
@@ -695,6 +700,24 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
       TraitDecl *TD = RD->getDesugaredTraitDecl();
       RecordDecl *LookupVtable = TD->getVtable();
       VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
+      QualType QT = Context.getTraitType(TD);
+      if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
+        TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
+        ClassTemplateSpecializationDecl *CTD =
+            dyn_cast<ClassTemplateSpecializationDecl>(RD);
+        ArrayRef<TemplateArgument> TAL = CTD->getTemplateArgs().asArray();
+        for (auto T : TAL)
+          Args.addArgument(
+              TemplateArgumentLoc(T, Context.getTrivialTypeSourceInfo(
+                                         T.getAsType(), TTD->getBeginLoc())));
+        QT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
+        QT = Context.getElaboratedType(ETK_Trait, nullptr, QT);
+      }
+      if (!LookupVar) {
+        Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
+            << QT << T;
+        return ExprError();
+      }
       QualType VtableTy = Context.getRecordType(LookupVtable);
       if (LookupVtable->getDescribedClassTemplate())
         VtableTy =

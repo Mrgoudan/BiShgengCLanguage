@@ -3,9 +3,6 @@
 
 #include "future.hbs"
 
-typedef struct PollResult<int> (*pollType)(void*);
-typedef void (*freeType)(void*);
-
 struct _Futureread {
     int a;
     int res;
@@ -27,16 +24,13 @@ struct PollResult<int> struct _Futureread::poll(__Futureread *this)     {
 
 void struct _Futureread::free(struct _Futureread *this) {}
 
-struct __Trait_T_Vtable<int> _Futureread_vtable = {
-  .poll = (pollType)struct _Futureread::poll, 
-  .free = (freeType)struct _Futureread::free 
-};
+impl trait Future<int> for struct _Futureread;
 
-struct __FatPointer<int> read(int a)     {
+trait Future<int>* read(int a) {
   struct _Futureread* ptr;
   ptr->a = a;
   ptr->__future_state = 0;
-  return (struct __FatPointer<int>) { .data = ptr, .vtable = &_Futureread_vtable};
+  return ptr;
 }
 
 #endif

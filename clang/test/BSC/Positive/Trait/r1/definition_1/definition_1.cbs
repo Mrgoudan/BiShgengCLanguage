@@ -74,10 +74,10 @@ int main() {
   return 0;
 };
 // CHECK: struct S_1 s_1 = {.x = 1};
-// CHECK-NEXT: struct __Trait_F i_1 = {&s_1, &__struct_S_1_trait_F};
+// CHECK-NEXT: struct __Trait_F i = {&s_1, &__struct_S_1_trait_F};
 // CHECK-NEXT: enum S_2 s_2 = x;
-// CHECK-NEXT: struct __Trait_F j_1 = {&s_2, &__enum_S_2_trait_F};
+// CHECK-NEXT: struct __Trait_F j = {&s_2, &__enum_S_2_trait_F};
 // CHECK-NEXT: union S_3 s_3 = {.x = 1};
-// CHECK-NEXT: struct __Trait_F k_1 = {&s_3, &__union_S_3_trait_F};
+// CHECK-NEXT: struct __Trait_F k = {&s_3, &__union_S_3_trait_F};
 // CHECK-NEXT: int s_4 = 1;
-// CHECK-NEXT: struct __Trait_F l_1 = {&s_4, &__int_trait_F};
+// CHECK-NEXT: struct __Trait_F l = {&s_4, &__int_trait_F};

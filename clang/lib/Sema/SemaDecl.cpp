@@ -4064,7 +4064,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   // C: Function types need to be compatible, not identical. This handles
   // duplicate function decls like "void f(int); void f(enum X);" properly.
-  if (!getLangOpts().CPlusPlus 
+  if (!getLangOpts().CPlusPlus
       #if ENABLE_BSC
       && !getLangOpts().BSC
       #endif
@@ -14514,7 +14514,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize
   #if ENABLE_BSC
   if (getLangOpts().BSC)
     if (TraitDecl *TD = TryDesugarTrait(parmDeclType))
-      parmDeclType = DesugarTraitToStructTrait(TD, parmDeclType);
+      parmDeclType = DesugarTraitToStructTrait(TD, parmDeclType, D.getBeginLoc());
   #endif
 
   // Temporarily put parameter variables in the translation unit, not
@@ -14533,8 +14533,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize
       UnqualTypeLoc CurrTL = TInfo->getTypeLoc().getUnqualifiedLoc();
       CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
       CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
-      TemplateSpecializationTypeLoc SpecTL = 
-                CurrTL.getAs<TemplateSpecializationTypeLoc>();
+      TemplateSpecializationTypeLoc SpecTL =
+          CurrTL.getAs<TemplateSpecializationTypeLoc>();
       const TemplateSpecializationType* SpecType = SpecTL.getTypePtr();
       for (unsigned i = 0, e = SpecTL.getNumArgs(); i != e; ++i) {
         TemplateArgument TemplateArg = SpecType->getArg(i);
@@ -14543,8 +14543,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize
           SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgExpr));
         } else if (TemplateArg.getKind() == clang::TemplateArgument::Type){
           QualType TemplateArgType = TemplateArg.getAsType();
-          TypeSourceInfo *TemplateArgTypeInfo = 
-              Context.getTrivialTypeSourceInfo(TemplateArgType, DS.getBeginLoc());
+          TypeSourceInfo *TemplateArgTypeInfo =
+              Context.getTrivialTypeSourceInfo(TemplateArgType,
+                                               DS.getBeginLoc());
           SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgTypeInfo));
         }
       }
@@ -17807,7 +17808,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclSt
 ///
 /// \todo The Declarator argument is a hack. It will be removed once
 FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
-                                TypeSourceInfo *TInfo, 
+                                TypeSourceInfo *TInfo,
                                 #if ENABLE_BSC
                                 TagDecl *Tag,
                                 #else
@@ -17963,6 +17964,16 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
     #endif
 
   #if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    if (T->isTraitType()) {
+      Diag(Loc, diag::err_variables_not_trait_pointer);
+    }
+    if (T->isTraitPointerType()) {
+      TraitDecl *TD = TryDesugarTrait(T);
+      T = DesugarTraitToStructTrait(TD, T, Loc);
+      TInfo = Context.getTrivialTypeSourceInfo(T);
+    }
+  }
   FieldDecl *NewFD = FieldDecl::Create(Context, Tag, TSSL, Loc, II, T, TInfo,
                                        BitWidth, Mutable, InitStyle);
   #else

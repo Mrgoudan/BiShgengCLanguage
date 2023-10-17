@@ -23,7 +23,7 @@ int main() {
 
 // CHECK: int int_foo(int *this) {
 // CHECK-NEXT: return 10;
- // CHECK-NEXT: }
+// CHECK-NEXT: }
 
 // CHECK: struct __Trait_F_Vtable_int __int_trait_F = {.foo = (int (*)(void *))int_foo};
 

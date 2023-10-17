@@ -49,7 +49,7 @@ int main() {
 // CHECK: int main(void) {
 // CHECK-NEXT: int m = 0;
 // CHECK-NEXT: struct S s = {10};
-// CHECK-NEXT: struct __Trait_Future_struct_S a_1 = {&m, &__int_trait_Future};
-// CHECK-NEXT: int b = a_1.vtable->poll(a_1.data, s).c;
+// CHECK-NEXT: struct __Trait_Future_struct_S a = {&m, &__int_trait_Future};
+// CHECK-NEXT: int b = a.vtable->poll(a.data, s).c;
 // CHECK-NEXT: return b - 10;
 // CHECK-NEXT: }

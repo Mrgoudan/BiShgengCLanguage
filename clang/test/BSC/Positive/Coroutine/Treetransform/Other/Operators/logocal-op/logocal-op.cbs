@@ -26,7 +26,7 @@ async int f(int start) {
 }
 
 int main() {
-  struct _Futuref this = {}; 
-  struct _Futuref::poll(&this);
+  trait Future<int>* this = f(1);
+  this->poll();
   return 0;
 }

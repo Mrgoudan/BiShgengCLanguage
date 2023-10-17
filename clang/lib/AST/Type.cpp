@@ -4549,7 +4549,7 @@ bool Type::isBSCFutureType() const {
   if (const auto *RT = getAs<RecordType>()) {
     RecordDecl *RD = RT->getAsRecordDecl();
     if (isa<ClassTemplateSpecializationDecl>(RD)) {
-      return RD->getNameAsString() == "__FatPointer";
+      return RD->getNameAsString() == "__Trait_Future";
     }
   }
   return false;

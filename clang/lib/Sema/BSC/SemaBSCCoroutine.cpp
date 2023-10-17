@@ -157,6 +157,8 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
               if (VD->isExternallyVisible()) continue;
 
               QualType QT = VD->getType();
+              if (QT->isTraitPointerType())
+                continue;
               if (QT.isConstQualified()) {
                 QT.removeLocalConst();
                 VD->setType(QT);
@@ -467,7 +469,7 @@ static RecordDecl *buildFutureRecordDecl(
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
     if (!S.IsBSCCompatibleFutureType(AE->getType())) {
       QualType FatPointerType = lookupGenericType(
-          S, FD->getBeginLoc(), AE->getType(), "__FatPointer");
+          S, FD->getBeginLoc(), AE->getType(), "__Trait_Future");
       if (FatPointerType.isNull()) {
         return nullptr;
       }
@@ -550,6 +552,8 @@ generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
   return std::make_pair(VoidRD, IsExisted);
 }
 
+// TODO: Can we first desugar to "impl trait Future<> for type",
+// then call the trait interface to desugar again.
 static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
                                     RecordDecl *VtableRD,
                                     RecordDecl *PollResultRD,
@@ -710,7 +714,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
 
   Sema::ConditionResult IfCond = S.ActOnCondition(
       nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
-  
+
   // exit(1);
   std::string ExitName = "exit";
 
@@ -950,7 +954,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
 
   Expr *StructFutureRef =
       S.BuildDeclRefExpr(VD, VD->getType(), VK_LValue, NLoc);
-   
+
   RecordDecl::field_iterator FieldIt = RD->field_begin(),
                              Field_end = RD->field_end();
   llvm::SmallVector<Expr *, 4> InitExprs;
@@ -1140,9 +1144,8 @@ class RecursiveCallVisitor : public StmtVisitor<RecursiveCallVisitor> {
 public:
   RecursiveCallVisitor(Decl *FD) : FD(FD) { IsRecursiveCall = false; }
   void VisitCallExpr(CallExpr *E) {
-    if (E->getCalleeDecl() == FD) 
+    if (E->getCalleeDecl() == FD)
       IsRecursiveCall = true;
-    
   }
   void VisitStmt(Stmt *S) {
     for (auto *C : S->children()) {
@@ -1356,7 +1359,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
 
         if (Init && (QT->isArrayType() || QT->isRecordType())) {
           Expr *CInit = BaseTransform::TransformExpr(Init).get();
-          
+
           std::string ArgName = VD->getName().str();
           VarDecl *ArgVDNew = VarDecl::Create(
               SemaRef.Context, FD, SourceLocation(), SourceLocation(),
@@ -2087,7 +2090,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
           }
           CallArgs.push_back(CE->getArg(I));
         }
-        
+
         Expr *FDRef = SemaRef.BuildDeclRefExpr(
             FutureInitFunc, FutureInitFunc->getType().getNonReferenceType(),
             VK_LValue, SourceLocation());
@@ -2142,7 +2145,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
              "the return type of poll function is null");
       QualType ParamType = SemaRef.getASTContext().getCanonicalType(
           PollFD->getParamDecl(0)->getType());
-    
+
       DeclarationName Name = FtField->getDeclName();
       DeclarationNameInfo MemberNameInfo(Name, FtField->getLocation());
       Expr *FtExpr = SemaRef.BuildMemberExpr(
@@ -2179,11 +2182,11 @@ class AEFinder : public StmtVisitor<AEFinder> {
       assert(args.size() == 1);
       // Make sure these three generic types are fully instantiated.
       (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
-                                             "PollResult");  
+                                             "PollResult");
       (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
-                                            "__Trait_T_Vtable");  
+                              "__Trait_Future_Vtable");
       (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
-                                            "__FatPointer");           
+                              "__Trait_Future");
       RecordDecl::field_iterator PtrField, VtableField, FPFieldIt;
       for (FPFieldIt = FatPointerRD->field_begin();
           FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {
@@ -2574,11 +2577,11 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     Expr *RHSExpr = S.BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(),
                                     FreeArgs, SourceLocation())
                         .get();
-    
+
     Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
                               /* LHSExpr=*/DataExpr, /* RHSExpr=*/IntegerExpr)
                      .get();
-    // if (this.Ft_<x>.data != 0)  
+    // if (this.Ft_<x>.data != 0)
     Sema::ConditionResult IfCond = S.ActOnCondition(
         nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
     SmallVector<Stmt *, 1> BodyStmts = {RHSExpr};
@@ -2634,7 +2637,7 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     Expr *CE = S.BuildCallExpr(nullptr, FreeFuncRef, SourceLocation(), Args,
                                SourceLocation())
                    .get();
-    
+
     Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
                               /* LHSExpr=*/FutureObjDRE, /* RHSExpr=*/IntegerExpr)
                      .get();
@@ -2833,7 +2836,7 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
   }
 
   QualType AwaitReturnTy = E->getType();
-  
+
   bool IsCall = isa<CallExpr>(E);
   if (IsCall) {
     Decl *AwaitDecl = (dyn_cast<CallExpr>(E))->getCalleeDecl();
@@ -2941,12 +2944,12 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
       return Decls;
     }
     QualType VtableType = lookupGenericType(*this, FD->getBeginLoc(), ReturnTy,
-                                            "__Trait_T_Vtable");
+                                            "__Trait_Future_Vtable");
     if (VtableType.isNull()) {
       return Decls;
     }
     QualType FatPointerType =
-        lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__FatPointer");
+        lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__Trait_Future");
     if (FatPointerType.isNull()) {
       return Decls;
     }
@@ -2957,7 +2960,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
       if (FutureInitDef) {
         Decls.push_back(FutureInitDef);
         Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
-      } 
+      }
     }
   }
   return Decls;
@@ -3011,14 +3014,14 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
     return Decls;
   }
   RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
-  QualType VtableType =
-      lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__Trait_T_Vtable");
+  QualType VtableType = lookupGenericType(*this, FD->getBeginLoc(), ReturnTy,
+                                          "__Trait_Future_Vtable");
   if (VtableType.isNull()) {
     return Decls;
   }
   RecordDecl *VtableRD = VtableType->getAsRecordDecl();
   QualType FatPointerType =
-      lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__FatPointer");
+      lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__Trait_Future");
   if (FatPointerType.isNull()) {
     return Decls;
   }
@@ -3079,7 +3082,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
     FutureInit = buildFutureInitFunctionDefinition(*this, RD, FD, FatPointerRD,
                                                    VtableDecl, FutureInitDef);
   }
-  
+
   if (!FutureInit) {
     return Decls;
   }

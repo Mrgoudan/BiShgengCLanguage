@@ -41,8 +41,8 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int m = 0;
-// CHECK-NEXT: struct __Trait_Future_int f_1 = {&m, &__int_trait_Future}, g_1 = {&m, &__int_trait_Future};
-// CHECK-NEXT: int a = f_1.vtable->poll(f_1.data);
-// CHECK-NEXT: int b = g_1.vtable->poll(g_1.data);
+// CHECK-NEXT: struct __Trait_Future_int f = {&m, &__int_trait_Future}, g = {&m, &__int_trait_Future};
+// CHECK-NEXT: int a = f.vtable->poll(f.data);
+// CHECK-NEXT: int b = g.vtable->poll(g.data);
 // CHECK-NEXT: return a - b;
 // CHECK-NEXT: }

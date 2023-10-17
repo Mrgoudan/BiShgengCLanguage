@@ -42,7 +42,7 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int x = 1;
-// CHECK-NEXT: struct __Trait_F_int t_1 = {&x, &__int_trait_F};
-// CHECK-NEXT: t_1.vtable->f(t_1.data);
+// CHECK-NEXT: struct __Trait_F_int t = {&x, &__int_trait_F};
+// CHECK-NEXT: t.vtable->f(t.data);
 // CHECK-NEXT: return 0;
 // CHECK-NEXT: }

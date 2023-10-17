@@ -32,16 +32,16 @@ async int f() {
 
 
 // Declaration
-// CHECK: |-FunctionDecl {{.*}} <line:28:1, col:11> col:11 used __f 'struct __FatPointer<int> (void)' 
+// CHECK: |-FunctionDecl {{.*}} <line:28:1, col:11> col:11 used __f 'struct __Trait_Future<int> (void)'
 
 // Make sure that function `__f` has body.
-// CHECK: |-FunctionDecl {{.*}} <line:28:1, col:11> col:11 used __f 'struct __FatPointer<int> (void)' 
+// CHECK: |-FunctionDecl {{.*}} <line:28:1, col:11> col:11 used __f 'struct __Trait_Future<int> (void)'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:1, col:11>
 // CHECK-NEXT: |   |-DeclStmt {{.*}} <col:11>
 
 int main() {
-  struct __FatPointer<int> this = f();
-  this.vtable->poll(this.data);
-  this.vtable->free(this.data); 
+  trait Future<int>* this = f();
+  this->poll();
+  this->free();
   return 0;
 }

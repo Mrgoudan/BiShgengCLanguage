@@ -95,18 +95,18 @@ int main() {
   return 0;
 }
 // CHECK: int x = 41;
-// CHECK-NEXT: struct __Trait_TR1 tr1_1 = {&x, &__int_trait_TR1};
-// CHECK-NEXT: tr1_1.vtable->f1(tr1_1.data);
-// CHECK-NEXT: int a1 = tr1_1.vtable->g1(tr1_1.data, 1);
+// CHECK-NEXT: struct __Trait_TR1 tr1 = {&x, &__int_trait_TR1};
+// CHECK-NEXT: tr1.vtable->f1(tr1.data);
+// CHECK-NEXT: int a1 = tr1.vtable->g1(tr1.data, 1);
 // CHECK-NEXT: if (a1 != 42)
 // CHECK-NEXT: return 1;
-// CHECK-NEXT: struct __Trait_TR2 tr2_1 = {&x, &__int_trait_TR2};
-// CHECK-NEXT: tr2_1.vtable->f2(tr2_1.data);
-// CHECK-NEXT: int a2 = tr2_1.vtable->g2(tr2_1.data, 1);
+// CHECK-NEXT: struct __Trait_TR2 tr2 = {&x, &__int_trait_TR2};
+// CHECK-NEXT: tr2.vtable->f2(tr2.data);
+// CHECK-NEXT: int a2 = tr2.vtable->g2(tr2.data, 1);
 // CHECK-NEXT: if (a2 != 42)
 // CHECK-NEXT: return 2;
 // CHECK-NEXT: int y = 41;
-// CHECK-NEXT: struct __Trait_TR1 tt1_1 = {&y, &__int_trait_TR1};
-// CHECK-NEXT: tt1_1.vtable->f1(tt1_1.data);
+// CHECK-NEXT: struct __Trait_TR1 tt1 = {&y, &__int_trait_TR1};
+// CHECK-NEXT: tt1.vtable->f1(tt1.data);
 // CHECK-NEXT: (struct __Trait_TR1){&y, &__int_trait_TR1}.vtable->f1((struct __Trait_TR1){&y, &__int_trait_TR1}.data);
 // CHECK-NEXT: baz((struct __Trait_TR1){.data = &y, .vtable = &__int_trait_TR1});

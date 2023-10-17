@@ -25,8 +25,8 @@ async int g() {
 }
 
 int main() {
-  struct __FatPointer<int> this = g();
-  this.vtable->poll(this.data);
-  this.vtable->free(this.data); 
+  trait Future<int>* this = g();
+  this->poll();
+  this->free(); 
   return 0;
 }

@@ -25,18 +25,18 @@ async int f() {
 }
 
 int main() {
-  struct __FatPointer<int> this = f(); 
-  this.vtable->poll(this.data);
-  this.vtable->free(this.data);
+  trait Future<int>* this = f();
+  this->poll();
+  this->free();
   return 0;
 }
 
-// CHECK: struct __FatPointer_int __f(void) {
+// CHECK: struct __Trait_Future_int __f(void) {
 // CHECK-NEXT:     struct _Futuref *data = calloc(1, sizeof(struct _Futuref));
 // CHECK-NEXT:     if (data == 0) {
 // CHECK-NEXT:         exit(1);
 // CHECK-NEXT:     }
 // CHECK-NEXT:     data->__future_state = 0;
-// CHECK-NEXT:     struct __FatPointer_int fp = {(void *)data, &__Trait_T_Vtablef};
+// CHECK-NEXT:     struct __Trait_Future_int fp = {(void *)data, &__Trait_Future_Vtablef};
 // CHECK-NEXT:     return fp;
 // CHECK-NEXT: }

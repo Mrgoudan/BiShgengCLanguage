@@ -1,9 +1,9 @@
 <div>
     <div style='height:1000px;width:90%'>
-        <div style='border-top:1px solid'> </div>          
+        <div style='border-top:1px solid'> </div>
         <div style='margin-top:10%;font-size:28px;width:100%;heigth:80%;font-width:600;letter-spacing:2px;text-align:center'>
             <span style=''>毕昇C用户手册</span>
-            <div style='margin-top:10%;font-size:20px'>版本号：0.0.0</div>              
+            <div style='margin-top:10%;font-size:20px'>版本号：0.0.0</div>
             <div style='margin-top:3%;font-size:20px'>发布时间：2023-08-11</div>
         </div>
         <div style='margin-top:500px;font-size:16px;font-width:600;letter-spacing:2px;text-align:center'>
@@ -11,13 +11,13 @@
         </div>
     </div>
 </div>
-<div style=“package-break-after:always;“></div>  
+<div style=“package-break-after:always;“></div>
 
 ## 编译器安装和使用
 
 ### 安装毕昇 C 编译器
 
-首先，请根据系统版本到[软件发布平台](https://cmc-svz.clouddragon.huawei.com/cmcversion/index/releaseView?deltald=7952942537179264&isSelect=Software)根据平台架构下载相应的安装包，如 x86_64, arrch64 等。		
+首先，请根据系统版本到[软件发布平台](https://cmc-svz.clouddragon.huawei.com/cmcversion/index/releaseView?deltald=7952942537179264&isSelect=Software)根据平台架构下载相应的安装包，如 x86_64, arrch64 等。
 
 下载成功后，解压安装包，通过配置 PATH 环境变量即可完成安装。具体步骤如下 （以 clang+llvm-15.04-x86_64-linux-gun-bsc.tar.gz 为例)
 
@@ -29,7 +29,7 @@
   $ rpm2cpio clang+llvm-15.04-x86_64-linux-gun-bsc.rpm | cpio -div
   ```
 
-- 配置环境变量 
+- 配置环境变量
 
   > 注：所配置的环境变量仅在运行下列命令的当前 `shell` 会话窗口有效，重启 `shell` 后需要重新配置环境变量。若想要这些环境变量在 shell 每次启动时重新生效，你可以在 `$HOME/.bashrc` 或 `$HOME/.ashrc` (根据 shell 的种类而定) 等 `shell` 初始化配置文件中加入如下命令：
 
@@ -41,7 +41,7 @@
 - 验证安装，执行以下命令：
 
   ```shell
-  $ clang --version	
+  $ clang --version
   ```
 
 若安装成功，可以看到当前的版本号和安装目录，其格式如下：
@@ -369,12 +369,12 @@ int main() {
     int a = 3;
     int b = 5;
     int c = 4;
-    
+
     // 泛型函数 实例化
     int max1 = max<int>(a, b);				// 显示指定泛型实参类型
     int max3 = max(a, c);				    // 隐式推导，编译器自动推导'T'为 int 类型
-    
-  	return 0;  
+
+	return 0;
 }
 ```
 
@@ -412,12 +412,12 @@ union MyUnion<T1, T2> foo_union<T1, T2>(union MyUnion<T1, T2> *this) {
 int main() {
     // 泛型struct 实例化
     struct S<int, LT> s1 = {.a = 42, .b = 5};		// 使用 typedef 后的类型作为泛型实参
-  
+
     // 泛型union 实例化
     union MyUnion<int, float> p;
-    foo_union(&p);		// 泛型函数 foo_union 的隐式类型推导 
-    
-    return 0;  
+    foo_union(&p);		// 泛型函数 foo_union 的隐式类型推导
+
+    return 0;
 }
 ```
 
@@ -493,10 +493,10 @@ struct Array_2<LLint B, int C, T>
 int main() {
   	int a1 = print_dataSize<int, 5>();
   	print_const<20>();
-    
+
   	struct Array_1<int, 5> arr1;
   	struct Array_2<5, 6, int> arr2 = {.a = 1};
-    
+
     return 0;
 }
 ```
@@ -591,7 +591,7 @@ void trait T::getArea(trait T* this) { // error: 不允许给 trait 类型扩展
 **语法：**
 
 ```c
-impl <trait> for <type>; 
+impl <trait> for <type>;
 ```
 
 我们可以通过 `impl` 关键字来为一个类型实现一个 trait。直观的，我们来看一个简单的例子：
@@ -672,7 +672,7 @@ void test() {
     struct S s = { 0.0 };
     int a = 1;
     float b = 1.0;
-    
+
     trait Print* p;
     p = &s; // ok，隐式转换
     p->print(); // This is a struct instance, valued 0.000000
@@ -885,8 +885,8 @@ _Bool struct PollResult<T>::is_completed(struct PollResult<T> *this, T *out) { .
 struct PollResult<T> struct PollResult<T>::completed(T result) { ... }
 
 trait Future<T> {
-    struct PollResult<T> poll(This* this); 
-    void free(This* this);                           
+    struct PollResult<T> poll(This* this);
+    void free(This* this);
 };
 ```
 
@@ -980,11 +980,11 @@ async void int::g(int* this) {
 
 ```c
 async void client1() {
-    // client1 send message... 
+    // client1 send message...
 }
 
 async void client2() {
-    // client2 send message... 
+    // client2 send message...
 }
 
 async int Server(int start) {
@@ -1112,9 +1112,10 @@ async int f() {
 ### 代码样例
 
 ```c
+# include “future.hbs”
 const int MAX = 3;
 
-async int f(int start) {
+async int f() {
     int *nptr = NULL;
     int  var[] = {10, 100, 200};
     int  i, *ptr;
@@ -1129,10 +1130,21 @@ async int f(int start) {
     return result;
 }
 
+async void g(int start) {
+    int result = start;
+    for (int i = 0; i< start; i++) {
+        int a = await f();
+    }
+}
+
 int main() {
-    trait Future<int> this = f();
-    this.vtable->poll(this.data);
-    this.vtable->free(this.data); 
+    trait Future<int> this1 = f();
+    this1->poll();
+    this1->free();
+    // 当 async 函数的返回类型是 void 时，我们需要用 struct Void 类型（会自动创建）来对 trait Future 实例化
+    trait Future<struct Void> this2 = g(5);
+    this2->poll();
+    this2->free();
     return 0;
 }
 ```
@@ -1154,7 +1166,7 @@ int main() {
 例如：如果你想要对 `test.cbs` 进行源源变换，那么在编译的时候使用如下命令即可在当前目录下得到一个名为 `test.c` 的 C 文件，文件的内容即为变换后的 C 源码。
 
 ```
-clang -rewrite-bsc test.cbs 
+clang -rewrite-bsc test.cbs
 ```
 
 你也可以使用 `-o` 指定输出的 C 文件名，示例如下：
@@ -1279,10 +1291,10 @@ void test() {
    ```c
    void test() {
        int* b;
-       int* owned a = b;	// error: b 是非 owned 类型，不能转换为 owned 类型    
+       int* owned a = b;	// error: b 是非 owned 类型，不能转换为 owned 类型
    }
    ```
-   
+
 9. 基础类型一致的情况下允许 `owned` 类型与非 `owned` 类型之间强制转换；基础类型不一致的情况下只允许`void* owned` 和 `T* owned` 之间相互转换
 
    ```c
@@ -1321,7 +1333,7 @@ void test() {
     }
     ```
 
-    
+
 
 #### 代码样例：
 
@@ -1332,7 +1344,7 @@ void consume(int* owned p) {
     int* owned p1 = p;
     free(p1);
 }
- void test() {     
+ void test() {
      int* owned p1 = (int* owned)malloc(sizeof(int));
      consume(p1);
      int res = *p1;	// error p1 所有权通过函数传参转移了，此处不允许再使用p1
@@ -1412,9 +1424,9 @@ direct-declarator:
 ```c
 template-parameter-list:
         template-parameter-item, template-parameter-list
-            
+
 template-parameter-item:
-        type-name identifier  
+        type-name identifier
         identifier
 ```
 

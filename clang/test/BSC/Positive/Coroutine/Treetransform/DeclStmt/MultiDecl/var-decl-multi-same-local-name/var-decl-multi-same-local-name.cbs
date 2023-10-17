@@ -32,9 +32,9 @@ async int getData() {
 }
 
 int main() {
-  struct __FatPointer<int> this = getData();
-  this.vtable->poll(this.data);
-  this.vtable->free(this.data); 
+  trait Future<int>* this = getData();
+  this->poll();
+  this->free();
   return 0;
 }
 
@@ -46,10 +46,10 @@ int main() {
 // CHECK-NEXT:      int start_2;
 // CHECK-NEXT:      int a_1;
 // CHECK-NEXT:      int start_3;
-// CHECK-NEXT:      struct __FatPointer_int Ft_1;
-// CHECK-NEXT:      struct __FatPointer_int Ft_2;
-// CHECK-NEXT:      struct __FatPointer_int Ft_3;
-// CHECK-NEXT:      struct __FatPointer_int Ft_4;
+// CHECK-NEXT:      struct __Trait_Future_int Ft_1;
+// CHECK-NEXT:      struct __Trait_Future_int Ft_2;
+// CHECK-NEXT:      struct __Trait_Future_int Ft_3;
+// CHECK-NEXT:      struct __Trait_Future_int Ft_4;
 // CHECK-NEXT:      int __future_state;
 // CHECK-NEXT:  };
 

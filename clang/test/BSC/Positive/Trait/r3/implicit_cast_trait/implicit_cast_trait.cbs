@@ -53,6 +53,6 @@ int main() {
 
 // CHECK: int main(void) {
 // CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_F b_1 = get((struct __Trait_F){.data = &a, .vtable = &__int_trait_F});
-// CHECK-NEXT: return b_1.vtable->foo(b_1.data);
+// CHECK-NEXT: struct __Trait_F b = get((struct __Trait_F){.data = &a, .vtable = &__int_trait_F});
+// CHECK-NEXT: return b.vtable->foo(b.data);
 // CHECK-NEXT: }
