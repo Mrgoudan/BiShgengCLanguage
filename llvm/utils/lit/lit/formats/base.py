@@ -3,6 +3,7 @@ import os
 
 import lit.Test
 import lit.util
+from lit.formats.BSCBlocklist import bsc_failed_cases
 
 class TestFormat(object):
     pass
@@ -21,6 +22,9 @@ class FileBasedTest(TestFormat):
 
             filepath = os.path.join(source_path, filename)
             if not os.path.isdir(filepath):
+                if litConfig.useBSC:
+                    if filename[-2:] != ".c" or filename in bsc_failed_cases:
+                        continue
                 base,ext = os.path.splitext(filename)
                 if ext in localConfig.suffixes:
                     yield lit.Test.Test(testSuite, path_in_suite + (filename,),

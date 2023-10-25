@@ -47,6 +47,7 @@ def load_test_suite(inputs):
         path=[],
         quiet=False,
         useValgrind=False,
+        useBSC=False,
         valgrindLeakCheck=False,
         valgrindArgs=[],
         noExecute=False,

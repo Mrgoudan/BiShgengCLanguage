@@ -85,6 +85,9 @@ class TestingConfig(object):
             if litConfig.valgrindLeakCheck:
                 available_features.append('vg_leak')
 
+        if litConfig.useBSC:
+            available_features.append('bsc')
+
         return TestingConfig(None,
                              name = '<unnamed>',
                              suffixes = set(),

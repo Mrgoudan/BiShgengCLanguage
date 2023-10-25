@@ -523,14 +523,15 @@ class LLVMConfig(object):
           self.config.available_features.add('clang')
           builtin_include_dir = self.get_clang_builtin_include_dir(
               self.config.clang)
+          bsc_args = ['-x', 'bsc'] if self.lit_config.useBSC else []
           tool_substitutions = [
               ToolSubst('%clang', command=self.config.clang,
-                        extra_args=additional_flags),
+                        extra_args=bsc_args+additional_flags),
               ToolSubst('%clang_analyze_cc1', command='%clang_cc1',
                         extra_args=['-analyze', '%analyze',
                                     '-setup-static-analyzer']+additional_flags),
               ToolSubst('%clang_cc1', command=self.config.clang,
-                        extra_args=['-cc1', '-internal-isystem',
+                        extra_args=['-cc1']+bsc_args+['-internal-isystem',
                                     builtin_include_dir, '-nostdsysteminc'] +
                                    additional_flags),
               ToolSubst('%clang_cpp', command=self.config.clang,

@@ -32,6 +32,7 @@ def main(builtin_params={}):
         path=opts.path,
         quiet=opts.quiet,
         useValgrind=opts.useValgrind,
+        useBSC=opts.useBSC,
         valgrindLeakCheck=opts.valgrindLeakCheck,
         valgrindArgs=opts.valgrindArgs,
         noExecute=opts.noExecute,
@@ -97,6 +98,8 @@ def main(builtin_params={}):
             sys.exit(0)
 
     selected_tests = selected_tests[:opts.max_tests]
+
+    selected_tests = mark_bscexcluded(lit_config.useBSC, selected_tests)
 
     mark_xfail(discovered_tests, opts)
 
@@ -213,6 +216,11 @@ def mark_excluded(discovered_tests, selected_tests):
     for t in excluded_tests:
         t.setResult(result)
 
+def mark_bscexcluded(useBSC, selected_tests):
+    res_list = selected_tests
+    if useBSC:
+        res_list = [i for i in selected_tests if "Clang-Unit :: " not in i.getFullName()]
+    return res_list
 
 def run_tests(tests, lit_config, opts, discovered_tests):
     workers = min(len(tests), opts.workers)

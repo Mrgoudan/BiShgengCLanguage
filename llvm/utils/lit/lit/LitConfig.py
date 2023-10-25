@@ -21,7 +21,7 @@ class LitConfig(object):
     """
 
     def __init__(self, progname, path, quiet,
-                 useValgrind, valgrindLeakCheck, valgrindArgs,
+                 useValgrind, useBSC, valgrindLeakCheck, valgrindArgs,
                  noExecute, debug, isWindows, order,
                  params, config_prefix = None,
                  maxIndividualTestTime = 0,
@@ -33,6 +33,7 @@ class LitConfig(object):
         self.path = [str(p) for p in path]
         self.quiet = bool(quiet)
         self.useValgrind = bool(useValgrind)
+        self.useBSC = bool(useBSC)
         self.valgrindLeakCheck = bool(valgrindLeakCheck)
         self.valgrindUserArgs = list(valgrindArgs)
         self.noExecute = noExecute

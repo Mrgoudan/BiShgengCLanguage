@@ -98,6 +98,10 @@ def parse_args():
             dest="useValgrind",
             help="Run tests under valgrind",
             action="store_true")
+    execution_group.add_argument("--bsc",
+            dest="useBSC",
+            help="Run tests under bsc",
+            action="store_true")
     execution_group.add_argument("--vg-leak",
             dest="valgrindLeakCheck",
             help="Check for memory leaks under valgrind",

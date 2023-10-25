@@ -191,6 +191,8 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
             filepath = os.path.join(sourcePath, filename)
             if not os.path.isdir(filepath):
+                if litConfig.useBSC and filepath[-2:] != ".c":
+                    continue
                 if any([re.search(ext, filename) for ext in SUPPORTED_SUFFIXES]):
                     yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
 
