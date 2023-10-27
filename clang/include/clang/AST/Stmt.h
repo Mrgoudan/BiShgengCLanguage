@@ -1431,6 +1431,10 @@ class CompoundStmt final
                SafeScopeSpecifier SafeSpec = SS_None, SourceLocation SafeLoc = SourceLocation());
   explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty),
                                             SafeSpec(SS_None), SafeLoc() {}
+  #else
+  CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
+               SourceLocation LB, SourceLocation RB);
+  explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {}
   #endif
 
   void setStmts(ArrayRef<Stmt *> Stmts);

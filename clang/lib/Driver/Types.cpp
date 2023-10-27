@@ -156,7 +156,6 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_CL: case TY_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
-  // 1
   #if ENABLE_BSC
   case TY_BSC:
   case TY_PP_BSC:
@@ -169,7 +168,6 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_ObjCXX: case TY_PP_ObjCXX: case TY_PP_ObjCXX_Alias:
   case TY_CHeader: case TY_PP_CHeader:
   case TY_CLHeader:
-  // 2
   #if ENABLE_BSC
   case TY_BSCHeader:
   case TY_PP_BSCHeader:

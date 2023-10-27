@@ -1215,8 +1215,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Stream.EnterSubblock(CONTROL_BLOCK_ID, 5);
   RecordData Record;
 
-  // add lto opt string
   #if ENABLE_BSC
+  // add lto opt string
   std::string OptString = PP.getPreprocessorOpts().OptString;
   if (!OptString.empty()) {
     OptString = OptString + '\0';

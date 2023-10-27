@@ -42,11 +42,9 @@ public:
 
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D);
   void VisitClassTemplateDecl(const ClassTemplateDecl *D);
-  #if ENABLE_BSC
-  void VisitTraitTemplateDecl(const TraitTemplateDecl *D);
-  #endif
   void VisitVarTemplateDecl(const VarTemplateDecl *D);
   #if ENABLE_BSC
+  void VisitTraitTemplateDecl(const TraitTemplateDecl *D);
   void VisitCompoundStmt(const CompoundStmt *Node);
   #endif
 };

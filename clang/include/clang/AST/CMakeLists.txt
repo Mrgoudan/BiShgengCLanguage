@@ -18,15 +18,15 @@ clang_tablegen(AttrVisitor.inc -gen-clang-attr-ast-visitor
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrVisitor)
 
-clang_tablegen(StmtNodes.inc -gen-clang-stmt-nodes
+clang_tablegen(StmtNodes.inc -gen-clang-stmt-nodes ${BSC_OPTION}
   SOURCE ../Basic/StmtNodes.td
   TARGET ClangStmtNodes)
 
-clang_tablegen(DeclNodes.inc -gen-clang-decl-nodes
+clang_tablegen(DeclNodes.inc -gen-clang-decl-nodes ${BSC_OPTION}
   SOURCE ../Basic/DeclNodes.td
   TARGET ClangDeclNodes)
 
-clang_tablegen(TypeNodes.inc -gen-clang-type-nodes
+clang_tablegen(TypeNodes.inc -gen-clang-type-nodes ${BSC_OPTION}
   SOURCE ../Basic/TypeNodes.td
   TARGET ClangTypeNodes)
 
@@ -38,11 +38,11 @@ clang_tablegen(AbstractBasicWriter.inc -gen-clang-basic-writer
   SOURCE PropertiesBase.td
   TARGET ClangAbstractBasicWriter)
 
-clang_tablegen(AbstractTypeReader.inc -gen-clang-type-reader
+clang_tablegen(AbstractTypeReader.inc -gen-clang-type-reader ${BSC_OPTION}
   SOURCE TypeProperties.td
   TARGET ClangAbstractTypeReader)
 
-clang_tablegen(AbstractTypeWriter.inc -gen-clang-type-writer
+clang_tablegen(AbstractTypeWriter.inc -gen-clang-type-writer ${BSC_OPTION}
   SOURCE TypeProperties.td
   TARGET ClangAbstractTypeWriter)
 

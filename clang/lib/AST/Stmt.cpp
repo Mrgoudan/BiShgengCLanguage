@@ -393,9 +393,9 @@ CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                                    FPOptionsOverride FPFeatures,
                                    SourceLocation LB, SourceLocation RB
                                    #if ENABLE_BSC
-                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc)
+                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
                                    #endif
-                                   {
+                                   ) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(Stmts.size(),  FPFeatures.requiresTrailingStorage()),
       alignof(CompoundStmt));

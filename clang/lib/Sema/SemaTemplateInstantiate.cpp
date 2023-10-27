@@ -2710,10 +2710,10 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     if (MemberSpecializationInfo *MSInfo =
             (static_cast<RecordDecl *>(Instantiation))
                 ->getMemberSpecializationInfo()) {
+      #if ENABLE_BSC
       // Since for BSC, we may enter InstantiateClass multi times for the same
       // class template specialization, we only update pointOfInstantiation at
       // the first time.
-      #if ENABLE_BSC
       if (MSInfo->getPointOfInstantiation().isInvalid()) {
       #endif
         MSInfo->setTemplateSpecializationKind(TSK);
@@ -2723,10 +2723,10 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       #endif
     } else if (ClassTemplateSpecializationDecl *Spec =
                    dyn_cast<ClassTemplateSpecializationDecl>(Instantiation)) {
+      #if ENABLE_BSC
       // Since for BSC, we may enter InstantiateClass multi times for the same
       // class template specialization, we only update pointOfInstantiation at
       // the first time.
-      #if ENABLE_BSC
       if (Spec->getPointOfInstantiation().isInvalid()) {
       #endif
         Spec->setTemplateSpecializationKind(TSK);

@@ -7748,6 +7748,7 @@ AST_MATCHER_P(FunctionDecl, hasExplicitSpecifier, internal::Matcher<Expr>,
   return InnerMatcher.matches(*ES.getExpr(), Finder, Builder);
 }
 
+#if ENABLE_BSC
 /// Matches function that are marked with the async keyword.
 ///
 /// Given
@@ -7755,7 +7756,6 @@ AST_MATCHER_P(FunctionDecl, hasExplicitSpecifier, internal::Matcher<Expr>,
 ///   async void g();
 /// \endcode
 /// functionDecl(isAsyncSpecified()) will match ::g().
-#if ENABLE_BSC
 AST_MATCHER(FunctionDecl, isAsyncSpecified) {
   return (dyn_cast<FunctionDecl>(&Node))->isAsyncSpecified();
 }

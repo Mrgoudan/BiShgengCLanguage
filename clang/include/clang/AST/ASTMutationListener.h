@@ -65,9 +65,9 @@ public:
   virtual void AddedCXXTemplateSpecialization(const ClassTemplateDecl *TD,
                                     const ClassTemplateSpecializationDecl *D) {}
 
+  #if ENABLE_BSC
   /// A template specialization (or partial one) was added to the
   /// template declaration.
-  #if ENABLE_BSC
   virtual void
   AddedCXXTemplateSpecialization(const TraitTemplateDecl *TD,
                                  const TraitTemplateSpecializationDecl *D) {}

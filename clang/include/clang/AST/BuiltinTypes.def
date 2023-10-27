@@ -57,8 +57,8 @@
 // void
 BUILTIN_TYPE(Void, VoidTy)
 
-// This
 #if ENABLE_BSC
+// This
 BUILTIN_TYPE(This, ThisTy)
 #endif
 

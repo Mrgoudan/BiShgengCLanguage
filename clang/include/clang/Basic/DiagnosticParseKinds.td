@@ -1615,6 +1615,8 @@ def warn_pragma_prefer_inline : Warning<
   InGroup<IgnoredPragmas>;
 
 // BSC Parser Diagnostics 
+#ifdef BSC
 include "clang/Basic/BSC/DiagnosticBSCParseKinds.td"
+#endif
 
 } // end of Parser diagnostics

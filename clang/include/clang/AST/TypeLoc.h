@@ -701,9 +701,9 @@ public:
   #endif
 };
 
+#if ENABLE_BSC
 /// Wrapper for source info for injected trait names of trait
 /// templates.
-#if ENABLE_BSC
 class InjectedTraitNameTypeLoc
     : public InheritingConcreteTypeLoc<
           TypeSpecTypeLoc, InjectedTraitNameTypeLoc, InjectedTraitNameType> {

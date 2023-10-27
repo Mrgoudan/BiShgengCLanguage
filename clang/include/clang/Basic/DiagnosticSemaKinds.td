@@ -11696,6 +11696,8 @@ def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
 // BSC warnings and errors
+#ifdef BSC
 include "clang/Basic/BSC/DiagnosticBSCSemaKinds.td"
+#endif
 
 } // end of sema component.

@@ -635,10 +635,10 @@ private:
   const RecordDecl *const Record;
 };
 
+#if ENABLE_BSC
 // Callback to only accept typo corrections that are either a ValueDecl or a
 // and are declared in the current enum or, for a C++ classes, one of its
 // base classes.
-#if ENABLE_BSC
 class EnumMemberExprValidatorCCC final : public CorrectionCandidateCallback {
 public:
   explicit EnumMemberExprValidatorCCC(const EnumType *ETy)
@@ -2063,9 +2063,9 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
 
     assert(!MemberQuals.hasAddressSpace());
 
+    #if ENABLE_BSC
     // BSC ownership: unlike other quals, owned cannot inherit from base
     // struct A owned a; a.b has not owned if b is not owned qualified
-    #if ENABLE_BSC
     if (BaseQuals.hasOwned()) {
       BaseQuals.removeOwned();
     }

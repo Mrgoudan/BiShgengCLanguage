@@ -89,7 +89,6 @@ def UnaryTransformType : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def TagType : TypeNode<Type, 1>;
 def RecordType : TypeNode<TagType>, LeafType;
 def EnumType : TypeNode<TagType>, LeafType;
-def TraitType : TypeNode<TagType>, LeafType;
 def ElaboratedType : TypeNode<Type>, NeverCanonical;
 def AttributedType : TypeNode<Type>, NeverCanonical;
 def BTFTagAttributedType : TypeNode<Type>, NeverCanonical;
@@ -101,7 +100,6 @@ def DeducedType : TypeNode<Type, 1>;
 def AutoType : TypeNode<DeducedType>;
 def DeducedTemplateSpecializationType : TypeNode<DeducedType>;
 def InjectedClassNameType : TypeNode<Type>, AlwaysDependent, LeafType;
-def InjectedTraitNameType : TypeNode<Type>, AlwaysDependent, LeafType;
 def DependentNameType : TypeNode<Type>, AlwaysDependent;
 def DependentTemplateSpecializationType : TypeNode<Type>, AlwaysDependent;
 def PackExpansionType : TypeNode<Type>, AlwaysDependent;
@@ -113,3 +111,8 @@ def PipeType : TypeNode<Type>;
 def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;
 def DependentBitIntType : TypeNode<Type>, AlwaysDependent;
+
+// BSC Extensions.
+#ifdef BSC
+include "clang/Basic/BSC/BSCTypeNodes.td"
+#endif

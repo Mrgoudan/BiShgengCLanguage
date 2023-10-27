@@ -1,6 +1,6 @@
 macro(clang_diag_gen component)
   clang_tablegen(Diagnostic${component}Kinds.inc
-    -gen-clang-diags-defs -clang-component=${component}
+    -gen-clang-diags-defs -clang-component=${component} ${BSC_OPTION}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component})
 endmacro(clang_diag_gen)
@@ -17,11 +17,11 @@ clang_diag_gen(Parse)
 clang_diag_gen(Refactoring)
 clang_diag_gen(Sema)
 clang_diag_gen(Serialization)
-clang_tablegen(DiagnosticGroups.inc -gen-clang-diag-groups
+clang_tablegen(DiagnosticGroups.inc -gen-clang-diag-groups ${BSC_OPTION}
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticGroups)
 
-clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
+clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name ${BSC_OPTION}
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 

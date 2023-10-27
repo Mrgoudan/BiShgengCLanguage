@@ -456,8 +456,8 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const FieldDecl *FD,
       return true;
 
     const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-    // For RecordDecl, no need to track empty subobjects.
     #if ENABLE_BSC
+    // For RecordDecl, no need to track empty subobjects.
     if (!RD)
       return true;
     #endif
@@ -566,8 +566,8 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
       return;
 
     const CXXRecordDecl *RD = RT->getAsCXXRecordDecl();
-    // For RecordDecl, no need to track empty subobjects.
     #if ENABLE_BSC
+    // For RecordDecl, no need to track empty subobjects.
     if (!RD)
       return;
     #endif

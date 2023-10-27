@@ -1266,8 +1266,8 @@ Corrected:
 ExprResult
 Sema::ActOnNameClassifiedAsUndeclaredNonType(IdentifierInfo *Name,
                                              SourceLocation NameLoc) {
-  // In BSC, this is the entrance of checking undefined function name.
   #if ENABLE_BSC
+  // In BSC, this is the entrance of checking undefined function name.
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "ADL-only call in C?");
   #else
@@ -1561,8 +1561,8 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
   if (getLangOpts().CPlusPlus && D->isOutOfLine() && !S->getFnParent())
     return;
 
-  // BSCMethodDecls shouldn't be pushed into scope in BSC.
   #if ENABLE_BSC
+  // BSCMethodDecls shouldn't be pushed into scope in BSC.
   if (getLangOpts().BSC && isa<BSCMethodDecl>(D)) {
     return;
   }
@@ -8051,9 +8051,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (IsMemberSpecialization && !NewVD->isInvalidDecl())
     CompleteMemberSpecialization(NewVD, Previous);
 
+  #if ENABLE_BSC
   // BSC global variable owned type check
   // 'typedef owned int myInt;' is legal
-  #if ENABLE_BSC
   bool IsTypedefName = D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef;
   if (!IsTypedefName && getLangOpts().BSC && NewVD
       && NewVD->getDeclContext()->isFileContext())
@@ -10196,10 +10196,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                             NewFD->getReturnTypeSourceRange().getBegin(),
                             NTCUC_FunctionReturn, NTCUK_Destruct | NTCUK_Copy);
 
+    #if ENABLE_BSC
     // We need this API for BSC template situation.
     // If we have a function template, check the template parameter
     // list. This will check and merge default template arguments.
-    #if ENABLE_BSC
     if (FunctionTemplate) {
       FunctionTemplateDecl *PrevTemplate = FunctionTemplate->getPreviousDecl();
       CheckTemplateParameterList(
@@ -10626,8 +10626,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       CompleteMemberSpecialization(NewFD, Previous);
   }
 
-  // This can return a 'FunctionTemplateDecl' for the AST Context.
   #if ENABLE_BSC
+  // This can return a 'FunctionTemplateDecl' for the AST Context.
   if (getLangOpts().BSC) {
     if (FunctionTemplate) {
       if (NewFD->isInvalidDecl())
@@ -14412,9 +14412,9 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
 
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
-Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize
+Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
                                  #if ENABLE_BSC
-                                 , QualType ExtendedType
+                                 , int ParamSize, QualType ExtendedType
                                  #endif
                                  ) {
   const DeclSpec &DS = D.getDeclSpec();
@@ -14521,9 +14521,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D, int ParamSize
   // the enclosing context.  This prevents them from accidentally
   // looking like class members in C++.
 
+  #if ENABLE_BSC
   // Use This* as BSCMethod parameter,
   // For example   void struct S::f(This* this);
-  #if ENABLE_BSC
   if (getLangOpts().BSC && TypePtr && DS.getTypeSpecType() == clang::TST_This) {
     parmDeclType = Context.getPointerType(ExtendedType);
     TInfo = Context.CreateTypeSourceInfo(parmDeclType);
@@ -17719,8 +17719,8 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclSt
          diag::err_invalid_thread)
       << DeclSpec::getSpecifierName(TSCS);
 
-  // BSC union fileds owned type check
   #if ENABLE_BSC
+  // BSC union fileds owned type check
   if (getLangOpts().BSC && Tag->isUnion())
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "union field");
   #endif

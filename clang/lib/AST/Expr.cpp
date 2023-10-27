@@ -105,12 +105,14 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
       }
     } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
       if (!ME->isArrow()) {
+        #if ENABLE_BSC
         assert(ME->getBase()->getType()->isRecordType()
-               #if ENABLE_BSC
                || ME->getBase()->getType()->isEnumeralType() ||
                ME->getBase()->getType()->isBuiltinType()
-               #endif
                );
+        #else
+        assert(ME->getBase()->getType()->isRecordType());
+        #endif
         if (FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           if (!Field->isBitField() && !Field->getType()->isReferenceType()) {
             E = ME->getBase();

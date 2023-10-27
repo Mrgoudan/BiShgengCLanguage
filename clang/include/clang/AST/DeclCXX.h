@@ -451,6 +451,7 @@ private:
     return static_cast<LambdaDefinitionData&>(*DD);
   }
 
+  #if !ENABLE_BSC
   /// The template or declaration that this declaration
   /// describes or was instantiated from, respectively.
   ///
@@ -460,7 +461,6 @@ private:
   /// classes of class template specializations, this will be the
   /// MemberSpecializationInfo referring to the member class that was
   /// instantiated or specialized.
-  #if !ENABLE_BSC
   llvm::PointerUnion<ClassTemplateDecl *, MemberSpecializationInfo *>
       TemplateOrInstantiation;
   #endif
@@ -1509,9 +1509,9 @@ public:
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
+  #if !ENABLE_BSC
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
-  #if !ENABLE_BSC
   const FunctionDecl *isLocalClass() const {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(getDeclContext()))
       return RD->isLocalClass();

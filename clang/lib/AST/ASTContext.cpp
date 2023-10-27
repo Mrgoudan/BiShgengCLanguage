@@ -4592,11 +4592,13 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 }
 
 #ifndef NDEBUG
+#if ENABLE_BSC
 static bool NeedsInjectedClassNameType(const RecordDecl *RD) {
-  #if !ENABLE_BSC
+#else
+static bool NeedsInjectedClassNameType(const RecordDecl *D) {
   if (!isa<CXXRecordDecl>(D)) return false;
   const auto *RD = cast<CXXRecordDecl>(D);
-  #endif
+#endif
   if (isa<ClassTemplatePartialSpecializationDecl>(RD))
     return true;
   if (RD->getDescribedClassTemplate() &&
@@ -4688,9 +4690,7 @@ QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
   #if ENABLE_BSC
   } else if (const auto *Trait = dyn_cast<TraitDecl>(Decl)) {
     assert(Trait->isFirstDecl() && "Trait has previous declaration");
-    #if ENABLE_BSC
     assert(!NeedsInjectedTraitNameType(Trait));
-    #endif
     return getTraitType(Trait);
   #endif
   } else if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl)) {

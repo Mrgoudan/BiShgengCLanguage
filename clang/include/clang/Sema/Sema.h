@@ -18,6 +18,7 @@
 #include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Availability.h"
+#include "clang/AST/Type.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/BSC/ExprBSC.h"
@@ -3193,10 +3194,10 @@ public:
   Decl *ActOnFinishExportDecl(Scope *S, Decl *ExportDecl,
                               SourceLocation RBraceLoc);
 
+  #if ENABLE_BSC
   /// The parser has processed a await declaration.
   /// \param AwaitLoc The location of the await token in the declaration.
   /// \param E await expression
-  #if ENABLE_BSC
   ExprResult BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E);
   ExprResult ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E);
 
@@ -3304,7 +3305,11 @@ public:
   Decl *ActOnField(Scope *S, Decl *TagD, SourceLocation DeclStart,
                    Declarator &D, Expr *BitfieldWidth);
 
+  #if ENABLE_BSC
   FieldDecl *HandleField(Scope *S, TagDecl *TagD, SourceLocation DeclStart,
+  #else
+  FieldDecl *HandleField(Scope *S, RecordDecl *TagD, SourceLocation DeclStart,
+  #endif
                          Declarator &D, Expr *BitfieldWidth,
                          InClassInitStyle InitStyle, AccessSpecifier AS);
   MSPropertyDecl *HandleMSProperty(Scope *S, RecordDecl *TagD,
@@ -3315,7 +3320,12 @@ public:
                                    const ParsedAttr &MSPropertyAttr);
 
   FieldDecl *CheckFieldDecl(DeclarationName Name, QualType T,
-                            TypeSourceInfo *TInfo, TagDecl *Record,
+                            TypeSourceInfo *TInfo
+                            #if ENABLE_BSC
+                            , TagDecl *Record,
+                            #else
+                            , RecordDecl *Record,
+                            #endif
                             SourceLocation Loc, bool Mutable,
                             Expr *BitfieldWidth, InClassInitStyle InitStyle,
                             SourceLocation TSSL, AccessSpecifier AS,
@@ -7570,12 +7580,12 @@ public:
 
   #if ENABLE_BSC
   void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
+  #endif
 
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
                                          SourceLocation RBrac,
                                          const ParsedAttributesView &AttrList);
-  #endif
 
   void ActOnFinishCXXMemberDecls();
   void ActOnFinishCXXNonNestedClass();
@@ -9841,7 +9851,11 @@ public:
                       const MultiLevelTemplateArgumentList &TemplateArgs);
 
   bool InstantiateClass(SourceLocation PointOfInstantiation,
+                        #if ENABLE_BSC
                         RecordDecl *Instantiation, RecordDecl *Pattern,
+                        #else
+                        CXXRecordDecl *Instantiation, CXXRecordDecl *Pattern,
+                        #endif
                         const MultiLevelTemplateArgumentList &TemplateArgs,
                         TemplateSpecializationKind TSK, bool Complain = true);
 
@@ -9890,7 +9904,11 @@ public:
 
   void
   InstantiateClassMembers(SourceLocation PointOfInstantiation,
+                          #if ENABLE_BSC
                           RecordDecl *Instantiation,
+                          #else
+                          CXXRecordDecl *Instantiation,
+                          #endif
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           TemplateSpecializationKind TSK);
 
@@ -12192,10 +12210,10 @@ public:
     /// object with __weak qualifier.
     IncompatibleObjCWeakRef,
 
+    #if ENABLE_BSC
     /// IncompatibleOwnedPointer - The assignment is between a owned qualified pointer
     /// type with a unOwned qualified pointer type or two owned qualified pointer type
     /// with different base types
-    #if ENABLE_BSC
     IncompatibleOwnedPointer,
     #endif
 

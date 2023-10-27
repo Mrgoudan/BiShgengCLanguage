@@ -121,8 +121,8 @@ public:
     ForceSpecifierReplacement = (NNS != nullptr);
   }
 
-  /// Gets the QualType needed to use the typo correction for BSC
   #if ENABLE_BSC
+  /// Gets the QualType needed to use the typo correction for BSC
   Type *getExtendedType() const { return ExtendedType; }
 
   void setExtendedType(Type *ET) { ExtendedType = ET; }

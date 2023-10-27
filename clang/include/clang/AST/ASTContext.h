@@ -1620,6 +1620,8 @@ public:
   QualType getInjectedClassNameType(RecordDecl *Decl, QualType TST) const;
 
   QualType getInjectedTraitNameType(TraitDecl *Decl, QualType TST) const;
+  #else
+  QualType getInjectedClassNameType(CXXRecordDecl *Decl, QualType TST) const;
   #endif
 
   QualType getAttributedType(attr::Kind attrKind, QualType modifiedType,

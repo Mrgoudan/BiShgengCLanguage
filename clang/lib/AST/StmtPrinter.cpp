@@ -1151,9 +1151,9 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }
 
+#if ENABLE_BSC
 // To prefix the type by jointing '_' between types and function name.
 // Arg 'isFront' determines weather to prefix '_' at the front of type or not.
-#if ENABLE_BSC
 static std::string GetTypePrefix(QualType T, bool isFront,
                                  const PrintingPolicy &PP) {
   std::string ExtendedTypeStr;
@@ -2638,8 +2638,8 @@ void StmtPrinter::VisitCoyieldExpr(CoyieldExpr *S) {
   PrintExpr(S->getOperand());
 }
 
-// BSC
 #if ENABLE_BSC
+// BSC
 void StmtPrinter::VisitAwaitExpr(AwaitExpr *S) {
   OS << "await ";
   PrintExpr(S->getSubExpr());

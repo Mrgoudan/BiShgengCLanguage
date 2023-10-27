@@ -222,12 +222,12 @@ public:
   unsigned location_size() const { return Builder.getBuffer().second; }
 };
 
+#if ENABLE_BSC
 /// Represents a BSC typename-specifier.
 ///
 /// These can be in 2 states:
 ///   1) Not present, identified by isEmpty()
 ///   2) Present, identified by isNotEmpty()
-#if ENABLE_BSC
 class BSCScopeSpec {
 private:
   QualType ExtendedType;
@@ -442,11 +442,9 @@ private:
       TQ_unalignedLoc;
   #if ENABLE_BSC
   SourceLocation TQ_ownedLoc;
-  #endif
-  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
-  #if ENABLE_BSC
   SourceLocation FS_asyncLoc;
   #endif
+  SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
@@ -1306,8 +1304,8 @@ struct DeclaratorChunk {
     /// The location of the const-qualifier, if any.
     SourceLocation ConstQualLoc;
 
-    /// The location of the owned-qualifier, if any.
     #if ENABLE_BSC
+    /// The location of the owned-qualifier, if any.
     SourceLocation OwnedQualLoc;
     #endif
 
@@ -2091,9 +2089,9 @@ public:
   const CXXScopeSpec &getCXXScopeSpec() const { return SS; }
   CXXScopeSpec &getCXXScopeSpec() { return SS; }
 
+  #if ENABLE_BSC
   /// getBSCScopeSpec - Return the BSCMethod declaration-specifier that this
   /// declarator was declared with.
-  #if ENABLE_BSC
   const BSCScopeSpec &getBSCScopeSpec() const { return BSS; }
   BSCScopeSpec &getBSCScopeSpec() { return BSS; }
   #endif

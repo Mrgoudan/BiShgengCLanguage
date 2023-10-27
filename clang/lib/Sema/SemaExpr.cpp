@@ -2159,10 +2159,11 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
 
   #if ENABLE_BSC
   if (getLangOpts().ObjCWeak && isa<VarDecl>(NewD) &&
+      NewTy.getObjCLifetime() == Qualifiers::OCL_Weak &&
   #else
   if (getLangOpts().ObjCWeak && isa<VarDecl>(D) &&
+      Ty.getObjCLifetime() == Qualifiers::OCL_Weak &&
   #endif
-      NewTy.getObjCLifetime() == Qualifiers::OCL_Weak &&
       !isUnevaluatedContext() &&
       !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, E->getBeginLoc()))
     getCurFunction()->recordUseOfWeak(E);
@@ -5104,8 +5105,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return CreateOverloadedArraySubscriptExpr(lbLoc, rbLoc, base, ArgExprs);
   }
 
-  // BSC owned pointer index check
   #if ENABLE_BSC
+  // BSC owned pointer index check
   if (getLangOpts().BSC && base->getType()->isPointerType() && base->getType().isOwnedQualified()) {
      Diag(lbLoc, diag::err_typecheck_invalid_owned_arrsub)
     << base->getType() << base->getSourceRange();
@@ -6331,12 +6332,12 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
   bool Invalid = false;
   size_t ArgIx = 0;
 
+  #if ENABLE_BSC
   // If the BSCMethod contains `this` parameter, the function is an instance
   // member function, It does not need to explicitly pass parameters when
   // calling, So we need to build an ast for `this` parameter.
   // Flag IsDesugaredBSCMethodCall is to jugde if this func call has already desugared,
   // so that we don`t need to desugar again.
-  #if ENABLE_BSC
   if (IsBSCInstanceFunc && !(Call->getCallee()->IsDesugaredBSCMethodCall)) {
     Expr *Callee = Call->getCallee();
     if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(
@@ -6971,6 +6972,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     }
   }
 
+  #if ENABLE_BSC
   // This branch is for attempting to parse a function-call
   // in the body of template function. Such as:
   // @Code:
@@ -6978,7 +6980,6 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   //    {
   //      a.foo();
   //    }
-  #if ENABLE_BSC
   if (getLangOpts().BSC) {
     // Determine whether this is a dependent call inside a C++ template,
     // in which case we won't do any semantic analysis now.
@@ -7051,8 +7052,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     NDecl = cast<MemberExpr>(NakedFn)->getMemberDecl();
 
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
-    // Desugar for BSC async function call
     #if ENABLE_BSC
+    // Desugar for BSC async function call
     if (FD->isAsyncSpecified()) {
       QualType AwaitReturnTy = FD->getReturnType();
       if (!IsBSCCompatibleFutureType(AwaitReturnTy)) {
@@ -7343,8 +7344,8 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall =
         CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
                          CurFPFeatureOverrides(), NumParams, UsesADL);
-    // Keep flag unchanged in transformation.
     #if ENABLE_BSC
+    // Keep flag unchanged in transformation.
     TheCall->getCallee()->IsDesugaredBSCMethodCall = Fn->IsDesugaredBSCMethodCall;
     TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
     #endif
@@ -8956,8 +8957,8 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   if (getLangOpts().CPlusPlus)
     return CXXCheckConditionalOperands(Cond, LHS, RHS, VK, OK, QuestionLoc);
 
-  // BSC will do type check after instantiation
   #if ENABLE_BSC
+  // BSC will do type check after instantiation
   bool IsTyDependent = Cond.get()->isTypeDependent() || LHS.get()->isTypeDependent() ||
                          RHS.get()->isTypeDependent();
   if (getLangOpts().BSC && IsTyDependent)
@@ -10249,8 +10250,8 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
   return Compatible;
 }
 
-// for union fields/array/global variable type check
 #if ENABLE_BSC
+// for union fields/array/global variable type check
 void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env) {
   enum {
     ownedQualified,
@@ -15840,8 +15841,8 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
   if (BinaryOperator::isComparisonOp(Opc))
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
 
-  //bsc owned pointer type check
   #if ENABLE_BSC
+  //bsc owned pointer type check
   if (Self.getLangOpts().BSC
       && ((LHSExpr->getType()->isPointerType() && LHSExpr->getType().isOwnedQualified())
       || (RHSExpr->getType()->isPointerType() && RHSExpr->getType().isOwnedQualified()))) {
@@ -15862,8 +15863,8 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   // Emit warnings for tricky precedence issues, e.g. "bitfield & 0x4 == 0"
   DiagnoseBinOpPrecedence(*this, Opc, TokLoc, LHSExpr, RHSExpr);
 
-  // Handling reassignments of variable types with trait pointers:
   #if ENABLE_BSC
+  // Handling reassignments of variable types with trait pointers:
   if (getLangOpts().BSC && LHSExpr->getType() != RHSExpr->getType()) {
     if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())) {
       RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());

@@ -451,8 +451,8 @@ KEYWORD(__FUNCTION__                , KEYALL)
 KEYWORD(__PRETTY_FUNCTION__         , KEYALL)
 KEYWORD(__auto_type                 , KEYALL)
 
-// BSC keywords
 #if ENABLE_BSC
+// BSC keywords
 KEYWORD(async                       , KEYBSC)
 KEYWORD(await                       , KEYBSC)
 KEYWORD(owned                       , KEYBSC)
@@ -723,8 +723,8 @@ ALIAS("_uuidof"          , __uuidof     , KEYMS | KEYBORLAND)
 ALIAS("_virtual_inheritance", __virtual_inheritance, KEYMSCOMPAT)
 ALIAS("_w64"             , __w64        , KEYMSCOMPAT)
 
-// safe region key word
 #if ENABLE_BSC
+// safe region key word
 KEYWORD(__Safe__                      , KEYALL)
 KEYWORD(__Unsafe__                    , KEYALL)
 #endif
@@ -809,10 +809,10 @@ ANNOTATION(decltype)     // annotation for a decltype expression,
 // one 'pragma_unused' annotation token followed by the argument token.
 PRAGMA_ANNOTATION(pragma_unused)
 
+#if ENABLE_BSC
 // Annotations for SAFE pragma
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma SAFE ... directives.
-#if ENABLE_BSC
 PRAGMA_ANNOTATION(pragma_safe)
 
 // Annotations for pragma prefer_inline (ON/OFF)

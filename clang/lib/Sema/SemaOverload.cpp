@@ -7987,8 +7987,8 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
     // Skip over volatile if no volatile found anywhere in the types.
     if ((CVR & Qualifiers::Volatile) && !hasVolatile) continue;
 
-    // Skip over owned if no owned found anywhere in the types.
     #if ENABLE_BSC
+    // Skip over owned if no owned found anywhere in the types.
     if ((CVR & Qualifiers::Owned) && !hasOwned) continue;
     #endif
 
@@ -8126,8 +8126,8 @@ BuiltinCandidateTypeSet::AddTypesConvertedFrom(QualType Ty,
     if (!SemaRef.isCompleteType(Loc, Ty))
       return;
 
-    // Don`t do anything here to avoid cast if is BSC.
     #if ENABLE_BSC
+    // Don`t do anything here to avoid cast if is BSC.
     if (!SemaRef.getLangOpts().BSC) {
     #endif
       CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());
@@ -8202,8 +8202,8 @@ static  Qualifiers CollectVRQualifiers(ASTContext &Context, Expr* ArgExpr) {
       return VRQuals;
     }
 
-    // Don`t do anything here to avoid cast if is BSC.
     #if ENABLE_BSC
+    // Don`t do anything here to avoid cast if is BSC.
     if (!Context.getLangOpts().BSC) {
     #endif
       CXXRecordDecl *ClassDecl = cast<CXXRecordDecl>(TyRec->getDecl());

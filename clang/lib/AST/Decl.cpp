@@ -2162,11 +2162,12 @@ static bool isDeclExternC(const T &D) {
   // language linkage or no language linkage.
   const DeclContext *DC = D.getDeclContext();
   if (DC->isRecord()) {
-    assert(D.getASTContext().getLangOpts().CPlusPlus
-          #if ENABLE_BSC
-          || D.getASTContext().getLangOpts().BSC
-          #endif
-          );
+    #if ENABLE_BSC
+    assert(D.getASTContext().getLangOpts().CPlusPlus ||
+            D.getASTContext().getLangOpts().BSC);
+    #else
+    assert(D.getASTContext().getLangOpts().CPlusPlus);
+    #endif
     return false;
   }
 

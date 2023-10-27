@@ -1110,6 +1110,7 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
   return llvm::is_contained(TentativelyDeclaredIdentifiers, II);
 }
 
+#if ENABLE_BSC
 // FIXME: Refactor!
 // Check template declaration syntax in BSC:
 //   function template declaration: "T Foo<T>(T a) {..}"
@@ -1120,7 +1121,6 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
 //   1. find template parameter list syntax structure "identifier <T, ..>"
 //   2. find declaration syntax(different from spcialization syntax)
 //     "<T, ..> ()" in template function or "<T, ..> {}" in template structure
-#if ENABLE_BSC
 bool Parser::isBSCTemplateDecl(Token tok) {
   // 1. check language
   if (!getLangOpts().BSC)

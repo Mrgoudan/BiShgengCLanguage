@@ -446,10 +446,10 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
   Base::Common = PrevCommon;
 }
 
+#if ENABLE_BSC
 //===----------------------------------------------------------------------===//
 // TraitTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
-#if ENABLE_BSC
 TraitTemplateDecl *TraitTemplateDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation L,
                                              DeclarationName Name,

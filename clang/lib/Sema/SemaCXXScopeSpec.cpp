@@ -237,8 +237,8 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
-    // For BSC, SS.getRange() is invalid
     #if ENABLE_BSC
+    // For BSC, SS.getRange() is invalid
     if (!LangOpts.BSC)
     #endif
       SS.SetInvalid(SS.getRange());
@@ -973,10 +973,10 @@ bool Sema::ActOnCXXNestedNameSpecifier(
       resolveAssumedTemplateNameAsType(S, Template, TemplateNameLoc))
     return true;
 
+  #if ENABLE_BSC
   // For the case of "struct MyStruct11<T>: foo()", if the name of 
   // the struct is incorrect, correct it in a timely manner to 
   // prevent duplicate errors from being reported.
-  #if ENABLE_BSC
   if (getLangOpts().BSC)
     OpaqueTemplate = TemplateTy::make(Template);
   #endif

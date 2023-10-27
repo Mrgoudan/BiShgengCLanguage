@@ -44,9 +44,9 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
     return ParseExplicitInstantiation(Context, SourceLocation(), ConsumeToken(),
                                       DeclEnd, AccessAttrs, AS);
   }
+  #if ENABLE_BSC
   // Parse BSC template declaration
   // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
-  #if ENABLE_BSC
   if (isBSCTemplateDecl(Tok)) {
     return ParseBSCGenericDeclaration(Context, DeclEnd, AccessAttrs, AS);
   }
@@ -55,8 +55,8 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
                                                   AS);
 }
 
-// DIY rewrite ParseTemplateDeclarationOrSpecialization for BSC
 #if ENABLE_BSC
+// DIY rewrite ParseTemplateDeclarationOrSpecialization for BSC
 Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
                                          SourceLocation &DeclEnd,
                                          ParsedAttributes &AccessAttrs,
@@ -626,9 +626,9 @@ bool Parser::ParseTemplateParameters(
   return false;
 }
 
+#if ENABLE_BSC
 // ParseBSCTemplateParameters - rewrite ParseTemplateParameters for cross-order
 // BSC syntax, use Peeking
-#if ENABLE_BSC
 bool Parser::ParseBSCTemplateParameters(
     MultiParseScope &TemplateScopes, unsigned Depth,
     SmallVectorImpl<NamedDecl *> &TemplateParams, SourceLocation &LAngleLoc,
@@ -710,9 +710,9 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
   return true;
 }
 
+#if ENABLE_BSC
 // ParseBSCTemplateParameterList - rewrite ParseTemplateParameterList, for
 // cross-order BSC syntax, use Peeking
-#if ENABLE_BSC
 bool Parser::ParseBSCTemplateParameterList(
     const unsigned Depth, SmallVectorImpl<NamedDecl *> &TemplateParams) {
   Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
@@ -1088,9 +1088,9 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   return NewDecl;
 }
 
+#if ENABLE_BSC
 // ParseBSCTypeParameter - rewrite ParseTypeParameter for cross-order BSC
 // syntax, use Peeking
-#if ENABLE_BSC
 NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
   // Check Tok location
   Token PeekTok = PP.LookAhead(BSCGenericLookAhead);

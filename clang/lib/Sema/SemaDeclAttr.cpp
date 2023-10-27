@@ -1576,8 +1576,8 @@ static bool attrNonNullArgCheck(Sema &S, QualType T, const ParsedAttr &AL,
   return true;
 }
 
-// EnhanceC
 #if ENABLE_BSC
+// EnhanceC
 template <typename AttrInfo>
 static bool checkFunctionTypeIndex(
     Sema &S, const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
@@ -8390,10 +8390,10 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
 // EnhanceC Attribute
 //===----------------------------------------------------------------------===//
 
+#if ENABLE_BSC
 // If no indexs were specified to `count` attribute and only one pointer argument in function
 // then the argument have the attribute; warn if there aren't any or more than one pointer argument.
 // Skip this check if the attribute came from a macro expansion or a template instantiation.
-#if ENABLE_BSC
 static void checkPtrArgsInDefaultAttrIdx(SmallVector<ParamIdx, 8> &Args, Sema &S, Decl *D, const ParsedAttr &AL) {
   if (Args.empty() && AL.getLoc().isFileID() && !S.inTemplateInstantiation()) {
     bool AnyPointers = isFunctionOrMethodVariadic(D);
@@ -9496,8 +9496,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
     break;
-  // EnhanceC attribute
   #if ENABLE_BSC
+  // EnhanceC attribute
   case ParsedAttr::AT_Count:
     if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)
       handleCountAttr(S, D, AL);

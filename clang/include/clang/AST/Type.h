@@ -864,10 +864,10 @@ public:
   /// Determine whether this type is const-qualified.
   bool isConstQualified() const;
 
+  #if ENABLE_BSC
   /// Determine whether this particular QualType instance has the
   /// "owned" qualifier set, without looking through typedefs that may have
   /// added "owned" at a different level.
-  #if ENABLE_BSC
   bool isLocalOwnedQualified() const {
     return (getLocalFastQualifiers() & Qualifiers::Owned);
   }
@@ -2301,8 +2301,8 @@ public:
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
 
-  /// Check if the type is the BSC future type.
   #if ENABLE_BSC
+  /// Check if the type is the BSC future type.
   bool isBSCFutureType() const;
   #endif
 
@@ -4315,8 +4315,8 @@ public:
   /// spec.
   bool hasInstantiationDependentExceptionSpec() const;
 
-  // return true if any 'owned' here
   #if ENABLE_BSC
+  // return true if any 'owned' here
   bool hasOwnedRetOrParams() const;
   #endif
 
@@ -5665,8 +5665,8 @@ enum TagTypeKind {
   /// The "enum" keyword.
   TTK_Enum
 
-  /// The "trait" keyword.
   #if ENABLE_BSC
+  /// The "trait" keyword.
   , TTK_Trait
   #endif
 };
@@ -5689,8 +5689,8 @@ enum ElaboratedTypeKeyword {
   /// The "enum" keyword introduces the elaborated-type-specifier.
   ETK_Enum,
 
-  /// The "trait" keyword introduces the elaborated-type-specifier.
   #if ENABLE_BSC
+  /// The "trait" keyword introduces the elaborated-type-specifier.
   ETK_Trait,
   #endif
 

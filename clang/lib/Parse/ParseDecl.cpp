@@ -1804,9 +1804,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     SingleDecl = ParseStaticAssertDeclaration(DeclEnd);
     break;
   default:
+    #if ENABLE_BSC
     // parse BSC generic declaration
     // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
-    #if ENABLE_BSC
     if (isBSCTemplateDecl(Tok)) {
       ProhibitAttributes(DeclAttrs);
       SingleDecl =
@@ -3207,7 +3207,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
       DS.SetRangeStart(PP.LookAhead(BSCGenericLookAhead).getLocation());
     } else {
+    #endif
       DS.SetRangeStart(Tok.getLocation());
+    #if ENABLE_BSC
     }
     #endif
     DS.SetRangeEnd(SourceLocation());
@@ -3220,8 +3222,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
   // We use Sema's policy to get bool macros right.
   PrintingPolicy Policy = Actions.getPrintingPolicy();
   while (true) {
-    // Get Switch Tok for BSC constant generic.
     #if ENABLE_BSC
+    // Get Switch Tok for BSC constant generic.
     Token SwitchTok;
     if (getLangOpts().BSC && IsParsingBSCGenericParameters){
       SwitchTok = PP.LookAhead(BSCGenericLookAhead);
@@ -3253,6 +3255,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     #if ENABLE_BSC
     SourceLocation Loc = SwitchTok.getLocation();
+    #else
+    SourceLocation Loc = Tok.getLocation();
     #endif
 
     // Helper for image types in OpenCL.
@@ -3319,7 +3323,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     }
     #endif
 
+    #if ENABLE_BSC
     switch (SwitchTok.getKind()) {
+    #else
+    switch (Tok.getKind()) {
+    #endif
     default:
     DoneWithDeclSpec:
       if (!AttrsLastTime)
@@ -5319,8 +5327,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     Diag(StartLoc, DiagID) << PrevSpec;
 }
 
-// FIXME: ParseTraitSpecifier can be refactored, remove useless code
 #if ENABLE_BSC
+// FIXME: ParseTraitSpecifier can be refactored, remove useless code
 void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                                  const ParsedTemplateInfo &TemplateInfo,
                                  bool EnteringContext, DeclSpecContext DSC,
@@ -6398,8 +6406,8 @@ void Parser::ParseTypeQualifierListOpt(
                                  getLangOpts());
       break;
 
-    // owned-qualifier:
     #if ENABLE_BSC
+    // owned-qualifier:
     case tok::kw_owned:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
                                  getLangOpts());
@@ -6591,8 +6599,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   if (Diags.hasAllExtensionsSilenced())
     D.setExtension();
 
-  // BSC
   #if ENABLE_BSC
+  // BSC
   if (getLangOpts().BSC && FindUntil(tok::coloncolon) &&
       !IsParsingBSCGenericParameters) {
     DeclSpec DS(AttrFactory);

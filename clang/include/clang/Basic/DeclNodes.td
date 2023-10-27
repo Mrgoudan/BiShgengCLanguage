@@ -32,8 +32,6 @@ def Named : DeclNode<Decl, "named declarations", 1>;
           def ClassTemplateSpecialization : DeclNode<CXXRecord>;
             def ClassTemplatePartialSpecialization
               : DeclNode<ClassTemplateSpecialization>;
-      def Trait : DeclNode<Tag, "Traits">;
-        def TraitTemplateSpecialization : DeclNode<Trait>;
     def TemplateTypeParm : DeclNode<Type>;
   def Value : DeclNode<Named, "value declarations", 1>;
     def EnumConstant : DeclNode<Value, "enumerators">;
@@ -52,7 +50,6 @@ def Named : DeclNode<Decl, "named declarations", 1>;
       def MSProperty : DeclNode<Declarator>;
       def Function : DeclNode<Declarator, "functions">, DeclContext;
         def CXXDeductionGuide : DeclNode<Function>;
-        // def BSCMethod : DeclNode<Function>;
         def CXXMethod : DeclNode<Function>;
           def CXXConstructor : DeclNode<CXXMethod>;
           def CXXDestructor : DeclNode<CXXMethod>;
@@ -65,13 +62,11 @@ def Named : DeclNode<Decl, "named declarations", 1>;
         def ParmVar : DeclNode<Var, "parameters">;
         def Decomposition : DeclNode<Var>;
         def OMPCapturedExpr : DeclNode<Var>;
-      def ImplTrait : DeclNode<Declarator, "impltraits">;
       def NonTypeTemplateParm : DeclNode<Declarator>;
   def Template : DeclNode<Named, "templates", 1>;
     def RedeclarableTemplate : DeclNode<Template, "redeclarable templates", 1>;
       def FunctionTemplate : DeclNode<RedeclarableTemplate>;
       def ClassTemplate : DeclNode<RedeclarableTemplate>;
-      def TraitTemplate : DeclNode<RedeclarableTemplate>;
       def VarTemplate : DeclNode<RedeclarableTemplate>;
       def TypeAliasTemplate : DeclNode<RedeclarableTemplate>;
     def TemplateTemplateParm : DeclNode<Template>;
@@ -115,4 +110,6 @@ def RequiresExprBody : DeclNode<Decl>, DeclContext;
 def LifetimeExtendedTemporary : DeclNode<Decl>;
 
 // BSC Extensions.
+#ifdef BSC
 include "clang/Basic/BSC/BSCDeclNodes.td"
+#endif

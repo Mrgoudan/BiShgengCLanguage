@@ -139,8 +139,8 @@ public:
   /// isOpenCL - Language is a OpenCL variant.
   bool isOpenCL() const { return Flags & OpenCL; }
 
-  /// isBSC - Language is a BiSheng C variant.
   #if ENABLE_BSC
+  /// isBSC - Language is a BiSheng C variant.
   bool isBSC() const { return Flags & BSC; }
   #endif
 

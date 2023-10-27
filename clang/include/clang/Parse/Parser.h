@@ -299,8 +299,8 @@ class Parser : public CodeCompletionHandler {
   }
   void DestroyTemplateIds();
 
-  /// Reset "#pragma prefer_inline ON/OFF"
   #if ENABLE_BSC
+  /// Reset "#pragma prefer_inline ON/OFF"
   void ResetPreferInlineScopeToNone() {
     Actions.SetPragmaPreferInlineInfo(PI_None);
   }
@@ -1051,8 +1051,8 @@ private:
     }
   };
 
-  /// Judge whether there is a \param FindToken before StopTokens.
   #if ENABLE_BSC
+  /// Judge whether there is a \param FindToken before StopTokens.
   bool FindUntil(tok::TokenKind FindToken);
   #endif
 
@@ -2450,8 +2450,8 @@ private:
       , bool BSCScopeSpecFlag = false
       #endif
       );
-  // Record BSC Generic Look-Ahead when parsing '<>'
   #if ENABLE_BSC
+  // Record BSC Generic Look-Ahead when parsing '<>'
   int BSCGenericLookAhead;
   bool IsParsingBSCGenericParameters = false;
   void ParseBSCScopeSpecifiers(DeclSpec &DS);
@@ -3495,8 +3495,8 @@ private:
                                                  SourceLocation &DeclEnd,
                                                  ParsedAttributes &AccessAttrs,
                                                  AccessSpecifier AS);
-  // BSC style ParseTemplateDeclarationOrSpecialization
   #if ENABLE_BSC
+  // BSC style ParseTemplateDeclarationOrSpecialization
   Decl *ParseBSCGenericDeclaration(DeclaratorContext Context,
                                    SourceLocation &DeclEnd,
                                    ParsedAttributes &AccessAttrs,

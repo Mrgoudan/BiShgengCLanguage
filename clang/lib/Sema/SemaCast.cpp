@@ -2869,8 +2869,8 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  // bsc owned type CStyleCast
   #if ENABLE_BSC
+  // bsc owned type CStyleCast
   if (Self.getLangOpts().BSC &&
       (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() ||
        DestType.getCanonicalType().isOwnedQualified())) {
@@ -3291,8 +3291,8 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getEndLoc());
 
-  // Try to use C-Style cast check for BSC generic.
   #if ENABLE_BSC
+  // Try to use C-Style cast check for BSC generic.
   if (getLangOpts().BSC) {
     Op.CheckCStyleCast();
   } else {

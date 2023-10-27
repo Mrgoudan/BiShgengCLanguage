@@ -1608,8 +1608,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       SS = Spec;
   }
 
-  // Generic struct 'struct S<int> s1' should enter here.
   #if ENABLE_BSC
+  // Generic struct 'struct S<int> s1' should enter here.
   if (getLangOpts().BSC) {
     ColonProtectionRAIIObject X(*this);
 
@@ -1675,9 +1675,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
 
+    #if ENABLE_BSC
     // BSC Sturct Template Declaration may have "<T>" syntax.
     //      This param list must been parsed, skip it.
-    #if ENABLE_BSC
     if (isParsingBSCTemplateStruct) {
       while (Tok.getKind() != tok::greater) {
         ConsumeToken();
@@ -2072,10 +2072,11 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
         D = static_cast<ClassTemplateDecl *>(TagOrTempResult.get())
                 ->getTemplatedDecl();
       } else {
-      #endif
         D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
-      #if ENABLE_BSC
       }
+      #else
+      Decl *D =
+          SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
       #endif
       
       // Parse the definition body.

@@ -3802,11 +3802,11 @@ public:
                                      Sema::AtomicArgumentOrder::AST);
   }
 
+  #if ENABLE_BSC
   /// Build a new await operation expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  #if ENABLE_BSC
   ExprResult RebuildAwaitExpr(SourceLocation BuiltinLoc, Expr *SubExprs) {
     return getSema().BuildAwaitExpr(BuiltinLoc, SubExprs);
   }
@@ -11107,8 +11107,8 @@ TreeTransform<Derived>::TransformCallExpr(CallExpr *E) {
   if (Callee.isInvalid())
     return ExprError();
   
-  // Keep flag unchanged in transformation.
   #if ENABLE_BSC
+  // Keep flag unchanged in transformation.
   Callee.get()->IsDesugaredBSCMethodCall = E->getCallee()->IsDesugaredBSCMethodCall;
   Callee.get()->HasBSCScopeSpec = E->getCallee()->HasBSCScopeSpec;
   Callee.get()->IgnoreImplicit()->HasBSCScopeSpec =
@@ -14510,10 +14510,10 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
                                         E->getOp(), E->getRParenLoc());
 }
 
+#if ENABLE_BSC
 //===----------------------------------------------------------------------===//
 // BSC await expression transform
 //===----------------------------------------------------------------------===//
-#if ENABLE_BSC
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformAwaitExpr(AwaitExpr *E) {
   ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());

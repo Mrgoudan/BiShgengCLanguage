@@ -4020,11 +4020,11 @@ Decl *TemplateDeclInstantiator::VisitRecordDecl(RecordDecl *D) {
   #endif
 }
 
+#if ENABLE_BSC
 Decl *TemplateDeclInstantiator::VisitTraitDecl(TraitDecl *D) {
   llvm_unreachable("There are only TraitDecls in BSC");
 }
 
-#if ENABLE_BSC
 Decl *TemplateDeclInstantiator::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
   llvm_unreachable("There are only TraitTemplateDecls in BSC");
 }

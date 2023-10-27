@@ -506,15 +506,13 @@ private:
   bool TraverseRecordHelper(RecordDecl *D);
   #if ENABLE_BSC
   bool TraverseTraitHelper(TraitDecl *D);
+  bool TraverseImplTraitHelper(ImplTraitDecl *D);
   #endif
   bool TraverseCXXRecordHelper(CXXRecordDecl *D);
   bool TraverseDeclaratorHelper(DeclaratorDecl *D);
   bool TraverseDeclContextHelper(DeclContext *DC);
   bool TraverseFunctionHelper(FunctionDecl *D);
   bool TraverseVarHelper(VarDecl *D);
-  #if ENABLE_BSC
-  bool TraverseImplTraitHelper(ImplTraitDecl *D);
-  #endif
   bool TraverseOMPExecutableDirective(OMPExecutableDirective *S);
   bool TraverseOMPLoopDirective(OMPLoopDirective *S);
   bool TraverseOMPClause(OMPClause *C);

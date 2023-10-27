@@ -2169,8 +2169,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
   DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  // Abbreviation for DECL_TRAIT
   #if ENABLE_BSC
+  // Abbreviation for DECL_TRAIT
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_TRAIT));
   // Redeclarable
@@ -2408,8 +2408,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // TypeLoc
   DeclVarAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  // Abbreviation for DECL_IMPL_TRAIT
   #if ENABLE_BSC
+  // Abbreviation for DECL_IMPL_TRAIT
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_IMPL_TRAIT));
   // Redeclarable
@@ -2513,9 +2513,9 @@ void ASTWriter::WriteDeclAbbrevs() {
 
   unsigned ExprDependenceBits = llvm::BitWidth<ExprDependence>;
 
+  #if ENABLE_BSC
   // FIXME: I dont know why this looks like a lot of repeated code.
   // Abbreviation for BSCMethodDecl.
-  #if ENABLE_BSC
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_BSC_METHOD));
   // RedeclarableDecl

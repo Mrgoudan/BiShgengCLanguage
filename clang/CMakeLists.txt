@@ -418,9 +418,21 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   endif()
 endif ()
 
-# We are building BSC version of clang
-# Put -DENABLE_BSC=0 if you would like to remove BSC support
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_BSC=1")
+# Determine whether to build BSC version of clang
+if(NOT DEFINED ENABLE_BSC)
+  set(ENABLE_BSC 1)
+endif()
+
+if (ENABLE_BSC)
+  message("BSC is enabled")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_BSC=1")
+  set(BSC_OPTION "-DBSC")
+else()
+  message("BSC is disabled")
+  set(BSC_OPTION "")
+endif()
+
+unset(ENABLE_BSC CACHE)
 
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION)

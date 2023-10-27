@@ -126,8 +126,8 @@ enum ActionKind {
   /// ObjC->C Rewriter.
   RewriteObjC,
 
-  /// BSC->C Rewriter.
   #if ENABLE_BSC
+  /// BSC->C Rewriter.
   RewriteBSC,
   #endif
 

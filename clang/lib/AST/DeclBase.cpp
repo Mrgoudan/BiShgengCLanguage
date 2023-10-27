@@ -1935,10 +1935,10 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
     // this decl.
     buildLookup();
     makeDeclVisibleInContextImpl(D, Internal);
+    #if ENABLE_BSC
     // There may be instances before extending member functions for
     // structs in BSC. Therefore, we need to add member functions
     // to the already instantiated map when defining them.
-    #if ENABLE_BSC
     if (getParentASTContext().getLangOpts().BSC && dyn_cast<BSCMethodDecl>(D)) {
       if (RecordDecl *RD = dyn_cast<RecordDecl>(this)) {
         if (ClassTemplateDecl *DCT = RD->getDescribedClassTemplate()) {

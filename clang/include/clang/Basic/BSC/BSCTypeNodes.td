@@ -1,0 +1,2 @@
+def TraitType : TypeNode<TagType>, LeafType;
+def InjectedTraitNameType : TypeNode<Type>, AlwaysDependent, LeafType;

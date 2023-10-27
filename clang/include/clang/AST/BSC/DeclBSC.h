@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_AST_DECLBSC_H
 #define LLVM_CLANG_AST_DECLBSC_H
 
-# if ENABLE_BSC
+#if ENABLE_BSC
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"

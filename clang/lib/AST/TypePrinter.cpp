@@ -1468,9 +1468,9 @@ void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
 void TypePrinter::printTraitBefore(const TraitType *T, raw_ostream &OS) {
   printTag(T->getDecl(), OS);
 }
-#endif
 
 void TypePrinter::printTraitAfter(const TraitType *T, raw_ostream &OS) {}
+#endif
 
 void TypePrinter::printTemplateTypeParmBefore(const TemplateTypeParmType *T,
                                               raw_ostream &OS) {
@@ -1575,10 +1575,10 @@ void TypePrinter::printInjectedTraitNameBefore(const InjectedTraitNameType *T,
   T->getTemplateName().print(OS, Policy);
   spaceBeforePlaceHolder(OS);
 }
-#endif
 
 void TypePrinter::printInjectedTraitNameAfter(const InjectedTraitNameType *T,
                                               raw_ostream &OS) {}
+#endif
 
 void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
                                         raw_ostream &OS) {

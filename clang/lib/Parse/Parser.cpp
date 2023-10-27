@@ -1055,9 +1055,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
 
   default:
   dont_know:
+    #if ENABLE_BSC
     // parse BSC template declaration
     // TODO: change if entrance condition, abandon isBSCTemplateDecl()
-    #if ENABLE_BSC
     if (isBSCTemplateDecl(Tok)) {
       // parsing function (enter next level of parsing function)
       SourceLocation DeclEnd;
@@ -1066,11 +1066,11 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       //
       break;
     }
-    #endif
 
     if (ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
                                  GetLookAheadToken(2)))
       return ParseImplTraitDeclaration();
+    #endif
 
     if (Tok.isEditorPlaceholder()) {
       ConsumeToken();
@@ -1259,10 +1259,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
   }
 }
 
+#if ENABLE_BSC
 /// ParseImplTraitDeclaration - Parse ImplTraitDecl, for example:
 /// "impl trait T for int;"
 /// or "impl trait Future<T> for int;"
-#if ENABLE_BSC
 Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   ConsumeToken(); // Eat the "impl"
   SourceLocation TraitLoc = Tok.getLocation();

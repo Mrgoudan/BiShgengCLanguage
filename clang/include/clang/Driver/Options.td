@@ -1126,8 +1126,6 @@ def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
 def fno_PIC : Flag<["-"], "fno-PIC">, Group<f_Group>;
 def fPIE : Flag<["-"], "fPIE">, Group<f_Group>;
 def fno_PIE : Flag<["-"], "fno-PIE">, Group<f_Group>;
-def opt_string : Joined<["-"], "opt-string=">, Flags<[CC1Option]>,
-  MarshallingInfoString<PreprocessorOpts<"OptString">>;
 defm access_control : BoolFOption<"access-control",
   LangOpts<"AccessControl">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option], "Disable C++ access control">,
@@ -4098,8 +4096,6 @@ def read__only__relocs : Separate<["-"], "read_only_relocs">;
 def remap : Flag<["-"], "remap">;
 def rewrite_objc : Flag<["-"], "rewrite-objc">, Flags<[NoXarchOption,CC1Option]>,
   HelpText<"Rewrite Objective-C source to C++">, Group<Action_Group>;
-def rewrite_bsc : Flag<["-"], "rewrite-bsc">, Flags<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Rewrite BSC source to C">;  
 def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">, Flags<[NoXarchOption]>,
   HelpText<"Rewrite Legacy Objective-C source to C++">;
 def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>;
@@ -6917,3 +6913,8 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+
+// BSC Extensions.
+#ifdef BSC
+include "clang/Driver/BSC/BSCOptions.td"
+#endif

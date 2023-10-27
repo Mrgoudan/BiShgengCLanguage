@@ -129,8 +129,8 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
       isUniqueInternalLinkageDecl(D))
     return true;
 
-  // In BSC, generic function always does mangling.
   #if ENABLE_BSC
+  // In BSC, generic function always does mangling.
   if (getASTContext().getLangOpts().BSC) {
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       return FD->getTemplatedKind() ==

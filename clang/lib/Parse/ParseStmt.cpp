@@ -983,8 +983,8 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
 ///
 StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
                                           unsigned ScopeFlags) {
-  // Add security scope identification processing.
   #if ENABLE_BSC
+  // Add security scope identification processing.
   SafeScopeSpecifier SafeSpec = SS_None;
   SourceLocation SafeLoc;
 
@@ -1952,11 +1952,11 @@ StmtResult Parser::ParseDoStatement() {
 
   #if ENABLE_BSC
   ResetPreferInlineScopeToNone();
-  #endif
 
   if (IsPreferInlineStatement) {
     Actions.SetPragmaPreferInlineInfo(PreferInlineState);
   }
+  #endif
 
   if (Tok.isNot(tok::kw_while)) {
     if (!Body.isInvalid()) {

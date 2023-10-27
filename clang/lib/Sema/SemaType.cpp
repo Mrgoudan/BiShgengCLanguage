@@ -5078,8 +5078,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         D.setInvalidType(true);
       }
 
-      // BSC rules: ele of array cannot be qualified by owned or owned-like
       #if ENABLE_BSC
+      // BSC rules: ele of array cannot be qualified by owned or owned-like
       if (LangOpts.BSC)
         S.CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "array");
       #endif
@@ -5146,8 +5146,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // type.
           D.DropTypeObject(chunkIndex + 1);
         }
-      #endif
       }
+      #endif
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
       // of the type, otherwise the argument list is ().

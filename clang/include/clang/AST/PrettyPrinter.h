@@ -92,8 +92,8 @@ struct PrintingPolicy {
     UseVoidForZeroParams = false;
   }
 
-  /// Adjust this printing policy for rewriting BSC code to C doe.
   #if ENABLE_BSC
+  /// Adjust this printing policy for rewriting BSC code to C doe.
   void adjustForRewritingBSC() {
     Bool = false;
     RewriteBSC = true;
@@ -316,8 +316,8 @@ struct PrintingPolicy {
   /// enumerator name or via cast of an integer.
   unsigned UseEnumerators : 1;
 
-  /// Whether rewriting BSC source code to C source code.
   #if ENABLE_BSC
+  /// Whether rewriting BSC source code to C source code.
   unsigned RewriteBSC : 1;
 
   /// Whether printing function declaration only while rewriting BSC source

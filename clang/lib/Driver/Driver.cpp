@@ -4603,12 +4603,14 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
+    #if ENABLE_BSC
     // While rewriting hbs files, we have to treat them as cbs files to do
     // compilation.
     if (Args.hasArg(options::OPT_rewrite_bsc)) {
       return C.MakeAction<CompileJobAction>(Input,
                                             types::TY_RewrittenBSCHeader);
     }
+    #endif
 
     types::ID OutputTy = getPrecompiledType(Input->getType());
     assert(OutputTy != types::TY_INVALID &&

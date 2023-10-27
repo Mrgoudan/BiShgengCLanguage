@@ -103,8 +103,8 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
              /*AtDigraph*/false);
 }
 
-// To judge if the syntax is a BSC template declaration.
 #if ENABLE_BSC
+// To judge if the syntax is a BSC template declaration.
 static bool IsBSCTemplateDeclaration(bool IsBSC, 
                                      bool IsIdentifier,
                                      Preprocessor &PP) {
@@ -198,16 +198,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
-  assert((getLangOpts().CPlusPlus
-         #if ENABLE_BSC
-         || getLangOpts().BSC
-         #endif
-         ) &&
+  #if ENABLE_BSC
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "Call sites of this function should be guarded by checking for C++ "
-         #if ENABLE_BSC
-         "or BSC"
-         #endif
-         );
+         "or BSC");
+  #else
+  assert(getLangOpts().CPlusPlus &&
+         "Call sites of this function should be guarded by checking for C++");
+  #endif
 
   if (Tok.is(tok::annot_cxxscope)) {
     assert(!LastII && "want last identifier but have already annotated scope");
@@ -655,9 +653,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
   return false;
 }
 
+#if ENABLE_BSC
 // Parse instation for bsc struct part of generic, to avoid affecting
 // the original logic of C++.
-#if ENABLE_BSC
 bool Parser::ParseOptionalBSCGenericSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
@@ -3226,12 +3224,12 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     SourceLocation IdLoc = ConsumeToken();
 
     if (!getLangOpts().CPlusPlus) {
+      #if ENABLE_BSC
       // We add this judge to parse BSC syntax, without
       // affecting the original logic of C.
       // @Code:k
       //  T max<T>(T a, T b) {...}
       // @EndCode
-      #if ENABLE_BSC
       if (Actions.getCurScope()->isTemplateParamScope() && 
           (getLangOpts().BSC && Tok.is(tok::less))) {
         // TODO: we should refactoring check logic, abandon assert.

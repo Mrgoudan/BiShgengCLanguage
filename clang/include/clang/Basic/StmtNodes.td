@@ -294,4 +294,6 @@ def OMPParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;
 
 // BSC Extensions.
+#ifdef BSC
 include "clang/Basic/BSC/BSCStmtNodes.td"
+#endif

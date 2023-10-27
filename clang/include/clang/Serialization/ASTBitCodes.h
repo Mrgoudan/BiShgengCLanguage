@@ -364,8 +364,8 @@ enum ControlRecordTypes {
   /// Record code for the module build directory.
   MODULE_DIRECTORY,
 
-  /// Recode code for the bishengc lto opt string
   #if ENABLE_BSC
+  /// Record code for the bishengc lto opt string
   OPT_STRING,
   #endif
 };
@@ -1099,8 +1099,8 @@ enum PredefinedTypeIDs {
 #define RVV_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/RISCVVTypes.def"
 
-  /// \brief This type in bishengc
   #if ENABLE_BSC
+  /// \brief This type in bishengc
   PREDEF_TYPE_THIS_ID,
   #endif
 };
@@ -1253,8 +1253,8 @@ enum DeclCode {
   /// An EnumDecl record.
   DECL_ENUM,
 
-  /// An TraitDecl record.
   #if ENABLE_BSC
+  /// An TraitDecl record.
   DECL_TRAIT,
   #endif
 
@@ -1315,8 +1315,8 @@ enum DeclCode {
   /// A VarDecl record.
   DECL_VAR,
 
-  /// An ImplTraitDecl record.
   #if ENABLE_BSC
+  /// An ImplTraitDecl record.
   DECL_IMPL_TRAIT,
   #endif
 
@@ -1405,8 +1405,8 @@ enum DeclCode {
   /// A CXXDeductionGuideDecl record.
   DECL_CXX_DEDUCTION_GUIDE,
 
-  /// A BSCMethodDecl record.
   #if ENABLE_BSC
+  /// A BSCMethodDecl record.
   DECL_BSC_METHOD,
   #endif
 
@@ -1440,8 +1440,8 @@ enum DeclCode {
   /// A ClassTemplatePartialSpecializationDecl record.
   DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION,
 
-  /// A TraitTemplateDecl record.
   #if ENABLE_BSC
+  /// A TraitTemplateDecl record.
   DECL_TRAIT_TEMPLATE,
 
   /// A TraitTemplateSpecializationDecl record.

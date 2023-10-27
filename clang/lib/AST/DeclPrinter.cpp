@@ -188,9 +188,9 @@ static QualType getDeclType(Decl* D) {
   return QualType();
 }
 
+#if ENABLE_BSC
 // To prefix the type by jointing '_' between types and function name.
 // Arg 'isFront' determines weather to prefix '_' at the front of type or not.
-#if ENABLE_BSC
 static std::string GetTypePrefix(QualType T, bool isFront,
                                  const PrintingPolicy &PP) {
   std::string ExtendedTypeStr;
@@ -430,8 +430,8 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
       if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation &&
           !isa<ClassTemplateSpecializationDecl>(DC))
         continue;
-      // Skip member functions for BSC.
       #if ENABLE_BSC
+      // Skip member functions for BSC.
       if (Context.getLangOpts().BSC && isa<RecordDecl>(FD->getParent()))
         continue;
       #endif
@@ -635,8 +635,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     prettyPrintPragmas(D);
 
   if (D->isFunctionTemplateSpecialization()) {
-    // We don`t need to print this in BSC generic.
     #if ENABLE_BSC
+    // We don`t need to print this in BSC generic.
     if (!Context.getLangOpts().BSC)
     #endif
       Out << "template<> ";
@@ -1314,12 +1314,12 @@ void DeclPrinter::VisitTraitTemplateDecl(TraitTemplateDecl *D) {
       }
   }
 }
-#endif
 
 void DeclPrinter::VisitTraitTemplateSpecializationDecl(
     TraitTemplateSpecializationDecl *D) {
   VisitTraitDecl(D);
 }
+#endif
 
 void DeclPrinter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   VisitRedeclarableTemplateDecl(D);
