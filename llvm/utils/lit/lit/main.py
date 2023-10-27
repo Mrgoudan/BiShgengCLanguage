@@ -20,7 +20,7 @@ import lit.Test
 import lit.util
 from lit.formats.googletest import GoogleTest
 from lit.TestTimes import record_test_times
-
+from lit.excluded import clang_excluded_list, clang_unit_excluded_list, c_excluded_list
 
 def main(builtin_params={}):
     opts = lit.cl_arguments.parse_args()
@@ -99,7 +99,7 @@ def main(builtin_params={}):
 
     selected_tests = selected_tests[:opts.max_tests]
 
-    selected_tests = mark_bscexcluded(lit_config.useBSC, selected_tests)
+    selected_tests = mark_bsc_excluded(lit_config.useBSC, selected_tests)
 
     mark_xfail(discovered_tests, opts)
 
@@ -216,11 +216,17 @@ def mark_excluded(discovered_tests, selected_tests):
     for t in excluded_tests:
         t.setResult(result)
 
-def mark_bscexcluded(useBSC, selected_tests):
-    res_list = selected_tests
+
+def mark_bsc_excluded(useBSC, selected_tests):
+    # exclude failed tests while running `llvm-lit clang/test`
+    res_list = [i for i in selected_tests if i.getFullName() not in clang_excluded_list
+                and i.getFullName() not in clang_unit_excluded_list]
+    # exclude extra failed tests while running `llvm-lit clang/test --bsc`
     if useBSC:
-        res_list = [i for i in selected_tests if "Clang-Unit :: " not in i.getFullName()]
+        res_list = [i for i in res_list if "Clang-Unit :: " not in i.getFullName()
+                    and i.getFullName()[-2:] == ".c" and i.getFullName() not in c_excluded_list]
     return res_list
+
 
 def run_tests(tests, lit_config, opts, discovered_tests):
     workers = min(len(tests), opts.workers)
