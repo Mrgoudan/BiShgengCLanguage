@@ -12268,10 +12268,35 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
   return LHSType;
 }
 
+#if ENABLE_BSC
+static bool isDesugaredTraitTypeComparison(Sema &S, ExprResult &LHS) {
+  if (!S.getLangOpts().BSC) {
+    return false;
+  }
+  if (ImplicitCastExpr *TraitImplExpr =
+          dyn_cast_or_null<ImplicitCastExpr>(LHS.get())) {
+    if (MemberExpr *TraitMemberExpr =
+            dyn_cast_or_null<MemberExpr>(TraitImplExpr->getSubExpr())) {
+      if (TraitMemberExpr->getBase() &&
+          S.TryDesugarTrait(TraitMemberExpr->getBase()->getType())) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+#endif
+
 /// Diagnose bad pointer comparisons.
 static void diagnoseDistinctPointerComparison(Sema &S, SourceLocation Loc,
                                               ExprResult &LHS, ExprResult &RHS,
                                               bool IsError) {
+#if ENABLE_BSC
+  // TraitType Comparison is diag already in ActOnTraitCompare function
+  if (isDesugaredTraitTypeComparison(S, LHS) && !IsError) {
+    return;
+  }
+#endif
   S.Diag(Loc, IsError ? diag::err_typecheck_comparison_of_distinct_pointers
                       : diag::ext_typecheck_comparison_of_distinct_pointers)
     << LHS.get()->getType() << RHS.get()->getType()
@@ -13062,7 +13087,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                                 /*isError*/false);
     } else {
       // Invalid
-      diagnoseDistinctPointerComparison(*this, Loc, LHS, RHS, /*isError*/false);
+      diagnoseDistinctPointerComparison(*this, Loc, LHS, RHS,
+                                        /*isError*/ false);
     }
     if (LCanPointeeTy != RCanPointeeTy) {
       // Treat NULL constant as a special case in OpenCL.
@@ -15865,11 +15891,16 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
 
   #if ENABLE_BSC
   // Handling reassignments of variable types with trait pointers:
-  if (getLangOpts().BSC && LHSExpr->getType() != RHSExpr->getType()) {
-    if (auto RT = dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())) {
-      RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());
-      if (RD && RD->getDesugaredTraitDecl())
-        return ActOnTraitReassign(S, TokLoc, Opc, RD, LHSExpr, RHSExpr);
+  if (getLangOpts().BSC) {
+    bool LHSIsTrait = IsTraitExpr(LHSExpr);
+    bool RHSIsTrait = IsTraitExpr(RHSExpr);
+    if (LHSIsTrait || RHSIsTrait) {
+      if (Opc == BO_Assign && LHSIsTrait && !RHSIsTrait) {
+        return ActOnTraitReassign(S, TokLoc, Opc, LHSExpr, RHSExpr);
+      }
+      if (Opc == BO_EQ || Opc == BO_NE) {
+        return ActOnTraitCompare(S, TokLoc, Opc, LHSExpr, RHSExpr);
+      }
     }
   }
   #endif
@@ -17672,9 +17703,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   if (Action == AA_Passing_CFAudited)
     ActionForDiag = AA_Passing;
   #if ENABLE_BSC
-  if (TraitDecl *TD = TryDesugarTrait(SecondType))
-    SecondType = CompleteTraitType(TD, SecondType);
-  #endif
+  SecondType = CompleteTraitType(SecondType);
+#endif
 
   FDiag << FirstType << SecondType << ActionForDiag
         << SrcExpr->getSourceRange();

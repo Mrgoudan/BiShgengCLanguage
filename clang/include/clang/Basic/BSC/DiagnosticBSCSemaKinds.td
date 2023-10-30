@@ -20,3 +20,5 @@ def err_invalid_async_function : Error <
   "function which returns 'Future' type should not be modified by 'async'">;
 def err_invalid_struct_definition : Error <
   "struct definition in generic fuction is not supported in BSC">;
+def warn_type_has_not_impl_trait : Warning<
+  "expected a pointer type which has implemented %0, found %1">;

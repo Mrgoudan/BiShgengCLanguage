@@ -252,7 +252,7 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
   QualType T = UO->getType();
   const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
   TraitDecl *TD = TryDesugarTrait(ProtoArgType);
-  QualType QT = CompleteTraitType(TD, ProtoArgType);
+  QualType QT = CompleteTraitType(ProtoArgType);
   if (!PT || !TD) {
     Diag(DSLoc, diag::err_type_has_not_impl_trait) << QT << T;
     return nullptr;
@@ -381,7 +381,11 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
   return false;
 }
 
-QualType Sema::CompleteTraitType(TraitDecl *TD, QualType QT) {
+QualType Sema::CompleteTraitType(QualType QT) {
+  TraitDecl *TD = TryDesugarTrait(QT);
+  if (!TD) {
+    return QT;
+  }
   QualType TraitQT = Context.getTraitType(TD);
   if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
     TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
@@ -540,6 +544,7 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
   } else {
     RT = RD->getTypeForDecl()->getCanonicalTypeInternal();
   }
+
   return Context.getElaboratedType(ETK_Struct, nullptr, RT);
 }
 
@@ -610,32 +615,53 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
     Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait) << OriginQT << T;
     return nullptr;
   }
+
+  bool ExpIsNullPointer =
+      exp->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
   T = PT->getPointeeType().getCanonicalType();
   VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
-  if (!LookupVar) {
+  if (!LookupVar && !ExpIsNullPointer) {
     Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait) << OriginQT << T;
     return nullptr;
   }
 
-  QualType VoidPT = Context.getPointerType(Context.VoidTy);
-  ImplicitCastExpr *TraitData =
-      ImplicitCastExpr::Create(Context, VoidPT,
-                               /* CastKind=*/CK_BitCast,
-                               /* Expr=*/UO,
-                               /* CXXCastPath=*/nullptr,
-                               /* ExprValueKind=*/VK_PRValue,
-                               /* FPFeatures */ FPOptionsOverride());
+  std::vector<Expr *> Exprs;
+  if (ExpIsNullPointer) {
+    // @code
+    // trait I *a = NULL;
+    // @endcode
+    RecordDecl *LookupVtable = TD->getVtable();
+    QualType VtableTy = Context.getRecordType(LookupVtable);
+    if (LookupVtable->getDescribedClassTemplate()) {
+      VtableTy = CompleteRecordType(LookupVtable, VD->getTypeSourceInfo());
+      VtableTy = Context.getElaboratedType(ETK_Struct, nullptr, VtableTy);
+    }
+    QualType VtablePT = Context.getPointerType(VtableTy);
+    ImplicitCastExpr *TraitVtable =
+        ImplicitCastExpr::Create(Context, VtablePT, CK_BitCast, UO, nullptr,
+                                 VK_PRValue, FPOptionsOverride());
+    Exprs = {UO, TraitVtable};
+  } else {
+    QualType VoidPT = Context.getPointerType(Context.VoidTy);
+    ImplicitCastExpr *TraitData =
+        ImplicitCastExpr::Create(Context, VoidPT,
+                                 /* CastKind=*/CK_BitCast,
+                                 /* Expr=*/UO,
+                                 /* CXXCastPath=*/nullptr,
+                                 /* ExprValueKind=*/VK_PRValue,
+                                 /* FPFeatures */ FPOptionsOverride());
 
-  QualType VtableTy = LookupVar->getType();
-  QualType VtablePT = Context.getPointerType(VtableTy);
-  DeclRefExpr *VtableRef = DeclRefExpr::Create(
-      Context, NestedNameSpecifierLoc(), SourceLocation(), LookupVar, false,
-      SourceLocation(), VtableTy, VK_LValue);
-  UnaryOperator *UOVtable = UnaryOperator::Create(
-      Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue, OK_Ordinary,
-      SourceLocation(), false, FPOptionsOverride());
+    QualType VtableTy = LookupVar->getType();
+    QualType VtablePT = Context.getPointerType(VtableTy);
+    DeclRefExpr *VtableRef = DeclRefExpr::Create(
+        Context, NestedNameSpecifierLoc(), SourceLocation(), LookupVar, false,
+        SourceLocation(), VtableTy, VK_LValue);
+    UnaryOperator *UOVtable = UnaryOperator::Create(
+        Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue, OK_Ordinary,
+        SourceLocation(), false, FPOptionsOverride());
+    Exprs = {TraitData, UOVtable};
+  }
 
-  std::vector<Expr *> Exprs = {TraitData, UOVtable};
   MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
   ExprResult TraitInit =
       ActOnInitList(SourceLocation(), initExprs, SourceLocation());
@@ -648,6 +674,91 @@ NamedDecl *Sema::ActOnTraitMemberDeclarator(Scope *S, Declarator &D) {
   MultiTemplateParamsArg TemplateParams;
   NamedDecl *Member = HandleDeclarator(S, D, TemplateParams);
   return Member;
+}
+
+// Desugar following code:
+// @code
+// struct S<T> { trait F* a; };
+// struct S<int> s = { &x };
+// @endcode
+void Sema::ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *expr,
+                                         QualType ElemType, unsigned &Index,
+                                         DesignatedInitExpr **DIE) {
+
+  TraitDecl *TD = TryDesugarTrait(ElemType);
+  if (IList->getHasDesugar() || !TD) {
+    return;
+  }
+
+  Expr *UO = expr;
+  if (CastExpr *Cexpr = dyn_cast<CastExpr>(UO)) {
+    while (CastExpr *Tmp = dyn_cast<CastExpr>(Cexpr->getSubExpr()))
+      Cexpr = Tmp;
+    UO = Cexpr->getSubExpr();
+  }
+
+  IList->setHasDesugar(true);
+  QualType T = UO->getType();
+  // If the right value is trait pointer type , there is no need to desugar
+  if (TD == TryDesugarTrait(T)) {
+    return;
+  }
+
+  SourceLocation SL = UO->getBeginLoc();
+  const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
+  if (!PT) {
+    Diag(SL, diag::err_type_has_not_impl_trait)
+        << CompleteTraitType(ElemType) << T;
+  }
+
+  T = PT->getPointeeType().getCanonicalType();
+  VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
+  bool ExpIsNullPointer =
+      UO->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
+  std::vector<Expr *> Exprs;
+  if (ExpIsNullPointer) {
+    RecordDecl *LookupVtable = TD->getVtable();
+    QualType VtableTy = Context.getRecordType(LookupVtable);
+    if (LookupVtable->getDescribedClassTemplate()) {
+      VtableTy = CompleteRecordType(
+          LookupVtable, Context.getTrivialTypeSourceInfo(ElemType, SL));
+      VtableTy = Context.getElaboratedType(ETK_Struct, nullptr, VtableTy);
+    }
+    QualType VtablePT = Context.getPointerType(VtableTy);
+    ImplicitCastExpr *TraitVtable =
+        ImplicitCastExpr::Create(Context, VtablePT, CK_BitCast, UO, nullptr,
+                                 VK_PRValue, FPOptionsOverride());
+    Exprs = {UO, TraitVtable};
+  } else if (LookupVar) {
+    LookupVar->setIsUsed();
+    QualType VtableTy = LookupVar->getType();
+    QualType VtablePT = Context.getPointerType(VtableTy);
+    DeclRefExpr *VtableRef = DeclRefExpr::Create(
+        Context, NestedNameSpecifierLoc(), SourceLocation(), LookupVar, false,
+        UO->getBeginLoc(), VtableTy, VK_LValue);
+    Expr *UOVtable = UnaryOperator::Create(
+        Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue, OK_Ordinary,
+        UO->getBeginLoc(), false, FPOptionsOverride());
+    Exprs = {UO, UOVtable};
+
+  } else {
+    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
+        << CompleteTraitType(ElemType) << T;
+    return;
+  }
+  MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
+  ExprResult TraitInit =
+      ActOnInitList(SourceLocation(), initExprs, SourceLocation());
+
+  if (DIE && *DIE) {
+    Designation Desig;
+    for (unsigned i = 0; i < (*DIE)->size(); i++)
+      Desig.AddDesignator(Designator::getField(
+          (*DIE)->getDesignator(i)->getFieldName(), SL, SL));
+    TraitInit = ActOnDesignatedInitializer(Desig, SL, false, TraitInit);
+    *DIE = dyn_cast<DesignatedInitExpr>(TraitInit.getAs<Expr>());
+  }
+  IList->updateInit(Context, Index, TraitInit.getAs<Expr>());
 }
 
 TraitDecl *Sema::TryDesugarTrait(QualType T) {
@@ -676,14 +787,54 @@ TraitDecl *Sema::TryDesugarTrait(QualType T) {
   return TD;
 }
 
+// Desugar following code:
+// @code
+// trait F* f = &b;
+// f = NULL;
+// @endcode
+ExprResult Sema::ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
+                                        BinaryOperatorKind Opc, Expr *LHSExpr,
+                                        Expr *RHSExpr) {
+  SmallVector<Expr *, 2> Exprs;
+  RecordDecl *RD =
+      dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
+  for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
+       I != E; ++I) {
+    Expr *NewLHSExpr = BuildMemberExpr(
+        LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+        SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()), false,
+        DeclarationNameInfo(), I->getType(), VK_LValue, OK_Ordinary);
+    Exprs.push_back(BuildBinOp(S, TokLoc, Opc, NewLHSExpr, RHSExpr).get());
+  }
+  // code
+  // f.data = NULL, f.vtable = NULL;
+  // @endcode
+  return BuildBinOp(S, TokLoc, BO_Comma, Exprs[0], Exprs[1]);
+}
+
 // Handling reassignments of variable types with trait pointers:
-// trait F* f = &a;
+// @code
+// trait F* f = &b;
 // f = &a;
+// @endcode
 ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
-                                    BinaryOperatorKind Opc, RecordDecl *RD,
-                                    Expr *LHSExpr, Expr *RHSExpr) {
+                                    BinaryOperatorKind Opc, Expr *LHSExpr,
+                                    Expr *RHSExpr) {
   Expr *Bin1 = nullptr;
   Expr *Bin2 = nullptr;
+  if (RHSExpr->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull)) {
+    return ActOnTraitReassignNull(S, TokLoc, Opc, LHSExpr, RHSExpr);
+  }
+
+  bool RHSIsPointerType = RHSExpr->getType()->isPointerType();
+  if (!RHSIsPointerType) {
+    Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
+        << CompleteTraitType(LHSExpr->getType()) << RHSExpr->getType();
+    return ExprError();
+  }
+
+  RecordDecl *RD =
+      dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
   QualType T = RHSExpr->getType()->getPointeeType().getCanonicalType();
   for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
        I != E; ++I) {
@@ -700,22 +851,9 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
       TraitDecl *TD = RD->getDesugaredTraitDecl();
       RecordDecl *LookupVtable = TD->getVtable();
       VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
-      QualType QT = Context.getTraitType(TD);
-      if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
-        TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
-        ClassTemplateSpecializationDecl *CTD =
-            dyn_cast<ClassTemplateSpecializationDecl>(RD);
-        ArrayRef<TemplateArgument> TAL = CTD->getTemplateArgs().asArray();
-        for (auto T : TAL)
-          Args.addArgument(
-              TemplateArgumentLoc(T, Context.getTrivialTypeSourceInfo(
-                                         T.getAsType(), TTD->getBeginLoc())));
-        QT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
-        QT = Context.getElaboratedType(ETK_Trait, nullptr, QT);
-      }
       if (!LookupVar) {
         Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
-            << QT << T;
+            << CompleteTraitType(LHSExpr->getType()) << T;
         return ExprError();
       }
       QualType VtableTy = Context.getRecordType(LookupVtable);
@@ -731,14 +869,139 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
           SourceLocation(), false, FPOptionsOverride());
     }
     if (Bin1 == nullptr)
-      Bin1 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
-                 .get(); // f.data = &a;
+      Bin1 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr).get();
     else
-      Bin2 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr)
-                 .get(); // f.vtable = &__int_trait_T;
+      Bin2 = BuildBinOp(S, TokLoc, Opc, NewLHSExpr, NewRHSExpr).get();
   }
-  return BuildBinOp(S, TokLoc, BO_Comma, Bin1,
-                    Bin2); // f.data = &a, f.vtable = &__int_trait_T;
+  // @code
+  // f.data = &a, f.vtable = &__int_trait_T;
+  // @endcode
+  return BuildBinOp(S, TokLoc, BO_Comma, Bin1, Bin2);
+}
+
+bool Sema::IsTraitExpr(Expr *Expr) {
+  if (auto RT = dyn_cast<RecordType>(Expr->getType().getCanonicalType())) {
+    RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());
+    return (RD && RD->getDesugaredTraitDecl());
+  }
+  return false;
+}
+
+ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
+                                   BinaryOperatorKind Opc, Expr *LHSExpr,
+                                   Expr *RHSExpr) {
+  // @code
+  // trait F* f = &a;
+  // trait F* e = &a;
+  // if (f == e) {};
+  // @endcode
+  bool LHSIsTrait = IsTraitExpr(LHSExpr);
+  bool RHSIsTrait = IsTraitExpr(RHSExpr);
+  if (LHSIsTrait && RHSIsTrait) {
+    if (Context.hasSameType(CompleteTraitType(LHSExpr->getType()),
+                            CompleteTraitType(RHSExpr->getType())) == false) {
+      Diag(TokLoc, diag::ext_typecheck_comparison_of_distinct_pointers)
+          << Context.getPointerType(CompleteTraitType(LHSExpr->getType()))
+          << Context.getPointerType(CompleteTraitType(RHSExpr->getType()))
+          << LHSExpr->getSourceRange() << RHSExpr->getSourceRange();
+    }
+
+    SmallVector<Expr *, 2> NewLHSExprs;
+    RecordDecl *LRD =
+        dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
+    for (RecordDecl::field_iterator I = LRD->field_begin(),
+                                    E = LRD->field_end();
+         I != E; ++I) {
+      Expr *NewLHSExpr = BuildMemberExpr(
+          LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()), false,
+          DeclarationNameInfo(), I->getType(), VK_LValue, OK_Ordinary);
+      NewLHSExprs.push_back(NewLHSExpr);
+    }
+    SmallVector<Expr *, 2> NewRHSExprs;
+    RecordDecl *RRD =
+        dyn_cast<RecordType>(RHSExpr->getType().getCanonicalType())->getDecl();
+    for (RecordDecl::field_iterator J = RRD->field_begin(),
+                                    F = RRD->field_end();
+         J != F; ++J) {
+      Expr *NewRHSExpr = BuildMemberExpr(
+          RHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *J, DeclAccessPair::make(*J, J->getAccess()), false,
+          DeclarationNameInfo(), J->getType(), VK_LValue, OK_Ordinary);
+      NewRHSExprs.push_back(NewRHSExpr);
+    }
+    Expr *Bin1 =
+        BuildBinOp(S, TokLoc, Opc, NewLHSExprs[0], NewRHSExprs[0]).get();
+    Expr *Bin2 =
+        BuildBinOp(S, TokLoc, Opc, NewLHSExprs[1], NewRHSExprs[1]).get();
+
+    if (Opc == BO_EQ) {
+      // @code
+      // f.data == e.data && f.vtable == e.vtable;
+      // @endcode
+      return BuildBinOp(S, TokLoc, BO_LAnd, Bin1, Bin2);
+    } else if (Opc == BO_NE) {
+      // @code
+      // f.data != e.data || f.vtable != e.vtable;
+      // @endcode
+      return BuildBinOp(S, TokLoc, BO_LOr, Bin1, Bin2);
+    } else {
+      assert(false);
+      return ExprError();
+    }
+  }
+
+  RecordDecl *RD;
+  Expr *BaseTrait;
+  Expr *BaseExpr;
+  if (LHSIsTrait) {
+    RD = dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
+    BaseTrait = LHSExpr;
+    BaseExpr = RHSExpr;
+  } else if (RHSIsTrait) {
+    RD = dyn_cast<RecordType>(RHSExpr->getType().getCanonicalType())->getDecl();
+    BaseTrait = RHSExpr;
+    BaseExpr = LHSExpr;
+  } else {
+    assert(false);
+    return ExprError();
+  }
+  bool IsPointerType = BaseExpr->getType()->isPointerType();
+  if (!IsPointerType) {
+    Diag(TokLoc, diag::err_type_has_not_impl_trait)
+        << CompleteTraitType(BaseTrait->getType()) << BaseExpr->getType();
+    return ExprError();
+  }
+  QualType T = BaseExpr->getType()->getPointeeType().getCanonicalType();
+  TraitDecl *TD = RD->getDesugaredTraitDecl();
+  VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
+  if (!LookupVar && !(T->isVoidType())) {
+    // If expr not ImplTraitDecl, Diagnose warning;
+    Diag(TokLoc, diag::warn_type_has_not_impl_trait)
+        << CompleteTraitType(BaseTrait->getType()) << BaseExpr->getType();
+  }
+  Expr *TraitExpr = nullptr;
+  for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
+       I != E; ++I) {
+    if (I->getNameAsString() == "data") {
+      TraitExpr = BuildMemberExpr(
+          BaseTrait, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()), false,
+          DeclarationNameInfo(), I->getType(), VK_LValue, OK_Ordinary);
+      break;
+    }
+  }
+  if (LHSIsTrait) {
+    // @code
+    // f.data == &a;
+    // @endcode
+    return BuildBinOp(S, TokLoc, Opc, TraitExpr, BaseExpr);
+  } else {
+    // @code
+    // &a == f.data;
+    // @endcode
+    return BuildBinOp(S, TokLoc, Opc, BaseExpr, TraitExpr);
+  }
 }
 
 #endif // ENABLE_BSC

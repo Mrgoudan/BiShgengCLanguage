@@ -1348,54 +1348,11 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
                                           unsigned &StructuredIndex,
                                           bool DirectlyDesignated) {
   Expr *expr = IList->getInit(Index);
-
 #if ENABLE_BSC
   // Assign values to variables of TraitPointer type in struct, such as:
   // "struct S<T> { trait F* a; };"
   // "struct S<int> s = { &x };"
-  TraitDecl *TD = SemaRef.TryDesugarTrait(ElemType);
-  if (!IList->getHasDesugar() && TD) {
-    // TODO: Assigning a null pointer
-    Expr *UO = expr;
-    if (CastExpr *Cexpr = dyn_cast<CastExpr>(UO)) {
-      while (CastExpr *Tmp = dyn_cast<CastExpr>(Cexpr->getSubExpr()))
-        Cexpr = Tmp;
-      UO = Cexpr->getSubExpr();
-    }
-    QualType T = UO->getType();
-    IList->setHasDesugar(true);
-    // If the right value is trait pointer type , there is no need to desugar
-    if (TD != SemaRef.TryDesugarTrait(T)) {
-      const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
-      QualType QT = SemaRef.CompleteTraitType(TD, ElemType);
-      if (PT) {
-        T = PT->getPointeeType().getCanonicalType();
-        VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
-        if (LookupVar) {
-          LookupVar->setIsUsed();
-          QualType VtableTy = LookupVar->getType();
-          QualType VtablePT = SemaRef.Context.getPointerType(VtableTy);
-          DeclRefExpr *VtableRef = DeclRefExpr::Create(
-              SemaRef.Context, NestedNameSpecifierLoc(), SourceLocation(),
-              LookupVar, false, UO->getBeginLoc(), VtableTy, VK_LValue);
-          Expr *UOVtable = UnaryOperator::Create(
-              SemaRef.Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
-              OK_Ordinary, UO->getBeginLoc(), false, FPOptionsOverride());
-          std::vector<Expr *> Exprs = {UO, UOVtable};
-          MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
-          ExprResult TraitInit = SemaRef.ActOnInitList(
-              SourceLocation(), initExprs, SourceLocation());
-          IList->updateInit(SemaRef.Context, Index, TraitInit.getAs<Expr>());
-        } else {
-          SemaRef.Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
-              << QT << T;
-        }
-      } else {
-        SemaRef.Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
-            << QT << T;
-      }
-    }
-  }
+  SemaRef.ActOnDesugarTraitExprInStruct(IList, expr, ElemType, Index, nullptr);
 #endif
 
   if (ElemType->isReferenceType())
@@ -2496,68 +2453,13 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
                                             unsigned &StructuredIndex,
                                             bool FinishSubobjectInit,
                                             bool TopLevelObject) {
+
 #if ENABLE_BSC
   // Assign values to variables of TraitPointer type in struct, such as:
   // "struct S<int> s = { .future = &x }"
   // or "struct S<int> s = { .future = (trait F<int>*)&x }"
-  TraitDecl *TD = SemaRef.TryDesugarTrait(CurrentObjectType);
-  if (!IList->getHasDesugar() && TD) {
-    Expr *UO = DIE->getInit();
-    if (CastExpr *Cexpr = dyn_cast<CastExpr>(UO)) {
-      while (CastExpr *Tmp = dyn_cast<CastExpr>(Cexpr->getSubExpr()))
-        Cexpr = Tmp;
-      UO = Cexpr->getSubExpr();
-    }
-    SourceLocation SL = UO->getBeginLoc();
-    Designation Desig1;
-    for (unsigned i = 0; i < DIE->size(); i++)
-      Desig1.AddDesignator(
-          Designator::getField(DIE->getDesignator(i)->getFieldName(), SL, SL));
-    Desig1.AddDesignator(
-        Designator::getField(&(SemaRef.Context.Idents).get("data"), SL, SL));
-    ExprResult TraitData =
-        SemaRef.ActOnDesignatedInitializer(Desig1, SL, false, UO);
-    IList->setHasDesugar(true);
-    QualType T = UO->getType();
-    // If the right value is trait pointer type , there is no need to desugar
-    if (TD != SemaRef.TryDesugarTrait(T)) {
-      const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
-      QualType QT = SemaRef.CompleteTraitType(TD, CurrentObjectType);
-      if (PT) {
-        T = PT->getPointeeType().getCanonicalType();
-        VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
-        if (LookupVar) {
-          LookupVar->setIsUsed();
-          QualType VtableTy = LookupVar->getType();
-          QualType VtablePT = SemaRef.Context.getPointerType(VtableTy);
-          DeclRefExpr *VtableRef = DeclRefExpr::Create(
-              SemaRef.Context, NestedNameSpecifierLoc(), SourceLocation(),
-              LookupVar, false, SL, VtableTy, VK_LValue);
-          ExprResult TraitVtable = UnaryOperator::Create(
-              SemaRef.Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
-              OK_Ordinary, SL, false, FPOptionsOverride());
-          Designation Desig2;
-          for (unsigned i = 0; i < DIE->size(); i++)
-            Desig2.AddDesignator(Designator::getField(
-                DIE->getDesignator(i)->getFieldName(), SL, SL));
-          Desig2.AddDesignator(Designator::getField(
-              &(SemaRef.Context.Idents).get("vtable"), SL, SL));
-          TraitVtable = SemaRef.ActOnDesignatedInitializer(Desig2, SL, false,
-                                                           TraitVtable);
-          int NumInits = IList->getNumInits();
-          IList->resizeInits(SemaRef.Context, NumInits + 1);
-          IList->setInit(NumInits, TraitVtable.getAs<Expr>());
-          DIE = dyn_cast<DesignatedInitExpr>(TraitData.getAs<Expr>());
-        } else {
-          SemaRef.Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
-              << QT << T;
-        }
-      } else {
-        SemaRef.Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
-            << QT << T;
-      }
-    }
-  }
+  SemaRef.ActOnDesugarTraitExprInStruct(IList, DIE->getInit(),
+                                        CurrentObjectType, Index, &DIE);
 #endif
 
   if (DesigIdx == DIE->size()) {

@@ -5,6 +5,8 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
+#include <stdio.h>
+
 trait F<T> {
   T f(This* this);
 };
@@ -54,5 +56,14 @@ int main() {
   int b3 = s9.s.future->f();
   int b4 = s10.s.future->f();
   int b5 = s11.s.future->f();
+
+  struct S<int> s12 = { 1, .future = &x, 'c' };
+  struct S<int> s13 = { .num = 1, &x, .c = 'c' };
+  struct S<int> s14 = { 1, NULL, 'c' };
+  struct S<int> s15 = { 1, .future = NULL, 'c' };
+  struct S<int> s16 = { .num = 1, .future = NULL, .c = 'c' };
+  struct S<int> s17;
+  s17.future = NULL;
+
   return a + a1 + a2 + a3 + a4 + a5 - b -b1 -b2 -b3 -b4 -b5;
 }

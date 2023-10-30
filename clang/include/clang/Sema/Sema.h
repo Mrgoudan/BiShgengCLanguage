@@ -5598,7 +5598,7 @@ public:
                             #endif
                             );
   #if ENABLE_BSC
-  QualType CompleteTraitType(TraitDecl *TD, QualType QT);
+  QualType CompleteTraitType(QualType QT);
   QualType CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo);
   VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
                             Declarator &TraitDeclarator,
@@ -5611,7 +5611,10 @@ public:
   VarDecl *ActOnDesugarTraitInstance(Decl *VarDec);
   Expr *ConvertParmTraitToStructTrait(Expr *Arg, QualType ProtoArgType,
                                       SourceLocation DSLoc);
-  #endif
+  void ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *UO,
+                                     QualType ElemType, unsigned &Index,
+                                     DesignatedInitExpr **DIE);
+#endif
 
   ExprResult BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                       LookupResult &R,
@@ -7593,11 +7596,19 @@ public:
   #if ENABLE_BSC
   RecordDecl *ActOnDesugarVtableRecord(TraitDecl *TD);
   RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD);
-  ExprResult ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
-                                BinaryOperatorKind Opc, RecordDecl *RD,
-                                Expr *LHSExpr, Expr *RHSExpr);
-  #endif
+  bool IsTraitExpr(Expr *Expr);
+  ExprResult ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
+                                    BinaryOperatorKind Opc, Expr *LHSExpr,
+                                    Expr *RHSExpr);
 
+  ExprResult ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
+                                BinaryOperatorKind Opc, Expr *LHSExpr,
+                                Expr *RHSExpr);
+
+  ExprResult ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
+                               BinaryOperatorKind Opc, Expr *LHSExpr,
+                               Expr *RHSExpr);
+  #endif
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,
                                      llvm::function_ref<Scope *()> EnterScope);
