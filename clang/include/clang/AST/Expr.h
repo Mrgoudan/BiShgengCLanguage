@@ -109,6 +109,9 @@ struct SubobjectAdjustment {
 class Expr : public ValueStmt {
   QualType TR;
 
+#if ENABLE_BSC
+  StringRef IcallHintStatus;
+#endif
 public:
   Expr() = delete;
   Expr(const Expr&) = delete;
@@ -149,6 +152,13 @@ public:
 
   SourceLocation getExtendedTypeBeginLoc() { return EBLoc; }
   void setExtendedTypeBeginLoc(SourceLocation L) { EBLoc = L; }
+  void setIcallHintStatus(StringRef IcallHint) {
+    IcallHintStatus = IcallHint;
+  }
+
+  StringRef getIcallHintStatus() const {
+    return IcallHintStatus;
+  }
   #endif
 
   QualType getType() const { return TR; }

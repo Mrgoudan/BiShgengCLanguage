@@ -1614,6 +1614,10 @@ def warn_pragma_prefer_inline : Warning<
   "incorrect use of '#pragma prefer_inline on|off' - ignored">,
   InGroup<IgnoredPragmas>;
 
+def warn_pragma_icall_hint : Warning<
+  "incorrect use of '#pragma_icall_hint function(args)' - ignored">,
+  InGroup<IgnoredPragmas>;
+
 // BSC Parser Diagnostics 
 #ifdef BSC
 include "clang/Basic/BSC/DiagnosticBSCParseKinds.td"

@@ -799,6 +799,9 @@ void ASTStmtWriter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   Record.AddStmt(E->getLHS());
   Record.AddStmt(E->getRHS());
   Record.AddSourceLocation(E->getRBracketLoc());
+#if ENABLE_BSC
+  Record.AddString(E->getIcallHintStatus());
+#endif
   Code = serialization::EXPR_ARRAY_SUBSCRIPT;
 }
 
@@ -917,6 +920,10 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   Record.push_back(E->hadMultipleCandidates());
   Record.push_back(E->isNonOdrUse());
   Record.AddSourceLocation(E->getOperatorLoc());
+
+#if ENABLE_BSC
+  Record.AddString(E->getIcallHintStatus());
+#endif
 
   if (HasFoundDecl) {
     DeclAccessPair FoundDecl = E->getFoundDecl();

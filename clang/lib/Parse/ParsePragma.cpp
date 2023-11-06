@@ -344,6 +344,13 @@ struct PragmaSafeHandler : public PragmaHandler {
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
 };
+
+struct PragmaIcallHintHandler : public PragmaHandler {
+  PragmaIcallHintHandler(const char *name) : PragmaHandler(name) {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 #endif
 
 struct PragmaPreferInlineHandler : public PragmaHandler {
@@ -529,6 +536,8 @@ void Parser::initializePragmaHandlers() {
 
   PreferInlineHandler.reset(new PragmaPreferInlineHandler());
   PP.AddPragmaHandler(PreferInlineHandler.get());
+  IcallHintHandler = std::make_unique<PragmaIcallHintHandler>("icall_hint");
+  PP.AddPragmaHandler(IcallHintHandler.get());
   #endif
 }
 
@@ -665,7 +674,9 @@ void Parser::resetPragmaHandlers() {
   SafeHandler.reset();
 
   PP.RemovePragmaHandler(PreferInlineHandler.get());
-  PreferInlineHandler.reset();  
+  PreferInlineHandler.reset();
+  PP.RemovePragmaHandler(IcallHintHandler.get());
+  IcallHintHandler.reset();
   #endif
 }
 
@@ -1941,6 +1952,12 @@ void Parser::HandlePragmaPreferInline() {
     reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
   (void)ConsumeAnnotationToken();
   Actions.ActOnPragmaPreferInline(St);
+}
+
+void Parser::HandlePragmaIcallHint() {
+  assert(Tok.is(tok::annot_pragma_icall_hint));
+  (void)ConsumeAnnotationToken();
+  Actions.ActOnPragmaIcallHint(PP.GetIcallHintInfoList());
 }
 #endif
 
@@ -4007,6 +4024,121 @@ void PragmaPreferInlineHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer 
   Toks[0].setAnnotationValue(reinterpret_cast<void*>(
                              static_cast<uintptr_t>(St)));
   PP.EnterTokenStream(Toks, true, false);
+}
+
+namespace {
+struct PragmaIcallHintInfo {
+  Token PragmaName;
+  StringRef Icallfunction;
+};
+} // end anonymous namespace
+
+/// Parses pragma icall hint value and fills in Info.
+static bool ParseIcallHintValue(Preprocessor &PP, Token &Tok, Token PragmaName,
+                                bool ValueInParens,
+                                PragmaIcallHintInfo &Info) {
+  SmallVector<Token, 1> ValueList;
+  int OpenParens = ValueInParens ? 1 : 0;
+  uint8_t RepeatCommaNum = 0;
+  uint8_t CommaNum = 0;
+
+  if (Tok.is(tok::r_paren)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_icall_hint) << "icallhint need any args";
+    return false;
+  }
+  // Read constant expression.
+  while (Tok.isNot(tok::eod)) {
+    if (Tok.is(tok::l_paren))
+      OpenParens++;
+    else if (Tok.is(tok::r_paren)) {
+      OpenParens--;
+      RepeatCommaNum++;
+      if (RepeatCommaNum >= 2) {
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_icall_hint) << "icallhint not support default arg";
+        return false;
+      }
+      if (OpenParens == 0 && ValueInParens)
+        break;
+    } else if (Tok.is(tok::comma)) {
+      CommaNum++;
+      RepeatCommaNum++;
+    }
+
+    ValueList.push_back(Tok);
+    PP.Lex(Tok);
+    if (Tok.is(tok::comma) || Tok.is(tok::r_paren)) {
+      continue;
+    } else {
+      RepeatCommaNum--;
+    }
+    if (RepeatCommaNum >= 2) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_icall_hint) << "icallhint not support default arg";
+      return false;
+    }
+  }
+
+  if (CommaNum % 2 != 0) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_icall_hint) << "icallhint need enough args";
+    return false;
+  }
+
+  if (ValueInParens) {
+    // Read ')'
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_expected) << tok::r_paren;
+      return true;
+    }
+    PP.Lex(Tok);
+  }
+
+  Token EOFTok;
+  EOFTok.startToken();
+  EOFTok.setKind(tok::eof);
+  EOFTok.setLocation(Tok.getLocation());
+  ValueList.push_back(EOFTok); // Terminates expression for parsing.
+
+  std::string funcName = ValueList[0].getIdentifierInfo()->getName().str();
+  if (ValueList.size() > 2 && ValueList[2].isLiteral()) {
+    std::string args = ValueList[2].getLiteralData();
+    size_t pos = args.find(")");
+    std::string icallfunc = funcName + ", " + args.substr(0, pos) + '\0';
+    PP.SetIcallHintInfoList(icallfunc);
+  } else {
+    PP.SetIcallHintInfoList(funcName);
+  }
+
+  Info.Icallfunction = PP.GetIcallHintInfoList();
+  Info.PragmaName = PragmaName;
+  return false;
+}
+
+// #pragma icall_hint(func, arg1, arg2, ···)
+void PragmaIcallHintHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer, Token &Tok) {
+  Token PragmaName = Tok;
+  PP.Lex(Tok);
+  auto *Info = new (PP.getPreprocessorAllocator()) PragmaIcallHintInfo;
+
+  bool ValueInParens = Tok.is(tok::l_paren);
+  if (ValueInParens) {
+    PP.Lex(Tok);
+  }
+
+  if (ParseIcallHintValue(PP, Tok, PragmaName, ValueInParens, *Info)) {
+    return;
+  }
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_icall_hint);
+    return;
+  }
+
+  // Generate the hint token.
+  MutableArrayRef<Token> TokenArray(PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
+  TokenArray[0].startToken();
+  TokenArray[0].setKind(tok::annot_pragma_icall_hint);
+  TokenArray[0].setLocation(Introducer.Loc);
+  TokenArray[0].setAnnotationEndLoc(PragmaName.getLocation());
+  PP.EnterTokenStream(TokenArray, true, false);
 }
 #endif
 

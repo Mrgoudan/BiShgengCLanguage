@@ -940,6 +940,10 @@ void ASTStmtReader::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
   E->setRBracketLoc(readSourceLocation());
+#if ENABLE_BSC
+  Record.GetModule()->SetIcallHintInfoList(Record.readString());
+  E->setIcallHintStatus(Record.GetModule()->GetIcallHintInfoList());
+#endif
 }
 
 void ASTStmtReader::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
@@ -1044,7 +1048,10 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
   E->MemberExprBits.HadMultipleCandidates = Record.readInt();
   E->MemberExprBits.NonOdrUseReason = Record.readInt();
   E->MemberExprBits.OperatorLoc = Record.readSourceLocation();
-
+#if ENABLE_BSC
+  Record.GetModule()->SetIcallHintInfoList(Record.readString());
+  E->setIcallHintStatus(Record.GetModule()->GetIcallHintInfoList());
+#endif
   if (HasQualifier || HasFoundDecl) {
     DeclAccessPair FoundDecl;
     if (HasFoundDecl) {

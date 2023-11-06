@@ -142,6 +142,9 @@ class Preprocessor {
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
 
+  #if ENABLE_BSC
+  std::list<std::string> IcallHintInfoList;
+  #endif
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
 
@@ -289,6 +292,20 @@ class Preprocessor {
 public:
   /// The kind of translation unit we are processing.
   const TranslationUnitKind TUKind;
+
+#if ENABLE_BSC
+  const char* GetIcallHintInfoList() const {
+    if (!IcallHintInfoList.empty()) {
+      return IcallHintInfoList.back().c_str();
+    } else {
+      return nullptr;
+    }
+  }
+
+  void SetIcallHintInfoList(const std::string &ICallInfo) {
+    IcallHintInfoList.push_back(ICallInfo);
+  }
+#endif
 
 private:
   /// The code-completion handler.

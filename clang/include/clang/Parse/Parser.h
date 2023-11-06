@@ -219,6 +219,7 @@ class Parser : public CodeCompletionHandler {
   #if ENABLE_BSC
   std::unique_ptr<PragmaHandler> SafeHandler;
   std::unique_ptr<PragmaHandler> PreferInlineHandler;
+  std::unique_ptr<PragmaHandler> IcallHintHandler;
   #endif
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
@@ -804,6 +805,7 @@ private:
   #if ENABLE_BSC
   void HandlePragmaSafe();
   void HandlePragmaPreferInline();
+  void HandlePragmaIcallHint();
   #endif
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token

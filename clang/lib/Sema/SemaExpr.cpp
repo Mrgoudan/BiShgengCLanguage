@@ -6864,6 +6864,17 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S, CallExpr *Call) {
 ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig) {
+#if ENABLE_BSC
+  if (isa<MemberExpr>(Fn)) {
+    MemberExpr *E = dyn_cast<MemberExpr>(Fn);
+    E->setIcallHintStatus(GetVTableIcallHintInfos());
+    SetVTableIcallHintInfos("");
+  } else if (isa<ArraySubscriptExpr>(Fn)) {
+    ArraySubscriptExpr *E = dyn_cast<ArraySubscriptExpr>(Fn);
+    E->setIcallHintStatus(GetVTableIcallHintInfos());
+    SetVTableIcallHintInfos("");
+  }
+#endif
   ExprResult Call =
       BuildCallExpr(Scope, Fn, LParenLoc, ArgExprs, RParenLoc, ExecConfig,
                     /*IsExecConfig=*/false, /*AllowRecovery=*/true);

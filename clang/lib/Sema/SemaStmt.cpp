@@ -478,6 +478,12 @@ void Sema::ActOnPragmaPreferInline(PragmaPreferInlineStatus St) {
   }
   SetPragmaPreferInlineInfo(spec);
 }
+
+void Sema::ActOnPragmaIcallHint(std::string funcInfo) {
+  if (funcInfo.size() != 0) {
+    SetVTableIcallHintInfos(funcInfo);
+  }
+}
 #endif
 
 ExprResult

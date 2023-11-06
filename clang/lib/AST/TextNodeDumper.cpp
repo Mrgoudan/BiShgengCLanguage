@@ -155,7 +155,15 @@ void TextNodeDumper::Visit(const Stmt *Node) {
         break;
       }
     }
-
+#if ENABLE_BSC
+    {
+      if (isa<ArraySubscriptExpr>(E)) {
+        if (E->getIcallHintStatus().str().size() != 0) {
+          OS << " " << E->getIcallHintStatus().str();
+        }
+      }
+    }
+#endif
     {
       ColorScope Color(OS, ShowColors, ObjectKindColor);
       switch (E->getObjectKind()) {
@@ -1155,6 +1163,11 @@ void TextNodeDumper::VisitMemberExpr(const MemberExpr *Node) {
   case NOUR_Constant: OS << " non_odr_use_constant"; break;
   case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
   }
+#if ENABLE_BSC
+  if (Node->getIcallHintStatus().str().size() != 0) {
+    OS << " " << Node->getIcallHintStatus().str();
+  }
+#endif
 }
 
 void TextNodeDumper::VisitExtVectorElementExpr(

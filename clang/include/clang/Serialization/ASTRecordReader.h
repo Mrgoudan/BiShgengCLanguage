@@ -54,6 +54,11 @@ public:
   /// Is this a module file for a module (rather than a PCH or similar).
   bool isModule() const { return F->isModule(); }
 
+#if ENABLE_BSC
+  ModuleFile *GetModule() const {
+    return F;
+  }
+#endif
   /// Retrieve the AST context that this AST reader supplements.
   ASTContext &getContext() { return Reader->getContext(); }
 
