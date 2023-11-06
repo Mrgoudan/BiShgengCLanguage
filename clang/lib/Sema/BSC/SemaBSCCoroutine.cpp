@@ -96,6 +96,19 @@ std::string GetPrefix(QualType T) {
   return ExtendedTypeStr;
 }
 
+static BSCMethodDecl *lookupBSCMethodInRecord(Sema &S, std::string FuncName,
+                                              DeclContext *RecordDecl) {
+  LookupResult Result(
+      S,
+      DeclarationNameInfo(&(S.Context.Idents).get(FuncName), SourceLocation()),
+      S.LookupOrdinaryName);
+  S.LookupQualifiedName(Result, RecordDecl);
+  BSCMethodDecl *BSCMethod = nullptr;
+  if (!Result.empty())
+    BSCMethod = dyn_cast_or_null<BSCMethodDecl>(Result.getFoundDecl());
+  return BSCMethod;
+}
+
 static bool implementedFutureType(Sema &S, QualType Ty) {
   RecordDecl *FutureRD = nullptr;
   if (const auto *RT = Ty->getAs<RecordType>()) {
@@ -104,27 +117,64 @@ static bool implementedFutureType(Sema &S, QualType Ty) {
 
   if (!FutureRD)
     return false;
-  std::string PollFuncName = "poll";
-  LookupResult PollFDResult(
-      S,
-      DeclarationNameInfo(&(S.Context.Idents).get(PollFuncName),
-                          SourceLocation()),
-      S.LookupOrdinaryName);
-  S.LookupQualifiedName(PollFDResult, FutureRD);
-  if (PollFDResult.empty())
+  BSCMethodDecl *PollFD = lookupBSCMethodInRecord(S, "poll", FutureRD);
+  if (PollFD == nullptr)
     return false;
 
-  std::string FreeFuncName = "free";
-  LookupResult FreeFDResult(
-      S,
-      DeclarationNameInfo(&(S.Context.Idents).get(FreeFuncName),
-                          SourceLocation()),
-      S.LookupOrdinaryName);
-  S.LookupQualifiedName(FreeFDResult, FutureRD);
-  if (FreeFDResult.empty())
+  BSCMethodDecl *FreeFD = lookupBSCMethodInRecord(S, "free", FutureRD);
+  if (FreeFD == nullptr)
     return false;
 
   return true;
+}
+
+// Generating free future obj logic:
+//
+// @code
+// if (FutureObj != 0) {
+//    FreeFuncExpr(FutureObj);
+//    FutureObj = (void*)0;
+// }
+// @endcode
+static Stmt *buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr,
+                                         Expr *FreeFuncExpr) {
+  llvm::APInt ResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
+  Expr *IntegerExpr = IntegerLiteral::Create(S.Context, ResultVal,
+                                             S.Context.IntTy, SourceLocation());
+  // generating condition
+  Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
+                            /* LHSExpr=*/PtrExpr, /* RHSExpr=*/IntegerExpr)
+                   .get();
+  Sema::ConditionResult IfCond = S.ActOnCondition(
+      nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
+
+  // generating free call
+  std::vector<Expr *> FreeArgs{PtrExpr};
+  Expr *FreeFuncCall = S.BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(),
+                                       FreeArgs, SourceLocation())
+                           .get();
+  // generating null assignment
+  QualType Ty = S.Context.getPointerType(S.Context.VoidTy);
+  Expr *RAssignExpr = CStyleCastExpr::Create(
+      S.Context, Ty, VK_PRValue, CK_NullToPointer, IntegerExpr, nullptr,
+      FPOptionsOverride(),
+      S.Context.getTrivialTypeSourceInfo(Ty, SourceLocation()),
+      SourceLocation(), SourceLocation());
+  Expr *NullptrAssign =
+      S.BuildBinOp(nullptr, SourceLocation(), BO_Assign,
+                   /* LHSExpr=*/PtrExpr, /* RHSExpr=*/RAssignExpr)
+          .get();
+
+  SmallVector<Stmt *, 2> BodyStmts = {FreeFuncCall, NullptrAssign};
+  Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
+                                    SourceLocation(), SourceLocation());
+
+  Stmt *If =
+      S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
+                    /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
+                    /* RPL=*/SourceLocation(), Body, SourceLocation(), nullptr)
+          .get();
+  return If;
 }
 
 bool Sema::IsBSCCompatibleFutureType(QualType Ty) {
@@ -1005,7 +1055,10 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
                  .get();
   Stmts.push_back(BO);
 
-  // Generating `return fi;`.
+  // Generating:
+  // @code
+  // return fi;
+  // @endcode
   // No need for ImplicitCastExpr since BuildReturnStmt will generate for us.
   Stmt *RS = S.BuildReturnStmt(NLoc, StructFutureRef).get();
   Stmts.push_back(RS);
@@ -1020,12 +1073,12 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
-                                    Expr *ICE, ParmVarDecl *PVD,
-                                    VarDecl *PollResultVar,
-                                    VarDecl *AwaitResult,
-                                    BSCMethodDecl *NewFD) {
-  std::vector<Stmt *> BodyStmts;
+static IfStmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
+                                      Expr *ICE, ParmVarDecl *PVD,
+                                      VarDecl *PollResultVar,
+                                      VarDecl *AwaitResult,
+                                      BSCMethodDecl *NewFD,
+                                      Stmt *ThenBodyStmt) {
   std::vector<Stmt *> ElseStmts;
   Expr *IfCond = nullptr;
   SourceLocation BLoc = NewFD->getBeginLoc();
@@ -1059,19 +1112,8 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
   }
 
   RecordDecl *PollResultRD = PollResultVar->getType()->getAsRecordDecl();
-
-  BSCMethodDecl *IsCompletedFD = nullptr;
-  std::string IsCompletedFDName = "is_completed";
-  LookupResult IsCompletedFDResult(
-      S,
-      DeclarationNameInfo(&(S.Context.Idents).get(IsCompletedFDName),
-                          SourceLocation()),
-      S.LookupOrdinaryName);
-  S.LookupQualifiedName(IsCompletedFDResult, PollResultRD);
-  if (!IsCompletedFDResult.empty())
-    IsCompletedFD =
-        dyn_cast_or_null<BSCMethodDecl>(IsCompletedFDResult.getFoundDecl());
-
+  BSCMethodDecl *IsCompletedFD =
+      lookupBSCMethodInRecord(S, "is_completed", PollResultRD);
   if (IsCompletedFD) {
     Expr *IsCompletedFDRef = S.BuildDeclRefExpr(
         IsCompletedFD, IsCompletedFD->getType(), VK_LValue, BLoc);
@@ -1103,14 +1145,8 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
 
   RecordDecl *PollResultRDForPending =
       NewFD->getReturnType()->getAsRecordDecl();
-  std::string PendingFDName = "pending";
-  LookupResult PendingFDResult(
-      S, DeclarationNameInfo(&(S.Context.Idents).get(PendingFDName), BLoc),
-      S.LookupOrdinaryName);
-  S.LookupQualifiedName(PendingFDResult, PollResultRDForPending);
-  BSCMethodDecl *PendingFD = nullptr;
-  if (!PendingFDResult.empty())
-    PendingFD = dyn_cast_or_null<BSCMethodDecl>(PendingFDResult.getFoundDecl());
+  BSCMethodDecl *PendingFD =
+      lookupBSCMethodInRecord(S, "pending", PollResultRDForPending);
 
   if (PendingFD) {
     Expr *PendingFDRef =
@@ -1127,15 +1163,17 @@ static Stmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
     ElseStmts.push_back(RS);
   }
 
+  std::vector<Stmt *> BodyStmts{ThenBodyStmt};
+
   Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
                                     BLoc, BLoc);
   Stmt *Else = CompoundStmt::Create(S.Context, ElseStmts, FPOptionsOverride(),
                                     BLoc, BLoc);
-  auto *If = IfStmt::Create(S.Context, BLoc, IfStatementKind::Ordinary,
-                            /* Init=*/nullptr,
-                            /* Var=*/nullptr, IfCond,
-                            /* LPL=*/BLoc,
-                            /* RPL=*/BLoc, Body, BLoc, Else);
+  IfStmt *If = IfStmt::Create(S.Context, BLoc, IfStatementKind::Ordinary,
+                              /* Init=*/nullptr,
+                              /* Var=*/nullptr, IfCond,
+                              /* LPL=*/BLoc,
+                              /* RPL=*/BLoc, Body, BLoc, Else);
   return If;
 }
 
@@ -1907,17 +1945,8 @@ class ARFinder : public StmtVisitor<ARFinder> {
     QualType PollResultType = FD->getReturnType();
     RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
 
-    std::string CompletedFuncName = "completed";
-    LookupResult CompletedFDResult(
-        SemaRef,
-        DeclarationNameInfo(&(SemaRef.Context.Idents).get(CompletedFuncName),
-                            SourceLocation()),
-        SemaRef.LookupOrdinaryName);
-    SemaRef.LookupQualifiedName(CompletedFDResult, PollResultRD);
-    BSCMethodDecl *CompletedFD = nullptr;
-    if (!CompletedFDResult.empty())
-      CompletedFD =
-          dyn_cast_or_null<BSCMethodDecl>(CompletedFDResult.getFoundDecl());
+    BSCMethodDecl *CompletedFD =
+        lookupBSCMethodInRecord(SemaRef, "completed", PollResultRD);
 
     Expr *CompletedRef = SemaRef.BuildDeclRefExpr(
         CompletedFD, CompletedFD->getType(), VK_LValue, BLoc);
@@ -2119,6 +2148,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
     Expr *PollFuncExpr = nullptr;
     RecordDecl *PollResultRD = nullptr;
     std::vector<Expr *> PollArgs;
+    Stmt *ThenBodyStmt = nullptr;
     if (IsOptimization) {
       const RecordType *FutureType = dyn_cast<RecordType>(
           AE->getType().getDesugaredType(SemaRef.Context));
@@ -2126,16 +2156,8 @@ class AEFinder : public StmtVisitor<AEFinder> {
       assert(FutureStructRD != nullptr &&
              "struct future of async function is null");
 
-      StringRef PollName = "poll";
-      LookupResult PollDecls(
-          SemaRef,
-          DeclarationNameInfo(&(SemaRef.Context.Idents).get(PollName),
-                              SourceLocation()),
-          Sema::LookupOrdinaryName);
-      SemaRef.LookupQualifiedName(PollDecls, FutureStructRD);
-      BSCMethodDecl *PollFD = nullptr;
-      if (!PollDecls.empty())
-        PollFD = dyn_cast<BSCMethodDecl>(PollDecls.getFoundDecl());
+      BSCMethodDecl *PollFD =
+          lookupBSCMethodInRecord(SemaRef, "poll", FutureStructRD);
       assert(PollFD != nullptr && "poll function of async function is null");
       PollResultRD = dyn_cast<RecordDecl>(
           dyn_cast<RecordType>(
@@ -2170,6 +2192,22 @@ class AEFinder : public StmtVisitor<AEFinder> {
                              CK_FunctionToPointerDecay)
                          .get();
       PollFuncExpr->HasBSCScopeSpec = true;
+
+      BSCMethodDecl *FreeFD =
+          lookupBSCMethodInRecord(SemaRef, "free", FutureStructRD);
+      assert(FreeFD != nullptr && "free function of async function is null");
+
+      Expr *FreeFuncExpr = SemaRef.BuildDeclRefExpr(
+          FreeFD, FreeFD->getType().getNonReferenceType(), VK_LValue,
+          FreeFD->getLocation());
+      FreeFuncExpr->HasBSCScopeSpec = true;
+      std::vector<Expr *> FreeArgs{Unop};
+      Expr *FreeFuncCall =
+          SemaRef
+              .BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(), FreeArgs,
+                             SourceLocation())
+              .get();
+      ThenBodyStmt = FreeFuncCall;
     } else {
       RecordDecl *FatPointerRD =
           dyn_cast<RecordType>(
@@ -2207,7 +2245,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
           SemaRef.Context, VtableExpr->getType(), CK_NoOp, VtableExpr, nullptr,
           VK_PRValue, FPOptionsOverride());
 
-      RecordDecl::field_iterator PollFuncField, VtableFieldIt;
+      RecordDecl::field_iterator PollFuncField, VtableFieldIt, FreeFuncField;
       const RecordType *RT = dyn_cast<RecordType>(
           VtableField->getType()->getPointeeType().getDesugaredType(
               SemaRef.Context));
@@ -2216,6 +2254,9 @@ class AEFinder : public StmtVisitor<AEFinder> {
           VtableFieldIt != VtableRD->field_end(); ++VtableFieldIt) {
         if (VtableFieldIt->getDeclName().getAsString() == "poll") {
           PollFuncField = VtableFieldIt;
+        }
+        if (VtableFieldIt->getDeclName().getAsString() == "free") {
+          FreeFuncField = VtableFieldIt;
         }
       }
       const FunctionType *FT = dyn_cast<FunctionType>(
@@ -2232,23 +2273,28 @@ class AEFinder : public StmtVisitor<AEFinder> {
           DeclAccessPair::make(VtableRD, PollFuncField->getAccess()), false,
           DeclarationNameInfo(), PollFuncField->getType(), VK_LValue,
           OK_Ordinary);
-      PollFuncExpr = ImplicitCastExpr::Create(
-          SemaRef.Context, PollFuncExpr->getType(), CK_LValueToRValue,
-          PollFuncExpr, nullptr, VK_PRValue, FPOptionsOverride());
       Expr *PtrExpr = SemaRef.BuildMemberExpr(
           LHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
           SourceLocation(), *PtrField,
           DeclAccessPair::make(FatPointerRD, PtrField->getAccess()), false,
           DeclarationNameInfo(), PtrField->getType(), VK_LValue, OK_Ordinary);
-      PtrExpr = ImplicitCastExpr::Create(SemaRef.Context, PtrExpr->getType(),
-                                        CK_LValueToRValue, PtrExpr, nullptr,
-                                        VK_PRValue, FPOptionsOverride());
+
       PollArgs.push_back(PtrExpr);
+      Expr *FreeFuncExpr = SemaRef.BuildMemberExpr(
+          VtableExpr, true, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *FreeFuncField,
+          DeclAccessPair::make(VtableRD, FreeFuncField->getAccess()), false,
+          DeclarationNameInfo(), FreeFuncField->getType(), VK_LValue,
+          OK_Ordinary);
+      ThenBodyStmt =
+          buildIfStmtForFreeFutureObj(SemaRef, PtrExpr, FreeFuncExpr);
     }
-    Expr *PollFuncCall = SemaRef
-                         .BuildCallExpr(nullptr, PollFuncExpr, SourceLocation(),
-                                        PollArgs, SourceLocation())
-                         .get();
+    Expr *PollFuncCall =
+        SemaRef
+            .BuildCallExpr(nullptr, PollFuncExpr, SourceLocation(), PollArgs,
+                           SourceLocation())
+            .get();
+
     RecordDecl::field_iterator ResField, FieldIt;
     for (FieldIt = PollResultRD->field_begin();
          FieldIt != PollResultRD->field_end(); ++FieldIt) {
@@ -2280,8 +2326,9 @@ class AEFinder : public StmtVisitor<AEFinder> {
         DeclStmt(PollResultDG, SourceLocation(), SourceLocation());
     AwaitStmts.push_back(PollResultDS);
 
-    auto *If = processAwaitExprStatus(SemaRef, AwaitCount, FutureRD, PDRE, PVD,
-                                      PollResultVD, AwaitResultVD, FD);
+    IfStmt *If =
+        processAwaitExprStatus(SemaRef, AwaitCount, FutureRD, PDRE, PVD,
+                               PollResultVD, AwaitResultVD, FD, ThenBodyStmt);
     if (If != nullptr) AwaitStmts.push_back(If);
 
     Expr *AwaitResultRef = SemaRef.BuildDeclRefExpr(
@@ -2496,10 +2543,6 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     }
   }
 
-  llvm::APInt ResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
-  Expr *IntegerExpr = IntegerLiteral::Create(
-      S.Context, ResultVal, S.Context.IntTy, SourceLocation());
-
   while (!Futures.empty()) {
     RecordDecl::field_iterator FtField = Futures.top();
     RecordDecl *FatPointerRD =
@@ -2511,7 +2554,11 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
     Expr *PDRE =
         ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
                                  nullptr, VK_PRValue, FPOptionsOverride());
+
+    // Generating `FutureExpr` as followed:
+    // @code
     // this.Ft_<x>
+    // @endcode
     Expr *FutureExpr = S.BuildMemberExpr(
         PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
         SourceLocation(), *FtField,
@@ -2529,7 +2576,10 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
       }
     }
 
+    // Generating `VtableExpr` as followed:
+    // @code
     // this.Ft_<x>.vtable
+    // @endcode
     Expr *VtableExpr = S.BuildMemberExpr(
         FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
         SourceLocation(), *VtableField,
@@ -2550,48 +2600,19 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
       }
     }
 
-    // this.Ft_<x>.vtable->free
-    Expr *FreeFuncExpr = S.BuildMemberExpr(
-        VtableExpr, true, SourceLocation(), NestedNameSpecifierLoc(),
-        SourceLocation(), *FreeFuncField,
-        DeclAccessPair::make(VtableRD, FreeFuncField->getAccess()), false,
-        DeclarationNameInfo(), FreeFuncField->getType(), VK_LValue,
-        OK_Ordinary);
-    FreeFuncExpr = ImplicitCastExpr::Create(
-        S.Context, FreeFuncExpr->getType(), CK_LValueToRValue, FreeFuncExpr,
-        nullptr, VK_PRValue, FPOptionsOverride());
-
-    std::vector<Expr *> FreeArgs;
-    // this.Ft_<x>.data
     Expr *DataExpr = S.BuildMemberExpr(
         FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
         SourceLocation(), *PtrField,
         DeclAccessPair::make(FatPointerRD, PtrField->getAccess()), false,
         DeclarationNameInfo(), PtrField->getType(), VK_LValue, OK_Ordinary);
-    DataExpr = ImplicitCastExpr::Create(S.Context, DataExpr->getType(),
-                                        CK_LValueToRValue, DataExpr, nullptr,
-                                        VK_PRValue, FPOptionsOverride());
-    FreeArgs.push_back(DataExpr);
 
-    // this.Ft_<x>.vtable->free(this.Ft_<x>.data)
-    Expr *RHSExpr = S.BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(),
-                                    FreeArgs, SourceLocation())
-                        .get();
-
-    Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
-                              /* LHSExpr=*/DataExpr, /* RHSExpr=*/IntegerExpr)
-                     .get();
-    // if (this.Ft_<x>.data != 0)
-    Sema::ConditionResult IfCond = S.ActOnCondition(
-        nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
-    SmallVector<Stmt *, 1> BodyStmts = {RHSExpr};
-    Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
-                                      SourceLocation(), SourceLocation());
-    Stmt *If = S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
-                             /* LPL=*/SourceLocation(), /* Init=*/nullptr,
-                             IfCond, /* RPL=*/SourceLocation(), Body,
-                             SourceLocation(), nullptr)
-                   .get();
+    Expr *FreeFuncExpr = S.BuildMemberExpr(
+        VtableExpr, true, SourceLocation(), NestedNameSpecifierLoc(),
+        SourceLocation(), *FreeFuncField,
+        DeclAccessPair::make(FatPointerRD, FreeFuncField->getAccess()), false,
+        DeclarationNameInfo(), FreeFuncField->getType(), VK_LValue,
+        OK_Ordinary);
+    Stmt *If = buildIfStmtForFreeFutureObj(S, DataExpr, FreeFuncExpr);
     Stmts.push_back(If);
   }
 
@@ -2618,51 +2639,9 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
 
     Expr *FreeFuncRef =
         S.BuildDeclRefExpr(FreeFunc, FreeFunc->getType(), VK_LValue, NLoc);
-    FreeFuncRef =
-        S.ImpCastExprToType(FreeFuncRef,
-                            S.Context.getPointerType(FreeFuncRef->getType()),
-                            CK_FunctionToPointerDecay)
-            .get();
-    Expr *FutureObjDRE =
+    Expr *FutureObj =
         S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
-    Expr *FutureObj = S.BuildCStyleCastExpr(
-                     SourceLocation(),
-                     S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy),
-                     SourceLocation(), FutureObjDRE)
-                    .get();
-
-    SmallVector<Expr *, 1> Args;
-    Args.push_back(FutureObj);
-    // free(this)
-    Expr *CE = S.BuildCallExpr(nullptr, FreeFuncRef, SourceLocation(), Args,
-                               SourceLocation())
-                   .get();
-
-    Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
-                              /* LHSExpr=*/FutureObjDRE, /* RHSExpr=*/IntegerExpr)
-                     .get();
-    // this = 0;
-    QualType Ty = S.Context.getPointerType(S.Context.VoidTy);
-    Expr *RAssignExpr = CStyleCastExpr::Create(
-        S.Context, Ty, VK_PRValue, CK_NullToPointer, IntegerExpr, nullptr,
-        FPOptionsOverride(),
-        S.Context.getTrivialTypeSourceInfo(Ty, SourceLocation()),
-        SourceLocation(), SourceLocation());
-    Expr *NullptrAssign =
-        S.BuildBinOp(nullptr, SourceLocation(), BO_Assign,
-                     /* LHSExpr=*/FutureObjDRE, /* RHSExpr=*/RAssignExpr)
-            .get();
-    // if (this != 0)
-    Sema::ConditionResult IfCond = S.ActOnCondition(
-        nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
-    SmallVector<Stmt *, 2> BodyStmts = {CE, NullptrAssign};
-    Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
-                                      SourceLocation(), SourceLocation());
-    Stmt *If = S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
-                             /* LPL=*/SourceLocation(), /* Init=*/nullptr,
-                             IfCond, /* RPL=*/SourceLocation(), Body,
-                             SourceLocation(), nullptr)
-                   .get();
+    Stmt *If = buildIfStmtForFreeFutureObj(S, FutureObj, FreeFuncRef);
     Stmts.push_back(If);
   }
 
@@ -2727,7 +2706,10 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   DeclarationName FutureName = FutureStateField->getDeclName();
   DeclarationNameInfo MemberNameInfo(FutureName,
                                      FutureStateField->getLocation());
+
+  // @code
   // this.__future_state
+  // @endcode
   Expr *ConditionVariable = S.BuildMemberExpr(
       FutureObj, true, SourceLocation(), NestedNameSpecifierLoc(),
       SourceLocation(), *FutureStateField,
@@ -2863,7 +2845,6 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
     }
   }
 
-  // TODO: After we use future in stdlib, get template argument directly.
   if (AwaitReturnTy.getTypePtr()->isBSCFutureType()) {
     const RecordType *FatPointerType =
         dyn_cast<RecordType>(AwaitReturnTy.getDesugaredType(Context));
@@ -2878,17 +2859,9 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
     const RecordType *FutureType =
         dyn_cast<RecordType>(AwaitReturnTy.getDesugaredType(Context));
     RecordDecl *FutureRD = FutureType->getDecl();
-    std::string PollFuncName = "poll";
-    LookupResult PollFDResult(
-        *this,
-        DeclarationNameInfo(&(Context.Idents).get(PollFuncName),
-                            SourceLocation()),
-        LookupOrdinaryName);
-    LookupQualifiedName(PollFDResult, FutureRD);
-    BSCMethodDecl *PollFD = nullptr;
-    if (!PollFDResult.empty()) {
-      PollFD = dyn_cast<BSCMethodDecl>(PollFDResult.getFoundDecl());
-      assert(PollFD != nullptr && "poll function of async function is null");
+
+    BSCMethodDecl *PollFD = lookupBSCMethodInRecord(*this, "poll", FutureRD);
+    if (PollFD != nullptr) {
       const RecordType *PollResultType = dyn_cast<RecordType>(
           PollFD->getReturnType().getDesugaredType(Context));
       RecordDecl *PollResult = PollResultType->getDecl();

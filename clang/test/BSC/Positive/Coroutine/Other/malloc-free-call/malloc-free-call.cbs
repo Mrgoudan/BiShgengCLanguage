@@ -30,12 +30,14 @@ int main() {
 // CHECK:void struct__Futuref_free(struct _Futuref *this) {
 // CHECK-NEXT:      if (this->Ft_2.data != 0) {
 // CHECK-NEXT:          this->Ft_2.vtable->free(this->Ft_2.data);
+// CHECK-NEXT:          this->Ft_2.data = (void *)0;
 // CHECK-NEXT:      }
 // CHECK-NEXT:      if (this->Ft_1.data != 0) {
 // CHECK-NEXT:          this->Ft_1.vtable->free(this->Ft_1.data);
+// CHECK-NEXT:          this->Ft_1.data = (void *)0;
 // CHECK-NEXT:      }
 // CHECK-NEXT:      if (this != 0) {
-// CHECK-NEXT:          free((void *)this);
+// CHECK-NEXT:          free(this);
 // CHECK-NEXT:          this = (void *)0;
 // CHECK-NEXT:      }
 // CHECK-NEXT:  }

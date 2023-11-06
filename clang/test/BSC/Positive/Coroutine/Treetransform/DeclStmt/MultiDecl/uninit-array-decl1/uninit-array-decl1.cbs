@@ -88,8 +88,12 @@ int main() {
 // CHECK-NEXT:      ;
 // CHECK-NEXT:      int Res_1;
 // CHECK-NEXT:      struct PollResult_int PR_1 = this->Ft_1.vtable->poll(this->Ft_1.data);
-// CHECK-NEXT:      if (struct_PollResult_int_is_completed(&PR_1, &Res_1)) {
-// CHECK-NEXT:      } else {
+// CHECK-NEXT:      if (struct_PollResult_int_is_completed(&PR_1, &Res_1))
+// CHECK-NEXT:          if (this->Ft_1.data != 0) {
+// CHECK-NEXT:              this->Ft_1.vtable->free(this->Ft_1.data);
+// CHECK-NEXT:              this->Ft_1.data = (void *)0;
+// CHECK-NEXT:          }  
+// CHECK-NEXT:      else {
 // CHECK-NEXT:          this->__future_state = 1;
 // CHECK-NEXT:          return struct_PollResult_int_pending();
 // CHECK-NEXT:      }
