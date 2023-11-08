@@ -25,17 +25,17 @@ clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name ${BSC_OPTION}
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
 
-clang_tablegen(AttrList.inc -gen-clang-attr-list
+clang_tablegen(AttrList.inc -gen-clang-attr-list ${BSC_OPTION}
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrList)
 
-clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
+clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list ${BSC_OPTION}
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrSubjectMatchRuleList)
 
-clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
+clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl ${BSC_OPTION}
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrHasAttributeImpl

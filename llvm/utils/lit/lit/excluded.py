@@ -1195,6 +1195,7 @@ clang_excluded_list = [
     "Clang :: SemaOpenCL/fdeclare-opencl-builtins.cl",
     "Clang :: SemaOpenCLCXX/addrspace-constructors.clcpp",
     "Clang :: SemaOpenCLCXX/private-access-specifier.cpp",
+    "Clang :: SemaTemplate/address_space-dependent.cpp",
     "Clang :: SemaTemplate/alias-templates.cpp",
     "Clang :: SemaTemplate/class-template-decl.cpp",
     "Clang :: SemaTemplate/concepts.cpp",

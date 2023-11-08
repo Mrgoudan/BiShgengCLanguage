@@ -1,0 +1,1 @@
+def BSCTraitMissing : DiagGroup<"bsc-trait-missing">;

@@ -13,7 +13,7 @@ clang_tablegen(Opcodes.inc
   SOURCE Interp/Opcodes.td
   TARGET Opcodes)
 
-clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table
+clang_tablegen(AttrDocTable.inc -gen-clang-attr-doc-table ${BSC_OPTION}
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../include/
   SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/../../include/clang/Basic/Attr.td
   TARGET ClangAttrDocTable)

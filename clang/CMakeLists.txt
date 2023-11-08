@@ -424,11 +424,11 @@ if(NOT DEFINED ENABLE_BSC)
 endif()
 
 if (ENABLE_BSC)
-  message("BSC is enabled")
+  message(STATUS "BSC is enabled")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_BSC=1")
   set(BSC_OPTION "-DBSC")
 else()
-  message("BSC is disabled")
+  message(STATUS "BSC is disabled")
   set(BSC_OPTION "")
 endif()
 

@@ -1380,3 +1380,8 @@ def BranchProtection : DiagGroup<"branch-protection">;
 // HLSL diagnostic groups
 // Warnings for HLSL Clang extensions
 def HLSLExtension : DiagGroup<"hlsl-extensions">;
+
+// BSC warnings and errors
+#ifdef BSC
+include "clang/Basic/BSC/DiagnosticBSCGroups.td"
+#endif

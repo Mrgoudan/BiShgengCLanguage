@@ -124,7 +124,7 @@ if (LLVM_ENABLE_SPHINX)
         "${CMAKE_CURRENT_BINARY_DIR}/html/LibASTMatchersReference.html")
 
       # Generated files
-      gen_rst_file_from_td(AttributeReference.rst -gen-attr-docs ../include/clang/Basic/Attr.td docs-clang-html)
+      gen_rst_file_from_td(AttributeReference.rst -gen-attr-docs ${BSC_OPTION} ../include/clang/Basic/Attr.td docs-clang-html)
       gen_rst_file_from_td(DiagnosticsReference.rst -gen-diag-docs ../include/clang/Basic/Diagnostic.td docs-clang-html)
       gen_rst_file_from_td(ClangCommandLineReference.rst -gen-opt-docs ../include/clang/Driver/ClangOptionDocs.td docs-clang-html)
     endif()

@@ -1,20 +1,20 @@
-clang_tablegen(Attrs.inc -gen-clang-attr-classes
+clang_tablegen(Attrs.inc -gen-clang-attr-classes ${BSC_OPTION}
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrClasses)
 
-clang_tablegen(AttrImpl.inc -gen-clang-attr-impl
+clang_tablegen(AttrImpl.inc -gen-clang-attr-impl ${BSC_OPTION}
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrImpl)
 
-clang_tablegen(AttrTextNodeDump.inc -gen-clang-attr-text-node-dump
+clang_tablegen(AttrTextNodeDump.inc -gen-clang-attr-text-node-dump ${BSC_OPTION}
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrTextDump)
 
-clang_tablegen(AttrNodeTraverse.inc -gen-clang-attr-node-traverse
+clang_tablegen(AttrNodeTraverse.inc -gen-clang-attr-node-traverse ${BSC_OPTION}
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrTraverse)
 
-clang_tablegen(AttrVisitor.inc -gen-clang-attr-ast-visitor
+clang_tablegen(AttrVisitor.inc -gen-clang-attr-ast-visitor ${BSC_OPTION}
   SOURCE ../Basic/Attr.td
   TARGET ClangAttrVisitor)
 

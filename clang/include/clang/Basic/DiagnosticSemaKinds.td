@@ -16,7 +16,6 @@ def note_previous_decl : Note<"%0 declared here">;
 def note_entity_declared_at : Note<"%0 declared here">;
 def note_callee_decl : Note<"%0 declared here">;
 def note_defined_here : Note<"%0 defined here">;
-def note_no_this_parameter : Note<"found the following member function %0 which doesn't have a 'this' parameter">;
 
 // For loop analysis
 def warn_variables_not_in_loop_body : Warning<
@@ -438,8 +437,6 @@ def err_inline_non_function : Error<
   "'inline' can only appear on functions%select{| and non-local variables}0">;
 def err_noreturn_non_function : Error<
   "'_Noreturn' can only appear on functions">;
-def err_async_non_function : Error<
-  "'async' can only appear on functions">;
 def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
@@ -860,7 +857,6 @@ def warn_static_main : Warning<"'main' should not be declared static">,
     InGroup<Main>;
 def err_static_main : Error<"'main' is not allowed to be declared static">;
 def err_inline_main : Error<"'main' is not allowed to be declared inline">;
-def err_async_main : Error<"'main' is not allowed to be declared async">;
 def ext_variadic_main : ExtWarn<
   "'main' is not allowed to be declared variadic">, InGroup<Main>;
 def ext_noreturn_main : ExtWarn<
@@ -2306,8 +2302,6 @@ def err_illegal_decl_array_of_auto : Error<
   "'%0' declared as array of %1">;
 def err_new_array_of_auto : Error<
   "cannot allocate array of 'auto'">;
-def err_owned_array_decl : Error<
-  "type of array cannot qualified by 'owned'">;
 def err_auto_not_allowed : Error<
   "%select{'auto'|'decltype(auto)'|'__auto_type'|"
   "use of "
@@ -3094,20 +3088,15 @@ def err_attribute_only_once_per_parameter : Error<
 def err_mismatched_uuid : Error<"uuid does not match previous declaration">;
 def note_previous_uuid : Note<"previous uuid specified here">;
 // EnhanceC
+#ifdef BSC
 def warn_attribute_pointers_only : Warning<
   "(EnhanceC) %0 attribute only applies to%select{| constant}1 pointer arguments, vars or fields)">,
   InGroup<IgnoredAttributes>;
-def warn_attribute_no_pointers : Warning<
-  "(EnhanceC) %0 attribute applied to function with no pointer arguments">,
+#else
+def warn_attribute_pointers_only : Warning<
+  "%0 attribute only applies to%select{| constant}1 pointer arguments">,
   InGroup<IgnoredAttributes>;
-def err_attribute_redundant_pointers : Error<
-  "(EnhanceC) %0 attribute applied to function with more than one pointer arguments, "
-  "please specify the index argument in the %0 attribute">;
-def warn_attribute_function_pointer : Warning<
-  "(EnhanceC) %0 attribute applied to function and function type pointer">,
-  InGroup<IgnoredAttributes>;
-def err_attribute_zero_pointer : Error<
-  "(EnhanceC) %0 attribute: The number of pointer arguments index cannot be zero">;
+#endif
 
 def err_attribute_pointers_only : Error<warn_attribute_pointers_only.Text>;
 def err_attribute_integers_only : Error<
@@ -5795,11 +5784,19 @@ def err_redefinition_different_typedef : Error<
   "redefinition with different types%diff{ ($ vs $)|}1,2">;
 def err_redefinition_different_concept : Error<
   "redefinition of concept %0 with different template parameters or requirements">;
+#ifdef BSC
 def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
   "type|typedef|type alias|template|type alias template|template "
   "template argument}1 %0 cannot be referenced with a "
   "%select{struct|interface|union|class|enum|trait}2 specifier">;
+#else
+def err_tag_reference_non_tag : Error<
+  "%select{non-struct type|non-class type|non-union type|non-enum "
+  "type|typedef|type alias|template|type alias template|template "
+  "template argument}1 %0 cannot be referenced with a "
+  "%select{struct|interface|union|class|enum}2 specifier">;
+#endif
 def err_tag_reference_conflict : Error<
   "implicit declaration introduced by elaborated type conflicts with a "
   "%select{non-struct type|non-class type|non-union type|non-enum "
@@ -6748,8 +6745,6 @@ def err_typecheck_incomplete_tag : Error<"incomplete definition of type %0">;
 def err_no_member : Error<"no member named %0 in %1">;
 def err_no_member_overloaded_arrow : Error<
   "no member named %0 in %1; did you mean to use '->' instead of '.'?">;
-def err_no_instance_member : Error<
-  "no instance member named %0 in %1; did you mean to use '::' instead of '%select{.|->}2'?">;
 
 def err_member_not_yet_instantiated : Error<
   "no member %0 in %1; it has not yet been instantiated">;
@@ -6766,12 +6761,6 @@ def err_specialization_not_primary_template : Error<
   "template specialization %0 is %select{instantiated from a partial|"
   "an explicit}1 specialization">;
 
-def err_owned_qualcheck_incompatible : Error<
-  "incompatible owned types, "
-  "%select{"
-  "cannot cast ownedType %1 to ownedType %2|"
-  "cannot cast UnOwnedType %1 to OwnedType %2|"
-  "cannot cast OwnedType %1 to UnOwnedType %2}0">;
 
 def err_owned_funcPtr_incompatible : Error<
   "cannot cast %0 to %1">;
@@ -6964,12 +6953,6 @@ def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
 def err_typecheck_invalid_operands : Error<
   "invalid operands to binary expression (%0 and %1)">, Deferrable;
-def err_typecheck_invalid_owned_binOp : Error<
-  "invalid operands to binary expression (%0 and %1)">, Deferrable;
-def err_typecheck_invalid_owned_unaOp : Error<
-  "invalid operands to unary expression (%0)">, Deferrable;
-def err_typecheck_invalid_owned_arrsub : Error<
-  "owned pointer type (%0) do not support ArraySubscript operate">, Deferrable;
 def note_typecheck_invalid_operands_converted : Note<
   "%select{first|second}0 operand was implicitly converted to type %1">;
 def err_typecheck_logical_vector_expr_gnu_cpp_restrict : Error<
@@ -8093,13 +8076,6 @@ def err_typecheck_convert_pointer_int : Error<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">;
-def err_owned_qualcheck_incompatible_pointer : Error<
-  "incompatible owned types, "
-  "%select{"
-  "cannot cast ownedType %1 to ownedType %2|"
-  "cannot cast UnOwnedType %1 to OwnedType %2|"
-  "cannot cast %1 to OwnedType %2|"
-  "cannot cast OwnedType %1 to UnOwnedType %2}0">;
 def ext_typecheck_convert_pointer_int : ExtWarn<
   err_typecheck_convert_pointer_int.Text>,
   InGroup<IntConversion>, DefaultError;

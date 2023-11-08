@@ -2112,6 +2112,8 @@ DeclResult Sema::CheckClassTemplate(
   if (!getLangOpts().BSC) {
     inferGslOwnerPointerAttribute(static_cast<CXXRecordDecl *>(NewClass));
   }
+  #else
+  inferGslOwnerPointerAttribute(NewClass);
   #endif
 
   if (TUK != TUK_Friend) {
