@@ -543,7 +543,11 @@ public:
   /// Returns true if functions without prototypes or functions with an
   /// identifier list (aka K&R C functions) are not allowed.
   bool requiresStrictPrototypes() const {
-    return CPlusPlus || C2x || DisableKNRFunctions;
+    return CPlusPlus || C2x || 
+    #if ENABLE_BSC
+    BSC || // FIXME: temp solution. should remove this later.
+    #endif
+    DisableKNRFunctions;
   }
 
   /// Returns true if implicit function declarations are allowed in the current

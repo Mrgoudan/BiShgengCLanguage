@@ -3,6 +3,7 @@
 // RUN: %t-rw.output
 
 #include "rewrite_bsc_with_macro_2.h"
+#include "stdbool.h"
 
 static inline void f() {
     if (BSC_LIKELY(true)) {}

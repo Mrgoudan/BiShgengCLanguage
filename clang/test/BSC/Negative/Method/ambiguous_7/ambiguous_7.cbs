@@ -8,7 +8,7 @@ unsigned float const int::f2() { // expected-error {{'float' cannot be signed or
     return 0;
 }
 
-unsigned bool int::f3() { // expected-error {{'bool' cannot be signed or unsigned}}
+unsigned _Bool int::f3() { // expected-error {{'_Bool' cannot be signed or unsigned}}
     return 0;
 }
 

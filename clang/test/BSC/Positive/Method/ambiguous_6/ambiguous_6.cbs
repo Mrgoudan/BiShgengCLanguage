@@ -18,11 +18,11 @@ struct F long long::f2() {
     return g;
 }
 
-bool long long::f3() {
+_Bool long long::f3() {
     return 0;
 }
 
-bool unsigned long::f4() {
+_Bool unsigned long::f4() {
     return 0;
 }
 

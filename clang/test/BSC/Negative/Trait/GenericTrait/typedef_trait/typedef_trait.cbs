@@ -3,4 +3,4 @@
 typedef trait F<T> {
   T foo(This* this, int a);
 }G; // expected-error {{expected ';' after trait}}
-// expected-error@-1 {{a type specifier is required for all declarations}}
+                // expected-warning@-1 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
