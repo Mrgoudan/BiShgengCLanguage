@@ -2879,7 +2879,17 @@ void CastOperation::CheckCStyleCast() {
       return;
     }
   }
-  #endif
+  if (Self.getLangOpts().BSC && Self.IsTraitExpr(SrcExpr.get()) &&
+      DestType->isPointerType() && !DestType->isTraitPointerType()) {
+    SrcExpr = Self.ActOnTraitPointerCast(SrcExpr.get());
+    if (DestType->isVoidPointerType()) {
+      Kind = CK_NoOp;
+    } else {
+      Kind = CK_BitCast;
+    }
+    return;
+  }
+#endif
 
   // If the type is dependent, we won't do any other semantic analysis now.
   if (Self.getASTContext().isDependenceAllowed() &&

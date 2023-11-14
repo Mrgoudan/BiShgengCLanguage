@@ -812,6 +812,30 @@ ExprResult Sema::ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
   return BuildBinOp(S, TokLoc, BO_Comma, Exprs[0], Exprs[1]);
 }
 
+// Handling trait pointers cast operation:
+// @code
+// trait F* f = &b;
+// void *p = (void *)f;
+// @endcode
+ExprResult Sema::ActOnTraitPointerCast(Expr *RHSExpr) {
+  RecordDecl *RD =
+      dyn_cast<RecordType>(RHSExpr->getType().getCanonicalType())->getDecl();
+  for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
+       I != E; ++I) {
+    if (I->getNameAsString() == "data") {
+      Expr *TraitExpr = BuildMemberExpr(
+          RHSExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *I, DeclAccessPair::make(*I, I->getAccess()), false,
+          DeclarationNameInfo(), I->getType(), VK_LValue, OK_Ordinary);
+      return ImplicitCastExpr::Create(Context, I->getType(), CK_LValueToRValue,
+                                      TraitExpr, nullptr, VK_PRValue,
+                                      FPOptionsOverride());
+    }
+  }
+  assert(false);
+  return ExprError();
+}
+
 // Handling reassignments of variable types with trait pointers:
 // @code
 // trait F* f = &b;

@@ -7623,7 +7623,9 @@ public:
   ExprResult ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
                                BinaryOperatorKind Opc, Expr *LHSExpr,
                                Expr *RHSExpr);
-  #endif
+
+  ExprResult ActOnTraitPointerCast(Expr *RHSExpr);
+#endif
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,
                                      llvm::function_ref<Scope *()> EnterScope);
