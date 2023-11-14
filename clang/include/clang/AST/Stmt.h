@@ -1461,11 +1461,9 @@ public:
 
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
-      : Stmt(CompoundStmtClass), 
+      : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc)
       #if ENABLE_BSC
-      RBraceLoc(Loc), SafeSpec(SS_None), SafeLoc()
-      #else
-      LBraceLoc(Loc), RBraceLoc(Loc)
+      , SafeSpec(SS_None), SafeLoc()
       #endif
       {
     CompoundStmtBits.NumStmts = 0;

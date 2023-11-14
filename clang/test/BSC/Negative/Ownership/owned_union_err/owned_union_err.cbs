@@ -15,7 +15,7 @@ int main() {
 }
 
 union A {
-    owned int* a;   //expected-error {{type of union field cannot be 'owned'（even indirectly), 'owned int *' contains 'owned' type}}
+    owned int* a;   //expected-error {{type of union field cannot be 'owned'(even indirectly), 'owned int *' contains 'owned' type}}
 };
 
 typedef owned int ownedInt;
@@ -28,5 +28,5 @@ struct S {
 };
 
 union C {
-    struct S* s1; //expected-error {{type of union field cannot be 'owned'（even indirectly), 'struct S *' contains 'owned' type}}
+    struct S* s1; //expected-error {{type of union field cannot be 'owned'(even indirectly), 'struct S *' contains 'owned' type}}
 };

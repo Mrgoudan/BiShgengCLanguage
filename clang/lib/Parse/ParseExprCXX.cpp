@@ -443,44 +443,48 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     Token Next;
     // TODO: this could be missidentified from typo:// "intt"
     
-    bool ParsingBSCTemplateFunction = false;
-    // lookup if identifier is a name of a function   
-    IdentifierInfo *CurName = Tok.getIdentifierInfo();
-    SourceLocation CurNameLoc = Tok.getLocation();    
-    LookupResult LookupPreviousFunction(Actions, CurName, CurNameLoc, 
-                                        Sema::LookupOrdinaryName, 
-                                        Sema::NotForRedeclaration);    
-    Actions.LookupName(LookupPreviousFunction, getCurScope());
+    if (getLangOpts().BSC) {
+      bool ParsingBSCTemplateFunction = false;
+      // lookup if identifier is a name of a function
+      IdentifierInfo *CurName = Tok.getIdentifierInfo();
+      SourceLocation CurNameLoc = Tok.getLocation();
+      LookupResult LookupPreviousFunction(Actions, CurName, CurNameLoc, 
+                                          Sema::LookupOrdinaryName, 
+                                          Sema::NotForRedeclaration);
+      Actions.LookupName(LookupPreviousFunction, getCurScope());
 
-    if (getCurScope()->getDepth() <= 1 && LookupPreviousFunction.empty()) {
-      ParsingBSCTemplateFunction = IsBSCTemplateDeclaration(getLangOpts().BSC,
-                                                            Tok.is(tok::identifier),
-                                                            PP);
-      
+      if (getCurScope()->getDepth() <= 1 && LookupPreviousFunction.empty()) {
+        ParsingBSCTemplateFunction = IsBSCTemplateDeclaration(getLangOpts().BSC,
+                                                              Tok.is(tok::identifier),
+                                                              PP);
+        
+        if (ParsingBSCTemplateFunction) {
+          // Determine if '>' is followed by '{' or '('
+          int LGreaterOffset = 2;
+          Token TmpTok = PP.LookAhead(LGreaterOffset);
+          // Attention to case like: int a = foo<(1>>2)>(3);
+          // The case above is not parsing BSC template function.
+          while ((TmpTok.isNot(tok::greater) ||
+                  (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
+                  PP.LookAhead(LGreaterOffset - 1).is(tok::greater)
+                  )) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
+            LGreaterOffset += 1;
+            TmpTok = PP.LookAhead(LGreaterOffset);
+          } 
+          ParsingBSCTemplateFunction =
+              TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
+                                            .isOneOf(tok::l_paren, tok::l_brace));
+        }
+      }
       if (ParsingBSCTemplateFunction) {
-        // Determine if '>' is followed by '{' or '('
-        int LGreaterOffset = 2;
-        Token TmpTok = PP.LookAhead(LGreaterOffset);
-        // Attention to case like: int a = foo<(1>>2)>(3);
-        // The case above is not parsing BSC template function.
-        while ((TmpTok.isNot(tok::greater) ||
-                (PP.LookAhead(LGreaterOffset + 1).is(tok::greater) ||
-                 PP.LookAhead(LGreaterOffset - 1).is(tok::greater)
-                )) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
-          LGreaterOffset += 1;
-          TmpTok = PP.LookAhead(LGreaterOffset);
-        } 
-        ParsingBSCTemplateFunction =
-            TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
-                                          .isOneOf(tok::l_paren, tok::l_brace));
+        int LParenOffset = 0;
+        while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
+          LParenOffset += 1;
+        }
+        Next = PP.LookAhead(LParenOffset);
+      } else {
+        Next = NextToken();
       }
-    }
-    if (ParsingBSCTemplateFunction) {
-      int LParenOffset = 0;
-      while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
-        LParenOffset += 1;
-      }
-      Next = PP.LookAhead(LParenOffset);
     } else {
       Next = NextToken();
     }

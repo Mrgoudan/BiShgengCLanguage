@@ -6,14 +6,14 @@ typedef struct A {
     owned int num;
 }SA;
 
-SA sa1 = {.num = 10};   //expected-error {{type of global variable cannot be 'owned'（even indirectly), 'SA' (aka 'struct A') contains 'owned' type}}
+SA sa1 = {.num = 10};   //expected-error {{type of global variable cannot be 'owned'(even indirectly), 'SA' (aka 'struct A') contains 'owned' type}}
 
-struct A sa2 = {.num = 20};   //expected-error {{type of global variable cannot be 'owned'（even indirectly), 'struct A' contains 'owned' type}}
+struct A sa2 = {.num = 20};   //expected-error {{type of global variable cannot be 'owned'(even indirectly), 'struct A' contains 'owned' type}}
 
 typedef struct B {
     SA* sa;
 }SB;
 
-SB* sb1; //expected-error{{type of global variable cannot be 'owned'（even indirectly), 'SB *' (aka 'struct B *') contains 'owned' type}}
+SB* sb1; //expected-error{{type of global variable cannot be 'owned'(even indirectly), 'SB *' (aka 'struct B *') contains 'owned' type}}
 
 

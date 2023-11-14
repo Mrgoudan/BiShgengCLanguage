@@ -186,7 +186,7 @@ def err_owned_inderictOwned_type_check : Error<
   "%select{"
   "type of %1 cannot be 'owned' |"
   "type of %1 cannot be 'owned', %2 contains 'owned' type |"
-  "type of %1 cannot be 'owned'（even indirectly), %2 contains 'owned' type}0">;
+  "type of %1 cannot be 'owned'(even indirectly), %2 contains 'owned' type}0">;
 
 def err_owned_union_spec: Error<"union cannot be qualifiered by '%0'">;
 def err_owned_union_field_spec: Error<"field of union cannot be qualifiered by 'owned'">;

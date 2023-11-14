@@ -7144,12 +7144,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // entering condition | BSC syntax reusing C++ parsing code
       if ((getLangOpts().CPlusPlus
           #if ENABLE_BSC
-          || getLangOpts().BSC
+          || (getLangOpts().BSC && Actions.getCurScope()->getParent()->isTemplateParamScope())
           #endif
           ) &&
-          #if ENABLE_BSC
-           Actions.getCurScope()->getParent()->isTemplateParamScope() &&
-          #endif
            D.mayBeFollowedByCXXDirectInit()) {
         // The name of the declarator, if any, is tentatively declared within
         // a possible direct initializer.

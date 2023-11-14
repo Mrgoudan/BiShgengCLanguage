@@ -1067,7 +1067,7 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       break;
     }
 
-    if (ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
+    if (getLangOpts().BSC && ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
                                  GetLookAheadToken(2)))
       return ParseImplTraitDeclaration();
     #endif

@@ -7,7 +7,7 @@ typedef struct A {
     owned int a;
 }AA;
 
-AA aa;  //expected-error {{type of global variable cannot be 'owned'（even indirectly), 'AA' (aka 'struct A') contains 'owned' type}}
+AA aa;  //expected-error {{type of global variable cannot be 'owned'(even indirectly), 'AA' (aka 'struct A') contains 'owned' type}}
 
 typedef owned struct B {
     int a;
