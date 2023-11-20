@@ -14677,13 +14677,15 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   }
 
   #if ENABLE_BSC
-  if (TraitDecl *TD = TryDesugarTrait(T)) {
-    RecordDecl *LookupTrait = TD->getTrait();
-    if (LookupTrait && LookupTrait->getDescribedClassTemplate()) {
-      T = CompleteRecordType(LookupTrait, TSInfo);
-      T = Context.getElaboratedType(ETK_Struct, nullptr, T);
+  if (getLangOpts().BSC) {
+    if (TraitDecl *TD = TryDesugarTrait(T)) {
+      RecordDecl *LookupTrait = TD->getTrait();
+      if (LookupTrait && LookupTrait->getDescribedClassTemplate()) {
+        T = CompleteRecordType(LookupTrait, TSInfo);
+        T = Context.getElaboratedType(ETK_Struct, nullptr, T);
+      }
+      TSInfo = Context.getTrivialTypeSourceInfo(T);
     }
-    TSInfo = Context.getTrivialTypeSourceInfo(T);
   }
   #endif
 

@@ -20,7 +20,7 @@ import lit.Test
 import lit.util
 from lit.formats.googletest import GoogleTest
 from lit.TestTimes import record_test_times
-from lit.excluded import clang_excluded_list, clang_unit_excluded_list, c_excluded_list
+from lit.excluded import clang_excluded_list, c_excluded_list
 
 def main(builtin_params={}):
     opts = lit.cl_arguments.parse_args()
@@ -219,8 +219,7 @@ def mark_excluded(discovered_tests, selected_tests):
 
 def mark_bsc_excluded(useBSC, selected_tests):
     # exclude failed tests while running `llvm-lit clang/test`
-    res_list = [i for i in selected_tests if i.getFullName() not in clang_excluded_list
-                and i.getFullName() not in clang_unit_excluded_list]
+    res_list = [i for i in selected_tests if i.getFullName() not in clang_excluded_list]
     # exclude extra failed tests while running `llvm-lit clang/test --bsc`
     if useBSC:
         res_list = [i for i in res_list if "Clang-Unit :: " not in i.getFullName()

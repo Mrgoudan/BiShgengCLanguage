@@ -10,7 +10,6 @@ import lit.Test
 import lit.TestRunner
 import lit.util
 from .base import TestFormat
-from lit.excluded import clang_unit_excluded_list
 
 kIsWindows = sys.platform in ['win32', 'cygwin']
 
@@ -271,11 +270,6 @@ class GoogleTest(TestFormat):
                             returnCode = lit.Test.UNRESOLVED
                             output = header + 'unresolved test result\n'
                         
-                        # We mark part of failed tests here since one unittest
-                        # has many subtests and we only got name of subtest here.
-                        if subtest.getFullName() in clang_unit_excluded_list:
-                            returnCode = lit.Test.EXCLUDED
-
                         elapsed_time = float(testinfo['time'][:-1])
                         res = lit.Test.Result(returnCode, output, elapsed_time)
                         res.pid = test.result.pid or 0

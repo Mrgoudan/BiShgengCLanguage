@@ -3720,10 +3720,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
         #if ENABLE_BSC
+        // FIXME: ParseImplicitInt is handling `Tok`, hence it's not correct
+        // here. Create an issue for this:
+        // https://gitee.com/bisheng_c_language_dep/llvm-project/issues/I8HS93
         if (SwitchTok.isNot(tok::identifier))
-        #else
-        if (Tok.isNot(tok::identifier))
+          continue;
         #endif
+        if (Tok.isNot(tok::identifier))
           continue;
         ParsedAttributes Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {

@@ -1879,14 +1879,12 @@ ExprResult Parser::ParseCastExpression(
   // These can be followed by postfix-expr pieces.
   PreferredType = SavedType;
   #if ENABLE_BSC
-  if (Res.get()) {
+  if (getLangOpts().BSC && Res.get()) {
     if (HasBSCScopeSpec && BL.isValid()) {
       Res.get()->HasBSCScopeSpec = HasBSCScopeSpec;
       Res.get()->setExtendedTypeBeginLoc(BL);
     }
-  }
 
-  if (Res.get()) {
     QualType ResType = Res.get()->getType();
     if (TraitDecl *TD = Actions.TryDesugarTrait(ResType)) {
       if (UnaryOperator *UO =
