@@ -12309,8 +12309,10 @@ public:
                                                              ExprResult &RHS);
 
   #if ENABLE_BSC
-  bool CheckOwnedQualTypeCStyleCast(QualType LHSType, Expr* RHSExpr);
+  bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType);
+  bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
+  bool CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   #endif

@@ -5928,6 +5928,9 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_volatile:
   case tok::kw_restrict:
   case tok::kw__Sat:
+  #if ENABLE_BSC
+  case tok::kw_owned:
+  #endif
 
     // Debugger support.
   case tok::kw___unknown_anytype:

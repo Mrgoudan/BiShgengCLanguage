@@ -6,9 +6,6 @@
             <div style='margin-top:10%;font-size:20px'>版本号：0.0.0</div>
             <div style='margin-top:3%;font-size:20px'>发布时间：2023-08-11</div>
         </div>
-        <div style='margin-top:500px;font-size:16px;font-width:600;letter-spacing:2px;text-align:center'>
-            <span style=''>华为技术有限公司</span>
-        </div>
     </div>
 </div>
 <div style=“package-break-after:always;“></div>
@@ -17,7 +14,7 @@
 
 ### 安装毕昇 C 编译器
 
-首先，请根据系统版本到[软件发布平台](https://cmc-svz.clouddragon.huawei.com/cmcversion/index/releaseView?deltald=7952942537179264&isSelect=Software)根据平台架构下载相应的安装包，如 x86_64, arrch64 等。
+首先，请根据系统版本到[毕昇 C 版本发布平台](https://gitee.com/bisheng_c_language_dep/bi-sheng-c-release)根据平台架构下载相应的安装包，如 x86_64, arrch64 等。
 
 下载成功后，解压安装包，通过配置 PATH 环境变量即可完成安装。具体步骤如下 （以 clang+llvm-15.04-x86_64-linux-gun-bsc.tar.gz 为例)
 
@@ -1235,7 +1232,7 @@ void test() {
 
 2. owned 使用方法与 `const` 基本一致，允许修饰变量/函数入参/函数返回/struct 成员/多级指针等
 
-3. owned 传染性：包含 `owned` 修饰成员的 `struct` 或者指向 `owned` 单元的指针间接拥有 `owned` 属性。`owned` 类型或间接拥有 `owned` 属性的类型不能声明为全局变量
+3. owned 传染性：包含 `owned` 修饰成员的 `struct` 或者指向 `owned` 单元的指针间接拥有 `owned` 属性
 
    ```c
    struct A {int* owned a}; // struct A 拥有简介 owned 属性
@@ -1307,7 +1304,7 @@ void test() {
    }
    ```
 
-10. 入参或返回类型包含 `owned` 类型或间接 `owned` 类型的函数指针，不支持隐私转换
+10. 入参或返回类型包含 `owned` 类型或间接 `owned` 类型的函数指针，不支持隐式转换
 
     ```c
     typedef int (*FTP)(int*, int*);

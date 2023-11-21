@@ -37,24 +37,13 @@ def err_invalid_async_function : Error <
 def err_owned_array_decl : Error<
   "type of array cannot qualified by 'owned'">;
 def err_owned_qualcheck_incompatible : Error<
-  "incompatible owned types, "
-  "%select{"
-  "cannot cast ownedType %1 to ownedType %2|"
-  "cannot cast UnOwnedType %1 to OwnedType %2|"
-  "cannot cast OwnedType %1 to UnOwnedType %2}0">;
+  "incompatible owned types, cannot cast %0 to %1">;
 def err_typecheck_invalid_owned_binOp : Error<
-  "invalid operands to binary expression (%0 and %1)">, Deferrable;
+  "invalid operands to binary expression (%0 and %1)">;
 def err_typecheck_invalid_owned_unaOp : Error<
-  "invalid operands to unary expression (%0)">, Deferrable;
+  "invalid operands to unary expression (%0)">;
 def err_typecheck_invalid_owned_arrsub : Error<
-  "owned pointer type (%0) do not support ArraySubscript operate">, Deferrable;
-def err_owned_qualcheck_incompatible_pointer : Error<
-  "incompatible owned types, "
-  "%select{"
-  "cannot cast ownedType %1 to ownedType %2|"
-  "cannot cast UnOwnedType %1 to OwnedType %2|"
-  "cannot cast %1 to OwnedType %2|"
-  "cannot cast OwnedType %1 to UnOwnedType %2}0">;
+  "owned pointer type (%0) do not support ArraySubscript operate">;
 
 // BSC trait warnings and errors.
 def err_variables_not_trait_pointer : Error<"only trait pointer type is allowed to be declared">;

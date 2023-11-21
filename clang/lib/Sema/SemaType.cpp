@@ -5318,6 +5318,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // function definition.  Apparently ok on declarations and
           // in C++ though (!)
           S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
+        #if ENABLE_BSC
+        } else if (S.getLangOpts().BSC && T.isOwnedQualified()) {
+          // owned type is allowed to return
+        #endif
         } else
           diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
 

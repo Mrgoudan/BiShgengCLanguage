@@ -14,6 +14,7 @@ add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
   BSC/SemaBSCCoroutine.cpp
   BSC/SemaBSCTrait.cpp
+  BSC/SemaExprBSC.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp

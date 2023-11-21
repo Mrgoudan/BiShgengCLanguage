@@ -2871,12 +2871,23 @@ void CastOperation::CheckCStyleCast() {
 
   #if ENABLE_BSC
   // bsc owned type CStyleCast
-  if (Self.getLangOpts().BSC &&
-      (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() ||
-       DestType.getCanonicalType().isOwnedQualified())) {
-    if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get())) {
-      SrcExpr = ExprError();
-      return;
+  if (Self.getLangOpts().BSC) {
+    if (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() ||
+       DestType.getCanonicalType().isOwnedQualified()) {
+      if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {
+        SrcExpr = ExprError();
+        return;
+      }
+    }
+    if (const auto *LHSPtrType = DestType->getAs<PointerType>()) {
+      if (const auto *RHSPtrType = SrcExpr.get()->getType()->getAs<PointerType>()) {
+        if (LHSPtrType->hasOwnedFields() || RHSPtrType->hasOwnedFields()) {
+          if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {
+            SrcExpr = ExprError();
+            return;
+          }
+        }
+      }
     }
   }
   if (Self.getLangOpts().BSC && Self.IsTraitExpr(SrcExpr.get()) &&

@@ -15,7 +15,7 @@ void test() {
 
 void test2() {
     int arr[3];
-    int* owned p1 = &arr[1];    // expected-error {{incompatible owned types, cannot cast UnOwnedType 'int *' to OwnedType 'int *owned'}}
+    int* owned p1 = &arr[1];    // expected-error {{incompatible owned types, cannot cast 'int *' to 'int *owned'}}
 }
 
 struct B {
