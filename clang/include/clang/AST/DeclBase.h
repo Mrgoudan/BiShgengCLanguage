@@ -1677,7 +1677,7 @@ class DeclContext {
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
   #if ENABLE_BSC
-  enum { NumFunctionDeclBits = 29 };
+  enum { NumFunctionDeclBits = 31 };
   #else
   enum { NumFunctionDeclBits = 28};
   #endif
@@ -1698,7 +1698,7 @@ class DeclContext {
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
     #if ENABLE_BSC
-    uint64_t NumCtorInitializers : 19;
+    uint64_t NumCtorInitializers : 17;
     #else
     uint64_t NumCtorInitializers : 20;
     #endif

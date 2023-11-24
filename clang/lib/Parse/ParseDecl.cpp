@@ -3250,8 +3250,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // the token as an identifier.
     if (getLangOpts().MSVCCompat && Tok.is(tok::kw__Atomic) &&
         DS.getStorageClassSpec() == clang::DeclSpec::SCS_typedef &&
-        !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less))
+        !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less)) {
       Tok.setKind(tok::identifier);
+      #if ENABLE_BSC
+      SwitchTok.setKind(tok::identifier);
+      #endif
+    }
 
     #if ENABLE_BSC
     SourceLocation Loc = SwitchTok.getLocation();
@@ -3613,7 +3617,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_decltype:
     case tok::identifier: {
       #if ENABLE_BSC
-      if (Tok.getIdentifierInfo()->getName().equals("This")) {
+      if (getLangOpts().BSC && Tok.getIdentifierInfo()->getName().equals("This")) {
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_This, Loc, PrevSpec,
                                        DiagID, Policy);
         break;
