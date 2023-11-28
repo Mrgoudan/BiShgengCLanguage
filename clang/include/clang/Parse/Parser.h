@@ -1633,10 +1633,6 @@ private:
   DeclGroupPtrTy ParseDeclOrFunctionDefInternal(ParsedAttributes &Attrs,
                                                 ParsingDeclSpec &DS,
                                                 AccessSpecifier AS);
-  #if ENABLE_BSC
-  DeclGroupPtrTy ParseImplTraitDeclaration();
-  #endif
-
   void SkipFunctionBody();
   Decl *ParseFunctionDefinition(ParsingDeclarator &D,
                  const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
@@ -2476,20 +2472,22 @@ private:
   void ParseStructUnionBody(SourceLocation StartLoc, DeclSpec::TST TagType,
                             RecordDecl *TagDecl);
   #if ENABLE_BSC
+  DeclGroupPtrTy ParseImplTraitDeclaration();
   void ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                            const ParsedTemplateInfo &TemplateInfo,
                            bool EnteringContext, DeclSpecContext DSC,
                            ParsedAttributes &Attributes);
+  void ParseTraitBody(SourceLocation StartLoc, SourceLocation AttrFixitLoc,
+                      Decl *TagDecl);
+  bool ParseTraitMemberDeclaratorBeforeInitializer(
+      Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
+      LateParsedAttrList &LateAttrs);
+  DeclGroupPtrTy ParseTraitMemberDeclaration(ParsedAttributes &Attr);
   #endif
 
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
       llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
-  #if ENABLE_BSC
-  void ParseTraitBody(SourceLocation StartLoc, SourceLocation AttrFixitLoc,
-                      Decl *TagDecl);
-  #endif
-
   bool isDeclarationSpecifier(bool DisambiguatingWithExpression = false);
   bool isTypeSpecifierQualifier();
 
@@ -3205,12 +3203,6 @@ private:
                                    SourceLocation AttrFixitLoc,
                                    ParsedAttributes &Attrs, unsigned TagType,
                                    Decl *TagDecl);
-  #if ENABLE_BSC
-  bool ParseTraitMemberDeclaratorBeforeInitializer(
-      Declarator &DeclaratorInfo, VirtSpecifiers &VS, ExprResult &BitfieldSize,
-      LateParsedAttrList &LateAttrs);
-  DeclGroupPtrTy ParseTraitMemberDeclaration(ParsedAttributes &Attr);
-  #endif
   ExprResult ParseCXXMemberInitializer(Decl *D, bool IsFunction,
                                        SourceLocation &EqualLoc);
   bool
