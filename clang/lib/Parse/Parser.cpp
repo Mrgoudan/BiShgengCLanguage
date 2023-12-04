@@ -1063,7 +1063,6 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       SourceLocation DeclEnd;
       ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
       return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs, EmptyDeclSpecAttrs);
-      //
       break;
     }
 

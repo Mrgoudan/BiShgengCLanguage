@@ -84,18 +84,11 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   TemplateParameterDepthRAII CurTemplateDepthTracker(
       TemplateParameterDepth); // changed in (2),
 
-  // Consume the 'export', if any.  // no corresponding syntax
+  // a variable for calling CXX template function
   SourceLocation ExportLoc;
-  TryConsumeToken(tok::kw_export, ExportLoc);
 
-  // Consume the 'template', which should be here.  // no corresponding syntax
-  SourceLocation TemplateLoc;
-  TryConsumeToken(tok::kw_template, TemplateLoc);
-
-  // We don`t have keyword 'template' in BSC, so we need use 
-  // the first tok`s location.
-  if (TemplateLoc.isInvalid())
-    TemplateLoc = Tok.getLocation();
+  // a variable for calling CXX template function
+  SourceLocation TemplateLoc = Tok.getLocation();
   
   BSCGenericLookAhead = 0; // BSCGenericLookAhead starts from 0, assume the first
                            // token we see must not be '<'
@@ -143,18 +136,6 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   if (!TemplateParams.empty()) {
     isSpecialization = false;  // keep this
     ++CurTemplateDepthTracker; // keep this
-
-    if (TryConsumeToken(tok::kw_requires)) { // C++ concept-requries clause
-      OptionalRequiresClauseConstraintER =
-          Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
-              /*IsTrailingRequiresClause=*/false));
-      if (!OptionalRequiresClauseConstraintER.isUsable()) {
-        // Skip until the semi-colon or a '}'.
-        SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
-        TryConsumeToken(tok::semi);
-        return nullptr;
-      }
-    }
   } else {
     LastParamListWasEmpty = true;
   }
@@ -164,14 +145,6 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
                                           // as C++, for both func and struct
           CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
           TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
-
-  // Parse the actual template declaration.
-  if (Tok.is(tok::kw_concept)) // C++ concept-requires clause, no corresponding
-                               // syntax in BSC
-    return ParseConceptDefinition(ParsedTemplateInfo(&ParamLists,
-                                                     isSpecialization,
-                                                     LastParamListWasEmpty),
-                                  DeclEnd);
 
   return ParseSingleDeclarationAfterTemplate( // make sure parameters input is
                                               // same as C++, for both func and
