@@ -1288,6 +1288,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__GLIBCXX_BITSIZE_INT_N_0", "128");
   }
 
+  #if ENABLE_BSC
+  if (LangOpts.BSC) {
+    Builder.defineMacro("__bishengc");
+  }
+  #endif
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }
