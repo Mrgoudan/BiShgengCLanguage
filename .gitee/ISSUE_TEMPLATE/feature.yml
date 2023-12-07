@@ -1,0 +1,19 @@
+name: 特性实现
+description: 新增特性实现
+title: "【】"
+labels: ["feature"]
+body:
+  - type: textarea
+    id: related-problem
+    attributes:
+      label: 你要实现什么功能？
+      description: 清晰并简洁地描述要实现的功能。
+    validations:
+      required: true
+  - type: textarea
+    id: desired-solution
+    attributes:
+      label: 你有简单示例吗？
+      description: 如有，可以展示简单示例。
+    validations:
+      required: false

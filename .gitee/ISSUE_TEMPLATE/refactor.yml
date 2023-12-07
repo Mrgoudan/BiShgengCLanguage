@@ -1,0 +1,12 @@
+name: 代码重构
+description: 新增代码重构
+title: "【】"
+labels: ["refactor"]
+body:
+  - type: textarea
+    id: related-problem
+    attributes:
+      label: 你要重构哪部分功能？
+      description: 清晰并简洁地描述要重构的功能。
+    validations:
+      required: true
