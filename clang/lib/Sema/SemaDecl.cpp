@@ -4065,9 +4065,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   // C: Function types need to be compatible, not identical. This handles
   // duplicate function decls like "void f(int); void f(enum X);" properly.
   if (!getLangOpts().CPlusPlus
-      #if ENABLE_BSC
-      && !getLangOpts().BSC
-      #endif
       ) {
     // C99 6.7.5.3p15: ...If one type has a parameter type list and the other
     // type is specified by a function definition that contains a (possibly
