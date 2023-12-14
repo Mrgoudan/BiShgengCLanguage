@@ -696,7 +696,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       // For instantiated functions which have same template arg type
       // in different source files, linker will report multi definition error.
       // Hence, we add weak attribute to solve this.
-      if (D->isTemplateInstantiation())
+      if (D->isTemplateInstantiation() && D->getStorageClass() != SC_Static)
         OS << "__attribute__((weak)) ";
       if (const BSCMethodDecl *BMD = dyn_cast<BSCMethodDecl>(D)) {
         std::string FunctionNameStr =
@@ -1099,7 +1099,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
         Out << ' ' + FunctionNameStr;
       } else {
       #endif
-        if (!Policy.PrintCanonicalTypes) 
+        if (!Policy.PrintCanonicalTypes)
           if (const auto* TSI = S->getTypeAsWritten())
             if (const auto *TST =
                     dyn_cast<TemplateSpecializationType>(TSI->getType()))
