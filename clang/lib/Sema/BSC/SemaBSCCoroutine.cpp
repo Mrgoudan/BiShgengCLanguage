@@ -182,59 +182,47 @@ bool Sema::IsBSCCompatibleFutureType(QualType Ty) {
 }
 
 namespace {
-class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
+class LocalVarFinder : public StmtVisitor<LocalVarFinder> {
   ASTContext &Context;
-  int AwaitCount = 0;
-  std::vector<Expr *> Args;
   std::vector<std::pair<DeclarationName, QualType>> LocalVarList;
   std::map<std::string, int> IdentifierNumber;
 
  public:
-  AwaitExprFinder(ASTContext &Context) : Context(Context) {}
+   LocalVarFinder(ASTContext &Context) : Context(Context) {}
 
-  void VisitAwaitExpr(AwaitExpr *E) {
-    Visit(E->getSubExpr());
-    Args.push_back(E);
-    AwaitCount++;
-  }
+   void VisitStmt(Stmt *S) {
+     for (auto *C : S->children()) {
+       if (C) {
+         if (auto DeclS = dyn_cast_or_null<DeclStmt>(C)) {
+           for (const auto &DI : DeclS->decls()) {
+             if (auto VD = dyn_cast_or_null<VarDecl>(DI)) {
+               if (VD->isExternallyVisible())
+                 continue;
 
-  void VisitStmt(Stmt *S) {
-    for (auto *C : S->children()) {
-      if (C) {
-        if (auto DeclS = dyn_cast_or_null<DeclStmt>(C)) {
-          for (const auto &DI : DeclS->decls()) {
-            if (auto VD = dyn_cast_or_null<VarDecl>(DI)) {
-              if (VD->isExternallyVisible()) continue;
+               QualType QT = VD->getType();
+               if (QT->isTraitPointerType())
+                 continue;
+               if (QT.isConstQualified()) {
+                 QT.removeLocalConst(); // TODO: need reconsider
+                 VD->setType(QT);
+               }
+               std::string VDName = VD->getName().str();
+               SetIdentifierNumber(VDName, GetIdentifierNumber(VDName) + 1);
+               if (GetIdentifierNumber(VDName) > 1) {
+                 VDName = VDName + "_" +
+                          std::to_string(GetIdentifierNumber(VDName) - 1);
+                 VD->setDeclName(&(Context.Idents).get(VDName));
+               }
 
-              QualType QT = VD->getType();
-              if (QT->isTraitPointerType())
-                continue;
-              if (QT.isConstQualified()) {
-                QT.removeLocalConst();
-                VD->setType(QT);
-              }
-              std::string VDName = VD->getName().str();
-              SetIdentifierNumber(VDName, GetIdentifierNumber(VDName) + 1);
-              if (GetIdentifierNumber(VDName) > 1) {
-                VDName = VDName + "_" +
-                         std::to_string(GetIdentifierNumber(VDName) - 1);
-                VD->setDeclName(&(Context.Idents).get(VDName));
-              }
-
-              LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
-                  VD->getDeclName(), VD->getType()));
-            }
-          }
-        }
-        Visit(C);
-      }
-    }
-  }
-
-  int GetAwaitExprNum() const { return AwaitCount; }
-
-  std::vector<Expr *> GetAwaitExpr() const { return Args; }
-
+               LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
+                   VD->getDeclName(), VD->getType()));
+             }
+           }
+         }
+         Visit(C);
+       }
+     }
+   }
   std::vector<std::pair<DeclarationName, QualType>> GetLocalVarList() const {
     return LocalVarList;
   }
@@ -249,6 +237,32 @@ class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
     if (I != IdentifierNumber.end()) return I->second;
     return 0;
   }
+};
+
+class AwaitExprFinder : public StmtVisitor<AwaitExprFinder> {
+  int AwaitCount = 0;
+  std::vector<Expr *> Args;
+
+public:
+  AwaitExprFinder() {}
+
+  void VisitAwaitExpr(AwaitExpr *E) {
+    Visit(E->getSubExpr());
+    Args.push_back(E);
+    AwaitCount++;
+  }
+
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        Visit(C);
+      }
+    }
+  }
+
+  int GetAwaitExprNum() const { return AwaitCount; }
+
+  std::vector<Expr *> GetAwaitExpr() const { return Args; }
 };
 
 static bool hasAwaitExpr(Stmt *S) {
@@ -2943,12 +2957,12 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   SmallVector<Decl *, 8> Decls;
   Decls.push_back(FD);
 
-  AwaitExprFinder finder = AwaitExprFinder(Context);
-  finder.Visit(FD->getBody());
+  AwaitExprFinder AwaitFinder = AwaitExprFinder();
+  AwaitFinder.Visit(FD->getBody());
 
   // Report if await expression appear in non-async functions.
   if (!FD->isAsyncSpecified()) {
-    if (finder.GetAwaitExprNum() != 0) {
+    if (AwaitFinder.GetAwaitExprNum() != 0) {
       Diag(FD->getBeginLoc(), diag::err_await_invalid_scope)
           << "non-async function.";
     }
@@ -3000,13 +3014,15 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   }
   RecordDecl *FatPointerRD = FatPointerType->getAsRecordDecl();
 
+  LocalVarFinder VarFinder = LocalVarFinder(Context);
+  VarFinder.Visit(FD->getBody());
+
   RecursiveCallVisitor RecursiveVisitor = RecursiveCallVisitor(FD);
   RecursiveVisitor.VisitStmt(FD->getBody());
   bool IsRecursiveCall = RecursiveVisitor.GetIsRecursiveCall();
   bool IsOptimization = FD->isStatic() && !IsRecursiveCall;
-  RecordDecl *RD =
-      buildFutureRecordDecl(*this, FD, finder.GetAwaitExpr(),
-                            finder.GetLocalVarList());
+  RecordDecl *RD = buildFutureRecordDecl(*this, FD, AwaitFinder.GetAwaitExpr(),
+                                         VarFinder.GetLocalVarList());
   if (!RD) {
     return Decls;
   }
@@ -3020,7 +3036,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Decls.push_back(FutureInitDef);
   Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
 
-  const int FutureStateNumber = finder.GetAwaitExprNum() + 1;
+  const int FutureStateNumber = AwaitFinder.GetAwaitExprNum() + 1;
 
   Decls.push_back(RD);
   Context.BSCDesugaredMap[FD].push_back(RD);
