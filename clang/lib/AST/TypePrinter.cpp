@@ -174,14 +174,18 @@ namespace {
 } // namespace
 
 static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
-                               bool HasRestrictKeyword) {
+                               bool HasRestrictKeyword
+                               #if ENABLE_BSC
+                               , bool IsRewriteBSC
+                               #endif
+                               ) {
   bool appendSpace = false;
   if (TypeQuals & Qualifiers::Const) {
     OS << "const";
     appendSpace = true;
   }
   #if ENABLE_BSC
-  if (TypeQuals & Qualifiers::Owned) {
+  if (TypeQuals & Qualifiers::Owned && !IsRewriteBSC) {
     if (appendSpace) OS << ' ';
     OS << "owned";
     appendSpace = true;
@@ -562,7 +566,11 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   OS << '[';
   if (T->getIndexTypeQualifiers().hasQualifiers()) {
     AppendTypeQualList(OS, T->getIndexTypeCVRQualifiers(),
-                       Policy.Restrict);
+                       Policy.Restrict
+                       #if ENABLE_BSC
+                       , Policy.RewriteBSC
+                       #endif
+                       );
     OS << ' ';
   }
 
@@ -595,7 +603,11 @@ void TypePrinter::printVariableArrayAfter(const VariableArrayType *T,
                                           raw_ostream &OS) {
   OS << '[';
   if (T->getIndexTypeQualifiers().hasQualifiers()) {
-    AppendTypeQualList(OS, T->getIndexTypeCVRQualifiers(), Policy.Restrict);
+    AppendTypeQualList(OS, T->getIndexTypeCVRQualifiers(), Policy.Restrict
+                       #if ENABLE_BSC
+                       , Policy.RewriteBSC
+                       #endif
+                       );
     OS << ' ';
   }
 
@@ -2338,7 +2350,11 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
 
   unsigned quals = getCVRQualifiers();
   if (quals) {
-    AppendTypeQualList(OS, quals, Policy.Restrict);
+    AppendTypeQualList(OS, quals, Policy.Restrict
+                       #if ENABLE_BSC
+                       , Policy.RewriteBSC
+                       #endif
+                       );
     addSpace = true;
   }
   if (hasUnaligned()) {
