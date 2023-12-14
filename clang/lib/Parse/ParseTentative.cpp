@@ -1130,7 +1130,7 @@ bool Parser::isBSCTemplateDecl(Token tok) {
   bool FoundLess = false;
   bool FoundGreater = false;
   bool HasValidParameter = false;
-  tok::TokenKind LookAheadKind = 
+  tok::TokenKind LookAheadKind =
                 PP.LookAhead(LookAheadOffset).getKind();
 
   Token PreTok;
@@ -1152,26 +1152,26 @@ bool Parser::isBSCTemplateDecl(Token tok) {
     // lookup if identifier is a name of a struct/enum/union
     // for example:
     //     struct S {};
-    //     struct T<struct S> foo(){}    
-    LookupResult LookupPreviousTag(Actions, CurName, CurNameLoc, 
+    //     struct T<struct S> foo(){}
+    LookupResult LookupPreviousTag(Actions, CurName, CurNameLoc,
                                       Sema::LookupTagName, Sema::NotForRedeclaration);
     // lookup if identifier is a name of a typedef
     // for example:
     //     struct S {};
     //     typedef S S1;
-    //     struct T<S1> foo(){}                          
-    LookupResult LookupPreviousTypedef(Actions, CurName, CurNameLoc, 
-                                       Sema::LookupOrdinaryName, Sema::NotForRedeclaration);                  
+    //     struct T<S1> foo(){}
+    LookupResult LookupPreviousTypedef(Actions, CurName, CurNameLoc,
+                                       Sema::LookupOrdinaryName, Sema::NotForRedeclaration);
     switch (LookAheadTok.getKind()) {
     case tok::less:
       if (PreTok.is(tok::identifier)) {
-        // If already found less, or it`s a bit operation 
+        // If already found less, or it`s a bit operation
         // case, like 'foo<(a<<b), int>;', skip it.
         if (FoundLess || (PreTok.is(tok::less) ||
                           NextTok.is(tok::less)))
           break;
 
-        // To avoid the misjudgement of a none-return 
+        // To avoid the misjudgement of a none-return
         // BSC template function, like this:
         //    @Code
         //      void foo<T>(T a){};
@@ -1183,7 +1183,7 @@ bool Parser::isBSCTemplateDecl(Token tok) {
         if (!(getCurScope()->getDepth() == 0) &&
             getCurScope()->getParent()->isClassScope())
           break;
-        
+
         FoundLess = true;
       }
       break;
@@ -1209,10 +1209,10 @@ bool Parser::isBSCTemplateDecl(Token tok) {
       // lookup this identifier
       Actions.LookupName(LookupPreviousTag, getCurScope());
       Actions.LookupName(LookupPreviousTypedef, getCurScope());
-      
+
       // check if there is an identifier in "<>"
       // check if this identifier not found before
-      if (LookupPreviousTag.empty() && LookupPreviousTypedef.empty() && 
+      if (LookupPreviousTag.empty() && LookupPreviousTypedef.empty() &&
           FoundLess && !FoundGreater) {
         HasValidParameter = true;
       }
@@ -1522,6 +1522,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     // cv-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
+  #if ENABLE_BSC
+  case tok::kw_owned:
+  #endif
     return TPResult::True;
 
     // OpenCL address space qualifiers
