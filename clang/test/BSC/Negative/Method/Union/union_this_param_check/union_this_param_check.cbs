@@ -6,6 +6,6 @@ union SimpleUnion {
   char uc;
 };
 
-int union SimpleUnion::getA(union SimpleUnion this) { // expected-error {{union SimpleUnion is not supported on this target}}
+int union SimpleUnion::getA(union SimpleUnion this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'union SimpleUnion*', but found 'union SimpleUnion'}}
   return 1;
 }

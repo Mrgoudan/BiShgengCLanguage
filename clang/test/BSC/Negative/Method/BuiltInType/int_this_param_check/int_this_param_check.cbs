@@ -1,4 +1,4 @@
 // RUN: %clang_cc1 -verify %s
 
-void int::increase(int this) { // expected-error {{int is not supported on this target}}
+void int::increase(int this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'int*', but found 'int'}}
 }

@@ -1887,6 +1887,8 @@ ExprResult Parser::ParseCastExpression(
 
     QualType ResType = Res.get()->getType();
     if (TraitDecl *TD = Actions.TryDesugarTrait(ResType)) {
+      // TODO: if containsErrors(), we should return earlier, fix it when refact trait.
+      if (Res.get()->containsErrors()) return ExprError();
       if (UnaryOperator *UO =
               dyn_cast<UnaryOperator>(Res.get()->IgnoreParenCasts())) {
         if (auto UOT = UO->getType().getTypePtr()) {

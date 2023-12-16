@@ -2,6 +2,6 @@
 
 struct Foo {
 };
-int struct Foo::getA(struct Foo this) { // expected-error {{struct Foo is not supported on this target}}
+int struct Foo::getA(struct Foo this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'struct Foo*', but found 'struct Foo'}}
     return 1;
 }

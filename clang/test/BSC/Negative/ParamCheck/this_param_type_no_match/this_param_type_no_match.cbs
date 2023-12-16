@@ -9,7 +9,7 @@ struct Bar {
   int a;
 };
 
-int struct Foo::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+int struct Foo::getBarA(struct Bar* this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'struct Foo*', but found 'struct Bar *'}}
   return this->a;
 }
 
@@ -19,7 +19,7 @@ enum E {
   X4
 };
 
-int enum E::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+int enum E::getBarA(struct Bar* this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'enum E*', but found 'struct Bar *'}}
   return this->a;
 }
 
@@ -30,11 +30,11 @@ union SimpleUnion {
   char uc;
 };
 
-int union SimpleUnion::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+int union SimpleUnion::getBarA(struct Bar* this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'union SimpleUnion*', but found 'struct Bar *'}}
   return this->a;
 }
 
 // BuiltinType
-int int::getBarA(struct Bar* this) { // expected-error {{struct Bar * is not supported on this target}}
+int int::getBarA(struct Bar* this) { // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'int*', but found 'struct Bar *'}}
   return this->a;
 }

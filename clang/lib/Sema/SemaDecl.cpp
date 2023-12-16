@@ -14474,8 +14474,9 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
               ThisTypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
       }
       if (DS.getTypeSpecType() != clang::TST_This && TypePtr != ThisTypePtr) {
-        Diag(D.getBeginLoc(), diag::err_type_unsupported)
-            << parmDeclType.getAsString();
+        Diag(D.getBeginLoc(), diag::err_this_type_unsupported)
+            << ExtendedType.getAsString() << parmDeclType.getAsString();
+        D.setInvalidType(true);
       }
       IsThisParam = true;
     } else {
