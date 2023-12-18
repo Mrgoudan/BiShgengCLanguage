@@ -84,8 +84,12 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
       for (unsigned i = 0; i < FPT->getNumParams(); i++) {
         QualType T = FPT->getParamType(i);
         if (T->isPointerType() &&
-            T->getPointeeType().getCanonicalType() == Context.ThisTy) {
-          QualType ThisPT = Context.getPointerType(Context.VoidTy);
+            T->getPointeeType().getCanonicalType().getTypePtr() ==
+                Context.ThisTy.getTypePtr()) {
+          QualType ThisPT = Context.getQualifiedType(
+              Context.VoidTy, T->getPointeeType().getLocalQualifiers());
+          ThisPT = Context.getPointerType(ThisPT);
+          ThisPT = Context.getQualifiedType(ThisPT, T.getLocalQualifiers());
           Args.push_back(ThisPT);
         } else {
           Args.push_back(T);
@@ -493,8 +497,15 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
       assert(FT->isFunctionProtoType());
       const FunctionProtoType *FPT = FT->getAs<FunctionProtoType>();
       SmallVector<QualType, 16> ParamTys;
-      QualType VoidPT = Context.getPointerType(Context.VoidTy);
+      assert(FPT->getNumParams() >= 1 && FPT->getParamType(0)->isPointerType());
+      QualType VoidPT = Context.getQualifiedType(
+          Context.VoidTy,
+          FPT->getParamType(0)->getPointeeType().getLocalQualifiers());
+      VoidPT = Context.getPointerType(VoidPT);
+      VoidPT = Context.getQualifiedType(
+          VoidPT, FPT->getParamType(0).getLocalQualifiers());
       ParamTys.push_back(VoidPT);
+
       for (unsigned int i = 1; i < FPT->getNumParams(); i++) {
         ParamTys.push_back(FPT->getParamType(i));
       }
