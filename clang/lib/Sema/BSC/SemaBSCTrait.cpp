@@ -466,8 +466,13 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
   for (RecordDecl::field_iterator FieldIt = TraitVT->field_begin();
        FieldIt != TraitVT->field_end(); ++FieldIt) {
     IdentifierInfo *II = FieldIt->getIdentifier();
-    DeclContext *LookupDC =
-        Context.BSCDeclContextMap[ImplQT.getCanonicalType().getTypePtr()];
+    DeclContext *LookupDC = nullptr;
+    const Type *BasedType = ImplQT.getCanonicalType().getTypePtr();
+    if (Context.BSCDeclContextMap.find(BasedType) !=
+        Context.BSCDeclContextMap.end()) {
+      LookupDC =
+          Context.BSCDeclContextMap[BasedType];
+    }
     DeclContext::lookup_result Decls;
     if (LookupDC)
       Decls = LookupDC->lookup(DeclarationName(II));
