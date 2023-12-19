@@ -9076,6 +9076,17 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         (HasPrototype || !SemaRef.getLangOpts().requiresStrictPrototypes()) &&
         "Strict prototypes are required");
 
+    #if ENABLE_BSC
+    if (SemaRef.getLangOpts().BSC 
+        && D.getDeclSpec().getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+      NewFD = FunctionDecl::Create(
+          SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
+          SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
+          ConstexprSpecKind::Constexpr,
+          /*TrailingRequiresClause=*/nullptr,
+          isAsync);
+    } else {
+    #endif
     NewFD = FunctionDecl::Create(
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
         SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
@@ -9085,6 +9096,9 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         , isAsync
         #endif
         );
+    #if ENABLE_BSC
+    }
+    #endif
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
 
@@ -13870,7 +13884,15 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   bool HasConstInit = true;
 
   // Check whether the initializer is sufficiently constant.
-  if (getLangOpts().CPlusPlus && !type->isDependentType() && Init &&
+  if (
+      #if ENABLE_BSC
+      (
+      #endif
+      getLangOpts().CPlusPlus 
+      #if ENABLE_BSC
+      || getLangOpts().BSC)
+      #endif
+       && !type->isDependentType() && Init &&
       !Init->isValueDependent() &&
       (GlobalStorage || var->isConstexpr() ||
        var->mightBeUsableInConstantExpressions(Context))) {

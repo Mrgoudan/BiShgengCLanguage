@@ -2401,7 +2401,11 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
 
   // OpenCL permits const integral variables to be used in constant
   // expressions, like in C++98.
-  if (!Lang.CPlusPlus && !Lang.OpenCL)
+  if (!Lang.CPlusPlus && !Lang.OpenCL 
+      #if ENABLE_BSC 
+      && !Lang.BSC
+      #endif
+      )
     return false;
 
   // Function parameters are never usable in constant expressions.
@@ -2570,8 +2574,12 @@ bool VarDecl::checkForConstantInitialization(
   // std::is_constant_evaluated()).
   assert(!Eval->WasEvaluated &&
          "already evaluated var value before checking for constant init");
+  #if ENABLE_BSC
+  assert((getASTContext().getLangOpts().CPlusPlus || getASTContext().getLangOpts().BSC) 
+         && "only meaningful in C++ and BSC");
+  #else
   assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
-
+  #endif
   assert(!cast<Expr>(Eval->Value)->isValueDependent());
 
   // Evaluate the initializer to check whether it's a constant expression.

@@ -15774,7 +15774,11 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
-  if (Ctx.getLangOpts().CPlusPlus11)
+  if (Ctx.getLangOpts().CPlusPlus11
+      #if ENABLE_BSC
+      || Ctx.getLangOpts().BSC
+      #endif
+      )
     return EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, nullptr, Loc);
 
   ICEDiag D = CheckICE(this, Ctx);
@@ -15833,7 +15837,12 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
 
   // We support this checking in C++98 mode in order to diagnose compatibility
   // issues.
+  
+  #if ENABLE_BSC
+  assert(Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().BSC);
+  #else
   assert(Ctx.getLangOpts().CPlusPlus);
+  #endif
 
   // Build evaluation settings.
   Expr::EvalStatus Status;

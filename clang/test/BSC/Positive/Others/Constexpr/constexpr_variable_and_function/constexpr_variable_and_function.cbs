@@ -1,0 +1,52 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+constexpr int foo1() {
+    return 1;
+}
+
+constexpr int foo2<T>() {
+    return 1;
+}
+
+void bar<int N>() {}
+
+trait M {
+    constexpr int foo(This* this);
+};
+constexpr int int::foo(This* this) {
+    return *this;
+}
+impl trait M for int;
+
+struct S {
+    int a;
+};
+
+int main() {
+    constexpr int a = 5;   
+    constexpr struct S s = {.a = 5}; 
+
+    bar<a>();
+    bar<foo1()>();
+    bar<foo2<int>()>();
+    
+    int arr1[a] = {0};
+    int arr2[foo1()] = {0};
+    int arr3[foo2<int>()] = {0};
+    
+    constexpr int b = a;
+    constexpr int c = foo1();
+    constexpr int d = foo2<int>();
+
+    _Static_assert(a == 5, "fail");
+    _Static_assert(foo1() == 1, "fail");
+    _Static_assert(foo2<int>() == 1, "fail");
+
+    int e = 5;
+    trait M* p = &e;
+    e.foo();
+    p->foo();
+    return 0;
+}
