@@ -15,7 +15,7 @@ float float::print(float *this) {
     return *this;
 }
 
-impl trait T for float; // expected-warning {{incompatible function pointer types initializing 'float (*)(volatile This *, int)' with an expression of type 'float (*)(void *, int)'}}
+impl trait T for float; // expected-warning {{incompatible function pointer types initializing 'float (*)(volatile void *, int)' with an expression of type 'float (*)(void *, int)'}}
 
 volatile trait T* get(trait T* t){
     float a = 6.0;
