@@ -228,6 +228,10 @@ public:
   TraitDecl *getTraitDecl();
 
   ImplTraitDecl *getCanonicalDecl() override;
+  
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  
+  static bool classofKind(Kind K) { return K == ImplTrait; }
 };
 
 /// Declaration of a trait template.
