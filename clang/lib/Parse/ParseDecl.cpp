@@ -7059,8 +7059,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     HasProto = ParamInfo.size() || getLangOpts().requiresStrictPrototypes() ||
                getLangOpts().OpenCL
                #if ENABLE_BSC
-               || (getLangOpts().BSC &&
-                Actions.getCurScope()->getParent()->isTemplateParamScope())
+               || getLangOpts().BSC
                #endif
                ;
 
