@@ -1044,4 +1044,38 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
   }
 }
 
+// a BSC function's return type can not be trait
+// if D is a FunctionDecl
+//    e.g. trait F foo();         trait F<T> foo();
+//         trait F<T> foo<T>();   trait F<int> foo();
+// if D is a VarDecl of FunctionPointer
+//    e.g. trait F (call*)();     trait F<T> (call*)();
+//         trait F<T> (call*)();  trait F<int> (call*)();
+// a BSC function's param type can not be trait too.
+void Sema::checkBSCFunctionContainsTrait(Decl* D) {
+  const Type* T = nullptr;
+  if (auto* FD = dyn_cast_or_null<FunctionDecl>(D))
+    T = FD->getReturnType().getCanonicalType().getTypePtr();
+  else if (auto* PD = dyn_cast_or_null<ParmVarDecl>(D))
+    T = PD->getType().getCanonicalType().getTypePtr();
+  else if (auto* VD = dyn_cast_or_null<VarDecl>(D)) { 
+    QualType Ty = VD->getType();
+    if (Ty->isFunctionPointerType()) {
+      const Type* FPT = Ty->getAs<PointerType>()->getPointeeType().getCanonicalType().getTypePtr();
+      T = FPT->getAs<FunctionProtoType>()->getReturnType().getTypePtr();
+    } else return;
+  } else return;
+  
+  if (T->isTraitType()) {
+    Diag(D->getBeginLoc(), diag::err_variables_not_trait_pointer);
+    D->setInvalidDecl();
+  } else if (auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T)) {
+    if (TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl()) {
+      if (dyn_cast_or_null<TraitDecl>(TempT->getTemplatedDecl())) {
+        Diag(D->getBeginLoc(), diag::err_variables_not_trait_pointer);
+        D->setInvalidDecl();
+      }
+    }
+  }
+}   
 #endif // ENABLE_BSC

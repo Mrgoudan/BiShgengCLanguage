@@ -7818,6 +7818,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (R->isFunctionPointerType())
     if (const auto *TT = R->getAs<TypedefType>())
       copyAttrFromTypedefToDecl<AllocSizeAttr>(*this, NewVD, TT);
+  
+  #if ENABLE_BSC
+  if (getLangOpts().BSC) 
+    checkBSCFunctionContainsTrait(NewVD);
+  #endif
 
   if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
       getLangOpts().SYCLIsDevice) {
@@ -10113,6 +10118,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     NewFD->addAttr(C11NoReturnAttr::Create(Context,
                                            D.getDeclSpec().getNoreturnSpecLoc(),
                                            AttributeCommonInfo::AS_Keyword));
+  
+  #if ENABLE_BSC
+  if (getLangOpts().BSC)
+    checkBSCFunctionContainsTrait(NewFD);
+  #endif
 
   // Functions returning a variably modified type violate C99 6.7.5.2p2
   // because all functions have linkage.
@@ -14581,7 +14591,12 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
 
   if (D.isInvalidType())
     New->setInvalidDecl();
-
+  
+  #if ENABLE_BSC
+  if (getLangOpts().BSC)
+    checkBSCFunctionContainsTrait(New);
+  #endif
+  
   assert(S->isFunctionPrototypeScope());
   assert(S->getFunctionPrototypeDepth() >= 1);
   New->setScopeInfo(S->getFunctionPrototypeDepth() - 1,
