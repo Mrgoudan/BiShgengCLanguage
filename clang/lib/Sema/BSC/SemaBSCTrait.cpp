@@ -550,7 +550,10 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
 QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
                                          SourceLocation Loc) {
   RecordDecl *RD = TD->getTrait();
-  assert(RD && "The TraitDecl did not generate a corresponding TraitRecord");
+  if (!RD) {
+    Diag(Loc, diag::err_trait_is_undefined) << Context.getTagDeclType(TD);
+    return T;
+  }
   QualType RT = QualType();
   if (dyn_cast<TemplateSpecializationType>(
           T->getPointeeType()
