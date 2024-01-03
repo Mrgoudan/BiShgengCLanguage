@@ -22,6 +22,24 @@ void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, Stri
   }
 }
 
+bool Sema::CheckOwnedDecl(SourceLocation ErrLoc, QualType T) {
+  // owned union check
+  if (T.getCanonicalType()->isUnionType()) {
+    Diag(ErrLoc, diag::err_owned_decl) << T;
+    return false;
+  }
+  // owned trait check
+  QualType BaseType = T;
+  while (!BaseType.isNull() && BaseType->isPointerType()) {
+    BaseType = BaseType->getPointeeType();
+  }
+  if (!BaseType.isNull() && BaseType.getCanonicalType()->isTraitType()) {
+    Diag(ErrLoc, diag::err_owned_decl) << T;
+    return false;
+  }
+  return true;
+}
+
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
@@ -89,10 +107,8 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
     }
     if (!IsPointer) {
       return false;
-    } else if (LHSPtrType->hasOwnedFields() || RHSPtrType->hasOwnedFields()){
-      return CheckOwnedQualTypeAssignment(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType(), RLoc);
     } else {
-      return true;
+      return CheckOwnedQualTypeAssignment(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType(), RLoc);
     }
   }
 

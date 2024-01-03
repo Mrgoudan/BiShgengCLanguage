@@ -1895,12 +1895,6 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state
       // produce a warning in this case.
     }
 
-    #if ENABLE_BSC
-    if(S.getLangOpts().BSC && (TypeQuals & DeclSpec::TQ_owned) && DS.getTypeSpecType() == DeclSpec::TST_union) {
-      S.Diag(DS.getOwnedSpecLoc(), diag::err_owned_union_spec) << "owned";
-    }
-    #endif
-
     QualType Qualified = S.BuildQualifiedType(Result, DeclLoc, TypeQuals, &DS);
 
     // If adding qualifiers fails, just use the unqualified type.
@@ -2022,6 +2016,13 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       Qs.removeRestrict();
     }
   }
+
+  #if ENABLE_BSC
+  if (getLangOpts().BSC && Qs.hasOwned()
+      && !CheckOwnedDecl(DS ? DS->getOwnedSpecLoc() : Loc, T)) {
+    return QualType();
+  }
+  #endif
 
   return Context.getQualifiedType(T, Qs);
 }

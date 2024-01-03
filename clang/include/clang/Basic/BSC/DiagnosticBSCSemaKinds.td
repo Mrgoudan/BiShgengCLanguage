@@ -36,8 +36,13 @@ def err_invalid_async_function : Error <
   "function which returns 'Future' type should not be modified by 'async'">;
 
 // BSC ownership warnings and errors.
-def err_owned_array_decl : Error<
-  "type of array cannot qualified by 'owned'">;
+def err_owned_inderictOwned_type_check : Error<
+  "%select{"
+  "type of %1 cannot be 'owned' |"
+  "type of %1 cannot be 'owned', %2 contains 'owned' type |"
+  "type of %1 cannot be 'owned'(even indirectly), %2 contains 'owned' type}0">;
+def err_owned_decl: Error<"%0 cannot be qualified by 'owned'">;
+def err_owned_funcPtr_incompatible : Error<"cannot cast %0 to %1">;
 def err_owned_qualcheck_incompatible : Error<
   "incompatible owned types, cannot cast %0 to %1">;
 def err_typecheck_invalid_owned_binOp : Error<

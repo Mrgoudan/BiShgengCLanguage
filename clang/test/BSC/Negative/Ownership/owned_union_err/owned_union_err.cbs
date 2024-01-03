@@ -5,12 +5,13 @@ union D {
 };
 
 
-union E {
+typedef union E {
     int a;
-};
+}EE;
 
 int main() {
-    owned union E e = {.a = 10};  //expected-error {{union cannot be qualifiered by 'owned'}}
+    owned union E e = {.a = 10};  //expected-error {{'union E' cannot be qualified by 'owned'}}
+    owned EE ee = {.a = 10};    //expected-error {{'EE' (aka 'union E') cannot be qualified by 'owned'}}
     return 0;
 }
 

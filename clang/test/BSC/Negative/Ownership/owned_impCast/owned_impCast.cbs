@@ -97,4 +97,8 @@ void test12(int* owned *p0, int** p1) {
     myIntPP p3 = p1;    //expected-error {{incompatible owned types, cannot cast 'int **' to 'myIntPP' (aka 'int *owned *'}}
 }
 
-
+void test13(int* owned p0, const int* owned p1) {
+    float* owned p2 = p0;   //expected-error {{incompatible owned types, cannot cast 'int *owned' to 'float *owned'}}
+    const float* owned p3 = p1; //expected-error {{incompatible owned types, cannot cast 'const int *owned' to 'const float *owned'}}
+    int* owned p4 = p1; //expected-warning {{initializing 'int *owned' with an expression of type 'const int *owned' discards qualifiers}}
+}

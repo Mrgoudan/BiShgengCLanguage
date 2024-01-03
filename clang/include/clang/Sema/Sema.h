@@ -12317,6 +12317,7 @@ public:
   bool CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
+  bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

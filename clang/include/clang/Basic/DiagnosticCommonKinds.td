@@ -182,22 +182,6 @@ def err_duplicate_declspec : Error<"%sub{duplicate_declspec}0">;
 
 def err_friend_decl_spec : Error<"'%0' is invalid in friend declarations">;
 
-def err_owned_inderictOwned_type_check : Error<
-  "%select{"
-  "type of %1 cannot be 'owned' |"
-  "type of %1 cannot be 'owned', %2 contains 'owned' type |"
-  "type of %1 cannot be 'owned'(even indirectly), %2 contains 'owned' type}0">;
-
-def err_owned_union_spec: Error<"union cannot be qualifiered by '%0'">;
-def err_owned_union_field_spec: Error<"field of union cannot be qualifiered by 'owned'">;
-def err_owned_union_field_typedef: Error<"field of union cannot be qualifiered by 'owned', %0 contains owned type">;
-def err_owned_union_field_qual: Error<"field of union cannot be owned-like type, %0 contains owned type">;
-def err_owned_global_decl: Error<"'owned' type cannot be global variable">;
-def err_owned_global_decl_typedef: Error<"'owned' type cannot be global variable %0 contains owned type">;
-def err_owned_global_qual: Error<"'owned' type cannot be global variable, %0 contains owned type">;
-def err_owned_arr_decl: Error<"member of array cannot be 'owned' type">;
-def err_owned_arr_qual: Error<"member of array cannot be 'owned' type, '%0 %1' contains owned type">;
-
 def err_invalid_member_in_interface : Error<
   "%select{data member |non-public member function |static member function |"
           "user-declared constructor|user-declared destructor|operator |"

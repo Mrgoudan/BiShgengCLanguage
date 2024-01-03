@@ -6761,10 +6761,6 @@ def err_specialization_not_primary_template : Error<
   "template specialization %0 is %select{instantiated from a partial|"
   "an explicit}1 specialization">;
 
-
-def err_owned_funcPtr_incompatible : Error<
-  "cannot cast %0 to %1">;
-
 def err_member_redeclared : Error<"class member cannot be redeclared">;
 def ext_member_redeclared : ExtWarn<"class member cannot be redeclared">,
   InGroup<RedeclaredClassMember>;
