@@ -1037,20 +1037,6 @@ bool DeclSpec::setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevS
   return false;
 }
 
-#if ENABLE_BSC
-bool DeclSpec::setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
-                                    unsigned &DiagID) {
-  if (FS_async_specified) {
-    DiagID = diag::warn_duplicate_declspec;
-    PrevSpec = "async";
-    return true;
-  }
-  FS_async_specified = true;
-  FS_asyncLoc = Loc;
-  return false;
-}
-#endif
-
 bool DeclSpec::setFunctionSpecVirtual(SourceLocation Loc,
                                       const char *&PrevSpec,
                                       unsigned &DiagID) {
@@ -1099,26 +1085,6 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   FS_noreturnLoc = Loc;
   return false;
 }
-
-#if ENABLE_BSC
-bool DeclSpec::setFunctionSafeSpecifier(SourceLocation Loc,
-                                        const char *&PrevSpec,
-                                        unsigned &DiagID,
-                                        SafeScopeSpecifier SafeSpec) {
-  if (FS_safe_specified == SS_None) {
-    FS_safe_specified = SafeSpec;
-    FS_safe_loc = Loc;
-    return false;
-  } else if (FS_safe_specified == SS_Safe) {
-    PrevSpec = "safe";
-  } else if (FS_safe_specified == SS_Unsafe) {
-    PrevSpec = "unsafe";
-  } else {
-    PrevSpec = "";
-  }
-  return true;
-}
-#endif
 
 bool DeclSpec::SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                              unsigned &DiagID) {

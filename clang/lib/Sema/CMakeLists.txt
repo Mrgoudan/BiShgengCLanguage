@@ -15,6 +15,9 @@ add_clang_library(clangSema
   BSC/SemaBSCCoroutine.cpp
   BSC/SemaBSCTrait.cpp
   BSC/SemaBSCOwnership.cpp
+  BSC/SemaStmtBSC.cpp
+  BSC/SemaTemplateInstantiateDeclBSC.cpp
+  BSC/DeclSpecBSC.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp

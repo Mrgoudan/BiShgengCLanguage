@@ -2090,11 +2090,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
       isa<VarDecl>(D) &&
       NeedToCaptureVariable(cast<VarDecl>(D), NameInfo.getLoc());
 
-  #if ENABLE_BSC
-  ValueDecl *NewD = D;
-  NamedDecl *NewFoundD = FoundD;
-  QualType NewTy = Ty;
-
+#if ENABLE_BSC
   // Desugar for declRefExpr which refers to async function.
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D)) {
     if (FD->isAsyncSpecified()) {
@@ -2111,23 +2107,19 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
         }
         // For nested async function call, DesugaredFD will be nullptr.
         if (DesugaredFD) {
-          NewD = DesugaredFD;
-          NewFoundD = DesugaredFD;
-          NewTy = DesugaredFD->getType();
+          D = DesugaredFD;
+          FoundD = DesugaredFD;
+          Ty = DesugaredFD->getType();
         }
       }
     }
   }
+#endif
 
-  DeclRefExpr *E = DeclRefExpr::Create(
-      Context, NNS, TemplateKWLoc, NewD, RefersToCapturedVariable, NameInfo,
-      NewTy, VK, NewFoundD, TemplateArgs,
-      getNonOdrUseReasonInCurrentContext(NewD));
-  #else
   DeclRefExpr *E = DeclRefExpr::Create(
       Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
       VK, FoundD, TemplateArgs, getNonOdrUseReasonInCurrentContext(D));
-  #endif
+
   MarkDeclRefReferenced(E);
 
   // C++ [except.spec]p17:
@@ -2142,39 +2134,20 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   //  b) if the function is a defaulted comparison, we can use the body we
   //     build when defining it as input to the exception specification
   //     computation rather than computing a new body.
-  #if ENABLE_BSC
-  if (auto *FPT = NewTy->getAs<FunctionProtoType>()) {
-  #else
   if (auto *FPT = Ty->getAs<FunctionProtoType>()) {
-  #endif
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
       if (auto *NewFPT = ResolveExceptionSpec(NameInfo.getLoc(), FPT))
-        #if ENABLE_BSC
-        E->setType(Context.getQualifiedType(NewFPT, NewTy.getQualifiers()));
-        #else
         E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
-        #endif
     }
   }
 
-  #if ENABLE_BSC
-  if (getLangOpts().ObjCWeak && isa<VarDecl>(NewD) &&
-      NewTy.getObjCLifetime() == Qualifiers::OCL_Weak &&
-  #else
   if (getLangOpts().ObjCWeak && isa<VarDecl>(D) &&
-      Ty.getObjCLifetime() == Qualifiers::OCL_Weak &&
-  #endif
-      !isUnevaluatedContext() &&
+      Ty.getObjCLifetime() == Qualifiers::OCL_Weak && !isUnevaluatedContext() &&
       !Diags.isIgnored(diag::warn_arc_repeated_use_of_weak, E->getBeginLoc()))
     getCurFunction()->recordUseOfWeak(E);
 
-  #if ENABLE_BSC
-  FieldDecl *FD = dyn_cast<FieldDecl>(NewD);
-  if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(NewD))
-  #else
   FieldDecl *FD = dyn_cast<FieldDecl>(D);
   if (IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(D))
-  #endif
     FD = IFD->getAnonField();
   if (FD) {
     UnusedPrivateFields.remove(FD);
@@ -2185,11 +2158,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
 
   // C++ [expr.prim]/8: The expression [...] is a bit-field if the identifier
   // designates a bit-field.
-  #if ENABLE_BSC
-  if (auto *BD = dyn_cast<BindingDecl>(NewD))
-  #else
   if (auto *BD = dyn_cast<BindingDecl>(D))
-  #endif
     if (auto *BE = BD->getBinding())
       E->setObjectKind(BE->getObjectKind());
 

@@ -455,36 +455,12 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                       : getCurCompoundScope().InitialFPFeatures;
   FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
 
-  // return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
   return CompoundStmt::Create(Context, Elts, FPDiff, L, R
                               #if ENABLE_BSC
                               , SafeSpec, SafeLoc
                               #endif
                               );
 }
-
-#if ENABLE_BSC
-void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
-  SafeScopeSpecifier spec = St == PSS_On ? SS_Safe : SS_Unsafe;
-  SetPragmaSafeInfo(spec);
-}
-
-void Sema::ActOnPragmaPreferInline(PragmaPreferInlineStatus St) {
-  PreferInlineScopeSpecifier spec = PI_None;
-  if (St == PPI_On) {
-    spec = PI_PreferInline;
-  } else if (St == PPI_Off) {
-    spec = PI_PreferNoInline;
-  }
-  SetPragmaPreferInlineInfo(spec);
-}
-
-void Sema::ActOnPragmaIcallHint(std::string funcInfo) {
-  if (funcInfo.size() != 0) {
-    SetVTableIcallHintInfos(funcInfo);
-  }
-}
-#endif
 
 ExprResult
 Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
