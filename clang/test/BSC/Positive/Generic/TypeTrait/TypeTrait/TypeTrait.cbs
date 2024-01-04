@@ -1,0 +1,37 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+#include "TypeTrait.hbs"
+int main() {
+    printf("%d\n",is_integral<int>()); //1
+    printf("%d\n",is_integral<float>()); //0
+    printf("%d\n",is_floating_point<float>()); //1
+    printf("%d\n",is_floating_point<int>()); //0
+    printf("%d\n",is_void<void>()); //1
+    printf("%d\n",is_void<int>()); //0
+    printf("%d\n",is_signed<int>()); //1
+    printf("%d\n",is_signed<unsigned int>()); //0
+    printf("%d\n",is_unsigned<unsigned int>()); //1
+    printf("%d\n",is_unsigned<int>()); //0
+    printf("%d\n",is_const<const int>()); //1
+    printf("%d\n",is_const<int>()); //0
+    printf("%d\n",is_volatile<volatile int>()); //1
+    printf("%d\n",is_volatile<int>()); //1
+    printf("%d\n",is_array<int[]>()); //1
+    printf("%d\n",is_array<int>()); //0
+    printf("%d\n",is_function<int ()>()); //1
+    printf("%d\n",is_function<int>()); //0
+    printf("%d\n",is_pointer<int*>()); //1
+    printf("%d\n",is_pointer<int>()); //0
+    printf("%d\n",is_same<int, signed int>()); //1
+    printf("%d\n",is_same<int, float>()); //0
+    struct S<int> s1;
+    struct S<float> s2;
+    s1.foo(); //print "integral"
+    s2.foo(); //print "not integral"
+    bar<int>();  //print "integral"
+    bar<float>(); //print "not integral"
+    _Static_assert(is_integral<int>() == true, "fail");
+    _Static_assert(is_integral<float>() == false, "fail");
+    return 0;
+}

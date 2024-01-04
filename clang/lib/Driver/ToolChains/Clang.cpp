@@ -1473,6 +1473,16 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         });
   }
 
+  #if ENABLE_BSC
+  // Add bsc include arguments, if needed.
+  if (types::isBSC(Inputs[0].getType())) {
+    forAllAssociatedToolChains(C, JA, getToolChain(),
+                               [&Args, &CmdArgs](const ToolChain &TC) {
+                                 TC.AddClangBSCSystemIncludeArgs(Args, CmdArgs);
+                               });
+  }
+  #endif
+
   // Add system include arguments for all targets but IAMCU.
   if (!IsIAMCU)
     forAllAssociatedToolChains(C, JA, getToolChain(),

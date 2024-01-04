@@ -263,6 +263,12 @@ set(openmp_wrapper_files
   openmp_wrappers/new
 )
 
+if (ENABLE_BSC)
+  set(bsc_include_files
+    bsc_include/bsc_type_traits.hbs
+  )
+endif()
+
 set(output_dir ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION}/include)
 set(out_files)
 set(generated_files)
@@ -299,6 +305,12 @@ endfunction(clang_generate_header)
 foreach( f ${files} ${cuda_wrapper_files} ${ppc_wrapper_files} ${openmp_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
+
+if (ENABLE_BSC)
+  foreach( f ${bsc_include_files})
+    copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
+  endforeach( f )
+endif()
 
 # Generate header files and copy them to the build directory
 if(ARM IN_LIST LLVM_TARGETS_TO_BUILD OR AArch64 IN_LIST LLVM_TARGETS_TO_BUILD)
@@ -393,6 +405,10 @@ add_dependencies("clang-resource-headers"
                  "openmp-resource-headers"
                  "windows-resource-headers"
                  "utility-resource-headers")
+if (ENABLE_BSC)
+  add_dependencies("clang-resource-headers"
+                   "bsc-resource-headers")
+endif()
 
 # Core/common headers
 add_header_target("core-resource-headers" ${core_files})
@@ -419,6 +435,9 @@ add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
 add_header_target("windows-resource-headers" ${windows_only_files})
 add_header_target("utility-resource-headers" ${utility_files})
+if (ENABLE_BSC)
+add_header_target("bsc-resource-headers" ${bsc_include_files})
+endif()
 
 set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include)
 
@@ -444,6 +463,12 @@ install(
   DESTINATION ${header_install_dir}/openmp_wrappers
   COMPONENT clang-resource-headers)
 
+if (ENABLE_BSC)
+  install(
+    FILES ${bsc_include_files}
+    DESTINATION ${header_install_dir}/bsc_include
+    COMPONENT clang-resource-headers)
+endif()
 #############################################################
 # Install rules for separate header lists
 install(
@@ -577,6 +602,14 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT windows-resource-headers)
+
+if (ENABLE_BSC)
+  install(
+    FILES ${bsc_include_files}
+    DESTINATION ${header_install_dir}/bsc_include
+    EXCLUDE_FROM_ALL
+    COMPONENT bsc-resource-headers)
+endif()
 #############################################################
 
 if (NOT LLVM_ENABLE_IDE)
@@ -645,4 +678,9 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-utility-resource-headers
                            DEPENDS utility-resource-headers
                            COMPONENT utility-resource-headers)
+  if (ENABLE_BSC)
+    add_llvm_install_targets(install-bsc-resource-headers
+                             DEPENDS bsc-resource-headers
+                             COMPONENT bsc-resource-headers)
+  endif()                         
 endif()

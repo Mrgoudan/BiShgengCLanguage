@@ -277,6 +277,19 @@ bool types::isCXX(ID Id) {
   }
 }
 
+#if ENABLE_BSC
+bool types::isBSC(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_BSC: 
+  case TY_BSCHeader:
+    return true;
+  }
+}
+#endif
+
 bool types::isLLVMIR(ID Id) {
   switch (Id) {
   default:

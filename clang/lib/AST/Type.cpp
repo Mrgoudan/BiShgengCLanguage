@@ -1953,7 +1953,11 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
            BT->getKind() <= BuiltinType::Int128;
 
   // Complete enum types are integral in C.
-  if (!Ctx.getLangOpts().CPlusPlus)
+  if (!Ctx.getLangOpts().CPlusPlus 
+      #if ENABLE_BSC
+      && !Ctx.getLangOpts().BSC 
+      #endif
+     )
     if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete();
 

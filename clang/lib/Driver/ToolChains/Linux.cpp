@@ -566,6 +566,16 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   return "/" + LibDir + "/" + Loader;
 }
 
+#if ENABLE_BSC
+void Linux::AddClangBSCSystemIncludeArgs(const ArgList &DriverArgs,
+                                      ArgStringList &CC1Args) const {
+  const Driver &D = getDriver();
+  SmallString<128> ResourceDirBSCInclude(D.ResourceDir);
+  llvm::sys::path::append(ResourceDirBSCInclude, "include/bsc_include");
+  addSystemInclude(DriverArgs, CC1Args, ResourceDirBSCInclude);
+}
+#endif
+
 void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                       ArgStringList &CC1Args) const {
   const Driver &D = getDriver();

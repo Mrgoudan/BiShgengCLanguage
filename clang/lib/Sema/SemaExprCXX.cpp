@@ -4756,6 +4756,9 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsScalar:
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
+  #if ENABLE_BSC
+  case UTT_IsStruct:
+  #endif
     // Fall-through
 
     // These traits are modeled on type predicates in C++0x [meta.unary.prop]
@@ -4899,6 +4902,10 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isEnumeralType();
   case UTT_IsUnion:
     return T->isUnionType();
+  #if ENABLE_BSC
+  case UTT_IsStruct:
+    return T->isStructureType();
+  #endif
   case UTT_IsClass:
     return T->isClassType() || T->isStructureType() || T->isInterfaceType();
   case UTT_IsFunction:
@@ -5433,6 +5440,10 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                 ArrayRef<TypeSourceInfo *> Args,
                                 SourceLocation RParenLoc) {
   QualType ResultType = Context.getLogicalOperationType();
+  
+  #if ENABLE_BSC
+  if (Context.getLangOpts().BSC) ResultType = Context.BoolTy;
+  #endif
 
   if (Kind <= UTT_Last && !CheckUnaryTypeTraitTypeCompleteness(
                                *this, Kind, KWLoc, Args[0]->getType()))
