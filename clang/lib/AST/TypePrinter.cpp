@@ -2216,6 +2216,12 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
           // we replace it with 'P'.
           // FIXME: it may conflict with user defined type Char_P.
           NewArgString.replace(i, 1, "P");
+        } else if (NewArgString[i] == '-') {
+          // if we define a var like `struct S<int, -5> s;`
+          // it will be rewritten to `struct S_int_-5 s;`;
+          // Since '-' is not allowed to appear in identifier,
+          // we replace it with 'n'.
+          NewArgString.replace(i, 1, "n");
         }
       }
     }

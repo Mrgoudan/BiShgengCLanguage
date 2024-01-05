@@ -213,6 +213,23 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   }
   return ExtendedTypeStr;
 }
+
+static std::string
+RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
+                           const PrintingPolicy &Policy) {
+  std::string QT;
+  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
+    QT = GetTypePrefix(TemplateArg.getAsType(), /*isFront=*/true, Policy);
+  else if (TemplateArg.getKind() ==
+           clang::TemplateArgument::ArgKind::Integral) {
+    llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
+    if (TemplateInt.isNegative())
+      QT = "_n" + std::to_string(-TemplateInt.getExtValue());
+    else
+      QT = "_" + std::to_string(TemplateInt.getExtValue());
+  }
+  return QT;
+}
 #endif
 
 void Decl::printGroup(Decl** Begin, unsigned NumDecls,
@@ -708,8 +725,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
         if (const TemplateArgumentList *TArgs =
                 D->getTemplateSpecializationArgs()) {
           for (size_t i = 0; i < TArgs->size(); i++) {
-            std::string QT = GetTypePrefix(TArgs->asArray()[i].getAsType(),
-                                           /*isFront=*/true, SubPolicy);
+            std::string QT =
+                RewriteBSCTemplateArgument(TArgs->get(i), SubPolicy);
             FunctionNameStr += QT;
           }
         }
@@ -1090,13 +1107,12 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();
       #if ENABLE_BSC
       if (Policy.RewriteBSC) {
-        std::string FunctionNameStr = S->getDeclName().getAsString();
+        std::string BSCRecordNameStr = S->getDeclName().getAsString();
         for (size_t i = 0; i < Args.size(); i++) {
-          std::string QT =
-              GetTypePrefix(Args[i].getAsType(), /*isFront=*/true, Policy);
-          FunctionNameStr += QT;
+          std::string QT = RewriteBSCTemplateArgument(Args[i], Policy);
+          BSCRecordNameStr += QT;
         }
-        Out << ' ' + FunctionNameStr;
+        Out << ' ' + BSCRecordNameStr;
       } else {
       #endif
         if (!Policy.PrintCanonicalTypes)

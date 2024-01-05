@@ -1176,6 +1176,23 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   }
   return ExtendedTypeStr;
 }
+
+static std::string
+RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
+                           const PrintingPolicy &Policy) {
+  std::string QT;
+  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
+    QT = GetTypePrefix(TemplateArg.getAsType(), /*isFront=*/true, Policy);
+  else if (TemplateArg.getKind() ==
+           clang::TemplateArgument::ArgKind::Integral) {
+    llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
+    if (TemplateInt.isNegative())
+      QT = "_n" + std::to_string(-TemplateInt.getExtValue());
+    else
+      QT = "_" + std::to_string(TemplateInt.getExtValue());
+  }
+  return QT;
+}
 #endif
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
@@ -1194,9 +1211,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       std::string FunctionNameStr = FD->getDeclName().getAsString();
       for (unsigned i = 0; i < FD->getTemplateSpecializationArgs()->size();
            i++) {
-        std::string QT = GetTypePrefix(
-            FD->getTemplateSpecializationArgs()->asArray()[i].getAsType(),
-            /*isFront=*/true, Policy);
+        std::string QT = RewriteBSCTemplateArgument(
+            FD->getTemplateSpecializationArgs()->get(i), Policy);
         FunctionNameStr += QT;
       }
       OS << FunctionNameStr;
