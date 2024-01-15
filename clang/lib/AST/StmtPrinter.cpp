@@ -1349,6 +1349,32 @@ static bool printExprAsWritten(raw_ostream &OS, Expr *E,
   return false;
 }
 
+// if the type of a generic constant is `short`
+// when it is written to C, there should not be suffix for the integer
+#if ENABLE_BSC
+static void rewriteBSCIntegerLiteralSuffix(IntegerLiteral *Node,
+                                           raw_ostream &OS) {
+  switch (Node->getType()->castAs<BuiltinType>()->getKind()) {
+  default: llvm_unreachable("Unexpected type for integer literal!");
+  case BuiltinType::Char_S:
+  case BuiltinType::Char_U:    OS << "i8"; break;
+  case BuiltinType::UChar:     OS << "Ui8"; break;
+  case BuiltinType::Short:
+  case BuiltinType::UShort:
+  case BuiltinType::Int:       break; // no suffix.
+  case BuiltinType::UInt:      OS << 'U'; break;
+  case BuiltinType::Long:      OS << 'L'; break;
+  case BuiltinType::ULong:     OS << "UL"; break;
+  case BuiltinType::LongLong:  OS << "LL"; break;
+  case BuiltinType::ULongLong: OS << "ULL"; break;
+  case BuiltinType::Int128:
+    break; // no suffix.
+  case BuiltinType::UInt128:
+    break; // no suffix.
+  }
+}
+#endif
+
 void StmtPrinter::VisitIntegerLiteral(IntegerLiteral *Node) {
   if (Policy.ConstantsAsWritten && printExprAsWritten(OS, Node, Context))
     return;
@@ -1361,6 +1387,12 @@ void StmtPrinter::VisitIntegerLiteral(IntegerLiteral *Node) {
   }
 
   // Emit suffixes.  Integer literals are always a builtin integer type.
+  #if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    rewriteBSCIntegerLiteralSuffix(Node, OS);
+    return;
+  }
+  #endif
   switch (Node->getType()->castAs<BuiltinType>()->getKind()) {
   default: llvm_unreachable("Unexpected type for integer literal!");
   case BuiltinType::Char_S:
