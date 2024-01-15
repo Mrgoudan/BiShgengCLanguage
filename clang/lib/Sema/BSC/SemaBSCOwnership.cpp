@@ -179,4 +179,16 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
   return true;
 }
 
+bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
+  if (!dyn_cast<CallExpr>(E)) return false;
+  QualType RetType = E->getType().getCanonicalType();
+  if (RetType.isOwnedQualified() || RetType->hasOwnedFields()) {
+    std::string ExprString;
+    llvm::raw_string_ostream ExprStream(ExprString);
+    E->printPretty(ExprStream, nullptr, clang::PrintingPolicy(getLangOpts()));
+    Diag(E->getBeginLoc(), diag::err_owned_temporary_memLeak) << ExprStream.str();
+    return true;
+  }
+  return false;
+}
 #endif

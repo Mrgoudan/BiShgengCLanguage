@@ -51,6 +51,9 @@ def err_typecheck_invalid_owned_unaOp : Error<
   "invalid operands to unary expression (%0)">;
 def err_typecheck_invalid_owned_arrsub : Error<
   "owned pointer type (%0) do not support ArraySubscript operate">;
+def err_owned_temporary_memLeak : Error<
+  "memory leak because temporary variable '%0' is owned or indirect owned type, please fix it">;
+
 
 // BSC trait warnings and errors.
 def err_variables_not_trait_pointer : Error<"only trait pointer type is allowed to be declared">;

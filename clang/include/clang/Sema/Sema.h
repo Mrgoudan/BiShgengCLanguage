@@ -7625,7 +7625,7 @@ public:
                                Expr *RHSExpr);
 
   ExprResult ActOnTraitPointerCast(Expr *RHSExpr);
-  
+
   void checkBSCFunctionContainsTrait(Decl* D);
 #endif
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
@@ -12318,6 +12318,7 @@ public:
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
+  bool CheckTemporaryVarMemoryLeak(Expr* E);
   #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

@@ -51,6 +51,11 @@ StmtResult Sema::ActOnExprStmt(ExprResult FE, bool DiscardedValue) {
   if (FE.isInvalid())
     return StmtError();
 
+  #if ENABLE_BSC
+  if (CheckTemporaryVarMemoryLeak(FE.get()))
+    return StmtError();
+  #endif
+
   // C99 6.8.3p2: The expression in an expression statement is evaluated as a
   // void expression for its side effects.  Conversion to void allows any
   // operand, even incomplete types.

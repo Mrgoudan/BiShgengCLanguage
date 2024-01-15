@@ -1230,6 +1230,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // Check the use of this member.
   if (DiagnoseUseOfDecl(MemberDecl, MemberLoc))
     return ExprError();
+  #if ENABLE_BSC
+  if (CheckTemporaryVarMemoryLeak(BaseExpr))
+    return ExprError();
+  #endif
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl))
     return BuildFieldReferenceExpr(BaseExpr, IsArrow, OpLoc, SS, FD, FoundDecl,

@@ -15714,16 +15714,6 @@ static void DiagnoseBinOpPrecedence(Sema &Self, BinaryOperatorKind Opc,
   // cout << 5 == 4;
   if (BinaryOperator::isComparisonOp(Opc))
     DiagnoseShiftCompare(Self, OpLoc, LHSExpr, RHSExpr);
-
-  #if ENABLE_BSC
-  //bsc owned pointer type check
-  if (Self.getLangOpts().BSC
-      && ((LHSExpr->getType()->isPointerType() && LHSExpr->getType().isOwnedQualified())
-      || (RHSExpr->getType()->isPointerType() && RHSExpr->getType().isOwnedQualified()))) {
-    DiagnoseOwnedPointerBinaryOp(Self, Opc, OpLoc, LHSExpr, RHSExpr);
-  }
-  #endif
-
 }
 
 // Binary Operators.  'Tok' is the token for the operator.
@@ -15749,6 +15739,19 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
       if (Opc == BO_EQ || Opc == BO_NE) {
         return ActOnTraitCompare(S, TokLoc, Opc, LHSExpr, RHSExpr);
       }
+    }
+  }
+
+  QualType LHSCanType = LHSExpr->getType().getCanonicalType();
+  QualType RHSCanType = RHSExpr->getType().getCanonicalType();
+  if ((LHSCanType->isPointerType() && LHSCanType.isOwnedQualified())
+      || (RHSCanType->isPointerType() && RHSCanType.isOwnedQualified())) {
+    //bsc owned pointer type check
+    DiagnoseOwnedPointerBinaryOp(*this, Opc, TokLoc, LHSExpr, RHSExpr);
+    //bsc owned temporary memory leak
+    if (BinaryOperator::isComparisonOp(Opc)) {
+      CheckTemporaryVarMemoryLeak(LHSExpr);
+      CheckTemporaryVarMemoryLeak(RHSExpr);
     }
   }
   #endif
@@ -16275,9 +16278,11 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
     return CreateOverloadedUnaryOp(OpLoc, Opc, Functions, Input);
   }
   #if ENABLE_BSC
-  if (getLangOpts().BSC && Input->getType()->isPointerType()
-      && Input->getType().isOwnedQualified()) {
+  if (getLangOpts().BSC && Input->getType().getCanonicalType()->isPointerType()
+      && Input->getType().getCanonicalType().isOwnedQualified()) {
     DiagnoseOwnedPointerUnaryOp(*this, Opc, OpLoc, Input);
+    if (Opc == UO_Deref && CheckTemporaryVarMemoryLeak(Input))
+      return ExprError();
   }
   #endif
 
