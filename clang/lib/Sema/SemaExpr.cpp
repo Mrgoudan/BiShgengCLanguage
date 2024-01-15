@@ -6360,9 +6360,9 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       Arg = Args[ArgIx++];
       #if ENABLE_BSC
       if (getLangOpts().BSC && TryDesugarTrait(ProtoArgType) &&
-          !TryDesugarTrait(Arg->getType())) {
+          !TryDesugarTrait(Arg->IgnoreParenCasts()->getType())) {
         Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
-            Arg, ProtoArgType, Arg->getBeginLoc());
+            Arg->IgnoreParenCasts(), ProtoArgType, Arg->getBeginLoc());
         if (TraitDesugaredExpr)
           Arg = TraitDesugaredExpr;
         else
@@ -14899,8 +14899,13 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
   }
 
   if (Result.isNull()) {
+    #if ENABLE_BSC
+    S.Diag(OpLoc, diag::err_typecheck_indirection_requires_pointer)
+      << S.CompleteTraitType(OpTy) << Op->getSourceRange();
+    #else
     S.Diag(OpLoc, diag::err_typecheck_indirection_requires_pointer)
       << OpTy << Op->getSourceRange();
+    #endif
     return QualType();
   }
 
