@@ -2,8 +2,19 @@
 // RUN: %t.output
 // expected-no-diagnostics
 #include "TypeTrait.hbs"
+
+typedef int MyInt;
+typedef int arr1[];
+typedef int arr2[3];
+typedef int arr3[3][4];
+typedef struct G { int a; } G;
+typedef enum E { Mon=1, Tue, Wed } E;
+typedef union U { int a; } U;
+typedef struct S<int> S_int;
+
 int main() {
     printf("%d\n",is_integral<int>()); //1
+    printf("%d\n",is_integral<MyInt>()); //1
     printf("%d\n",is_integral<float>()); //0
     printf("%d\n",is_floating_point<float>()); //1
     printf("%d\n",is_floating_point<int>()); //0
@@ -23,8 +34,23 @@ int main() {
     printf("%d\n",is_function<int>()); //0
     printf("%d\n",is_pointer<int*>()); //1
     printf("%d\n",is_pointer<int>()); //0
+    printf("%d\n",is_struct<struct G>()); //1
+    printf("%d\n",is_struct<G>()); //1        
+    printf("%d\n",is_struct<struct S<int> >()); //1
+    printf("%d\n",is_struct<S_int>()); //1
+    printf("%d\n",is_struct<int>()); //0
+    printf("%d\n",is_enum<enum E>()); //1
+    printf("%d\n",is_enum<E>()); //1        
+    printf("%d\n",is_enum<int>()); //0
+    printf("%d\n",is_union<union U>()); //1
+    printf("%d\n",is_union<U>()); //1        
+    printf("%d\n",is_union<int>()); //0
     printf("%d\n",is_same<int, signed int>()); //1
     printf("%d\n",is_same<int, float>()); //0
+    printf("%d\n",is_convertible<int, float>()); //1
+    printf("%d\n",is_convertible<int, int()>()); //0
+    printf("%d\n",is_convertible<struct G, G>()); //1
+    printf("%d\n",is_convertible<struct G, S_int>()); //0
     struct S<int> s1;
     struct S<float> s2;
     s1.foo(); //print "integral"
@@ -32,6 +58,28 @@ int main() {
     bar<int>();  //print "integral"
     bar<float>(); //print "not integral"
     _Static_assert(is_integral<int>() == true, "fail");
+    _Static_assert(is_integral<MyInt>() == true, "fail");
     _Static_assert(is_integral<float>() == false, "fail");
+    _Static_assert(rank<int>() == 0, "fail");
+    _Static_assert(rank<int[]>() == 1, "fail");    
+    _Static_assert(rank<int[3]>() == 1, "fail");
+    _Static_assert(rank<int[3][4]>() == 2, "fail");
+    _Static_assert(rank<arr1>() == 1, "fail");
+    _Static_assert(rank<arr2>() == 1, "fail");
+    _Static_assert(rank<arr3>() == 2, "fail");
+    _Static_assert(extent<int, 0>() == 0, "fail");
+    _Static_assert(extent<int, 1>() == 0, "fail");
+    _Static_assert(extent<int[], 0>() == 0, "fail");    
+    _Static_assert(extent<int[3], 0>() == 3, "fail");
+    _Static_assert(extent<int[3], 1>() == 0, "fail");
+    _Static_assert(extent<int[3][4], 0>() == 3, "fail");
+    _Static_assert(extent<int[3][4], 1>() == 4, "fail");
+    _Static_assert(extent<int[3][4], 2>() == 0, "fail");
+    _Static_assert(extent<arr1, 0>() == 0, "fail");    
+    _Static_assert(extent<arr2, 0>() == 3, "fail");
+    _Static_assert(extent<arr2, 1>() == 0, "fail");
+    _Static_assert(extent<arr3, 0>() == 3, "fail");
+    _Static_assert(extent<arr3, 1>() == 4, "fail");
+    _Static_assert(extent<arr3, 2>() == 0, "fail");
     return 0;
 }

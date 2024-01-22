@@ -72,3 +72,11 @@ def err_trait_is_undefined : Error<"%0 must be defined before it can be used">;
 // BSC generic warnings and errors.
 def err_invalid_struct_definition : Error <
   "struct definition in generic fuction is not supported in BSC">;
+
+// BSC constexpr warnings and errors.
+def err_constexpr_func_unsupported : Error<
+  "BSC constexpr function does not support %0">;
+def err_constexpr_func_unsupported_type : Error<
+  "BSC constexpr function does not support type %0">;
+def err_constexpr_var_unsupported_type : Error<
+  "BSC constexpr variable does not support type %0">;

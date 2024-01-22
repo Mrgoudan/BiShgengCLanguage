@@ -10,6 +10,8 @@
 #ifndef BSC_TYPE_TRAITS_HBS
 #define BSC_TYPE_TRAITS_HBS
 #include <stdbool.h>
+#include <stddef.h>
+
 // Unary Type Traits
 constexpr bool is_integral<T>() {
     return __is_integral(T);
@@ -25,10 +27,6 @@ constexpr bool is_signed<T>() {
 
 constexpr bool is_unsigned<T>() {
     return __is_unsigned(T);
-}
-
-constexpr bool is_arithmetic<T>() {
-    return __is_arithmetic(T);
 }
 
 constexpr bool is_pointer<T>() {
@@ -55,10 +53,6 @@ constexpr bool is_enum<T>() {
     return __is_enum(T);
 }
 
-constexpr bool is_compound<T>() {
-    return __is_compound(T);
-}
-
 constexpr bool is_const<T>() {
     return __is_const(T);
 }
@@ -70,11 +64,24 @@ constexpr bool is_volatile<T>() {
 constexpr bool is_void<T>() {
     return __is_void(T);
 }
+
 // Binary Type Traits
 constexpr bool is_same<T1, T2>() {
     return __is_same(T1, T2);
 }
 
+constexpr bool is_convertible<From, To>() {
+    return __is_convertible(From, To);
+}
+
+// Array Type Traits
+constexpr size_t rank<T>() {
+    return __array_rank(T);
+}
+
+constexpr size_t extent<T, size_t N>() {
+    return __array_extent(T, N);
+}
 #endif /* BSC_TYPE_TRAITS_HBS */
 
 

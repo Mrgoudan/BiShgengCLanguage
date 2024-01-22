@@ -112,7 +112,7 @@ bool Parser::FindUntil(tok::TokenKind FindToken) {
   if (Tok.isOneOf(tok::star, tok::greater, tok::r_paren, tok::comma))
     return false;
   std::vector<tok::TokenKind> StopTokens {tok::l_brace, tok::semi, tok::eof,
-                                          tok::equal};
+                                          tok::equal, tok::l_paren, tok::l_square};
   int LookStep = 0;
   tok::TokenKind KindToMatch;
 

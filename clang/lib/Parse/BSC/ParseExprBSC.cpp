@@ -53,4 +53,20 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
                              T, HasBSCScopeSpec, DS.getBeginLoc());
 }
 
+bool Parser::IsBSCStaticMemberFunctionCall() {
+  if (!FindUntil(tok::coloncolon))
+    return false; 
+  if (!FindUntil(tok::greater))
+    return true;
+  int i = 0;
+  Token CurrTok = Tok;
+  Token NextTok = PP.LookAhead(i);
+  while (!NextTok.isOneOf(tok::comma, tok::greater)) {
+    if (CurrTok.is(tok::identifier) && NextTok.is(tok::less))
+      return true;
+    CurrTok = NextTok;
+    NextTok = PP.LookAhead(++i);
+  }
+  return false;
+}
 #endif // ENABLE_BSC

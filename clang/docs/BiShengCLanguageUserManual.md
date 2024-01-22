@@ -498,9 +498,252 @@ int main() {
 }
 ```
 
+------
+## constexpr
+### 概述
+constexpr 可以定义编译时常量和编译时计算返回值的函数。
+在 C 语言中已经有了 const 关键字，而它的含义更多的是 readonly 的意思，不是“编译时常量”这么强的约束，所以我们需要引入 "constexpr" 这个关键字来表达编译时计算的能力。
 
+定义“编译时计算”的类型：
+bool,char(signed char, unsigned char), 整数类型（包括 int 以及被 short/signed/unsigned/long/long long 等修饰的 int 类型，不包括 enum 类型），以及这些类型的别名。
 
+定义“常量计算”上下文，也就是 constexpr 修饰的变量和函数可以作为常量使用的场景：
+- 可以用于 static_assert 中，第一个条件参数属于“常量计算”上下文
+- 可以用于定义定长数组，数组长度属于“常量计算”上下文
+- 可以用于初始化其它 constexpr 常量
+- 可以用于常量泛型的实参
 
+下面举例说明什么是“常量计算”上下文。
+```
+void bar<int N>(){}
+
+constexpr int foo() {
+    return 5;
+}
+
+int main() {
+    constexpr int a = 5;   
+    
+    //可以用于常量泛型的实参
+    bar<a>();
+    bar<foo()>();
+    
+    //可以用于定义定长数组
+    int arr1[a] = {0};
+    int arr2[foo()] = {0};
+    
+    //可以用于初始化其它 constexpr 常量
+    constexpr int b = a;
+    constexpr int c = foo();
+    
+    //可以用于 static_assert 中
+    _Static_assert(a == 5, "fail");
+    _Static_assert(foo() == 5, "fail");
+
+    return 0;
+}
+```
+###使用规则
+####constexpr 修饰变量
+1. constexpr 可以修饰一个常量定义，且必须在定义时被初始化，否则要报错
+```
+constexpr int a = 5;
+constexpr int b; //error,未初始化
+```
+2. constexpr 修饰的常量在定义之后，不可被修改
+```
+constexpr int a = 5;
+a = 10; //error
+```
+3. constexpr 修饰常量的类型只能是上述“编译时计算”的类型
+```
+constexpr float a = 5.0;//error,“编译时计算”的类型不包括浮点类型
+```   
+4. constexpr 修饰的常量的初始化表达式必须可以在编译时求值，否则要报错。可编译时求值的常量表达式可以是：
+- 字面量
+- constexpr 修饰的常量
+- sizeof,_Alignof 表达式
+- 以可编译时求值的常量表达式作为实参，调用 constexpr 函数
+- 由以下运算符组合起来的常量表达式，也是常量表达式：+,-,*,/,%,>,<,==,!=,<=,>=,&,|,^,~,!,&&,||,<<,>>,?:
+
+举例说明：
+```
+//场景1
+int a = 10; 
+constexpr int b = a;//error
+//场景2
+constexpr int a = 10; 
+constexpr int b = a;
+//场景3
+constexpr int a = sizeof(int);
+constexpr int b = sizeof(int);
+//场景4
+constexpr int foo() {
+    return 5;
+};
+constexpr int a = 10; 
+constexpr int b = foo(a); 
+//场景5
+constexpr int b = 1 == 1.0; 
+```
+
+####constexpr 修饰函数
+1. constexpr 可以修饰一个函数声明或者定义
+```
+constexpr int foo();
+constexpr int foo() {
+    return 5;
+}
+```
+2. constexpr 修饰的函数，参数和返回类型，只能是上述“编译时计算”的类型
+```
+constexpr void foo(); //error,返回值是空值，不属于“编译时计算”的类型
+```
+3. constexpr 可以修饰泛型函数
+```
+constexpr int foo<T>();
+```
+4. constexpr 函数体内的所有语句，都是编译期可求值的
+- constexpr 函数体内不允许定义 static 变量
+- constexpr 函数体内不允许调用非 constexpr 函数
+- constexpr 函数体内不允许访问外部的非 constexpr 变量
+- constexpr 函数体内不允许内嵌汇编
+- constexpr 函数体内允许定义不使用 constexpr 修饰的局部变量，这些变量也只能是“编译时计算”的类型
+
+5. 在非“常量计算”的上下文中，constexpr 修饰的函数可以当作普通函数使用，实参不需要是常量，返回值也不需要是常量。在“常量计算”的上下文中，实参和返回值都要求是常量表达式，否则会报错
+```
+constexpr int foo() {
+    return 5;
+};
+
+int a = 10; 
+constexpr int b = foo(a);//error，foo 函数处于“常量计算“上下文中
+int c = foo(a);//ok，foo 函数处于非“常量计算“上下文中
+```
+6. constexpr 可以修饰成员函数
+```
+//普通成员函数，参数 This* this 不属于编译时计算类型
+constexpr int int::foo1(This* this) { //error
+    return 5;
+}
+
+//静态成员函数
+constexpr int int::foo2() {
+    return 5;
+}
+
+int main() {
+    constexpr int c = int::foo2();//ok，可编译期求值
+    return 0;
+}
+```
+6. constexpr 不允许修饰 async 函数
+7. constexpr 不允许支持变长参数
+
+------
+
+## type trait
+
+type trait 可以看作是一个编译期计算返回值的 constexpr 函数。
+BSC标准库中提供了一系列 type trait 泛型函数，使用时需要导入头文件 bsc_type_traits.hbs
+
+目前实现的 type trait 函数有：
+```
+// 判断类型的分类
+constexpr bool is_integral<T>();
+constexpr bool is_floating_point<T>();
+constexpr bool is_pointer<T>();
+constexpr bool is_function<T>();
+constexpr bool is_array<T>();
+constexpr bool is_struct<T>();
+constexpr bool is_union<T>();
+constexpr bool is_enum<T>();
+constexpr bool is_void<T>();
+//判断类型的属性
+constexpr bool is_signed<T>();
+constexpr bool is_unsigned<T>();
+constexpr bool is_const<T>();
+constexpr bool is_volatile<T>();
+constexpr size_t rank<T>();
+constexpr size_t extent<T, size_t N>();
+//判断类型的关系
+constexpr bool is_same<T1, T2>();
+constexpr bool is_convertible<From, To>();
+```
+针对其中一些作出说明和举例：
+```
+constexpr size_t rank<T>(); //可用于计算数组的维数,如
+rank<int>() == 0;
+rank<int[5]>() == 1;
+rank<int[5][5]>() == 2;
+
+constexpr size_t extent<T, size_t N>();//可用于计算数组第 N 维元素的个数,如
+extent<int[3],0>() == 3;
+extent<int[3],1>() == 0;
+extent<int[3][4],0>() == 3;
+extent<int[3][4],1>() == 4;
+extent<int[3][4],2>() == 0;
+
+constexpr bool is_same<T1, T2>();//判断类型 T1，T2 是否一样，忽略类型别名
+
+constexpr bool is_convertible<From, To>();//判断类型 From 是否可以类型转换为 To
+```
+
+使用时就像普通泛型函数一样
+```
+#include<stdio.h>
+#include<bsc_type_traits.hbs> 
+
+int main() {
+    printf("%d\n",is_integral<int>()); //1
+    printf("%d\n",is_integral<float>()); //0
+    return 0;
+}
+```
+
+type trait 函数可以在泛型函数和泛型结构体的成员函数中使用
+```
+#include<stdio.h>
+#include<bsc_type_traits.hbs> 
+
+struct S<T> {};
+void struct S<T>::foo(struct S<T>* this) {
+    if (is_integral<T>()) {
+        printf("integral\n");
+    } else {
+        printf("not integral\n");
+    }
+}
+
+void bar<T>() {
+    if (is_integral<T>()) {
+        printf("integral\n");
+    } else {
+        printf("not integral\n");
+    }
+}
+
+int main() {
+    struct S<int> s1;
+    struct S<float> s2;
+    s1.foo(); //print "integral"
+    s2.foo(); //print "not integral"
+    bar<int>();  //print "integral"
+    bar<float>(); //print "not integral"
+    return 0;
+}
+```
+
+type trait 函数也可用于静态断言中
+```
+#include<bsc_type_traits.hbs> 
+
+int main() {
+    _Static_assert(is_integral<int>() == true, "fail");
+    _Static_assert(is_integral<float>() == false, "fail");
+    return 0;
+}
+```
 
 ------
 

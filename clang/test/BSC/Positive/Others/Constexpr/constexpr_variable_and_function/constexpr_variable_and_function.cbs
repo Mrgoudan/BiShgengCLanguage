@@ -3,50 +3,81 @@
 // expected-no-diagnostics
 
 constexpr int foo1() {
-    return 1;
+    return 5;
 }
 
-constexpr int foo2<T>() {
-    return 1;
+constexpr int foo2<T, int N>() {
+    return 5;
 }
 
-void bar<int N>() {}
+void bar<int N, T>() {}
 
-trait M {
-    constexpr int foo(This* this);
-};
-constexpr int int::foo(This* this) {
-    return *this;
+constexpr int int::foo_static() {
+    return 5;
 }
-impl trait M for int;
 
 struct S {
     int a;
 };
+constexpr int struct S::foo_static() {
+    return 5;
+}
+
+struct G<T> {
+    T a;
+};
+constexpr int struct G<T>::foo_static() {
+    return 5;
+}
+
+struct K<T, int N> {
+    T arr[N];
+};
+constexpr int struct K<T, int N>::foo_static() {
+    return 5;
+}
 
 int main() {
     constexpr int a = 5;   
-    constexpr struct S s = {.a = 5}; 
 
-    bar<a>();
-    bar<foo1()>();
-    bar<foo2<int>()>();
+    bar<a, struct G<int> >();
+    bar<foo1(), struct G<int> >();
+    bar<foo2<int, 5>(), struct G<int> >();
+    bar<int::foo_static(), struct G<int> >();
+    bar<struct S::foo_static(), struct G<int> >();
+    bar<struct G<int>::foo_static(), struct G<int> >();
+    bar<struct K<int, 5>::foo_static(), struct G<int> >();    
     
     int arr1[a] = {0};
     int arr2[foo1()] = {0};
-    int arr3[foo2<int>()] = {0};
+    int arr3[foo2<int, 5>()] = {0};
+    int arr4[int::foo_static()] = {0};
+    int arr5[struct S::foo_static()] = {0};
+    int arr6[struct G<int>::foo_static()] = {0};
+    int arr7[struct K<int, 5>::foo_static()] = {0};
+    int arr8[struct K<int, 5>::foo_static()][struct G<int>::foo_static()] = {0};
     
     constexpr int b = a;
     constexpr int c = foo1();
-    constexpr int d = foo2<int>();
+    constexpr int d = foo2<int, 5>();
+    constexpr int e = int::foo_static();
+    constexpr int f = struct S::foo_static();
+    constexpr int g = struct G<int>::foo_static();   
+    constexpr int h = struct K<int, 5>::foo_static();
 
     _Static_assert(a == 5, "fail");
-    _Static_assert(foo1() == 1, "fail");
-    _Static_assert(foo2<int>() == 1, "fail");
-
-    int e = 5;
-    trait M* p = &e;
-    e.foo();
-    p->foo();
+    _Static_assert(foo1() == 5, "fail");
+    _Static_assert(foo2<int, 5>() == 5, "fail");
+    _Static_assert(int::foo_static() == 5, "fail");
+    _Static_assert(struct S::foo_static() == 5, "fail");
+    _Static_assert(struct G<int>::foo_static() == 5, "fail");
+    _Static_assert(struct K<int, 5>::foo_static() == 5, "fail");
+    _Static_assert(b == 5, "fail");
+    _Static_assert(c == 5, "fail");
+    _Static_assert(d == 5, "fail");
+    _Static_assert(e == 5, "fail");
+    _Static_assert(f == 5, "fail");
+    _Static_assert(g == 5, "fail");
+    _Static_assert(h == 5, "fail");
     return 0;
 }

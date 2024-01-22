@@ -1888,10 +1888,19 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   thread storage duration or [before C++2a] for which no
       //   initialization is performed.
       const auto *VD = cast<VarDecl>(DclIt);
+      #if ENABLE_BSC
+      if (SemaRef.LangOpts.BSC && Kind == Sema::CheckConstexprKind::Diagnose &&
+          !VD->getType()->isDependentType() && !VD->getType()->isBSCCalculatedTypeInCompileTime())
+        SemaRef.Diag(VD->getBeginLoc(), diag::err_constexpr_func_unsupported_type)
+              << VD->getType();
+      #endif
       if (VD->isThisDeclarationADefinition()) {
         if (VD->isStaticLocal()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
-            SemaRef.Diag(VD->getLocation(),
+            #if ENABLE_BSC
+            if (!SemaRef.getLangOpts().BSC)
+            #endif
+              SemaRef.Diag(VD->getLocation(),
                          SemaRef.getLangOpts().CPlusPlus2b
                              ? diag::warn_cxx20_compat_constexpr_var
                              : diag::ext_constexpr_static_var)
@@ -1915,7 +1924,10 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         if (!VD->getType()->isDependentType() &&
             !VD->hasInit() && !VD->isCXXForRangeDecl()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
-            SemaRef.Diag(
+            #if ENABLE_BSC
+            if (!SemaRef.getLangOpts().BSC)
+            #endif
+              SemaRef.Diag(
                 VD->getLocation(),
                 SemaRef.getLangOpts().CPlusPlus20
                     ? diag::warn_cxx17_compat_constexpr_local_var_no_init
@@ -1928,7 +1940,10 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
         }
       }
       if (Kind == Sema::CheckConstexprKind::Diagnose) {
-        SemaRef.Diag(VD->getLocation(),
+        #if ENABLE_BSC
+        if (!SemaRef.getLangOpts().BSC)
+        #endif
+          SemaRef.Diag(VD->getLocation(),
                      SemaRef.getLangOpts().CPlusPlus14
                       ? diag::warn_cxx11_compat_constexpr_local_var
                       : diag::ext_constexpr_local_var)

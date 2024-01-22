@@ -1881,7 +1881,19 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
     Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
     /*LambdaContextDecl=*/nullptr,
     /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
-  if (isCXXTypeId(TypeIdAsTemplateArgument)) {
+
+  // if we have a constant generic function or struct : 
+  // `void bar<int N>()` or `struct S<int N>{}`
+  // we want to use a BSCStaticMemberFunctionCall as a argument
+  // for example: bar<int::foo()>(); 
+  //              bar<struct G::foo()>();
+  //              bar<struct G<int>::foo()>();
+  // the argument must not be a TypeName
+  if (
+    #if ENABLE_BSC
+    !(getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) &&
+    #endif
+    isCXXTypeId(TypeIdAsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(
         /*Range=*/nullptr, DeclaratorContext::TemplateArg);
     return Actions.ActOnTemplateTypeArgument(TypeArg);

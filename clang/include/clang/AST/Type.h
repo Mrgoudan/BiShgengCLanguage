@@ -2194,6 +2194,7 @@ public:
   #if ENABLE_BSC
   bool isTraitType() const;
   bool isTraitPointerType() const;
+  bool isBSCCalculatedTypeInCompileTime() const;
   #endif
   bool isClassType() const;
   bool isStructureType() const;
@@ -7146,6 +7147,16 @@ inline bool Type::isTraitPointerType() const {
   if (CanonicalType->isPointerType())
     return isa<TraitType>(CanonicalType->getPointeeType());
   return false;
+}
+
+//BSCCalculatedTypeInCompileTime includes bool,char(also includes signed char,unsigned char),
+//and int(can be specified by short/signed/unsigned/long/long long).
+//Enum is not included.
+inline bool Type::isBSCCalculatedTypeInCompileTime() const {
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->getKind() >= BuiltinType::Bool &&
+           BT->getKind() <= BuiltinType::Int128;
+  return isBitIntType();
 }
 #endif
 

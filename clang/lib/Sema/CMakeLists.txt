@@ -16,6 +16,7 @@ add_clang_library(clangSema
   BSC/SemaBSCTrait.cpp
   BSC/SemaBSCOwnership.cpp
   BSC/SemaStmtBSC.cpp
+  BSC/SemaDeclBSC.cpp  
   BSC/SemaTemplateInstantiateDeclBSC.cpp
   BSC/DeclSpecBSC.cpp
   CodeCompleteConsumer.cpp

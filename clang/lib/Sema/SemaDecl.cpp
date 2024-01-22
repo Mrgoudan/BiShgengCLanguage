@@ -4066,6 +4066,18 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   // duplicate function decls like "void f(int); void f(enum X);" properly.
   if (!getLangOpts().CPlusPlus
       ) {
+    #if ENABLE_BSC
+    // If any declaration of a BSC function or function
+    // template has a constexpr specifier then all its declarations shall
+    // contain the constexpr specifier.
+    if (getLangOpts().BSC && New->getConstexprKind() != Old->getConstexprKind()) {
+      Diag(New->getLocation(), diag::err_constexpr_redecl_mismatch)
+        << New << static_cast<int>(New->getConstexprKind())
+        << static_cast<int>(Old->getConstexprKind());
+      Diag(Old->getLocation(), diag::note_previous_declaration);
+      return true;
+    }
+    #endif
     // C99 6.7.5.3p15: ...If one type has a parameter type list and the other
     // type is specified by a function definition that contains a (possibly
     // empty) identifier list, both shall agree in the number of parameters
@@ -8671,6 +8683,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     return;
   }
 
+  #if ENABLE_BSC
+  if (getLangOpts().BSC && NewVD->isConstexpr() && 
+      !T->isDependentType() && !T->isBSCCalculatedTypeInCompileTime()) {
+    Diag(NewVD->getLocation(), diag::err_constexpr_var_unsupported_type) << T;
+    return;
+  }
+  #endif
+
   // PPC MMA non-pointer types are not allowed as non-local variable types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       !NewVD->isLocalVarDecl() &&
@@ -11699,6 +11719,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       Diag(NewFD->getBeginLoc(), diag::err_async_func_unsupported)
             << "static declaration";
     }
+    // check BSC constexpr function
+    if (NewFD->isConstexprSpecified())
+      CheckBSCConstexprFunction(NewFD);
   }
   #endif
 
@@ -13391,6 +13414,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (Type->isUndeducedType() &&
         DeduceVariableDeclarationType(Var, false, nullptr))
       return;
+
+    #if ENABLE_BSC
+    if (getLangOpts().BSC && Var->isConstexpr()) {
+      Diag(Var->getLocation(), diag::err_constexpr_var_requires_const_init) << Var;
+      return;
+    }
+    #endif
 
     // C++11 [class.static.data]p3: A static data member can be declared with
     // the constexpr specifier; if so, its declaration shall specify

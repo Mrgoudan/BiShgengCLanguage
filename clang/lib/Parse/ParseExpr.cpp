@@ -1059,7 +1059,7 @@ ExprResult Parser::ParseCastExpression(
                                // unqualified-id: identifier
                                // constant: enumeration-constant
     #if ENABLE_BSC
-    if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
+    if (getLangOpts().BSC && FindUntil(tok::coloncolon) && !IsBSCStaticMemberFunctionCall()) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);

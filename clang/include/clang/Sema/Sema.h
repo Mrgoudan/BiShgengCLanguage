@@ -7627,6 +7627,7 @@ public:
   ExprResult ActOnTraitPointerCast(Expr *RHSExpr);
 
   void checkBSCFunctionContainsTrait(Decl* D);
+  void CheckBSCConstexprFunction(FunctionDecl* FD);
 #endif
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,

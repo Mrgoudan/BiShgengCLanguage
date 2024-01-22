@@ -12793,7 +12793,11 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
     if (SubExpr.isInvalid())
       return ExprError();
 
-    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression())
+    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression()
+       #if ENABLE_BSC 
+       && E->getDimensionExpression()
+       #endif
+       )
       return E;
   }
 

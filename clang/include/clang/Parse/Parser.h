@@ -2453,6 +2453,8 @@ private:
   int BSCGenericLookAhead;
   bool IsParsingBSCGenericParameters = false;
   void ParseBSCScopeSpecifiers(DeclSpec &DS);
+  // check BSC static member function call
+  bool IsBSCStaticMemberFunctionCall();
   #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
