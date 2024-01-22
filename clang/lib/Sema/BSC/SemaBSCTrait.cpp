@@ -199,12 +199,18 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
 static std::string TypeAsString(QualType T) {
   PrintingPolicy PrintPolicy = LangOptions();
   SplitQualType T_split = T.split();
-  std::string Ty = T.getAsString(T_split, PrintPolicy);
-  int n = Ty.find(' ');
-  std::string TyName = Ty;
-  if (n > 0)
-    TyName = Ty.substr(0, n) + "_" + Ty.substr(n + 1, -1);
-  return TyName;
+  std::string ExtendedTypeStr = T.getAsString(T_split, PrintPolicy);
+  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
+    if (ExtendedTypeStr[i] == ' ') {
+      ExtendedTypeStr.replace(i, 1, "_");
+    } else if (ExtendedTypeStr[i] == '*') {
+      // Since '*' is not allowed to appear in identifier,
+      // we replace it with 'P'.
+      // FIXME: it may conflict with user defined type Char_P.
+      ExtendedTypeStr.replace(i, 1, "P");
+    }
+  }
+  return ExtendedTypeStr;
 }
 
 ImplTraitDecl *Sema::BuildImplTraitDecl(Scope *S, Declarator &TypeDeclarator,
