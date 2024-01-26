@@ -2,7 +2,6 @@
 // RUN: %t.output
 // expected-no-diagnostics
 #include "TypeTrait.hbs"
-
 typedef int MyInt;
 typedef int arr1[];
 typedef int arr2[3];
@@ -13,44 +12,6 @@ typedef union U { int a; } U;
 typedef struct S<int> S_int;
 
 int main() {
-    printf("%d\n",is_integral<int>()); //1
-    printf("%d\n",is_integral<MyInt>()); //1
-    printf("%d\n",is_integral<float>()); //0
-    printf("%d\n",is_floating_point<float>()); //1
-    printf("%d\n",is_floating_point<int>()); //0
-    printf("%d\n",is_void<void>()); //1
-    printf("%d\n",is_void<int>()); //0
-    printf("%d\n",is_signed<int>()); //1
-    printf("%d\n",is_signed<unsigned int>()); //0
-    printf("%d\n",is_unsigned<unsigned int>()); //1
-    printf("%d\n",is_unsigned<int>()); //0
-    printf("%d\n",is_const<const int>()); //1
-    printf("%d\n",is_const<int>()); //0
-    printf("%d\n",is_volatile<volatile int>()); //1
-    printf("%d\n",is_volatile<int>()); //1
-    printf("%d\n",is_array<int[]>()); //1
-    printf("%d\n",is_array<int>()); //0
-    printf("%d\n",is_function<int ()>()); //1
-    printf("%d\n",is_function<int>()); //0
-    printf("%d\n",is_pointer<int*>()); //1
-    printf("%d\n",is_pointer<int>()); //0
-    printf("%d\n",is_struct<struct G>()); //1
-    printf("%d\n",is_struct<G>()); //1        
-    printf("%d\n",is_struct<struct S<int> >()); //1
-    printf("%d\n",is_struct<S_int>()); //1
-    printf("%d\n",is_struct<int>()); //0
-    printf("%d\n",is_enum<enum E>()); //1
-    printf("%d\n",is_enum<E>()); //1        
-    printf("%d\n",is_enum<int>()); //0
-    printf("%d\n",is_union<union U>()); //1
-    printf("%d\n",is_union<U>()); //1        
-    printf("%d\n",is_union<int>()); //0
-    printf("%d\n",is_same<int, signed int>()); //1
-    printf("%d\n",is_same<int, float>()); //0
-    printf("%d\n",is_convertible<int, float>()); //1
-    printf("%d\n",is_convertible<int, int()>()); //0
-    printf("%d\n",is_convertible<struct G, G>()); //1
-    printf("%d\n",is_convertible<struct G, S_int>()); //0
     struct S<int> s1;
     struct S<float> s2;
     s1.foo(); //print "integral"
@@ -60,6 +21,63 @@ int main() {
     _Static_assert(is_integral<int>() == true, "fail");
     _Static_assert(is_integral<MyInt>() == true, "fail");
     _Static_assert(is_integral<float>() == false, "fail");
+    _Static_assert(is_floating_point<float>() == true, "fail");
+    _Static_assert(is_floating_point<int>() == false, "fail");
+    _Static_assert(is_void<void>() == true, "fail");
+    _Static_assert(is_void<int>() == false, "fail");
+    _Static_assert(is_signed<int>() == true, "fail");
+    _Static_assert(is_signed<unsigned int>() == false, "fail");
+    _Static_assert(is_unsigned<unsigned int>() == true, "fail");
+    _Static_assert(is_unsigned<int>() == false, "fail");
+    _Static_assert(is_const<const int>() == true, "fail");
+    _Static_assert(is_const<int>() == false, "fail");
+    _Static_assert(is_volatile<volatile int>() == true, "fail");
+    _Static_assert(is_volatile<int>() == false, "fail");
+    _Static_assert(is_array<int[]>() == true, "fail");
+    _Static_assert(is_array<int>() == false, "fail");
+    _Static_assert(is_function<int ()>() == true, "fail");
+    _Static_assert(is_function<int>() == false, "fail");
+    _Static_assert(is_pointer<int*>() == true, "fail");
+    _Static_assert(is_pointer<int>() == false, "fail");
+    _Static_assert(is_struct<struct G>() == true, "fail");
+    _Static_assert(is_struct<G>() == true, "fail");
+    _Static_assert(is_struct<struct S<int> >() == true, "fail");
+    _Static_assert(is_struct<S_int>() == true, "fail");
+    _Static_assert(is_struct<int>() == false, "fail");
+    _Static_assert(is_enum<enum E>() == true, "fail");
+    _Static_assert(is_enum<E>() == true, "fail");
+    _Static_assert(is_enum<int>() == false, "fail");
+    _Static_assert(is_union<union U>() == true, "fail");
+    _Static_assert(is_union<U>() == true, "fail");
+    _Static_assert(is_union<int>() == false, "fail");
+    _Static_assert(is_same<int, signed int>() == true, "fail");
+    _Static_assert(is_same<int, float>() == false, "fail");
+    _Static_assert(is_same<struct G, G>() == true, "fail");
+    _Static_assert(is_convertible<int, float>() == true, "fail");
+    _Static_assert(is_convertible<int, int()>() == false, "fail");
+    _Static_assert(is_convertible<struct G, G>() == true, "fail");
+    _Static_assert(is_convertible<struct G, S_int>() == false, "fail");
+    _Static_assert(is_convertible<int, const int>() == true, "fail");
+    _Static_assert(is_convertible<int, unsigned>() == true, "fail");
+    _Static_assert(is_convertible<int, void>() == false, "fail");
+    _Static_assert(is_convertible<int, int*>() == false, "fail");
+    _Static_assert(is_convertible<int*, void*>() == true, "fail");
+    _Static_assert(is_convertible<int*, float*>() == false, "fail");
+    _Static_assert(is_convertible<void*, int*>() == false, "fail");
+    _Static_assert(is_convertible<int*, int[]>() == false, "fail");
+    _Static_assert(is_convertible<int[], int*>() == true, "fail");
+    _Static_assert(is_convertible<int(*)(), int()>() == false, "fail");
+    _Static_assert(is_convertible<int(), int(*)()>() == true, "fail");
+    _Static_assert(is_convertible<int* const, int *>() == true, "fail");
+    _Static_assert(is_convertible<int*, int>() == false, "fail");
+    _Static_assert(is_convertible<int*, char*>() == false, "fail");
+    _Static_assert(is_convertible<int, char>() == true, "fail");
+    _Static_assert(is_convertible<int* [], int**>() == true, "fail");
+    _Static_assert(is_convertible<int* [], char**>() == false, "fail");
+    _Static_assert(is_convertible<int**, int *[]>() == false, "fail");
+    _Static_assert(is_convertible<int(*)[], int[]>() == false, "fail");
+    _Static_assert(is_convertible<int[], int(*)[]>() == false, "fail");
+    _Static_assert(is_convertible<int*, int(*)[]>() == false, "fail");
     _Static_assert(rank<int>() == 0, "fail");
     _Static_assert(rank<int[]>() == 1, "fail");    
     _Static_assert(rank<int[3]>() == 1, "fail");

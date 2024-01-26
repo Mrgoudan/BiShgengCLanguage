@@ -5600,6 +5600,17 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     Expr *FromPtr = &From;
     InitializationKind Kind(InitializationKind::CreateCopy(KeyLoc,
                                                            SourceLocation()));
+    #if ENABLE_BSC
+    if (Self.getLangOpts().BSC) {
+      ImplicitConversionSequence ICS = Self.TryImplicitConversion(FromPtr, RhsT,
+                                                          /*SuppressUserConversions*/true,
+                                                          Sema::AllowedExplicit::None,
+                                                          /*InOverloadResolution*/ false,
+                                                          /*CStyle=*/Kind.isCStyleOrFunctionalCast(),
+                                                          /*allowObjCWritebackConversion=*/false);
+      return ICS.isStandard();
+    }
+    #endif
 
     // Perform the initialization in an unevaluated context within a SFINAE
     // trap at translation unit scope.
