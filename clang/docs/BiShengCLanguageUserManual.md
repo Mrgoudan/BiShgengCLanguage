@@ -2,9 +2,7 @@
     <div style='height:1000px;width:90%'>
         <div style='border-top:1px solid'> </div>
         <div style='margin-top:10%;font-size:28px;width:100%;heigth:80%;font-width:600;letter-spacing:2px;text-align:center'>
-            <span style=''>毕昇C用户手册</span>
-            <div style='margin-top:10%;font-size:20px'>版本号：0.0.0</div>
-            <div style='margin-top:3%;font-size:20px'>发布时间：2023-08-11</div>
+            <span style=''>毕昇 C 用户手册</span>            
         </div>
     </div>
 </div>
@@ -14,16 +12,19 @@
 
 ### 安装毕昇 C 编译器
 
-首先，请根据系统版本到[毕昇 C 版本发布平台](https://gitee.com/bisheng_c_language_dep/bi-sheng-c-release)根据平台架构下载相应的安装包，如 x86_64, arrch64 等。
+首先请前往毕昇 C 版本发布渠道下载安装包，当前我们为开发者提供 Linux 平台上的 rpm 格式安装包，支持  clang + llvm 后端和 clang + BiShengC 后端。
 
-下载成功后，解压安装包，通过配置 PATH 环境变量即可完成安装。具体步骤如下 （以 clang+llvm-15.04-x86_64-linux-gun-bsc.tar.gz 为例)
+> 注：其中 clang + llvm 支持编译和运行环境都在 X86_64 环境；而 clang + BiShengC 支持 X86_64 环境编译，aarch64 环境运行，如果用户想要在 X86_64 环境运行，则需要使用 qemu 工具。
+
+#### clang + llvm 版本安装
+
+以 clang+llvm_15.04_BiShengCLanguage-x-y.rpm 为例，下载到本地后，安装步骤如下 ：
 
 - 解压
 
   ```shell
-  $ tar -xvf clang+llvm-15.04-x86_64-linux-gun-bsc.tar.gz
-  # 如果是 rpm 格式，可以直接安装，也可以执行如下命令像上面的 tar 包一样解压出来, 再配置环境变量
-  $ rpm2cpio clang+llvm-15.04-x86_64-linux-gun-bsc.rpm | cpio -div
+  $ rpm2cpio clang+llvm_15.0.4_BiShengCLanguage-x-y.rpm | cpio -div
+  # 解压后会在当前目录生成 /opt/buildtools/clang+llvm_15.0.4_BiShengCLanguage 目录
   ```
 
 - 配置环境变量
@@ -31,7 +32,7 @@
   > 注：所配置的环境变量仅在运行下列命令的当前 `shell` 会话窗口有效，重启 `shell` 后需要重新配置环境变量。若想要这些环境变量在 shell 每次启动时重新生效，你可以在 `$HOME/.bashrc` 或 `$HOME/.ashrc` (根据 shell 的种类而定) 等 `shell` 初始化配置文件中加入如下命令：
 
   ```shell
-  $ export LLVM_HOME=/path/to/clang+llvm-15.04-x86_64-linux-gun-bsc/bin
+  $ export LLVM_HOME=/path/to/clang+llvm_15.0.4_BiShengCLanguage/bin
   $ export PATH=$LLVM_HOME:$PATH
   ```
 
@@ -45,18 +46,46 @@
 
 `clang version xx.xx.xx`
 
-`InstalledDir: /path/to/clang+llvm-15.04-x86_64-linux-gun-bsc/bin`
+`InstalledDir: /path/to/clang+llvm_15.0.4_BiShengCLanguage/bin`
+
+#### clang + BiShengC 版本安装
+
+以 bsc_host_linux_x86_64_target_aarch64-x-y.rpm 为例，下载到本地后，安装步骤如下 ：
+
+- 解压
+
+  ```shell
+  $ rpm2cpio bsc_host_linux_x86_64_target_aarch64-x-y.rpm | cpio -div
+  # 解压后会在当前目录生成 /opt/buildtools/bsc_host_linux_x86_64_target_aarch64 目录
+  ```
+
+- 下载第三方工具包（由于 rpm 不包含 GCC 交叉编译工具链及 qemu 工具，可直接下载我们提供的第三方工具包）
+
+  ```shell
+  # 下载与解压
+  $ git clone https://gitee.com/bisheng_c_language_dep/ThirdParty.git
+  $ cd ./ThirdParty
+  $ dpkg-deb -R qemu-user_2.11+dfsg-1ubuntu7.40_amd64.deb qemu
+  ```
+
+- 配置环境变量（也可加入 `$HOME/.bashrc` 或 `$HOME/.ashrc` 等配置文件）
+
+  ```shell
+  $ export Maple_Path=/path/to/bsc_host_linux_x86_64_target_aarch64
+  $ export MTP=/path/to/ThirdParty
+  $ export BiShengC_GCC_Path=$MTP/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc
+  $ export PATH=$PATH:$Maple_Path/bin:$MTP/qemu/usr/bin
+  
+  # 设置编译时和 qemu 运行时依赖的库
+  $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MTP/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/aarch64-linux-gnu/libc/lib
+  $ export QEMU_LD_PREFIX=$MTP/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/aarch64-linux-gnu/libc
+  ```
 
 ### 卸载与更新
 
-在 linux 平台，删除相应目录下的文件，移除环境变量即可完成卸载。如：
+在 linux 平台，删除相应目录下的文件，移除环境变量即可完成卸载（最简单的，您可以重新开一个 shell 环境）。
 
-```shell
-$ unset LLVM_HOME
-$ rm -rf /path/to/clang+llvm-15.04-x86_64-linux-gun-bsc
-```
-
-如需要更新，用户需自行卸载后重新安装新的版本。
+如需要更新，用户需自行卸载后重新下载安装新的版本。
 
 ### 第一个毕昇 C 程序
 
@@ -91,20 +120,21 @@ int main() {
 使用编译命令编译该文件，得到可执行文件，如下：
 
 ```shell
-# 编译
+# clang + llvm 编译运行
 $ clang demo.cbs -o demo
-$ ls
-demo.cbs     demo
-
-# 运行
 $ ./demo
+foo.getA() = 1
+
+# clang + maple 编译运行
+$ maple demo.cbs -o demo
+$ qemu-aarch64 demo
 foo.getA() = 1
 ```
 
 输出如上结果，说明你已经成功应用了毕昇 C 的成员函数特性。
 
 
-------
+
 ## 毕昇 C 简介
 在系统编程领域，C/C++ 是应用最广泛的编程语言。在硬件资源十分受限的嵌入式场景下，C 语言使用的最多，但使用 C 语言编码存在很多痛点问题，比如 C 语言中指针使用带来的内存安全问题，C 语言缺乏原生的并发支持，以及一些基础的编程抽象(如泛型等)。近年来，在系统编程语言领域有不少探索的工作，比如 Rust，主打内存安全(所有权，生命周期，borrow checker 等)和并行并发(无栈协程)。Rust 是一门全新的编程语言，采用了和 C/C++ 完全不同的语言设计，学习曲线陡峭，也无法解决存量代码开发的问题。
 
@@ -558,7 +588,7 @@ a = 10; //error
 3. constexpr 修饰常量的类型只能是上述“编译时计算”的类型
 ```
 constexpr float a = 5.0;//error,“编译时计算”的类型不包括浮点类型
-```   
+```
 4. constexpr 修饰的常量的初始化表达式必须可以在编译时求值，否则要报错。可编译时求值的常量表达式可以是：
 - 字面量
 - constexpr 修饰的常量
