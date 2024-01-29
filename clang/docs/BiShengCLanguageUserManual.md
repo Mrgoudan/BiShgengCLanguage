@@ -669,7 +669,16 @@ int main() {
 ```
 6. constexpr 不允许修饰 async 函数
 7. constexpr 不允许支持变长参数
+8. 函数的形参不能用 constexpr 修饰
+```
+int foo1(constexpr int a) { //error
+    return 5;
+}
 
+constexpr int foo2(constexpr int a) { //error
+    return 5;
+}
+```
 ------
 
 ## type trait
@@ -702,12 +711,12 @@ constexpr bool is_convertible<From, To>();
 ```
 针对其中一些作出说明和举例：
 ```
-constexpr size_t rank<T>(); //可用于计算数组的维数,如
+constexpr size_t rank<T>(); //可用于计算数组的维数，如
 rank<int>() == 0;
 rank<int[5]>() == 1;
 rank<int[5][5]>() == 2;
 
-constexpr size_t extent<T, size_t N>();//可用于计算数组第 N 维元素的个数,如
+constexpr size_t extent<T, size_t N>();//可用于计算数组第 N 维元素的个数，如
 extent<int[3],0>() == 3;
 extent<int[3],1>() == 0;
 extent<int[3][4],0>() == 3;
@@ -716,7 +725,15 @@ extent<int[3][4],2>() == 0;
 
 constexpr bool is_same<T1, T2>();//判断类型 T1，T2 是否一样，忽略类型别名
 
-constexpr bool is_convertible<From, To>();//判断类型 From 是否可以类型转换为 To
+constexpr bool is_convertible<From, To>();//判断类型 From 是否可以隐式转换为类型 To，如
+is_convertible<int, float>() == true;
+is_convertible<int, const int>() == true;
+is_convertible<int, volatile int>() == true;
+is_convertible<int, signed>() == true;
+is_convertible<int, void>() == false;
+is_convertible<int, int*>() == false;
+is_convertible<int, void*>() == false;
+is_convertible<struct S, struct G>() == false;
 ```
 
 使用时就像普通泛型函数一样

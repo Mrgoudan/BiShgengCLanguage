@@ -5270,13 +5270,6 @@ void Sema::BuildVariableInstantiation(
     Previous.addDecl(PrevDeclForVarTemplateSpecialization);
   }
   CheckVariableDeclaration(NewVar, Previous);
-  
-  #if ENABLE_BSC
-  if (getLangOpts().BSC)
-    if (FunctionDecl* FD = dyn_cast_or_null<FunctionDecl>(NewVar->getDeclContext()))
-      if (FD->isConstexpr() && !NewVar->getType()->isBSCCalculatedTypeInCompileTime())
-        Diag(NewVar->getLocation(), diag::err_constexpr_func_unsupported_type) << NewVar->getType();
-  #endif
 
   if (!InstantiatingVarTemplate) {
     NewVar->getLexicalDeclContext()->addHiddenDecl(NewVar);

@@ -1891,7 +1891,7 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   // the argument must not be a TypeName
   if (
     #if ENABLE_BSC
-    !(getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) &&
+    !(getLangOpts().BSC && IsBSCStaticMemberFunctionCallInTemplateArgumentList()) &&
     #endif
     isCXXTypeId(TypeIdAsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(

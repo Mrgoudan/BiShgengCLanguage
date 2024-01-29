@@ -1888,12 +1888,6 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   thread storage duration or [before C++2a] for which no
       //   initialization is performed.
       const auto *VD = cast<VarDecl>(DclIt);
-      #if ENABLE_BSC
-      if (SemaRef.LangOpts.BSC && Kind == Sema::CheckConstexprKind::Diagnose &&
-          !VD->getType()->isDependentType() && !VD->getType()->isBSCCalculatedTypeInCompileTime())
-        SemaRef.Diag(VD->getBeginLoc(), diag::err_constexpr_func_unsupported_type)
-              << VD->getType();
-      #endif
       if (VD->isThisDeclarationADefinition()) {
         if (VD->isStaticLocal()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {

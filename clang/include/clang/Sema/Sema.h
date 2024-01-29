@@ -7628,6 +7628,7 @@ public:
 
   void checkBSCFunctionContainsTrait(Decl* D);
   void CheckBSCConstexprFunction(FunctionDecl* FD);
+  void CheckBSCConstexprVarType(VarDecl* VD);
 #endif
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,

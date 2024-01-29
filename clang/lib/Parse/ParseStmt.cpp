@@ -243,7 +243,7 @@ Default:
         ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          (isDeclarationStatement()
          #if ENABLE_BSC
-         && !(getLangOpts().BSC && FindUntil(tok::coloncolon))
+         && !(getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) 
          #endif
          ))) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;

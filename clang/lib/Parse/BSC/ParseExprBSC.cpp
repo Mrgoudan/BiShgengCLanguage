@@ -53,19 +53,59 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
                              T, HasBSCScopeSpec, DS.getBeginLoc());
 }
 
-bool Parser::IsBSCStaticMemberFunctionCall() {
-  if (!FindUntil(tok::coloncolon))
-    return false; 
-  if (!FindUntil(tok::greater))
-    return true;
+bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
+  bool FoundLess = false;
   int i = 0;
   Token CurrTok = Tok;
   Token NextTok = PP.LookAhead(i);
-  while (!NextTok.isOneOf(tok::comma, tok::greater)) {
-    if (CurrTok.is(tok::identifier) && NextTok.is(tok::less))
-      return true;
+  while (!NextTok.isOneOf(tok::semi, tok::l_brace, tok::eof, tok::equal)) {
+    if (CurrTok.is(tok::less)) 
+      FoundLess = true;
+    if (CurrTok.is(tok::greater) && FoundLess) 
+      FoundLess = false;
+    if (!FoundLess) {
+      if (CurrTok.is(tok::coloncolon))
+        return true;
+      if (NextTok.isOneOf(tok::comma, tok::greater))
+        return false;
+    }
     CurrTok = NextTok;
     NextTok = PP.LookAhead(++i);
+  }
+  return false;
+}
+
+// For case:
+//     int::foo();
+//     struct S::foo();
+//     struct S<int>::foo();  
+//     struct S<int::bar()>::foo();
+//     struct S<int::bar(), struct G<int::bar()> >::foo();
+// This situation should be excluded: 
+//     struct S<int::foo()> s;
+//     int arr[int::foo()];
+//     static_assert(int::foo() == 5, "fail");
+bool Parser::IsBSCStaticMemberFunctionCall() {
+  int NumLess = 0;
+  int NumGreater = 0;
+  int LookAheadNumber = 0;
+  Token CurrTok = Tok;
+  Token NextTok = PP.LookAhead(LookAheadNumber);
+  while (!NextTok.isOneOf(tok::semi, tok::l_brace, tok::eof, tok::equal, tok::l_square)) {
+    if (CurrTok.isOneOf(tok::kw__Static_assert, tok::kw_static_assert))
+      return false;
+    if (CurrTok.is(tok::less))
+      NumLess++;
+    if (CurrTok.is(tok::greater)) {
+      NumGreater++;
+      if (NextTok.is(tok::identifier))
+        return false;
+    }
+    if (CurrTok.is(tok::coloncolon) && NumLess == NumGreater)
+      return true;
+    CurrTok = NextTok;
+    NextTok = PP.LookAhead(LookAheadNumber + 1);
+    LookAheadNumber++;
   }
   return false;
 }

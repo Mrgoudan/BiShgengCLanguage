@@ -44,4 +44,23 @@ void Sema::CheckBSCConstexprFunction(FunctionDecl* FD) {
   } 
 }
 
+// The type of BSC constexpr variable should be compile_time_calculated type. 
+void Sema::CheckBSCConstexprVarType(VarDecl* VD) {
+  assert(getLangOpts().BSC);
+  QualType T = VD->getType();
+  if (T->isDependentType()) 
+    return;
+  if (VD->isConstexpr() && !T->isBSCCalculatedTypeInCompileTime()) {
+    Diag(VD->getLocation(), diag::err_constexpr_var_unsupported_type) << T;
+    VD->setInvalidDecl();
+    return;
+  }
+  if (FunctionDecl* FD = dyn_cast_or_null<FunctionDecl>(VD->getDeclContext())) {
+    if (FD->isConstexpr() && !T->isBSCCalculatedTypeInCompileTime()) {
+      Diag(VD->getLocation(), diag::err_constexpr_func_unsupported_type) << VD->getType();
+      VD->setInvalidDecl();
+      return;
+    }
+  }
+}
 #endif

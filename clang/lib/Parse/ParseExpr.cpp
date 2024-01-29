@@ -1045,8 +1045,8 @@ ExprResult Parser::ParseCastExpression(
   case tok::kw_struct:
     // For case like:
     // @code
-    //    void struct S::f(...)
-    if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
+    //    struct S::f(...)
+    if (getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);
@@ -1059,7 +1059,13 @@ ExprResult Parser::ParseCastExpression(
                                // unqualified-id: identifier
                                // constant: enumeration-constant
     #if ENABLE_BSC
-    if (getLangOpts().BSC && FindUntil(tok::coloncolon) && !IsBSCStaticMemberFunctionCall()) {
+    // For case like:
+    // @code
+    //    S::f(...)
+    // This situation should be excluded:
+    // @code
+    //    bar<int::foo()>(); 
+    if (getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);

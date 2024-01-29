@@ -8676,20 +8676,17 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     return;
   }
 
+  #if ENABLE_BSC
+  if (getLangOpts().BSC)
+    CheckBSCConstexprVarType(NewVD);
+  #endif
+
   if (NewVD->isConstexpr() && !T->isDependentType() &&
       RequireLiteralType(NewVD->getLocation(), T,
                          diag::err_constexpr_var_non_literal)) {
     NewVD->setInvalidDecl();
     return;
   }
-
-  #if ENABLE_BSC
-  if (getLangOpts().BSC && NewVD->isConstexpr() && 
-      !T->isDependentType() && !T->isBSCCalculatedTypeInCompileTime()) {
-    Diag(NewVD->getLocation(), diag::err_constexpr_var_unsupported_type) << T;
-    return;
-  }
-  #endif
 
   // PPC MMA non-pointer types are not allowed as non-local variable types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
