@@ -1754,6 +1754,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:
+  #if ENABLE_BSC
+  case tok::kw__Bool:
+  #endif
   case tok::kw_short:
   case tok::kw_int:
   case tok::kw_long:
