@@ -531,9 +531,20 @@ static RecordDecl *buildFutureRecordDecl(
 
   for (unsigned I = 0; I != Args.size(); ++I) {
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
-    if (!S.IsBSCCompatibleFutureType(AE->getType())) {
+    CallExpr *CE = dyn_cast<CallExpr>(AE);
+    QualType AEType;
+    if (CE) {
+      FunctionDecl *AwaitFD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
+      AEType =
+          AwaitFD == nullptr
+              ? AE->getType()
+              : S.Context.getQualifiedType(
+                    AE->getType(), AwaitFD->getReturnType().getQualifiers());
+    } else AEType = AE->getType();
+    
+    if (!S.IsBSCCompatibleFutureType(AEType)) {
       QualType FatPointerType = lookupGenericType(
-          S, FD->getBeginLoc(), AE->getType(), "__Trait_Future");
+          S, FD->getBeginLoc(), AEType, "__Trait_Future");
       if (FatPointerType.isNull()) {
         return nullptr;
       }
@@ -544,9 +555,9 @@ static RecordDecl *buildFutureRecordDecl(
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
           &(S.Context.Idents).get("Ft_" + std::to_string(I + 1)),
           S.Context.getRecordType(FatPointerStruct)));
-    } else if (implementedFutureType(S, AE->getType())) {
+    } else if (implementedFutureType(S, AEType)) {
       const RecordType *FutureType = dyn_cast<RecordType>(
-          AE->getType().getDesugaredType(S.Context));
+          AEType.getDesugaredType(S.Context));
       RecordDecl *FutureDecl = FutureType->getDecl();
       assert(FutureDecl != nullptr &&
              "struct future of async function is null");
@@ -2164,8 +2175,19 @@ class AEFinder : public StmtVisitor<AEFinder> {
     std::vector<Expr *> PollArgs;
     Stmt *ThenBodyStmt = nullptr;
     if (IsOptimization) {
+      CallExpr *CE = dyn_cast<CallExpr>(AE);
+      QualType AEType;
+      if (CE) {
+        FunctionDecl *AwaitFD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
+        AEType =
+            AwaitFD == nullptr
+                ? AE->getType()
+                : SemaRef.Context.getQualifiedType(
+                      AE->getType(), AwaitFD->getReturnType().getQualifiers());
+      } else AEType = AE->getType();
+      
       const RecordType *FutureType = dyn_cast<RecordType>(
-          AE->getType().getDesugaredType(SemaRef.Context));
+          AEType.getDesugaredType(SemaRef.Context));
       RecordDecl *FutureStructRD = FutureType->getDecl();
       assert(FutureStructRD != nullptr &&
              "struct future of async function is null");

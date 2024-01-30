@@ -402,12 +402,15 @@ QualType Sema::CompleteTraitType(QualType QT) {
     const TemplateSpecializationType *TST =
         dyn_cast<TemplateSpecializationType>(
             QT->getLocallyUnqualifiedSingleStepDesugaredType());
+    if (!TST)
+      return QT;
     for (auto T : TST->template_arguments())
       Args.addArgument(TemplateArgumentLoc(
           T,
           Context.getTrivialTypeSourceInfo(T.getAsType(), TTD->getBeginLoc())));
     TraitQT = CheckTemplateIdType(TemplateName(TTD), TTD->getBeginLoc(), Args);
-    TraitQT = Context.getElaboratedType(ETK_Trait, nullptr, TraitQT);
+    if (!TraitQT.isNull())
+      TraitQT = Context.getElaboratedType(ETK_Trait, nullptr, TraitQT);
   }
   return TraitQT;
 }
@@ -607,7 +610,8 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
     }
     OriginQT = OriginQT->getPointeeType();
   }
-  QT = Context.getElaboratedType(ETK_Struct, nullptr, QT);
+  if (!QT.isNull())
+    QT = Context.getElaboratedType(ETK_Struct, nullptr, QT);
 
   if (TD == nullptr || QT.isNull())
     return nullptr;
