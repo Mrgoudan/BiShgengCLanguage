@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-typedef trait F<T> {
+typedef trait F<T> { // expected-warning {{typedef requires a name}}
   T foo(This* this, int a);
 }G; // expected-error {{expected ';' after trait}}
                 // expected-warning@-1 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+                

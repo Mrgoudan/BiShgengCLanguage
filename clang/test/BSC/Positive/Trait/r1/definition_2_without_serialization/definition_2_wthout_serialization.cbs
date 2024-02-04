@@ -9,7 +9,7 @@
 trait F {
   int foo(This* this, int a);
 };
-// CHECK: TraitDecl 0x{{[^ ]*}} <{{.*}}:[[@LINE-3]]:1, line:[[@LINE-1]]:1> line:[[@LINE-3]]:7 invalid
+// CHECK: TraitDecl 0x{{[^ ]*}} <{{.*}}:[[@LINE-3]]:1, line:[[@LINE-1]]:1> line:[[@LINE-3]]:7
 // CHECK-NEXT: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-3]]:3, col:28> col:7 foo 'int (This *, int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:11, col:17> col:17 this 'This *'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:23, col:27> col:27 a 'int'

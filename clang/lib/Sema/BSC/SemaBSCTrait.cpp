@@ -243,6 +243,8 @@ void Sema::ActOnFinishTraitMemberSpecification(Decl *TagDecl) {
   if (!TagDecl)
     return;
   AdjustDeclIfTemplate(TagDecl);
+
+  cast<TraitDecl>(TagDecl)->completeDefinition();
 }
 
 ExprResult Sema::AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,

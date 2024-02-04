@@ -1,11 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 typedef trait F {
   int foo(This* this, int a);
 }G;
 
-typedef trait G {
+typedef trait G { // expected-warning {{typedef requires a name}}
   int foo(This* this);
 };
 

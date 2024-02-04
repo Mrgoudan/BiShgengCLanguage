@@ -29,7 +29,7 @@ trait Future<T> {
     struct PollResult<T> poll(This* this, T a);
     void free(This* this);
 };
-// CHECK: TraitTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-4]]:1, line:[[@LINE-1]]:1> line:[[@LINE-4]]:7 invalid Future
+// CHECK: TraitTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-4]]:1, line:[[@LINE-1]]:1> line:[[@LINE-4]]:7 Future
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <col:14> col:14 referenced class depth 0 index 0 T
 // CHECK-NEXT: TraitDecl 0x{{[^ ]*}} <col:1, line:[[@LINE-3]]:1> line:[[@LINE-6]]:7
 // CHECK-NEXT: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:5, col:46> col:26 poll 'struct PollResult<T> (This *, T)'

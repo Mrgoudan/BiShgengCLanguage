@@ -9,7 +9,7 @@
 typedef trait F {
     int foo(This* this, int a);
 }G;
-// CHECK: TraitDecl 0x{{[^ ]*}} <{{.*}}:[[@LINE-3]]:9, line:[[@LINE-1]]:1> line:[[@LINE-3]]:15 invalid
+// CHECK: TraitDecl 0x{{[^ ]*}} <{{.*}}:[[@LINE-3]]:9, line:[[@LINE-1]]:1> line:[[@LINE-3]]:15
 // CHECK-NEXT: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-3]]:5, col:30> col:9 foo 'int (This *, int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:13, col:19> col:19 this 'This *'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:25, col:29> col:29 a 'int'

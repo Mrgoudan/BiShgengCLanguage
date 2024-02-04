@@ -175,11 +175,10 @@ void Parser::ParseTraitBody(SourceLocation TraitLoc,
   ParsedAttributes attrs(AttrFactory);
   if (TagDecl)
     Actions.ActOnFinishTraitMemberSpecification(TagDecl);
-  if (TagDecl) {
-    TagDecl->setInvalidDecl();
+  if (TagDecl)
     Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
-  }
-  // Leave the class scope
+
+  // Leave the trait scope
   ParsingDef.Pop();
   ClassScope.Exit();
 }
@@ -475,7 +474,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
 
   // desugar
   Decl *D = TagOrTempResult.get();
-  if (TUK == Sema::TUK_Definition && D != nullptr) {
+  if (TUK == Sema::TUK_Definition && D != nullptr && !D->isInvalidDecl()) {
     TraitDecl *TD = nullptr;
     if (auto *TTD = dyn_cast_or_null<TraitTemplateDecl>(D)) {
       TD = TTD->getTemplatedDecl();
