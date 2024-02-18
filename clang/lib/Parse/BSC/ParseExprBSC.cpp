@@ -59,9 +59,9 @@ bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
   Token CurrTok = Tok;
   Token NextTok = PP.LookAhead(i);
   while (!NextTok.isOneOf(tok::semi, tok::l_brace, tok::eof, tok::equal)) {
-    if (CurrTok.is(tok::less)) 
+    if (CurrTok.is(tok::less))
       FoundLess = true;
-    if (CurrTok.is(tok::greater) && FoundLess) 
+    if (CurrTok.is(tok::greater) && FoundLess)
       FoundLess = false;
     if (!FoundLess) {
       if (CurrTok.is(tok::coloncolon))
@@ -78,10 +78,10 @@ bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
 // For case:
 //     int::foo();
 //     struct S::foo();
-//     struct S<int>::foo();  
+//     struct S<int>::foo();
 //     struct S<int::bar()>::foo();
 //     struct S<int::bar(), struct G<int::bar()> >::foo();
-// This situation should be excluded: 
+// This situation should be excluded:
 //     struct S<int::foo()> s;
 //     int arr[int::foo()];
 //     static_assert(int::foo() == 5, "fail");
@@ -91,6 +91,8 @@ bool Parser::IsBSCStaticMemberFunctionCall() {
   int LookAheadNumber = 0;
   Token CurrTok = Tok;
   Token NextTok = PP.LookAhead(LookAheadNumber);
+  if (CurrTok.is(tok::identifier) && !NextTok.isOneOf(tok::coloncolon, tok::less))
+    return false;
   while (!NextTok.isOneOf(tok::semi, tok::l_brace, tok::eof, tok::equal, tok::l_square)) {
     if (CurrTok.isOneOf(tok::kw__Static_assert, tok::kw_static_assert))
       return false;

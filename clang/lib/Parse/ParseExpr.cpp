@@ -1064,7 +1064,7 @@ ExprResult Parser::ParseCastExpression(
     //    S::f(...)
     // This situation should be excluded:
     // @code
-    //    bar<int::foo()>(); 
+    //    bar<int::foo()>();
     if (getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
