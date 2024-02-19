@@ -6342,9 +6342,9 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         AllArgs.push_back(Implict);
       } else {
         AllArgs.push_back(ImplicitArg);
-        // Set desugar flag true after push_back the arg.
-        Callee->IsDesugaredBSCMethodCall = true;
       }
+      // Set desugar flag true after push_back the arg.
+      Callee->IsDesugaredBSCMethodCall = true;
       FirstParam = FirstParam + 1;
     }
   }

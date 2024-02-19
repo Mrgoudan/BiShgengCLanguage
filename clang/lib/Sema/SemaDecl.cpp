@@ -7830,9 +7830,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (R->isFunctionPointerType())
     if (const auto *TT = R->getAs<TypedefType>())
       copyAttrFromTypedefToDecl<AllocSizeAttr>(*this, NewVD, TT);
-  
+
   #if ENABLE_BSC
-  if (getLangOpts().BSC) 
+  if (getLangOpts().BSC)
     checkBSCFunctionContainsTrait(NewVD);
   #endif
 
@@ -9099,8 +9099,8 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         "Strict prototypes are required");
 
     #if ENABLE_BSC
-    if (SemaRef.getLangOpts().BSC 
-        && D.getDeclSpec().getConstexprSpecifier() == ConstexprSpecKind::Constexpr) {
+    if (SemaRef.getLangOpts().BSC && D.getDeclSpec().getConstexprSpecifier() ==
+                                         ConstexprSpecKind::Constexpr) {
       NewFD = FunctionDecl::Create(
           SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
           SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
@@ -10135,7 +10135,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     NewFD->addAttr(C11NoReturnAttr::Create(Context,
                                            D.getDeclSpec().getNoreturnSpecLoc(),
                                            AttributeCommonInfo::AS_Keyword));
-  
+
   #if ENABLE_BSC
   if (getLangOpts().BSC)
     checkBSCFunctionContainsTrait(NewFD);
@@ -13925,12 +13925,11 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       #if ENABLE_BSC
       (
       #endif
-      getLangOpts().CPlusPlus 
+          getLangOpts().CPlusPlus
       #if ENABLE_BSC
-      || getLangOpts().BSC)
+          || getLangOpts().BSC)
       #endif
-       && !type->isDependentType() && Init &&
-      !Init->isValueDependent() &&
+      && !type->isDependentType() && Init && !Init->isValueDependent() &&
       (GlobalStorage || var->isConstexpr() ||
        var->mightBeUsableInConstantExpressions(Context))) {
     // If this variable might have a constant initializer or might be usable in
@@ -14582,7 +14581,11 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
   // Use This* as BSCMethod parameter,
   // For example   void struct S::f(This* this);
   if (getLangOpts().BSC && TypePtr && DS.getTypeSpecType() == clang::TST_This) {
-    parmDeclType = Context.getPointerType(ExtendedType);
+    Qualifiers ThisQual = parmDeclType->getPointeeType().getLocalQualifiers();
+    Qualifiers ThisPointerQual = parmDeclType.getLocalQualifiers();
+    parmDeclType = Context.getQualifiedType(ExtendedType, ThisQual);
+    parmDeclType = Context.getQualifiedType(
+        Context.getPointerType(parmDeclType), ThisPointerQual);
     TInfo = Context.CreateTypeSourceInfo(parmDeclType);
     // if EntendedType is a generic type,
     // TemplateArgumentLocInfo is needed when instantiation,
@@ -14618,12 +14621,12 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
 
   if (D.isInvalidType())
     New->setInvalidDecl();
-  
+
   #if ENABLE_BSC
   if (getLangOpts().BSC)
     checkBSCFunctionContainsTrait(New);
   #endif
-  
+
   assert(S->isFunctionPrototypeScope());
   assert(S->getFunctionPrototypeDepth() >= 1);
   New->setScopeInfo(S->getFunctionPrototypeDepth() - 1,
