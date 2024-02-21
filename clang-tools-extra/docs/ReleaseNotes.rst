@@ -144,6 +144,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bsc-add-new-field
+  <clang-tidy/checks/bsc/add-new-field>` check.
+
+  FIXME: add release notes.
+
 - New :doc:`bugprone-shared-ptr-array-mismatch <clang-tidy/checks/bugprone/shared-ptr-array-mismatch>` check.
 
   Finds initializations of C++ shared pointers to non-array type that are initialized with an array.

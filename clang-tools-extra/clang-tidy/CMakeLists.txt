@@ -54,6 +54,7 @@ add_subdirectory(android)
 add_subdirectory(abseil)
 add_subdirectory(altera)
 add_subdirectory(boost)
+add_subdirectory(bsc)
 add_subdirectory(bugprone)
 add_subdirectory(cert)
 add_subdirectory(concurrency)
@@ -81,6 +82,7 @@ set(ALL_CLANG_TIDY_CHECKS
   clangTidyAbseilModule
   clangTidyAlteraModule
   clangTidyBoostModule
+  clangTidyBscModule
   clangTidyBugproneModule
   clangTidyCERTModule
   clangTidyConcurrencyModule

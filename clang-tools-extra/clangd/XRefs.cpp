@@ -2047,8 +2047,13 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
     // specialization parameters, while the children would involve classes
     // that derive from other specializations of the template.
     if (WantChildren) {
-      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
-        CXXRD = CTSD->getTemplateInstantiationPattern();
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD)) {
+          // FIXME: Temporary handling for clang-tidy. Fix this if the 
+          // problem of BSC has been solved.
+          #if !ENABLE_BSC
+          CXXRD = CTSD->getTemplateInstantiationPattern();
+          #endif
+      }
     }
 
     Optional<TypeHierarchyItem> Result =

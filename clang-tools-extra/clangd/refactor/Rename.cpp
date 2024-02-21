@@ -121,7 +121,11 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
         dyn_cast_or_null<CXXRecordDecl>(Field->getParent());
     if (!FieldParent)
       return Field->getCanonicalDecl();
+    #if !ENABLE_BSC
+    // FIXME: Temporary handling for clang-tidy. Fix this if the 
+    // problem of BSC has been solved.
     FieldParent = FieldParent->getTemplateInstantiationPattern();
+    #endif
     // Field is not instantiation.
     if (!FieldParent || Field->getParent() == FieldParent)
       return Field->getCanonicalDecl();

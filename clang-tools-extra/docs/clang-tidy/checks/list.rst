@@ -11,6 +11,7 @@ Clang-Tidy Checks
    altera/*
    android/*
    boost/*
+   bsc/*
    bugprone/*
    cert/*
    clang-analyzer/*
