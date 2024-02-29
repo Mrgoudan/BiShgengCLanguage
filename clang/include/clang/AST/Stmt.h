@@ -1426,11 +1426,16 @@ class CompoundStmt final
   #if ENABLE_BSC
   SafeScopeSpecifier SafeSpec;
   SourceLocation SafeLoc;
+  SafeZoneSpecifier SafeZoneSpec;
 
-  CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures, SourceLocation LB, SourceLocation RB,
-               SafeScopeSpecifier SafeSpec = SS_None, SourceLocation SafeLoc = SourceLocation());
-  explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty),
-                                            SafeSpec(SS_None), SafeLoc() {}
+  CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
+               SourceLocation LB, SourceLocation RB,
+               SafeScopeSpecifier SafeSpec = SS_None,
+               SourceLocation SafeLoc = SourceLocation(),
+               SafeZoneSpecifier SafeZoneSpec = SZ_None);
+  explicit CompoundStmt(EmptyShell Empty)
+      : Stmt(CompoundStmtClass, Empty), SafeSpec(SS_None), SafeLoc(),
+        SafeZoneSpec(SZ_None) {}
   #else
   CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
                SourceLocation LB, SourceLocation RB);
@@ -1455,7 +1460,8 @@ public:
                               SourceLocation RB
                               #if ENABLE_BSC
                               , SafeScopeSpecifier SafeSpec = SS_None,
-                              SourceLocation SafeLoc = SourceLocation()
+                              SourceLocation SafeLoc = SourceLocation(),
+                              SafeZoneSpecifier SafeZoneSpec = SZ_None
                               #endif
                               );
 
@@ -1463,7 +1469,7 @@ public:
   explicit CompoundStmt(SourceLocation Loc)
       : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc)
       #if ENABLE_BSC
-      , SafeSpec(SS_None), SafeLoc()
+      , SafeSpec(SS_None), SafeLoc(), SafeZoneSpec(SZ_None)
       #endif
       {
     CompoundStmtBits.NumStmts = 0;
@@ -1571,6 +1577,8 @@ public:
   SourceLocation getSafeSpecifierLoc() const {
     return SafeLoc;
   }
+
+  SafeZoneSpecifier getCompSafeZoneSpecifier() const { return SafeZoneSpec; }
   #endif
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }

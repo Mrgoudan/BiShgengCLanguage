@@ -367,12 +367,13 @@ int64_t Stmt::getID(const ASTContext &Context) const {
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
                            SourceLocation LB, SourceLocation RB
                            #if ENABLE_BSC
-                           , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
+                           , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc,
+                           SafeZoneSpecifier SafeZoneSpec
                            #endif
                            )
     : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB)
     #if ENABLE_BSC
-    , SafeSpec(SafeSpec), SafeLoc(SafeLoc)
+    , SafeSpec(SafeSpec), SafeLoc(SafeLoc), SafeZoneSpec(SafeZoneSpec)
     #endif
     {
   CompoundStmtBits.NumStmts = Stmts.size();
@@ -393,7 +394,8 @@ CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                                    FPOptionsOverride FPFeatures,
                                    SourceLocation LB, SourceLocation RB
                                    #if ENABLE_BSC
-                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
+                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc,
+                                   SafeZoneSpecifier SafeZoneSpec
                                    #endif
                                    ) {
   void *Mem =
@@ -401,7 +403,7 @@ CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
       alignof(CompoundStmt));
   return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB
                                 #if ENABLE_BSC
-                                , SafeSpec, SafeLoc
+                                , SafeSpec, SafeLoc, SafeZoneSpec
                                 #endif
                                 );
 }

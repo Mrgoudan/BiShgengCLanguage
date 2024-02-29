@@ -392,4 +392,10 @@ def err_opencl_extension_and_feature_differs : Error<
   "options %0 and %1 are set to different values">;
 def err_opencl_feature_requires : Error<
   "feature %0 requires support of %1 feature">;
+
+// BSC warnings and errors
+#ifdef BSC
+include "clang/Basic/BSC/DiagnosticBSCCommonKinds.td"
+#endif
+
 }

@@ -5392,6 +5392,34 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       FunctionType::ExtInfo EI(
           getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex));
 
+#if ENABLE_BSC
+      // empty param or variadic param is forbidden in the safe zone
+      if (S.getLangOpts().BSC &&
+          D.getDeclSpec().getSafeZoneSpecifier() == SZ_Safe) {
+        if (!FTI.NumParams) {
+          S.Diag(DeclType.Loc, diag::err_safe_function)
+              << "need void parameter declaration, empty parameter";
+        }
+        if (FTI.isVariadic) {
+          S.Diag(FTI.getEllipsisLoc(), diag::err_safe_function)
+              << "variadic parameter";
+        }
+        if (S.IsUnsafeType(T)) {
+          S.Diag(DeclType.Loc, diag::err_safe_function) << "unsafe return type";
+        }
+        for (unsigned i = 0, e = FTI.NumParams; i != e; ++i) {
+          if (FTI.Params[i].Param != nullptr) {
+            ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
+            QualType ParamTy = Param->getType();
+            if (S.IsUnsafeType(ParamTy)) {
+              S.Diag(FTI.Params[i].IdentLoc, diag::err_safe_function)
+                  << "unsafe parameter type";
+            }
+          }
+        }
+      }
+#endif
+
       // OpenCL disallows functions without a prototype, but it doesn't enforce
       // strict prototypes as in C2x because it allows a function definition to
       // have an identifier list. See OpenCL 3.0 6.11/g for more details.
@@ -5440,6 +5468,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                     : FTI.RefQualifierIsLValueRef? RQ_LValue
                     : RQ_RValue;
 
+#if ENABLE_BSC
+        EPI.SafeZoneSpec = D.getDeclSpec().getSafeZoneSpecifier();
+#endif
         // Otherwise, we have a function with a parameter list that is
         // potentially variadic.
         SmallVector<QualType, 16> ParamTys;

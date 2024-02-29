@@ -13,8 +13,9 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
   BSC/SemaBSCCoroutine.cpp
-  BSC/SemaBSCTrait.cpp
   BSC/SemaBSCOwnership.cpp
+  BSC/SemaBSCSafeZone.cpp
+  BSC/SemaBSCTrait.cpp
   BSC/SemaStmtBSC.cpp
   BSC/SemaDeclBSC.cpp  
   BSC/SemaTemplateInstantiateDeclBSC.cpp

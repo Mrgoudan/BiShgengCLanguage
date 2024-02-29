@@ -531,6 +531,7 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
           Context, Context.getPointerType(Res.get()->getType()),
           CK_FunctionToPointerDecay, Res.get(), nullptr, VK_PRValue,
           FPOptionsOverride());
+      Res.get()->IsDesugaredCastExpr = true;
       Res = BuildCStyleCastExpr(ITD->getLocation(), TInfo, ITD->getLocation(),
                                 Res.get())
                 .get();

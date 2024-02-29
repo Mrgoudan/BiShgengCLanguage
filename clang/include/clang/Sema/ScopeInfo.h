@@ -97,6 +97,20 @@ public:
       : PD(PD), Loc(Loc), Stmts(Stmts) {}
 };
 
+#if ENABLE_BSC
+class InsCompoundSafeZoneInfo {
+private:
+  SafeZoneSpecifier SafeZoneSpec;
+
+public:
+  InsCompoundSafeZoneInfo(SafeZoneSpecifier SafeZoneSpec = SZ_None)
+      : SafeZoneSpec(SafeZoneSpec) {}
+  SafeZoneSpecifier getInsCompoundSafeZoneSpecifier() const {
+    return SafeZoneSpec;
+  }
+};
+#endif
+
 /// Retains information about a function, method, or block that is
 /// currently being parsed.
 class FunctionScopeInfo {
@@ -218,6 +232,9 @@ public:
   /// function.
   SmallVector<CompoundScopeInfo, 4> CompoundScopes;
 
+#if ENABLE_BSC
+  SmallVector<InsCompoundSafeZoneInfo, 4> InsCompoundSafeZone;
+#endif
   /// The set of blocks that are introduced in this function.
   llvm::SmallPtrSet<const BlockDecl *, 1> Blocks;
 

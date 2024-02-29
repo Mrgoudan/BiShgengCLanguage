@@ -1770,6 +1770,11 @@ protected:
 
     /// Whether this function has a trailing return type.
     unsigned HasTrailingReturn : 1;
+
+#if ENABLE_BSC
+    // Whether the function is safe. 0 is unsafe, 1 is safe.
+    unsigned SafeZoneSpec : 1;
+#endif
   };
 
   class ObjCObjectTypeBitfields {
@@ -2195,7 +2200,8 @@ public:
   bool isTraitType() const;
   bool isTraitPointerType() const;
   bool isBSCCalculatedTypeInCompileTime() const;
-  #endif
+  bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
+#endif
   bool isClassType() const;
   bool isStructureType() const;
   bool isObjCBoxableRecordType() const;
@@ -4142,6 +4148,9 @@ public:
     FunctionType::ExtInfo ExtInfo;
     bool Variadic : 1;
     bool HasTrailingReturn : 1;
+#if ENABLE_BSC
+    SafeZoneSpecifier SafeZoneSpec = SZ_None;
+#endif
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
@@ -4281,6 +4290,9 @@ public:
     ExtProtoInfo EPI;
     EPI.ExtInfo = getExtInfo();
     EPI.Variadic = isVariadic();
+#if ENABLE_BSC
+    EPI.SafeZoneSpec = getFunSafeZoneSpecifier();
+#endif
     EPI.EllipsisLoc = getEllipsisLoc();
     EPI.HasTrailingReturn = hasTrailingReturn();
     EPI.ExceptionSpec = getExceptionSpecInfo();
@@ -4394,6 +4406,11 @@ public:
 
   /// Whether this function prototype is variadic.
   bool isVariadic() const { return FunctionTypeBits.Variadic; }
+#if ENABLE_BSC
+  SafeZoneSpecifier getFunSafeZoneSpecifier() const {
+    return (SafeZoneSpecifier)FunctionTypeBits.SafeZoneSpec;
+  }
+#endif
 
   SourceLocation getEllipsisLoc() const {
     return isVariadic() ? *getTrailingObjects<SourceLocation>()

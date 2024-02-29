@@ -1820,14 +1820,15 @@ private:
       TypeCastState isTypeCast, bool isVectorLiteral = false,
       bool *NotPrimaryExpression = nullptr, QualType T = QualType(),
       bool HasBSCScopeSpec = false, SourceLocation BL = SourceLocation());
-  #else
+  void CheckStmtTokInSafeZone(tok::TokenKind Kind);
+#else
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
                                  TypeCastState isTypeCast,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
-  #endif
+#endif
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand = false,
                                  TypeCastState isTypeCast = NotTypeCast,

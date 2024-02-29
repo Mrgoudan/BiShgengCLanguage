@@ -1215,8 +1215,13 @@ void InitListChecker::CheckExplicitInitList(const InitializedEntity &Entity,
   // Don't complain for incomplete types, since we'll get an error elsewhere.
   if (Index < IList->getNumInits() && !T->isIncompleteType()) {
     // We have leftover initializers
+    // incomplete initialization is not allowed in the safe zone
     bool ExtraInitsIsError = SemaRef.getLangOpts().CPlusPlus ||
-          (SemaRef.getLangOpts().OpenCL && T->isVectorType());
+                             (SemaRef.getLangOpts().OpenCL && T->isVectorType())
+#if ENABLE_BSC
+                             || SemaRef.IsInSafeZone()
+#endif
+        ;
     hadError = ExtraInitsIsError;
     if (VerifyOnly) {
       return;
@@ -2312,6 +2317,14 @@ void InitListChecker::CheckStructUnionTypes(
       }
     }
   }
+
+#if ENABLE_BSC
+  // check is a complete initialization struct type in the safe zone.
+  // allow initialization by '{0}' and '{}'.
+  if (Index >= IList->getNumInits() && SemaRef.IsInSafeZone() && !VerifyOnly &&
+      !DeclType->isUnionType() && Field != FieldEnd)
+    SemaRef.DiagnoseIncompleteInitStructTypeInSafeZone(IList);
+#endif
 
   if (Field == FieldEnd || !Field->getType()->isIncompleteArrayType() ||
       Index >= IList->getNumInits())

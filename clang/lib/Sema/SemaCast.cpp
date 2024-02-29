@@ -2870,8 +2870,16 @@ void CastOperation::CheckCStyleCast() {
   }
 
   #if ENABLE_BSC
-  // bsc owned type CStyleCast
   if (Self.getLangOpts().BSC) {
+    if (!Self.IsSafeConversion(DestType, SrcExpr)) {
+      SrcExpr = ExprError();
+      return;
+    }
+    if (!Self.IsSafeFunctionPointerTypeCast(DestType, SrcExpr.get())) {
+      SrcExpr = ExprError();
+      return;
+    }
+    // bsc owned type CStyleCast
     if (SrcExpr.get()->getType().getCanonicalType().isOwnedQualified() ||
        DestType.getCanonicalType().isOwnedQualified()) {
       if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {

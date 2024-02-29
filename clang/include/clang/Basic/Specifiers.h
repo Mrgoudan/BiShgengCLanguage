@@ -403,7 +403,19 @@ namespace clang {
     SS_Safe = 1,
     SS_Unsafe = 2,
   };
-  
+
+  enum SafeZoneSpecifier {
+    SZ_None = 0,
+    SZ_Safe = 1,
+    SZ_Unsafe = 2,
+  };
+
+  enum SafeZoneSource {
+    SZS_Inherit = 0,
+    SZS_Function = 1,
+    SZS_Compound = 2,
+  };
+
   enum PreferInlineScopeSpecifier {
     PI_None = 0,
     PI_PreferInline = 1,

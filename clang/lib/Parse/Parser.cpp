@@ -1385,6 +1385,15 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // Enter a scope for the function body.
   ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
                                  Scope::CompoundStmtScope);
+#if ENABLE_BSC
+  // Update the current scope to a safe scope, will be used in the function
+  // body.
+  SafeZoneSpecifier SafeZoneSpec = D.getDeclSpec().getSafeZoneSpecifier();
+  if (SafeZoneSpec != SZ_None) {
+    getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
+    getCurScope()->setScopeSafeZoneSource(SZS_Function);
+  }
+#endif
 
   // Parse function body eagerly if it is either '= delete;' or '= default;' as
   // ActOnStartOfFunctionDef needs to know whether the function is deleted.

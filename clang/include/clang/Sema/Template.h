@@ -363,10 +363,23 @@ enum class TemplateSubstitutionKind : char {
     /// ArgsInPartiallySubstitutedPack.
     unsigned NumArgsInPartiallySubstitutedPack;
 
+#if ENABLE_BSC
+    SafeZoneSpecifier SafeZoneSpec;
+#endif
   public:
-    LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false)
+    LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false
+#if ENABLE_BSC
+                            ,
+                            SafeZoneSpecifier SafeZoneSpec = SZ_None
+#endif
+                            )
         : SemaRef(SemaRef), Outer(SemaRef.CurrentInstantiationScope),
-          CombineWithOuterScope(CombineWithOuterScope) {
+          CombineWithOuterScope(CombineWithOuterScope)
+#if ENABLE_BSC
+          ,
+          SafeZoneSpec(SafeZoneSpec)
+#endif
+    {
       SemaRef.CurrentInstantiationScope = this;
     }
 
@@ -402,7 +415,12 @@ enum class TemplateSubstitutionKind : char {
       LocalInstantiationScope *oldScope = SemaRef.CurrentInstantiationScope;
 
       LocalInstantiationScope *newScope =
-        new LocalInstantiationScope(SemaRef, CombineWithOuterScope);
+          new LocalInstantiationScope(SemaRef, CombineWithOuterScope
+#if ENABLE_BSC
+                                      ,
+                                      SafeZoneSpec
+#endif
+          );
 
       newScope->Outer = nullptr;
       if (Outer)
@@ -442,7 +460,9 @@ enum class TemplateSubstitutionKind : char {
         Scope = Out;
       }
     }
-
+#if ENABLE_BSC
+    SafeZoneSpecifier getScopeSafeZoneSpecifier() const { return SafeZoneSpec; }
+#endif
     /// Find the instantiation of the declaration D within the current
     /// instantiation scope.
     ///

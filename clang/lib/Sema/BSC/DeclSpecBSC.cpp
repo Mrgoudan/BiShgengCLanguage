@@ -39,12 +39,31 @@ bool DeclSpec::setFunctionSafeSpecifier(SourceLocation Loc,
     FS_safe_loc = Loc;
     return false;
   } else if (FS_safe_specified == SS_Safe) {
-    PrevSpec = "safe";
+    PrevSpec = "__Safe__";
   } else if (FS_safe_specified == SS_Unsafe) {
+    PrevSpec = "__Unsafe__";
+  } else {
+    PrevSpec = "";
+  }
+  return true;
+}
+
+bool DeclSpec::setFunctionSafeZoneSpecifier(SourceLocation Loc,
+                                            const char *&PrevSpec,
+                                            unsigned &DiagID,
+                                            SafeZoneSpecifier SafeZoneSpec) {
+  if (FS_safe_zone_specified == SZ_None) {
+    FS_safe_zone_specified = SafeZoneSpec;
+    FS_safe_zone_loc = Loc;
+    return false;
+  } else if (FS_safe_zone_specified == SZ_Safe) {
+    PrevSpec = "safe";
+  } else if (FS_safe_zone_specified == SZ_Unsafe) {
     PrevSpec = "unsafe";
   } else {
     PrevSpec = "";
   }
+  DiagID = diag::err_duplicate_declspec;
   return true;
 }
 

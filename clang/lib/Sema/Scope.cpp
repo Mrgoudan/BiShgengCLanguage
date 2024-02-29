@@ -39,6 +39,10 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     TemplateParamParent = parent->TemplateParamParent;
     MSLastManglingParent = parent->MSLastManglingParent;
     MSCurManglingNumber = getMSLastManglingNumber();
+#if ENABLE_BSC
+    SafeZoneSpec = parent->SafeZoneSpec;
+    SafeZoneSrc = SZS_Inherit;
+#endif
     if ((Flags & (FnScope | ClassScope | BlockScope | TemplateParamScope |
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
         0)
@@ -51,6 +55,10 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
     TemplateParamParent = nullptr;
     MSLastManglingNumber = 1;
     MSCurManglingNumber = 1;
+#if ENABLE_BSC
+    SafeZoneSpec = SZ_Unsafe;
+    SafeZoneSrc = SZS_Inherit;
+#endif
   }
 
   // If this scope is a function or contains breaks/continues, remember it.

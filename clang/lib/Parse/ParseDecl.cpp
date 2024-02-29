@@ -2580,6 +2580,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     break;
   }
   case InitKind::Uninitialized: {
+#if ENABLE_BSC
+    // uninitialized declaration is not allowed in the bsc language safe zone
+    if (Actions.IsInSafeZone()) {
+      Diag(Tok, diag::err_unsafe_action) << "uninitialized declarator";
+    }
+#endif
     Actions.ActOnUninitializedDecl(ThisDecl);
     break;
   }
@@ -4007,7 +4013,17 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_async:
       isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
       break;
-    #endif
+    case tok::kw_safe:
+    case tok::kw_unsafe: {
+      SafeZoneSpecifier SafeZoneSpec = SZ_Unsafe;
+      if (Tok.is(tok::kw_safe)) {
+        SafeZoneSpec = SZ_Safe;
+      }
+      isInvalid =
+          DS.setFunctionSafeZoneSpecifier(Loc, PrevSpec, DiagID, SafeZoneSpec);
+      break;
+    }
+#endif
     case tok::kw_virtual:
       // C++ for OpenCL does not allow virtual function qualifier, to avoid
       // function pointers restricted in OpenCL v2.0 s6.9.a.
@@ -5637,7 +5653,9 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_inline:
   #if ENABLE_BSC
   case tok::kw_async:
-  #endif
+  case tok::kw_safe:
+  case tok::kw_unsafe:
+#endif
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:
@@ -7006,6 +7024,16 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   SourceLocation LParenLoc, RParenLoc;
   LParenLoc = Tracker.getOpenLocation();
   StartLoc = LParenLoc;
+
+#if ENABLE_BSC
+  // Update the current scope to a safe scope, will be used by function
+  // parameters.
+  SafeZoneSpecifier SafeZoneSpec = D.getDeclSpec().getSafeZoneSpecifier();
+  if (SafeZoneSpec != SZ_None) {
+    getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
+    getCurScope()->setScopeSafeZoneSource(SZS_Function);
+  }
+#endif
 
   if (isFunctionDeclaratorIdentifierList()) {
     if (RequiresArg)

@@ -34,6 +34,7 @@ add_clang_library(clangAST
   BSC/DeclBSC.cpp
   BSC/ExprBSC.cpp
   BSC/StmtBSC.cpp
+  BSC/TypeBSC.cpp
   Comment.cpp
   CommentBriefParser.cpp
   CommentCommandTraits.cpp

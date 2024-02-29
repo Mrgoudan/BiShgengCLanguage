@@ -6953,14 +6953,22 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   }
 
   #if ENABLE_BSC
-  // This branch is for attempting to parse a function-call
-  // in the body of template function. Such as:
-  // @Code:
-  //    T1 Misc<T1, T2>(T1 a, T2 b)
-  //    {
-  //      a.foo();
-  //    }
   if (getLangOpts().BSC) {
+    // unsafe function call is forbidden in the safe zone
+    if ((IsInSafeZone()) &&
+        (Fn->getType()->checkFunctionProtoType(SZ_None) ||
+         Fn->getType()->checkFunctionProtoType(SZ_Unsafe))) {
+      Diag(Fn->getBeginLoc(), diag::err_unsafe_action)
+          << "unsafe function call";
+    }
+    //
+    // This branch is for attempting to parse a function-call
+    // in the body of template function. Such as:
+    // @Code:
+    //    T1 Misc<T1, T2>(T1 a, T2 b)
+    //    {
+    //      a.foo();
+    //    }
     // Determine whether this is a dependent call inside a C++ template,
     // in which case we won't do any semantic analysis now.
     if (Fn->isTypeDependent() || Expr::hasAnyTypeDependentArguments(ArgExprs)) {
@@ -10271,6 +10279,9 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
 
   #if ENABLE_BSC
   if (getLangOpts().BSC) {
+    if (!IsSafeConversion(LHSType, RHS)) {
+      return IncompatibleBSCSafeZone;
+    }
     if (RHS.get()->getType().getCanonicalType().isOwnedQualified() || LHSType.getCanonicalType().isOwnedQualified()) {
       if (!CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
         return IncompatibleOwnedPointer;
@@ -15998,6 +16009,10 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 1);
   }
 
+#if ENABLE_BSC
+  DiagnoseInvalidUnaryExprInSafeZone(OpLoc, Opc, InputExpr->getType());
+#endif
+
   switch (Opc) {
   case UO_PreInc:
   case UO_PreDec:
@@ -17358,7 +17373,12 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatibleFunctionPointer:
-    if (getLangOpts().CPlusPlus) {
+
+    if (getLangOpts().CPlusPlus
+#if ENABLE_BSC
+        || IsInSafeZone() || IsSafeFunctionPointerType(DstType)
+#endif
+    ) {
       DiagKind = diag::err_typecheck_convert_incompatible_function_pointer;
       isInvalid = true;
     } else {
@@ -17527,7 +17547,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   #if ENABLE_BSC
   case IncompatibleOwnedPointer:
     return false;
-  #endif
+  case IncompatibleBSCSafeZone:
+    return true;
+#endif
   }
 
   QualType FirstType, SecondType;

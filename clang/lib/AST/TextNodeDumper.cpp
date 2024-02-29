@@ -685,6 +685,11 @@ void TextNodeDumper::dumpBareType(QualType T, bool Desugar) {
 void TextNodeDumper::dumpType(QualType T) {
   OS << ' ';
   dumpBareType(T);
+#if ENABLE_BSC
+  if (!T.isNull() && T->checkFunctionProtoType(SZ_Safe)) {
+    OS << " safe";
+  }
+#endif
 }
 
 void TextNodeDumper::dumpBareDeclRef(const Decl *D) {
@@ -1717,11 +1722,11 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
 
   #if ENABLE_BSC
   if (D->getSafeSpecifier() == SS_Safe) {
-    OS << " safe";
+    OS << " __Safe__";
   } else if (D->getSafeSpecifier() == SS_Unsafe) {
-    OS << " unsafe";
+    OS << " __Unsafe__";
   }
-  #endif
+#endif
 
   if (const auto *FPT = D->getType()->getAs<FunctionProtoType>()) {
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();

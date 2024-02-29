@@ -10265,6 +10265,15 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->isVariadic() != rproto->isVariadic())
       return {};
 
+#if ENABLE_BSC
+    // Safe and unsafe functions aren't compatible
+    if (lproto->getFunSafeZoneSpecifier() !=
+            rproto->getFunSafeZoneSpecifier() &&
+        (lproto->getFunSafeZoneSpecifier() == SZ_Safe ||
+         rproto->getFunSafeZoneSpecifier() == SZ_Safe))
+      return {};
+#endif
+
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
 

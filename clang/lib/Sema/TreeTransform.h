@@ -7356,6 +7356,16 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
                                               bool IsStmtExpr) {
   Sema::CompoundScopeRAII CompoundScope(getSema());
 
+#if ENABLE_BSC
+  SafeZoneSpecifier SafeZoneSpec = SZ_None;
+  if (S->getCompSafeZoneSpecifier() != SZ_None) {
+    SafeZoneSpec = S->getCompSafeZoneSpecifier();
+  } else {
+    SafeZoneSpec = getSema().getInstantiationSafeZoneSpecifier();
+  }
+  Sema::InsSafeZoneRAII InsSafeZone(getSema(), SafeZoneSpec);
+#endif
+
   const Stmt *ExprResult = S->getStmtExprResult();
   bool SubStmtInvalid = false;
   bool SubStmtChanged = false;

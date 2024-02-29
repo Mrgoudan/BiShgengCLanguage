@@ -175,6 +175,9 @@ StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
   // or they directly 'return;' if not.
 Retry:
   tok::TokenKind Kind  = Tok.getKind();
+#if ENABLE_BSC
+  CheckStmtTokInSafeZone(Kind);
+#endif
   SourceLocation AtLoc;
   switch (Kind) {
   case tok::at: // May be a @try or @throw statement
@@ -320,6 +323,18 @@ Default:
     Token Next = NextToken();
     if (Next.is(tok::l_brace))
       return ParseCompoundStatement();
+    goto Default;
+  }
+  case tok::kw_safe:
+  case tok::kw_unsafe: {
+    Token Next = NextToken();
+    if (Next.is(tok::l_brace))
+      return ParseCompoundStatement();
+    if (Next.is(tok::kw_safe) || Next.is(tok::kw_unsafe)) {
+      Diag(Next.getLocation(), diag::err_duplicate_declspec) << Tok.getKind();
+      ConsumeToken();
+      return StmtError();
+    }
     goto Default;
   }
   #endif
@@ -911,6 +926,16 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
       DeepestParsedCaseStmt = NextDeepest;
     }
 
+#if ENABLE_BSC
+    // In the bsc safe zone.
+    // 'case' can only appear in the top-level switch block.
+    if (Actions.IsInSafeZone() && getCurScope()->getParent() &&
+        !(getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
+      Diag(ColonLoc, diag::err_unsafe_action)
+          << "case statement not in top-level switch block";
+    }
+#endif
+
     // Handle all case statements.
   } while (Tok.is(tok::kw_case));
 
@@ -989,6 +1014,16 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
   if (SubStmt.isInvalid())
     SubStmt = Actions.ActOnNullStmt(ColonLoc);
 
+#if ENABLE_BSC
+  // In the bsc safe zone.
+  // 'default' can only appear in the top-level switch block.
+  if (Actions.IsInSafeZone() && getCurScope()->getParent() &&
+      !(getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
+    Diag(ColonLoc, diag::err_unsafe_action)
+        << "default statement not in top-level switch block";
+  }
+#endif
+
   return Actions.ActOnDefaultStmt(DefaultLoc, ColonLoc,
                                   SubStmt.get(), getCurScope());
 }
@@ -1036,14 +1071,29 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   }
 
   ResetPreferInlineScopeToNone();
-  #endif
+
+  SafeZoneSpecifier SafeZoneSpec = SZ_None;
+
+  if (Tok.is(tok::kw_safe)) {
+    SafeZoneSpec = SZ_Safe;
+    ConsumeToken();
+  } else if (Tok.is(tok::kw_unsafe)) {
+    SafeZoneSpec = SZ_Unsafe;
+    ConsumeToken();
+  }
+#endif
 
   assert(Tok.is(tok::l_brace) && "Not a compount stmt!");
 
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
   ParseScope CompoundScope(this, ScopeFlags);
-
+#if ENABLE_BSC
+  if (getCurScope() && SafeZoneSpec != SZ_None) {
+    getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
+    getCurScope()->setScopeSafeZoneSource(SZS_Compound);
+  }
+#endif
   // Parse the statements in the body.
   return ParseCompoundStatementBody(isStmtExpr
                                     #if ENABLE_BSC

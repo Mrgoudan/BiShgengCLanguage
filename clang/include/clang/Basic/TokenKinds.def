@@ -461,6 +461,8 @@ KEYWORD(async                       , KEYBSC)
 KEYWORD(await                       , KEYBSC)
 KEYWORD(owned                       , KEYBSC)
 KEYWORD(trait                       , KEYBSC)
+KEYWORD(safe                        , KEYBSC)
+KEYWORD(unsafe                      , KEYBSC)
 #endif
 
 // GNU Extensions (outside impl-reserved namespace)

@@ -5079,6 +5079,13 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     Diag(DS.getInlineSpecLoc(), diag::err_inline_non_function)
         << getLangOpts().CPlusPlus17;
 
+  #if ENABLE_BSC
+    if (getLangOpts().BSC && DS.getSafeZoneSpecifier() != SZ_None) {
+      Diag(DS.getSafeZoneSpecifierLoc(), diag::err_safe_zone_decl)
+          << DS.getSafeZoneSpecifier();
+    }
+  #endif
+
   if (DS.hasConstexprSpecifier()) {
     // C++0x [dcl.constexpr]p1: constexpr can only be applied to declarations
     // and definitions of functions and variables.
@@ -6431,9 +6438,17 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     return nullptr;
 
   #if ENABLE_BSC
-  QualType T = TInfo->getType();
-  if (Context.getLangOpts().BSC && TryDesugarTrait(T))
-    AddToScope = false;
+  if (Context.getLangOpts().BSC) {
+    QualType T = TInfo->getType();
+    if (TryDesugarTrait(T))
+      AddToScope = false;
+    // 'safe' or 'unsafe' can only appear before on function or compound
+    // statement
+    if (D.getDeclSpec().getSafeZoneSpecifier() != SZ_None &&
+        !R->isFunctionPointerType() && !R->isFunctionType())
+      Diag(D.getDeclSpec().getSafeZoneSpecifierLoc(), diag::err_safe_zone_decl)
+          << D.getDeclSpec().getSafeZoneSpecifier();
+  }
   #endif
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
@@ -14116,6 +14131,14 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   if (!VD)
     return;
 
+#if ENABLE_BSC
+  if (IsInSafeZone() && getCurScope()->getParent() &&
+      (getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
+    Diag(VD->getLocation(), diag::err_unsafe_action)
+        << "variable declaration in the top-level switch block";
+  }
+#endif
+
   // Apply an implicit SectionAttr if '#pragma clang section bss|data|rodata' is active
   if (VD->hasGlobalStorage() && VD->isThisDeclarationADefinition() &&
       !inTemplateInstantiation() && !VD->hasAttr<SectionAttr>()) {
@@ -14517,6 +14540,10 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
   IdentifierInfo *II = D.getIdentifier();
   #if ENABLE_BSC
+  if (getLangOpts().BSC && DS.getSafeZoneSpecifier() != SZ_None) {
+    Diag(DS.getSafeZoneSpecifierLoc(), diag::err_safe_zone_decl)
+        << DS.getSafeZoneSpecifier();
+  }
   bool IsThisParam = false;
   const Type* TypePtr = ExtendedType.getTypePtrOrNull();
   if (TypePtr)

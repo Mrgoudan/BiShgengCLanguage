@@ -459,12 +459,19 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                       ? FPOptions(getLangOpts())
                       : getCurCompoundScope().InitialFPFeatures;
   FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
+#if ENABLE_BSC
+  SafeZoneSpecifier SafeZone = SZ_None;
+  if (getCurScope()->getScopeSafeZoneSource() == SZS_Compound) {
+    SafeZone = getCurScope()->getScopeSafeZoneSpecifier();
+  }
+#endif
 
   return CompoundStmt::Create(Context, Elts, FPDiff, L, R
-                              #if ENABLE_BSC
-                              , SafeSpec, SafeLoc
-                              #endif
-                              );
+#if ENABLE_BSC
+                              ,
+                              SafeSpec, SafeLoc, SafeZone
+#endif
+  );
 }
 
 ExprResult

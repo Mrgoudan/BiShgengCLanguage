@@ -80,3 +80,9 @@ def err_constexpr_func_unsupported_type : Error<
   "BSC constexpr function does not support type %0">;
 def err_constexpr_var_unsupported_type : Error<
   "BSC constexpr variable does not support type %0">;
+
+// BSC safe scope warnings and errors.
+def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
+def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
+def err_safe_function : Error<"%0 is forbidden in the safe function">;
+def err_safe_zone_decl : Error<"%select{|'safe'|'unsafe'}0 can only appear before on function or compound statement"> ;

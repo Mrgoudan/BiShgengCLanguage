@@ -15,6 +15,9 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
+#if ENABLE_BSC
+#include "clang/Basic/Specifiers.h"
+#endif
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -226,6 +229,11 @@ private:
 
   void setFlags(Scope *Parent, unsigned F);
 
+#if ENABLE_BSC
+  SafeZoneSpecifier SafeZoneSpec;
+  SafeZoneSource SafeZoneSrc;
+#endif
+
 public:
   Scope(Scope *Parent, unsigned ScopeFlags, DiagnosticsEngine &Diag)
       : ErrorTrap(Diag) {
@@ -262,7 +270,17 @@ public:
   const Scope *getContinueParent() const {
     return const_cast<Scope*>(this)->getContinueParent();
   }
+#if ENABLE_BSC
+  void setScopeSafeZoneSpecifier(SafeZoneSpecifier SafeZoneSpec) {
+    const_cast<Scope *>(this)->SafeZoneSpec = SafeZoneSpec;
+  }
+  void setScopeSafeZoneSource(SafeZoneSource SafeZoneSrc) {
+    const_cast<Scope *>(this)->SafeZoneSrc = SafeZoneSrc;
+  }
 
+  SafeZoneSpecifier getScopeSafeZoneSpecifier() const { return SafeZoneSpec; }
+  SafeZoneSource getScopeSafeZoneSource() const { return SafeZoneSrc; }
+#endif
   // Set whether we're in the scope of a condition variable, where 'continue'
   // is disallowed despite being a continue scope.
   void setIsConditionVarScope(bool InConditionVarScope) {

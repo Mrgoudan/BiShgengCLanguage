@@ -147,6 +147,8 @@ protected:
 public:
   #if ENABLE_BSC
   bool HasBSCScopeSpec = false;
+  // Safety cast expression flag.
+  bool IsDesugaredCastExpr = false;
   // Add BSC Member func desugar flag.
   bool IsDesugaredBSCMethodCall = false;
 

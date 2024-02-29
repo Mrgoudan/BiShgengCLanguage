@@ -1571,16 +1571,6 @@ class DeclContext {
   /// Number of non-inherited bits in RecordDeclBitfields.
   enum { NumRecordDeclBits = 15 };
 
-  #if ENABLE_BSC
-  class TraitDeclBitfields {
-    friend class TraitDecl;
-    /// For the bits in DeclContextBitfields.
-    uint64_t : NumDeclContextBits;
-    /// For the bits in TagDeclBitfields.
-    uint64_t : NumTagDeclBits;
-  };
-  #endif
-
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor
   /// methods in OMPDeclareReductionDecl should be updated appropriately.
@@ -1614,7 +1604,6 @@ class DeclContext {
     #if ENABLE_BSC
     uint64_t IsAsyncSpecified : 1;
     #endif
-
     uint64_t IsVirtualAsWritten : 1;
     uint64_t IsPure : 1;
     uint64_t HasInheritedPrototype : 1;
@@ -1873,9 +1862,6 @@ protected:
     ObjCContainerDeclBitfields ObjCContainerDeclBits;
     LinkageSpecDeclBitfields LinkageSpecDeclBits;
     BlockDeclBitfields BlockDeclBits;
-    #if ENABLE_BSC
-    TraitDeclBitfields TraitDeclBits;
-    #endif
 
     static_assert(sizeof(DeclContextBitfields) <= 8,
                   "DeclContextBitfields is larger than 8 bytes!");

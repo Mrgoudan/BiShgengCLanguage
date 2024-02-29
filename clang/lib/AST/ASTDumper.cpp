@@ -155,8 +155,16 @@ void ASTDumper::VisitCompoundStmt(const CompoundStmt *Node) {
   SafeScopeSpecifier SafeSpec = Node->getSafeSpecifier();
 
   if (SafeSpec == SS_Safe) {
-    OS << " safe";
+    OS << " __Safe__";
   } else if (SafeSpec == SS_Unsafe) {
+    OS << " __Unsafe__";
+  }
+
+  SafeZoneSpecifier SafeZoneSpec = Node->getCompSafeZoneSpecifier();
+
+  if (SafeZoneSpec == SZ_Safe) {
+    OS << " safe";
+  } else if (SafeZoneSpec == SZ_Unsafe) {
     OS << " unsafe";
   }
 }

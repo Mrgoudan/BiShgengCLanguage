@@ -395,6 +395,7 @@ private:
   unsigned FS_noreturn_specified : 1;
   #if ENABLE_BSC
   unsigned FS_async_specified : 1;
+  unsigned FS_safe_zone_specified : 2;
   #endif
 
   // friend-specifier
@@ -442,7 +443,7 @@ private:
       TQ_unalignedLoc;
   #if ENABLE_BSC
   SourceLocation TQ_ownedLoc;
-  SourceLocation FS_asyncLoc;
+  SourceLocation FS_asyncLoc, FS_safe_zone_loc;
   #endif
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_explicitCloseParenLoc;
@@ -492,7 +493,7 @@ public:
         FS_forceinline_specified(false), FS_virtual_specified(false),
         FS_noreturn_specified(false),
         #if ENABLE_BSC
-        FS_async_specified(false),
+        FS_async_specified(false), FS_safe_zone_specified(SZ_None),
         #endif
         Friend_specified(false), ConstexprSpecifier(static_cast<unsigned>(
                                      ConstexprSpecKind::Unspecified)),
@@ -646,6 +647,11 @@ public:
   #if ENABLE_BSC
   bool isAsyncSpecified() const { return FS_async_specified; }
   SourceLocation getAsyncSpecLoc() const { return FS_asyncLoc; }
+
+  SafeZoneSpecifier getSafeZoneSpecifier() const {
+    return (SafeZoneSpecifier)FS_safe_zone_specified;
+  }
+  SourceLocation getSafeZoneSpecifierLoc() const { return FS_safe_zone_loc; }
   #endif
 
   ExplicitSpecifier getExplicitSpecifier() const {
@@ -686,16 +692,16 @@ public:
     #if ENABLE_BSC
     FS_async_specified = false;
     FS_asyncLoc = SourceLocation();
+    FS_safe_specified = SS_None;
+    FS_safe_loc = SourceLocation();
+    FS_safe_zone_specified = SZ_None;
+    FS_safe_zone_loc = SourceLocation();
     #endif
     FS_virtual_specified = false;
     FS_virtualLoc = SourceLocation();
     FS_explicit_specifier = ExplicitSpecifier();
     FS_explicitLoc = SourceLocation();
     FS_explicitCloseParenLoc = SourceLocation();
-    #if ENABLE_BSC
-    FS_safe_specified = SS_None;
-    FS_safe_loc = SourceLocation();
-    #endif
     FS_noreturn_specified = false;
     FS_noreturnLoc = SourceLocation();
   }
@@ -828,6 +834,9 @@ public:
   #if ENABLE_BSC
   bool setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
                             unsigned &DiagID);
+  bool setFunctionSafeZoneSpecifier(SourceLocation Loc, const char *&PrevSpec,
+                                    unsigned &DiagID,
+                                    SafeZoneSpecifier SafeSpec);
   #endif
   bool setFunctionSpecVirtual(SourceLocation Loc, const char *&PrevSpec,
                               unsigned &DiagID);

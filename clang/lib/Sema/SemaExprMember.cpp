@@ -1964,6 +1964,9 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   DeclarationName Name = NameInfo.getName();
   bool IsArrow = (OpKind == tok::arrow);
 
+#if ENABLE_BSC
+  DiagnoseInvalidMemberAccessExprInSafeZone(OpLoc, OpKind, Base->getType());
+#endif
   if (getLangOpts().HLSL && IsArrow)
     return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);
 

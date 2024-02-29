@@ -4466,7 +4466,12 @@ bool Sema::addInstantiatedParametersToScope(
           return true;
         FunctionParam->setType(T);
       }
-
+#if ENABLE_BSC
+      if (IsInSafeZone() && IsUnsafeType(FunctionParam->getType())) {
+        Diag(FunctionParam->getLocation(), diag::err_safe_function)
+            << "unsafe parameter type";
+      }
+#endif
       Scope.InstantiatedLocal(PatternParam, FunctionParam);
       ++FParamIdx;
       continue;
@@ -4491,7 +4496,12 @@ bool Sema::addInstantiatedParametersToScope(
             return true;
           FunctionParam->setType(T);
         }
-
+#if ENABLE_BSC
+        if (IsInSafeZone() && IsUnsafeType(FunctionParam->getType())) {
+          Diag(FunctionParam->getLocation(), diag::err_safe_function)
+              << "unsafe parameter type";
+        }
+#endif
         Scope.InstantiatedLocalPackArg(PatternParam, FunctionParam);
         ++FParamIdx;
       }
@@ -4985,7 +4995,24 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     MergeWithParentScope =
         Rec->isLocalClass() && !Function->isFunctionTemplateSpecialization();
 
-  LocalInstantiationScope Scope(*this, MergeWithParentScope);
+#if ENABLE_BSC
+  SafeZoneSpecifier SafeZoneSpec = SZ_None;
+  if (const FunctionProtoType *Proto =
+          Function->getType()->getAs<FunctionProtoType>()) {
+    SafeZoneSpec = Proto->getExtProtoInfo().SafeZoneSpec;
+  }
+  if (SafeZoneSpec == SZ_Safe && IsUnsafeType(Function->getReturnType())) {
+    Diag(PatternDecl->getLocation(), diag::err_safe_function)
+        << "unsafe return type";
+  }
+#endif
+
+  LocalInstantiationScope Scope(*this, MergeWithParentScope
+#if ENABLE_BSC
+                                ,
+                                SafeZoneSpec
+#endif
+  );
   auto RebuildTypeSourceInfoForDefaultSpecialMembers = [&]() {
     // Special members might get their TypeSourceInfo set up w.r.t the
     // PatternDecl context, in which case parameters could still be pointing

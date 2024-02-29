@@ -229,6 +229,9 @@ namespace sema {
   class DelayedDiagnostic;
   class DelayedDiagnosticPool;
   class FunctionScopeInfo;
+#if ENABLE_BSC
+  class InsCompoundSafeZoneInfo;
+#endif
   class LambdaScopeInfo;
   class PossiblyUnreachableDiag;
   class RISCVIntrinsicManager;
@@ -5010,6 +5013,19 @@ public:
       return nullptr;
     }
   }
+
+  /// A RAII object to enter safe or unsafe zone of a compound statement.
+  class InsSafeZoneRAII {
+  public:
+    InsSafeZoneRAII(Sema &S, SafeZoneSpecifier SafeZoneSpec) : S(S) {
+      S.PushInsSafeZone(SafeZoneSpec);
+    }
+
+    ~InsSafeZoneRAII() { S.PopInsSafeZone(); }
+
+  private:
+    Sema &S;
+  };
 #endif
 
   /// A RAII object to enter scope of a compound statement.
@@ -12247,6 +12263,8 @@ public:
     /// type with a unOwned qualified pointer type or two owned qualified pointer type
     /// with different base types
     IncompatibleOwnedPointer,
+    /// IncompatibleBSCSafeZone - unsafe convert in the bsc safe zone.
+    IncompatibleBSCSafeZone,
     #endif
 
     /// Incompatible - We reject this conversion outright, it is invalid to
@@ -12321,7 +12339,25 @@ public:
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
-  #endif
+  bool IsInSafeZone();
+  bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
+                                   BuiltinType::Kind DestType);
+  bool IsSafeConversion(QualType DestType, ExprResult &SrcExpr);
+  bool IsSafeConstantValueConversion(QualType DestType, ExprResult &SrcExpr);
+  bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
+  bool IsSafeFunctionPointerType(QualType Type);
+  bool IsUnsafeType(QualType Type);
+  void DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
+                                                 tok::TokenKind Kind,
+                                                 QualType Type);
+  void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
+                                          UnaryOperatorKind Opc, QualType Type);
+  void DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList);
+  void PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec);
+  void PopInsSafeZone();
+  sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;
+  SafeZoneSpecifier getInstantiationSafeZoneSpecifier();
+#endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);
 

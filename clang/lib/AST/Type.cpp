@@ -839,19 +839,6 @@ const ObjCObjectPointerType *ObjCObjectPointerType::stripObjCKindOfTypeAndQuals(
   return ctx.getObjCObjectPointerType(obj)->castAs<ObjCObjectPointerType>();
 }
 
-#if ENABLE_BSC
-bool PointerType::hasOwnedFields() const {
-  QualType R = getPointeeType();
-  if (R.isOwnedQualified()) {
-    return true;
-  }
-  if (R.getTypePtr()->hasOwnedFields()) {
-    return true;
-  }
-  return false;
-}
-#endif
-
 namespace {
 
 /// Visitor used to perform a simple type transformation that does not change
@@ -2015,17 +2002,6 @@ bool Type::isChar32Type() const {
     return BT->getKind() == BuiltinType::Char32;
   return false;
 }
-
-#if ENABLE_BSC
-bool Type::hasOwnedFields() const {
-  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
-    return RecTy->hasOwnedFields();
-  } else if (const auto *PointerTy = dyn_cast<PointerType>(CanonicalType)) {
-    return PointerTy->hasOwnedFields();
-  }
-  return false;
-}
-#endif
 
 /// Determine whether this type is any of the built-in character
 /// types.
@@ -3282,6 +3258,11 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   FunctionTypeBits.HasExtParameterInfos = !!epi.ExtParameterInfos;
   FunctionTypeBits.Variadic = epi.Variadic;
   FunctionTypeBits.HasTrailingReturn = epi.HasTrailingReturn;
+#if ENABLE_BSC
+  // transform enum 'SafeZoneSpecifier' type to bit value 0 or 1.
+  // unsafe function value is bit 0, safe function value is bit 1.
+  FunctionTypeBits.SafeZoneSpec = epi.SafeZoneSpec & 1;
+#endif
 
   if (epi.requiresFunctionProtoTypeExtraBitfields()) {
     FunctionTypeBits.HasExtraBitfields = true;
@@ -3445,20 +3426,6 @@ bool FunctionProtoType::isTemplateVariadic() const {
   return false;
 }
 
-#if ENABLE_BSC
-bool FunctionProtoType::hasOwnedRetOrParams() const {
-  if (getReturnType().isOwnedQualified()) {
-    return true;
-  }
-  for (auto ParamType:getParamTypes()) {
-    if (ParamType.isOwnedQualified()) {
-      return true;
-    }
-  }
-  return false;
-}
-#endif
-
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
@@ -3507,6 +3474,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (unsigned i = 0; i != NumParams; ++i)
       ID.AddInteger(epi.ExtParameterInfos[i].getOpaqueValue());
   }
+#if ENABLE_BSC
+  ID.AddInteger(epi.SafeZoneSpec & 1);
+#endif
   epi.ExtInfo.Profile(ID);
   ID.AddBoolean(epi.HasTrailingReturn);
 }
@@ -3660,54 +3630,6 @@ bool RecordType::hasConstFields() const {
   }
   return false;
 }
-
-#if ENABLE_BSC
-void RecordType::initOwnedStatus() const {
-  if (hasOwn != ownedStatus::unInit) return;
-  std::vector<const RecordType*> RecordTypeList;
-  RecordTypeList.push_back(this);
-  unsigned NextToCheckIndex = 0;
-
-  while (RecordTypeList.size() > NextToCheckIndex) {
-    for (FieldDecl *FD :
-         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
-      QualType FieldTy = FD->getType();
-      if (FieldTy.isOwnedQualified()) {
-        hasOwn = ownedStatus::withOwned;
-        return;
-      }
-      QualType tempQT = FieldTy;
-      const Type* tempT = tempQT.getTypePtr();
-      while(tempT->isPointerType()) {
-        tempQT = tempT->getPointeeType();
-        if (tempQT.isOwnedQualified()) {
-          hasOwn = ownedStatus::withOwned;
-          return;
-        } else {
-          tempQT = tempQT.getCanonicalType();
-          tempT = tempQT.getTypePtr();
-        }
-      }
-      FieldTy = tempQT.getCanonicalType();
-      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
-        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
-          RecordTypeList.push_back(FieldRecTy);
-      }
-    }
-    ++NextToCheckIndex;
-  }
-  hasOwn = ownedStatus::withoutOwned;
-  return;
-}
-
-bool RecordType::hasOwnedFields() const {
-  if (hasOwn == ownedStatus::unInit)
-    initOwnedStatus();
-  if (hasOwn == ownedStatus::withOwned)
-    return true;
-  return false;
-}
-#endif
 
 bool AttributedType::isQualifier() const {
   // FIXME: Generate this with TableGen.
@@ -4547,18 +4469,6 @@ bool Type::isCUDADeviceBuiltinSurfaceType() const {
     return RT->getDecl()->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>();
   return false;
 }
-
-#if ENABLE_BSC
-bool Type::isBSCFutureType() const {
-  if (const auto *RT = getAs<RecordType>()) {
-    RecordDecl *RD = RT->getAsRecordDecl();
-    if (isa<ClassTemplateSpecializationDecl>(RD)) {
-      return RD->getNameAsString() == "__Trait_Future";
-    }
-  }
-  return false;
-}
-#endif
 
 /// Check if the specified type is the CUDA device builtin texture type.
 bool Type::isCUDADeviceBuiltinTextureType() const {
