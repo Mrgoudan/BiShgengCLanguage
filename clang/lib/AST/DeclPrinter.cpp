@@ -204,6 +204,22 @@ static std::string GetTypePrefix(QualType T, bool isFront,
       // we replace it with 'P'.
       // FIXME: it may conflict with user defined type Char_P.
       ExtendedTypeStr.replace(i, 1, "P");
+    } else if (ExtendedTypeStr[i] == '(') {
+      // Since '(' is not allowed to appear in identifier,
+      // we replace it with 'LP'.
+      ExtendedTypeStr.replace(i, 1, "LP");
+    } else if (ExtendedTypeStr[i] == ')') {
+      // Since ')' is not allowed to appear in identifier,
+      // we replace it with 'RP'.
+      ExtendedTypeStr.replace(i, 1, "RP");
+    } else if (ExtendedTypeStr[i] == '[') {
+      // Since '[' is not allowed to appear in identifier,
+      // we replace it with 'LB'.
+      ExtendedTypeStr.replace(i, 1, "LB");
+    } else if (ExtendedTypeStr[i] == ']') {
+      // Since ']' is not allowed to appear in identifier,
+      // we replace it with 'RB'.
+      ExtendedTypeStr.replace(i, 1, "RB");
     }
   }
   if (isFront) {
@@ -683,8 +699,12 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     #endif
     if (D->isVirtualAsWritten()) Out << "virtual ";
     if (D->isModulePrivate())    Out << "__module_private__ ";
-    if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
-      Out << "constexpr ";
+    if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted()) {
+      #if ENABLE_BSC
+      if (!Policy.RewriteBSC)
+      #endif
+        Out << "constexpr ";
+    }
     if (D->isConsteval())        Out << "consteval ";
     ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
     if (ExplicitSpec.isSpecified())
@@ -987,6 +1007,9 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
       Out << "__module_private__ ";
 
     if (D->isConstexpr()) {
+      #if ENABLE_BSC
+      if (!Policy.RewriteBSC)
+      #endif
       Out << "constexpr ";
       T.removeLocalConst();
     }
@@ -1045,6 +1068,11 @@ void DeclPrinter::VisitImportDecl(ImportDecl *D) {
 }
 
 void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {
+  #if ENABLE_BSC
+  if (Policy.RewriteBSC)
+    Out << "_Static_assert(";
+  else
+  #endif
   Out << "static_assert(";
   D->getAssertExpr()->printPretty(Out, nullptr, Policy, Indentation, "\n",
                                   &Context);

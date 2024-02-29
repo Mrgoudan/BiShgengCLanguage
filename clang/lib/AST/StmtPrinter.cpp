@@ -1167,6 +1167,22 @@ static std::string GetTypePrefix(QualType T, bool isFront,
       // we replace it with 'P'.
       // FIXME: it may conflict with user defined type Char_P.
       ExtendedTypeStr.replace(i, 1, "P");
+    } else if (ExtendedTypeStr[i] == '(') {
+      // Since '(' is not allowed to appear in identifier,
+      // we replace it with 'LP'.
+      ExtendedTypeStr.replace(i, 1, "LP");
+    } else if (ExtendedTypeStr[i] == ')') {
+      // Since ')' is not allowed to appear in identifier,
+      // we replace it with 'RP'.
+      ExtendedTypeStr.replace(i, 1, "RP");
+    } else if (ExtendedTypeStr[i] == '[') {
+      // Since '[' is not allowed to appear in identifier,
+      // we replace it with 'LB'.
+      ExtendedTypeStr.replace(i, 1, "LB");
+    } else if (ExtendedTypeStr[i] == ']') {
+      // Since ']' is not allowed to appear in identifier,
+      // we replace it with 'RB'.
+      ExtendedTypeStr.replace(i, 1, "RB");
     }
   }
   if (isFront) {
@@ -1198,6 +1214,13 @@ RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
   #if ENABLE_BSC
   if (Policy.RewriteBSC) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(Node->getDecl())) {
+      APValue *Res = VD->getEvaluatedValue();
+      if (VD->isConstexpr() && Res && Res->isInt()) {
+        OS << Res->getInt();
+        return;
+      }
+    }
     if (Node->HasBSCScopeSpec) {
       if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
         std::string ExtendedTypeStr =
@@ -1659,10 +1682,21 @@ void StmtPrinter::PrintCallArgs(CallExpr *Call) {
 }
 
 void StmtPrinter::VisitCallExpr(CallExpr *Call) {
-  PrintExpr(Call->getCallee());
-  OS << "(";
-  PrintCallArgs(Call);
-  OS << ")";
+#if ENABLE_BSC
+  if (Policy.RewriteBSC && Call->isEvaluatable(*Context)) {
+    Expr::EvalResult Res;
+    if (Call->EvaluateAsRValue(Res, *Context) &&
+        Res.Val.getKind() == APValue::ValueKind::Int)
+      OS << Res.Val.getInt();
+  } else {
+#endif
+    PrintExpr(Call->getCallee());
+    OS << "(";
+    PrintCallArgs(Call);
+    OS << ")";
+#if ENABLE_BSC
+  }
+#endif
 }
 
 static bool isImplicitThis(const Expr *E) {
@@ -2522,19 +2556,35 @@ void StmtPrinter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *Node) {
 }
 
 void StmtPrinter::VisitTypeTraitExpr(TypeTraitExpr *E) {
-  OS << getTraitSpelling(E->getTrait()) << "(";
-  for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I) {
-    if (I > 0)
-      OS << ", ";
-    E->getArg(I)->getType().print(OS, Policy);
+#if ENABLE_BSC
+  if (Policy.RewriteBSC)
+    OS << E->getValue();
+  else {
+#endif
+    OS << getTraitSpelling(E->getTrait()) << "(";
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I) {
+      if (I > 0)
+        OS << ", ";
+      E->getArg(I)->getType().print(OS, Policy);
+    }
+    OS << ")";
+#if ENABLE_BSC
   }
-  OS << ")";
+#endif
 }
 
 void StmtPrinter::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
-  OS << getTraitSpelling(E->getTrait()) << '(';
-  E->getQueriedType().print(OS, Policy);
-  OS << ')';
+#if ENABLE_BSC
+  if (Policy.RewriteBSC)
+    OS << E->getValue();
+  else {
+#endif
+    OS << getTraitSpelling(E->getTrait()) << '(';
+    E->getQueriedType().print(OS, Policy);
+    OS << ')';
+#if ENABLE_BSC
+  }
+#endif
 }
 
 void StmtPrinter::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {

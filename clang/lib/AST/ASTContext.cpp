@@ -11489,13 +11489,13 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
        !FD->hasAttr<DLLExportAttr>()) ||
       FD->hasAttr<GNUInlineAttr>()) {
     // FIXME: This doesn't match gcc's behavior for dllexport inline functions.
-    
+
     #if ENABLE_BSC
     // BSC constexpr functions are implicited-inlined, and the symbol should be externally visible.
     if (Context.getLangOpts().BSC && FD->isConstexpr())
       return External;
     #endif
-    
+
     // GNU or C99 inline semantics. Determine whether this symbol should be
     // externally visible.
     if (FD->isInlineDefinitionExternallyVisible())
