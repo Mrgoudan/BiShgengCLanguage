@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AddNewFieldCheck.h"
+#include "ExplicitCastCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -20,6 +21,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AddNewFieldCheck>(
         "bsc-add-new-field");
+    CheckFactories.registerCheck<ExplicitCastCheck>(
+        "bsc-explicit-cast");
   }
 };
 

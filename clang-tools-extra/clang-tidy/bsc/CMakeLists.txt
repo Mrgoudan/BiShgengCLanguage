@@ -7,6 +7,7 @@ add_clang_library(clangTidyBscModule
   
   AddNewFieldCheck.cpp
   BSCTidyModule.cpp
+  ExplicitCastCheck.cpp
   
   LINK_LIBS
   clangTidy
