@@ -187,7 +187,46 @@ Retry:
     cutOffParsing();
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
     return StmtError();
-
+  
+  #if ENABLE_BSC
+  // Here we should try parse BSC generic struct or union to avoid ambiguity.
+  // For example, `struct S<int> s;` and `struct S<int>::foo();` have same prefix `struct S<int>`.
+  // Try parse to distinguish whether it is a generic VarDecl or a static member function call:
+  // if it is a static member function call, it should enter `ParseExprStatement`,
+  // otherwise it should enter `ParseDeclaration`.
+  // We will annotate `S<int>` as a `tok::annot_template_id`,
+  // if the next token is `tok::coloncolon` ,it is a static member function call,
+  // otherwise it is a generic VarDecl.
+  // For non-generic struct or union, 
+  // we can distinguish `struct S s;` and `struct S::foo();` easily,
+  // so `goto Default` is enough.
+  case tok::kw_union:
+  case tok::kw_struct: {
+    if (getLangOpts().BSC && PP.LookAhead(0).is(tok::identifier) && PP.LookAhead(1).is(tok::less)) {
+      TryParseBSCGenericClassSpecifier(GNUAttrs);
+      if (Tok.is(tok::annot_template_id)) {
+        if (NextToken().is(tok::coloncolon))
+          return ParseExprStatement(StmtCtx);
+        else {
+          SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
+          DeclGroupPtrTy Decl;
+          if (GNUAttributeLoc.isValid()) {
+            DeclStart = GNUAttributeLoc;
+            Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, CXX11Attrs,
+                                    GNUAttrs, &GNUAttributeLoc);
+          } else {
+            Decl = ParseDeclaration(DeclaratorContext::Block, DeclEnd, CXX11Attrs,
+                                    GNUAttrs);
+          }
+          if (GNUAttrs.Range.getBegin().isValid())
+            DeclStart = GNUAttrs.Range.getBegin();
+          return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
+        }
+      }
+    }
+    goto Default;
+  }
+  #endif
   case tok::identifier: {
     Token Next = NextToken();
     if (Next.is(tok::colon)) { // C99 6.8.1: labeled-statement
@@ -243,7 +282,7 @@ Default:
         ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||
          (isDeclarationStatement()
          #if ENABLE_BSC
-         && !(getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) 
+         && !(getLangOpts().BSC && FindUntil(tok::coloncolon))
          #endif
          ))) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;

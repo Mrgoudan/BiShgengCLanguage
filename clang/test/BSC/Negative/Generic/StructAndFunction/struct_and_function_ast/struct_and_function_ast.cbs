@@ -70,15 +70,15 @@ int main() {
 }
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:1, line:[[@LINE-1]]:1> line:[[@LINE-6]]:5 main 'int (void)'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:12, line:[[@LINE-2]]:1>
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-7]]:3, col:31>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:30> col:17 used s1 'struct S<int>':'struct S<int>' cinit
-// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:22, col:30> 'struct S<int>':'struct S<int>'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-7]]:10, col:31>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:10, col:30> col:17 used s1 'S<int>':'struct S<int>' cinit
+// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:22, col:30> 'S<int>':'struct S<int>'
 // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:28> 'int' 42
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-10]]:3, col:15>
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:14> col:7 a 'int' cinit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:11, col:14> 'int':'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:11, col:14> 'int':'int' lvalue .a 0x{{[^ ]*}}
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:11> 'struct S<int>':'struct S<int>' lvalue Var 0x{{[^ ]*}} 's1' 'struct S<int>':'struct S<int>'
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:11> 'S<int>':'struct S<int>' lvalue Var 0x{{[^ ]*}} 's1' 'S<int>':'struct S<int>'
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-14]]:3, col:31>
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:30> col:7 b 'int' cinit
 // CHECK-NEXT: CallExpr 0x{{[^ ]*}} <col:11, col:30> 'int':'int'

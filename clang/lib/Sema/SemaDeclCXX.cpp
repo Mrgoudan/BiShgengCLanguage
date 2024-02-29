@@ -2266,6 +2266,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
            : diag::ext_constexpr_body_invalid_stmt_cxx20)
       << isa<CXXConstructorDecl>(Dcl);
   } else if (Cxx1yLoc.isValid()) {
+    #if ENABLE_BSC
+    if (!SemaRef.getLangOpts().BSC)
+    #endif
     SemaRef.Diag(Cxx1yLoc,
          SemaRef.getLangOpts().CPlusPlus14
            ? diag::warn_cxx11_compat_constexpr_body_invalid_stmt
@@ -2364,6 +2367,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     } else if (ReturnStmts.size() > 1) {
       switch (Kind) {
       case Sema::CheckConstexprKind::Diagnose:
+        #if ENABLE_BSC
+        if (!SemaRef.getLangOpts().BSC) {
+        #endif
         SemaRef.Diag(
             ReturnStmts.back(),
             SemaRef.getLangOpts().CPlusPlus14
@@ -2372,6 +2378,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         for (unsigned I = 0; I < ReturnStmts.size() - 1; ++I)
           SemaRef.Diag(ReturnStmts[I],
                        diag::note_constexpr_body_previous_return);
+        #if ENABLE_BSC
+        }
+        #endif
         break;
 
       case Sema::CheckConstexprKind::CheckValid:

@@ -1062,9 +1062,6 @@ ExprResult Parser::ParseCastExpression(
     // For case like:
     // @code
     //    S::f(...)
-    // This situation should be excluded:
-    // @code
-    //    bar<int::foo()>();
     if (getLangOpts().BSC && IsBSCStaticMemberFunctionCall()) {
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
@@ -1676,6 +1673,13 @@ ExprResult Parser::ParseCastExpression(
   }
 
   case tok::annot_template_id: { // [C++]          template-id
+    #if ENABLE_BSC
+    if (getLangOpts().BSC && NextToken().is(tok::coloncolon)) {
+      return ParseOptionalBSCScopeSpecifier(
+          ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
+          isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);
+    }
+    #endif
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->Kind == TNK_Type_template) {
       // We have a template-id that we know refers to a type,

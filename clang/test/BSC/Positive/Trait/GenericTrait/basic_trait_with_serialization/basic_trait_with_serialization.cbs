@@ -75,16 +75,16 @@ struct PollResult<int> int::poll(int* this, int a) {
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:34, col:39> col:39 this 'int *'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:45, col:49> col:49 used a 'int'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:52, line:[[@LINE-4]]:1>
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-8]]:5, col:29>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:28> col:28 used p 'struct PollResult<int>':'struct PollResult<int>' nrvo
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-8]]:12, col:29>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:12, col:28> col:28 used p 'PollResult<int>':'struct PollResult<int>' nrvo
 // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <line:[[@LINE-9]]:5, col:11> 'int' '='
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:5, col:7> 'int' lvalue .c 0x{{[^ ]*}}
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:5> 'struct PollResult<int>':'struct PollResult<int>' lvalue Var 0x{{[^ ]*}} 'p' 'struct PollResult<int>':'struct PollResult<int>'
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:5> 'PollResult<int>':'struct PollResult<int>' lvalue Var 0x{{[^ ]*}} 'p' 'PollResult<int>':'struct PollResult<int>'
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:11> 'int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:11> 'int' lvalue ParmVar 0x{{[^ ]*}} 'a' 'int'
 // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <line:[[@LINE-13]]:5, col:12>
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:12> 'struct PollResult<int>':'struct PollResult<int>' <NoOp>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'struct PollResult<int>':'struct PollResult<int>' lvalue Var 0x{{[^ ]*}} 'p' 'struct PollResult<int>':'struct PollResult<int>'
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:12> 'PollResult<int>':'struct PollResult<int>' <NoOp>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'PollResult<int>':'struct PollResult<int>' lvalue Var 0x{{[^ ]*}} 'p' 'PollResult<int>':'struct PollResult<int>'
 
 void int::free(int* this) {}
 // CHECK: BSCMethodDecl 0x{{[^ ]*}} parent 0x{{[^ ]*}} <col:1, col:28> col:11 used free 'void (int *)'

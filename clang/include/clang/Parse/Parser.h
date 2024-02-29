@@ -2456,6 +2456,7 @@ private:
   // check if it is a BSC static member function call in template argument list
   bool IsBSCStaticMemberFunctionCallInTemplateArgumentList();
   bool IsBSCStaticMemberFunctionCall();
+  void TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs);
   #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,

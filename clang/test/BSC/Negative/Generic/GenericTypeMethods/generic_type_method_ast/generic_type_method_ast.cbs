@@ -57,20 +57,20 @@ int main() {
 }
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-6]]:1, line:[[@LINE-1]]:1> line:[[@LINE-6]]:5 main 'int (void)'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:12, line:[[@LINE-2]]:1>
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-7]]:3, col:45>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:44> col:31 used s 'struct MyStruct<int, float>':'struct MyStruct<int, float>' cinit
-// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:35, col:44> 'struct MyStruct<int, float>':'struct MyStruct<int, float>'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-7]]:10, col:45>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:10, col:44> col:31 used s 'MyStruct<int, float>':'struct MyStruct<int, float>' cinit
+// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:35, col:44> 'MyStruct<int, float>':'struct MyStruct<int, float>'
 // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:43> 'int' 1
 // CHECK-NEXT: CallExpr 0x{{[^ ]*}} <line:[[@LINE-10]]:3, col:9> 'struct MyStruct<int, float>':'struct MyStruct<int, float>'
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:3, col:5> 'struct MyStruct<int, float> (*)(struct MyStruct<int, float> *)' <FunctionToPointerDecay>
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> 'struct MyStruct<int, float> (struct MyStruct<int, float> *)' lvalue .foo 0x{{[^ ]*}}
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'struct MyStruct<int, float>':'struct MyStruct<int, float>' lvalue Var 0x{{[^ ]*}} 's' 'struct MyStruct<int, float>':'struct MyStruct<int, float>'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:3> 'struct MyStruct<int, float> *' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'struct MyStruct<int, float>':'struct MyStruct<int, float>' lvalue Var 0x{{[^ ]*}} 's' 'struct MyStruct<int, float>':'struct MyStruct<int, float>'
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'MyStruct<int, float>':'struct MyStruct<int, float>' lvalue Var 0x{{[^ ]*}} 's' 'MyStruct<int, float>':'struct MyStruct<int, float>'
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:3> 'MyStruct<int, float> *' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'MyStruct<int, float>':'struct MyStruct<int, float>' lvalue Var 0x{{[^ ]*}} 's' 'MyStruct<int, float>':'struct MyStruct<int, float>'
 // CHECK-NEXT: CallExpr 0x{{[^ ]*}} <line:[[@LINE-15]]:32, col:38> 'struct MyStruct<int, float>':'struct MyStruct<int, float>'
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:32> 'struct MyStruct<int, float> (*)(struct MyStruct<int, float> *)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:32> 'struct MyStruct<int, float> (struct MyStruct<int, float> *)' BSCMethod 0x{{[^ ]*}} 'foo' 'struct MyStruct<int, float> (struct MyStruct<int, float> *)'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:36, col:37> 'struct MyStruct<int, float> *' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:37> 'struct MyStruct<int, float>':'struct MyStruct<int, float>' lvalue Var 0x{{[^ ]*}} 's' 'struct MyStruct<int, float>':'struct MyStruct<int, float>'
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:36, col:37> 'MyStruct<int, float> *' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:37> 'MyStruct<int, float>':'struct MyStruct<int, float>' lvalue Var 0x{{[^ ]*}} 's' 'MyStruct<int, float>':'struct MyStruct<int, float>'
 // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <line:[[@LINE-19]]:3, col:10>
 // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:10> 'int' 0

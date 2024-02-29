@@ -580,4 +580,260 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   return Actions.FinalizeDeclaratorGroup(getCurScope(), TypeDS, DeclsInGroup);
 }
 
+void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
+  ParsingDeclSpec DS(*this);
+  DS.takeAttributesFrom(DeclSpecAttrs);
+  DeclSpecContext DSC = DeclSpecContext::DSC_normal; 
+  bool EnteringContext = false;
+  SourceLocation StartLoc = Tok.getLocation();
+  ParsedAttributes Attributes(AttrFactory);
+  
+  tok::TokenKind TagTokKind = Tok.getKind();
+  DeclSpec::TST TagType = TagTokKind == tok::kw_struct ? DeclSpec::TST_struct : DeclSpec::TST_union;
+  ConsumeToken();
+  
+  ParsedTemplateInfo TemplateInfo = ParsedTemplateInfo();
+  const bool shouldDelayDiagsInTag =
+      (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate);
+  SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
+  
+  ParsedAttributes attrs(AttrFactory);
+  MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
+  SourceLocation AttrFixitLoc = Tok.getLocation();
+
+  struct PreserveAtomicIdentifierInfoRAII {
+    PreserveAtomicIdentifierInfoRAII(Token &Tok, bool Enabled)
+        : AtomicII(nullptr) {
+      if (!Enabled)
+        return;
+      assert(Tok.is(tok::kw__Atomic));
+      AtomicII = Tok.getIdentifierInfo();
+      AtomicII->revertTokenIDToIdentifier();
+      Tok.setKind(tok::identifier);
+    }
+    ~PreserveAtomicIdentifierInfoRAII() {
+      if (!AtomicII)
+        return;
+      AtomicII->revertIdentifierToTokenID(tok::kw__Atomic);
+    }
+    IdentifierInfo *AtomicII;
+  };
+      
+  CXXScopeSpec &SS = DS.getTypeSpecScope();
+  ColonProtectionRAIIObject X(*this);
+  CXXScopeSpec Spec;
+  bool HasValidSpec = true;
+
+  if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
+                                       /*ObjectHadErrors=*/false,
+                                       EnteringContext)) {
+    DS.SetTypeSpecError();
+    HasValidSpec = false;
+  }
+
+  if (Spec.isSet())
+    if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id)) {
+      Diag(Tok, diag::err_expected) << tok::identifier;
+      HasValidSpec = false;
+    }
+  if (HasValidSpec)
+    SS = Spec;
+
+  TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
+
+  auto RecoverFromUndeclaredTemplateName = [&](IdentifierInfo *Name,
+                                               SourceLocation NameLoc,
+                                               SourceRange TemplateArgRange,
+                                               bool KnownUndeclared) {
+    Diag(NameLoc, diag::err_explicit_spec_non_template)
+        << (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
+        << TagTokKind << Name << TemplateArgRange << KnownUndeclared;
+
+    // Strip off the last template parameter list if it was empty, since
+    // we've removed its template argument list.
+    if (TemplateParams && TemplateInfo.LastParameterListWasEmpty) {
+      if (TemplateParams->size() > 1) {
+        TemplateParams->pop_back();
+      } else {
+        TemplateParams = nullptr;
+        const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
+            ParsedTemplateInfo::NonTemplate;
+      }
+    } else if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation) {
+      // Pretend this is just a forward declaration.
+      TemplateParams = nullptr;
+      const_cast<ParsedTemplateInfo &>(TemplateInfo).Kind =
+          ParsedTemplateInfo::NonTemplate;
+      const_cast<ParsedTemplateInfo &>(TemplateInfo).TemplateLoc =
+          SourceLocation();
+      const_cast<ParsedTemplateInfo &>(TemplateInfo).ExternLoc =
+          SourceLocation();
+    }
+  };
+  
+  // Parse the (optional) class name or simple-template-id.
+  IdentifierInfo *Name = nullptr;
+  SourceLocation NameLoc = Tok.getLocation();
+  TemplateIdAnnotation *TemplateId = nullptr;
+  if (Tok.is(tok::identifier)) {
+    Name = Tok.getIdentifierInfo();
+  } else if (Tok.is(tok::annot_template_id)) {
+    TemplateId = takeTemplateIdAnnotation(Tok);
+
+    if (TemplateId->Kind == TNK_Undeclared_template) {
+      // Try to resolve the template name to a type template. May update Kind.
+      Actions.ActOnUndeclaredTypeTemplateName(
+          getCurScope(), TemplateId->Template, TemplateId->Kind, NameLoc, Name);
+      if (TemplateId->Kind == TNK_Undeclared_template) {
+        RecoverFromUndeclaredTemplateName(
+            Name, NameLoc,
+            SourceRange(TemplateId->LAngleLoc, TemplateId->RAngleLoc), true);
+        TemplateId = nullptr;
+      }
+    }
+
+    if (TemplateId && !TemplateId->mightBeType()) {
+      // The template-name in the simple-template-id refers to
+      // something other than a type template. Give an appropriate
+      // error message and skip to the ';'.
+      SourceRange Range(NameLoc);
+      if (SS.isNotEmpty())
+        Range.setBegin(SS.getBeginLoc());
+
+      // FIXME: Name may be null here.
+      Diag(TemplateId->LAngleLoc, diag::err_template_spec_syntax_non_template)
+          << TemplateId->Name << static_cast<int>(TemplateId->Kind) << Range;
+      
+      DS.SetTypeSpecError();
+      SkipUntil(tok::semi, StopBeforeMatch);
+      return;
+    }
+  }
+
+  const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
+  Sema::TagUseKind TUK;
+  if (isDefiningTypeSpecifierContext(DSC, false) == AllowDefiningTypeSpec::No)
+    TUK = Sema::TUK_Reference;
+  else if (Tok.is(tok::l_brace))
+    TUK = Sema::TUK_Definition;
+  else if (!isTypeSpecifier(DSC) &&
+            (Tok.is(tok::semi) ||
+              (Tok.isAtStartOfLine() && !isValidAfterTypeSpecifier(false)))) {
+    TUK = DS.isFriendSpecified() ? Sema::TUK_Friend : Sema::TUK_Declaration;
+    if (Tok.isNot(tok::semi)) {
+      const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
+      // A semicolon was missing after this declaration. Diagnose and recover.
+      ExpectAndConsume(tok::semi, diag::err_expected_after,
+                      DeclSpec::getSpecifierName(TagType, PPol));
+      PP.EnterToken(Tok, /*IsReinject*/ true);
+      Tok.setKind(tok::semi);
+    }
+  } else
+    TUK = Sema::TUK_Reference;
+
+  if (TUK != Sema::TUK_Reference) {
+    SourceRange AttrRange = Attributes.Range;
+    if (AttrRange.isValid()) {
+      Diag(AttrRange.getBegin(), diag::err_attributes_not_allowed)
+          << AttrRange
+          << FixItHint::CreateInsertionFromRange(
+                AttrFixitLoc, CharSourceRange(AttrRange, true))
+          << FixItHint::CreateRemoval(AttrRange);
+      attrs.takeAllFrom(Attributes);
+    }
+  }
+
+  if (!Name && !TemplateId &&
+      (DS.getTypeSpecType() == DeclSpec::TST_error ||
+      TUK != Sema::TUK_Definition)) {
+    if (DS.getTypeSpecType() != DeclSpec::TST_error) {
+      Diag(StartLoc, diag::err_anon_type_definition)
+          << DeclSpec::getSpecifierName(TagType, Policy);
+    }
+    if (TUK == Sema::TUK_Definition && Tok.is(tok::colon))
+      SkipUntil(tok::semi, StopBeforeMatch);
+    else
+      SkipUntil(tok::comma, StopAtSemi);
+    return;
+  }
+
+  DeclResult TagOrTempResult = true; // invalid
+  TypeResult TypeResult = true;      // invalid
+  
+  bool Owned = false;
+  Sema::SkipBodyInfo SkipBody;
+  bool IsDependent = false;
+  MultiTemplateParamsArg TParams;
+  if (TUK != Sema::TUK_Reference && TemplateParams)
+    TParams =
+        MultiTemplateParamsArg(&(*TemplateParams)[0], TemplateParams->size());
+
+  if (TemplateId) {
+    ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                      TemplateId->NumArgs);
+    if (TemplateId->isInvalid()) {
+      // Can't build the declaration.
+    } else if (TUK == Sema::TUK_Reference) {
+      ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
+                              /*DiagnoseEmptyAttrs=*/true);
+      TypeResult = Actions.ActOnTagTemplateIdType(
+          TUK, TagType, StartLoc, SS, TemplateId->TemplateKWLoc,
+          TemplateId->Template, TemplateId->TemplateNameLoc,
+          TemplateId->LAngleLoc, TemplateArgsPtr, TemplateId->RAngleLoc);
+    }
+  } else {
+    if (TUK != Sema::TUK_Declaration && TUK != Sema::TUK_Definition)
+      ProhibitAttributes(attrs);
+
+    stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
+    TagOrTempResult = Actions.ActOnTag(
+        getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs,
+        AS_public, DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
+        SourceLocation(), false, clang::TypeResult(),
+        DSC == DeclSpecContext::DSC_type_specifier,
+        DSC == DeclSpecContext::DSC_template_param ||
+            DSC == DeclSpecContext::DSC_template_type_arg,
+        &SkipBody);
+    if (IsDependent) {
+      assert(TUK == Sema::TUK_Reference);
+      TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK, SS,
+                                            Name, StartLoc, NameLoc);
+    }
+  }
+
+  if (!TagOrTempResult.isInvalid())
+    Actions.ProcessDeclAttributeDelayed(TagOrTempResult.get(), attrs);
+
+  const char *PrevSpec = nullptr;
+  unsigned DiagID;
+  bool Result;
+  if (!TypeResult.isInvalid()) {
+    Result = DS.SetTypeSpecType(DeclSpec::TST_typename, StartLoc,
+                                NameLoc.isValid() ? NameLoc : StartLoc,
+                                PrevSpec, DiagID, TypeResult.get(), Policy);
+  } else if (!TagOrTempResult.isInvalid()) {
+    Result = DS.SetTypeSpecType(
+        TagType, StartLoc, NameLoc.isValid() ? NameLoc : StartLoc, PrevSpec,
+        DiagID, TagOrTempResult.get(), Owned, Policy);
+  } else {
+    DS.SetTypeSpecError();
+    return;
+  }
+
+  if (Result)
+    Diag(StartLoc, DiagID) << PrevSpec;
+
+  // In a template-declaration which defines a class, no declarator is
+  // permitted.
+  if (TUK == Sema::TUK_Definition && !isTypeSpecifier(DSC) &&
+      (TemplateInfo.Kind || !isValidAfterTypeSpecifier(false))) {
+    if (Tok.isNot(tok::semi)) {
+      const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
+      ExpectAndConsume(tok::semi, diag::err_expected_after,
+                      DeclSpec::getSpecifierName(TagType, PPol));
+      PP.EnterToken(Tok, /*IsReinject=*/true);
+      Tok.setKind(tok::semi);
+    }
+  }
+}
 #endif

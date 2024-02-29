@@ -22,6 +22,16 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
     CastParseKind ParseKind, bool isAddressOfOperand, bool &NotCastExpr,
     TypeCastState isTypeCast, bool isVectorLiteral, bool *NotPrimaryExpression,
     bool HasBSCScopeSpec) {
+  CXXScopeSpec SS;
+  if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon)) {
+    TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+    SourceLocation CCLoc = NextToken().getLocation();
+    ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                        TemplateId->NumArgs);
+    Actions.ActOnCXXNestedNameSpecifier(getCurScope(), SS, TemplateId->TemplateKWLoc,
+        TemplateId->Template, TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
+        TemplateArgsPtr, TemplateId->RAngleLoc, CCLoc, /*EnteringContext*/false);
+  }
   ParsingDeclSpec DS(*this);
   ParseBSCScopeSpecifiers(DS);
   ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
@@ -39,7 +49,7 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
   if (Tok.is(tok::coloncolon) && TST) {
     TagDecl *TD = dyn_cast_or_null<TagDecl>(Actions.getASTContext().BSCDeclContextMap[TST]);
     if (TD)
-      TD->setQualifierInfo(DS.getTypeSpecScope().getWithLocInContext(Actions.getASTContext()));
+      TD->setQualifierInfo(SS.getWithLocInContext(Actions.getASTContext()));
   }
   HasBSCScopeSpec = TryConsumeToken(tok::coloncolon);
   D.getBSCScopeSpec() = BSS;
@@ -75,39 +85,39 @@ bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
   return false;
 }
 
-// For case:
-//     int::foo();
-//     struct S::foo();
-//     struct S<int>::foo();
-//     struct S<int::bar()>::foo();
-//     struct S<int::bar(), struct G<int::bar()> >::foo();
-// This situation should be excluded:
-//     struct S<int::foo()> s;
-//     int arr[int::foo()];
-//     static_assert(int::foo() == 5, "fail");
 bool Parser::IsBSCStaticMemberFunctionCall() {
-  int NumLess = 0;
-  int NumGreater = 0;
-  int LookAheadNumber = 0;
-  Token CurrTok = Tok;
-  Token NextTok = PP.LookAhead(LookAheadNumber);
-  if (CurrTok.is(tok::identifier) && !NextTok.isOneOf(tok::coloncolon, tok::less))
-    return false;
-  while (!NextTok.isOneOf(tok::semi, tok::l_brace, tok::eof, tok::equal, tok::l_square)) {
-    if (CurrTok.isOneOf(tok::kw__Static_assert, tok::kw_static_assert))
-      return false;
-    if (CurrTok.is(tok::less))
-      NumLess++;
-    if (CurrTok.is(tok::greater)) {
-      NumGreater++;
-      if (NextTok.is(tok::identifier))
-        return false;
+  assert(Tok.isOneOf(tok::identifier, tok::kw_union, tok::kw_enum, tok::kw_struct));
+  Token NextTok = Tok.is(tok::identifier) ? PP.LookAhead(0) : PP.LookAhead(1);
+  if (NextTok.is(tok::coloncolon)) 
+    return true;
+  if (NextTok.is(tok::less)) {
+    if (Tok.isOneOf(tok::kw_struct, tok::kw_union)) {
+      ParsedAttributes Attributes(AttrFactory);
+      TryParseBSCGenericClassSpecifier(Attributes);
+    } else {
+      IdentifierInfo &II = *Tok.getIdentifierInfo();
+      TemplateTy Template;
+      UnqualifiedId TemplateName;
+      TemplateName.setIdentifier(&II, Tok.getLocation());
+      CXXScopeSpec SS;
+      bool MemberOfUnknownSpecialization;
+      if (TemplateNameKind TNK = Actions.isTemplateName(getCurScope(), SS,
+                                                        /*hasTemplateKeyword=*/false,
+                                                        TemplateName,
+                                                        /*ObjectType*/nullptr,
+                                                        /*EnteringContext*/false,
+                                                        Template,
+                                                        MemberOfUnknownSpecialization)) {
+        if (TNK == TNK_Type_template) {
+          ConsumeToken();
+          if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
+                                      TemplateName, false))
+            return false;
+        }
+      }
     }
-    if (CurrTok.is(tok::coloncolon) && NumLess == NumGreater)
+    if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon))
       return true;
-    CurrTok = NextTok;
-    NextTok = PP.LookAhead(LookAheadNumber + 1);
-    LookAheadNumber++;
   }
   return false;
 }
