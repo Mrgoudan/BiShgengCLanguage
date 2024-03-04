@@ -332,8 +332,12 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace)) {
     TUK = Sema::TUK_Definition;
+    // Trait can only be defined at top-level. So an error is required
+    // when the depth of CurScope is greater than 0. However, for
+    // generic trait, parsing generic parameters will enter TemplateParamScope
+    // with a depth of 1, which needs to be allowed.
     if (Actions.getCurScope()->getDepth() > 0 &&
-        !(isParsingBSCTemplateTrait &&
+        !(!Actions.getCurScope()->getEntity() &&
           Actions.getCurScope()->getDepth() == 1)) {
       Diag(StartLoc, diag::err_trait_def_not_at_top_level);
       return;

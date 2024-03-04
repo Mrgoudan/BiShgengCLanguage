@@ -14770,11 +14770,18 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
 
   #if ENABLE_BSC
   if (getLangOpts().BSC) {
-    if (TraitDecl *TD = TryDesugarTrait(T)) {
+    QualType QT = TSInfo->getType();
+    if (TraitDecl *TD = TryDesugarTrait(QT)) {
       RecordDecl *LookupTrait = TD->getTrait();
       if (LookupTrait && LookupTrait->getDescribedClassTemplate()) {
         T = CompleteRecordType(LookupTrait, TSInfo);
         T = Context.getElaboratedType(ETK_Struct, nullptr, T);
+        if (QT->isPointerType())
+          QT = QT->getPointeeType();
+        while (QT->isPointerType()) {
+          T = Context.getPointerType(T);
+          QT = QT->getPointeeType();
+        }
       }
       TSInfo = Context.getTrivialTypeSourceInfo(T);
     }
@@ -18064,8 +18071,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (getLangOpts().BSC) {
     if (T->isTraitType()) {
       Diag(Loc, diag::err_variables_not_trait_pointer);
-    }
-    if (T->isTraitPointerType()) {
+    } else if (T->hasTraitType()) {
       TraitDecl *TD = TryDesugarTrait(T);
       T = DesugarTraitToStructTrait(TD, T, Loc);
       TInfo = Context.getTrivialTypeSourceInfo(T);

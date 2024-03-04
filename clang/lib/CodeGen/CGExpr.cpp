@@ -188,6 +188,10 @@ llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
 /// EmitIgnoredExpr - Emit code to compute the specified expression,
 /// ignoring the result.
 void CodeGenFunction::EmitIgnoredExpr(const Expr *E) {
+#if ENABLE_BSC
+  if (getLangOpts().BSC && E->getType()->hasTraitType())
+    return;
+#endif
   if (E->isPRValue())
     return (void)EmitAnyExpr(E, AggValueSlot::ignored(), true);
 

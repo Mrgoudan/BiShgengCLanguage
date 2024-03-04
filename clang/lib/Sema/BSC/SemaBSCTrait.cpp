@@ -310,7 +310,7 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
   std::vector<Expr *> Exprs = {TraitData.get(), UOVtable.get()};
   MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
   ExprResult Result = ActOnInitList(DSLoc, initExprs, DSLoc);
-  dyn_cast<InitListExpr>(Result.getAs<Expr>())->setHasDesugar(true);
+  dyn_cast<InitListExpr>(Result.getAs<Expr>())->setDesugaredIndex(Exprs.size());
   TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(ProtoArgType);
   TypeResult TR = CreateParsedType(ProtoArgType, TInfo);
   Result = ActOnCompoundLiteral(DSLoc, TR.get(), DSLoc, Result.get());
@@ -398,6 +398,8 @@ QualType Sema::CompleteTraitType(QualType QT) {
   if (!TD) {
     return QT;
   }
+  while (QT->isPointerType())
+    QT = QT->getPointeeType();
   QualType TraitQT = Context.getTraitType(TD);
   if (TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate()) {
     TemplateArgumentListInfo Args(TTD->getBeginLoc(), TTD->getEndLoc());
@@ -423,7 +425,7 @@ QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
   SourceLocation EL = TInfo->getTypeLoc().getEndLoc();
   TemplateArgumentListInfo Args(BL, EL);
   QualType QT = TInfo->getType();
-  if (QT->isPointerType())
+  while (QT->isPointerType())
     QT = QT->getPointeeType();
   // Remove ElaboratedType
   const TemplateSpecializationType *TST = dyn_cast<TemplateSpecializationType>(
@@ -567,16 +569,25 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
     return T;
   }
   QualType RT = QualType();
+  QualType InnerTy = T;
+  while (InnerTy->isPointerType())
+    InnerTy = InnerTy->getPointeeType();
   if (dyn_cast<TemplateSpecializationType>(
-          T->getPointeeType()
-              ->getLocallyUnqualifiedSingleStepDesugaredType())) {
-    TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(T, Loc);
+          InnerTy->getLocallyUnqualifiedSingleStepDesugaredType())) {
+    TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(InnerTy, Loc);
     RT = CompleteRecordType(RD, TInfo);
   } else {
     RT = RD->getTypeForDecl()->getCanonicalTypeInternal();
   }
+  RT = Context.getElaboratedType(ETK_Struct, nullptr, RT);
+  assert(T->isPointerType() && "Trait must be of pointer type");
+  T = T->getPointeeType();
+  while (T->isPointerType()) {
+    RT = Context.getPointerType(RT);
+    T = T->getPointeeType();
+  }
 
-  return Context.getElaboratedType(ETK_Struct, nullptr, RT);
+  return RT;
 }
 
 // In this function, we aim to assign the Trait_xxx struct,
@@ -615,6 +626,11 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   }
   if (!QT.isNull())
     QT = Context.getElaboratedType(ETK_Struct, nullptr, QT);
+  QualType TmpT = OriginQT.getCanonicalType();
+  while (TmpT->isPointerType()) {
+    QT = Context.getPointerType(QT);
+    TmpT = TmpT->getPointeeType();
+  }
 
   if (TD == nullptr || QT.isNull())
     return nullptr;
@@ -642,6 +658,23 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
 
   Expr *UO = Cexpr->getSubExpr();
   QualType T = UO->getType();
+  QualType InnerTy = T;
+  while (InnerTy->isPointerType())
+    InnerTy = InnerTy->getPointeeType();
+
+  QualType TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);
+  if (dyn_cast<InjectedClassNameType>(TraitTy)) {
+    TraitTy = CompleteRecordType(TD->getTrait(), NewVD->getTypeSourceInfo());
+  }
+  // @code
+  // trait I **a;
+  // trait I **b = a;
+  // trait I **c = (trait F **)a;
+  // @endcode
+  if (!TraitTy.isNull() && Context.hasSameType(InnerTy, TraitTy)) {
+    AddInitializerToDecl(NewVD, UO, false);
+    return NewVD;
+  }
   const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
   if (!PT) {
     Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait) << OriginQT << T;
@@ -659,6 +692,13 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
 
   std::vector<Expr *> Exprs;
   if (ExpIsNullPointer) {
+    // @code
+    // trait I **a = NULL;
+    // @endcode
+    if (QT->isPointerType()) {
+      AddInitializerToDecl(NewVD, UO, false);
+      return NewVD;
+    }
     // @code
     // trait I *a = NULL;
     // @endcode
@@ -717,9 +757,17 @@ void Sema::ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *expr,
                                          QualType ElemType, unsigned &Index,
                                          DesignatedInitExpr **DIE) {
 
-  TraitDecl *TD = TryDesugarTrait(ElemType);
-  if (IList->getHasDesugar() || !TD) {
+  if (Index < IList->getDesugaredIndex()) {
     return;
+  }
+  TraitDecl *TD = TryDesugarTrait(ElemType);
+  if (!TD) {
+    QualType InnerTy = ElemType;
+    while (InnerTy->isPointerType())
+      InnerTy = InnerTy->getPointeeType();
+    TD = TryDesugarTrait(InnerTy);
+    if (!TD)
+      return;
   }
 
   Expr *UO = expr;
@@ -729,10 +777,15 @@ void Sema::ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *expr,
     UO = Cexpr->getSubExpr();
   }
 
-  IList->setHasDesugar(true);
+  // Since the index is calculated from 0, we need to add 1 to indicate that the
+  // first index has been desugared, and so on.
+  IList->setDesugaredIndex(Index + 1);
   QualType T = UO->getType();
   // If the right value is trait pointer type , there is no need to desugar
-  if (TD == TryDesugarTrait(T)) {
+  if (TD == TryDesugarTrait(T) || Context.hasSameType(ElemType, T)) {
+    if (DIE && *DIE)
+      (*DIE)->setInit(UO);
+    IList->updateInit(Context, Index, UO);
     return;
   }
 
@@ -741,6 +794,7 @@ void Sema::ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *expr,
   if (!PT) {
     Diag(SL, diag::err_type_has_not_impl_trait)
         << CompleteTraitType(ElemType) << T;
+    return;
   }
 
   T = PT->getPointeeType().getCanonicalType();
@@ -797,17 +851,20 @@ TraitDecl *Sema::TryDesugarTrait(QualType T) {
   TraitDecl *TD = nullptr;
   if (T.isNull())
     return TD;
+
   if (T->isPointerType()) {
+    QualType TraitTy = T->getPointeeType();
+    while (TraitTy->isPointerType())
+      TraitTy = TraitTy->getPointeeType();
     // Remove ElaboratedType
     const TemplateSpecializationType *TST =
         dyn_cast<TemplateSpecializationType>(
-            T->getPointeeType()
-                ->getLocallyUnqualifiedSingleStepDesugaredType());
+            TraitTy->getLocallyUnqualifiedSingleStepDesugaredType());
     if (TST) {
       TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
       TD = dyn_cast_or_null<TraitDecl>(TempT->getTemplatedDecl());
     } else {
-      TD = dyn_cast_or_null<TraitDecl>(T->getPointeeType()->getAsTagDecl());
+      TD = dyn_cast_or_null<TraitDecl>(TraitTy->getAsTagDecl());
     }
   } else if (RecordDecl *RD = T->getAsRecordDecl()) {
     if (auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T)) {
@@ -827,6 +884,10 @@ TraitDecl *Sema::TryDesugarTrait(QualType T) {
 ExprResult Sema::ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
                                         BinaryOperatorKind Opc, Expr *LHSExpr,
                                         Expr *RHSExpr) {
+  // @code
+  // trait I **a;
+  // a = NULL;
+  // @endcode
   SmallVector<Expr *, 2> Exprs;
   RecordDecl *RD =
       dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
@@ -838,7 +899,7 @@ ExprResult Sema::ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
         DeclarationNameInfo(), I->getType(), VK_LValue, OK_Ordinary);
     Exprs.push_back(BuildBinOp(S, TokLoc, Opc, NewLHSExpr, RHSExpr).get());
   }
-  // code
+  // @code
   // f.data = NULL, f.vtable = NULL;
   // @endcode
   return BuildBinOp(S, TokLoc, BO_Comma, Exprs[0], Exprs[1]);
@@ -889,9 +950,27 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
     return ExprError();
   }
 
-  RecordDecl *RD =
-      dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
-  QualType T = RHSExpr->getType()->getPointeeType().getCanonicalType();
+  QualType LTy = LHSExpr->getType();
+  Expr *RE = RHSExpr->IgnoreCasts();
+  QualType RTy = RE->getType();
+  while (LTy->isPointerType()) {
+    LTy = LTy->getPointeeType();
+    if (RTy->isPointerType())
+      RTy = RTy->getPointeeType();
+  }
+
+  if (!RTy->isPointerType()) {
+    TraitDecl *TD = TryDesugarTrait(RTy);
+    if (!TD) {
+      Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
+          << CompleteTraitType(LHSExpr->getType()) << RE->getType();
+      return ExprError();
+    }
+    return BuildBinOp(S, TokLoc, Opc, LHSExpr, RE);
+  }
+
+  RecordDecl *RD = dyn_cast<RecordType>(LTy.getCanonicalType())->getDecl();
+  QualType T = RE->getType()->getPointeeType().getCanonicalType();
   for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
        I != E; ++I) {
     Expr *NewLHSExpr = BuildMemberExpr(
@@ -901,14 +980,14 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
     Expr *NewRHSExpr = nullptr;
     if (I->getNameAsString() == "data") {
       NewRHSExpr =
-          ImplicitCastExpr::Create(Context, I->getType(), CK_BitCast, RHSExpr,
+          ImplicitCastExpr::Create(Context, I->getType(), CK_BitCast, RE,
                                    nullptr, VK_PRValue, FPOptionsOverride());
     } else {
       TraitDecl *TD = RD->getDesugaredTraitDecl();
       RecordDecl *LookupVtable = TD->getVtable();
       VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
       if (!LookupVar) {
-        Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
+        Diag(RE->getBeginLoc(), diag::err_type_has_not_impl_trait)
             << CompleteTraitType(LHSExpr->getType()) << T;
         return ExprError();
       }
@@ -936,7 +1015,10 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
 }
 
 bool Sema::IsTraitExpr(Expr *Expr) {
-  if (auto RT = dyn_cast<RecordType>(Expr->getType().getCanonicalType())) {
+  QualType T = Expr->getType().getCanonicalType();
+  while (T->isPointerType())
+    T = T->getPointeeType();
+  if (auto RT = dyn_cast<RecordType>(T)) {
     RecordDecl *RD = dyn_cast<RecordDecl>(RT->getDecl());
     return (RD && RD->getDesugaredTraitDecl());
   }
@@ -961,6 +1043,10 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
           << Context.getPointerType(CompleteTraitType(RHSExpr->getType()))
           << LHSExpr->getSourceRange() << RHSExpr->getSourceRange();
     }
+
+    if (LHSExpr->getType()->isPointerType() ||
+        RHSExpr->getType()->isPointerType())
+      return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
 
     SmallVector<Expr *, 2> NewLHSExprs;
     RecordDecl *LRD =
@@ -1074,14 +1160,15 @@ void Sema::checkBSCFunctionContainsTrait(Decl* D) {
     T = FD->getReturnType().getCanonicalType().getTypePtr();
   else if (auto* PD = dyn_cast_or_null<ParmVarDecl>(D))
     T = PD->getType().getCanonicalType().getTypePtr();
-  else if (auto* VD = dyn_cast_or_null<VarDecl>(D)) { 
+  else if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
     QualType Ty = VD->getType();
     if (Ty->isFunctionPointerType()) {
       const Type* FPT = Ty->getAs<PointerType>()->getPointeeType().getCanonicalType().getTypePtr();
       T = FPT->getAs<FunctionProtoType>()->getReturnType().getTypePtr();
     } else return;
-  } else return;
-  
+  } else
+    return;
+
   if (T->isTraitType()) {
     Diag(D->getBeginLoc(), diag::err_variables_not_trait_pointer);
     D->setInvalidDecl();
@@ -1093,5 +1180,5 @@ void Sema::checkBSCFunctionContainsTrait(Decl* D) {
       }
     }
   }
-}   
+}
 #endif // ENABLE_BSC

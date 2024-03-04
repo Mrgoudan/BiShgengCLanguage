@@ -10239,12 +10239,25 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
 }
 
 #if ENABLE_BSC
-static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType) {
+static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType,
+                             SourceLocation Loc) {
   if (TraitDecl *TD = S.TryDesugarTrait(DstType)) {
     if (SrcType->isPointerType()) {
       QualType T = SrcType->getPointeeType().getCanonicalType();
       if (TD->getTypeImpledVarDecl(T))
         return true;
+      while (T->isPointerType())
+        T = T->getPointeeType();
+      if (TD->getTrait()) {
+        QualType TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);
+        if (dyn_cast<InjectedClassNameType>(TraitTy)) {
+          TypeSourceInfo *TInfo =
+              S.Context.getTrivialTypeSourceInfo(DstType, Loc);
+          TraitTy = S.CompleteRecordType(TD->getTrait(), TInfo);
+        }
+        if (!TraitTy.isNull() && S.Context.hasSameType(T, TraitTy))
+          return true;
+      }
     }
   }
   return false;
@@ -15745,10 +15758,16 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
     bool RHSIsTrait = IsTraitExpr(RHSExpr);
     if (LHSIsTrait || RHSIsTrait) {
       if (Opc == BO_Assign && LHSIsTrait && !RHSIsTrait) {
-        return ActOnTraitReassign(S, TokLoc, Opc, LHSExpr, RHSExpr);
+        if (!(LHSExpr->getType()->isPointerType() &&
+              RHSExpr->isNullPointerConstant(Context,
+                                             Expr::NPC_ValueDependentIsNull)))
+          return ActOnTraitReassign(S, TokLoc, Opc, LHSExpr, RHSExpr);
       }
       if (Opc == BO_EQ || Opc == BO_NE) {
-        return ActOnTraitCompare(S, TokLoc, Opc, LHSExpr, RHSExpr);
+        if ((LHSIsTrait && RHSIsTrait) ||
+            (LHSIsTrait && !LHSExpr->getType()->isPointerType()) ||
+            (RHSIsTrait && !RHSExpr->getType()->isPointerType()))
+          return ActOnTraitCompare(S, TokLoc, Opc, LHSExpr, RHSExpr);
       }
     }
   }
@@ -17390,7 +17409,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case IncompatiblePointer:
     #if ENABLE_BSC
     // int a = 1; trait F* f = &a;
-    if (getLangOpts().BSC && IsTraitEqualExpr(*this, DstType, SrcType))
+    if (getLangOpts().BSC && IsTraitEqualExpr(*this, DstType, SrcType, Loc))
       return false;
     #endif
     if (Action == AA_Passing_CFAudited) {

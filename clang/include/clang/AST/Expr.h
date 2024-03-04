@@ -4846,9 +4846,10 @@ class InitListExpr : public Expr {
   llvm::PointerUnion<Expr *, FieldDecl *> ArrayFillerOrUnionFieldInit;
 
 #if ENABLE_BSC
-  // For BSC, it is used to determine whether it has been desugared,
-  // When assigning a value to the trait pointer type
-  bool HasDesugar = false;
+  // For BSC, it is used to determine which index has been desugared during
+  // struct initialization, for trait pointer type.
+  // 0 indicates that no InitExpr has been desugared in InitListExpr.
+  unsigned DesugaredIndex = 0;
 #endif
 
 public:
@@ -4870,9 +4871,13 @@ public:
   }
 
 #if ENABLE_BSC
-  bool getHasDesugar() { return HasDesugar; }
+  // When there are trait pointer types in the struct,
+  // desugaring will be performed during initialization. We can use the
+  // 'getDesugaredIndex' method to obtain the index to which has been desugared,
+  // avoiding being repeated desugared.
+  unsigned getDesugaredIndex() { return DesugaredIndex; }
 
-  void setHasDesugar(bool Desugar) { HasDesugar = Desugar; }
+  void setDesugaredIndex(unsigned index) { DesugaredIndex = index; }
 #endif
 
   ArrayRef<Expr *> inits() {

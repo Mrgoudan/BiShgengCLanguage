@@ -2899,8 +2899,9 @@ void CastOperation::CheckCStyleCast() {
     }
   }
   if (Self.getLangOpts().BSC && Self.IsTraitExpr(SrcExpr.get()) &&
-      DestType->isPointerType() && !DestType->isTraitPointerType()) {
-    SrcExpr = Self.ActOnTraitPointerCast(SrcExpr.get());
+      DestType->isPointerType()) {
+    if (!DestType->hasTraitType())
+      SrcExpr = Self.ActOnTraitPointerCast(SrcExpr.get());
     if (DestType->isVoidPointerType()) {
       Kind = CK_NoOp;
     } else {

@@ -221,7 +221,7 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
   }
 
   #if ENABLE_BSC
-  if (getLangOpts().BSC && D.getType()->isTraitPointerType())
+  if (getLangOpts().BSC && D.getType()->hasTraitType())
     return;
   #endif
 

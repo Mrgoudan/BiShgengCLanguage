@@ -4676,6 +4676,11 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
 
+#if ENABLE_BSC
+  if (getLangOpts().BSC && ASTTy->hasTraitType())
+    return;
+#endif
+
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
   if (LangOpts.OpenMPIsDevice && OpenMPRuntime &&

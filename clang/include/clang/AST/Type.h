@@ -2199,6 +2199,7 @@ public:
   #if ENABLE_BSC
   bool isTraitType() const;
   bool isTraitPointerType() const;
+  bool hasTraitType() const;
   bool isBSCCalculatedTypeInCompileTime() const;
   bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
 #endif
@@ -7164,6 +7165,13 @@ inline bool Type::isTraitPointerType() const {
   if (CanonicalType->isPointerType())
     return isa<TraitType>(CanonicalType->getPointeeType());
   return false;
+}
+
+inline bool Type::hasTraitType() const {
+  QualType T = CanonicalType;
+  while (T->isPointerType())
+    T = T->getPointeeType();
+  return isa<TraitType>(T);
 }
 
 //BSCCalculatedTypeInCompileTime includes bool,char(also includes signed char,unsigned char),

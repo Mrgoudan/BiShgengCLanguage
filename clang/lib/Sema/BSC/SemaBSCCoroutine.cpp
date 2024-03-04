@@ -200,7 +200,7 @@ class LocalVarFinder : public StmtVisitor<LocalVarFinder> {
                  continue;
 
                QualType QT = VD->getType();
-               if (QT->isTraitPointerType())
+               if (QT->hasTraitType())
                  continue;
                if (QT.isConstQualified()) {
                  QT.removeLocalConst(); // TODO: need reconsider
@@ -541,7 +541,7 @@ static RecordDecl *buildFutureRecordDecl(
               : S.Context.getQualifiedType(
                     AE->getType(), AwaitFD->getReturnType().getQualifiers());
     } else AEType = AE->getType();
-    
+
     if (!S.IsBSCCompatibleFutureType(AEType)) {
       QualType FatPointerType = lookupGenericType(
           S, FD->getBeginLoc(), AEType, "__Trait_Future");
@@ -2185,7 +2185,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
                 : SemaRef.Context.getQualifiedType(
                       AE->getType(), AwaitFD->getReturnType().getQualifiers());
       } else AEType = AE->getType();
-      
+
       const RecordType *FutureType = dyn_cast<RecordType>(
           AEType.getDesugaredType(SemaRef.Context));
       RecordDecl *FutureStructRD = FutureType->getDecl();
