@@ -2023,11 +2023,384 @@ void test() {
 
 ### 借用
 
+### 安全区
+
+#### 概述：
+
+c 语言有很多规则过于灵活，不方便编译器做静态检查。因此我们引入一个新语法，使得在一定范围内的毕昇 c 代码必须遵循更严格的约束，保证在这个范围内的代码肯定不会出现“内存安全”问题。
+
+允许用 safe/unsafe 关键字修饰一个代码块或者一个函数。
+
+​    unsafe 表示这段代码在非安全区，这部分代码遵循标准 c 的规定，同时这部分代码的安全性由用户保证。
+
+​    safe 表示这段代码在安全区，这部分代码必须遵循更严格的约束，同时编译器可以保证内存安全。
+
+​    没有 safe/unsafe 关键字修饰的全局函数默认是非安全的。
+
+#### 代码示例：
+
+```c
+#include <stdlib.h>
+
+typedef struct File{
+} FileID;
+
+FileID* owned create(void) {
+  FileID *p = malloc(sizeof(FileID));
+  return (FileID* owned)p;
+}
+
+FileID* owned consume_and_return(FileID* owned p) {
+  return p;
+}
+// 使用 safe 修饰函数，表示该函数为安全函数，函数内为安全区
+safe void safe_free(FileID* owned p) {
+    // 使用 unsafe 修饰代码块，表示这段代码在非安全区。这段代码是在安全区内的非安全区，也属于非安全区
+    unsafe {free((FileID*)p);}
+}
+
+int main(void) {
+  FileID* owned p1 = create();
+  FileID* owned p2 = consume_and_return(p1);
+  // 使用 safe 修饰代码块，表示这段代码在安全区
+  safe {
+  	safe_free(p2);
+  }
+  return 0;
+}
+```
 
 
 
+#### 语法规则：
 
+1、允许使用 safe/unsafe 修饰代码块、函数声明、函数签名、函数定义。
 
+```c
+// 修饰函数签名
+safe int test(int, int);
+// 修饰函数定义
+safe int test(int a, int b);
+// 修饰函数声明
+safe int test(int a, int b) {
+	return a + b;
+}
+// 修饰函数指针
+safe int (*p)(int, int);
+
+int main() {
+    safe {  // 修饰代码块
+        int a = 1;
+    }
+    unsafe {
+        int b = 1;
+    }
+    return 0;
+}
+```
+
+2、不允许使用 safe/unsafe 修饰全局变量、类型声明、typedef 声明（允许修饰函数指针)、static_assert。
+
+```c
+#include <assert.h>
+
+safe int g_a; // error: 不允许修饰全局变量
+safe struct b {   // error: 不允许修饰类型声明
+    int a;
+};
+safe typedef int mm; // error: 不允许修饰 typedef
+safe typedef int (*p)(int a); // ok: 允许修饰函数指针
+int main() {
+    safe int a;  // error: 不允许修饰类型声明
+    safe static_assert(1, "error"); // error: 不允许修饰 static_assert
+    return 0;
+}
+```
+
+3、safe 修饰的函数，参数类型和返回类型必须是 safe 类型。
+
+非 safe 类型包括：裸指针类型、union 类型、成员中包含不安全类型的 struct 类型、成员中包含不安全类型的数组类型。
+
+```c
+safe int* test1(int a);  // error: 返回值为非安全类型的裸指针类型
+safe int test2(int *a);  // error: 参数类型为非安全类型的裸指针类型
+
+typedef struct F {
+    int* a;
+} SF;
+safe SF test3(int a); // error: 返回值为成员中包含不安全裸指针类型的 struct 类型
+safe int test4(SF b); // error: 参数类型为成员中包含不安全裸指针类型的 struct 类型
+```
+
+4、safe 修饰的函数，函数参数列表不可以省略。`safe void test(); `是不允许的， `safe void test(void); `是允许的。
+
+5、safe 修饰的函数，函数参数列表不可以包含变长参数。`safe int test(int a,  ...); `是不允许的。
+
+6、如果 trait 中的函数被声明为 safe，那么要求实现 trait 的类型的对应成员函数也必须是 safe 修饰的函数。若 trait 中的函数未声明为 safe，也允许实现 trait 中的类型的成员函数为 safe。
+
+```c
+trait G {
+    safe int* owned test1(This* owned this);
+    int* owned test2(This* owned this);
+};
+safe int* owned int::test1(int* owned this) {
+    return this;
+}
+safe int* owned int::test2(int* owned this) {
+    return this;
+}
+impl trait G for int;
+```
+
+ 7、多个同名函数声明必须有同样的 safe/unsafe 修饰。
+
+```c
+safe int test(int a);
+unsafe int test(int a); // error: 多个函数声明中 safe/unsafe 不一致
+```
+
+8、多个同名函数声明排除 safe/unsafe 修饰后，是完全一致的。
+
+```c
+safe int test(int a);
+safe int test(int a, int b); // error: 函数声明不完全一致
+```
+
+9、safe 修饰泛型函数时，会对泛型每个实例化版本也做 safe 检查。
+
+```c
+safe T test<T>(T a) {
+    return a;
+}
+
+void test2() {
+    int a = 1;
+    int b = test<int>(a);
+    int* owned c = (int* owned)&a;
+    int* owned d = test<int* owned>(c);
+    int* e = test<void*>((void*)0);  // error: 实列化函数入参和返回值为非安全的裸指针类型
+}
+```
+
+10、成员函数也可以被 safe/unsafe 修饰，其规则和全局函数一样。
+
+```c
+struct MyStruct<T> {
+    T res;
+};
+safe T struct MyStruct<T>::foo_a(T a) {
+    return a;
+}
+```
+
+11、对于 safe 修饰的函数指针类型，与赋值的函数参数和返回值类型必须是一致的。
+
+```c
+safe void test1(int a) {}
+safe void test2(void) {}
+int main() {
+	safe void (*p)(int a);
+	p = test1; // ok
+	p = test2; // error: 参数类型不一致，不允许赋值
+}
+```
+
+12、安全区内被调用的函数或函数指针必须是 safe 的函数签名，不允许调用非安全函数或函数指针。
+
+```c
+safe void test1(void) {}
+unsafe void test2(void) {}
+safe void (*test3)(void);
+unsafe void (*test4)(void);
+int main() {
+    safe {
+        test1();
+        test2(); // error: 安全区内不允许调用非安全函数
+        test3();
+        test4(); // error: 安全区内不允许调用非安全函数指针
+    }
+    unsafe {
+        test1();
+        test2();
+        test3();
+        test4();
+    }
+}
+```
+
+13、安全区内允许再包含 unsafe 修饰的代码块、非安全区内也允许再包含 safe 修饰的代码块。
+
+```c
+int test1(int a, int b) {
+    return a + b;
+}
+safe int test2(int a, int b) {
+    return a > b ? a : b;
+}
+int main() {
+    safe {
+        int a = 0;
+        unsafe {
+            a = test1(1, 3);
+            safe {
+                a = test2(3, 5);
+            }
+        }
+    }
+}
+```
+
+14、安全区内不允许使用标签和 goto 语句。
+
+```c
+void test(int a) {
+    safe {
+        if (a < 10) {
+            goto error; // error: 安全区不允许使用 goto 语句
+        }
+        error:  // error: 安全区内不允许使用标签
+        return;
+    }
+}
+```
+
+15、安全区内不允许无初始化或初始化不完整的变量声明。
+
+```c
+struct F {
+	int age;
+	char name[20];
+};
+void test() {
+	safe {
+		int a; // error: 安全区内不允许无初始化的变量声明
+		struct F tom = {10}; // error：安全区不允许部分初始化
+		struct F tony = {10, "tony"};
+	}
+}
+```
+
+16、安全区内 switch 语句中的 case/default 只能存在于 switch 后面的第一层代码块中，且第一层代码块不允许有变量定义。
+
+```c
+safe void test(int a) {
+    switch (a) {
+    	int b = 10;  // error: 第一层代码块不允许有变量定义
+        case 0: {
+            int c = 1;  // ok
+            break;
+        }
+        {
+            case 1: {    // error: case 只能存在于 switch 后面的第一层代码块中
+                break;
+            }
+        }
+        {
+            default:{   // error: default 只能存在于 switch 后面的第一层代码块中
+                break;
+            }
+        }
+    }
+}
+```
+
+17、安全区内不允许使用自增 （++）、自减（--）操作符，不允许 union 类型通过“.”访问成员，不允许裸指针通过“->”访问成员。
+
+```c
+union un {
+    int age;
+    char name[16];
+};
+struct F {
+    int age;
+};
+
+void test(void) {
+    struct F d = {10};
+    struct F *e = &d;
+    struct F* owned f = (struct F* owned)&d;
+    safe {
+        int a = 1;
+        a++;    // error: 安全区不允许自增
+        a--;    // error: 安全区不允许自减
+        union un b = {10};
+        int c = b.age;   // error: 安全区不允许 union 通过“.”访问成员
+        int g = e->age;  // error: 安全区不允许裸指针通过“->”访问成员
+        int h = f->age;  // ok
+    }
+}
+```
+
+18、安全区内不允许使用取地址符“&”（允许对函数取地址），不允许解引用裸指针类型。
+
+```c
+void test() {
+	safe {
+		int a = 10;
+		int *b = &a;  // error: 安全区不允许取地址符号
+		int c = *b;	  // error: 安全区不允许解引用裸指针 
+	}
+}
+```
+
+19、安全区内不允许指向类型不同的指针类型之间转换，不允许指针和非指针类型之间的转换，不允许 owned/raw 指针之间的转换。
+
+```c
+void test() {
+	int *a;
+	double *b;
+	safe {
+		b = a;  // error：不允许指向类型不同的指针类型之间转换
+		a = b;  // error：不允许指向类型不同的指针类型之间转换
+		b = (double *)a;  // error：不允许指向类型不同的指针类型之间转换
+	}
+	int c;
+	safe {
+		a = c;  // error：不允许指针和非指针类型之间的转换
+		c = a;  // error：不允许指针和非指针类型之间的转换
+	}
+	int* owned d = (int* owned)&c;
+	safe {
+		a = d;  // error：不允许 owned/raw 指针之间的转换
+		d = a;  // error：不允许 owned/raw 指针之间的转换
+	}
+}
+```
+
+20、安全区内不允许表达范围从大向小的类型转换（比如从 long 转换为 int，从 int 转换为 _Bool，从 int 转换为 enum）。不允许表达精度从高向低的类型转换（比如从 double 转换为 float）。对于基础类型的常量发生类型转换，如果目标类型可以描述这个值，那么该类型转换是允许的。
+
+```c
+void test() {
+    long a;
+    int b;
+    _Bool c;
+    double e;
+    float f;
+    safe {
+        a = b;    // ok
+        b = a;    // error: 不允许表达范围从大向小的类型转换
+        a = 1;    // ok
+        c = 1;    // ok
+        c = 2;    // error: 目标类型不可以描述这个值，不允许转换
+        e = f;    // ok
+        f = e;    // error：不允许表达精度从高向低的类型转换
+        f = 1.0;  // ok
+        f = 1.2f; // ok
+    }
+}
+```
+
+21、安全区内不允许内嵌汇编语句。
+
+```c
+void test() {
+    safe {
+        int ret = 0;
+        int src = 1;
+        asm("move %0, %1\n\t" :"=r"(ret) :"r"(src)); // error: 安全区不允许内嵌汇编
+    }
+}
+```
 
 
 
