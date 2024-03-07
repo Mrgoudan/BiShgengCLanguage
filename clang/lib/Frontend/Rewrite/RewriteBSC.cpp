@@ -446,7 +446,8 @@ const std::string RewriteBSC::GetRewrittenString() {
 
       break;
     }
-    case Decl::Var: {
+    case Decl::Var: 
+    case Decl::FileScopeAsm: {
       if (SM->isWrittenInMainFile(SM->getExpansionLoc(D->getBeginLoc()))) {
         D->print(Buf, Policy);
         Buf << ";\n\n";
