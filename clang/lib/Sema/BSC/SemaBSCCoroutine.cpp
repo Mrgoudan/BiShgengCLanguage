@@ -149,17 +149,33 @@ static Stmt *buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr,
       nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
 
   // generating free call
-  std::vector<Expr *> FreeArgs{PtrExpr};
+  QualType Ty = S.Context.getPointerType(S.Context.VoidTy);
+  Expr *FreeArg = PtrExpr;
+  if (PtrExpr->getType() != Ty) {
+    FreeArg = CStyleCastExpr::Create(
+        S.Context, Ty, VK_PRValue, CK_BitCast, FreeArg, nullptr,
+        FPOptionsOverride(),
+        S.Context.getTrivialTypeSourceInfo(Ty, SourceLocation()),
+        SourceLocation(), SourceLocation());
+  }
+  std::vector<Expr *> FreeArgs{FreeArg};
   Expr *FreeFuncCall = S.BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(),
                                        FreeArgs, SourceLocation())
                            .get();
   // generating null assignment
-  QualType Ty = S.Context.getPointerType(S.Context.VoidTy);
   Expr *RAssignExpr = CStyleCastExpr::Create(
       S.Context, Ty, VK_PRValue, CK_NullToPointer, IntegerExpr, nullptr,
       FPOptionsOverride(),
       S.Context.getTrivialTypeSourceInfo(Ty, SourceLocation()),
       SourceLocation(), SourceLocation());
+  if (PtrExpr->getType() != Ty) {
+    RAssignExpr = CStyleCastExpr::Create(
+        S.Context, PtrExpr->getType(), VK_PRValue, CK_BitCast, RAssignExpr,
+        nullptr, FPOptionsOverride(),
+        S.Context.getTrivialTypeSourceInfo(PtrExpr->getType(),
+                                           SourceLocation()),
+        SourceLocation(), SourceLocation());
+  }
   Expr *NullptrAssign =
       S.BuildBinOp(nullptr, SourceLocation(), BO_Assign,
                    /* LHSExpr=*/PtrExpr, /* RHSExpr=*/RAssignExpr)
