@@ -12357,6 +12357,7 @@ public:
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;
   SafeZoneSpecifier getInstantiationSafeZoneSpecifier();
+  ExprResult CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, bool IsConstexpr);
 #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

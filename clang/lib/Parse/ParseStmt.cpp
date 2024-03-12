@@ -1612,8 +1612,11 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation ConstevalLoc;
 
   if (Tok.is(tok::kw_constexpr)) {
-    Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
-                                        : diag::ext_constexpr_if);
+    #if ENABLE_BSC
+    if (!getLangOpts().BSC)
+    #endif
+      Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
+                                          : diag::ext_constexpr_if);
     IsConstexpr = true;
     ConsumeToken();
   } else {

@@ -20507,6 +20507,12 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4
 
+    #if ENABLE_BSC
+    if (getLangOpts().BSC && IsConstexpr) {
+      return CheckBSCConstexprCondition(Loc, E, IsConstexpr);
+    }
+    #endif
+
     ExprResult ERes = DefaultFunctionArrayLvalueConversion(E);
     if (ERes.isInvalid())
       return ExprError();

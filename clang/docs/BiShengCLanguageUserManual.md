@@ -529,8 +529,9 @@ int main() {
 ```
 
 ------
-## constexpr
-### 概述
+## 常量计算
+### constexpr
+#### 概述
 constexpr 可以定义编译时常量和编译时计算返回值的函数。
 在 C 语言中已经有了 const 关键字，而它的含义更多的是 readonly 的意思，不是“编译时常量”这么强的约束，所以我们需要引入 "constexpr" 这个关键字来表达编译时计算的能力。
 
@@ -573,8 +574,8 @@ int main() {
     return 0;
 }
 ```
-###使用规则
-####constexpr 修饰变量
+#### 使用规则
+##### constexpr 修饰变量
 1. constexpr 可以修饰一个常量定义，且必须在定义时被初始化，否则要报错
 ```
 constexpr int a = 5;
@@ -617,7 +618,7 @@ constexpr int b = foo(a);
 constexpr int b = 1 == 1.0; 
 ```
 
-####constexpr 修饰函数
+##### constexpr 修饰函数
 1. constexpr 可以修饰一个函数声明或者定义
 ```
 constexpr int foo();
@@ -681,7 +682,7 @@ constexpr int foo2(constexpr int a) { //error
 ```
 ------
 
-## type trait
+### type trait
 
 type trait 可以看作是一个编译期计算返回值的 constexpr 函数。
 BSC标准库中提供了一系列 type trait 泛型函数，使用时需要导入头文件 bsc_type_traits.hbs
@@ -788,6 +789,111 @@ type trait 函数也可用于静态断言中
 int main() {
     _Static_assert(is_integral<int>() == true, "fail");
     _Static_assert(is_integral<float>() == false, "fail");
+    return 0;
+}
+```
+
+### constexpr if
+#### 概述
+以 if constexpr 开头的语句被称为 constexpr if 语句，允许用户使用 constexpr 表达式作为 if 语句的条件，保证条件是编译时计算的常量，使得编译器在编译时就能够做分支判断，并对 false 分支进行死代码消除，减少运行时开销。
+
+constexpr if 语句与普通 if 语句的区别在于，cond 条件表达式之前使用 constexpr 关键字进行修饰，即：
+```
+if constexpr (<cond>) {
+    <then-statement>
+} else {
+    <else-statement>
+}
+```
+
+我们以计算阶乘为例来认识 constexpr if，先写出一个不使用 constexpr if 的版本来计算阶乘：
+```
+int factorial(int n) {
+    return (n == 1) ? 1 : n * factorial(n - 1);
+}
+
+int main() {
+    printf("%d", factorial(5));
+    return 0;
+}
+```
+由于 BSC 不支持泛型特化的功能，故想要实现阶乘只能使用普通函数，在运行期进行求值。使用 constexpr if，我们可以实现类似于泛型特化的功能，实现编译期计算阶乘结果。
+```
+constexpr int factorial<int N>() {
+    if constexpr (N == 1) {
+        return 1;
+    } else {
+        return N * factorial<N - 1>();
+    }
+}
+
+int main() {
+    _Static_assert(factorial<5>() == 120, "fail");
+    return 0;
+}
+```
+
+#### 用法
+constexpr if 语句中的 cond 表达式在使用时需要满足以下约束：
+1. cond 表达式必须是可编译时求值的常量表达式；
+2. cond 表达式的类型必须是可以隐式转换为 bool 的类型，包括 bool、整型和 char。
+例如：
+```
+int foo1() {
+    return 5;
+}
+
+constexpr int foo2(int a) {
+    return a;
+}
+
+int main() {
+    int a = 1;
+    if constexpr(5.0) { //error,类型不支持浮点类型
+        a = 6;
+    }
+    if constexpr(a) {  //error,不是编译期计算的常量表达式
+        a = 6;
+    }
+    if constexpr(foo1()) {  //error,不是编译期计算的常量表达式
+        a = 6;
+    }
+    if constexpr(foo2(a)) {  //error,不是编译期计算的常量表达式
+        a = 6;
+    }
+    return 0;
+}
+```
+
+constexpr if 语句中，因为条件表达式是编译时计算的常量表达式，求值为 false 的分支会被定义为 “discarded statement”，会在编译期作为死代码被消除。
+例如：
+```
+if constexpr (<cond>) {  //如果<cond>的值为true
+    <true-statement>
+} else {
+    <false-statement>  //那么else分支内的语句成为discarded statement，会在编译期作为死代码被消除
+}
+```
+
+对于 discarded statement，有如下规则：
+1. 在非泛型上下文内，discarded statement 仍然需要做完整的语法语义检查。
+2. 在泛型上下文内，discarded statement 不会被实例化，也就不会进行实例化之后的语义检查。
+例如：
+```
+void foo<T>(T a) {
+    if constexpr (is_pointer<T>()) {
+    //如果T不是指针，实例化的时候，下面这个block会被当作死代码，不会被实例化，也就不会进行实例化之后的语义检查
+        printf("T is pointer\n");
+        void* p = (void*) a;
+    } else {
+        printf("T is a generic case\n");
+    }
+}
+
+int main() {
+    int b = 5;
+    foo<int>(5);
+    foo<int*>(&b);
     return 0;
 }
 ```

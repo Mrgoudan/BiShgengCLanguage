@@ -14,6 +14,7 @@
 #if ENABLE_BSC
 
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaDiagnostic.h"
 
 using namespace clang;
 using namespace sema;
@@ -39,4 +40,14 @@ void Sema::ActOnPragmaIcallHint(std::string funcInfo) {
   }
 }
 
+// Check if BSC constexpr if condition expression satisfy:
+// 1. type is bool, integral or char;
+// 2. constant expression which can be calculated in compile time.
+ExprResult Sema::CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, bool IsConstexpr) {
+  if (!CondExpr->getType()->isBSCCalculatedTypeInCompileTime()) {
+    Diag(Loc, diag::err_constexpr_if_cond_expr_unsupported_type) << CondExpr->getType();
+    return ExprError();
+  }
+  return CheckCXXBooleanCondition(CondExpr, IsConstexpr);
+}
 #endif

@@ -80,6 +80,8 @@ def err_constexpr_func_unsupported_type : Error<
   "BSC constexpr function does not support type %0">;
 def err_constexpr_var_unsupported_type : Error<
   "BSC constexpr variable does not support type %0">;
+def err_constexpr_if_cond_expr_unsupported_type : Error<
+  "BSC constexpr if condition expression does not support type %0">;
 
 // BSC safe scope warnings and errors.
 def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
