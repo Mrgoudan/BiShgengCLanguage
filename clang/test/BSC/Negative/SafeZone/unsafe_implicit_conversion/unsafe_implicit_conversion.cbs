@@ -127,6 +127,12 @@ void baseTypeCastConver() {
     c = 1;
     c = 2;            // expected-error{{conversion from type 'int' to '_Bool' is forbidden in the safe zone}}
   }
+  // char <-> long double
+  safe {
+    char a = 'A';
+    long double b = a;  // ok
+    char c = b;         // expected-error{{conversion from type 'long double' to 'char' is forbidden in the safe zone}}
+  }
   // int <-> enum
   enum E {
     ZERO,
