@@ -31,8 +31,8 @@ int main() {
   if (q != q1) {}
   if (q != &p) {}
   // compare with trait *
-  if (q != p) {} // expected-warning {{comparison of distinct pointer types ('struct __Trait_F **' and 'trait F *')}}
-                 // expected-error@-1{{invalid operands to binary expression ('struct __Trait_F *' and 'struct __Trait_F')}}
+  if (q != p) {} // expected-error {{invalid operands to binary expression ('struct __Trait_F *' and 'struct __Trait_F')}}
+                 // expected-warning@-1 {{comparison of distinct pointer types ('trait F **' and 'trait F *')}}
   // compare with int
   if (q != num) {} // expected-warning {{comparison between pointer and integer ('struct __Trait_F *' and 'int')}}
   // compare with struct S
@@ -62,5 +62,5 @@ int main() {
   if ((**t) == a) {} // expected-warning {{expected a pointer type which has implemented 'trait F', found 'int *'}}
   if ((**t) == s) {} // expected-error {{expected a pointer type which has implemented 'trait F', found 'struct S'}}
 
-  (*t)->foo(); // expected-error {{no member named 'foo' in 'struct __Trait_F'}}
+  (*t)->foo(); // expected-error {{'trait F **' cannot directly call functions}}
 }

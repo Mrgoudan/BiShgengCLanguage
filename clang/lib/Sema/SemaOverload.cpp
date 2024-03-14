@@ -1987,6 +1987,17 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
+  #if ENABLE_BSC
+  if (S.getLangOpts().BSC) {
+    if (TraitDecl *TD = S.TryDesugarTrait(CanonTo)) {
+      if (TD->getTypeImpledVarDecl(CanonFrom->getPointeeType()))
+        return true;
+      if (TD == S.TryDesugarTrait(FromType))
+        return true;
+    }
+  }
+  #endif
+
   if (CanonFrom == CanonTo)
     return true;
 

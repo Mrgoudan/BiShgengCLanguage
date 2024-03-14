@@ -2287,6 +2287,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           //   t->foo(); // see '->', desugar to "t.vtable->foo()" immediately;
           // }
           // @endcode
+          if (T->isPointerType()) {
+            Diag(LHS.get()->getExprLoc(), diag::err_multi_trait_call_func) << Actions.CompleteTraitType(T);
+            return ExprError();
+          }
           TraitParam =
               Actions.AddAfterStructTrait(LHS, Loc, "data").get(); // "t.data"
           LHS = Actions.AddAfterStructTrait(LHS, Loc, "vtable");   // "t.vtable"

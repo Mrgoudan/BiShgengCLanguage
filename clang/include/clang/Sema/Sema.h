@@ -5637,6 +5637,7 @@ public:
   QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
                                      SourceLocation Loc);
   TraitDecl *TryDesugarTrait(QualType T);
+  bool IsDesugaredFromTraitType(QualType T);
   ExprResult AddAfterStructTrait(ExprResult ULE, SourceLocation DSLoc,
                                  std::string ID);
   VarDecl *ActOnDesugarTraitInstance(Decl *VarDec);

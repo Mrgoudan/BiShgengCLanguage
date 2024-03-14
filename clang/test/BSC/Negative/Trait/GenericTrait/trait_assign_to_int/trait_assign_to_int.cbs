@@ -16,6 +16,6 @@ trait F<int>* get(trait F<int>* f) {
 
 int main() {
   int a = 1;
-  int b = get(&a); // expected-error {{initializing 'int' with an expression of incompatible type 'trait F<int>'}}
+  int b = get(&a); // expected-error {{initializing 'int' with an expression of incompatible type 'trait F<int> *'}}
   return 0;
 }

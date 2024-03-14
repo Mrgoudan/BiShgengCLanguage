@@ -235,7 +235,7 @@ bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
   bool IsSafeBehavior = true;
   QualType SrcType = SrcExpr.get()->getType();
   if (IsTraitExpr(SrcExpr.get())) {
-    SrcType = Context.getPointerType(CompleteTraitType(SrcType));
+    SrcType = CompleteTraitType(SrcType);
   }
   // conversion from non trait pointer type to trait pointer type is allowed
   if (DestType->isTraitPointerType() && !SrcType->isTraitPointerType()) {

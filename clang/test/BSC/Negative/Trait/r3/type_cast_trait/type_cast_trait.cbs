@@ -18,7 +18,7 @@ int main() {
   baz((trait TR1)&y); // expected-error {{used type 'trait TR1' where arithmetic or pointer type is required}}
 
   trait TR1* tr1 = (trait TR1*)&y;
-  baz(*tr1); // expected-error {{indirection requires pointer operand ('trait TR1' invalid)}}
+  baz(*tr1); // expected-error {{indirection requires pointer operand ('trait TR1 *' invalid)}}
 
   ((trait TR1)&y)->f1(); // expected-error {{used type 'trait TR1' where arithmetic or pointer type is required}}
   return 0;
