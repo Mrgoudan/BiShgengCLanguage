@@ -15754,6 +15754,10 @@ ExprResult Sema::ActOnBinOp(Scope *S, SourceLocation TokLoc,
   #if ENABLE_BSC
   // Handling reassignments of variable types with trait pointers:
   if (getLangOpts().BSC) {
+    if (LHSExpr->getType()->hasTraitType())
+      LHSExpr = LHSExpr->IgnoreCasts();
+    if (RHSExpr->getType()->hasTraitType())
+      RHSExpr = RHSExpr->IgnoreCasts();
     bool LHSIsTrait = IsTraitExpr(LHSExpr);
     bool RHSIsTrait = IsTraitExpr(RHSExpr);
     if (LHSIsTrait || RHSIsTrait) {

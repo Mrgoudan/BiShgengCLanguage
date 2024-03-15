@@ -26,6 +26,12 @@ int main() {
     if (x == f) {
         return 0;
     }
+    if ((trait Future *)f == (trait Future *)x) {
+        return 0;
+    }
+    if ((int *)f == x) {
+        return 0;
+    }
     return 1;
 }
 
@@ -52,6 +58,12 @@ int main() {
 // CHECK-NEXT: return 1;
 // CHECK-NEXT: }
 // CHECK-NEXT: if (x == f.data) {
+// CHECK-NEXT: return 0;
+// CHECK-NEXT: }
+// CHECK-NEXT: if (f.data == x) {
+// CHECK-NEXT: return 0;
+// CHECK-NEXT: }
+// CHECK-NEXT: if ((int *)f.data == x) {
 // CHECK-NEXT: return 0;
 // CHECK-NEXT: }
 // CHECK-NEXT: return 1;

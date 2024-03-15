@@ -26,6 +26,9 @@ int traitPtrEqualTraitPtr() {
   if (f == e) {
     return 0;
   }
+  if ((trait F<int>*)f != (trait F<int>*)e) {
+    return 1;
+  }
   return 1;
 }
 
@@ -38,6 +41,9 @@ int traitPtrNotEqualTraitPtr() {
     return 1;
   }
   if (f != e) {
+    return 0;
+  }
+  if ((trait F<int>*)f != (trait F<int>*)e) {
     return 0;
   }
   return 1;
@@ -53,12 +59,12 @@ int main() {
 // CHECK: struct __Trait_F_Vtable_int {
 // CHECK-NEXT: int (*foo)(void *);
 // CHECK-NEXT: };
- 
+
 // CHECK: struct __Trait_F_int {
 // CHECK-NEXT: void *data;
 // CHECK-NEXT: struct __Trait_F_Vtable_int *vtable;
 // CHECK-NEXT: };
- 
+
 // CHECK: int int_foo(int *this) {
 // CHECK-NEXT: return 2;
 // CHECK-NEXT: }
@@ -75,6 +81,9 @@ int main() {
 // CHECK-NEXT: if (f.data == e.data && f.vtable == e.vtable) {
 // CHECK-NEXT: return 0;
 // CHECK-NEXT: }
+// CHECK-NEXT: if (f.data != e.data || f.vtable != e.vtable) {
+// CHECK-NEXT: return 1;
+// CHECK-NEXT: }
 // CHECK-NEXT: return 1;
 // CHECK-NEXT: }
 
@@ -85,6 +94,9 @@ int main() {
 // CHECK-NEXT: struct __Trait_F_int e = {&b, &__int_trait_F};
 // CHECK-NEXT: if (f.data == e.data && f.vtable == e.vtable) {
 // CHECK-NEXT: return 1;
+// CHECK-NEXT: }
+// CHECK-NEXT: if (f.data != e.data || f.vtable != e.vtable) {
+// CHECK-NEXT: return 0;
 // CHECK-NEXT: }
 // CHECK-NEXT: if (f.data != e.data || f.vtable != e.vtable) {
 // CHECK-NEXT: return 0;

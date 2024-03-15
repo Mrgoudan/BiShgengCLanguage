@@ -27,24 +27,27 @@ int main() {
     if (f != g) {
         return 0;
     }
+    if (NULL == (trait Future *)f) {
+        return 1;
+    }
     return 1;
 }
 
 // CHECK: struct __Trait_Future_Vtable {
 // CHECK-NEXT: int (*poll)(void *);
 // CHECK-NEXT: };
- 
+
 // CHECK: struct __Trait_Future {
 // CHECK-NEXT: void *data;
 // CHECK-NEXT: struct __Trait_Future_Vtable *vtable;
 // CHECK-NEXT: };
- 
+
 // CHECK: int int_poll(int *this) {
 // CHECK-NEXT: return *this;
 // CHECK-NEXT: }
 
 // CHECK: struct __Trait_Future_Vtable __int_trait_Future = {.poll = (int (*)(void *))int_poll};
- 
+
 // CHECK: int main(void) {
 // CHECK-NEXT: int *c = ((void *)0);
 // CHECK-NEXT: struct __Trait_Future f = {((void *)0), ((void *)0)}, g = {c, &__int_trait_Future};
@@ -53,6 +56,9 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-NEXT: if (f.data != g.data || f.vtable != g.vtable) {
 // CHECK-NEXT: return 0;
+// CHECK-NEXT: }
+// CHECK-NEXT: if (((void *)0) == f.data) {
+// CHECK-NEXT: return 1;
 // CHECK-NEXT: }
 // CHECK-NEXT: return 1;
 // CHECK-NEXT: }
