@@ -1357,6 +1357,66 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
   }
 }
 
+#if ENABLE_BSC
+// To prefix the type by jointing '_' between types and function name.
+// Arg 'isFront' determines weather to prefix '_' at the front of type or not.
+static std::string GetTypePrefix(QualType T, bool isFront,
+                                 const PrintingPolicy &PP) {
+  std::string ExtendedTypeStr;
+  llvm::raw_string_ostream OS(ExtendedTypeStr);
+  T.print(OS, PP);
+  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
+    if (ExtendedTypeStr[i] == ' ') {
+      ExtendedTypeStr.replace(i, 1, "_");
+    } else if (ExtendedTypeStr[i] == '*') {
+      // Since '*' is not allowed to appear in identifier,
+      // we replace it with 'P'.
+      // FIXME: it may conflict with user defined type Char_P.
+      ExtendedTypeStr.replace(i, 1, "P");
+    } else if (ExtendedTypeStr[i] == '(') {
+      // Since '(' is not allowed to appear in identifier,
+      // we replace it with 'LP'.
+      ExtendedTypeStr.replace(i, 1, "LP");
+    } else if (ExtendedTypeStr[i] == ')') {
+      // Since ')' is not allowed to appear in identifier,
+      // we replace it with 'RP'.
+      ExtendedTypeStr.replace(i, 1, "RP");
+    } else if (ExtendedTypeStr[i] == '[') {
+      // Since '[' is not allowed to appear in identifier,
+      // we replace it with 'LB'.
+      ExtendedTypeStr.replace(i, 1, "LB");
+    } else if (ExtendedTypeStr[i] == ']') {
+      // Since ']' is not allowed to appear in identifier,
+      // we replace it with 'RB'.
+      ExtendedTypeStr.replace(i, 1, "RB");
+    }
+  }
+  if (isFront) {
+    ExtendedTypeStr = "_" + ExtendedTypeStr;
+  } else {
+    ExtendedTypeStr += "_";
+  }
+  return ExtendedTypeStr;
+}
+
+static std::string
+RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
+                           const PrintingPolicy &Policy) {
+  std::string QT;
+  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
+    QT = GetTypePrefix(TemplateArg.getAsType(), /*isFront=*/true, Policy);
+  else if (TemplateArg.getKind() ==
+           clang::TemplateArgument::ArgKind::Integral) {
+    llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
+    if (TemplateInt.isNegative())
+      QT = "_n" + std::to_string(-TemplateInt.getExtValue());
+    else
+      QT = "_" + std::to_string(TemplateInt.getExtValue());
+  }
+  return QT;
+}
+#endif
+
 void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   if (Policy.IncludeTagDefinition) {
     PrintingPolicy SubPolicy = Policy;
@@ -1428,6 +1488,17 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   // arguments.
   if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     ArrayRef<TemplateArgument> Args;
+    #if ENABLE_BSC
+    if (Policy.RewriteBSC) {
+      Args = Spec->getTemplateArgs().asArray();
+      std::string BSCRecordNameStr;
+      for (size_t i = 0; i < Args.size(); i++) {
+        std::string QT = RewriteBSCTemplateArgument(Args[i], Policy);
+        BSCRecordNameStr += QT;
+      }
+      OS << BSCRecordNameStr;
+    } else {
+    #endif
     TypeSourceInfo *TAW = Spec->getTypeAsWritten();
     if (!Policy.PrintCanonicalTypes && TAW) {
       const TemplateSpecializationType *TST =
@@ -1441,6 +1512,9 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     printTemplateArgumentList(
         OS, Args, Policy,
         Spec->getSpecializedTemplate()->getTemplateParameters());
+    #if ENABLE_BSC    
+    }
+    #endif
   }
 
   spaceBeforePlaceHolder(OS);
