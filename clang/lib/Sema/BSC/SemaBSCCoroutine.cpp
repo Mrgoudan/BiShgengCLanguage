@@ -672,7 +672,11 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
                                  S.Context.getPointerType(PollInit->getType()),
                                  CK_FunctionToPointerDecay)
                  .get();
-  PollInit = S.ImpCastExprToType(PollInit, PollFuncType, CK_BitCast).get();
+  PollInit =
+      S.BuildCStyleCastExpr(SourceLocation(),
+                            S.Context.getTrivialTypeSourceInfo(PollFuncType),
+                            SourceLocation(), PollInit)
+          .get();
   InitExprs.push_back(PollInit);
 
   QualType FreeFuncType = S.Context.getPointerType(
@@ -684,7 +688,11 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
                                  S.Context.getPointerType(FreeInit->getType()),
                                  CK_FunctionToPointerDecay)
                  .get();
-  FreeInit = S.ImpCastExprToType(FreeInit, FreeFuncType, CK_BitCast).get();
+  FreeInit =
+      S.BuildCStyleCastExpr(SourceLocation(),
+                            S.Context.getTrivialTypeSourceInfo(FreeFuncType),
+                            SourceLocation(), FreeInit)
+          .get();
   InitExprs.push_back(FreeInit);
 
   Expr *ILE =

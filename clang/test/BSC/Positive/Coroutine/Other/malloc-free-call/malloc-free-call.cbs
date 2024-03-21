@@ -52,3 +52,5 @@ int main() {
 // CHECK-NEXT:      struct __Trait_Future_int fp = {(void *)data, &__Trait_Future_Vtablef};
 // CHECK-NEXT:      return fp;
 // CHECK-NEXT:  }
+
+// CHECK: struct __Trait_Future_Vtable_int __Trait_Future_Vtablef = {(struct PollResult_int (*)(void *))struct__Futuref_poll, (void (*)(void *))struct__Futuref_free};

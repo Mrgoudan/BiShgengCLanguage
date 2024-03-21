@@ -300,9 +300,6 @@ const std::string RewriteBSC::GetRewrittenString() {
       ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
       for (auto *DD : CT->specializations()) {
         SourceLocation SL = DD->getPointOfInstantiation();
-        if (!SM->isWrittenInMainFile(SL)) {
-          continue;
-        }
         std::vector<Decl *>::iterator It = DeclList.begin();
         bool Inserted = false;
         while (It != DeclList.end()) {
