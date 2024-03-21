@@ -1140,7 +1140,9 @@ bool Parser::isBSCTemplateDecl(Token tok) {
   for(; !IsBSCTemplateBlackList(LookAheadKind); LookAheadOffset++) {
     LookAheadTok = PP.LookAhead(LookAheadOffset);
     LookAheadKind = PP.LookAhead(LookAheadOffset).getKind();
-
+    if (IsBSCTemplateBlackList(LookAheadKind)) {
+      break;
+    }
     NextTok = PP.LookAhead(LookAheadOffset + 1);
     if(LookAheadOffset != 0) {
       PreTok = PP.LookAhead(LookAheadOffset - 1);
