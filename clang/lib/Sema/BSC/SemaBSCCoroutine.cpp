@@ -229,10 +229,21 @@ class LocalVarFinder : public StmtVisitor<LocalVarFinder> {
                  continue;
 
                std::string VDName = VD->getName().str();
-               SetIdentifierNumber(VDName, GetIdentifierNumber(VDName) + 1);
-               if (GetIdentifierNumber(VDName) > 1) {
-                 VDName = VDName + "_" +
-                          std::to_string(GetIdentifierNumber(VDName) - 1);
+               // May have several local variables which has same name, eg.
+               // @code
+               // async void f() {
+               //    int c = 1;
+               //    {
+               //       int c = 2;
+               //  }
+               //   }
+               // @endcode
+               std::map<std::string, int>::iterator I =
+                   IdentifierNumber.find(VDName);
+               int VDNameNum = I != IdentifierNumber.end() ? I->second : 0;
+               IdentifierNumber[VDName] = VDNameNum + 1;
+               if (VDNameNum > 0) {
+                 VDName = VDName + "_" + std::to_string(VDNameNum);
                  VD->setDeclName(&(Context.Idents).get(VDName));
                }
 
@@ -247,17 +258,6 @@ class LocalVarFinder : public StmtVisitor<LocalVarFinder> {
    }
   std::vector<std::pair<DeclarationName, QualType>> GetLocalVarList() const {
     return LocalVarList;
-  }
-
-  void SetIdentifierNumber(std::string identifier, int index) {
-    assert(!identifier.empty() && "Passed null name");
-    IdentifierNumber[identifier] = index;
-  }
-
-  int GetIdentifierNumber(std::string identifier) {
-    std::map<std::string, int>::iterator I = IdentifierNumber.find(identifier);
-    if (I != IdentifierNumber.end()) return I->second;
-    return 0;
   }
 };
 
@@ -1930,8 +1930,9 @@ class ARFinder : public StmtVisitor<ARFinder> {
   const int UnitNum = 3;
   int ReturnNum;
   llvm::DenseMap<ReturnStmt *, int> ARMap;
+  std::map<std::string, int> IdentifierNumber;
 
- public:
+public:
   ARFinder(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD,
            QualType ReturnTy)
       : SemaRef(SemaRef),
@@ -1988,6 +1989,22 @@ class ARFinder : public StmtVisitor<ARFinder> {
     }
 
     std::string ResReturnName = "__RES_RETURN";
+    // May have several return stmts in the same scope, eg.
+    // @code
+    // async f() {
+    //    goto ERR;
+    //    return 0;
+    // ERR:
+    //    return 0;
+    // }
+    // @endcode
+    std::map<std::string, int>::iterator I =
+        IdentifierNumber.find(ResReturnName);
+    int ResReturnNum = I != IdentifierNumber.end() ? I->second : 0;
+    IdentifierNumber[ResReturnName] = ResReturnNum + 1;
+    if (ResReturnNum > 0) {
+      ResReturnName = ResReturnName + "_" + std::to_string(ResReturnNum);
+    }
     VarDecl *ResReturnVD =
         VarDecl::Create(SemaRef.Context, FD, SourceLocation(), SourceLocation(),
                         &(SemaRef.Context.Idents).get(ResReturnName),
@@ -2087,14 +2104,36 @@ class TransformARToCS : public TreeTransform<TransformARToCS> {
     std::vector<Stmt *> Statements;
     for (auto *C : S->children()) {
       Stmt *SS = const_cast<Stmt *>(C);
-      if (isa<ReturnStmt>(SS)) {
-        int index = ARInitlizer.GetARMap(cast<ReturnStmt>(SS));
-        if (index != -1) {
-          for (int i = index; i < index + UnitNum; i++) {
-            if (i < StmtsSize) Statements.push_back(ReturnStmts[i]);
-          }
+      if (auto *RS = dyn_cast<ReturnStmt>(SS)) {
+        int index = ARInitlizer.GetARMap(RS);
+        assert(index != -1);
+        for (int i = index; i < index + UnitNum; i++) {
+          assert(i < StmtsSize);
+          Statements.push_back(ReturnStmts[i]);
         }
         continue;
+      }
+      // special case: substmt of a label stmt is a return stmt.
+      // @code
+      // LABEL:
+      //     return xx;
+      // @endcode
+      if (auto *LS = dyn_cast<LabelStmt>(SS)) {
+        if (auto *RS = dyn_cast<ReturnStmt>(LS->getSubStmt())) {
+          int index = ARInitlizer.GetARMap(RS);
+          assert(index != -1);
+          for (int i = index; i < index + UnitNum; i++) {
+            assert(i < StmtsSize);
+            if (i == index) {
+              LabelStmt *NewLS = new (SemaRef.Context)
+                  LabelStmt(SourceLocation(), LS->getDecl(), ReturnStmts[i]);
+              Statements.push_back(NewLS);
+            } else {
+              Statements.push_back(ReturnStmts[i]);
+            }
+          }
+          continue;
+        }
       }
       SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
       Statements.push_back(SS);
@@ -2531,11 +2570,17 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
             if (j < StmtsSize) Statements.push_back(AwaitStmts[j]);
           }
         }
-
+        auto StartsWith = [](const std::string &str,
+                             const std::string &prefix) {
+          if (str.length() >= prefix.length()) {
+            return 0 == str.compare(0, prefix.length(), prefix);
+          }
+          return false;
+        };
         if (isa<DeclStmt>(SS) && cast<DeclStmt>(SS)->isSingleDecl() &&
             BaseIndex >= 0) {
           VarDecl *VD = cast<VarDecl>(cast<DeclStmt>(SS)->getSingleDecl());
-          if (VD->getNameAsString() == "__RES_RETURN") {
+          if (StartsWith(VD->getNameAsString(), "__RES_RETURN")) {
             Stmt *LastStmt = Statements[BaseIndex];
             Statements.erase(Statements.begin() + BaseIndex);
             Statements.push_back(LastStmt);
