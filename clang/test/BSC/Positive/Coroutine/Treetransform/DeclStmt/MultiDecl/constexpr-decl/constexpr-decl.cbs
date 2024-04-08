@@ -2,6 +2,7 @@
 // RUN: %test.output
 // RUN: %clang -rewrite-bsc %S/../../../../../../../../lib/Headers/bsc_include/future.hbs -o %T/future.h
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 // expected-no-diagnostics
@@ -20,14 +21,12 @@ struct Addr
 };
 
 async int f(int start) {
-  const long myLong = 100000L;
-  const unsigned int myUnsignedInt = 10U;
-  const float myFloat = 3.14f;
-  const double myDouble = 3.14159;
-  const struct Addr addr = {1, "hello"};
-  const int newStart = start;
-
-  int result = await read(newStart);
+  constexpr long myLong = 100000L;
+  constexpr unsigned int myUnsignedInt = 10U;
+  constexpr int myInt = 2;
+  static struct Addr addr = {myInt, "hello"};
+  
+  int result = await read(myInt);
   return result + 5 + start;
 }
 
@@ -36,6 +35,13 @@ int main() {
   this->poll();
   return 0;
 }
+
+// CHECK: struct _Futuref {
+// CHECK-NEXT:     int start;
+// CHECK-NEXT:     int result;
+// CHECK-NEXT:     struct __Trait_Future_int Ft_1;
+// CHECK-NEXT:     int __future_state;
+// CHECK-NEXT: };
 
 // CHECK: struct PollResult_int struct__Futuref_poll(struct _Futuref *this) {
 // CHECK-NEXT:     switch (this->__future_state) {
@@ -46,13 +52,11 @@ int main() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:   __L0:
 // CHECK-NEXT:     ;
-// CHECK-NEXT:     const long myLong = 100000L;
-// CHECK-NEXT:     const unsigned int myUnsignedInt = 10U;
-// CHECK-NEXT:     const float myFloat = 3.1400001F;
-// CHECK-NEXT:     const double myDouble = 3.1415899999999999;
-// CHECK-NEXT:     const struct Addr addr = {1, "hello"};
-// CHECK-NEXT:     this->newStart = this->start;
-// CHECK-NEXT:     this->Ft_1 = __read(this->newStart);
+// CHECK-NEXT:     long myLong = 100000L;
+// CHECK-NEXT:     unsigned int myUnsignedInt = 10U;
+// CHECK-NEXT:     int myInt = 2;
+// CHECK-NEXT:     static struct Addr addr = {2, "hello"};
+// CHECK-NEXT:     this->Ft_1 = __read(2);
 // CHECK-NEXT:   __L1:
 // CHECK-NEXT:     ;
 // CHECK-NEXT:     int Res_1;

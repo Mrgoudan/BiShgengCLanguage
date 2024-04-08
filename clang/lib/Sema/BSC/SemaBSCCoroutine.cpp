@@ -212,16 +212,22 @@ class LocalVarFinder : public StmtVisitor<LocalVarFinder> {
          if (auto DeclS = dyn_cast_or_null<DeclStmt>(C)) {
            for (const auto &DI : DeclS->decls()) {
              if (auto VD = dyn_cast_or_null<VarDecl>(DI)) {
-               if (VD->isExternallyVisible())
+               if (VD->isExternallyVisible() || VD->isConstexpr() ||
+                   VD->isStaticLocal())
                  continue;
 
                QualType QT = VD->getType();
                if (QT->hasTraitType())
                  continue;
-               if (QT.isConstQualified()) {
-                 QT.removeLocalConst(); // TODO: need reconsider
-                 VD->setType(QT);
-               }
+
+               Expr *Init = VD->getInit();
+               // Do not need to transform constant variable with compile-time
+               // constant initializier.
+               const Expr *Culprit;
+               if (QT.isConstQualified() && Init && !Init->isValueDependent() &&
+                   Init->isConstantInitializer(Context, false, &Culprit))
+                 continue;
+
                std::string VDName = VD->getName().str();
                SetIdentifierNumber(VDName, GetIdentifierNumber(VDName) + 1);
                if (GetIdentifierNumber(VDName) > 1) {
@@ -604,6 +610,9 @@ static RecordDecl *buildFutureRecordDecl(
        it != LocalVarList.end(); it++) {
     const std::string VarName = it->first.getAsString();
     QualType VarType = it->second;
+    if (VarType.isConstQualified()) {
+      VarType.removeLocalConst();
+    }
     addAsyncRecordDecl(S.Context, VarName, VarType, SLoc, ELoc, RD);
   }
 
@@ -1417,12 +1426,21 @@ class TransformToAP : public TreeTransform<TransformToAP> {
     std::vector<Stmt *> NullStmts;
     for (auto *SD : StmDecl->decls()) {
       if (VarDecl *VD = dyn_cast<VarDecl>(SD)) {
-        Expr *Init = const_cast<Expr *>(VD->getInit());
+        Expr *Init = VD->getInit();
         Expr *LE = nullptr;
         Expr *RE = nullptr;
         QualType QT = VD->getType();
 
-        if (VD->isExternallyVisible()) return S;
+        if (VD->isExternallyVisible() || VD->isConstexpr() ||
+            VD->isStaticLocal())
+          return S;
+
+        // Do not need to transform constant variable with compile-time constant
+        // initializier.
+        const Expr *Culprit;
+        if (QT.isConstQualified() && Init && !Init->isValueDependent() &&
+            Init->isConstantInitializer(SemaRef.Context, false, &Culprit))
+          return S;
 
         RecordDecl::field_iterator LField, FieldIt;
         for (FieldIt = FutureRD->field_begin();
