@@ -1,0 +1,80 @@
+// RUN: %clang_cc1 -verify %s
+
+struct C {
+    owned int a;
+    owned int b;
+};
+
+struct B {
+    owned int a;
+    owned int b;
+    struct C * owned c;
+};
+
+struct A {
+    struct B b;
+    struct B * owned c;
+    struct B d;
+    struct A * owned e;
+    struct A * f;
+};
+
+int * owned IntPtrOwned() {
+    int * owned a;
+    return a; // expected-error {{cannot read a, because it is uninitialized}}
+}
+
+void func1(owned int * owned * owned * owned a, owned int * owned * owned * owned b) {
+    int * owned c = IntPtrOwned();
+    int * owned d = c;
+    int * owned e = c; // expected-error {{cannot read c, because it is moved at line: 29}}
+} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}} expected-error {{d's memory will leak at the end of scope}} expected-error {{e's memory will leak at the end of scope}}
+
+void * owned VoidPtrOwned_err(owned struct C * owned c) {
+    int d = (int)c->a;
+    d = (int)c->b;
+    return (void * owned)c; // expected-error {{c cannot cast to 'void * owned' because inner is not moved}}
+}
+
+void * owned VoidPtrOwned_succ(owned struct C * owned c) {
+    struct C d = (struct C) *c;
+    return (void * owned)c; // expected-error {{d.a, d.b's memory will leak at the end of scope}}
+}
+
+int owned IntOwned() {
+    int owned a;
+    return a; // expected-error {{cannot read a, because it is uninitialized}}
+}
+
+int owned func2() {
+    int owned a = IntOwned();
+    return a;
+}
+
+void callee1(int * owned a, int * owned b) {} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+
+void caller1(int * owned a, int * owned b) {
+    callee1(a, b);
+}
+
+void caller2(int * owned a, int * owned b) {
+    int * owned c = a;
+    callee1(a, b); // expected-error {{cannot read a, because it is moved at line: 61}}
+} // expected-error {{c's memory will leak at the end of scope}}
+
+void callee2(void * owned a) {} // expected-error {{a's memory will leak at the end of scope}}
+
+void caller3(void * owned a) {
+    callee2(a);
+}
+
+void caller4(struct A * owned a) {
+    struct A b = (struct A)*a;
+    callee2((void * owned)a);
+} // expected-error {{b.b.a, b.b.b, b.b.c, b.c, b.d.a, b.d.b, b.d.c, b.e's memory will leak at the end of scope}}
+
+void caller5(struct A * owned a) {
+    callee2((void * owned)a);
+}
+
+int main() { return 0; }

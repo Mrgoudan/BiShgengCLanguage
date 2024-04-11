@@ -1,5 +1,21 @@
+//===--- SemaBSCOwnership.cpp - Semantic Analysis for BSC Ownership
+//----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file implements dataflow analysis for BSC Ownership.
+//
+//===----------------------------------------------------------------------===//
+
 #if ENABLE_BSC
+
 #include "clang/AST/Type.h"
+#include "clang/Analysis/Analyses/BSCOwnership.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
@@ -191,4 +207,22 @@ bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
   }
   return false;
 }
+
+void Sema::CheckBSCOwnership(const Decl *D) {
+  AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
+
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddEHEdges = false;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddTemporaryDtors = true;
+  AC.getCFGBuildOptions().AddScopes = true;
+  AC.getCFGBuildOptions().AddAllScopes = true;
+  AC.getCFGBuildOptions().setAllAlwaysAdd();
+
+  OwnershipDiagReporter Reporter(*this);
+  if (AC.getCFG())
+    runOwnershipAnalysis(*cast<FunctionDecl>(D), *AC.getCFG(), AC, Reporter);
+}
+
 #endif

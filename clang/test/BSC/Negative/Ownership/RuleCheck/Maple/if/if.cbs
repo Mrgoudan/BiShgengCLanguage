@@ -1,0 +1,80 @@
+// RUN: %clang_cc1 -verify %s
+
+int rand();
+
+void func1(owned int argA, owned int argB) {
+    owned int a;
+    if (rand()) {
+        a = argA;
+    } else {
+        a = argB;
+    }
+} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+
+void func2(owned int argA, owned int argB) {
+    owned int a;
+    if (rand()) {
+        a = argA;
+    } else {
+    }
+    owned int b = a; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+
+void func3(owned int argA, owned int argB) {
+    owned int a;
+    if (rand()) {
+        a = argA;
+    } else {
+    }
+    owned int b = argA; // expected-error {{argA cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{argB's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+
+void func4() {
+    owned int a = 5;
+    owned int b;
+    switch (rand()) {
+        case 0: {
+            break;
+        }
+        case 1: {
+            b = a;
+            break;
+        }
+        case 4: {
+            b = a;
+            break;
+        }
+        case 5: {
+            break;
+        }
+        default:
+            break;
+    }
+    b = 5; // expected-error {{cannot assign b because its type is owned}}
+} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+
+void func5(owned int argA, owned int argB) {
+    owned int a;
+    owned int b;
+    if (rand()) {
+        a = argA;
+        if (rand()) {
+            b = a;
+        }
+    } else {
+        b = argB;
+    }
+    b = a; // expected-error {{cannot assign b because its type is owned}} expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+
+void func6(owned int argA, owned int argB) {
+    owned int a;
+    owned int b;
+label1:
+    if (rand()) {
+        a = argA; // expected-error {{cannot assign a because its type is owned}} expected-error {{argA cannot be accessed, because it is uninitialized or moved}}
+        goto label1;
+    }
+} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+
+int main() { return 0; }

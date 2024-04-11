@@ -1953,7 +1953,11 @@ public:
   PoppedFunctionScopePtr
   PopFunctionScopeInfo(const sema::AnalysisBasedWarnings::Policy *WP = nullptr,
                        const Decl *D = nullptr,
-                       QualType BlockType = QualType());
+                       QualType BlockType = QualType()
+                       #if ENABLE_BSC
+                       , bool isBSCCoroutine = false
+                       #endif
+                       );
 
   sema::FunctionScopeInfo *getCurFunction() const {
     return FunctionScopes.empty() ? nullptr : FunctionScopes.back();
@@ -12340,6 +12344,7 @@ public:
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
+  void CheckBSCOwnership(const Decl *D);
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);

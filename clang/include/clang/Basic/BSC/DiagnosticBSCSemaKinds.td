@@ -88,3 +88,22 @@ def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the s
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
 def err_safe_function : Error<"%0 is forbidden in the safe function">;
 def err_safe_zone_decl : Error<"%select{|'safe'|'unsafe'}0 can only appear before on function or compound statement"> ;
+
+
+// Ownership Analysis errors.
+def err_ownership_read_invalid : Error<
+  "%0 cannot be accessed, because it is uninitialized or moved">;
+def err_ownership_scope_memory_leak : Error<
+  "%0's memory will leak at the end of scope">;
+def err_ownership_pointer_inner_moved : Error<
+  "%0 cannot be moved because its pointee is moved">;
+def err_ownership_pointer_inner_assign : Error<
+  "pointer %0 inner assign error because inner is not moved">;
+def err_ownership_cast_to_void_invalid : Error <
+  "%0 cannot cast to 'void * owned' because inner is not moved">;
+def err_ownership_reassign : Error <
+  "cannot assign %0 because its type is owned">;
+def err_ownership_read_invalid_uninit : Error<
+  "cannot read %0, because it is uninitialized">;
+def err_ownership_read_invalid_moved : Error<
+  "cannot read %0, because it is moved at line: %1">;

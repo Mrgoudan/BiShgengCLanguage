@@ -10,10 +10,10 @@ safe T max_b<T>(T a, T b) {
   return a > b ? a : b;
 }
 
-safe T max_c<T>(T a, T b) {     // expected-error{{unsafe return type is forbidden in the safe function}}  
+safe T max_c<T>(T a, T b) {     // expected-error{{unsafe return type is forbidden in the safe function}}
                                 // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
                                 // expected-error@-2{{unsafe parameter type is forbidden in the safe function}}
-  return a > b ? a : b;          
+  return a > b ? a : b;
 }
 
 void genericFun(){
@@ -22,10 +22,10 @@ void genericFun(){
   int c = max_a<int>(1, 2); // ok
   int* owned p = (int* owned)&a;
   int* owned q = (int* owned)&a;
-  int* owned m = max_b<int* owned>(p, q); // OK
+  int* owned m = max_b<int* owned>(p, q); // OK 
   int *n = max_c<void *>((void*)0, (void *)0); // expected-note{{in instantiation of function template specialization 'max_c<void *>' requested here}}
-                                                
-}
+
+}// expected-error {{m's memory will leak at the end of scope}}
 
 safe int* foo_a<T>(int* a, T b) {   // expected-error{{unsafe return type is forbidden in the safe function}}
                                     // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}

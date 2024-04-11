@@ -33,8 +33,9 @@ async int f() {
 
 async int foo() {
     struct Owned<int> q = make_owned(2);
-    int a = await f(); 
-    return a; 
+    int a = await f();
+    int * p = (int *) q.p;
+    return a;
 }
 
 int main() {

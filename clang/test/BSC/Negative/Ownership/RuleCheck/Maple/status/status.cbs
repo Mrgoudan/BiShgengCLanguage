@@ -1,0 +1,130 @@
+// RUN: %clang_cc1 -verify %s
+
+#define NULL ((void *)0)
+
+struct A {
+    int owned a;
+    int owned b;
+};
+
+int * owned func1(int * owned b) {
+    int * owned a = b;
+    return a;
+}
+
+void func2() {
+    int * owned a;
+    int * owned b = a; // expected-error {{cannot read a, because it is uninitialized}}
+} // expected-error {{b's memory will leak at the end of scope}}
+
+void func3() {
+    struct A * owned a;
+    struct A b = *a; // expected-error {{cannot read a, because it is uninitialized}}
+} // expected-error {{b.a, b.b's memory will leak at the end of scope}}
+
+void func4() {
+    owned struct A a;
+    int owned b = a.a; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{b's memory will leak at the end of scope}}
+
+void func12(owned int a, owned int b) {
+    a = b; // expected-error {{cannot assign a because its type is owned}}
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func15(int * owned * owned a) {
+    int * owned b = *a;
+    int * c = (int *)b;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func16(owned struct A a) {
+    int b = (int)a.a;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func17(owned struct A a) {
+    owned struct A b = a;
+} // expected-error {{b's memory will leak at the end of scope}}
+
+void * owned func20(struct A * owned a) {
+    int owned b = a->a;
+    int owned c = a->b;
+    return (void * owned)a; // expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+}
+
+void * owned func201(owned struct A * owned a) {
+    int owned b = a->a;
+    int owned c = a->b;
+    return (void * owned)a; // expected-error {{a cannot cast to 'void * owned' because inner is not moved}} expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+}
+
+struct B {
+    owned int a;
+    owned int b;
+    owned int c;
+};
+
+void func21(struct B owned a) {
+    int b = (int)a.a;
+    int c = (int)a.b;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func22(struct A owned a) {
+    int b = (int)a.a;
+    a.a = 5;
+    struct A c = (struct A)a;
+} // expected-error {{c.a, c.b's memory will leak at the end of scope}}
+
+void func23(struct A owned a) {
+    struct A owned b;
+    a = b; // expected-error {{cannot assign a because its type is owned}} expected-error {{b cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func25(int owned a, int owned b) {
+    int c = (int)a;
+    a = b;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func26(struct A owned a, struct A owned b) {
+    struct A owned c = a;
+    a.a = b.a;
+} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+
+void func27(struct A owned a) {
+    struct A owned b = a;
+    struct A owned c = a; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+
+void func28(struct A owned a, struct A owned b) {
+    int owned c = b.a;
+    int owned d = b.b;
+    struct A e = (struct A)a;
+    a = b; // expected-error {{b cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{a's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}} expected-error {{d's memory will leak at the end of scope}} // expected-error {{e.a, e.b's memory will leak at the end of scope}}
+
+void func29(int * owned * owned a) {
+    int * owned c = *a;
+    int * owned * owned b;
+    a = b; // expected-error {{cannot assign a because its type is owned}} expected-error {{cannot read b, because it is uninitialized}}
+} // expected-error {{a's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+
+void func31(struct A * owned a) {
+    int b = (int)a->a;
+    int c = (int)a->b;
+    a->a = 5;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func32(int * owned * owned a, int * owned * owned b) {
+    int * owned c = *a;
+    int * owned * owned e = a; // expected-error {{a cannot be moved because its pointee is moved}}
+} // expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}} expected-error {{e's memory will leak at the end of scope}}
+
+void * owned func33(int * owned * owned a) {
+    int * owned b = *a;
+    return (void * owned)a; // expected-error {{b's memory will leak at the end of scope}}
+}
+
+void * owned func34(owned struct A a) {
+    int c = (int)a.a;
+    int d = (int)a.b;
+    int owned x = 5;
+    a.a = 5;
+} // expected-error {{a's memory will leak at the end of scope}} expected-error {{x's memory will leak at the end of scope}}

@@ -1245,6 +1245,9 @@ public:
     bool AddLoopExit = false;
     bool AddTemporaryDtors = false;
     bool AddScopes = false;
+    #if ENABLE_BSC
+    bool AddAllScopes = false;
+    #endif
     bool AddStaticInitBranches = false;
     bool AddCXXNewAllocator = false;
     bool AddCXXDefaultInitExprInCtors = false;

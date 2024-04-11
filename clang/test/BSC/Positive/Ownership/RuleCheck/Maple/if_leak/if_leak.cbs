@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+struct B {
+    int * a;
+};
+
+struct B owned SafeMalloc(int *arg) {
+    struct B owned aaa = { .a = arg };
+    return aaa;
+}
+
+void SafeMalloc1(int *arg) {
+    struct B owned aaa = { .a = arg };
+    struct B bbb = (struct B)aaa;
+}
+
+typedef struct AAA {
+    volatile int lock;
+} T;
+
+static struct AAAA {
+    T a;
+} g_t = {0};
+
+struct C {
+    T * latch;
+};
+
+void SafeMalloc2() {
+    struct C owned aaa = { .latch = &g_t.a };
+    struct C local = (struct C)aaa;
+}
+
+int main() { return 0; }

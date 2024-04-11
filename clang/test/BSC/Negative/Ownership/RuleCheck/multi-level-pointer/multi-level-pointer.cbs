@@ -1,0 +1,71 @@
+// RUN: %clang_cc1 -verify %s
+
+void write_error_1(owned int * owned * owned * owned a) {
+    ***a = 5; // expected-error {{pointer a inner assign error because inner is not moved}}
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void write_error_2(owned int * owned * owned * owned a) {
+    owned int * owned * owned * owned b = a;
+    owned int * owned * owned * owned c = a; // expected-error {{cannot read a, because it is moved at line: 8}}
+} // expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+
+void write_error_3(owned int * owned * owned * owned a) {
+    owned int * owned * owned * owned b = a;
+    owned int * owned * owned * owned c = b;
+    owned int * owned * owned * owned d = b; // expected-error {{cannot read b, because it is moved at line: 14}}
+} // expected-error {{c's memory will leak at the end of scope}} expected-error {{d's memory will leak at the end of scope}}
+
+void * owned VoidPtrOwned();
+
+void write_error_4() {
+    void * owned c = VoidPtrOwned();
+    void * owned d = c;
+    void * owned e = c; // expected-error {{cannot read c, because it is moved at line: 22}}
+} // expected-error {{d's memory will leak at the end of scope}} expected-error {{e's memory will leak at the end of scope}}
+
+void cons(int owned p);
+
+void consume(int owned p) {
+    int p1 = (int)p;
+    return;
+}
+
+int owned * owned func5(int owned * owned p) {
+    int owned re1;
+    re1 = *p;
+    cons(re1);
+    return p; // expected-error {{p cannot be moved because its pointee is moved}}
+}
+
+void f4(int * owned p) {
+    int re1;
+    re1 = *p;
+    return;
+} // expected-error {{p's memory will leak at the end of scope}}
+
+int owned * owned f5(int owned * owned p) {
+    int owned re1;
+    re1 = *p;
+    consume(re1);
+    return p; // expected-error {{p cannot be moved because its pointee is moved}}
+}
+
+int owned * owned * owned f6(int owned * owned * owned p) {
+    int owned re1;
+    re1 = **p;
+    consume(re1);
+    return p; // expected-error {{p cannot be moved because its pointee is moved}}
+}
+
+void ufree(void * owned p);
+
+void f8(owned int * owned * owned * owned p) {
+    owned int * owned * owned q;
+    q = *p;
+    ufree((void * owned)p);
+} // expected-error {{q's memory will leak at the end of scope}}
+
+void f9(owned int * owned * owned * owned p) {
+    owned int * owned q = **p;
+    ufree((void * owned)p); // expected-error {{p cannot cast to 'void * owned' because inner is not moved}}
+} // expected-error {{q's memory will leak at the end of scope}}

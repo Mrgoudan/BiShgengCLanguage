@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
-// expected-no-diagnostics
 
 struct Base {
     int num;
@@ -18,7 +17,8 @@ int owned foo(owned int* a) {
 
 void test2() {
     struct A owned a;
-    int res = a.b;                  //unlike const, a.b's QualType is int(not owned int)
+    int res = a.b;                  //unlike const, a.b's QualType is int(not owned int) // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
     owned int res2 = foo(a.c);      //a.c's QualType is owned int*(not owned int* owned)
-    int res3 = a.base.num;
-}
+                                    // expected-error@-1 {{a cannot be accessed, because it is uninitialized or moved}}
+    int res3 = a.base.num; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+} // expected-error {{res2's memory will leak at the end of scope}}

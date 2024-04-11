@@ -1,0 +1,96 @@
+// RUN: %clang_cc1 -verify %s
+
+int f1() {
+	int owned a = 1, b;
+	b = a;
+	return 0; // expected-error {{b's memory will leak at the end of scope}}
+}
+
+int f2() {
+	int owned a = 1, b = a;
+	return 0; // expected-error {{b's memory will leak at the end of scope}}
+}
+
+int f3() {
+	int owned a = 1, b, c;
+	b = a;
+	c = b;
+	return 0; // expected-error {{c's memory will leak at the end of scope}}
+}
+
+int f4() {
+	int flag = 1;
+	int owned a = 1;
+	int owned b, c;
+	if (flag) {
+		b = a;
+	} else {
+		c = a;
+	}
+	return 0; // expected-error {{c's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+}
+
+int f5() {
+	int flag = 1;
+	int owned a = 1;
+	if (flag) {
+		int owned b = a;
+	} else { // expected-error {{b's memory will leak at the end of scope}}
+		int owned c = a;
+	} // expected-error {{c's memory will leak at the end of scope}}
+	return 0;
+}
+
+int f6() {
+	int flag = 2;
+	int owned a = 1;
+	int owned b = 2;
+	int owned c;
+	switch (flag) {
+		case 1: c = a; break;
+		case 2: c = b; break;
+		default: break;
+	}
+	return 0; // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+}
+
+int f7() {
+	int owned a = 1;
+	int owned b = 2;
+	{
+		int owned c = b;
+	} // expected-error {{c's memory will leak at the end of scope}}
+	return 0; // expected-error {{a's memory will leak at the end of scope}}
+}
+
+struct S {
+	int a;
+	int b;
+};
+
+int f8() {
+	struct S owned s1 = { 1, 2 };
+	struct S owned s2 = s1;
+	return 0; // expected-error {{s2's memory will leak at the end of scope}}
+}
+
+int f9() {
+	int owned a = 1;
+	{
+		int owned b = a;
+		{
+			int owned c = b;
+		} // expected-error {{c's memory will leak at the end of scope}}
+	}
+	return 0;
+}
+
+int owned get() {
+	return 1;
+}
+
+int f10() {
+	int owned a = get();
+	int owned b = a;
+	return 0; // expected-error {{b's memory will leak at the end of scope}}
+}

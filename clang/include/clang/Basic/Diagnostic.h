@@ -494,6 +494,11 @@ private:
   /// Number of errors reported
   unsigned NumErrors;
 
+  /// Number of ownership errors reported
+  #if ENABLE_BSC
+  unsigned NumOwnershipErrors;
+  #endif
+
   /// A function pointer that converts an opaque diagnostic
   /// argument to a strings.
   ///
@@ -855,6 +860,13 @@ public:
   void setNumWarnings(unsigned NumWarnings) {
     this->NumWarnings = NumWarnings;
   }
+
+  #if ENABLE_BSC
+  unsigned getNumOwnershipErrors() const { return NumOwnershipErrors; }
+  void increaseOwnershipErrors() {
+    NumOwnershipErrors++;
+  }
+  #endif
 
   /// Return an ID for a diagnostic with the specified format string and
   /// level.

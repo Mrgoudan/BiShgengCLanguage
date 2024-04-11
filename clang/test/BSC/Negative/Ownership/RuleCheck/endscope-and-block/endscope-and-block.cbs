@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -verify %s
+
+void func1() {
+    int num = 1;
+    int owned a;
+    a = (int owned)num;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func2() {
+    int num = 1;
+    int * owned a;
+    a = (int * owned)&num;
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func3(int * owned a) {
+    {
+        int * p = (int *)a;
+    }
+}
+
+void func4(int * owned a) {
+    {
+        int * p = (int *)a;
+    }
+    {
+        int * owned q = (int * owned)a; // expected-error {{cannot read a, because it is moved at line: 23}}
+    } // expected-error {{q's memory will leak at the end of scope}}
+}
+
+void func5(int * owned a) {
+    {
+        int * p = (int *)a;
+        {
+            int * owned q = (int * owned)p;
+        } // expected-error {{q's memory will leak at the end of scope}}
+    }
+}
+
+void func6(int * owned a) {
+    {
+        int *p = (int *)a;
+        {
+            int * owned q = (int * owned)p;
+            {}
+        } // expected-error {{q's memory will leak at the end of scope}}
+    }
+}

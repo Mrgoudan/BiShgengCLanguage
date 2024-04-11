@@ -960,7 +960,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   NewFD->setBody(CS);
   S.PopDeclContext();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   return NewFD;
 }
 
@@ -1126,7 +1126,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   NewFD->setBody(CS);
   S.PopDeclContext();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   return NewFD;
 }
@@ -2772,7 +2772,7 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, NLoc);
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   return NewFD;
 }
@@ -2927,7 +2927,7 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   NewFD->setBody(CS);
   S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   return NewFD->isInvalidDecl() ? nullptr : NewFD;
 }
 

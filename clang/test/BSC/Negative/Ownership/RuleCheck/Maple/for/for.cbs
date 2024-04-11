@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -verify %s
+
+int rand();
+
+void func1() {
+    owned int a;
+    for (int i = 0; i < 10; i++) {
+        a = 5; // expected-error {{cannot assign a because its type is owned}}
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func2() {
+    owned int a;
+    owned int b;
+    for (int i = 0; i < 10; i++) {
+        b = 5;
+        a = b; // expected-error {{cannot assign a because its type is owned}}
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func3() {
+    owned int a;
+    owned int b;
+    int c;
+    for (int i = 0; i < 10; i++) {
+        if (c) {
+            continue;
+        }
+        if (c) {
+            continue;
+        }
+        b = 5;
+        a = b; // expected-error {{cannot assign a because its type is owned}}
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+int main() { return 0; }

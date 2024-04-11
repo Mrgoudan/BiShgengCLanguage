@@ -622,8 +622,16 @@ private:
 
   void maybeAddScopeBeginForVarDecl(CFGBlock *B, const VarDecl *VD,
                                     const Stmt *S) {
-    if (ScopePos && (VD == ScopePos.getFirstVarInScope()))
+    if (ScopePos && (VD == ScopePos.getFirstVarInScope())
+      #if ENABLE_BSC
+      && !BuildOpts.AddAllScopes
+      #endif
+      )
       appendScopeBegin(B, VD, S);
+    #if ENABLE_BSC
+    else if (BuildOpts.AddAllScopes && ScopePos)
+      appendScopeBegin(B, VD, S);
+    #endif
   }
 
   /// When creating the CFG for temporary destructors, we want to mirror the
@@ -1851,10 +1859,20 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
     if (hasTrivialDestructor(VD)) {
       // If AddScopes is enabled and *I is a first variable in a scope, add a
       // ScopeEnd marker in a Block.
-      if (BuildOpts.AddScopes && DeclsWithEndedScope.count(VD)) {
+      if (BuildOpts.AddScopes && DeclsWithEndedScope.count(VD)
+          #if ENABLE_BSC
+          && !BuildOpts.AddAllScopes
+          #endif
+      ) {
         autoCreateBlock();
         appendScopeEnd(Block, VD, S);
       }
+      #if ENABLE_BSC
+      else if (BuildOpts.AddAllScopes && BuildOpts.AddScopes) {
+        autoCreateBlock();
+        appendScopeEnd(Block, VD, S);
+      }
+      #endif
       continue;
     }
     // If this destructor is marked as a no-return destructor, we need to

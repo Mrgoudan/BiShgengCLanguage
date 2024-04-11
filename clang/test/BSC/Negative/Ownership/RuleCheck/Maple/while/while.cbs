@@ -1,0 +1,122 @@
+// RUN: %clang_cc1 -verify %s
+
+int rand();
+
+void func1() {
+    owned int a;
+    while (rand()) {
+        a = 5; // expected-error {{cannot assign a because its type is owned}}
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func2() {
+    owned int a;
+    owned int b;
+    while (rand()) {
+        b = 5;
+        a = b; // expected-error {{cannot assign a because its type is owned}}
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func3() {
+    owned int a;
+    owned int b;
+    int c;
+    while (rand()) {
+        if (c) {
+            continue;
+        }
+        if (c) {
+            continue;
+        }
+        b = 5;
+        a = b; // expected-error {{cannot assign a because its type is owned}}
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func4() {
+    owned int a;
+    owned int b;
+    int c;
+    if (rand()) {
+        goto label1;
+    }
+    while (rand()) {
+        if (c) {
+            continue;
+        }
+label1:
+        if (c) {
+            continue;
+        }
+        while (rand()) {
+            b = 5; // expected-error {{cannot assign b because its type is owned}}
+        }
+    }
+} // expected-error {{b's memory will leak at the end of scope}}
+
+void func5() {
+    owned int a;
+    owned int b;
+    int c;
+    if (rand()) {
+        goto label1;
+    }
+    while (rand()) {
+        if (c) {
+            continue;
+        }
+label1:
+        if (c) {
+            continue;
+        }
+        while (rand()) {
+            a = b; // expected-error {{cannot assign a because its type is owned}} expected-error {{cannot read b, because it is uninitialized}}
+        }
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func6() {
+    owned int a;
+    owned int b;
+    int c;
+    if (rand()) {
+        goto label1;
+    }
+    while (rand()) {
+        if (c) {
+            continue;
+        }
+label1:
+        if (c) {
+            continue;
+        }
+        while (rand()) {
+            b = 5;
+            a = b; // expected-error {{cannot assign a because its type is owned}}
+        }
+    }
+} // expected-error {{a's memory will leak at the end of scope}}
+
+void func7() {
+    owned int a;
+    owned int b;
+    int c;
+    if (rand()) {
+        goto label1;
+    }
+    while (rand()) {
+        if (c) {
+            continue;
+        }
+label1:
+        if (c) {
+            continue;
+        }
+        while (rand()) {
+            b = 5; // expected-error {{cannot assign b because its type is owned}}
+        }
+    }
+} // expected-error {{b's memory will leak at the end of scope}}
+
+int main() { return 0; }

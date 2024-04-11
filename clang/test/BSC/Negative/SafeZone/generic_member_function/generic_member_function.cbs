@@ -8,9 +8,9 @@ safe T struct MyStruct<T>::foo_a(T a) {
   return a;
 }
 
-safe T struct MyStruct<T>::foo_b(T a) {      // expected-error{{unsafe return type is forbidden in the safe function}} 
-                                             // expected-error@-1{{unsafe parameter type is forbidden in the safe function}} 
-  return a;  
+safe T struct MyStruct<T>::foo_b(T a) {      // expected-error{{unsafe return type is forbidden in the safe function}}
+                                             // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+  return a;
 }
 
 safe void struct MyStruct<T>::foo_c(T a) {
@@ -27,11 +27,11 @@ void genericMemberFun() {
   int* owned p = (int* owned)&a;
   int *q = (void*)0;
   int res1 = struct MyStruct<int>::foo_a(12); // OK
-  int* owned m = struct MyStruct<int* owned>::foo_a(p);   // OK
+  int* owned m = struct MyStruct<int* owned>::foo_a(p);   // OK 
   int *n = struct MyStruct<int*>::foo_b(q);  // expected-note{{in instantiation of member function 'MyStruct<int *>::foo_b' requested here}}
   unsafeFun fun_c;
   struct MyStruct<unsafeFun>::foo_c(fun_c);  // expected-note{{in instantiation of member function 'MyStruct<void (*)(void)>::foo_c' requested here}}
-}
+}// expected-error {{m's memory will leak at the end of scope}}
 
 trait F<T> {
   safe int foo(This* owned this, T b);
