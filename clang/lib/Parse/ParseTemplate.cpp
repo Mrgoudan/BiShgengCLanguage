@@ -89,7 +89,7 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
 
   // a variable for calling CXX template function
   SourceLocation TemplateLoc = Tok.getLocation();
-  
+
   BSCGenericLookAhead = 0; // BSCGenericLookAhead starts from 0, assume the first
                            // token we see must not be '<'
   while (!PP.LookAhead(BSCGenericLookAhead)
@@ -701,8 +701,8 @@ bool Parser::ParseBSCTemplateParameterList(
       // a comma or closing brace.
       for (; PeekTok.isNot(tok::semi); BSCGenericLookAhead++) {
         PeekTok = PP.LookAhead(BSCGenericLookAhead);
-        if (PeekTok.isOneOf(tok::comma, 
-                            tok::greater, 
+        if (PeekTok.isOneOf(tok::comma,
+                            tok::greater,
                             tok::semi))
           break;
       }
@@ -1077,11 +1077,11 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
     return nullptr;
   }
 
-  bool IsNextCommaOrGreater = 
+  bool IsNextCommaOrGreater =
                   PP.LookAhead(BSCGenericLookAhead + 1).isOneOf(tok::comma,
                                                                 tok::greater);
 
-  // if ((PeekTok.isNot(tok::identifier) && (!IsNextCommaOrGreater)) || 
+  // if ((PeekTok.isNot(tok::identifier) && (!IsNextCommaOrGreater)) ||
   //     !IsNextCommaOrGreater) {
   //   return ParseNonTypeTemplateParameter(Depth, Position);
   // }
@@ -1487,8 +1487,13 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
       Hint2 = FixItHint::CreateInsertion(Next.getLocation(), " ");
 
     unsigned DiagId = diag::err_two_right_angle_brackets_need_space;
+    #if ENABLE_BSC
+    if ((getLangOpts().CPlusPlus11 || getLangOpts().BSC) &&
+          (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
+    #else
     if (getLangOpts().CPlusPlus11 &&
-        (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
+          (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
+    #endif
       DiagId = diag::warn_cxx98_compat_two_right_angle_brackets;
     else if (Tok.is(tok::greaterequal))
       DiagId = diag::err_right_angle_bracket_equal_needs_space;
@@ -1882,10 +1887,10 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
     /*LambdaContextDecl=*/nullptr,
     /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
 
-  // if we have a constant generic function or struct : 
+  // if we have a constant generic function or struct :
   // `void bar<int N>()` or `struct S<int N>{}`
   // we want to use a BSCStaticMemberFunctionCall as a argument
-  // for example: bar<int::foo()>(); 
+  // for example: bar<int::foo()>();
   //              bar<struct G::foo()>();
   //              bar<struct G<int>::foo()>();
   // the argument must not be a TypeName
@@ -1949,7 +1954,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
 
   do {
     #if ENABLE_BSC
-    if (getLangOpts().BSC && !Tok.isOneOf(tok::kw_struct, 
+    if (getLangOpts().BSC && !Tok.isOneOf(tok::kw_struct,
                                           tok::kw_enum,
                                           tok::kw_union)) {
       // if template argument list like <T, int N> or <T, MyInt N>
@@ -1958,14 +1963,14 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
       if (PP.LookAhead(0).is(tok::identifier)) ConsumeToken();
       // if template argument list like <T, unsigned long int N>
       // should consume tokens 'unsigned long int'
-      int ShouldConsumeCnt = 0;  
+      int ShouldConsumeCnt = 0;
       while (PP.LookAhead(ShouldConsumeCnt).isOneOf(tok::kw_int, tok::kw_long,
                                                     tok::kw_short, tok::kw_unsigned,
-                                                    tok::kw_signed)) 
+                                                    tok::kw_signed))
         ShouldConsumeCnt++;
       if (PP.LookAhead(ShouldConsumeCnt).is(tok::identifier)) {
         for (int i = 0; i <= ShouldConsumeCnt; i++) ConsumeToken();
-      } 
+      }
     }
     #endif
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
