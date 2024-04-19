@@ -104,7 +104,8 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   Token TmpTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead);
   Token PostTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead + 1);
   while (!(TmpTok.is(tok::greater) &&
-           PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon)) &&
+           PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::semi,
+                           tok::coloncolon)) &&
          !TmpTok.is(tok::eof)) {
     if (TmpTok.is(tok::less)) {
       BSCGenericLookAhead = LookGreaterOffset + BSCGenericLookAhead;
@@ -116,7 +117,8 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   }
 
   assert(TmpTok.is(tok::greater) &&
-         (PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::coloncolon)) &&
+         (PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::semi,
+                          tok::coloncolon)) &&
          "BSC template function parameter list is not standardized.");
 
   // Parse the '<' template-parameter-list '>'

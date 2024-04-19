@@ -2811,7 +2811,11 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     StoredDeclsMap *Map = Instantiation->getLookupPtr();
     for (auto *Member : getASTContext().getTranslationUnitDecl()->decls()) {
       if (BSCMethodDecl *Method = dyn_cast<BSCMethodDecl>(Member)) {
-        if (Method->getDeclContext() == cast<DeclContext>(Pattern) &&
+        // For generic struct, BSCMethod should be hung below its first declaration
+        RecordDecl *DC = Pattern;
+        while(DC->getPreviousDecl())
+          DC = DC->getPreviousDecl();
+        if (Method->getDeclContext() == cast<DeclContext>(DC) &&
             (Map == nullptr || !Map->count(Method->getDeclName()))) {
           Instantiator.Visit(Method);
           getASTContext().BSCDeclContextMap[Instantiation->getTypeForDecl()] =

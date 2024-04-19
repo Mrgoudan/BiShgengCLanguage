@@ -6,6 +6,8 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
+struct MyStruct<T>;
+struct MyStruct<T>;
 struct MyStruct<T> {
   T res;
 };
@@ -25,7 +27,7 @@ T union MyUnion<T>::foo(T a) {
 int main() {
   int res1 = struct MyStruct<int>::foo(12);
   int res2 = union MyUnion<int>::foo(10);
-  return res1 - res2 - 2;  
+  return res1 - res2 - 2;
 }
 
 // CHECK: struct MyStruct_int {

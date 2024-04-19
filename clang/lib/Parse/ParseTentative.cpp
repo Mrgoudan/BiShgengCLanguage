@@ -1200,11 +1200,10 @@ bool Parser::isBSCTemplateDecl(Token tok) {
                          NextTok.is(tok::greater)))
         break;
       // valid syntax for BSC template
-      if (HasValidParameter && NextTok.isOneOf(tok::l_brace,
-                                               tok::l_paren,
-                                               tok::coloncolon)) {
-          FoundGreater = true;
-          return true;
+      if (HasValidParameter && NextTok.isOneOf(tok::l_brace, tok::l_paren,
+                                               tok::semi, tok::coloncolon)) {
+        FoundGreater = true;
+        return true;
       }
       break;
     case tok::identifier:

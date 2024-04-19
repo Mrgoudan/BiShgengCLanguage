@@ -1198,7 +1198,11 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(ND)) {
     // Walk all the template decl till this point to see if there are
     // explicit visibility attributes.
+    #if ENABLE_BSC
+    const auto *TD = spec->getSpecializedTemplate()->getBSCTemplatedDecl();
+    #else
     const auto *TD = spec->getSpecializedTemplate()->getTemplatedDecl();
+    #endif
     while (TD != nullptr) {
       auto Vis = getVisibilityOf(TD, kind);
       if (Vis != None)
@@ -2401,8 +2405,8 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
 
   // OpenCL permits const integral variables to be used in constant
   // expressions, like in C++98.
-  if (!Lang.CPlusPlus && !Lang.OpenCL 
-      #if ENABLE_BSC 
+  if (!Lang.CPlusPlus && !Lang.OpenCL
+      #if ENABLE_BSC
       && !Lang.BSC
       #endif
       )
@@ -2575,7 +2579,7 @@ bool VarDecl::checkForConstantInitialization(
   assert(!Eval->WasEvaluated &&
          "already evaluated var value before checking for constant init");
   #if ENABLE_BSC
-  assert((getASTContext().getLangOpts().CPlusPlus || getASTContext().getLangOpts().BSC) 
+  assert((getASTContext().getLangOpts().CPlusPlus || getASTContext().getLangOpts().BSC)
          && "only meaningful in C++ and BSC");
   #else
   assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");

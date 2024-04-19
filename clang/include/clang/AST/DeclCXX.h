@@ -1425,7 +1425,7 @@ public:
   }
 
   /// Notify the class that this destructor is now selected.
-  /// 
+  ///
   /// Important properties of the class depend on destructor properties. Since
   /// C++20, it is possible to have multiple destructor declarations in a class
   /// out of which one will be selected at the end.
@@ -1524,7 +1524,7 @@ public:
         const_cast<const CXXRecordDecl*>(this)->isLocalClass());
   }
   #endif
-  
+
   /// Determine whether this dependent class is a current instantiation,
   /// when viewed from within the given context.
   bool isCurrentInstantiation(const DeclContext *CurContext) const;

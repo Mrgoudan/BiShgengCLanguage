@@ -298,6 +298,11 @@ const std::string RewriteBSC::GetRewrittenString() {
     switch ((*D)->getKind()) {
     case Decl::ClassTemplate: {
       ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
+      if (auto RD = dyn_cast<RecordDecl>(CT->getTemplatedDecl())) {
+        if (!RD->isCompleteDefinition()) {
+          break;
+        }
+      }
       for (auto *DD : CT->specializations()) {
         SourceLocation SL = DD->getPointOfInstantiation();
         std::vector<Decl *>::iterator It = DeclList.begin();
@@ -443,7 +448,7 @@ const std::string RewriteBSC::GetRewrittenString() {
 
       break;
     }
-    case Decl::Var: 
+    case Decl::Var:
     case Decl::FileScopeAsm: {
       if (SM->isWrittenInMainFile(SM->getExpansionLoc(D->getBeginLoc()))) {
         D->print(Buf, Policy);
@@ -492,6 +497,11 @@ const std::string RewriteBSC::GetRewrittenString() {
     }
     case Decl::ClassTemplate: {
       ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
+      if (auto RD = dyn_cast<RecordDecl>(CT->getTemplatedDecl())) {
+        if (!RD->isCompleteDefinition()) {
+          break;
+        }
+      }
       for (auto *DD : CT->specializations()) {
         for (auto *DDD : DD->decls()) {
           if (isa<FunctionDecl>(DDD)) {

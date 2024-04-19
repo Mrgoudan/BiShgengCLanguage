@@ -105,26 +105,26 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 
 #if ENABLE_BSC
 // To judge if the syntax is a BSC template declaration.
-static bool IsBSCTemplateDeclaration(bool IsBSC, 
+static bool IsBSCTemplateDeclaration(bool IsBSC,
                                      bool IsIdentifier,
                                      Preprocessor &PP) {
-  
+
   bool IsCase_1 = (PP.LookAhead(1).is(tok::kw_int) &&
                    PP.LookAhead(2).is(tok::identifier));
 
-  bool IsCase_2 = (PP.LookAhead(1).is(tok::identifier) && 
+  bool IsCase_2 = (PP.LookAhead(1).is(tok::identifier) &&
                    PP.LookAhead(2).isOneOf(tok::comma,
                                            tok::greater));
 
-  bool IsCase_3 = (PP.LookAhead(1).is(tok::identifier) && 
-                   PP.LookAhead(2).is(tok::identifier) && 
+  bool IsCase_3 = (PP.LookAhead(1).is(tok::identifier) &&
+                   PP.LookAhead(2).is(tok::identifier) &&
                    PP.LookAhead(3).isOneOf(tok::comma,
                                            tok::greater));
 
   bool IsCase_4 = (PP.LookAhead(1).isOneOf(tok::kw_unsigned,
                                            tok::kw_signed,
                                            tok::kw_long,
-                                           tok::kw_short) &&  
+                                           tok::kw_short) &&
                    PP.LookAhead(2).isOneOf(tok::kw_int,
                                            tok::identifier,
                                            tok::kw_short,
@@ -135,10 +135,10 @@ static bool IsBSCTemplateDeclaration(bool IsBSC,
                                            tok::greater,
                                            tok::kw_long));
 
-  bool IsBSCTemplateDecl = IsBSC && 
+  bool IsBSCTemplateDecl = IsBSC &&
                            IsIdentifier &&
                            PP.LookAhead(0).is(tok::less) &&
-                           (IsCase_1 || IsCase_2 || 
+                           (IsCase_1 || IsCase_2 ||
                             IsCase_3 || IsCase_4);
 
   return IsBSCTemplateDecl;
@@ -442,14 +442,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     // "T max<T> (T a, T b) {...}"
     Token Next;
     // TODO: this could be missidentified from typo:// "intt"
-    
+
     if (getLangOpts().BSC) {
       bool ParsingBSCTemplateFunction = false;
       // lookup if identifier is a name of a function
       IdentifierInfo *CurName = Tok.getIdentifierInfo();
       SourceLocation CurNameLoc = Tok.getLocation();
-      LookupResult LookupPreviousFunction(Actions, CurName, CurNameLoc, 
-                                          Sema::LookupOrdinaryName, 
+      LookupResult LookupPreviousFunction(Actions, CurName, CurNameLoc,
+                                          Sema::LookupOrdinaryName,
                                           Sema::NotForRedeclaration);
       Actions.LookupName(LookupPreviousFunction, getCurScope());
 
@@ -457,7 +457,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         ParsingBSCTemplateFunction = IsBSCTemplateDeclaration(getLangOpts().BSC,
                                                               Tok.is(tok::identifier),
                                                               PP);
-        
+
         if (ParsingBSCTemplateFunction) {
           // Determine if '>' is followed by '{' or '('
           int LGreaterOffset = 2;
@@ -470,7 +470,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                   )) && !IsBSCTemplateBlackList(TmpTok.getKind())) {
             LGreaterOffset += 1;
             TmpTok = PP.LookAhead(LGreaterOffset);
-          } 
+          }
           ParsingBSCTemplateFunction =
               TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
                                             .isOneOf(tok::l_paren, tok::l_brace));
@@ -846,7 +846,7 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
     //   nested-name-specifier identifier '::'
 
     Token Next;
-    bool ParsingBSCTemplateStruct = 
+    bool ParsingBSCTemplateStruct =
                           IsBSCTemplateDeclaration(getLangOpts().BSC,
                                                    Tok.is(tok::identifier),
                                                    PP);
@@ -862,9 +862,10 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
         LGreaterOffset += 1;
         TmpTok = PP.LookAhead(LGreaterOffset);
       }
+      // When declaring a generic struct, tok::greater is followed by tok::semi
       ParsingBSCTemplateStruct =
-          TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
-                                          .is(tok::l_brace));
+          TmpTok.is(tok::greater) &&
+          (PP.LookAhead(LGreaterOffset + 1).isOneOf(tok::l_brace, tok::semi));
     }
 
     if (ParsingBSCTemplateStruct) {
@@ -3234,7 +3235,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       // @Code:k
       //  T max<T>(T a, T b) {...}
       // @EndCode
-      if (Actions.getCurScope()->isTemplateParamScope() && 
+      if (Actions.getCurScope()->isTemplateParamScope() &&
           (getLangOpts().BSC && Tok.is(tok::less))) {
         // TODO: we should refactoring check logic, abandon assert.
         assert(Tok.is(tok::less) && "expected 'less' token");
