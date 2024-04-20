@@ -1,0 +1,46 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+trait Future<T> {};
+
+struct A<T> {
+};
+
+void struct A<T>::foo(struct A<T> *this, trait Future<T> *future) {
+}
+
+int main() {
+  struct A<void *> s;
+  trait Future<void *> *future;
+  s.foo(future);
+  struct A<void *>::foo(&s, future);
+  return 0;
+}
+
+// CHECK: struct __Trait_Future_Vtable_void_P;
+
+// CHECK: struct __Trait_Future_void_P {
+// CHECK-NEXT:     void *data;
+// CHECK-NEXT:     struct __Trait_Future_Vtable_void_P *vtable;
+// CHECK-NEXT: };
+
+// CHECK: struct A_void_P {
+// CHECK-NEXT: };
+
+// CHECK: void __attribute__((weak)) struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future);
+
+// CHECK: int main(void) {
+// CHECK-NEXT:     struct A_void_P s;
+// CHECK-NEXT:     struct __Trait_Future_void_P future;
+// CHECK-NEXT:     struct_A_void_P_foo(&s, future);
+// CHECK-NEXT:     struct_A_void_P_foo(&s, future);
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }
+
+// CHECK: void __attribute__((weak)) struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future) {
+// CHECK-NEXT: }

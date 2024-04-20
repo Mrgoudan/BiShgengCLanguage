@@ -14783,7 +14783,8 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
           QT = QT->getPointeeType();
         }
       }
-      TSInfo = Context.getTrivialTypeSourceInfo(T);
+      TSInfo = Context.getTrivialTypeSourceInfo(
+          T, TSInfo->getTypeLoc().getBeginLoc());
     }
   }
   #endif
