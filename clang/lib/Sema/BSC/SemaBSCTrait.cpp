@@ -653,17 +653,18 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
                                    StorageClass::SC_None);
 
   PushOnScopeChains(NewVD, getCurScope(), true);
-  Expr *exp = VD->getInit();
-  if (exp == nullptr) // trait I *a;
+  Expr *Init = VD->getInit();
+  if (Init == nullptr) // trait I *a;
+    return NewVD;
+    
+  if (Init->containsErrors())
     return NewVD;
 
-  CastExpr *Cexpr = dyn_cast<CastExpr>(exp);
-  if (!Cexpr) {
-    AddInitializerToDecl(NewVD, exp, false);
-    return NewVD;
+  Expr *UO = Init;
+  if (CastExpr *Cexpr = dyn_cast<CastExpr>(Init)) {
+    UO = Cexpr->getSubExpr();
   }
 
-  Expr *UO = Cexpr->getSubExpr();
   QualType T = UO->getType();
   QualType InnerTy = T;
   while (InnerTy->isPointerType())
@@ -689,7 +690,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   }
 
   bool ExpIsNullPointer =
-      exp->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
+      Init->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull);
   T = PT->getPointeeType().getCanonicalType();
   VarDecl *LookupVar = TD->getTypeImpledVarDecl(T);
   if (!LookupVar && !ExpIsNullPointer) {
