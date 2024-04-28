@@ -190,7 +190,7 @@ Retry:
     cutOffParsing();
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
     return StmtError();
-  
+
   #if ENABLE_BSC
   // Here we should try parse BSC generic struct or union to avoid ambiguity.
   // For example, `struct S<int> s;` and `struct S<int>::foo();` have same prefix `struct S<int>`.
@@ -200,7 +200,7 @@ Retry:
   // We will annotate `S<int>` as a `tok::annot_template_id`,
   // if the next token is `tok::coloncolon` ,it is a static member function call,
   // otherwise it is a generic VarDecl.
-  // For non-generic struct or union, 
+  // For non-generic struct or union,
   // we can distinguish `struct S s;` and `struct S::foo();` easily,
   // so `goto Default` is enough.
   case tok::kw_union:
@@ -1171,7 +1171,7 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_icall_hint:
       HandlePragmaIcallHint();
       break;
-    #endif   
+    #endif
     default:
       checkForPragmas = false;
       break;

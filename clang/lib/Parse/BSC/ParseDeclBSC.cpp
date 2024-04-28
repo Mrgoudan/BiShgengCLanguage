@@ -224,10 +224,12 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   ColonProtectionRAIIObject X(*this);
   CXXScopeSpec Spec;
   bool HasValidSpec = true;
+  const bool IsTemplated =
+      (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate);
 
-  if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
-                                       EnteringContext)) {
+  if (ParseOptionalBSCGenericSpecifier(
+          Spec, /*ObjectType=*/nullptr,
+          /*ObjectHadErrors=*/false, EnteringContext, IsTemplated)) {
     DS.SetTypeSpecError();
     HasValidSpec = false;
   }
@@ -587,20 +589,20 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
 void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
   ParsingDeclSpec DS(*this);
   DS.takeAttributesFrom(DeclSpecAttrs);
-  DeclSpecContext DSC = DeclSpecContext::DSC_normal; 
+  DeclSpecContext DSC = DeclSpecContext::DSC_normal;
   bool EnteringContext = false;
   SourceLocation StartLoc = Tok.getLocation();
   ParsedAttributes Attributes(AttrFactory);
-  
+
   tok::TokenKind TagTokKind = Tok.getKind();
   DeclSpec::TST TagType = TagTokKind == tok::kw_struct ? DeclSpec::TST_struct : DeclSpec::TST_union;
   ConsumeToken();
-  
+
   ParsedTemplateInfo TemplateInfo = ParsedTemplateInfo();
   const bool shouldDelayDiagsInTag =
       (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate);
   SuppressAccessChecks diagsFromTag(*this, shouldDelayDiagsInTag);
-  
+
   ParsedAttributes attrs(AttrFactory);
   MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
   SourceLocation AttrFixitLoc = Tok.getLocation();
@@ -622,15 +624,15 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
     }
     IdentifierInfo *AtomicII;
   };
-      
+
   CXXScopeSpec &SS = DS.getTypeSpecScope();
   ColonProtectionRAIIObject X(*this);
   CXXScopeSpec Spec;
   bool HasValidSpec = true;
 
-  if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
-                                       EnteringContext)) {
+  if (ParseOptionalBSCGenericSpecifier(
+          Spec, /*ObjectType=*/nullptr,
+          /*ObjectHadErrors=*/false, EnteringContext, shouldDelayDiagsInTag)) {
     DS.SetTypeSpecError();
     HasValidSpec = false;
   }
@@ -674,7 +676,7 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
           SourceLocation();
     }
   };
-  
+
   // Parse the (optional) class name or simple-template-id.
   IdentifierInfo *Name = nullptr;
   SourceLocation NameLoc = Tok.getLocation();
@@ -707,7 +709,7 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
       // FIXME: Name may be null here.
       Diag(TemplateId->LAngleLoc, diag::err_template_spec_syntax_non_template)
           << TemplateId->Name << static_cast<int>(TemplateId->Kind) << Range;
-      
+
       DS.SetTypeSpecError();
       SkipUntil(tok::semi, StopBeforeMatch);
       return;
@@ -763,7 +765,7 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
 
   DeclResult TagOrTempResult = true; // invalid
   TypeResult TypeResult = true;      // invalid
-  
+
   bool Owned = false;
   Sema::SkipBodyInfo SkipBody;
   bool IsDependent = false;

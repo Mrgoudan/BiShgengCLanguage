@@ -1056,6 +1056,10 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   default:
   dont_know:
     #if ENABLE_BSC
+    if (getLangOpts().BSC && ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
+                                                      GetLookAheadToken(2)))
+      return ParseImplTraitDeclaration();
+
     // parse BSC template declaration
     // TODO: change if entrance condition, abandon isBSCTemplateDecl()
     if (isBSCTemplateDecl(Tok)) {
@@ -1065,10 +1069,6 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs, EmptyDeclSpecAttrs);
       break;
     }
-
-    if (getLangOpts().BSC && ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
-                                 GetLookAheadToken(2)))
-      return ParseImplTraitDeclaration();
     #endif
 
     if (Tok.isEditorPlaceholder()) {

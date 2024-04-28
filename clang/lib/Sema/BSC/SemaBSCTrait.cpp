@@ -656,7 +656,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   Expr *Init = VD->getInit();
   if (Init == nullptr) // trait I *a;
     return NewVD;
-    
+
   if (Init->containsErrors())
     return NewVD;
 

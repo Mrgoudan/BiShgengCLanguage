@@ -1617,7 +1617,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     bool HasValidSpec = true;
     if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
                                          /*ObjectHadErrors=*/false,
-                                         EnteringContext)) {
+                                         EnteringContext,
+                                         shouldDelayDiagsInTag)) {
       DS.SetTypeSpecError();
       HasValidSpec = false;
     }
@@ -2078,7 +2079,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       Decl *D =
           SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
       #endif
-      
+
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
 

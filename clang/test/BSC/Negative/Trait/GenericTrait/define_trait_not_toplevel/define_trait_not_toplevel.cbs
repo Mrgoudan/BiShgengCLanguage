@@ -17,6 +17,7 @@ struct MyStruct1 {
                    // expected-error@-1 {{type name requires a specifier or qualifier}}
                    // expected-error@-2 {{expected member name or ';' after declaration specifiers}}
                    // expected-error@-3 {{expected ';' at end of declaration list}}
+                   // expected-error@-4 {{use of undeclared identifier 'T'}}
 };
 
 struct MyStruct2<T> {

@@ -662,8 +662,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
 // the original logic of C++.
 bool Parser::ParseOptionalBSCGenericSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
-    bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
-    IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
+    bool EnteringContext, bool IsTemplated,
+    bool *MayBePseudoDestructor, bool IsTypename, IdentifierInfo **LastII,
+    bool OnlyNamespace, bool InUsingDeclaration) {
   assert(getLangOpts().BSC &&
          "Call sites of this function should be guarded by checking for BSC");
 
@@ -846,10 +847,7 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
     //   nested-name-specifier identifier '::'
 
     Token Next;
-    bool ParsingBSCTemplateStruct =
-                          IsBSCTemplateDeclaration(getLangOpts().BSC,
-                                                   Tok.is(tok::identifier),
-                                                   PP);
+    bool ParsingBSCTemplateStruct = IsTemplated;
 
     int LGreaterOffset = 2;
     if (ParsingBSCTemplateStruct) {

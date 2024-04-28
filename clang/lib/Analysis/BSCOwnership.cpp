@@ -331,11 +331,7 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   int OwnedDepth = 0;
   bool OwnedFlag = false;
 
-  enum Operation{
-    None,
-    Assign,
-    Use
-  };
+  enum Operation { None, Assigned, Moved };
   mutable Operation op = Operation::None;
 public:
   TransferFunctions(OwnershipImpl &os,
@@ -374,17 +370,17 @@ void TransferFunctions::VisitStmt(Stmt *S) {
 }
 
 void TransferFunctions::VisitMemberExpr(MemberExpr *ME) {
-  if (op == Assign)
+  if (op == Assigned)
     HandleMEAssign(ME);
-  else if (op == Use)
+  else if (op == Moved)
     HandleMEUse(ME);
 }
 
 
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DRE) {
-  if (op == Assign)
+  if (op == Assigned)
     HandleDREAssign(DRE, OwnedDepth);
-  else if (op == Use)
+  else if (op == Moved)
     HandleDREUse(DRE, "", OwnedDepth);
 }
 
@@ -419,20 +415,24 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
 }
 
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
-  op = Assign;
-  if (BO->getOpcode() == BO_Assign)
+  if (BO->isAssignmentOp()) {
+    op = Assigned;
     Visit(BO->getLHS());
+  }
   Expr *RHS = BO->getRHS();
   bool IsCall = dyn_cast_or_null<CallExpr>(RHS);
   if (!IsCall) {
-    op = Use;
+    if (BO->getOpcode() == BO_Assign)
+      op = Moved;
+    else
+      op = None;
     Visit(RHS);
   }
   op = None;
 }
 
 void TransferFunctions::VisitCallExpr(CallExpr *CE) {
-  op = Use;
+  op = Moved;
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
     Visit(*it);
   }
@@ -496,7 +496,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
       if (Init) {
         bool IsCall = dyn_cast_or_null<CallExpr>(Init);
         if (!IsCall) {
-          op = Use;
+          op = Moved;
           Visit(Init);
           op = None;
         }
@@ -509,7 +509,7 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   Expr *RV = RS->getRetValue();
   bool IsCall = dyn_cast_or_null<CallExpr>(RV);
   if (RV && !IsCall) {
-    op = Use;
+    op = Moved;
     Visit(RV);
     op = None;
   }

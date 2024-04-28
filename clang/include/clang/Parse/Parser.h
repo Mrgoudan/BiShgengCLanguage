@@ -1924,8 +1924,7 @@ private:
 
   #if ENABLE_BSC
   static bool IsBSCTemplateBlackList(tok::TokenKind TmpKind) {
-    switch (TmpKind) 
-    {
+    switch (TmpKind) {
     case tok::eof:
     case tok::equal:
     case tok::l_brace:
@@ -1954,10 +1953,11 @@ private:
   #if ENABLE_BSC
   bool ParseOptionalBSCGenericSpecifier(
       CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHasErrors,
-      bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
-      bool IsTypename = false, IdentifierInfo **LastII = nullptr,
-      bool OnlyNamespace = false, bool InUsingDeclaration = false);
-  #endif
+      bool EnteringContext, bool IsTemplated,
+      bool *MayBePseudoDestructor = nullptr, bool IsTypename = false,
+      IdentifierInfo **LastII = nullptr, bool OnlyNamespace = false,
+      bool InUsingDeclaration = false);
+#endif
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions

@@ -94,3 +94,17 @@ int f10() {
 	int owned b = a;
 	return 0; // expected-error {{b's memory will leak at the end of scope}}
 }
+
+owned int f11(int owned a)
+{
+  const int owned b = 1;
+  a -= b; // expected-error {{cannot assign a because its type is owned}}
+  return a; // expected-error {{b's memory will leak at the end of scope}}
+}
+
+owned int f12(int owned a)
+{
+  const int owned b = 1;
+  a = (int owned)(a - b); // expected-error {{cannot assign a because its type is owned}}
+  return a; // expected-error {{b's memory will leak at the end of scope}}
+}
