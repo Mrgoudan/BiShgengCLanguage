@@ -72,12 +72,13 @@ static FunctionDecl *buildAsyncFuncDecl(ASTContext &C, DeclContext *DC,
 
 static BSCMethodDecl *
 buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-                        SourceLocation NLoc, DeclarationName N, QualType T,
-                        TypeSourceInfo *TInfo, StorageClass SC, QualType ET) {
+                        SourceLocation NLoc, SourceLocation EndLoc,
+                        DeclarationName N, QualType T, TypeSourceInfo *TInfo,
+                        StorageClass SC, QualType ET) {
   BSCMethodDecl *NewDecl =
-      BSCMethodDecl::Create(  // TODO: inline should be passed.
+      BSCMethodDecl::Create( // TODO: inline should be passed.
           C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false,
-          false, ConstexprSpecKind::Unspecified, NLoc);
+          false, ConstexprSpecKind::Unspecified, EndLoc);
   if (auto RD = dyn_cast_or_null<RecordDecl>(DC)) {
     C.BSCDeclContextMap[RD->getTypeForDecl()] = DC;
     NewDecl->setHasThisParam(true); // bug
@@ -136,8 +137,9 @@ static bool implementedFutureType(Sema &S, QualType Ty) {
 //    FutureObj = (void*)0;
 // }
 // @endcode
-static Stmt *buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr,
-                                         Expr *FreeFuncExpr) {
+static Stmt *
+buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr, Expr *FreeFuncExpr,
+                            SourceLocation Loc = SourceLocation()) {
   llvm::APInt ResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
   Expr *IntegerExpr = IntegerLiteral::Create(S.Context, ResultVal,
                                              S.Context.IntTy, SourceLocation());
@@ -185,11 +187,10 @@ static Stmt *buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr,
   Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
                                     SourceLocation(), SourceLocation());
 
-  Stmt *If =
-      S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
-                    /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
-                    /* RPL=*/SourceLocation(), Body, SourceLocation(), nullptr)
-          .get();
+  Stmt *If = S.BuildIfStmt(Loc, IfStatementKind::Ordinary,
+                           /* LPL=*/Loc, /* Init=*/nullptr, IfCond,
+                           /* RPL=*/Loc, Body, Loc, nullptr)
+                 .get();
   return If;
 }
 
@@ -719,12 +720,13 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   FunctionDecl *NewFD = nullptr;
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
+  SourceLocation ELoc = FD->getEndLoc();
   FunctionDecl::param_const_iterator pi;
 
   if (isa<BSCMethodDecl>(FD)) {
     BSCMethodDecl *BMD = cast<BSCMethodDecl>(FD);
     NewFD = buildAsyncBSCMethodDecl(
-        S.Context, FDecl->getDeclContext(), SLoc, NLoc,
+        S.Context, FDecl->getDeclContext(), SLoc, NLoc, ELoc,
         &(S.Context.Idents).get(FDecl->getName().str()), FDecl->getType(),
         FDecl->getTypeSourceInfo(), SC_None, BMD->getExtendedType());
   } else {
@@ -756,7 +758,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
       SC_None);
 
   DeclGroupRef DataDG(VD);
-  DeclStmt *DataDS = new (S.Context) DeclStmt(DataDG, NLoc, NLoc);
+  DeclStmt *DataDS = new (S.Context) DeclStmt(DataDG, SLoc, ELoc);
   std::vector<Stmt *> Stmts;
   Stmts.push_back(DataDS);
 
@@ -926,7 +928,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
       SC_None);
 
   DeclGroupRef FatPointerDG(FatPointerVD);
-  DeclStmt *FatPointerDS = new (S.Context) DeclStmt(FatPointerDG, NLoc, NLoc);
+  DeclStmt *FatPointerDS = new (S.Context) DeclStmt(FatPointerDG, SLoc, ELoc);
   Stmts.push_back(FatPointerDS);
 
   SmallVector<Expr *, 2> InitExprs;
@@ -956,7 +958,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   Stmts.push_back(RS);
 
   CompoundStmt *CS =
-      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, NLoc);
+      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   S.PopDeclContext();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
@@ -968,6 +970,7 @@ static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *F
                                                  RecordDecl *FatPointerRD) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
+  SourceLocation ELoc = FD->getEndLoc();
   DeclarationName funcName = FD->getDeclName();
   QualType FuncRetType = S.Context.getRecordType(FatPointerRD);
   SmallVector<QualType, 16> ParamTys;
@@ -982,9 +985,10 @@ static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *F
   FunctionDecl *NewFD = nullptr;
   if (isa<BSCMethodDecl>(FD)) {
     BSCMethodDecl *BMD = cast<BSCMethodDecl>(FD);
-    NewFD = buildAsyncBSCMethodDecl(S.Context, FD->getDeclContext(), SLoc, NLoc,
-                                    &(S.Context.Idents).get(FName), FuncType,
-                                    Tinfo, SC_None, BMD->getExtendedType());
+    NewFD =
+        buildAsyncBSCMethodDecl(S.Context, FD->getDeclContext(), SLoc, NLoc,
+                                ELoc, &(S.Context.Idents).get(FName), FuncType,
+                                Tinfo, SC_None, BMD->getExtendedType());
   } else {
     NewFD = buildAsyncFuncDecl(S.Context, FD->getDeclContext(), SLoc, NLoc,
                                &(S.Context.Idents).get(FName), FuncType, Tinfo);
@@ -1009,6 +1013,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
                                         FunctionDecl *OriginFD) {
   SourceLocation SLoc = OriginFD->getBeginLoc();
   SourceLocation NLoc = OriginFD->getNameInfo().getLoc();
+  SourceLocation ELoc = OriginFD->getEndLoc();
   QualType FuncRetType = S.Context.getRecordType(RD);
   SmallVector<QualType, 16> ParamTys;
   FunctionDecl::param_const_iterator pi;
@@ -1023,7 +1028,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   if (isa<BSCMethodDecl>(OriginFD)) {
     BSCMethodDecl *BMD = cast<BSCMethodDecl>(OriginFD);
     NewFD = buildAsyncBSCMethodDecl(
-        S.Context, OriginFD->getDeclContext(), SLoc, NLoc,
+        S.Context, OriginFD->getDeclContext(), SLoc, NLoc, ELoc,
         &(S.Context.Idents).get(FuncName), FuncType,
         OriginFD->getTypeSourceInfo(), SC_None, BMD->getExtendedType());
   } else {
@@ -1056,7 +1061,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   ILE->setType(FuncRetType);
   S.AddInitializerToDecl(VD, ILE, /*DirectInit=*/false);
   DeclGroupRef FutureDG(VD);
-  DeclStmt *FutureDS = new (S.Context) DeclStmt(FutureDG, NLoc, NLoc);
+  DeclStmt *FutureDS = new (S.Context) DeclStmt(FutureDG, SLoc, ELoc);
   std::vector<Stmt *> Stmts;
   Stmts.push_back(FutureDS);
 
@@ -1122,7 +1127,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   Stmts.push_back(RS);
 
   CompoundStmt *CS =
-      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, NLoc);
+      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   S.PopDeclContext();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
@@ -1139,7 +1144,7 @@ static IfStmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
                                       Stmt *ThenBodyStmt) {
   std::vector<Stmt *> ElseStmts;
   Expr *IfCond = nullptr;
-  SourceLocation BLoc = NewFD->getBeginLoc();
+  SourceLocation BLoc = ThenBodyStmt->getBeginLoc();
 
   RecordDecl::field_iterator TheField;
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
@@ -1223,10 +1228,10 @@ static IfStmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
 
   std::vector<Stmt *> BodyStmts{ThenBodyStmt};
 
-  Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
-                                    BLoc, BLoc);
-  Stmt *Else = CompoundStmt::Create(S.Context, ElseStmts, FPOptionsOverride(),
-                                    BLoc, BLoc);
+  Stmt *Body =
+      CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(), BLoc, BLoc);
+  Stmt *Else =
+      CompoundStmt::Create(S.Context, ElseStmts, FPOptionsOverride(), BLoc, BLoc);
   IfStmt *If = IfStmt::Create(S.Context, BLoc, IfStatementKind::Ordinary,
                               /* Init=*/nullptr,
                               /* Var=*/nullptr, IfCond,
@@ -1302,13 +1307,14 @@ class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
 
       SourceLocation SLoc = D->getBeginLoc();
       SourceLocation NLoc = D->getNameInfo().getLoc();
+      SourceLocation ELoc = D->getEndLoc();
       TypeSourceInfo *Tinfo = D->getTypeSourceInfo();
       std::string FName = std::string(D->getIdentifier()->getName());
 
       if (isa<BSCMethodDecl>(D)) {
         BSCMethodDecl *BMD = cast<BSCMethodDecl>(D);
         NewFD = buildAsyncBSCMethodDecl(
-            SemaRef.Context, D->getDeclContext(), SLoc, NLoc,
+            SemaRef.Context, D->getDeclContext(), SLoc, NLoc, ELoc,
             &(SemaRef.Context.Idents).get(FName), FuncType, Tinfo, SC_None,
             BMD->getExtendedType());
       } else {
@@ -1773,8 +1779,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(ES);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      ES = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                              SourceLocation(), false)
+      ES = BaseTransform::RebuildCompoundStmt(If->getBeginLoc(), Stmts,
+                                              If->getEndLoc(), false)
                .getAs<CompoundStmt>();
       If->setElse(ES);
     }
@@ -1783,8 +1789,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(TS);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      TS = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                              SourceLocation(), false)
+      TS = BaseTransform::RebuildCompoundStmt(If->getBeginLoc(), Stmts,
+                                              If->getEndLoc(), false)
                .getAs<CompoundStmt>();
       If->setThen(TS);
     }
@@ -1804,8 +1810,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(Body);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      Body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                                SourceLocation(), false)
+      Body = BaseTransform::RebuildCompoundStmt(Body->getBeginLoc(), Stmts,
+                                                Body->getEndLoc(), false)
                  .getAs<CompoundStmt>();
       WS->setBody(Body);
     }
@@ -1824,8 +1830,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(Body);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      Body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                                SourceLocation(), false)
+      Body = BaseTransform::RebuildCompoundStmt(Body->getBeginLoc(), Stmts,
+                                                Body->getEndLoc(), false)
                  .getAs<CompoundStmt>();
       DS->setBody(Body);
     }
@@ -1843,8 +1849,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(Body);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      Body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                                SourceLocation(), false)
+      Body = BaseTransform::RebuildCompoundStmt(Body->getBeginLoc(), Stmts,
+                                                Body->getEndLoc(), false)
                  .getAs<CompoundStmt>();
       FS->setBody(Body);
     }
@@ -1860,8 +1866,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(SS);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      SS = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                              SourceLocation(), false)
+      SS = BaseTransform::RebuildCompoundStmt(SS->getBeginLoc(), Stmts,
+                                              SS->getEndLoc(), false)
                .getAs<CompoundStmt>();
       CS->setSubStmt(SS);
     }
@@ -1877,8 +1883,8 @@ class TransformToHasSingleState
       std::vector<Stmt *> Stmts;
       Stmts.push_back(SS);
       Sema::CompoundScopeRAII CompoundScope(SemaRef);
-      SS = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                              SourceLocation(), false)
+      SS = BaseTransform::RebuildCompoundStmt(SS->getBeginLoc(), Stmts,
+                                              SS->getEndLoc(), false)
                .getAs<CompoundStmt>();
       DS->setSubStmt(SS);
     }
@@ -1905,10 +1911,9 @@ class TransformToHasSingleState
       Statements.push_back(SS);
     }
     Sema::CompoundScopeRAII CompoundScope(SemaRef);
-    CompoundStmt *CS =
-        BaseTransform::RebuildCompoundStmt(SourceLocation(), Statements,
-                                           SourceLocation(), false)
-            .getAs<CompoundStmt>();
+    CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
+                           S->getBeginLoc(), Statements, S->getEndLoc(), false)
+                           .getAs<CompoundStmt>();
     return CS;
   }
 
@@ -2139,10 +2144,9 @@ class TransformARToCS : public TreeTransform<TransformARToCS> {
       Statements.push_back(SS);
     }
     Sema::CompoundScopeRAII CompoundScope(SemaRef);
-    CompoundStmt *CS =
-        BaseTransform::RebuildCompoundStmt(SourceLocation(), Statements,
-                                           SourceLocation(), false)
-            .getAs<CompoundStmt>();
+    CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
+                           S->getBeginLoc(), Statements, S->getEndLoc(), false)
+                           .getAs<CompoundStmt>();
     return CS;
   }
 
@@ -2316,7 +2320,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
 
       Expr *FreeFuncExpr = SemaRef.BuildDeclRefExpr(
           FreeFD, FreeFD->getType().getNonReferenceType(), VK_LValue,
-          FreeFD->getLocation());
+          E->getBeginLoc());
       FreeFuncExpr->HasBSCScopeSpec = true;
       std::vector<Expr *> FreeArgs{Unop};
       Expr *FreeFuncCall =
@@ -2403,8 +2407,8 @@ class AEFinder : public StmtVisitor<AEFinder> {
           DeclAccessPair::make(VtableRD, FreeFuncField->getAccess()), false,
           DeclarationNameInfo(), FreeFuncField->getType(), VK_LValue,
           OK_Ordinary);
-      ThenBodyStmt =
-          buildIfStmtForFreeFutureObj(SemaRef, PtrExpr, FreeFuncExpr);
+      ThenBodyStmt = buildIfStmtForFreeFutureObj(SemaRef, PtrExpr, FreeFuncExpr,
+                                                 E->getBeginLoc());
     }
     Expr *PollFuncCall =
         SemaRef
@@ -2596,10 +2600,9 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
       Statements.push_back(SS);
     }
     Sema::CompoundScopeRAII CompoundScope(SemaRef);
-    CompoundStmt *CS =
-        BaseTransform::RebuildCompoundStmt(SourceLocation(), Statements,
-                                           SourceLocation(), false)
-            .getAs<CompoundStmt>();
+    CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
+                           S->getBeginLoc(), Statements, S->getEndLoc(), false)
+                           .getAs<CompoundStmt>();
     return CS;
   }
 
@@ -2625,6 +2628,7 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
                                         FunctionDecl *FD, bool IsOptimization) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
+  SourceLocation ELoc = FD->getEndLoc();
 
   std::string FName = "free";
   QualType FuncRetType = S.Context.VoidTy;
@@ -2635,7 +2639,7 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
   QualType FuncType = S.Context.getFunctionType(FuncRetType, ParamTys, {});
 
   BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(
-      S.Context, RD, SLoc, NLoc, &(S.Context.Idents).get(FName), FuncType,
+      S.Context, RD, SLoc, NLoc, ELoc, &(S.Context.Idents).get(FName), FuncType,
       nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
@@ -2769,7 +2773,7 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
   }
 
   CompoundStmt *CS =
-      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, NLoc);
+      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
@@ -2784,6 +2788,7 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
                                         int FutureStateNumber) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
+  SourceLocation ELoc = FD->getEndLoc();
   QualType Ty = FD->getDeclaredReturnType();
 
   std::string FName = "poll";
@@ -2797,8 +2802,9 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   QualType OriginType = S.Context.getFunctionType(Ty, ParamTys, {});
 
   BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(
-      S.Context, RD, SLoc, NLoc, &(S.Context.Idents).get(FName), OriginType,
-      nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
+      S.Context, RD, SLoc, NLoc, ELoc, &(S.Context.Idents).get(FName),
+      OriginType, nullptr, SC_None,
+      RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
   S.PushFunctionScope();
@@ -2868,7 +2874,7 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   }
 
   CompoundStmt *SSBody = CompoundStmt::Create(S.Context, CaseStmts,
-                                              FPOptionsOverride(), SLoc, NLoc);
+                                              FPOptionsOverride(), SLoc, ELoc);
 
   SS->setBody(SSBody);
   Stmts.push_back(SS);
@@ -2923,7 +2929,7 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   }
 
   CompoundStmt *CS =
-      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, NLoc);
+      CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
