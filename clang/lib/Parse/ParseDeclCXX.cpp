@@ -1483,6 +1483,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     TagType = DeclSpec::TST_interface;
   else if (TagTokKind == tok::kw_class)
     TagType = DeclSpec::TST_class;
+#if ENABLE_BSC
+  else if (TagTokKind == tok::kw_trait)
+    TagType = DeclSpec::TST_trait;
+#endif
   else {
     assert(TagTokKind == tok::kw_union && "Not a class specifier");
     TagType = DeclSpec::TST_union;
