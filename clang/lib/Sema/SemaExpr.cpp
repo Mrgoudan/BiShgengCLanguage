@@ -2676,12 +2676,16 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
   // This could be an implicitly declared function reference if the language
   // mode allows it as a feature.
+#if ENABLE_BSC
+// In BSC, we do not allow implicitly declared function reference for member
+// functions.
+#endif
   if (R.empty() && HasTrailingLParen && II &&
       (getLangOpts().implicitFunctionsAllowed())
-      #if ENABLE_BSC
-      && !getLangOpts().BSC
-      #endif
-      ) {
+#if ENABLE_BSC
+      && (!(getLangOpts().BSC && !T.isNull()))
+#endif
+  ) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }

@@ -8,7 +8,8 @@ async int f(int start) {
   return result;
 }
 
-// expected-error@#1 {{use of undeclared identifier 'g'}}
+// expected-warning@#1 {{call to undeclared function 'g'; ISO C99 and later do not support implicit function declarations}}
+// expected-error@#1 {{the await expression's external function declaration must be modified by async or return 'Future' type}}
 
 int main() {
   return 0;

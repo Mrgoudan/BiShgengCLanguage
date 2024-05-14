@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -verify %s
+
+int main() {
+    f(); // expected-warning {{call to undeclared function 'f'; ISO C99 and later do not support implicit function declarations}}
+    return g(); // expected-warning {{call to undeclared function 'g'; ISO C99 and later do not support implicit function declarations}}
+}

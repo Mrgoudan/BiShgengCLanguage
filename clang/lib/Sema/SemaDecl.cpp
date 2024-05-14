@@ -945,12 +945,20 @@ Corrected:
     if (SS.isEmpty() && NextToken.is(tok::l_paren)) {
       // In C++, this is an ADL-only call.
       // FIXME: Reference?
-      // In BSC, this is the key of check undefined function name.
+#if ENABLE_BSC
+      // In BSC, we report an error when using undefined identifier inside
+      // function template. Otherwise, it will cause coredump during funciton
+      // instantiation.
+      FunctionDecl *CurFD = getCurFunctionDecl();
+      bool InsideFunctionTempalte =
+          CurFD &&
+          CurFD->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate;
+#endif
       if (getLangOpts().CPlusPlus
-          #if ENABLE_BSC
-          || getLangOpts().BSC
-          #endif
-          )
+#if ENABLE_BSC
+          || (getLangOpts().BSC && InsideFunctionTempalte)
+#endif
+      )
         return NameClassification::UndeclaredNonType();
 
       // C90 6.3.2.2:
