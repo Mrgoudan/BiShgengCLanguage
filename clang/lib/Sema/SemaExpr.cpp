@@ -2683,7 +2683,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   if (R.empty() && HasTrailingLParen && II &&
       (getLangOpts().implicitFunctionsAllowed())
 #if ENABLE_BSC
-      && (!(getLangOpts().BSC && !T.isNull()))
+      && !(getLangOpts().BSC && !T.isNull())
 #endif
   ) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);

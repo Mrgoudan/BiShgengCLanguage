@@ -4812,10 +4812,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Args.getLastArg(options::OPT_opt_string))
     Args.AddLastArg(CmdArgs, options::OPT_opt_string);
-  #endif
+  if (Args.hasArg(options::OPT_disable_ownership_check))
+    CmdArgs.push_back("-disable-ownership-check");
+#endif
 
   auto *MemProfArg = Args.getLastArg(options::OPT_fmemory_profile,
                                      options::OPT_fmemory_profile_EQ,

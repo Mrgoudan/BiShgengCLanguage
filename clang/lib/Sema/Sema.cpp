@@ -2212,10 +2212,16 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
     popOpenMPFunctionRegion(Scope.get());
 
   #if ENABLE_BSC
-  if (LangOpts.BSC && !isBSCCoroutine && (getDiagnostics().getNumErrors() == getDiagnostics().getNumOwnershipErrors()) && D)
-    if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D))
-      CheckBSCOwnership(D);
-  #endif
+  bool DisableOwnershipCheck = getLangOpts().DisableOwnershipCheck;
+  if (!DisableOwnershipCheck) {
+    if (LangOpts.BSC && !isBSCCoroutine &&
+        (getDiagnostics().getNumErrors() ==
+         getDiagnostics().getNumOwnershipErrors()) &&
+        D)
+      if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D))
+        CheckBSCOwnership(D);
+  }
+#endif
 
   // Issue any analysis-based warnings.
   if (WP && D)
