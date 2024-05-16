@@ -3907,14 +3907,17 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   Arg *RewriteBSCArg = Args.getLastArg(options::OPT_rewrite_bsc);
   if (RewriteBSCArg) {
     for (auto &I : Inputs) {
-      types::ID InputType = I.first;
-      // We only support rewriting files with suffixes 'hbs' and 'cbs'.
-      if (InputType != types::TY_BSC && InputType != types::TY_BSCHeader) {
-        Diag(clang::diag::warn_target_unsupported_non_bsc_file)
-            << types::getTypeName(InputType);
-        Args.eraseArg(options::OPT_rewrite_bsc);
-        RewriteBSCArg = nullptr;
-        break;
+      // Note: We only check types of input source files.
+      if (I.second->getOption().getKind() == Option::InputClass) {
+        types::ID InputType = I.first;
+        // We only support rewriting files with suffixes 'hbs' and 'cbs'.
+        if (InputType != types::TY_BSC && InputType != types::TY_BSCHeader) {
+          Diag(clang::diag::warn_target_unsupported_non_bsc_file)
+              << types::getTypeName(InputType);
+          Args.eraseArg(options::OPT_rewrite_bsc);
+          RewriteBSCArg = nullptr;
+          break;
+        }
       }
     }
   }
