@@ -21,6 +21,7 @@
 #include "clang/Rewrite/Frontend/ASTConsumers.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
 
 using namespace clang;
 
@@ -265,11 +266,38 @@ void RewriteBSC::GetSourceLocationsOfFirstDeclAndLastDecl() {
   }
 }
 
+static QualType getInnerType(QualType QT) {
+  QT = QT.IgnoreParens();
+  while (QT->isPointerType())
+    QT = QT->getPointeeType();
+  return QT;
+}
+
+// Determine whether the QualType contains instantiated generic type.
+static bool HasTemplateSpecType(QualType QT,
+                                std::set<Decl *> HasTemplateSpecSet) {
+  if (QT->getAs<TemplateSpecializationType>()) {
+    return true;
+  } else if (const RecordType *RT = QT->getAs<RecordType>()) {
+    return HasTemplateSpecSet.count(RT->getDecl());
+  }
+  return false;
+}
+
 const std::string RewriteBSC::GetRewrittenString() {
   std::string SStr;
   llvm::raw_string_ostream Buf(SStr);
 
   std::vector<Decl *> DeclList;
+  std::set<Decl *> HasTemplateSpecSet;
+  auto EndsWith = [](const std::string &str, const std::string &suffix) {
+    if (str.length() >= suffix.length()) {
+      return 0 == str.compare(str.length() - suffix.length(), suffix.length(),
+                              suffix);
+    }
+    return false;
+  };
+  bool IsHBSFile = EndsWith(InFileName, "hbs");
 
   // Step 1: Sort all struct/union/enum/typedef decls.
   // Step 1.1: Put non-generic struct / union / enum / typedef decls into
@@ -278,23 +306,85 @@ const std::string RewriteBSC::GetRewrittenString() {
                                   DEnd = TUDecl->decls_end();
        D != DEnd; ++D) {
     switch ((*D)->getKind()) {
-    case Decl::Record:
-    case Decl::Enum:
-    case Decl::Typedef: {
-      if (SM->isWrittenInMainFile(SM->getExpansionLoc(D->getBeginLoc()))) {
+    case Decl::Record: {
+      RecordDecl *RD = cast<RecordDecl>(*D);
+      RecordDecl::field_iterator Field, FieldEnd;
+      bool HasTemplateSpec = false;
+      for (Field = RD->field_begin(), FieldEnd = RD->field_end();
+           Field != FieldEnd; ++Field) {
+        QualType FieldTy = getInnerType(Field->getType());
+        if (HasTemplateSpecType(FieldTy, HasTemplateSpecSet)) {
+          HasTemplateSpec = true;
+          HasTemplateSpecSet.insert(*D);
+          break;
+        }
+      }
+      // In the header file, skip the RecordDecl containing instantiated type.
+      // and move them to the .c file
+      if (IsHBSFile && HasTemplateSpec)
+        break;
+      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(RD->getBeginLoc())) &&
+          !SM->isWrittenInMainFile(SM->getSpellingLoc(RD->getEndLoc())) &&
+          !HasTemplateSpec)
+        break;
+      DeclList.push_back(*D);
+      break;
+    }
+    case Decl::Enum: {
+      if (SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
+          SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
         DeclList.push_back(*D);
       }
       break;
+    }
+    case Decl::Typedef: {
+      TypedefDecl *TD = cast<TypedefDecl>(*D);
+      bool HasTemplateSpec = false;
+      if (const RecordType *RT = TD->getUnderlyingType()->getAs<RecordType>()) {
+        RecordDecl *RD = RT->getDecl();
+        HasTemplateSpec = HasTemplateSpecSet.count(RD);
+      } else if (const PointerType *PT = TD->getUnderlyingType()
+                                             .IgnoreParens()
+                                             ->getAs<PointerType>()) {
+        if (const FunctionType *FT =
+                PT->getPointeeType().IgnoreParens()->getAs<FunctionType>()) {
+          QualType ReturnTy = getInnerType(FT->getReturnType());
+          if (HasTemplateSpecType(ReturnTy, HasTemplateSpecSet))
+            HasTemplateSpec = true;
+          else if (auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
+            for (unsigned i = 0; i < FPT->getNumParams(); i++) {
+              QualType ParamTy = getInnerType(FPT->getParamType(i));
+              if (HasTemplateSpecType(ParamTy, HasTemplateSpecSet)) {
+                HasTemplateSpec = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      // In the header file, skip the TypedefDecl containing instantiated type.
+      // and move them to the .c file
+      if (IsHBSFile && HasTemplateSpec)
+        break;
+      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(TD->getBeginLoc())) &&
+          !SM->isWrittenInMainFile(SM->getSpellingLoc(TD->getEndLoc())) &&
+          !HasTemplateSpec)
+        break;
+      DeclList.push_back(*D);
     }
     default:
       break;
     }
   }
 
-  // Step 1.2: Insert instantiated stuct / enum decls into DeclList.
+  // Step 1.2: Insert instantiated stuct / union decls into DeclList.
   for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
                                   DEnd = TUDecl->decls_end();
        D != DEnd; ++D) {
+    // In the header file, skip instantiated stuct / union decls.
+    if (IsHBSFile) {
+      break;
+    }
     switch ((*D)->getKind()) {
     case Decl::ClassTemplate: {
       ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
@@ -377,6 +467,10 @@ const std::string RewriteBSC::GetRewrittenString() {
   for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
                                   DEnd = TUDecl->decls_end();
        D != DEnd; ++D) {
+    // In the header file, skip all instatiation function declarations.
+    if (IsHBSFile) {
+      break;
+    }
     switch ((*D)->getKind()) {
     case Decl::BSCMethod:
     case Decl::Function: {
@@ -387,7 +481,8 @@ const std::string RewriteBSC::GetRewrittenString() {
       }
       if (FD->isAsyncSpecified())
         break;
-      if (SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getBeginLoc())) &&
+      if ((SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) ||
+           SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc()))) &&
           FD->isTemplateInstantiation()) {
         FD->print(Buf, Policy);
         Buf << ";\n\n";
@@ -437,8 +532,30 @@ const std::string RewriteBSC::GetRewrittenString() {
       }
       if (FD->isAsyncSpecified())
         break;
-      if (SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getBeginLoc())) &&
-          !FD->isTemplateInstantiation()) {
+      if (!FD->isTemplateInstantiation()) {
+        // Check if there is a generic instantiation in the function declaration
+        bool HasTemplateSpec = false;
+        const FunctionType *FT = FD->getType()->getAs<FunctionType>();
+        QualType ReturnTy = getInnerType(FT->getReturnType());
+        if (HasTemplateSpecType(ReturnTy, HasTemplateSpecSet))
+          HasTemplateSpec = true;
+        else if (auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
+          for (unsigned i = 0; i < FPT->getNumParams(); i++) {
+            QualType ParamTy = getInnerType(FPT->getParamType(i));
+            if (HasTemplateSpecType(ParamTy, HasTemplateSpecSet)) {
+              HasTemplateSpec = true;
+              break;
+            }
+          }
+        }
+        // In the header file, skip the FunctionDecl / BSCMethodDecl containing
+        // instantiated type. and move them to the .c file
+        if (IsHBSFile && HasTemplateSpec)
+          break;
+        if (!SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) &&
+            !SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc())) &&
+            !HasTemplateSpec)
+          break;
         FD->print(Buf, Policy);
         if (!isa<FunctionDecl>(FD) || !FD->isThisDeclarationADefinition()) {
           Buf << ";\n";
@@ -448,9 +565,28 @@ const std::string RewriteBSC::GetRewrittenString() {
 
       break;
     }
-    case Decl::Var:
+    case Decl::Var: {
+      VarDecl *VD = cast<VarDecl>(*D);
+      QualType VarTy = getInnerType(VD->getType());
+      bool HasTemplateSpec = false;
+      if (HasTemplateSpecType(VarTy, HasTemplateSpecSet))
+        HasTemplateSpec = true;
+      // In the header file, skip the VarDecl containing instantiated type.
+      // and move them to the .c file
+      if (IsHBSFile && HasTemplateSpec)
+        break;
+      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(VD->getBeginLoc())) &&
+          !SM->isWrittenInMainFile(SM->getSpellingLoc(VD->getEndLoc())) &&
+          !HasTemplateSpec)
+        break;
+      D->print(Buf, Policy);
+      Buf << ";\n\n";
+
+      break;
+    }
     case Decl::FileScopeAsm: {
-      if (SM->isWrittenInMainFile(SM->getExpansionLoc(D->getBeginLoc()))) {
+      if (SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
+          SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
         D->print(Buf, Policy);
         Buf << ";\n\n";
       }
@@ -465,6 +601,10 @@ const std::string RewriteBSC::GetRewrittenString() {
   for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
                                   DEnd = TUDecl->decls_end();
        D != DEnd; ++D) {
+    // In the header file, skip all instatiation function definition.
+    if (IsHBSFile) {
+      break;
+    }
     switch ((*D)->getKind()) {
     case Decl::BSCMethod:
     case Decl::Function: {
@@ -475,7 +615,8 @@ const std::string RewriteBSC::GetRewrittenString() {
       }
       if (FD->isAsyncSpecified())
         break;
-      if (SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getBeginLoc())) &&
+      if ((SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) ||
+           SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc()))) &&
           FD->isTemplateInstantiation()) {
         if (FD->doesThisDeclarationHaveABody()) {
           FD->print(Buf, Policy);
