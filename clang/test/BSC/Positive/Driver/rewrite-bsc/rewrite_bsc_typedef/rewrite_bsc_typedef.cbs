@@ -1,0 +1,51 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+
+
+struct S<T> {};
+typedef struct {
+  struct S<int> a;
+}MyStruct;
+
+typedef union {
+  int a;
+}MyUnion;
+
+typedef enum {
+  X1,
+  X2
+}MyEnum;
+
+int main() {
+  return 0;
+}
+
+
+
+// CHECK: struct S_int {
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:struct MyStruct {
+// CHECK-NEXT:    struct S_int a;
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:typedef struct MyStruct MyStruct;
+// CHECK-EMPTY:
+// CHECK-NEXT:union MyUnion {
+// CHECK-NEXT:    int a;
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:typedef union MyUnion MyUnion;
+// CHECK-EMPTY:
+// CHECK-NEXT:enum MyEnum {
+// CHECK-NEXT:    X1,
+// CHECK-NEXT:    X2
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:typedef enum MyEnum MyEnum;
+// CHECK-EMPTY:
+// CHECK-NEXT:int main(void) {
+// CHECK-NEXT:    return 0;
+// CHECK-NEXT:}

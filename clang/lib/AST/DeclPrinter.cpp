@@ -584,6 +584,25 @@ void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
       Out << "__module_private__ ";
   }
   QualType Ty = D->getTypeSourceInfo()->getType();
+#if ENABLE_BSC
+  // Handling anonymous struct/union/enum defined through typedef for rewriting
+  if (Context.getLangOpts().BSC) {
+    if (const RecordType *RT = D->getUnderlyingType()->getAs<RecordType>()) {
+      RecordDecl *RD = RT->getDecl();
+      if (!RD->getIdentifier()) {
+        if (RD->isStruct())
+          Out << "struct ";
+        if (RD->isUnion())
+          Out << "union ";
+      }
+    } else if (const EnumType *ET = D->getUnderlyingType()->getAs<EnumType>()) {
+      EnumDecl *ED = ET->getDecl();
+      if (!ED->getIdentifier()) {
+        Out << "enum ";
+      }
+    }
+  }
+#endif
   Ty.print(Out, Policy, D->getName(), Indentation);
   prettyPrintAttributes(D);
 }
@@ -609,6 +628,13 @@ void DeclPrinter::VisitEnumDecl(EnumDecl *D) {
 
   if (D->getDeclName())
     Out << ' ' << D->getDeclName();
+#if ENABLE_BSC
+  // Handling anonymous enum defined through typedef for rewriting
+  else if (Context.getLangOpts().BSC) {
+    if (TypedefNameDecl *TND = D->getTypedefNameForAnonDecl())
+      Out << ' ' << TND->getName();
+  }
+#endif
 
   if (D->isFixed())
     Out << " : " << D->getIntegerType().stream(Policy);
@@ -629,6 +655,13 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
 
   if (D->getIdentifier())
     Out << ' ' << *D;
+#if ENABLE_BSC
+  // Handling anonymous struct/union defined through typedef for rewriting
+  else if (Context.getLangOpts().BSC) {
+    if (TypedefNameDecl *TND = D->getTypedefNameForAnonDecl())
+      Out << ' ' << TND->getName();
+  }
+#endif
 
   if (D->isCompleteDefinition()) {
     Out << " {\n";
