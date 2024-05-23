@@ -1241,27 +1241,31 @@ static IfStmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
 }
 
 namespace {
-class RecursiveCallVisitor : public StmtVisitor<RecursiveCallVisitor> {
+  /**
+   * Visit a Stmt and return true if there's a recursive call to the provided Decl
+  */
+class RecursiveCallVisitor : public ConstStmtVisitor<RecursiveCallVisitor, bool> {
 public:
-  RecursiveCallVisitor(Decl *FD) : FD(FD) { IsRecursiveCall = false; }
-  void VisitCallExpr(CallExpr *E) {
+  RecursiveCallVisitor(const Decl *FD) : FD(FD) {}
+  bool VisitCallExpr(const CallExpr *E) {
     if (E->getCalleeDecl() == FD)
-      IsRecursiveCall = true;
+      return true;
+
+    return this->VisitStmt(static_cast<const Stmt*>(E));
   }
-  void VisitStmt(Stmt *S) {
+  bool VisitStmt(const Stmt *S) {
     for (auto *C : S->children()) {
       if (C) {
-        if (IsRecursiveCall)
-          return;
-        Visit(C);
+        if (Visit(C)) {
+          return true;
+        }
       }
     }
+    return false;
   }
-  bool GetIsRecursiveCall() { return IsRecursiveCall; }
 
 private:
-  bool IsRecursiveCall;
-  Decl *FD;
+  const Decl *FD;
 };
 } // namespace
 
@@ -3132,9 +3136,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   LocalVarFinder VarFinder = LocalVarFinder(Context);
   VarFinder.Visit(FD->getBody());
 
-  RecursiveCallVisitor RecursiveVisitor = RecursiveCallVisitor(FD);
-  RecursiveVisitor.VisitStmt(FD->getBody());
-  bool IsRecursiveCall = RecursiveVisitor.GetIsRecursiveCall();
+  bool IsRecursiveCall = RecursiveCallVisitor(FD).VisitStmt(FD->getBody());
   bool IsOptimization = FD->isStatic() && !IsRecursiveCall;
   RecordDecl *RD = buildFutureRecordDecl(*this, FD, AwaitFinder.GetAwaitExpr(),
                                          VarFinder.GetLocalVarList());
