@@ -122,7 +122,7 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
     }
   }
   TraitVtableRD->completeDefinition();
-
+  Context.BSCDesugaredMap[TD].push_back(TraitVtableRD);
   return TraitVtableRD;
 }
 
@@ -193,6 +193,7 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
   TraitRD->addDecl(VtableFD);
   TraitRD->completeDefinition();
   TraitRD->setDesugaredTraitDecl(TD);
+  Context.BSCDesugaredMap[TD].push_back(TraitRD);
   return TraitRD;
 }
 

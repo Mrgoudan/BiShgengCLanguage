@@ -552,6 +552,7 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   }
 
   ParsingDeclSpec TypeDS(*this);
+  TypeDS.setImplTrait();
   ParseDeclarationSpecifiers(TypeDS);
   ParsingDeclarator TypeDeclarator(*this, TypeDS, EmptyDeclSpecAttrs,
                                    DeclaratorContext::File);

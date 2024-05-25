@@ -1644,9 +1644,11 @@ class DeclContext {
     /// have a body, once we're done parsing it.
     uint64_t WillHaveBody : 1;
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     uint64_t SafeSpecifier : 2;
-    #endif
+
+    uint64_t SafeZoneSpecifier : 2;
+#endif
 
     /// Indicates that this function is a multiversioned
     /// function using attribute 'target'.
@@ -1665,11 +1667,11 @@ class DeclContext {
   };
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
-  #if ENABLE_BSC
-  enum { NumFunctionDeclBits = 31 };
-  #else
+#if ENABLE_BSC
+  enum { NumFunctionDeclBits = 33 };
+#else
   enum { NumFunctionDeclBits = 28};
-  #endif
+#endif
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1686,11 +1688,11 @@ class DeclContext {
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    #if ENABLE_BSC
-    uint64_t NumCtorInitializers : 17;
-    #else
+#if ENABLE_BSC
+    uint64_t NumCtorInitializers : 15;
+#else
     uint64_t NumCtorInitializers : 20;
-    #endif
+#endif
     uint64_t IsInheritingConstructor : 1;
 
     /// Whether this constructor has a trail-allocated explicit specifier.

@@ -33,19 +33,15 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:typedef struct MyStruct MyStruct;
 // CHECK-EMPTY:
-// CHECK-NEXT:union MyUnion {
-// CHECK-NEXT:    int a;
-// CHECK-NEXT:};
+// CHECK-NEXT:typedef union {
+// CHECK-NEXT:  int a;
+// CHECK-NEXT:}MyUnion;
 // CHECK-EMPTY:
-// CHECK-NEXT:typedef union MyUnion MyUnion;
+// CHECK-NEXT:typedef enum {
+// CHECK-NEXT:  X1,
+// CHECK-NEXT:  X2
+// CHECK-NEXT:}MyEnum;
 // CHECK-EMPTY:
-// CHECK-NEXT:enum MyEnum {
-// CHECK-NEXT:    X1,
-// CHECK-NEXT:    X2
-// CHECK-NEXT:};
-// CHECK-EMPTY:
-// CHECK-NEXT:typedef enum MyEnum MyEnum;
-// CHECK-EMPTY:
-// CHECK-NEXT:int main(void) {
+// CHECK-NEXT:int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}

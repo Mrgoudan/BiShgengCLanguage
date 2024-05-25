@@ -1,0 +1,12 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "rewrite_bsc_with_macro_3.h"
+
+Bool a = false;
+
+int main() {
+  Bool x = a;
+  return 0;
+}

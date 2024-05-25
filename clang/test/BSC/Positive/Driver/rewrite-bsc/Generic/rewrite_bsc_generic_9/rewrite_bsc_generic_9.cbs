@@ -17,8 +17,7 @@ struct C {
 
 int main() {}
 
-// CHECK: struct Void {
-// CHECK-NEXT: };
+// CHECK: struct Void {};
 // CHECK-EMPTY:
 // CHECK-NEXT: struct A_struct_Void {
 // CHECK-NEXT: };
@@ -31,5 +30,4 @@ int main() {}
 // CHECK-NEXT:     struct B_struct_Void b;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: int main(void) {
-// CHECK-NEXT:   }
+// CHECK-NEXT: int main() {}

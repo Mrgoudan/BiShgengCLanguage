@@ -14,11 +14,14 @@
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DeclVisitor.h"
+#include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/ASTConsumers.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <set>
@@ -42,6 +45,8 @@ private:
 
   unsigned RewriteFailedDiag;
 
+  llvm::SmallPtrSet<Decl *, 16> DeclsWithoutBSCFeature;
+
   SourceLocation BeginLocOfFirstDecl;
   SourceLocation EndLocOfLastDecl;
 
@@ -58,6 +63,7 @@ public:
   void HandleTranslationUnit(ASTContext &C) override;
 
 private:
+  void FindDeclsWithoutBSCFeature();
   const std::string GetRewrittenString();
   /// Get the begin source location of the first decl and the end source
   /// location of the last decl.
@@ -201,11 +207,14 @@ void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
 void RewriteBSC::RewriteDecls(DeclContext *DC) {
 
   GetSourceLocationsOfFirstDeclAndLastDecl();
-
-  // Step 1: Get rewritten string for all decls using pretty printer.
+  // Step 1: Find decls without bsc features.
+  FindDeclsWithoutBSCFeature();
+  // Step 2: Get rewritten string
+  // For decls that have bsc features, we use pretty printer.
+  // For decls that do not have bsc features, we use the original decl string.
   const std::string &Str = GetRewrittenString();
 
-  // Step 2: Replace buffered string with original decl string.
+  // Step 3: Replace buffered string with original decl string.
   const char *startBuf = SM->getCharacterData(BeginLocOfFirstDecl);
   const char *endBuf = SM->getCharacterData(EndLocOfLastDecl);
   ReplaceText(BeginLocOfFirstDecl, endBuf - startBuf + 1, Str);
@@ -284,6 +293,301 @@ static bool HasTemplateSpecType(QualType QT,
   return false;
 }
 
+namespace {
+class BSCFeatureFinder : public StmtVisitor<BSCFeatureFinder, bool>,
+                         public DeclVisitor<BSCFeatureFinder, bool>,
+                         public TypeVisitor<BSCFeatureFinder, bool> {
+protected:
+  ASTContext &Context;
+
+private:
+  bool IsDesugaredFromTraitType(QualType T) {
+    while (T->isPointerType())
+      T = T->getPointeeType();
+    if (RecordDecl *RD = T->getAsRecordDecl()) {
+      if (auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T)) {
+        TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
+        RD = dyn_cast_or_null<RecordDecl>(TempT->getTemplatedDecl());
+      }
+      if (RD->getDesugaredTraitDecl())
+        return true;
+    }
+    return false;
+  }
+
+public:
+  using TypeVisitor<BSCFeatureFinder, bool>::Visit;
+  using DeclVisitor<BSCFeatureFinder, bool>::Visit;
+  using StmtVisitor<BSCFeatureFinder, bool>::Visit;
+
+  BSCFeatureFinder(ASTContext &Context) : Context(Context) {}
+
+  /*--------------Types--------------*/
+
+  bool VisitType(const Type *T) {
+    if (isa<PointerType>(T)) {
+      if (VisitQualType(cast<PointerType>(T)->getPointeeType())) {
+        return true;
+      }
+    }
+
+    if (isa<ParenType>(T)) {
+      if (VisitQualType(cast<ParenType>(T)->getInnerType())) {
+        return true;
+      }
+    }
+
+    if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(T)) {
+      if (VisitQualType(FPT->getReturnType())) {
+        return true;
+      }
+      for (auto &P : FPT->getParamTypes()) {
+        if (VisitQualType(P)) {
+          return true;
+        }
+      }
+    }
+
+    if (T->isTraitType() || T->isTraitPointerType() || T->hasTraitType()) {
+      return true;
+    }
+    return false;
+  }
+
+  bool VisitQualType(QualType QT) {
+    if (QT.isOwnedQualified()) {
+      return true;
+    }
+    if (IsDesugaredFromTraitType(QT)) {
+      return true;
+    }
+    if (QT->getAs<TemplateSpecializationType>()) {
+      return true;
+    }
+
+    if (VisitType(QT.getTypePtr())) {
+      return true;
+    }
+    return false;
+  }
+
+  /*--------------Decls--------------*/
+  bool VisitBSCMethodDecl(BSCMethodDecl *MD) { return true; }
+
+  bool VisitFunctionDecl(FunctionDecl *FD) {
+    if (VisitQualType(FD->getType())) {
+      return true;
+    }
+
+    // async related funcs
+    if (IsDesugared(FD, &Context) || FD->isAsyncSpecified()) {
+      return true;
+    }
+    // safe / unsafe func
+    if (FD->getSafeZoneSpecifier() != SZ_None) {
+      return true;
+    }
+    // generic function
+    if (FD->getParent() && isa<RecordDecl>(FD->getParent()) &&
+        cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
+      return true;
+    }
+    if (FD->isTemplateInstantiation()) {
+      return true;
+    }
+
+    if (FD->isConstexpr()) {
+      return true;
+    }
+
+    for (auto *Parameter : FD->parameters()) {
+      if (Visit(Parameter)) {
+        return true;
+      }
+      if (VisitQualType(Parameter->getType())) {
+        return true;
+      }
+    }
+
+    if (FD->doesThisDeclarationHaveABody()) {
+      if (Visit(FD->getBody())) {
+        return true;
+      }
+    }
+    return false;
+  }
+  bool VisitVarDecl(VarDecl *D) {
+    if (VisitQualType(D->getType())) {
+      return true;
+    }
+    if (D->isConstexpr()) {
+      return true;
+    }
+
+    if (D->hasInit()) {
+      if (Visit((D->getInit()))) {
+        return true;
+      }
+      if (VisitQualType(D->getInit()->getType())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool VisitRecordDecl(RecordDecl *RD) {
+    if (IsDesugared(RD, &Context)) {
+      return true;
+    }
+
+    if (RD->isTrait() || RD->getDesugaredTraitDecl()) {
+      return true;
+    }
+
+    for (auto Member : RD->fields()) {
+      if (Visit(Member)) {
+        return true;
+      }
+      if (VisitQualType(Member->getType())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool VisitStaticAssertDecl(StaticAssertDecl *D) {
+    return Visit(D->getAssertExpr());
+  }
+  bool VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        if (Visit(C)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /*--------------Stmts--------------*/
+  bool VisitDeclStmt(DeclStmt *DS) {
+    for (auto *D : DS->decls()) {
+      if (Visit(D)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool VisitCompoundStmt(CompoundStmt *CS) {
+    if (CS->getCompSafeZoneSpecifier() != SZ_None) {
+      return true;
+    }
+    for (auto *S : CS->body()) {
+      if (Visit(S)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool VisitInitListExpr(InitListExpr *ILE) {
+    if (VisitQualType(ILE->getType())) {
+      return true;
+    }
+    for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i) {
+      if (ILE->getInit(i)) {
+        if (Visit(ILE->getInit(i))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool VisitCStyleCastExpr(CStyleCastExpr *E) {
+    if (VisitQualType(E->getType())) {
+      return true;
+    }
+    if (VisitExplicitCastExpr(E)) {
+      return true;
+    }
+    return false;
+  }
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (VisitQualType(DRE->getType())) {
+      return true;
+    }
+    if (IsDesugared(DRE->getDecl(), &Context)) {
+      return true;
+    }
+
+    if (DRE->getDecl()->getKind() == Decl::BSCMethod) {
+      return true;
+    }
+
+    if (DRE->getDecl()->getKind() == Decl::Function) {
+      FunctionDecl *FD = cast<FunctionDecl>(DRE->getDecl());
+      if (FD->isTemplateInstantiation() || FD->isConstexpr()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool VisitMemberExpr(MemberExpr *ME) {
+    if (VisitQualType(ME->getType())) {
+      return true;
+    }
+    if (Visit(ME->getBase())) {
+      return true;
+    }
+    if (IsDesugared(ME->getMemberDecl(), &Context)) {
+      return true;
+    }
+    if (ME->getMemberDecl()->getKind() == Decl::BSCMethod) {
+      return true;
+    }
+    if (ME->getMemberDecl()->getKind() == Decl::Function) {
+      FunctionDecl *FD = cast<FunctionDecl>(ME->getMemberDecl());
+      if (FD->isTemplateInstantiation() || FD->isConstexpr()) {
+        return true;
+      }
+    }
+    return false;
+  }
+};
+} // namespace
+
+void RewriteBSC::FindDeclsWithoutBSCFeature() {
+  BSCFeatureFinder finder = BSCFeatureFinder(*Context);
+  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
+                                  DEnd = TUDecl->decls_end();
+       D != DEnd; ++D) {
+    switch ((*D)->getKind()) {
+    case Decl::Var:
+    case Decl::Record:
+    case Decl::Function: {
+      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
+          !SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
+        break;
+      }
+      if (!finder.Visit(*D)) {
+        DeclsWithoutBSCFeature.insert(*D);
+        if (RecordDecl *RD = dyn_cast<RecordDecl>(*D)) {
+          if (TypedefNameDecl *TND = RD->getTypedefNameForAnonDecl()) {
+            DeclsWithoutBSCFeature.insert(TND);
+          }
+        }
+      }
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}
 const std::string RewriteBSC::GetRewrittenString() {
   std::string SStr;
   llvm::raw_string_ostream Buf(SStr);
@@ -334,6 +638,11 @@ const std::string RewriteBSC::GetRewrittenString() {
       if (SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
           SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
         DeclList.push_back(*D);
+        DeclsWithoutBSCFeature.insert(*D);
+        if (TypedefNameDecl *TND =
+                cast<EnumDecl>(*D)->getTypedefNameForAnonDecl()) {
+          DeclsWithoutBSCFeature.insert(TND);
+        }
       }
       break;
     }
@@ -457,8 +766,35 @@ const std::string RewriteBSC::GetRewrittenString() {
     if (D == VoidStruct) {
       continue;
     }
-    D->print(Buf, Policy);
-    Buf << ";\n\n";
+    if (DeclsWithoutBSCFeature.find(D) == DeclsWithoutBSCFeature.end()) {
+      D->print(Buf, Policy);
+      Buf << ";\n\n";
+    } else {
+      if (auto *TD = dyn_cast<TagDecl>(D)) {
+        if (TD->getTypedefNameForAnonDecl()) {
+
+        } else {
+          const char *startBuf = SM->getCharacterData(D->getBeginLoc());
+          const char *endBuf = SM->getCharacterData(D->getEndLoc());
+          Buf << std::string(startBuf, endBuf - startBuf + 1);
+          Buf << ";\n\n";
+        }
+      } else {
+        if (TypedefNameDecl *TND = dyn_cast<TypedefNameDecl>(D)) {
+          const char *startBuf = SM->getCharacterData(D->getBeginLoc());
+          const char *endBuf =
+              SM->getCharacterData(D->getEndLoc().getLocWithOffset(
+                  TND->getIdentifier()->getLength()));
+          Buf << std::string(startBuf, endBuf - startBuf + 1);
+          Buf << "\n\n";
+        } else {
+          const char *startBuf = SM->getCharacterData(D->getBeginLoc());
+          const char *endBuf = SM->getCharacterData(D->getEndLoc());
+          Buf << std::string(startBuf, endBuf - startBuf + 1);
+          Buf << ";\n\n";
+        }
+      }
+    }
   }
 
   // Step 2: Collect all instatiation function declarations.
@@ -556,7 +892,18 @@ const std::string RewriteBSC::GetRewrittenString() {
             !SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc())) &&
             !HasTemplateSpec)
           break;
-        FD->print(Buf, Policy);
+
+        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end()) {
+          FD->print(Buf, Policy);
+        } else {
+          const char *startBuf = SM->getCharacterData(FD->getBeginLoc());
+          const char *endBuf = SM->getCharacterData(FD->getEndLoc());
+          Buf << std::string(startBuf, endBuf - startBuf + 1);
+          if (FD->isThisDeclarationADefinition()) {
+            Buf << "\n";
+          }
+        }
+
         if (!isa<FunctionDecl>(FD) || !FD->isThisDeclarationADefinition()) {
           Buf << ";\n";
         }
@@ -575,8 +922,8 @@ const std::string RewriteBSC::GetRewrittenString() {
       // and move them to the .c file
       if (IsHBSFile && HasTemplateSpec)
         break;
-      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(VD->getBeginLoc())) &&
-          !SM->isWrittenInMainFile(SM->getSpellingLoc(VD->getEndLoc())) &&
+      if (!SM->isWrittenInMainFile(SM->getExpansionLoc(VD->getBeginLoc())) &&
+          !SM->isWrittenInMainFile(SM->getExpansionLoc(VD->getEndLoc())) &&
           !HasTemplateSpec)
         break;
       D->print(Buf, Policy);
@@ -587,9 +934,12 @@ const std::string RewriteBSC::GetRewrittenString() {
     case Decl::FileScopeAsm: {
       if (SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
           SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
-        D->print(Buf, Policy);
+        const char *startBuf = SM->getCharacterData(D->getBeginLoc());
+        const char *endBuf = SM->getCharacterData(D->getEndLoc());
+        Buf << std::string(startBuf, endBuf - startBuf + 1);
         Buf << ";\n\n";
       }
+
       break;
     }
     default:

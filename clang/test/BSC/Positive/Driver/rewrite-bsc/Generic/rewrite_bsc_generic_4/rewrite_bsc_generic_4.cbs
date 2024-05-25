@@ -20,7 +20,8 @@ int main() {
 }
 
 
-// CHECK:struct Block {
+// CHECK:struct Block 
+// CHECK-NEXT: {
 // CHECK-NEXT:    int a;
 // CHECK-NEXT:};
 // CHECK-EMPTY:

@@ -15,11 +15,14 @@ int main() {
 }
 
 
-// CHECK: void swap_contexts(void);
+// CHECK: void swap_contexts();
 // CHECK-EMPTY:
-// CHECK-NEXT: __asm ("swap_contexts:;ret;");
+// CHECK-NEXT: __asm__ (
+// CHECK-NEXT:     "swap_contexts:;"
+// CHECK-NEXT:     "ret;"
+// CHECK-NEXT: );
 // CHECK-EMPTY:
-// CHECK-NEXT: int main(void) {
+// CHECK-NEXT: int main() {
 // CHECK-NEXT:     swap_contexts();
 // CHECK-NEXT:     return 0;
 // CHECK-NEXT: }

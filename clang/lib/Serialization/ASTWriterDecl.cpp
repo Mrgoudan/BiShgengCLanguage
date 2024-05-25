@@ -616,7 +616,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
   #if ENABLE_BSC
   Record.push_back(D->getSafeSpecifier());
-  #endif
+  Record.push_back(D->getSafeZoneSpecifier());
+#endif
   Record.push_back(D->isInlineSpecified());
   Record.push_back(D->isInlined());
   #if ENABLE_BSC
@@ -2474,7 +2475,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // StorageClass
   #if ENABLE_BSC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // SafeSpecifier
-  #endif
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // SafeZoneSpecifier
+#endif
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Inline
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // InlineSpecified
   #if ENABLE_BSC
@@ -2546,6 +2548,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));  // StorageClass
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // SafeSpecifier
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));  // SafeZoneSpecifier
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // Inline
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // InlineSpecified
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));  // AsyncSpecified

@@ -9672,13 +9672,16 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                                               isVirtualOkay);
   if (!NewFD) return nullptr;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   SafeScopeSpecifier FuncSpec = D.getDeclSpec().getSafeSpecifier();
   if (FuncSpec == SS_None) {
     FuncSpec = GetPragmaSafeInfo();
   }
   NewFD->setSafeSpecifier(FuncSpec);
-  #endif
+
+  SafeZoneSpecifier FuncZoneSpec = D.getDeclSpec().getSafeZoneSpecifier();
+  NewFD->setSafeZoneSpecifier(FuncZoneSpec);
+#endif
 
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer())
     NewFD->setTopLevelDeclInObjCContainer();

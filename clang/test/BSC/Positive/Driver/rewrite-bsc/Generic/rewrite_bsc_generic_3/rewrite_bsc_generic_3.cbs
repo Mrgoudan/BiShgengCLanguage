@@ -26,7 +26,7 @@ int main() {
 
 
 // CHECK:struct Block {
-// CHECK-NEXT:  char *color;
+// CHECK-NEXT:  char* color;
 // CHECK-NEXT:  int blood;
 // CHECK-NEXT:};
 // CHECK-EMPTY:

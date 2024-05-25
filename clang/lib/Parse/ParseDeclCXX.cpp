@@ -1837,6 +1837,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
              (Tok.is(tok::semi) ||
               (Tok.isAtStartOfLine() && !isValidAfterTypeSpecifier(false)))) {
     TUK = DS.isFriendSpecified() ? Sema::TUK_Friend : Sema::TUK_Declaration;
+    /* Distinguish `struct S;` with `impl trait T for struct S;`*/
+    if (Tok.is(tok::semi) && DS.getImplTrait()) {
+      TUK = Sema::TUK_Reference;
+    }
     if (Tok.isNot(tok::semi)) {
       const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
       // A semicolon was missing after this declaration. Diagnose and recover.

@@ -441,15 +441,16 @@ private:
   SourceRange TypeofParensRange;
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
-  #if ENABLE_BSC
-  SourceLocation TQ_ownedLoc;
-  SourceLocation FS_asyncLoc, FS_safe_zone_loc;
-  #endif
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
   SourceLocation TQ_pipeLoc;
+#if ENABLE_BSC
+  SourceLocation TQ_ownedLoc;
+  SourceLocation FS_asyncLoc, FS_safe_zone_loc;
+  bool IsImplTrait = false; // if parsing impl trait decl
+#endif
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
@@ -613,14 +614,16 @@ public:
   /// getTypeQualifiers - Return a set of TQs.
   unsigned getTypeQualifiers() const { return TypeQualifiers; }
   SourceLocation getConstSpecLoc() const { return TQ_constLoc; }
-  #if ENABLE_BSC
-  SourceLocation getOwnedSpecLoc() const { return TQ_ownedLoc; }
-  #endif
   SourceLocation getRestrictSpecLoc() const { return TQ_restrictLoc; }
   SourceLocation getVolatileSpecLoc() const { return TQ_volatileLoc; }
   SourceLocation getAtomicSpecLoc() const { return TQ_atomicLoc; }
   SourceLocation getUnalignedSpecLoc() const { return TQ_unalignedLoc; }
   SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
+#if ENABLE_BSC
+  SourceLocation getOwnedSpecLoc() const { return TQ_ownedLoc; }
+  void setImplTrait() { IsImplTrait = true; }
+  bool getImplTrait() { return IsImplTrait; }
+#endif
 
   /// Clear out all of the type qualifiers.
   void ClearTypeQualifiers() {

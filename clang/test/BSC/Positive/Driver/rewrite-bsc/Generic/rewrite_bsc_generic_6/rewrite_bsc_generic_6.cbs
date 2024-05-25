@@ -30,8 +30,7 @@ int main() {
   return 0;
 }
 
-// CHECK: struct B {
-// CHECK-NEXT:   };
+// CHECK: struct B {};
 // CHECK-EMPTY:
 // CHECK-NEXT: struct Foo_int {
 // CHECK-NEXT:      int a;

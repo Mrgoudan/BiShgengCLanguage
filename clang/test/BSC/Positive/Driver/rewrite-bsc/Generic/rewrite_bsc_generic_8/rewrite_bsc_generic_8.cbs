@@ -32,11 +32,11 @@ int main() {};
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct B {
+// CHECK-EMPTY:    
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct C {
 // CHECK-NEXT:       struct PollResult_int a;
 // CHECK-NEXT:   };
 // CHECK-EMPTY:
-// CHECK-NEXT: int main(void) {
-// CHECK-NEXT:   }
+// CHECK-NEXT: int main() {}

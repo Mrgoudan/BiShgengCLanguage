@@ -14,8 +14,6 @@ T struct MyStruct<T>::foo1(struct MyStruct<T> *this) {
 }
 
 impl trait F<T> for struct MyStruct<int>; // expected-error {{use of undeclared identifier 'T'}}
-                                          // expected-error@-1 {{template specialization requires 'template<>'}}
 
 impl trait F<int> for struct MyStruct<T>; // expected-error {{use of undeclared identifier 'T'}}
-impl trait F<int> for struct MyStruct<int>; // expected-error {{template specialization requires 'template<>'}}
-                                            // expected-error@-1 {{function 'foo1' in 'trait F<int>' is not implemented for 'struct MyStruct<int>'}}
+impl trait F<int> for struct MyStruct<int>; // expected-error {{function 'foo1' in 'trait F<int>' is not implemented for 'struct MyStruct<int>'}}

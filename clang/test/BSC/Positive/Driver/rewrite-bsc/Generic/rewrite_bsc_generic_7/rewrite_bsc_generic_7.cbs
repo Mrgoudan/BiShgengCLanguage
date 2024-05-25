@@ -41,8 +41,7 @@ int main() {
   return 0;
 }
 
-// CHECK: struct B {
-// CHECK-NEXT:  };
+// CHECK: struct B {};
 // CHECK-EMPTY:
 // CHECK-NEXT: struct Foo_struct_B {
 // CHECK-NEXT:       struct B a;

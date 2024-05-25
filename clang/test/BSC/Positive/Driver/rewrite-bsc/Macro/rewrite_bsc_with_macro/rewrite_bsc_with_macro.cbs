@@ -12,11 +12,10 @@ int main() {
     return 0;
 }
 
-
 // CHECK:void f(void) {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: int main(void) {
+// CHECK-NEXT: int main() {
 // CHECK-NEXT:     return 0;
 // CHECK-NEXT: }
 
