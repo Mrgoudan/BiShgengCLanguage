@@ -491,6 +491,29 @@ public:
     return false;
   }
 
+  bool VisitIfStmt(IfStmt *IS) {
+    if (IS->isConstexpr()) {
+      return true;
+    }
+    Visit(IS->getCond());
+    if (IS->getConditionVariable()) {
+      if (Visit(IS->getConditionVariable())) {
+        return true;
+      }
+    }
+    if (IS->getThen()) {
+      if (Visit(IS->getThen())) {
+        return true;
+      }
+    }
+    if (IS->getElse()) {
+      if (Visit(IS->getElse())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool VisitInitListExpr(InitListExpr *ILE) {
     if (VisitQualType(ILE->getType())) {
       return true;
