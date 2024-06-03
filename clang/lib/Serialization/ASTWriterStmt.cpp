@@ -80,13 +80,33 @@ void ASTStmtWriter::VisitNullStmt(NullStmt *S) {
 
 void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
+  #if ENABLE_BSC
+  if (Writer.getLangOpts().BSC) {
+    unsigned NumStmts = S->size();
+    for (auto *CS : S->body())
+      if (auto* DS = dyn_cast_or_null<DeclStmt>(CS))
+        if (DS->isSingleDecl() && isa<TypeAliasDecl>(DS->getSingleDecl()))
+          NumStmts--;
+    Record.push_back(NumStmts);
+  } else
+  #endif
   Record.push_back(S->size());
   Record.push_back(S->hasStoredFPFeatures());
   #if ENABLE_BSC
   Record.push_back(S->getSafeSpecifier());
   #endif
   for (auto *CS : S->body())
+  #if ENABLE_BSC
+  {
+    if (Writer.getLangOpts().BSC)
+      if (auto* DS = dyn_cast_or_null<DeclStmt>(CS))
+        if (DS->isSingleDecl() && isa<TypeAliasDecl>(DS->getSingleDecl()))
+          continue;
+  #endif    
     Record.AddStmt(CS);
+  #if ENABLE_BSC
+  }
+  #endif    
   if (S->hasStoredFPFeatures())
     Record.push_back(S->getStoredFPFeatures().getAsOpaqueInt());
   Record.AddSourceLocation(S->getLBracLoc());

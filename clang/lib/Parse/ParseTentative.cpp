@@ -1117,10 +1117,11 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
 //   struct template declaration: "struct S<T> {..};"
 //   struct template's method: "void struct S<T>::Foo();"
 //   struct template's method: "void struct S<T>::Foo(){..};"
+//   generic typealias declaration: "typedef S_T<T> = struct S<T>;"
 // The method of checking template declaration is:
 //   1. find template parameter list syntax structure "identifier <T, ..>"
 //   2. find declaration syntax(different from spcialization syntax)
-//     "<T, ..> ()" in template function or "<T, ..> {}" in template structure
+//     "<T, ..> ()" in template function, structure, typealias
 bool Parser::isBSCTemplateDecl(Token tok) {
   // 1. check language
   if (!getLangOpts().BSC)
@@ -1201,8 +1202,19 @@ bool Parser::isBSCTemplateDecl(Token tok) {
         break;
       // valid syntax for BSC template
       if (HasValidParameter && NextTok.isOneOf(tok::l_brace, tok::l_paren,
-                                               tok::semi, tok::coloncolon)) {
+                                               tok::semi, tok::coloncolon,
+                                               tok::equal)) {
         FoundGreater = true;
+        // These two typealias usecases are not allowed:
+        //   "typedef struct S<T> {} S_T;"   
+        //   "typedef struct S<T> S_T;"
+        if (Tok.is(tok::kw_typedef) && NextTok.isNot(tok::equal))
+          return false;
+        // Define a member function for a generic typealias is not allowed:
+        //   typedef MyS<T> = struct S<T>;
+        //   void MyS<T>::foo(This* this);
+        if (!LookupPreviousTypedef.empty() && NextTok.is(tok::coloncolon))
+          return false;
         return true;
       }
       break;

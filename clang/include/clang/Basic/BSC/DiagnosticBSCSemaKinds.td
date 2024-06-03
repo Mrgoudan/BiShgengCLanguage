@@ -72,6 +72,8 @@ def err_trait_is_undefined : Error<"%0 must be defined before it can be used">;
 // BSC generic warnings and errors.
 def err_invalid_struct_definition : Error <
   "struct definition in generic fuction is not supported in BSC">;
+def err_extended_type_not_instantiated_type : Error<
+  "extended type of a BSC member function cannot be an instantiated type">;
 
 // BSC constexpr warnings and errors.
 def err_constexpr_func_unsupported : Error<

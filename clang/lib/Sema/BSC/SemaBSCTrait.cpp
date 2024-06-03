@@ -883,7 +883,8 @@ TraitDecl *Sema::TryDesugarTrait(QualType T) {
         TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
         RD = dyn_cast_or_null<RecordDecl>(TempT->getTemplatedDecl());
       }
-      TD = RD->getDesugaredTraitDecl();
+      if (RD)
+        TD = RD->getDesugaredTraitDecl();
     }
   }
   return TD;

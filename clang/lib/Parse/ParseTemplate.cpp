@@ -105,7 +105,7 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   Token PostTok = PP.LookAhead(LookGreaterOffset + BSCGenericLookAhead + 1);
   while (!(TmpTok.is(tok::greater) &&
            PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::semi,
-                           tok::coloncolon)) &&
+                           tok::coloncolon, tok::equal)) &&
          !TmpTok.is(tok::eof)) {
     if (TmpTok.is(tok::less)) {
       BSCGenericLookAhead = LookGreaterOffset + BSCGenericLookAhead;
@@ -118,7 +118,7 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
 
   assert(TmpTok.is(tok::greater) &&
          (PostTok.isOneOf(tok::l_brace, tok::l_paren, tok::semi,
-                          tok::coloncolon)) &&
+                          tok::coloncolon, tok::equal)) &&
          "BSC template function parameter list is not standardized.");
 
   // Parse the '<' template-parameter-list '>'
@@ -320,7 +320,11 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   ParsedAttributes prefixAttrs(AttrFactory);
   MaybeParseCXX11Attributes(prefixAttrs);
 
-  if (Tok.is(tok::kw_using)) {
+  if (Tok.is(tok::kw_using)
+    #if ENABLE_BSC
+    || (getLangOpts().BSC && Tok.is(tok::kw_typedef))
+    #endif
+  ) {
     auto usingDeclPtr = ParseUsingDirectiveOrDeclaration(Context, TemplateInfo, DeclEnd,
                                                          prefixAttrs);
     if (!usingDeclPtr || !usingDeclPtr.get().isSingleDecl())
@@ -1083,11 +1087,6 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
                   PP.LookAhead(BSCGenericLookAhead + 1).isOneOf(tok::comma,
                                                                 tok::greater);
 
-  // if ((PeekTok.isNot(tok::identifier) && (!IsNextCommaOrGreater)) ||
-  //     !IsNextCommaOrGreater) {
-  //   return ParseNonTypeTemplateParameter(Depth, Position);
-  // }
-
   if (PeekTok.isNot(tok::identifier) && IsNextCommaOrGreater) {
     Diag(PeekTok.getLocation(), diag::err_expected_template_parameter) << PeekTok.getName();
     return nullptr;
@@ -1097,29 +1096,8 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
     return ParseNonTypeTemplateParameter(Depth, Position);
   }
 
-  CXXScopeSpec TypeConstraintSS;
-  TemplateIdAnnotation *TypeConstraint = nullptr;
   bool TypenameKeyword = false;
   SourceLocation KeyLoc;
-  ParseOptionalCXXScopeSpecifier(TypeConstraintSS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
-                                 /*EnteringContext*/ false);
-  if (PeekTok.is(tok::annot_template_id)) {
-    // Consume the 'type-constraint'.
-    TypeConstraint =
-        static_cast<TemplateIdAnnotation *>(PeekTok.getAnnotationValue());
-    assert(TypeConstraint->Kind == TNK_Concept_template &&
-           "stray non-concept template-id annotation");
-    // KeyLoc remain at init status
-  } else {
-    assert(TypeConstraintSS.isEmpty() &&
-           "expected type constraint after scope specifier");
-
-    // Consume the 'class' or 'typename' keyword.
-    TypenameKeyword = false;
-    // KeyLoc = ConsumeToken();  // no typename in BSC, KeyLoc remain at init
-    // status
-  }
 
   // Grab the ellipsis (if given).
   SourceLocation EllipsisLoc;
@@ -1174,14 +1152,7 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
 
   NamedDecl *NewDecl = Actions.ActOnTypeParameter(
       getCurScope(), TypenameKeyword, EllipsisLoc, KeyLoc, ParamName, NameLoc,
-      Depth, Position, EqualLoc, DefaultArg, TypeConstraint != nullptr);
-
-  if (TypeConstraint) {
-    Actions.ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
-                                cast<TemplateTypeParmDecl>(NewDecl),
-                                EllipsisLoc);
-  }
-
+      Depth, Position, EqualLoc, DefaultArg, /*HasTypeConstraint*/false);
   return NewDecl;
 }
 #endif

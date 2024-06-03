@@ -438,13 +438,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     #if !ENABLE_BSC
     Token Next = NextToken();
     #else
-    // Skip param list "<T>" in template function declaration:
+    // Skip param list "<T>" in template function or typealias declaration:
     // "T max<T> (T a, T b) {...}"
+    // "typedef S_T<T> = struct S<T>;"
     Token Next;
     // TODO: this could be missidentified from typo:// "intt"
 
     if (getLangOpts().BSC) {
-      bool ParsingBSCTemplateFunction = false;
+      bool ParsingBSCTemplateFunctionOrTypealias = false;
       // lookup if identifier is a name of a function
       IdentifierInfo *CurName = Tok.getIdentifierInfo();
       SourceLocation CurNameLoc = Tok.getLocation();
@@ -453,12 +454,12 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
                                           Sema::NotForRedeclaration);
       Actions.LookupName(LookupPreviousFunction, getCurScope());
 
-      if (getCurScope()->getDepth() <= 1 && LookupPreviousFunction.empty()) {
-        ParsingBSCTemplateFunction = IsBSCTemplateDeclaration(getLangOpts().BSC,
+      if (getCurScope()->getDepth() <= 1 && (LookupPreviousFunction.empty() || InUsingDeclaration)) {
+        ParsingBSCTemplateFunctionOrTypealias = IsBSCTemplateDeclaration(getLangOpts().BSC,
                                                               Tok.is(tok::identifier),
                                                               PP);
 
-        if (ParsingBSCTemplateFunction) {
+        if (ParsingBSCTemplateFunctionOrTypealias) {
           // Determine if '>' is followed by '{' or '('
           int LGreaterOffset = 2;
           Token TmpTok = PP.LookAhead(LGreaterOffset);
@@ -471,17 +472,17 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
             LGreaterOffset += 1;
             TmpTok = PP.LookAhead(LGreaterOffset);
           }
-          ParsingBSCTemplateFunction =
+          ParsingBSCTemplateFunctionOrTypealias =
               TmpTok.is(tok::greater) && (PP.LookAhead(LGreaterOffset + 1)
-                                            .isOneOf(tok::l_paren, tok::l_brace));
+                                            .isOneOf(tok::l_paren, tok::l_brace, tok::equal));
         }
       }
-      if (ParsingBSCTemplateFunction) {
-        int LParenOffset = 0;
-        while (!PP.LookAhead(LParenOffset).isOneOf(tok::l_paren, tok::eof)) {
-          LParenOffset += 1;
+      if (ParsingBSCTemplateFunctionOrTypealias) {
+        int LParenOrEqualOffset = 0;
+        while (!PP.LookAhead(LParenOrEqualOffset).isOneOf(tok::l_paren, tok::equal, tok::eof)) {
+          LParenOrEqualOffset += 1;
         }
-        Next = PP.LookAhead(LParenOffset);
+        Next = PP.LookAhead(LParenOrEqualOffset);
       } else {
         Next = NextToken();
       }
@@ -3232,6 +3233,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       // affecting the original logic of C.
       // @Code:k
       //  T max<T>(T a, T b) {...}
+      //  typedef S_T<T> = struct S<T>;
       // @EndCode
       if (Actions.getCurScope()->isTemplateParamScope() &&
           (getLangOpts().BSC && Tok.is(tok::less))) {
@@ -3245,7 +3247,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
         } else {
           Diag(Tok.getLocation(), diag::err_expected_comma_greater);
         }
-        assert(Tok.is(tok::l_paren) && "expected 'l_paren' token");
+        assert(Tok.isOneOf(tok::l_paren, tok::equal) && "expected 'l_paren' or 'equal' token");
       }
       #endif
 

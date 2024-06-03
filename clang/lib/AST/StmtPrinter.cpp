@@ -262,14 +262,18 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   #if ENABLE_BSC
   if (Policy.RewriteBSC) {
     if (Node->isSingleDecl()) {
-      if (auto *VD = dyn_cast<VarDecl>(Node->getSingleDecl()))
+      if (auto *VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
         if (VD->getType()->hasTraitType())
           return;
+      } else if (isa<TypeAliasDecl>(Node->getSingleDecl()))
+        return;
     } else {
       for (auto N : Node->getDeclGroup()) {
-        if (auto *VD = dyn_cast<VarDecl>(N))
+        if (auto *VD = dyn_cast<VarDecl>(N)) {
           if (VD->getType()->hasTraitType())
             return;
+        } else if (isa<TypeAliasDecl>(N))
+          return;
       }
     }
   }

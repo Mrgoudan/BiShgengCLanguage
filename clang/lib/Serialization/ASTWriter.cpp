@@ -4739,13 +4739,17 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   for (const auto *D : TU->noload_decls()) {
     if (!D->isFromASTFile()) {
       #if ENABLE_BSC
-      if (dyn_cast_or_null<ImplTraitDecl>(D) 
-          || dyn_cast_or_null<TraitDecl>(D)
-          || dyn_cast_or_null<TraitTemplateDecl>(D))
-          continue;
-      if (auto * TDD = dyn_cast_or_null<TypedefDecl>(D)) 
-        if (TDD->getUnderlyingType().getCanonicalType().getTypePtr()->isTraitType())
-          continue;
+      if (getLangOpts().BSC) {
+        if (isa<ImplTraitDecl>(D) 
+            || isa<TraitDecl>(D)
+            || isa<TraitTemplateDecl>(D)
+            || isa<TypeAliasDecl>(D)
+            || isa<TypeAliasTemplateDecl>(D))
+            continue;
+        if (auto * TDD = dyn_cast_or_null<TypedefDecl>(D)) 
+          if (TDD->getUnderlyingType().getCanonicalType().getTypePtr()->isTraitType())
+            continue;
+      }
       #endif
       NewGlobalKindDeclPairs.push_back(D->getKind());
       NewGlobalKindDeclPairs.push_back(GetDeclRef(D));

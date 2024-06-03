@@ -472,6 +472,11 @@ Decl *Parser::ParseExportDeclaration() {
 Parser::DeclGroupPtrTy Parser::ParseUsingDirectiveOrDeclaration(
     DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
     SourceLocation &DeclEnd, ParsedAttributes &Attrs) {
+  #if ENABLE_BSC
+  if (getLangOpts().BSC)
+    assert(Tok.is(tok::kw_typedef) && "Not typedef token");
+  else
+  #endif
   assert(Tok.is(tok::kw_using) && "Not using token");
   ObjCDeclContextSwitch ObjCDC(*this);
 
@@ -726,6 +731,15 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
   if (InInitStatement && Tok.isNot(tok::identifier))
     return nullptr;
+  
+  // BSC generic typealias can not be declared within a function.
+  #if ENABLE_BSC
+  if (getLangOpts().BSC && TemplateInfo.Kind == ParsedTemplateInfo::Template && Context == DeclaratorContext::Block) {
+    Diag(UsingLoc, diag::err_generic_typealias_not_within_function);
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+  #endif
 
   UsingDeclarator D;
   bool InvalidDeclarator = ParseUsingDeclarator(Context, D);
@@ -838,6 +852,9 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   }
 
   Diag(Tok.getLocation(), getLangOpts().CPlusPlus11
+                          #if ENABLE_BSC
+                          || getLangOpts().BSC
+                          #endif
                               ? diag::warn_cxx98_compat_alias_declaration
                               : diag::ext_alias_declaration);
 

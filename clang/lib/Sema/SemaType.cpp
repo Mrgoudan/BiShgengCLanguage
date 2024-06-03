@@ -1917,12 +1917,19 @@ QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
   NamedDecl *Def = nullptr;
   if (!AddToContextMap && T.getTypePtr()->getAs<TemplateSpecializationType>())
     return T;
+  const Type *BasedType = T.getCanonicalType().getTypePtr();
+  // Extended type of a BSC member function cannot be an instantiated type.
+  if (AddToContextMap)
+    if (auto * RT = BasedType->getAs<RecordType>())
+      if (isa<ClassTemplateSpecializationDecl>(RT->getDecl())) {
+        Diag(Loc, diag::err_extended_type_not_instantiated_type);
+        return T;
+      }
   if (T->isIncompleteType(&Def)) {
     BoundTypeDiagnoser<> Diagnoser(diag::err_typecheck_decl_incomplete_type);
     Diagnoser.diagnose(*this, Loc, T);
   } else {
     BSS.setExtendedType(T);
-    const Type *BasedType = T.getCanonicalType().getTypePtr();
     // build declcontext map
     if (getASTContext().BSCDeclContextMap.find(BasedType) ==
         getASTContext().BSCDeclContextMap.end()) {

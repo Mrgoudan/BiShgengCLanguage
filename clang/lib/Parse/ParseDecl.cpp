@@ -1805,6 +1805,17 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     break;
   default:
     #if ENABLE_BSC
+    if (getLangOpts().BSC && Tok.is(tok::kw_typedef) && PP.LookAhead(1).is(tok::equal)) {
+      // Only handle typealias declaration without template, for example:
+      //   typedef MyLongInt = long int;
+      //   typedef MyInt = typeof(3 + 5);
+      //   typedef MyS = struct S<int>;
+      // Typealias declaration with template will be handled in ParseDeclarationStartingWithTemplate().  
+      ParsedAttributes Attrs(AttrFactory);
+      takeAndConcatenateAttrs(DeclAttrs, DeclSpecAttrs, Attrs);
+      return ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
+                                              DeclEnd, Attrs);
+    }
     // parse BSC generic declaration
     // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
     if (isBSCTemplateDecl(Tok)) {
@@ -3653,7 +3664,23 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
       // In C++, check to see if this is a scope specifier like foo::bar::, if
       // so handle it as such.  This is important for ctor parsing.
-      if (getLangOpts().CPlusPlus) {
+      // In BSC, return type of a function may be a generic type or typealias, 
+      // for example:
+      //   struct S<T> {};
+      //   typedef MyS<T> = struct S<T>;
+      //   S<T> foo1<T>();
+      //   MyS<T> foo<T>();
+      // return type `S<T>` and `MyS<T>` shoule be annotated.
+      if (getLangOpts().CPlusPlus
+      #if ENABLE_BSC
+      || (getLangOpts().BSC && NextToken().is(tok::less))
+      #endif
+      ) {
+        #if ENABLE_BSC
+        if (BSCScopeSpecFlag && ExtendedTypeOfBSCMemberFunctionIsTypealias(DS)) {
+          continue;
+        }
+        #endif
         // C++20 [temp.spec] 13.9/6.
         // This disables the access checking rules for function template
         // explicit instantiation and explicit specialization:

@@ -18,6 +18,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/Sema/Lookup.h"
 
 using namespace clang;
 
@@ -842,5 +843,28 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
       Tok.setKind(tok::semi);
     }
   }
+}
+
+// The extended type of a BSC member function cannot be a generic typealias,
+// for example:
+//     typedef MyS<T> = struct S<T>;
+//     void MyS<T>::foo(This* this);
+bool Parser::ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS) {
+  IdentifierInfo *CurName = Tok.getIdentifierInfo();
+  SourceLocation CurNameLoc = Tok.getLocation();
+  LookupResult LookupPreviousTypealias(Actions, CurName, CurNameLoc,
+                                        Sema::LookupOrdinaryName,
+                                        Sema::NotForRedeclaration);
+  Actions.LookupName(LookupPreviousTypealias, getCurScope());
+  if (LookupPreviousTypealias.isSingleResult()) {
+    TypeAliasTemplateDecl *TATD = dyn_cast_or_null<TypeAliasTemplateDecl>(LookupPreviousTypealias.getFoundDecl());
+    if (TATD) {
+      Diag(CurNameLoc, diag::err_extended_type_not_generic_typealias);
+      DS.SetTypeSpecError();
+      SkipUntil(tok::coloncolon);
+      return true;
+    }
+  }
+  return false;
 }
 #endif

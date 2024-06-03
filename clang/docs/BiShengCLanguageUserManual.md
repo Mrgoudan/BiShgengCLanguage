@@ -300,7 +300,7 @@ const char* int::to_string(const int* this){
 
 毕昇 C 的泛型是一种编译时的泛型机制，它可以定义一个通用的函数或类，然后根据不同的类型参数生成不同的实例。
 
-目前，毕昇 C 已支持**泛型函数**和**泛型结构体**。
+目前，毕昇 C 已支持**泛型函数**、**泛型结构体**和**泛型类型别名**。
 
 #### 实现动机
 
@@ -358,13 +358,13 @@ int main() {
 
 对于毕昇 C 泛型，我们设计了如下的语法规则：
 
-- 在声明泛型函数/结构体的定义时，泛型参数列表要用尖括号 '<>' 包裹起来，尖括号内部的类型一般是 identifier ，如 'T1', 'T2' 之类 。
+- 在声明泛型函数、结构体或类型别名时，泛型参数列表要用尖括号 '<>' 包裹起来，尖括号内部的类型一般是 identifier ，如 'T1', 'T2' 之类 。
 
 
 - 在实例化时，既可以在尖括号内部传入具体的类型，如 int, float, struct S 等，也可以省略尖括号的书写，编译器会根据实际传入的参数进行隐式的类型推导。此外，如果将现有类型 typedef 为其他别名后，同样可以在实例化时用作泛型实参。
 
 
-- 同时，毕昇 C 的泛型函数和泛型结构体也支持使用**常量参数**作为泛型的形参。
+- 同时，毕昇 C 的泛型函数、泛型结构体和泛型类型别名也支持使用**常量参数**作为泛型的形参。
 
 下面我们将分为三个部分详细说明。
 
@@ -524,6 +524,107 @@ int main() {
   	struct Array_1<int, 5> arr1;
   	struct Array_2<5, 6, int> arr2 = {.a = 1};
 
+    return 0;
+}
+```
+
+#### 泛型类型别名
+标准 C 已有类型别名的功能，语法为：
+```
+typedef OldType NewType;
+```
+为了使类型别名能够与泛型一起配合使用，BSC 引入与标准 C 语法不同的类型别名语法：
+```
+typedef NewType = OldType ;
+```
+加上泛型参数就形成了泛型类型别名，例如：
+```
+typedef MyPointerType<T> = T*;
+```
+泛型类型别名的使用可以简化类型的书写，还可以为类型赋予更具描述性的名称，使代码更易于阅读和理解，举例来说：
+
+我们可以使用 HashMap 来记录某年级学生的各科成绩，Key 表示学生的学号，Value 表示学生的各科成绩，根据实际情况的不同，学生的学号可以用 int、string 等类型表示，成绩可以用 int、float 等类型表示，科目数量也可能发生变化，使用泛型类型别名有助于我们根据实际需求进行定制：
+
+```C
+//辅助类及成员方法
+struct HashMap<K, V> {
+   //省略实现
+};
+void struct HashMap<K, V>::insert(This* this, K key, V value) {
+   //省略实现
+}
+struct Array<T, int N> { 
+    T a[N];
+};
+//使用泛型类型别名定义一个特殊的HashMap类型，它的key是T1类型，value是一个长度为N，元素类型为T2的数组类型：
+typedef GenericGrade<T1, T2, int N> = struct HashMap<T1, struct Array<T2, N>>;
+//继续使用类型别名，针对不同的年级进行定制：
+typedef Grade1 = GenericGrade<int, int, 3>;  //一年级学生学号为int，成绩为int，科目数量为3
+typedef Grade3 = GenericGrade<int, float, 4>;//三年级学生学号为int，成绩为float，科目数量为4
+typedef Grade6 = GenericGrade<int, float, 5>;//六年级学生学号为int，成绩为float，科目数量为5
+
+int main() {
+    Grade1 grade1;
+    grade1.insert(10, {80, 90, 95});
+    grade1.insert(11, {80, 95, 90});
+    Grade3 grade3;
+    grade3.insert(12, {90.0, 95.5, 90.0, 85.0});
+    grade3.insert(13, {80.0, 90.0, 95.5, 90.0});
+    Grade6 grade6;
+    grade6.insert(15, {80.0, 90.0, 95.5, 90.0, 85.0});
+    grade6.insert(16, {80.0, 90.0, 95.5, 90.0, 85.0});
+    return 0;
+}
+```
+
+对于类型别名，有以下规则：
+1. 不允许为泛型类型别名扩展成员函数。
+```C
+struct S<T> {};
+typedef MyS<T> = struct S<T>;
+
+void MyS<T>::foo(This* this) {} //error
+```
+2. 不允许在结构体类型内部定义类型别名。
+```C
+struct S<T> {
+    typedef type = T;    //error
+    typedef Int64 = int; //error
+};
+```
+3. 不允许在函数体内定义泛型类型别名，但可以定义普通类型别名。
+```C
+void foo<T>() {
+    typedef type = T;
+    typedef Int64 = int;
+    
+    typedef MyType1<T> = T;   //error
+    typedef MyType2<T1> = T1; //error
+}
+```
+
+下面是一些用法示例：
+```C
+// 普通类型别名
+typedef Int64 = long int;   //等价于 typedef long int Int64; 
+typedef MyS = struct S<int>;//等价于 typedef struct S<int> MyS; 
+
+// 泛型类型别名
+typedef MyPointerType<T> = T*;
+typedef Array_3<T> = T[3];
+typedef Array_N<T, int N> = T[N]; //支持带常量泛型参数
+
+typedef MyS_T_T<T> = struct S<T, T>; 
+typedef MyS_T_int<T> = struct S<T, int>;
+
+int main() {
+    Int64 a = 5;  //等价于int a = 5;
+    MyS s;        //等价于struct S<int> s = 5;
+    MyPointerType<int> c = &b;  //等价于int* c = &b;
+    Array_3<int> d = {1,2,3};   //等价于int d[3] = {1,2,3};
+    Array_N<int, 3> e= {1,2,3}; //等价于int e[3] = {1,2,3};
+    MyS_T_T<int> s2;
+    MyS_T_int<int> s3;
     return 0;
 }
 ```

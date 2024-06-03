@@ -2458,6 +2458,7 @@ private:
   bool IsBSCStaticMemberFunctionCallInTemplateArgumentList();
   bool IsBSCStaticMemberFunctionCall();
   void TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs);
+  bool ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS);
   #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,

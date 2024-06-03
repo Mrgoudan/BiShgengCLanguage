@@ -364,7 +364,11 @@ public:
     if (QT->getAs<TemplateSpecializationType>()) {
       return true;
     }
-
+    if (auto * TT = QT->getAs<TypedefType>()) {
+      if (auto * TD = TT->getDecl())
+        if (isa<TypeAliasDecl>(TD) || isa<TypeAliasTemplateDecl>(TD))
+          return true;
+    }
     if (VisitType(QT.getTypePtr())) {
       return true;
     }
@@ -458,6 +462,15 @@ public:
   bool VisitStaticAssertDecl(StaticAssertDecl *D) {
     return Visit(D->getAssertExpr());
   }
+  
+  bool VisitTypeAliasDecl(TypeAliasDecl *D) {
+    return true;
+  }
+
+  bool VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
+    return true;
+  }
+
   bool VisitStmt(Stmt *S) {
     for (auto *C : S->children()) {
       if (C) {
