@@ -14629,8 +14629,11 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
     // TemplateArgumentLocInfo is needed when instantiation,
     if (TypePtr->isDependentType()) {
       UnqualTypeLoc CurrTL = TInfo->getTypeLoc().getUnqualifiedLoc();
-      CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
-      CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
+      QualType CurrType = CurrTL.getType();
+      while (!isa<TemplateSpecializationType>(CurrType)) {
+        CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
+        CurrType = CurrTL.getType();
+      }
       TemplateSpecializationTypeLoc SpecTL =
           CurrTL.getAs<TemplateSpecializationTypeLoc>();
       const TemplateSpecializationType* SpecType = SpecTL.getTypePtr();

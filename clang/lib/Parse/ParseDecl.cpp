@@ -3664,30 +3664,52 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
       // In C++, check to see if this is a scope specifier like foo::bar::, if
       // so handle it as such.  This is important for ctor parsing.
-      // In BSC, return type of a function may be a generic type or typealias, 
+      // In BSC, these types may be a generic type without tag or a generic typealias which should be annotated here:
+      //     1) the return type of a function 
+      //     2) the extended type of a member function
+      //     3) the type of an impl trait decl
       // for example:
-      //   struct S<T> {};
-      //   typedef MyS<T> = struct S<T>;
-      //   S<T> foo1<T>();
-      //   MyS<T> foo<T>();
-      // return type `S<T>` and `MyS<T>` shoule be annotated.
+      //     struct S<T> {};
+      //     typedef MyS<T> = struct S<T>;
+      //     S<T> foo1<T>();  
+      //     MyS<T> foo2<T>();
+      //     S<int> foo3();
+      //     MyS<int> foo4();
+      //     void S<T>::foo5<T>(This* this);
+      //     void MyS<T>::foo6<T>(This* this);
+      //     impl trait F for S<int>;
+      //     impl trait F for MyS<int>;
       if (getLangOpts().CPlusPlus
       #if ENABLE_BSC
       || (getLangOpts().BSC && NextToken().is(tok::less))
       #endif
       ) {
-        #if ENABLE_BSC
-        if (BSCScopeSpecFlag && ExtendedTypeOfBSCMemberFunctionIsTypealias(DS)) {
-          continue;
-        }
-        #endif
         // C++20 [temp.spec] 13.9/6.
         // This disables the access checking rules for function template
         // explicit instantiation and explicit specialization:
         // - `return type`.
         SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
-
-        const bool Success = TryAnnotateCXXScopeToken(EnteringContext);
+        bool Success = false;
+        #if ENABLE_BSC
+        if (BSCScopeSpecFlag && ExtendedTypeOfBSCMemberFunctionIsTypealias(DS)) {
+          continue;
+        }
+        // In BSC, extend type of a member function may be a generic type without tag, 
+        // for example:
+        //   struct S<T> {};
+        //   void S<T>::foo<T>(This* this) {}
+        // extended type `S<T>` shoule be annotated,
+        if (BSCScopeSpecFlag) {
+          CXXScopeSpec Spec;
+          if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
+                                              /*ObjectHadErrors=*/false,
+                                              EnteringContext, /*IsTemplated=*/false))
+            Success = true;
+          if (Spec.isEmpty())
+            Success = false;
+        } else
+        #endif
+        Success = TryAnnotateCXXScopeToken(EnteringContext);
 
         if (IsTemplateSpecOrInst)
           SAC.done();
