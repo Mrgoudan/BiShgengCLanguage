@@ -77,8 +77,9 @@ Clang-Tidy Checks
    `android-cloexec-socket <android/cloexec-socket.html>`_, "Yes"
    `android-comparison-in-temp-failure-retry <android/comparison-in-temp-failure-retry.html>`_,
    `boost-use-to-string <boost/use-to-string.html>`_, "Yes"
+   `bsc-access-specific-type <bsc/access-specific-type.html>`_, "Yes"
    `bsc-add-new-field <bsc/add-new-field.html>`_, "Yes"
-   `bsc-explicit-cast <bsc/explicit-cast.html>`_, "Yes"
+   `bsc-explicit-cast <bsc/explicit-cast.html>`_,
    `bugprone-argument-comment <bugprone/argument-comment.html>`_, "Yes"
    `bugprone-assert-side-effect <bugprone/assert-side-effect.html>`_,
    `bugprone-assignment-in-if-condition <bugprone/assignment-in-if-condition.html>`_,

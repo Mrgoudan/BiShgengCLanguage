@@ -144,6 +144,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bsc-access-specific-type
+  <clang-tidy/checks/bsc/access-specific-type>` check.
+
+  FIXME: add release notes.
+
 - New :doc:`bsc-add-new-field
   <clang-tidy/checks/bsc/add-new-field>` check.
 

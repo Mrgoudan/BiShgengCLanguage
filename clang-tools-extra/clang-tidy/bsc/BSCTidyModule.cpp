@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
+#include "AccessSpecificTypeCheck.h"
 #include "AddNewFieldCheck.h"
 #include "ExplicitCastCheck.h"
 
@@ -19,6 +20,8 @@ namespace bsc {
 class BscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AccessSpecificTypeCheck>(
+        "bsc-access-specific-type");
     CheckFactories.registerCheck<AddNewFieldCheck>(
         "bsc-add-new-field");
     CheckFactories.registerCheck<ExplicitCastCheck>(

@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyBscModule
   
+  AccessSpecificTypeCheck.cpp
   AddNewFieldCheck.cpp
   BSCTidyModule.cpp
   ExplicitCastCheck.cpp
