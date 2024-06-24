@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
- safe int main(void) {
+safe int main(void) {
   int a;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
   a = 0;
   lab:   // expected-error {{label statement is forbidden in the safe zone}}
@@ -46,8 +46,8 @@
         break;
     }
   }
-  int ret = 0;
-  int src = 1;
+  long ret = 0;
+  long src = 1;
   asm("move %0, %1\n\t" :"=r"(ret) :"r"(src));   // expected-error {{asm statement is forbidden in the safe zone}}
   return 0;
 }

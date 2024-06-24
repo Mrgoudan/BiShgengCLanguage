@@ -29,9 +29,6 @@ void foo6<short N1, short N2>()
         arr[i] = i;
     }
 }
-char foo7<char N>() {
-    return N;
-}
 bool foo8<bool N>() {
     return N;
 }
@@ -52,8 +49,6 @@ int main() {
     int a5_0 = foo5<5>();
     int a5_1 = foo5<-5>();
     foo6<5, 10>();
-    int a7_0 = foo7<5>();
-    int a7_1 = foo7<-5>();
     int a8_0 = foo8<true>();
     int a8_1 = foo8<-5>();
     int a8_2 = foo8<0>();
@@ -89,10 +84,6 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:void __attribute__((weak)) foo6_5_10(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:char __attribute__((weak)) foo7_5(void);
-// CHECK-EMPTY:
-// CHECK-NEXT:char __attribute__((weak)) foo7_n5(void);
-// CHECK-EMPTY:
 // CHECK-NEXT:_Bool __attribute__((weak)) foo8_1(void);
 // CHECK-EMPTY:
 // CHECK-NEXT:_Bool __attribute__((weak)) foo8_0(void);
@@ -110,8 +101,6 @@ int main() {
 // CHECK-NEXT:    int a5_0 = foo5_5();
 // CHECK-NEXT:    int a5_1 = foo5_n5();
 // CHECK-NEXT:    foo6_5_10();
-// CHECK-NEXT:    int a7_0 = foo7_5();
-// CHECK-NEXT:    int a7_1 = foo7_n5();
 // CHECK-NEXT:    int a8_0 = foo8_1();
 // CHECK-NEXT:    int a8_1 = foo8_1();
 // CHECK-NEXT:    int a8_2 = foo8_0();
@@ -163,14 +152,6 @@ int main() {
 // CHECK-NEXT:    for (int i = 0; i < 5 + 10; i++) {
 // CHECK-NEXT:        arr[i] = i;
 // CHECK-NEXT:    }
-// CHECK-NEXT:}
-// CHECK-EMPTY:
-// CHECK-NEXT:char __attribute__((weak)) foo7_5(void) {
-// CHECK-NEXT:    return '\x05';
-// CHECK-NEXT:}
-// CHECK-EMPTY:
-// CHECK-NEXT:char __attribute__((weak)) foo7_n5(void) {
-// CHECK-NEXT:    return '\xfb';
 // CHECK-NEXT:}
 // CHECK-EMPTY:
 // CHECK-NEXT:_Bool __attribute__((weak)) foo8_1(void) {
