@@ -4200,6 +4200,9 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::UnresolvedUsing:
   case Type::TypeOfExpr:
   case Type::TypeOf:
+  #if ENABLE_BSC
+  case Type::Conditional:
+  #endif
   case Type::Decltype:
   case Type::UnaryTransform:
   case Type::TemplateTypeParm:

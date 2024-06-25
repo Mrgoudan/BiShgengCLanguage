@@ -408,6 +408,7 @@ namespace clang {
     ExpectedType VisitRecordType(const RecordType *T);
     #if ENABLE_BSC
     ExpectedType VisitTraitType(const TraitType *T);
+    ExpectedType VisitConditionalType(const ConditionalType *T);
     #endif
     ExpectedType VisitEnumType(const EnumType *T);
     ExpectedType VisitAttributedType(const AttributedType *T);
@@ -1390,6 +1391,27 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
 
   return Importer.getToContext().getTypeOfType(*ToUnderlyingTypeOrErr);
 }
+
+#if ENABLE_BSC
+ExpectedType ASTNodeImporter::VisitConditionalType(const ConditionalType *T) {
+  ExpectedExpr ToCondExprOrErr = import(T->getCondExpr());
+  if (!ToCondExprOrErr)
+    return ToCondExprOrErr.takeError();
+
+  ExpectedType ToConditionalType1OrErr = import(T->getConditionalType1());
+  if (!ToConditionalType1OrErr)
+    return ToConditionalType1OrErr.takeError();  
+  
+  ExpectedType ToConditionalType2OrErr = import(T->getConditionalType2());
+  if (!ToConditionalType2OrErr)
+    return ToConditionalType2OrErr.takeError();  
+  
+  llvm::Optional<bool> CondResult = T->getCondResult();
+  return Importer.getToContext().getConditionalType(CondResult, *ToCondExprOrErr,
+                                                    *ToConditionalType1OrErr,
+                                                    *ToConditionalType2OrErr);
+}
+#endif
 
 ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
   Expected<UsingShadowDecl *> FoundOrErr = import(T->getFoundDecl());

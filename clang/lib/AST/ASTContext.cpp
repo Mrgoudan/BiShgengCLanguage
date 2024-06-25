@@ -3621,6 +3621,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::Enum:
   #if ENABLE_BSC
   case Type::Trait:
+  case Type::Conditional:
   #endif
   case Type::UnresolvedUsing:
   case Type::TypeOfExpr:
@@ -5700,6 +5701,18 @@ QualType ASTContext::getTypeOfType(QualType tofType) const {
   Types.push_back(tot);
   return QualType(tot, 0);
 }
+
+#if ENABLE_BSC
+QualType ASTContext::getConditionalType(llvm::Optional<bool> CondResult, Expr *CondExpr, 
+                                        QualType CondType1, QualType CondType2) const {
+  QualType Canonical;
+  if (CondResult)
+    Canonical = getCanonicalType(*CondResult ? CondType1 : CondType2);
+  auto *ct = new (*this, TypeAlignment) ConditionalType(CondResult, CondExpr, CondType1, CondType2, Canonical);
+  Types.push_back(ct);
+  return QualType(ct, 0);
+}
+#endif
 
 /// getReferenceQualifiedType - Given an expr, will return the type for
 /// that expression, as in [dcl.type.simple]p4 but without taking id-expressions

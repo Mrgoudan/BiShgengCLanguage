@@ -3442,6 +3442,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   #if ENABLE_BSC
   case Type::Trait:
     llvm_unreachable("Trait types cannot show up in debug information");
+  case Type::Conditional:
+    llvm_unreachable("Conditional types cannot show up in debug information");
   #endif
   case Type::ExtVector:
   case Type::Vector:

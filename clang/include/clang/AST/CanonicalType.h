@@ -538,6 +538,12 @@ struct CanProxyAdaptor<TypeOfType> : public CanProxyBase<TypeOfType> {
   LLVM_CLANG_CANPROXY_TYPE_ACCESSOR(getUnderlyingType)
 };
 
+#if ENABLE_BSC
+template<>
+struct CanProxyAdaptor<ConditionalType> : public CanProxyBase<ConditionalType> {
+  LLVM_CLANG_CANPROXY_TYPE_ACCESSOR(getUnderlyingType)
+};
+#endif
 template<>
 struct CanProxyAdaptor<DecltypeType> : public CanProxyBase<DecltypeType> {
   LLVM_CLANG_CANPROXY_SIMPLE_ACCESSOR(Expr *, getUnderlyingExpr)

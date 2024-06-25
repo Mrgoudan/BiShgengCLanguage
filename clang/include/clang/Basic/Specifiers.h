@@ -78,6 +78,7 @@ namespace clang {
     TST_struct,
     #if ENABLE_BSC
     TST_trait,
+    TST_conditionalType,
     #endif
     TST_class,     // C++ class type
     TST_interface, // C++ (Microsoft-specific) __interface type

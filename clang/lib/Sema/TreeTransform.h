@@ -960,6 +960,10 @@ public:
   QualType RebuildTraitType(TraitDecl *Trait) {
     return SemaRef.Context.getTypeDeclType(Trait);
   }
+
+  QualType RebuildConditionalType(llvm::Optional<bool> CondRes, Expr* CondE, QualType T1, QualType T2) {
+    return SemaRef.Context.getConditionalType(CondRes, CondE, T1, T2);
+  }
   #endif
   /// Build a new Enum type.
   QualType RebuildEnumType(EnumDecl *Enum) {
@@ -6259,6 +6263,58 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
 
   return Result;
 }
+
+#if ENABLE_BSC
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformConditionalType(TypeLocBuilder &TLB,
+                                                          ConditionalTypeLoc TL) {
+  SourceLocation ConditionalLoc = TL.getConditionalLoc();
+  llvm::Optional<bool> CondResult = TL.getCondResult();
+  Expr* Old_CondExpr = TL.getCondExpr();
+  Expr* New_CondExpr = Old_CondExpr;
+  if (!CondResult) {
+    ExprResult CondExpr = getDerived().TransformExpr(Old_CondExpr);
+    if (CondExpr.isInvalid())
+      return QualType();
+    Sema::ConditionResult Cond = getSema().ActOnCondition(nullptr, ConditionalLoc, CondExpr.get(),
+                                                        Sema::ConditionKind::ConstexprIf,
+                                                        /*MissingOK=*/false);
+    if (Cond.isInvalid())
+      return QualType();
+    CondResult = Cond.getKnownValue();
+    New_CondExpr = CondExpr.get();
+  }
+
+  TypeSourceInfo* Old_ConditionalTypeInfo1 = TL.getConditionalTInfo1();
+  TypeSourceInfo* New_ConditionalTypeInfo1 = getDerived().TransformType(Old_ConditionalTypeInfo1);
+  if (!New_ConditionalTypeInfo1)
+    return QualType();
+
+  TypeSourceInfo* Old_ConditionalTypeInfo2 = TL.getConditionalTInfo2();
+  TypeSourceInfo* New_ConditionalTypeInfo2 = getDerived().TransformType(Old_ConditionalTypeInfo2);
+  if (!New_ConditionalTypeInfo2)
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() 
+      || Old_CondExpr != New_CondExpr
+      || Old_ConditionalTypeInfo1 != New_ConditionalTypeInfo1
+      || Old_ConditionalTypeInfo2 != New_ConditionalTypeInfo2) {
+    Result = getDerived().RebuildConditionalType(CondResult, New_CondExpr,
+                                                 New_ConditionalTypeInfo1->getType(),
+                                                 New_ConditionalTypeInfo2->getType());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  ConditionalTypeLoc NewTL = TLB.push<ConditionalTypeLoc>(Result);
+  NewTL.setConditionalLoc(TL.getConditionalLoc());
+  NewTL.setConditionalTInfo1(New_ConditionalTypeInfo1);
+  NewTL.setConditionalTInfo2(New_ConditionalTypeInfo2);
+  NewTL.setUnderlyingTInfo(CondResult ? New_ConditionalTypeInfo1 : New_ConditionalTypeInfo2);
+  return Result;
+}
+#endif
 
 template<typename Derived>
 QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,

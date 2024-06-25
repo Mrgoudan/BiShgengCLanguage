@@ -6704,7 +6704,15 @@ void TypeLocReader::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
   TL.setRParenLoc(readSourceLocation());
   TL.setUnderlyingTInfo(GetTypeSourceInfo());
 }
-
+#if ENABLE_BSC
+void TypeLocReader::VisitConditionalTypeLoc(ConditionalTypeLoc TL) {
+  TL.setConditionalLoc(readSourceLocation());
+  TL.setRParenLoc(readSourceLocation());
+  TL.setConditionalTInfo1(GetTypeSourceInfo());
+  TL.setConditionalTInfo2(GetTypeSourceInfo());
+  TL.setUnderlyingTInfo(GetTypeSourceInfo());
+}
+#endif
 void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   TL.setDecltypeLoc(readSourceLocation());
   TL.setRParenLoc(readSourceLocation());

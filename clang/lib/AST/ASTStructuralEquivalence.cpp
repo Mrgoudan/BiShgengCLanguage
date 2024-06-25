@@ -982,7 +982,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   cast<TypeOfType>(T2)->getUnderlyingType()))
       return false;
     break;
-
+  #if ENABLE_BSC
+  case Type::Conditional:
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<ConditionalType>(T1)->getUnderlyingType(),
+                                  cast<ConditionalType>(T2)->getUnderlyingType()))
+      return false;
+    break;
+  #endif
   case Type::UnaryTransform:
     if (!IsStructurallyEquivalent(
             Context, cast<UnaryTransformType>(T1)->getUnderlyingType(),

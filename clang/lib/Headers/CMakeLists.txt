@@ -266,6 +266,7 @@ set(openmp_wrapper_files
 if (ENABLE_BSC)
   set(bsc_include_files
     bsc_include/bsc_type_traits.hbs
+    bsc_include/bsc_conditional.hbs
     bsc_include/future.hbs
   )
 endif()

@@ -6293,6 +6293,12 @@ bool UnnamedLocalNoLinkageFinder::VisitTypeOfType(const TypeOfType* T) {
   return Visit(T->getUnderlyingType());
 }
 
+#if ENABLE_BSC
+bool UnnamedLocalNoLinkageFinder::VisitConditionalType(const ConditionalType* T) {
+  return Visit(T->getUnderlyingType());
+}
+#endif
+
 bool UnnamedLocalNoLinkageFinder::VisitDecltypeType(const DecltypeType*) {
   return false;
 }

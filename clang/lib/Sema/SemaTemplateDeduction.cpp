@@ -2181,6 +2181,9 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
     case Type::TypeOfExpr:
     case Type::TypeOf:
+    #if ENABLE_BSC
+    case Type::Conditional:
+    #endif
     case Type::DependentName:
     case Type::UnresolvedUsing:
     case Type::Decltype:
@@ -5923,6 +5926,15 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                  Used);
     break;
   }
+
+  #if ENABLE_BSC
+  case Type::Conditional:
+    if (!OnlyDeduced)
+      MarkUsedTemplateParameters(Ctx,
+                                 cast<ConditionalType>(T)->getUnderlyingType(),
+                                 OnlyDeduced, Depth, Used);
+    break;
+  #endif
 
   case Type::TypeOf:
     if (!OnlyDeduced)

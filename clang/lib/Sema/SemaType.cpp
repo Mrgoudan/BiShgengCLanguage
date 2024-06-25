@@ -1625,6 +1625,16 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(Result);
     break;
+  #if ENABLE_BSC
+  case DeclSpec::TST_conditionalType: {
+    llvm::Optional<bool> CondResult = DS.getConditionalCondResult();
+    Expr *CondExpr = DS.getConditionalCondExpr();
+    QualType CondType1 = S.GetTypeFromParser(DS.getConditionalType1());
+    QualType CondType2 = S.GetTypeFromParser(DS.getConditionalType2());
+    Result = Context.getConditionalType(CondResult, CondExpr, CondType1, CondType2);
+    break;
+  }
+  #endif
   case DeclSpec::TST_typeofExpr: {
     Expr *E = DS.getRepAsExpr();
     assert(E && "Didn't get an expression for typeof?");
@@ -6204,6 +6214,21 @@ namespace {
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       TL.setUnderlyingTInfo(TInfo);
     }
+    #if ENABLE_BSC
+    void VisitConditionalTypeLoc(ConditionalTypeLoc TL) {
+      assert(DS.getTypeSpecType() == DeclSpec::TST_conditionalType);
+      TL.setConditionalLoc(DS.getTypeSpecTypeLoc());
+      TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+      
+      TypeSourceInfo *ConditionalTInfo1 = nullptr;
+      TypeSourceInfo *ConditionalTInfo2 = nullptr;
+      Sema::GetTypeFromParser(DS.getConditionalType1(), &ConditionalTInfo1);
+      Sema::GetTypeFromParser(DS.getConditionalType2(), &ConditionalTInfo2);      
+      
+      TL.setConditionalTInfo1(ConditionalTInfo1);
+      TL.setConditionalTInfo2(ConditionalTInfo2);
+    }
+    #endif
     void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
       TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());

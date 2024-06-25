@@ -9,6 +9,25 @@ let Class = TraitType in {
   }]>;
 }
 
+let Class = ConditionalType in {
+  def : Property<"CondResult", Bool> {
+    let Read = [{ node->getCondResult() }];
+  }
+  def : Property<"CondExpr", ExprRef> {
+    let Read = [{ node->getCondExpr() }];
+  }
+  def : Property<"Type1", QualType> {
+    let Read = [{ node->getConditionalType1() }];
+  }
+  def : Property<"Type2", QualType> {
+    let Read = [{ node->getConditionalType2() }];
+  }
+
+  def : Creator<[{
+    return ctx.getConditionalType(CondResult, CondExpr, Type1, Type2);
+  }]>;
+}
+
 let Class = InjectedTraitNameType in {
   def : Property<"declaration", DeclRef> {
     // FIXME: drilling down to the canonical declaration is what the

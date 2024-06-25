@@ -1118,6 +1118,7 @@ DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
 DEF_TRAVERSE_TYPE(RecordType, {})
 #if ENABLE_BSC
 DEF_TRAVERSE_TYPE(TraitType, {})
+DEF_TRAVERSE_TYPE(ConditionalType, { TRY_TO(TraverseType(T->getUnderlyingType())); })
 #endif
 DEF_TRAVERSE_TYPE(EnumType, {})
 DEF_TRAVERSE_TYPE(TemplateTypeParmType, {})
@@ -1407,6 +1408,9 @@ DEF_TRAVERSE_TYPELOC(RecordType, {})
 DEF_TRAVERSE_TYPELOC(EnumType, {})
 #if ENABLE_BSC
 DEF_TRAVERSE_TYPELOC(TraitType, {})
+DEF_TRAVERSE_TYPELOC(ConditionalType, {
+  TRY_TO(TraverseTypeLoc(TL.getUnderlyingTInfo()->getTypeLoc()));
+})
 #endif
 DEF_TRAVERSE_TYPELOC(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {

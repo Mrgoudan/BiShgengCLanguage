@@ -327,6 +327,7 @@ public:
   #if ENABLE_BSC
   static const TST TST_trait = clang::TST_trait;
   static const TST TST_This = clang::TST_This;
+  static const TST TST_conditionalType = clang::TST_conditionalType;
   #endif
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
@@ -410,6 +411,13 @@ private:
     Expr *ExprRep;
     TemplateIdAnnotation *TemplateIdRep;
   };
+
+  #if ENABLE_BSC
+  llvm::Optional<bool> ConditionalCondResult;
+  ParsedType ConditionalType1;
+  ParsedType ConditionalType2;
+  Expr *ConditionalCondExpr;
+  #endif
 
   /// ExplicitSpecifier - Store information about explicit spicifer.
   ExplicitSpecifier FS_explicit_specifier;
@@ -623,6 +631,10 @@ public:
   SourceLocation getOwnedSpecLoc() const { return TQ_ownedLoc; }
   void setImplTrait() { IsImplTrait = true; }
   bool getImplTrait() { return IsImplTrait; }
+  llvm::Optional<bool> getConditionalCondResult() const { return ConditionalCondResult; }
+  ParsedType getConditionalType1() const { return ConditionalType1; }
+  ParsedType getConditionalType2() const { return ConditionalType2; }
+  Expr* getConditionalCondExpr() const { return ConditionalCondExpr; }
 #endif
 
   /// Clear out all of the type qualifiers.
@@ -809,6 +821,13 @@ public:
   bool SetBitIntType(SourceLocation KWLoc, Expr *BitWidth,
                      const char *&PrevSpec, unsigned &DiagID,
                      const PrintingPolicy &Policy);
+  #if ENABLE_BSC
+  bool SetConditionalType(SourceLocation KWLoc,
+                          const char *&PrevSpec, unsigned &DiagID,
+                          llvm::Optional<bool> CondResult,
+                          Expr *CondExpr, ParsedType Ty1, ParsedType Ty2,
+                          const PrintingPolicy &Policy);
+  #endif
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
                       unsigned &DiagID);
   bool SetTypeSpecError();

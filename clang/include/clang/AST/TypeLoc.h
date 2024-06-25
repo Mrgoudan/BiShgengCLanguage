@@ -1947,6 +1947,86 @@ class ComplexTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
                                                         ComplexType> {
 };
 
+#if ENABLE_BSC
+struct ConditionalTypeLocInfo {
+  SourceLocation ConditionalLoc;
+  SourceLocation RParenLoc;
+  TypeSourceInfo* ConditionalTInfo1;
+  TypeSourceInfo* ConditionalTInfo2;
+  TypeSourceInfo* UnderlyingTInfo;
+};
+
+class ConditionalTypeLoc
+  : public ConcreteTypeLoc<UnqualTypeLoc, ConditionalTypeLoc, ConditionalType,
+                           ConditionalTypeLocInfo> {
+public:
+  SourceLocation getConditionalLoc() const {
+    return this->getLocalData()->ConditionalLoc;
+  }
+
+  void setConditionalLoc(SourceLocation Loc) {
+    this->getLocalData()->ConditionalLoc = Loc;
+  }
+
+  SourceLocation getRParenLoc() const {
+    return this->getLocalData()->RParenLoc;
+  }
+
+  void setRParenLoc(SourceLocation Loc) {
+    this->getLocalData()->RParenLoc = Loc;
+  }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getConditionalLoc(), getRParenLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc);
+
+  Expr* getCondExpr() const {
+    return this->getTypePtr()->getCondExpr();
+  }
+
+  llvm::Optional<bool> getCondResult() const { 
+    return this->getTypePtr()->getCondResult(); 
+  }
+  
+  QualType getConditionalType1() const {
+    return this->getTypePtr()->getConditionalType1();
+  }
+
+  TypeSourceInfo* getConditionalTInfo1() const {
+    return this->getLocalData()->ConditionalTInfo1;
+  }
+  
+  void setConditionalTInfo1(TypeSourceInfo* TI) const {
+    this->getLocalData()->ConditionalTInfo1 = TI;
+  }
+
+  QualType getConditionalType2() const {
+    return this->getTypePtr()->getConditionalType2();
+  }
+
+  TypeSourceInfo* getConditionalTInfo2() const {
+    return this->getLocalData()->ConditionalTInfo2;
+  }
+
+  void setConditionalTInfo2(TypeSourceInfo* TI) const {
+    this->getLocalData()->ConditionalTInfo2 = TI;
+  }
+
+  QualType getUnderlyingType() const {
+    return this->getTypePtr()->getUnderlyingType();
+  }
+
+  TypeSourceInfo* getUnderlyingTInfo() const {
+    return this->getLocalData()->UnderlyingTInfo;
+  }
+
+  void setUnderlyingTInfo(TypeSourceInfo* TI) const {
+    this->getLocalData()->UnderlyingTInfo = TI;
+  }
+};
+#endif
 struct TypeofLocInfo {
   SourceLocation TypeofLoc;
   SourceLocation LParenLoc;

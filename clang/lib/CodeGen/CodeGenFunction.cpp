@@ -2310,6 +2310,9 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
 
     case Type::Paren:
     case Type::TypeOf:
+    #if ENABLE_BSC
+    case Type::Conditional:
+    #endif
     case Type::UnaryTransform:
     case Type::Attributed:
     case Type::BTFTagAttributed:

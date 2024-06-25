@@ -523,6 +523,18 @@ void TypeOfTypeLoc::initializeLocal(ASTContext &Context,
       getUnderlyingType(), Loc);
 }
 
+#if ENABLE_BSC
+void ConditionalTypeLoc::initializeLocal(ASTContext &Context,
+                                       SourceLocation Loc) {
+  setConditionalLoc(Loc);
+  setRParenLoc(Loc);
+  this->getLocalData()->ConditionalTInfo1 = Context.getTrivialTypeSourceInfo(
+      getConditionalType1(), Loc);
+  this->getLocalData()->ConditionalTInfo2 = Context.getTrivialTypeSourceInfo(
+      getConditionalType2(), Loc); 
+}
+#endif
+
 void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
                                        SourceLocation Loc) {
     setKWLoc(Loc);

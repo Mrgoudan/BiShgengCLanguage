@@ -16,6 +16,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Lookup.h"
@@ -865,6 +866,84 @@ bool Parser::ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS) {
       return true;
     }
   }
+  return false;
+}
+
+/// [BSC]   conditional-specifier:
+///           __conditional ( constant expression, type-name, type-name )
+void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
+  assert(Tok.is(tok::kw___conditional) && "Not a conditional specifier");
+  SourceLocation KWLoc = ConsumeToken();  // Consume __conditional
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return;
+
+  Sema::ConditionResult Cond;
+  llvm::Optional<bool> CondResult;
+  ExprResult CondExpr = ParseExpression();
+  if (CondExpr.isInvalid()) {
+    Cond = Sema::ConditionError();
+    T.skipToEnd();
+    return;
+  } else
+    Cond = Actions.ActOnCondition(getCurScope(), KWLoc, CondExpr.get(),
+                                  Sema::ConditionKind::ConstexprIf,
+                                  /*MissingOK=*/false);
+  if (Cond.isInvalid() || Tok.isNot(tok::comma)) {
+    T.skipToEnd();
+    return;
+  }
+  CondResult = Cond.getKnownValue();
+  ConsumeToken(); // Consume comma
+  
+  // Parse the next two types.
+  TypeResult Ty1 = ParseTypeName();
+  if (ExpectAndConsume(tok::comma)) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return;
+  }
+  TypeResult Ty2 = ParseTypeName();
+  if (Ty1.isInvalid() || Ty2.isInvalid()) {
+      T.skipToEnd();
+      return;
+  }
+  // Closing ')'.
+  if (T.consumeClose())
+    return;
+  DS.setTypeofParensRange(T.getRange());
+  ParsedType PT1 = Ty1.get();
+  ParsedType PT2 = Ty2.get();
+  const char *PrevSpec = nullptr;
+  unsigned DiagID;
+  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID, 
+                            CondResult, CondExpr.get(), PT1, PT2,
+                            Actions.getASTContext().getPrintingPolicy()))
+    Diag(KWLoc, DiagID) << PrevSpec;
+}
+
+bool DeclSpec::SetConditionalType(SourceLocation KWLoc,
+                                  const char *&PrevSpec, unsigned &DiagID,
+                                  llvm::Optional<bool> CondResult,
+                                  Expr *CondExpr, ParsedType Ty1, ParsedType Ty2,
+                                  const PrintingPolicy &Policy) {
+  if (TypeSpecType == TST_error)
+    return false;
+  if (TypeSpecType != TST_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
+    DiagID = diag::err_invalid_decl_spec_combination;
+    return true;
+  }
+
+  TypeSpecType = TST_conditionalType;
+  TSTLoc = KWLoc;
+  TSTNameLoc = KWLoc;
+  TypeSpecOwned = false;
+
+  ConditionalCondResult = CondResult;
+  ConditionalCondExpr = CondExpr;
+  ConditionalType1 = Ty1;
+  ConditionalType2 = Ty2;
   return false;
 }
 #endif

@@ -1823,6 +1823,15 @@ bool CursorVisitor::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
   return false;
 }
 
+#if ENABLE_BSC
+bool CursorVisitor::VisitConditionalTypeLoc(ConditionalTypeLoc TL) {
+  if (TypeSourceInfo *TSInfo = TL.getUnderlyingTInfo())
+    return Visit(TSInfo->getTypeLoc());
+
+  return false;
+}
+#endif
+
 bool CursorVisitor::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   if (TypeSourceInfo *TSInfo = TL.getUnderlyingTInfo())
     return Visit(TSInfo->getTypeLoc());

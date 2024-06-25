@@ -4895,6 +4895,35 @@ public:
 
   static bool classof(const Type *T) { return T->getTypeClass() == Trait; }
 };
+
+// For BSC, we define __conditional(expression, type-name, type-name) as ConditionalType.
+// If the value of CondExpr is true, then UnderlyingType is Type1, otherwise is Type2.
+class ConditionalType : public Type {
+  friend class ASTContext; // ASTContext creates these.
+  
+  llvm::Optional<bool> CondResult;
+  Expr* CondExpr;
+  QualType Type1;
+  QualType Type2;
+  QualType UnderlyingType;
+  
+  ConditionalType(llvm::Optional<bool> CondRes, Expr* CondE, QualType T1, QualType T2, QualType can);
+
+public:
+  Expr *getCondExpr() const { return CondExpr; }
+  llvm::Optional<bool> getCondResult() const { return CondResult; }
+  QualType getConditionalType1() const { return Type1; }
+  QualType getConditionalType2() const { return Type2; }
+  QualType getUnderlyingType() const { return UnderlyingType; }
+  
+  /// Remove a single level of sugar.
+  QualType desugar() const;
+
+  /// Returns whether this type directly provides sugar.
+  bool isSugared() const;
+
+  static bool classof(const Type *T) { return T->getTypeClass() == Conditional; }
+};
 #endif
 
 /// A helper class that allows the use of isa/cast/dyncast

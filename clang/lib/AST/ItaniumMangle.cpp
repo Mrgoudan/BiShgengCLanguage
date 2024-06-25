@@ -2340,6 +2340,9 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   // (this last is not official yet)
   case Type::TypeOfExpr:
   case Type::TypeOf:
+  #if ENABLE_BSC
+  case Type::Conditional:
+  #endif
   case Type::Decltype:
   case Type::TemplateTypeParm:
   case Type::UnaryTransform:
@@ -3386,6 +3389,10 @@ void CXXNameMangler::mangleType(const RecordType *T) {
 #if ENABLE_BSC
 void CXXNameMangler::mangleType(const TraitType *T) {
   llvm_unreachable("type is illegal to mangle");
+}
+
+void CXXNameMangler::mangleType(const ConditionalType *T) {
+  Out << "u11conditional";
 }
 #endif
 void CXXNameMangler::mangleType(const TagType *T) {

@@ -1079,6 +1079,13 @@ public:
     VisitType(T);
   }
 
+  #if ENABLE_BSC
+  void VisitConditionalType(const ConditionalType *T) {
+    AddQualType(T->getUnderlyingType());
+    VisitType(T);
+  }
+  #endif
+
   void VisitTypeWithKeyword(const TypeWithKeyword *T) {
     ID.AddInteger(T->getKeyword());
     VisitType(T);

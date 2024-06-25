@@ -3289,6 +3289,17 @@ void MicrosoftCXXNameMangler::mangleType(const TypeOfType *T, Qualifiers,
     << Range;
 }
 
+#if ENABLE_BSC
+void MicrosoftCXXNameMangler::mangleType(const ConditionalType *T, Qualifiers,
+                                         SourceRange Range) {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+    "cannot mangle this conditional(type) yet");
+  Diags.Report(Range.getBegin(), DiagID)
+    << Range;
+}
+#endif
+
 void MicrosoftCXXNameMangler::mangleType(const TypeOfExprType *T, Qualifiers,
                                          SourceRange Range) {
   DiagnosticsEngine &Diags = Context.getDiags();

@@ -629,6 +629,43 @@ int main() {
 }
 ```
 
+##### conditional 泛型类型别名
+在 bsc_conditional.hbs 这一 BSC 标准库中提供了 conditional 泛型类型别名，可以实现类型层面的“分支逻辑”：
+```
+// bsc_conditional.hbs
+typedef conditional<int C, T, F> = __conditional(int C, T, F);
+```
+当 C 非 0 时，conditional 类型别名指代类型 T ，否则指代类型 F，条件表达式必须是可以编译期求值的常量表达式：
+```
+#include<bsc_conditional.hbs>  //使用conditional需要导入头文件
+int main() {
+    conditional<1, int, double> a = 1;   //等价于int a = 1;
+    conditional<0, int, double> b = 1.0; //等价于double b = 1.0;
+    return 0;
+}
+```
+使用conditional，不仅可以简化书写，可以在编译时根据条件选择不同的类型，避免了运行时的条件分支，提高代码的效率，以下是一个关于选择函数返回类型的使用案例：
+
+定义一个泛型函数，它的返回值类型取决于泛型参数 T ，如果 T 是指针类型，则返回值类型仍然是 T ，否则，返回 T 的指针类型。
+
+C++ 中需要借助泛型特化和 concept 来实现：
+```cpp
+// T 是指针类型时，std::is_pointer_v<T> == true，匹配该版本:
+template<typename T> requires std::is_pointer_v<T>  
+T foo() { ... }
+
+// T 不是指针类型时，匹配该版本:
+template<typename T>                                
+T* foo() { ... }
+```
+
+在 BSC 中，我们可以借助 conditional 很方便地实现这样的功能，相比C++更加方便易用：
+```
+typedef PointerType<T> = conditional<is_pointer<T>(), T, T*>;
+
+PointerType<T> foo<T>() { ... } 
+```
+
 ------
 ## 常量计算
 ### constexpr

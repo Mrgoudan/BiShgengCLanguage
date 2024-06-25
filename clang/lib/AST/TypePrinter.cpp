@@ -268,6 +268,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Enum:
     #if ENABLE_BSC
     case Type::Trait:
+    case Type::Conditional:
     #endif
     case Type::Elaborated:
     case Type::TemplateTypeParm:
@@ -1170,6 +1171,23 @@ void TypePrinter::printTypeOfBefore(const TypeOfType *T, raw_ostream &OS) {
 }
 
 void TypePrinter::printTypeOfAfter(const TypeOfType *T, raw_ostream &OS) {}
+
+#if ENABLE_BSC
+void TypePrinter::printConditionalBefore(const ConditionalType *T, raw_ostream &OS) {
+  OS << "__conditional(";
+  if (T->getCondExpr()) {
+    T->getCondExpr()->printPretty(OS, nullptr, Policy);
+    OS << ',';
+  }
+  print(T->getConditionalType1(), OS, StringRef());
+  OS << ',';
+  print(T->getConditionalType2(), OS, StringRef());
+  OS << ')';
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printConditionalAfter(const ConditionalType *T, raw_ostream &OS) {}
+#endif
 
 void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << "decltype(";

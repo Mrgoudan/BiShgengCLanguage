@@ -121,4 +121,21 @@ bool Type::isBSCFutureType() const {
   return false;
 }
 
+ConditionalType::ConditionalType(llvm::Optional<bool> CondRes, Expr* CondE, QualType T1, QualType T2, QualType can)
+    : Type(Conditional, can, 
+           toTypeDependence(CondE->getDependence()) |
+           (CondE->isInstantiationDependent() ? TypeDependence::Dependent : TypeDependence::None) |
+           (CondE->getType()->getDependence() & TypeDependence::VariablyModified) |
+           T1->getDependence() |
+           T2->getDependence()),
+      CondResult(CondRes), CondExpr(CondE), Type1(T1), Type2(T2), UnderlyingType(can) {}
+
+bool ConditionalType::isSugared() const { return !CondExpr->isInstantiationDependent(); }
+
+QualType ConditionalType::desugar() const {
+  if (isSugared())
+    return getUnderlyingType();
+
+  return QualType(this, 0);
+}
 #endif

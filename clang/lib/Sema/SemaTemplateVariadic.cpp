@@ -905,6 +905,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_class:
   #if ENABLE_BSC
   case TST_trait:
+  case TST_conditionalType:
   #endif
   case TST_auto:
   case TST_auto_type:

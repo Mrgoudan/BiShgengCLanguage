@@ -442,7 +442,15 @@ void TypeLocWriter::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
   addSourceLocation(TL.getRParenLoc());
   Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
 }
-
+#if ENABLE_BSC
+void TypeLocWriter::VisitConditionalTypeLoc(ConditionalTypeLoc TL) {
+  addSourceLocation(TL.getConditionalLoc());
+  addSourceLocation(TL.getRParenLoc());
+  Record.AddTypeSourceInfo(TL.getConditionalTInfo1());
+  Record.AddTypeSourceInfo(TL.getConditionalTInfo2());
+  Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
+}
+#endif
 void TypeLocWriter::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   addSourceLocation(TL.getDecltypeLoc());
   addSourceLocation(TL.getRParenLoc());

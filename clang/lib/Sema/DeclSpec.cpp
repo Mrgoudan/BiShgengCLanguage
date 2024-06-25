@@ -371,6 +371,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_union:
     #if ENABLE_BSC
     case TST_trait:
+    case TST_conditionalType:
     #endif
     case TST_unknown_anytype:
     case TST_unspecified:
@@ -590,6 +591,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_typename:    return "type-name";
   #if ENABLE_BSC
   case DeclSpec::TST_trait:       return "trait";
+  case DeclSpec::TST_conditionalType: return "__conditional";
   #endif
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeofExpr:  return "typeof";

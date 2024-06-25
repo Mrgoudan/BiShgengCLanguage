@@ -4455,6 +4455,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ParseTypeofSpecifier(DS);
       continue;
 
+    // BSC conditional support.
+    #if ENABLE_BSC
+    case tok::kw___conditional:
+      ParseConditionalSpecifier(DS);
+      continue;
+    #endif
+
     case tok::annot_decltype:
       ParseDecltypeSpecifier(DS);
       continue;
@@ -5703,8 +5710,10 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   #if ENABLE_BSC
   case tok::kw_async:
   case tok::kw_safe:
-  case tok::kw_unsafe:
-#endif
+  case tok::kw_unsafe:    
+  // BSC conditional support.
+  case tok::kw___conditional:
+  #endif
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:
@@ -6447,6 +6456,21 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       #endif
       ) &&
       D.mayHaveIdentifier()) {
+    #if ENABLE_BSC
+    if (IsParsingBSCGenericParameters) {
+      Token SwitchTok = PP.LookAhead(BSCGenericLookAhead);
+      UnqualifiedId &Result = D.getName();
+      if (SwitchTok.is(tok::identifier)) {
+        IdentifierInfo *Id = SwitchTok.getIdentifierInfo();
+        SourceLocation IdLoc = SwitchTok.getLocation();
+        Result.setIdentifier(Id, IdLoc);
+        BSCGenericLookAhead++;
+      }
+      D.SetRangeEnd(D.getName().getSourceRange().getEnd());
+      goto PastIdentifier;
+    }
+    #endif
+
     // This might be a C++17 structured binding.
     if (Tok.is(tok::l_square) && !D.mayOmitIdentifier() &&
         D.getCXXScopeSpec().isEmpty())
@@ -6514,21 +6538,6 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // check for that in ParseParenDeclarator, after we have disambiguated
       // the l_paren token.
     }
-
-    #if ENABLE_BSC
-    if (IsParsingBSCGenericParameters) {
-      Token SwitchTok = PP.LookAhead(BSCGenericLookAhead);
-      UnqualifiedId &Result = D.getName();
-      if (SwitchTok.is(tok::identifier)) {
-        IdentifierInfo *Id = SwitchTok.getIdentifierInfo();
-        SourceLocation IdLoc = SwitchTok.getLocation();
-        Result.setIdentifier(Id, IdLoc);
-        BSCGenericLookAhead++;
-      }
-      D.SetRangeEnd(D.getName().getSourceRange().getEnd());
-      goto PastIdentifier;
-    }
-    #endif
 
     if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::annot_template_id,
                     tok::tilde)) {

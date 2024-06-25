@@ -1929,7 +1929,6 @@ private:
     case tok::equal:
     case tok::l_brace:
     case tok::semi:
-    case tok::numeric_constant:
       return true;
 
     default:
@@ -2459,6 +2458,7 @@ private:
   bool IsBSCStaticMemberFunctionCall();
   void TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs);
   bool ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS);
+  void ParseConditionalSpecifier(DeclSpec &DS);
   #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,

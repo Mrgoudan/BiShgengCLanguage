@@ -463,6 +463,7 @@ KEYWORD(owned                       , KEYBSC)
 KEYWORD(trait                       , KEYBSC)
 KEYWORD(safe                        , KEYBSC)
 KEYWORD(unsafe                      , KEYBSC)
+KEYWORD(__conditional               , KEYBSC)
 #endif
 
 // GNU Extensions (outside impl-reserved namespace)
