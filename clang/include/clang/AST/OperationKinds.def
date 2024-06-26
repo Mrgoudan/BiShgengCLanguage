@@ -439,6 +439,13 @@ UNARY_OPERATION(Imag, "__imag")
 UNARY_OPERATION(Extension, "__extension__")
 // [C++ Coroutines] co_await operator
 UNARY_OPERATION(Coawait, "co_await")
+#if ENABLE_BSC
+// [BSC Ownership] ownership operator
+UNARY_OPERATION(AddrMut, "&mut")
+UNARY_OPERATION(AddrMutDeref, "&mut *")
+UNARY_OPERATION(AddrConst, "&const")
+UNARY_OPERATION(AddrConstDeref, "&const *")
+#endif
 
 #undef CAST_OPERATION
 #undef BINARY_OPERATION

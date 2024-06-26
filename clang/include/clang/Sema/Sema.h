@@ -12268,6 +12268,12 @@ public:
     /// type with a unOwned qualified pointer type or two owned qualified pointer type
     /// with different base types
     IncompatibleOwnedPointer,
+
+    /// IncompatibleBorrowPointer - The assignment is between a borrow qualified pointer
+    /// type with a unBorrow qualified pointer type or two borrow qualified pointer type
+    /// with different base types
+    IncompatibleBorrowPointer,
+
     /// IncompatibleBSCSafeZone - unsafe convert in the bsc safe zone.
     IncompatibleBSCSafeZone,
     #endif
@@ -12364,6 +12370,16 @@ public:
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;
   SafeZoneSpecifier getInstantiationSafeZoneSpecifier();
   ExprResult CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, bool IsConstexpr);
+  // borrow
+  bool IsAddrBorrowDerefOp(ExprResult &Operand);
+  bool CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType);
+  bool CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
+  bool CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
+  bool CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
+  void CheckBorrowFunctionType(QualType ReturnTy, SmallVector<QualType, 16> ParamTys, SourceLocation SL);
+  bool CheckBorrowFunctionPointerType(QualType LHSType, Expr* RHSExpr);
+  void CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL);
+  bool CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType);
 #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

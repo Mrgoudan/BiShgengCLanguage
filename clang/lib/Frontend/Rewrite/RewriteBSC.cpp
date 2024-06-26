@@ -355,7 +355,7 @@ public:
   }
 
   bool VisitQualType(QualType QT) {
-    if (QT.isOwnedQualified()) {
+    if (QT.isOwnedQualified() || QT.isBorrowQualified()) {
       return true;
     }
     if (IsDesugaredFromTraitType(QT)) {

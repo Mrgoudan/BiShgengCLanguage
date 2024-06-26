@@ -1997,6 +1997,13 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     Qs.removeConst();
     Qs.removeVolatile();
   }
+  #if ENABLE_BSC
+  if (getLangOpts().BSC && Qs.hasBorrow()) {
+    if (!T->isPointerType())
+      Diag(DS ? DS->getBorrowSpecLoc() : Loc,
+           diag::err_typecheck_invalid_borrow_not_pointer) << T;
+  }
+  #endif
 
   // Enforce C99 6.7.3p2: "Types other than pointer types derived from
   // object or incomplete types shall not be restrict-qualified."
@@ -5650,6 +5657,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                         : ASIdx);
           EPI.TypeQuals.addAddressSpace(AS);
         }
+
+        #if ENABLE_BSC
+        if (S.getLangOpts().BSC) {
+          S.CheckBorrowFunctionType(T, ParamTys, DeclType.Loc);
+        }
+        #endif
         T = Context.getFunctionType(T, ParamTys, EPI);
       }
       break;

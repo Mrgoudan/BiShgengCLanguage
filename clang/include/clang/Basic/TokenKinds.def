@@ -247,6 +247,12 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 // CL support
 PUNCTUATOR(caretcaret,            "^^")
 
+// BSC support
+#if ENABLE_BSC
+PUNCTUATOR(ampmut,            "&mut")
+PUNCTUATOR(ampconst,          "&const")
+#endif
+
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.
 // Flags allowed:
 //   KEYALL   - This is a keyword in all variants of C and C++, or it
@@ -460,6 +466,7 @@ KEYWORD(__auto_type                 , KEYALL)
 KEYWORD(async                       , KEYBSC)
 KEYWORD(await                       , KEYBSC)
 KEYWORD(owned                       , KEYBSC)
+KEYWORD(borrow                      , KEYBSC)
 KEYWORD(trait                       , KEYBSC)
 KEYWORD(safe                        , KEYBSC)
 KEYWORD(unsafe                      , KEYBSC)

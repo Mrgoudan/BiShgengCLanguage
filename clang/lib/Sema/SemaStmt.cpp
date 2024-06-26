@@ -3915,6 +3915,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     return StmtError();
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
+  #if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    if (auto RT = dyn_cast_or_null<ReturnStmt>(R.get()))
+      CheckMoveVarMemoryLeak(RT->getRetValue(), ReturnLoc);
+  }
+  #endif
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
     return R;
 

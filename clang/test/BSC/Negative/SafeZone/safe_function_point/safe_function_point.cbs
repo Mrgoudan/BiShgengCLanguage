@@ -26,7 +26,7 @@ int main() {
   up = add;           // expected-warning {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe int (int, int)'}}
   up = dadd;          // expected-warning {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe double (double, double)'}}
   safe {
-    p = &add;       // ok 
+    p = &add;       // ok
     TP tp = &add;   // ok
     up = &add;      // expected-error {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe int (*)(int, int)'}}
     up = &dadd;     // expected-error {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe double (*)(double, double)'}}

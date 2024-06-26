@@ -237,7 +237,7 @@ private:
 public:
   /// Used to mark parameters that include 'this'.
   bool HasThisParam = false;
-  
+
   QualType getExtendedType() const { return ExtendedType; }
   void setExtendedType(QualType ExtendedType) {
     this->ExtendedType = ExtendedType;
@@ -335,17 +335,18 @@ public:
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
-  enum TQ {   // NOTE: These flags must be kept in sync with Qualifiers::TQ.
+  enum TQ { // NOTE: These flags must be kept in sync with Qualifiers::TQ.
     TQ_unspecified = 0,
     TQ_const       = 1,
     TQ_restrict    = 2,
     TQ_volatile    = 4,
     #if ENABLE_BSC
     TQ_owned       = 8,
-    TQ_unaligned   = 16,
+    TQ_borrow      = 16,
+    TQ_unaligned   = 32,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
-    TQ_atomic      = 32
+    TQ_atomic      = 64
     #else
     TQ_unaligned   = 8,
     TQ_atomic      = 16
@@ -384,7 +385,7 @@ private:
 
   // type-qualifiers
   #if ENABLE_BSC
-  unsigned TypeQualifiers : 6;  // Bitwise OR of TQ.
+  unsigned TypeQualifiers : 7; // Bitwise OR of TQ.
   #else
   unsigned TypeQualifiers : 5;
   #endif
@@ -455,7 +456,7 @@ private:
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
   SourceLocation TQ_pipeLoc;
 #if ENABLE_BSC
-  SourceLocation TQ_ownedLoc;
+  SourceLocation TQ_ownedLoc, TQ_borrowLoc;
   SourceLocation FS_asyncLoc, FS_safe_zone_loc;
   bool IsImplTrait = false; // if parsing impl trait decl
 #endif
@@ -629,6 +630,7 @@ public:
   SourceLocation getPipeLoc() const { return TQ_pipeLoc; }
 #if ENABLE_BSC
   SourceLocation getOwnedSpecLoc() const { return TQ_ownedLoc; }
+  SourceLocation getBorrowSpecLoc() const { return TQ_borrowLoc; }
   void setImplTrait() { IsImplTrait = true; }
   bool getImplTrait() { return IsImplTrait; }
   llvm::Optional<bool> getConditionalCondResult() const { return ConditionalCondResult; }
@@ -643,6 +645,7 @@ public:
     TQ_constLoc = SourceLocation();
     #if ENABLE_BSC
     TQ_ownedLoc = SourceLocation();
+    TQ_borrowLoc = SourceLocation();
     #endif
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
@@ -1327,7 +1330,7 @@ struct DeclaratorChunk {
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/owned/unaligned/atomic.
     #if ENABLE_BSC
-    unsigned TypeQuals : 6;
+    unsigned TypeQuals : 7;
     #else
     unsigned TypeQuals : 5;
     #endif
@@ -1338,6 +1341,9 @@ struct DeclaratorChunk {
     #if ENABLE_BSC
     /// The location of the owned-qualifier, if any.
     SourceLocation OwnedQualLoc;
+
+    /// The location of the borrow-qualifier, if any.
+    SourceLocation BorrowQualLoc;
     #endif
 
     /// The location of the volatile-qualifier, if any.
@@ -1369,7 +1375,7 @@ struct DeclaratorChunk {
     /// The type qualifiers for the array:
     /// const/volatile/restrict/owned/__unaligned/_Atomic.
     #if ENABLE_BSC
-    unsigned TypeQuals : 6;
+    unsigned TypeQuals : 7;
     #else
     unsigned TypeQuals : 5;
     #endif
@@ -1661,7 +1667,7 @@ struct DeclaratorChunk {
     /// For now, sema will catch these as invalid.
     /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
     #if ENABLE_BSC
-    unsigned TypeQuals : 6;
+    unsigned TypeQuals : 7;
     #else
     unsigned TypeQuals : 5;
     #endif
@@ -1673,7 +1679,7 @@ struct DeclaratorChunk {
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
     #if ENABLE_BSC
-    unsigned TypeQuals : 6;
+    unsigned TypeQuals : 7;
     #else
     unsigned TypeQuals : 5;
     #endif

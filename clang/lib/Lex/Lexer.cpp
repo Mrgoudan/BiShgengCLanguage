@@ -3544,6 +3544,9 @@ LexNextToken:
   }
 
   unsigned SizeTmp, SizeTmp2;   // Temporaries for use in cases below.
+#if ENABLE_BSC
+  unsigned SizeTmp3, SizeTmp4, SizeTmp5, SizeTmp6;
+#endif
 
   // Read a character, advancing over it.
   char Char = getAndAdvanceChar(CurPtr, Result);
@@ -3879,7 +3882,41 @@ LexNextToken:
     } else if (Char == '=') {
       Kind = tok::ampequal;
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
-    } else {
+    }
+#if ENABLE_BSC
+    else if (LangOpts.BSC && Char == 'm' &&
+             getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == 'u' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3) == 't') {
+      char After =
+          getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3, SizeTmp4);
+      if ((After >= '0' && After <= '9') || (After >= 'a' && After <= 'z') ||
+          (After >= 'A' && After <= 'Z')) {
+        Kind = tok::amp;
+      } else {
+        Kind = tok::ampmut;
+        CurPtr = ConsumeChar(
+            ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result), SizeTmp2, Result),
+            SizeTmp3, Result);
+      }
+    } else if (LangOpts.BSC && Char == 'c' &&
+             getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == 'o' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3) == 'n' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3, SizeTmp4) == 's' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4, SizeTmp5) == 't') {
+      char After =
+          getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4 + SizeTmp5, SizeTmp6);
+      if ((After >= '0' && After <= '9') || (After >= 'a' && After <= 'z') ||
+          (After >= 'A' && After <= 'Z')) {
+        Kind = tok::amp;
+      } else {
+        Kind = tok::ampconst;
+        CurPtr = ConsumeChar(ConsumeChar(ConsumeChar(
+            ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result), SizeTmp2, Result),
+            SizeTmp3, Result), SizeTmp4, Result), SizeTmp5, Result);
+      }
+    }
+#endif
+    else {
       Kind = tok::amp;
     }
     break;

@@ -757,7 +757,12 @@ void ASTStmtWriter::VisitUnaryOperator(UnaryOperator *E) {
   // size of the UnaryOperator.
   Record.push_back(HasFPFeatures);
   Record.AddStmt(E->getSubExpr());
-  Record.push_back(E->getOpcode()); // FIXME: stable encoding
+  #if ENABLE_BSC
+  if (E->getOpcode() == UO_AddrMut || E->getOpcode() == UO_AddrConst)
+    Record.push_back(UO_AddrOf);
+  else
+  #endif
+    Record.push_back(E->getOpcode()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getOperatorLoc());
   Record.push_back(E->canOverflow());
   if (HasFPFeatures)
@@ -2758,6 +2763,12 @@ void ASTWriter::WriteSubStmt(Stmt *S) {
   ParentStmtInserterRAII ParentStmtInserter(S, ParentStmts);
 #endif
 
+  #if ENABLE_BSC
+  if (auto UO = dyn_cast<UnaryOperator>(S)) {
+    if (UO->getOpcode() == UO_AddrMutDeref || UO->getOpcode() == UO_AddrConstDeref)
+      S = UO->getSubExpr();
+  }
+  #endif
   Writer.Visit(S);
 
   uint64_t Offset = Writer.Emit();

@@ -302,7 +302,7 @@ bool Sema::IsUnsafeType(QualType Type) {
     return false;
   }
   if (Type->isPointerType() && !Type->isFunctionPointerType() &&
-      !Type.isOwnedQualified()) {
+      !(Type.isOwnedQualified() || Type.isBorrowQualified())) {
     return true;
   }
   if (Type->isUnionType()) {
@@ -335,7 +335,7 @@ void Sema::DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
   switch (Kind) {
   case tok::arrow: {
     if (!T.isNull() && T->isPointerType() &&
-        !T.getCanonicalType().isOwnedQualified())
+        !(T.getCanonicalType().isOwnedQualified() || T.getCanonicalType().isBorrowQualified()))
       Diag(OpLoc, diag::err_unsafe_action)
           << "'->' operator used by raw point type";
     break;

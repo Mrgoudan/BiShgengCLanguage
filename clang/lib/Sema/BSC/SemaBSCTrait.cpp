@@ -998,7 +998,8 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
   }
 
   RecordDecl *RD = dyn_cast<RecordType>(LTy.getCanonicalType())->getDecl();
-  QualType T = RE->getType()->getPointeeType().getCanonicalType();
+  QualType T = RE->getType()->getPointeeType().getUnqualifiedType().getCanonicalType();
+  T.removeLocalOwned();
   for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
        I != E; ++I) {
     Expr *NewLHSExpr = BuildMemberExpr(

@@ -38,12 +38,44 @@ bool Type::hasOwnedFields() const {
   return false;
 }
 
+bool PointerType::hasBorrowFields() const {
+  QualType R = getPointeeType();
+  if (R.isBorrowQualified()) {
+    return true;
+  }
+  if (R.getTypePtr()->hasBorrowFields()) {
+    return true;
+  }
+  return false;
+}
+
+bool Type::hasBorrowFields() const {
+  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
+    return RecTy->hasBorrowFields();
+  } else if (const auto *PointerTy = dyn_cast<PointerType>(CanonicalType)) {
+    return PointerTy->hasBorrowFields();
+  }
+  return false;
+}
+
 bool FunctionProtoType::hasOwnedRetOrParams() const {
   if (getReturnType().isOwnedQualified()) {
     return true;
   }
   for (auto ParamType : getParamTypes()) {
     if (ParamType.isOwnedQualified()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool FunctionProtoType::hasBorrowRetOrParams() const {
+  if (getReturnType().hasBorrow()) {
+    return true;
+  }
+  for (auto ParamType : getParamTypes()) {
+    if (ParamType.hasBorrow()) {
       return true;
     }
   }
@@ -65,7 +97,7 @@ bool Type::checkFunctionProtoType(SafeZoneSpecifier SZS) const {
 }
 
 void RecordType::initOwnedStatus() const {
-  if (hasOwn != ownedStatus::unInit)
+  if (hasOwn != ownedStatus::unInitOwned)
     return;
   std::vector<const RecordType *> RecordTypeList;
   RecordTypeList.push_back(this);
@@ -104,9 +136,56 @@ void RecordType::initOwnedStatus() const {
 }
 
 bool RecordType::hasOwnedFields() const {
-  if (hasOwn == ownedStatus::unInit)
+  if (hasOwn == ownedStatus::unInitOwned)
     initOwnedStatus();
   if (hasOwn == ownedStatus::withOwned)
+    return true;
+  return false;
+}
+
+void RecordType::initBorrowStatus() const {
+  if (hasBorrow != borrowStatus::unInitBorrow)
+    return;
+  std::vector<const RecordType *> RecordTypeList;
+  RecordTypeList.push_back(this);
+  unsigned NextToCheckIndex = 0;
+
+  while (RecordTypeList.size() > NextToCheckIndex) {
+    for (FieldDecl *FD :
+         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+      QualType FieldTy = FD->getType();
+      if (FieldTy.isBorrowQualified()) {
+        hasBorrow = borrowStatus::withBorrow;
+        return;
+      }
+      QualType tempQT = FieldTy;
+      const Type *tempT = tempQT.getTypePtr();
+      while (tempT->isPointerType()) {
+        tempQT = tempT->getPointeeType();
+        if (tempQT.isBorrowQualified()) {
+          hasBorrow = borrowStatus::withBorrow;
+          return;
+        } else {
+          tempQT = tempQT.getCanonicalType();
+          tempT = tempQT.getTypePtr();
+        }
+      }
+      FieldTy = tempQT.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+          RecordTypeList.push_back(FieldRecTy);
+      }
+    }
+    ++NextToCheckIndex;
+  }
+  hasBorrow = borrowStatus::withoutBorrow;
+  return;
+}
+
+bool RecordType::hasBorrowFields() const {
+  if (hasBorrow == borrowStatus::unInitBorrow)
+    initBorrowStatus();
+  if (hasBorrow == borrowStatus::withBorrow)
     return true;
   return false;
 }
@@ -138,4 +217,60 @@ QualType ConditionalType::desugar() const {
 
   return QualType(this, 0);
 }
+bool QualType::hasBorrow() const {
+  if (isBorrowQualified())
+    return true;
+  return getTypePtr()->hasBorrowFields();
+}
+
+bool QualType::isConstBorrow() const {
+  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
+  if (QT.isLocalBorrowQualified()) {
+    while (QT->isPointerType()) {
+      QT = QT->getPointeeType();
+    }
+    if (QT.isLocalConstQualified())
+      return true;
+  }
+  return false;
+}
+
+QualType QualType::addConstBorrow(const ASTContext &Context) {
+  SmallVector<unsigned, 4> Qualifiers;
+  int PointerNum = 0;
+  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
+  while (QT->isPointerType()) {
+    Qualifiers.push_back(QT.getLocalFastQualifiers());
+    QT = QT->getPointeeType();
+    PointerNum++;
+  }
+  QT.addConst();
+  while (PointerNum) {
+    QT = Context.getPointerType(QT);
+    QT.setLocalFastQualifiers(Qualifiers[PointerNum - 1]);
+    PointerNum--;
+  }
+  QT.addBorrow();
+  return QT;
+}
+
+QualType QualType::removeConstForBorrow(const ASTContext &Context) {
+  SmallVector<unsigned, 4> Qualifiers;
+  int PointerNum = 0;
+  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
+  while (QT->isPointerType()) {
+    Qualifiers.push_back(QT.getLocalFastQualifiers());
+    QT = QT->getPointeeType();
+    PointerNum++;
+  }
+  QT.removeLocalConst();
+  PointerNum--;
+  while (PointerNum + 1) {
+    QT = Context.getPointerType(QT);
+    QT.setLocalFastQualifiers(Qualifiers[PointerNum]);
+    PointerNum--;
+  }
+  return QT;
+}
+
 #endif

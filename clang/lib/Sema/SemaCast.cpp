@@ -2887,6 +2887,14 @@ void CastOperation::CheckCStyleCast() {
         return;
       }
     }
+    // bsc borrow type CStyleCast
+    if (SrcExpr.get()->getType().getCanonicalType().isBorrowQualified() ||
+       DestType.getCanonicalType().isBorrowQualified()) {
+      if (!Self.CheckBorrowQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {
+        SrcExpr = ExprError();
+        return;
+      }
+    }
     if (const auto *LHSPtrType = DestType->getAs<PointerType>()) {
       if (const auto *RHSPtrType = SrcExpr.get()->getType()->getAs<PointerType>()) {
         if (LHSPtrType->hasOwnedFields() || RHSPtrType->hasOwnedFields()) {

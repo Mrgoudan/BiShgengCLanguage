@@ -721,6 +721,23 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   #if ENABLE_BSC
   if (getLangOpts().BSC && !T->isNullPtrType() && T->getAsCXXRecordDecl())
     CK = CK_NoOp;
+
+  /// For type 'const T * borrow' dereference, the result is type 'T'.
+  /// If T is a pointer type, special handling is required.
+  /// We need to remove the const qualifier that modifies type 'T'.
+  /// @code
+  /// const int * owned * borrow b = &const p;
+  /// int * owned a = *b;
+  /// @endcode
+  if (getLangOpts().BSC) {
+    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      QualType QT = UO->getSubExpr()->getType();
+      if (QT.isLocalBorrowQualified() && UO->getOpcode() == UO_Deref) {
+        T= T.removeConstForBorrow(Context);
+        CK = CK_BitCast;
+      }
+    }
+  }
   #endif
   Res = ImplicitCastExpr::Create(Context, T, CK, E, nullptr, VK_PRValue,
                                  CurFPFeatureOverrides());
@@ -5771,6 +5788,11 @@ ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
 ExprResult
 Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                                       Expr *Idx, SourceLocation RLoc) {
+  #if ENABLE_BSC
+  if (getLangOpts().BSC && Base->getType().getCanonicalType().isBorrowQualified()) {
+    return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
+  }
+  #endif
   Expr *LHSExp = Base;
   Expr *RHSExp = Idx;
 
@@ -10250,7 +10272,8 @@ static bool IsTraitEqualExpr(Sema &S, QualType DstType, QualType SrcType,
                              SourceLocation Loc) {
   if (TraitDecl *TD = S.TryDesugarTrait(DstType)) {
     if (SrcType->isPointerType()) {
-      QualType T = SrcType->getPointeeType().getCanonicalType();
+      QualType T = SrcType->getPointeeType().getUnqualifiedType().getCanonicalType();
+      T.removeLocalOwned();
       if (TD->getTypeImpledVarDecl(T))
         return true;
       while (T->isPointerType())
@@ -10316,10 +10339,26 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
       }
     }
 
+    if (RHS.get()->getType().getCanonicalType().isBorrowQualified() || LHSType.getCanonicalType().isBorrowQualified()) {
+      if (!CheckBorrowQualTypeAssignment(LHSType, RHS.get()))
+        return IncompatibleOwnedPointer;
+    }
+    if (const auto *LHSPtrType = LHSType->getAs<PointerType>()) {
+      if (const auto *RHSPtrType = RHS.get()->getType()->getAs<PointerType>()) {
+        if (LHSPtrType->hasBorrowFields() || RHSPtrType->hasBorrowFields()) {
+          if (!CheckBorrowQualTypeAssignment(LHSType, RHS.get())) {
+            return IncompatibleOwnedPointer;
+          }
+        }
+      }
+    }
+
     if (LHSType->isFunctionPointerType()
         && (RHS.get()->getType()->isFunctionPointerType() || RHS.get()->getType()->isFunctionType())) {
       if (!CheckOwnedFunctionPointerType(LHSType, RHS.get()))
         return IncompatibleOwnedPointer;
+      if (!CheckBorrowFunctionPointerType(LHSType, RHS.get()))
+        return IncompatibleBorrowPointer;
     }
   }
   #endif
@@ -11535,6 +11574,14 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
                                      QualType* CompLHSTy) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
+  #if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    if (LHS.get()->getType().isBorrowQualified() || RHS.get()->getType().isBorrowQualified()) {
+      return InvalidOperands(Loc, LHS, RHS);
+    }
+  }
+  #endif
+
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType()) {
     QualType compType =
@@ -11649,6 +11696,14 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation Loc,
                                         QualType* CompLHSTy) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
+
+  #if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    if (LHS.get()->getType().isBorrowQualified() || RHS.get()->getType().isBorrowQualified()) {
+      return InvalidOperands(Loc, LHS, RHS);
+    }
+  }
+  #endif
 
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType()) {
@@ -12938,6 +12993,13 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     QualType RCanPointeeTy =
       RHSType->castAs<PointerType>()->getPointeeType().getCanonicalType();
 
+    #if ENABLE_BSC
+    if (getLangOpts().BSC && !CheckBorrowQualTypeCompare(LHSType, RHSType)) {
+      Diag(Loc, diag::err_borrow_qualcheck_compare) << RHSType << LHSType;
+      return computeResultTy();
+    }
+    #endif
+
     // C99 6.5.9p2 and C99 6.5.8p2
     if (Context.typesAreCompatible(LCanPointeeTy.getUnqualifiedType(),
                                    RCanPointeeTy.getUnqualifiedType())) {
@@ -13815,7 +13877,17 @@ static bool IsReadonlyMessage(Expr *E, Sema &S) {
 /// 'const' due to being captured within a block?
 enum NonConstCaptureKind { NCCK_None, NCCK_Block, NCCK_Lambda };
 static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
+  #if ENABLE_BSC
+  if (S.getLangOpts().BSC) {
+    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
+      assert(E->isLValue() && (E->getType().isConstQualified()
+             || UO->getSubExpr()->getType().isConstBorrow()));
+    else
+      assert(E->isLValue() && (E->getType().isConstQualified()));
+  }
+  #else
   assert(E->isLValue() && E->getType().isConstQualified());
+  #endif
   E = E->IgnoreParens();
 
   // Must be a reference to a declaration from an enclosing scope.
@@ -14071,6 +14143,17 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
                                                               &Loc);
   if (IsLV == Expr::MLV_ClassTemporary && IsReadonlyMessage(E, S))
     IsLV = Expr::MLV_InvalidMessageExpression;
+  #if ENABLE_BSC
+  if (S.getLangOpts().BSC) {
+    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      QualType QT = UO->getSubExpr()->getType();
+      if (QT.isConstBorrow() && UO->getOpcode() == UO_Deref) {
+        IsLV = Expr::MLV_ConstQualified;
+      }
+    }
+  }
+  #endif
+
   if (IsLV == Expr::MLV_Valid)
     return false;
 
@@ -14491,6 +14574,14 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
   if (Op->isTypeDependent())
     return S.Context.DependentTy;
 
+  #if ENABLE_BSC
+  if (S.getLangOpts().BSC && Op->getType().isBorrowQualified()) {
+    S.Diag(OpLoc, diag::err_typecheck_unary_expr)
+      << Op->getType()<< Op->getSourceRange();
+    return QualType();
+  }
+  #endif
+
   QualType ResType = Op->getType();
   // Atomic types can be used for increment / decrement where the non-atomic
   // versions can, so ignore the _Atomic() specifier for the purpose of
@@ -14652,6 +14743,18 @@ static void diagnoseAddressOfInvalidType(Sema &S, SourceLocation Loc,
                                          Expr *E, unsigned Type) {
   S.Diag(Loc, diag::err_typecheck_address_of) << Type << E->getSourceRange();
 }
+
+#if ENABLE_BSC
+bool Sema::IsAddrBorrowDerefOp(ExprResult &OrigOp) {
+  if (UnaryOperator *uOp = dyn_cast<UnaryOperator>(OrigOp.get())) {
+    if (uOp->getOpcode() == UO_Deref) {
+      OrigOp = uOp->getSubExpr();
+      return true;
+    }
+  }
+  return false;
+}
+#endif
 
 /// CheckAddressOfOperand - The operand of & must be either a function
 /// designator or an lvalue designating an object. If it is an lvalue, the
@@ -15020,6 +15123,10 @@ static inline UnaryOperatorKind ConvertTokenKindToUnaryOpcode(
   case tok::kw___real:    Opc = UO_Real; break;
   case tok::kw___imag:    Opc = UO_Imag; break;
   case tok::kw___extension__: Opc = UO_Extension; break;
+#if ENABLE_BSC
+  case tok::ampmut:       Opc = UO_AddrMut; break;
+  case tok::ampconst:     Opc = UO_AddrConst; break;
+#endif
   }
   return Opc;
 }
@@ -15704,7 +15811,8 @@ static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
 
 static void DiagnoseOwnedPointerUnaryOp(Sema &Self, UnaryOperatorKind Opc,
                                     SourceLocation OpLoc, Expr *Input) {
-  if (Opc != UO_AddrOf && Opc != UO_Deref) {
+  if (Opc != UO_AddrOf && Opc != UO_Deref && Opc != UO_AddrMut &&
+      Opc != UO_AddrConst && Opc != UO_AddrMutDeref && Opc != UO_AddrConstDeref) {
     Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_unaOp)
     << Input->getType() << Input->getSourceRange();
   }
@@ -16056,10 +16164,71 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                                 Opc == UO_PreDec);
     CanOverflow = isOverflowingIntegerType(Context, resultType);
     break;
+#if ENABLE_BSC
+  case UO_AddrMutDeref:
+  case UO_AddrConstDeref:
+    llvm_unreachable("unexpected operator kind");
+    break;
+  case UO_AddrMut:
+  case UO_AddrConst:
+#endif
   case UO_AddrOf:
     resultType = CheckAddressOfOperand(Input, OpLoc);
     CheckAddressOfNoDeref(InputExpr);
     RecordModifiableNonNullParam(*this, InputExpr);
+#if ENABLE_BSC
+    if (Opc == UO_AddrMut) {
+      if (IsAddrBorrowDerefOp(Input)) {
+        Opc = UO_AddrMutDeref;
+        if (resultType->isPointerType()) {
+          resultType = resultType.getUnqualifiedType();
+          resultType.removeLocalOwned();
+          resultType.addBorrow();
+        }
+      } else {
+        if (InputExpr->getType().hasBorrow())
+          Diag(OpLoc, diag::err_borrow_on_borrow) << "'&mut'"
+              << InputExpr->getSourceRange();
+        if (InputExpr->getType().isConstQualified())
+          Diag(OpLoc, diag::err_mut_expr_unmodifiable)
+              << InputExpr->getSourceRange();
+        if (InputExpr->getType()->isFunctionProtoType())
+          Diag(OpLoc, diag::err_mut_expr_func)
+                << InputExpr->getSourceRange();
+        if (IsInSafeZone()) {
+          if (auto DRE = dyn_cast_or_null<DeclRefExpr>(InputExpr->IgnoreParenCasts())) {
+            if (auto VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+              if ((VD->isExternallyVisible() || VD->isStaticLocal()
+                  || VD->getDeclContext()->isTranslationUnit())
+                  && !VD->getType().isConstQualified())
+                Diag(OpLoc, diag::err_safe_mut)
+                << InputExpr->getSourceRange();
+            }
+          }
+        }
+        resultType.addBorrow();
+      }
+    } else if (Opc == UO_AddrConst) {
+      if (IsAddrBorrowDerefOp(Input)) {
+        Opc = UO_AddrConstDeref;
+        if (resultType->isPointerType()) {
+          resultType = resultType.getUnqualifiedType();
+          resultType.removeLocalOwned();
+          resultType = resultType.addConstBorrow(Context);
+        }
+      } else {
+        if (InputExpr->getType().hasBorrow())
+          Diag(OpLoc, diag::err_borrow_on_borrow) << "'&const'"
+              << InputExpr->getSourceRange();
+        if (resultType->isFunctionPointerType()) {
+          resultType.addConst();
+          resultType.addBorrow();
+        } else {
+          resultType = resultType.addConstBorrow(Context);
+        }
+      }
+    }
+#endif
     break;
   case UO_Deref: {
     Input = DefaultFunctionArrayLvalueConversion(Input.get());
@@ -17576,6 +17745,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   #if ENABLE_BSC
   case IncompatibleOwnedPointer:
+  case IncompatibleBorrowPointer:
     return false;
   case IncompatibleBSCSafeZone:
     return true;

@@ -15528,6 +15528,12 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     case UO_PreInc:
     case UO_PreDec:
     case UO_AddrOf:
+#if ENABLE_BSC
+    case UO_AddrMut:
+    case UO_AddrConst:
+    case UO_AddrMutDeref:
+    case UO_AddrConstDeref:
+#endif
     case UO_Deref:
     case UO_Coawait:
       // C99 6.6/3 allows increment and decrement within unevaluated
@@ -15837,7 +15843,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
 
   // We support this checking in C++98 mode in order to diagnose compatibility
   // issues.
-  
+
   #if ENABLE_BSC
   assert(Ctx.getLangOpts().CPlusPlus || Ctx.getLangOpts().BSC);
   #else

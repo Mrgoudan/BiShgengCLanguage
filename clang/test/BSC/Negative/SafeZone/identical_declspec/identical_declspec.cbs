@@ -18,7 +18,7 @@ safe enum c {   // expected-error {{'safe' can only appear before on function or
 unsafe int (*pp)(int x, int y); // expected-note {{previous definition is here}}
 safe int (*pp)(int x, int y);  // expected-error {{redefinition of 'pp' with a different type: 'safe int (*)(int, int)' vs 'int (*)(int, int)'}}
 
-safe int safun(int x, int y) {  
+safe int safun(int x, int y) {
   return 0;
 }
 unsafe int unfun(int x, int y) {
@@ -36,7 +36,7 @@ int main() {
   unsafe int (*qq)(int x, int y); // expected-note {{previous definition is here}}
   safe int (*qq)(int x, int y);   // expected-error {{redefinition of 'qq' with a different type: 'safe int (*)(int, int)' vs 'int (*)(int, int)'}}
 
-  sapfun = safun; 
+  sapfun = safun;
   sapfun = unfun;   // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int, int)' from 'int (int, int)'}}
   sapfun = fun;     // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int, int)' from 'int (int, int)'}}
 

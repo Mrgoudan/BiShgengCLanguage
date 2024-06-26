@@ -142,6 +142,10 @@ public:
   bool isOwnedQualified() const {
     return Stored.isLocalOwnedQualified();
   }
+
+  bool isBorrowQualified() const {
+    return Stored.isLocalBorrowQualified();
+  }
   #endif
 
   bool isVolatileQualified() const {

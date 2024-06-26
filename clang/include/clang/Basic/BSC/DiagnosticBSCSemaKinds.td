@@ -53,6 +53,21 @@ def err_typecheck_invalid_owned_arrsub : Error<
   "owned pointer type (%0) do not support ArraySubscript operate">;
 def err_owned_temporary_memLeak : Error<
   "memory leak because temporary variable '%0' is owned or indirect owned type, please fix it">;
+def err_funcPtr_incompatible : Error<
+  "incompatible borrow function pointer types, cannot cast %0 to %1">;
+def err_borrow_template_args : Error<"type of template arguments cannot be qualified by 'borrow'">;
+def err_borrow_on_borrow : Error<"%0 on a 'borrow' quialified type is not allowed">;
+def err_mut_expr_unmodifiable  : Error<"the expression after '&mut' must be modifiable">;
+def err_mut_expr_func : Error<"'&mut' for function pointer is not allowed">;
+def err_safe_mut : Error<"global or static variables are not allowed to be mutably borrowed within the safe zone">;
+def err_move_borrow : Error<"borrow type does not allow move ownership">;
+def err_typecheck_invalid_borrow_not_pointer : Error<"borrow type requires a pointer or reference (%0 is invalid)">;
+def err_borrow_qualcheck_incompatible : Error<
+  "incompatible borrow types, cannot cast %0 to %1">;
+def err_borrow_qualcheck_compare : Error<
+  "incompatible borrow types, %0 and %1 cannot be compared">;
+def err_typecheck_borrow_func : Error<"no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified">;
+def err_typecheck_borrow_subscript : Error<"subscript of borrow pointer is not allowed">;
 
 
 // BSC trait warnings and errors.
@@ -90,6 +105,7 @@ def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the s
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
 def err_safe_function : Error<"%0 is forbidden in the safe function">;
 def err_safe_zone_decl : Error<"%select{|'safe'|'unsafe'}0 can only appear before on function or compound statement"> ;
+def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;
 
 
 // Ownership Analysis errors.
@@ -109,3 +125,4 @@ def err_ownership_read_invalid_uninit : Error<
   "cannot read %0, because it is uninitialized">;
 def err_ownership_read_invalid_moved : Error<
   "cannot read %0, because it is moved at line: %1">;
+

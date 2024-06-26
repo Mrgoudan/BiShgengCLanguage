@@ -1,0 +1,55 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+struct R {
+    int * owned p;
+};
+
+int * owned foo(int * owned a) {
+    return a;
+}
+int owned foo1() {
+    int owned a = 1;
+    int owned * borrow b = &mut a;
+    return *b; // expected-error {{borrow type does not allow move ownership}}
+}
+
+void test() {
+	int a = 0;
+    int *p1 = &a;
+	const int* p2 = &a;
+	int * owned p3 = (int * owned)&a;
+
+	int * borrow b1 = &mut *p1; // legal
+    const int * borrow b2 = &mut *p2; // legal
+    int * borrow b3 = &mut *p3; // legal
+    const int * borrow b4 = &const *p1; // legal
+    const int * borrow b5 = &const *p2; // legal
+    const int * borrow b6 = &const *p3; // legal
+
+	int *owned * borrow b7 =&mut p3; // legal
+	const int *owned * borrow b8 =&const p3; // legal
+
+    // T 是 copy 语义，p 是 immut 借用
+	int a1 = *b4; // legal
+    *b4 = a1; // expected-error {{read-only variable is not assignable}}
+    // T 是 copy 语义，p 是 mut 借用
+    int a2 = *b1; // legal
+    *b1 = a2; // legal
+    // T 是 move 语义，p 是 immut 借用
+    int * owned a3 = *b8; // expected-error {{borrow type does not allow move ownership}}
+    int * owned a4 = ((int * owned)*b8); // expected-error {{borrow type does not allow move ownership}}
+    *b8 = p3; // expected-error {{read-only variable is not assignable}}
+    // T 是 move 语义，p 是 mut 借用
+    a3 = *b7; // expected-error {{borrow type does not allow move ownership}}
+    a3 = ((int * owned)*b7); // expected-error {{borrow type does not allow move ownership}}
+    *b7; // expected-warning {{expression result unused}}
+    *b7 = a3; // legal
+
+    struct R r = {p3};
+    struct R * borrow b9 = &mut r;
+    struct R r1 = *b9; // legal
+    int * owned *borrow b10 = &mut r.p;
+    a4 = *b10; // expected-error {{borrow type does not allow move ownership}}
+
+    foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is owned or indirect owned type, please fix it}}
+}

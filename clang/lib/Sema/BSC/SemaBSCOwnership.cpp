@@ -225,4 +225,167 @@ void Sema::CheckBSCOwnership(const Decl *D) {
     runOwnershipAnalysis(*cast<FunctionDecl>(D), *AC.getCFG(), AC, Reporter);
 }
 
+void Sema::CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL) {
+  if (E == nullptr)
+    return;
+  if (auto UO = dyn_cast_or_null<UnaryOperator>(E->IgnoreParenCasts())) {
+    if (UO->getOpcode() == UO_Deref && UO->getType().isOwnedQualified()
+        && UO->getSubExpr()->getType().isBorrowQualified()) {
+        Diag(SL, diag::err_move_borrow);
+    }
+  } else if (auto ME = dyn_cast_or_null<MemberExpr>(E->IgnoreParenCasts())) {
+    if (ME->getType().isOwnedQualified() && ME->getBase()->getType().isBorrowQualified())
+      Diag(SL, diag::err_move_borrow);
+  }
+}
+
+bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
+  QualType RHSCanType = RHSType.getCanonicalType();
+  QualType LHSCanType = LHSType.getCanonicalType();
+  bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
+  const auto *LHSPtrType = LHSType->getAs<PointerType>();
+  const auto *RHSPtrType = RHSType->getAs<PointerType>();
+  bool IsPointer = LHSPtrType && RHSPtrType;
+  QualType RHSRawType = RHSCanType.getUnqualifiedType();
+  QualType LHSRawType = LHSCanType.getUnqualifiedType();
+
+  if (IsSameType) {
+    return true;
+  }
+  if (IsPointer) {
+    if (LHSCanType->isVoidPointerType()) {
+      return true;
+    } else if(RHSCanType->isVoidPointerType() && !IsInSafeZone()) {
+      return true;
+    } else if (Context.hasSameType(LHSRawType, RHSRawType)) {
+      return true;
+    } else if (TryDesugarTrait(RHSType)) {
+      return true;
+    } else {
+      return CheckBorrowQualTypeCStyleCast(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType());
+    }
+  }
+  return false;
+}
+
+bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc) {
+  if (!CheckBorrowQualTypeCStyleCast(LHSType, RHSType)) {
+    Diag(RLoc, diag::err_borrow_qualcheck_incompatible) << CompleteTraitType(RHSType) << CompleteTraitType(LHSType);
+    return false;
+  } else {
+    return true;
+  }
+}
+
+bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc) {
+  QualType RHSCanType = RHSType.getCanonicalType();
+  QualType LHSCanType = LHSType.getCanonicalType();
+  const auto *LHSPtrType = LHSType->getAs<PointerType>();
+  const auto *RHSPtrType = RHSType->getAs<PointerType>();
+  bool IsPointer = LHSPtrType && RHSPtrType;
+
+
+  if (LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified()) {
+    if (TraitDecl *TD = TryDesugarTrait(LHSCanType)) {
+      if (TD->getTypeImpledVarDecl(RHSCanType->getPointeeType()))
+        return true;
+    }
+    if (Context.hasSameType(LHSCanType, RHSCanType)) {
+      return true;
+    }
+    if (LHSCanType->isVoidPointerType()) {
+      if (LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified())
+        return true;
+    }
+    if (!IsPointer) {
+      return false;
+    } else {
+      return CheckBorrowQualTypeAssignment(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType(), RLoc);
+    }
+  }
+
+  return false;
+}
+
+bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
+  QualType RHSCanType = RHSExpr->getType().getCanonicalType();
+  QualType LHSCanType = LHSType.getCanonicalType();
+  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+  bool Res = true;
+
+  if (LHSCanType.isBorrowQualified() || RHSCanType.isBorrowQualified()) {
+    if (TraitDecl *TD = TryDesugarTrait(LHSCanType)) {
+      if (RHSCanType->isPointerType()) {
+        QualType ImplType = RHSCanType->getPointeeType().getUnqualifiedType().getCanonicalType();
+        ImplType.removeLocalOwned();
+        if (TD->getTypeImpledVarDecl(ImplType))
+          return true;
+      }
+    }
+    if (LHSCanType->isVoidPointerType()) {
+      if (LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified())
+        return true;
+    }
+    if (!Context.hasSameType(LHSCanType, RHSCanType))
+      Res = false;
+  } else {
+    Res = CheckBorrowQualTypeAssignment(LHSType, RHSCanType, ExprLoc);
+  }
+  if (!Res) {
+    Diag(ExprLoc, diag::err_borrow_qualcheck_incompatible) << CompleteTraitType(RHSExpr->getType()) << CompleteTraitType(LHSType);
+  }
+  return Res;
+}
+
+bool Sema::CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType) {
+  QualType RHSCanType = RHSType.getCanonicalType();
+  QualType LHSCanType = LHSType.getCanonicalType();
+
+  if (LHSCanType.isBorrowQualified() || RHSCanType.isBorrowQualified()) {
+    if (RHSCanType != LHSCanType) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void Sema::CheckBorrowFunctionType(QualType ReturnTy, SmallVector<QualType, 16> ParamTys, SourceLocation SL) {
+  if (ReturnTy.hasBorrow()) {
+    bool HasBorrowParam = false;
+    for (QualType PT : ParamTys) {
+      if (PT.hasBorrow()) {
+        HasBorrowParam = true;
+        break;
+      }
+    }
+    if (!HasBorrowParam)
+      Diag(SL, diag::err_typecheck_borrow_func);
+  }
+}
+
+bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
+  const FunctionProtoType *LSHFuncType = LHSType->getAs<PointerType>()
+                                             ->getPointeeType()
+                                             ->getAs<FunctionProtoType>();
+  const FunctionProtoType *RSHFuncType =
+      RHSExpr->getType()->isFunctionPointerType()
+          ? RHSExpr->getType()
+                ->getAs<PointerType>()
+                ->getPointeeType()
+                ->getAs<FunctionProtoType>()
+          : RHSExpr->getType()->getAs<FunctionProtoType>();
+  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+
+  // return if no 'borrow' in both side
+  if (!LSHFuncType->hasBorrowRetOrParams() &&
+      !RSHFuncType->hasBorrowRetOrParams()) {
+    return true;
+  }
+  if (!Context.hasSameType(LSHFuncType, RSHFuncType)) {
+    Diag(ExprLoc, diag::err_funcPtr_incompatible)
+        << LHSType << RHSExpr->getType();
+    return false;
+  }
+  return true;
+}
 #endif

@@ -628,6 +628,11 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
         ExprResult BinOp =
             Actions.ActOnBinOp(getCurScope(), OpToken.getLocation(),
                                OpToken.getKind(), LHS.get(), RHS.get());
+        #if ENABLE_BSC
+        if (getLangOpts().BSC && OpToken.is(tok::equal)) {
+          Actions.CheckMoveVarMemoryLeak(RHS.get(), OpToken.getLocation());
+        }
+        #endif
         if (BinOp.isInvalid())
           BinOp = Actions.CreateRecoveryExpr(LHS.get()->getBeginLoc(),
                                              RHS.get()->getEndLoc(),
@@ -1394,12 +1399,20 @@ ExprResult Parser::ParseCastExpression(
     }
     return Res;
   }
+#if ENABLE_BSC
+  case tok::ampmut:
+  case tok::ampconst:
+#endif
   case tok::amp: {         // unary-expression: '&' cast-expression
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     // Special treatment because of member pointers
     SourceLocation SavedLoc = ConsumeToken();
+#if ENABLE_BSC
+    PreferredType.enterUnary(Actions, Tok.getLocation(), SavedKind, SavedLoc);
+#else
     PreferredType.enterUnary(Actions, Tok.getLocation(), tok::amp, SavedLoc);
+#endif
     Res = ParseCastExpression(AnyCastExpr, true);
     if (!Res.isInvalid()) {
       Expr *Arg = Res.get();

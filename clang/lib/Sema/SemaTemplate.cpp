@@ -1014,6 +1014,12 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
     return ParsedTemplateArgument();
   assert(TInfo && "template argument with no location");
 
+#if ENABLE_BSC
+  if (getLangOpts().BSC && T.isBorrowQualified())
+    Diag(TInfo->getTypeLoc().getBeginLoc(), diag::err_borrow_template_args)
+        << TInfo->getTypeLoc().getSourceRange();
+#endif
+
   // If we might have formed a deduced template specialization type, convert
   // it to a template template argument.
   if (getLangOpts().CPlusPlus17) {

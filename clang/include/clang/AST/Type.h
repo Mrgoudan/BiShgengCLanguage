@@ -67,7 +67,7 @@ class Type;
 
 enum {
   #if ENABLE_BSC
-  TypeAlignmentInBits = 5,
+  TypeAlignmentInBits = 6,
   #else
   TypeAlignmentInBits = 4,
   #endif
@@ -158,8 +158,9 @@ public:
     Restrict = 0x2,
     Volatile = 0x4,
     #if ENABLE_BSC
-    Owned      = 0x8,
-    CVRMask = Const | Volatile | Restrict | Owned
+    Owned    = 0x8,
+    Borrow   = 0x10,
+    CVRMask = Const | Volatile | Restrict | Owned | Borrow
     #else
     CVRMask = Const | Volatile | Restrict
     #endif
@@ -195,16 +196,16 @@ public:
 
   enum {
     /// The maximum supported address space number.
-    /// 22 bits should be enough for anyone.
+    /// 21 bits should be enough for anyone.
     #if ENABLE_BSC
-    MaxAddressSpace = 0x3fffffu,
+    MaxAddressSpace = 0x1fffffu,
     #else
     MaxAddressSpace = 0x7fffffu,
     #endif
 
     /// The width of the "fast" qualifier mask.
     #if ENABLE_BSC
-    FastWidth = 4,
+    FastWidth = 5,
     #else
     FastWidth = 3,
     #endif
@@ -299,6 +300,16 @@ public:
   Qualifiers withOwned() const {
     Qualifiers Qs = *this;
     Qs.addOwned();
+    return Qs;
+  }
+
+  bool hasBorrow() const { return Mask & Borrow; }
+  bool hasOnlyBorrow() const { return Mask == Borrow; }
+  void removeBorrow() { Mask &= ~Borrow; }
+  void addBorrow() { Mask |= Borrow; }
+  Qualifiers withBorrow() const {
+    Qualifiers Qs = *this;
+    Qs.addBorrow();
     return Qs;
   }
   #endif
@@ -641,17 +652,17 @@ public:
   }
 
 private:
-  // bits:     |0 1 2 3|4|5 .. 6|7  ..  9|10  ...   31|
-  //           |C R V O|U|GCAttr|Lifetime|AddressSpace|
+  // bits:     |0 1 2 3 4|5|6 .. 7|8  .. 10|11  ...   31|
+  //           |C R V O B|U|GCAttr|Lifetime|AddressSpace|
   uint32_t Mask = 0;
 
   #if ENABLE_BSC
-  static const uint32_t UMask = 0x10;
-  static const uint32_t UShift = 4;
-  static const uint32_t GCAttrMask = 0x60;
-  static const uint32_t GCAttrShift = 5;
-  static const uint32_t LifetimeMask = 0x380;
-  static const uint32_t LifetimeShift = 7;
+  static const uint32_t UMask = 0x20;
+  static const uint32_t UShift = 5;
+  static const uint32_t GCAttrMask = 0xC0;
+  static const uint32_t GCAttrShift = 6;
+  static const uint32_t LifetimeMask = 0x700;
+  static const uint32_t LifetimeShift = 8;
   #else
   static const uint32_t UMask = 0x8;
   static const uint32_t UShift = 3;
@@ -663,7 +674,7 @@ private:
   static const uint32_t AddressSpaceMask =
       ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
   #if ENABLE_BSC
-  static const uint32_t AddressSpaceShift = 10;
+  static const uint32_t AddressSpaceShift = 11;
   #else
   static const uint32_t AddressSpaceShift = 9;
   #endif
@@ -684,6 +695,7 @@ public:
   bool hasConst() const { return Quals.hasConst(); }
   #if ENABLE_BSC
   bool hasOwned() const { return Quals.hasOwned(); }
+  bool hasBorrow() const { return Quals.hasBorrow(); }
   #endif
   bool hasRestrict() const { return Quals.hasRestrict(); }
   bool hasAtomic() const { return HasAtomic; }
@@ -692,6 +704,7 @@ public:
   void addConst() { Quals.addConst(); }
   #if ENABLE_BSC
   void addOwned() { Quals.addOwned(); }
+  void addBorrow() { Quals.addBorrow(); }
   #endif
   void addRestrict() { Quals.addRestrict(); }
   void addAtomic() { HasAtomic = true; }
@@ -700,6 +713,7 @@ public:
   void removeConst() { Quals.removeConst(); }
   #if ENABLE_BSC
   void removeOwned() { Quals.removeOwned(); }
+  void removeBorrow() { Quals.removeBorrow(); }
   #endif
   void removeRestrict() { Quals.removeRestrict(); }
   void removeAtomic() { HasAtomic = false; }
@@ -710,6 +724,7 @@ public:
   QualifiersAndAtomic withConst() { return {Quals.withConst(), HasAtomic}; }
   #if ENABLE_BSC
   QualifiersAndAtomic withOwned() { return {Quals.withOwned(), HasAtomic}; }
+  QualifiersAndAtomic withBorrow() { return {Quals.withBorrow(), HasAtomic}; }
   #endif
   QualifiersAndAtomic withRestrict() {
     return {Quals.withRestrict(), HasAtomic};
@@ -790,7 +805,7 @@ class QualType {
 
   // Thankfully, these are efficiently composable.
   llvm::PointerIntPair<llvm::PointerUnion<const Type *, const ExtQuals *>,
-                       Qualifiers::FastWidth> Value;
+                       Qualifiers::FastWidth> Value; // For BSC, FastWidth = 5
 
   const ExtQuals *getExtQualsUnsafe() const {
     return Value.getPointer().get<const ExtQuals*>();
@@ -874,6 +889,16 @@ public:
 
   /// Determine whether this type is owned-qualified.
   bool isOwnedQualified() const;
+
+  /// Determine whether this particular QualType instance has the
+  /// "borrow" qualifier set, without looking through typedefs that may have
+  /// added "borrow" at a different level.
+  bool isLocalBorrowQualified() const {
+    return (getLocalFastQualifiers() & Qualifiers::Borrow);
+  }
+
+  /// Determine whether this type is borrow-qualified.
+  bool isBorrowQualified() const;
   #endif
 
   /// Determine whether this particular QualType instance has the
@@ -975,14 +1000,26 @@ public:
     return withFastQualifiers(Qualifiers::Const);
   }
 
-  /// Add the `owned` type qualifier to this QualType.
   #if ENABLE_BSC
+  /// Add the `owned` type qualifier to this QualType.
   void addOwned() {
     addFastQualifiers(Qualifiers::Owned);
   }
   QualType withOwned() const {
     return withFastQualifiers(Qualifiers::Owned);
   }
+
+  /// Add the `borrow` type qualifier to this QualType.
+  void addBorrow() {
+    addFastQualifiers(Qualifiers::Borrow);
+  }
+  QualType withBorrow() const {
+    return withFastQualifiers(Qualifiers::Borrow);
+  }
+  bool isConstBorrow() const;
+  QualType addConstBorrow(const ASTContext &Context);
+  QualType removeConstForBorrow(const ASTContext &Context);
+  bool hasBorrow() const;
   #endif
 
   /// Add the `volatile` type qualifier to this QualType.
@@ -1014,6 +1051,7 @@ public:
   void removeLocalConst();
   #if ENABLE_BSC
   void removeLocalOwned();
+  void removeLocalBorrow();
   #endif
   void removeLocalVolatile();
   void removeLocalRestrict();
@@ -1746,6 +1784,10 @@ protected:
     ///
     /// C++ 8.3.5p4: The return type, the parameter type list and the
     /// cv-qualifier-seq, [...], are part of the function type.
+    ///
+    /// After add 'owned, borrow' qualifiers, the FastWidth is now 5(from 3 to 5),
+    /// then bitNumberOf(FunctionTypeBitFields) is now 65(63 to 65, greater than 8 bytes),
+    /// then sizeof(Type) is now increased by one byte.
     unsigned FastTypeQuals : Qualifiers::FastWidth;
     /// Whether this function has extended Qualifiers.
     unsigned HasExtQuals : 1;
@@ -1963,6 +2005,10 @@ protected:
     DependentTemplateSpecializationTypeBitfields
       DependentTemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
+    // Add some debug code. Bellow will fail now.
+    // static_assert(sizeof(FunctionTypeBitfields) <= 8,
+    //               "FunctionTypeBitfields is larger than 8 bytes!");
+    // TODO: Investigate if its worth it to break above static_assert.
   };
 
 private:
@@ -1979,7 +2025,9 @@ protected:
   Type(TypeClass tc, QualType canon, TypeDependence Dependence)
       : ExtQualsTypeCommonBase(this,
                                canon.isNull() ? QualType(this_(), 0) : canon) {
-    static_assert(sizeof(*this) <= 8 + sizeof(ExtQualsTypeCommonBase),
+    // Add owned, borrow, sizeof(FunctionTypeBitfields) > 8 now.
+    // sizeof(Type) is larger too.
+    static_assert(sizeof(*this) <= 16 + sizeof(ExtQualsTypeCommonBase),
                   "changing bitfields changed sizeof(Type)!");
     static_assert(alignof(decltype(*this)) % sizeof(void *) == 0,
                   "Insufficient alignment!");
@@ -2111,6 +2159,8 @@ public:
 
   #if ENABLE_BSC
   bool hasOwnedFields() const;
+
+  bool hasBorrowFields() const;
   #endif
 
   /// Test for a particular builtin type.
@@ -2202,7 +2252,7 @@ public:
   bool hasTraitType() const;
   bool isBSCCalculatedTypeInCompileTime() const;
   bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
-#endif
+  #endif
   bool isClassType() const;
   bool isStructureType() const;
   bool isObjCBoxableRecordType() const;
@@ -2838,6 +2888,8 @@ public:
   static bool classof(const Type *T) { return T->getTypeClass() == Pointer; }
   #if ENABLE_BSC
   bool hasOwnedFields() const;
+
+  bool hasBorrowFields() const;
   #endif
 };
 
@@ -3998,12 +4050,17 @@ public:
   ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
 
   static_assert((~Qualifiers::FastMask & Qualifiers::CVRMask) == 0,
+              #if ENABLE_BSC
+                "Const, volatile, restrict, owned and borrow are assumed to be a subset of "
+              #else
                 "Const, volatile and restrict are assumed to be a subset of "
+              #endif
                 "the fast qualifiers.");
 
   bool isConst() const { return getFastTypeQuals().hasConst(); }
   #if ENABLE_BSC
   bool isOwned() const { return getFastTypeQuals().hasOwned(); }
+  bool isBorrow() const { return getFastTypeQuals().hasBorrow(); }
   #endif
   bool isVolatile() const { return getFastTypeQuals().hasVolatile(); }
   bool isRestrict() const { return getFastTypeQuals().hasRestrict(); }
@@ -4332,6 +4389,8 @@ public:
   #if ENABLE_BSC
   // return true if any 'owned' here
   bool hasOwnedRetOrParams() const;
+  // return true if any 'borrow' here
+  bool hasBorrowRetOrParams() const;
   #endif
 
   /// Return all the available information about this type's exception spec.
@@ -4843,12 +4902,19 @@ protected:
 
   #if ENABLE_BSC
   enum ownedStatus {
-    unInit,
+    unInitOwned,
     withOwned,
     withoutOwned
   };
-  mutable ownedStatus hasOwn = ownedStatus::unInit;
-  #endif
+
+  enum borrowStatus {
+    unInitBorrow,
+    withBorrow,
+    withoutBorrow
+  };
+  mutable ownedStatus hasOwn = ownedStatus::unInitOwned;
+  mutable borrowStatus hasBorrow = borrowStatus::unInitBorrow;
+#endif
 
 public:
   RecordDecl *getDecl() const {
@@ -4863,6 +4929,10 @@ public:
   bool hasOwnedFields() const;
 
   void initOwnedStatus() const;
+
+  bool hasBorrowFields() const;
+
+  void initBorrowStatus() const;
   #endif
 
   bool isSugared() const { return false; }
@@ -6892,6 +6962,11 @@ inline bool QualType::isOwnedQualified() const {
   return isLocalOwnedQualified() ||
          getCommonPtr()->CanonicalType.isLocalOwnedQualified();
 }
+
+inline bool QualType::isBorrowQualified() const {
+  return isLocalBorrowQualified() ||
+         getCommonPtr()->CanonicalType.isLocalBorrowQualified();
+}
 #endif
 
 inline bool QualType::isRestrictQualified() const {
@@ -6913,13 +6988,16 @@ inline bool QualType::hasQualifiers() const {
 inline QualType QualType::getUnqualifiedType() const {
   #if ENABLE_BSC
   int addOwned = getCanonicalType().isOwnedQualified() ? Qualifiers::Owned : 0;
+  int addBorrow =
+      getCanonicalType().isBorrowQualified() ? Qualifiers::Borrow : 0;
   #else
   int addOwned = 0;
+  int addBorrow = 0;
   #endif
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
-    return QualType(getTypePtr(), addOwned);
+    return QualType(getTypePtr(), addOwned | addBorrow);
 
-  return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, addOwned);
+  return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, addOwned | addBorrow);
 }
 
 inline SplitQualType QualType::getSplitUnqualifiedType() const {
@@ -6936,6 +7014,10 @@ inline void QualType::removeLocalConst() {
 #if ENABLE_BSC
 inline void QualType::removeLocalOwned() {
   removeLocalFastQualifiers(Qualifiers::Owned);
+}
+
+inline void QualType::removeLocalBorrow() {
+  removeLocalFastQualifiers(Qualifiers::Borrow);
 }
 #endif
 

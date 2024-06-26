@@ -1509,7 +1509,20 @@ void StmtPrinter::VisitParenExpr(ParenExpr *Node) {
 
 void StmtPrinter::VisitUnaryOperator(UnaryOperator *Node) {
   if (!Node->isPostfix()) {
+    #if ENABLE_BSC
+    if (Policy.RewriteBSC) {
+      if (Node->getOpcode() == UO_AddrConst || Node->getOpcode() == UO_AddrMut) {
+        OS << UnaryOperator::getOpcodeStr(UO_AddrOf);
+      } else if (Node->getOpcode() == UO_AddrConstDeref || Node->getOpcode() == UO_AddrMutDeref) {
+        OS << UnaryOperator::getOpcodeStr(UO_AddrOf);
+        OS << UnaryOperator::getOpcodeStr(UO_Deref);
+      } else {
+        OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
+      }
+    } else
+    #endif
     OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
+
 
     // Print a space if this is an "identifier operator" like __real, or if
     // it might be concatenated incorrectly like '+'.

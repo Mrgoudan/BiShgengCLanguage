@@ -35,7 +35,7 @@ int main() {
 // CHECK: int int_foo(int *this) {
 // CHECK-NEXT: return 0;
 // CHECK-NEXT: }
- 
+
 // CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *))int_foo};
 
 // CHECK: int main(void) {

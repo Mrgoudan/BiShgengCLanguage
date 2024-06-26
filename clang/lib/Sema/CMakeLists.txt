@@ -17,7 +17,7 @@ add_clang_library(clangSema
   BSC/SemaBSCSafeZone.cpp
   BSC/SemaBSCTrait.cpp
   BSC/SemaStmtBSC.cpp
-  BSC/SemaDeclBSC.cpp  
+  BSC/SemaDeclBSC.cpp
   BSC/SemaTemplateInstantiateDeclBSC.cpp
   BSC/DeclSpecBSC.cpp
   CodeCompleteConsumer.cpp

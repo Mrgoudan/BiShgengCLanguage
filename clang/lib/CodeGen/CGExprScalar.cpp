@@ -618,6 +618,26 @@ public:
 
     return EmitLValue(E->getSubExpr()).getPointer(CGF);
   }
+#if ENABLE_BSC
+  Value *VisitUnaryAddrMut(const UnaryOperator *E) {
+    if (isa<MemberPointerType>(E->getType())) // never sugared
+      return CGF.CGM.getMemberPointerConstant(E);
+
+    return EmitLValue(E->getSubExpr()).getPointer(CGF);
+  }
+  Value *VisitUnaryAddrMutDeref(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+  Value *VisitUnaryAddrConst(const UnaryOperator *E) {
+    if (isa<MemberPointerType>(E->getType())) // never sugared
+      return CGF.CGM.getMemberPointerConstant(E);
+
+    return EmitLValue(E->getSubExpr()).getPointer(CGF);
+  }
+  Value *VisitUnaryAddrConstDeref(const UnaryOperator *E) {
+    return Visit(E->getSubExpr());
+  }
+#endif
   Value *VisitUnaryDeref(const UnaryOperator *E) {
     if (E->getType()->isVoidType())
       return Visit(E->getSubExpr()); // the actual value should be unused

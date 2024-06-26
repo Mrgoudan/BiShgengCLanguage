@@ -17,3 +17,6 @@ def err_multi_trait_call_func : Error<"%0 cannot directly call functions">;
 // BSC generic warnings and errors.
 def err_extended_type_not_generic_typealias : Error<"extended type of a BSC member function cannot be a generic typealias">;
 def err_generic_typealias_not_within_function : Error<"BSC generic typealias cannot be declared within a function">;
+
+// BSC ownership warnings and errors.
+def err_borrow_not_init : Error<"variable declarations of borrow qualified must be initialized">;

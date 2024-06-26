@@ -101,6 +101,12 @@ public:
       case UO_Imag:      DISPATCH(UnaryImag,      UnaryOperator);
       case UO_Extension: DISPATCH(UnaryExtension, UnaryOperator);
       case UO_Coawait:   DISPATCH(UnaryCoawait,   UnaryOperator);
+#if ENABLE_BSC
+      case UO_AddrMut:   DISPATCH(UnaryAddrMut, UnaryOperator);
+      case UO_AddrConst:   DISPATCH(UnaryAddrConst, UnaryOperator);
+      case UO_AddrMutDeref: DISPATCH(UnaryAddrMutDeref, UnaryOperator);
+      case UO_AddrConstDeref: DISPATCH(UnaryAddrConstDeref, UnaryOperator);
+#endif
       }
     }
 
@@ -168,6 +174,10 @@ public:
   UNARYOP_FALLBACK(Not)       UNARYOP_FALLBACK(LNot)
   UNARYOP_FALLBACK(Real)      UNARYOP_FALLBACK(Imag)
   UNARYOP_FALLBACK(Extension) UNARYOP_FALLBACK(Coawait)
+#if ENABLE_BSC
+  UNARYOP_FALLBACK(AddrMut)   UNARYOP_FALLBACK(AddrMutDeref)
+  UNARYOP_FALLBACK(AddrConst) UNARYOP_FALLBACK(AddrConstDeref)
+#endif
 #undef UNARYOP_FALLBACK
 
   // Base case, ignore it. :)

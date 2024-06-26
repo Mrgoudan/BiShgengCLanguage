@@ -5282,6 +5282,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     #if ENABLE_BSC
     if (DS.getTypeQualifiers() & DeclSpec::TQ_owned)
       Diag(DS.getOwnedSpecLoc(), DiagID) << "owned";
+    if (DS.getTypeQualifiers() & DeclSpec::TQ_borrow)
+      Diag(DS.getBorrowSpecLoc(), DiagID) << "borrow";
     #endif
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
@@ -7505,6 +7507,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     #endif
     NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(), D.getIdentifierLoc(),
                             II, R, TInfo, SC);
+    #if ENABLE_BSC
+    if (IsInSafeZone() && NewVD->getStorageClass() == SC_Static
+        && !NewVD->getType().isConstQualified()) {
+      Diag(D.getIdentifierLoc(), diag::err_safe_global_var);
+    }
+    #endif
     if (R->getContainedDeducedType())
       ParsingInitForAutoVars.insert(NewVD);
 
@@ -17817,6 +17825,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclSt
 
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType T = TInfo->getType();
+
   if (getLangOpts().CPlusPlus) {
     CheckExtraCXXDefaultArguments(D);
 

@@ -2530,6 +2530,12 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     case UO_Plus:
     case UO_Minus:
     case UO_AddrOf:
+#if ENABLE_BSC
+    case UO_AddrMut:
+    case UO_AddrConst:
+    case UO_AddrMutDeref:
+    case UO_AddrConstDeref:
+#endif
     case UO_Not:
     case UO_LNot:
     case UO_Deref:

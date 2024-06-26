@@ -190,6 +190,12 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
     OS << "owned";
     appendSpace = true;
   }
+  if (TypeQuals & Qualifiers::Borrow && !IsRewriteBSC) {
+    if (appendSpace)
+      OS << ' ';
+    OS << "borrow";
+    appendSpace = true;
+  }
   #endif
   if (TypeQuals & Qualifiers::Volatile) {
     if (appendSpace) OS << ' ';
@@ -1530,7 +1536,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     printTemplateArgumentList(
         OS, Args, Policy,
         Spec->getSpecializedTemplate()->getTemplateParameters());
-    #if ENABLE_BSC    
+    #if ENABLE_BSC
     }
     #endif
   }

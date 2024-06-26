@@ -462,6 +462,10 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
     return new (Arena) til::Undefined(UO);
 
   case UO_AddrOf:
+  #if ENABLE_BSC
+  case UO_AddrMut:
+  case UO_AddrConst:
+  #endif
     if (CapabilityExprMode) {
       // interpret &Graph::mu_ as an existential.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
@@ -479,6 +483,10 @@ til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
   // We treat these as no-ops
   case UO_Deref:
   case UO_Plus:
+  #if ENABLE_BSC
+  case UO_AddrMutDeref:
+  case UO_AddrConstDeref:
+  #endif
     return translate(UO->getSubExpr(), Ctx);
 
   case UO_Minus:

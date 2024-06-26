@@ -1,0 +1,42 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+struct S {
+  int num;
+  int * owned p;
+};
+
+int * owned foo(int * owned a) {
+    return a;
+}
+int * owned foo1() {
+    struct S s;
+    const struct S * borrow p1 = &const s;
+    return p1->p; // expected-error {{borrow type does not allow move ownership}}
+}
+
+void struct S::f1(const This * borrow this) {}
+void struct S::f2(This * borrow this) {}
+void test() {
+  struct S s;
+  struct S * borrow p1 = &mut s;
+  const struct S * borrow p2 = &const s;// expected-note {{variable 'p2' declared const here}} // expected-note {{variable 'p2' declared const here}}
+  p2->num = 1; // expected-error {{cannot assign to variable 'p2' with const-qualified type 'const struct S *borrow'}}
+  int a = p2->num; // legal
+  a = p2->num; // legal
+
+  p2->p = (int * owned)&a; // expected-error {{cannot assign to variable 'p2' with const-qualified type 'const struct S *borrow'}}
+  int * owned b = p2->p; // expected-error {{borrow type does not allow move ownership}}
+  b = p2->p; // expected-error {{borrow type does not allow move ownership}}
+
+  p1->num = 1; // legal
+  a = p1->num; // legal
+
+  p1->p = (int * owned)&a; // legal
+  b = p1->p; // expected-error {{borrow type does not allow move ownership}}
+
+  foo(p1->p); // expected-error {{memory leak because temporary variable 'foo(p1->p)' is owned or indirect owned type, please fix it}}
+
+  //p2->f1(); // legal
+  p2->f2(); // expected-error {{incompatible borrow types, cannot cast 'const struct S *borrow' to 'struct S *borrow'}}
+  //p1->f1(); // legal
+  p1->f2(); // legal
+}

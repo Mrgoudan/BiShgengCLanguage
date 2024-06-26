@@ -2486,6 +2486,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
       PreferredType.enterVariableInit(Tok.getLocation(), ThisDecl);
       ExprResult Init = ParseInitializer();
+      #if ENABLE_BSC
+      if (getLangOpts().BSC) {
+        Actions.CheckMoveVarMemoryLeak(Init.get(), EqualLoc);
+      }
+      #endif
 
       // If this is the only decl in (possibly) range based for statement,
       // our best guess is that the user meant ':' instead of '='.
@@ -2513,6 +2518,23 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         Actions.AddInitializerToDecl(ThisDecl, Init.get(),
                                      /*DirectInit=*/false);
     }
+#if ENABLE_BSC
+    VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
+    if (getLangOpts().BSC && VD) {
+      if (VD->getType()->getAs<RecordType>()) {
+        if (const auto *ILE = dyn_cast_or_null<InitListExpr>(VD->getInit())) {
+          for (auto Init : ILE->inits()) {
+            if (dyn_cast_or_null<ImplicitValueInitExpr>(Init)) {
+              if (Init->getType().hasBorrow()) {
+                Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+#endif
     break;
   }
   case InitKind::CXXDirect: {
@@ -2595,6 +2617,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     // uninitialized declaration is not allowed in the bsc language safe zone
     if (Actions.IsInSafeZone()) {
       Diag(Tok, diag::err_unsafe_action) << "uninitialized declarator";
+    }
+    VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
+    if (getLangOpts().BSC && VD) {
+      if (VD->getType().hasBorrow())
+        Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
     }
 #endif
     Actions.ActOnUninitializedDecl(ThisDecl);
@@ -4438,6 +4465,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+
+    // borrow-qualifier:
+    case tok::kw_borrow:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_borrow, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
     #endif
 
     // C++ typename-specifier:
@@ -5528,6 +5561,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw__Sat:
   #if ENABLE_BSC
   case tok::kw_owned:
+  case tok::kw_borrow:
   #endif
 
     // Debugger support.
@@ -5702,6 +5736,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_restrict:
   #if ENABLE_BSC
   case tok::kw_owned:
+  case tok::kw_borrow:
   #endif
   case tok::kw__Sat:
 
@@ -6018,6 +6053,11 @@ void Parser::ParseTypeQualifierListOpt(
     // owned-qualifier:
     case tok::kw_owned:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+    // borrow-qualifier:
+    case tok::kw_borrow:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_borrow, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
     #endif
