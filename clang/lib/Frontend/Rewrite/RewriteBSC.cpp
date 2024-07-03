@@ -309,7 +309,7 @@ private:
         TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
         RD = dyn_cast_or_null<RecordDecl>(TempT->getTemplatedDecl());
       }
-      if (RD->getDesugaredTraitDecl())
+      if (RD && RD->getDesugaredTraitDecl())
         return true;
     }
     return false;
