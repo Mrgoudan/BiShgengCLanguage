@@ -506,34 +506,48 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   SourceLocation TraitLoc = Tok.getLocation();
   TraitDecl *Trait = nullptr;
   IdentifierInfo *TraitII = nullptr;
-
-  if (Tok.is(tok::kw_trait) && PP.LookAhead(0).is(tok::identifier)) {
+  if (Tok.is(tok::kw_trait) && PP.LookAhead(0).is(tok::identifier))
     TraitII = PP.LookAhead(0).getIdentifierInfo();
-    DeclContext::lookup_result Decls =
-        Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
-    for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                              E = Decls.end();
-         I != E; ++I) {
-      if (isa<TraitDecl>(*I)) {
-        Trait = dyn_cast<TraitDecl>(*I);
-      } else if (isa<TraitTemplateDecl>(*I)) {
-        TraitTemplateDecl *TTD = dyn_cast<TraitTemplateDecl>(*I);
-        Trait = TTD->getTemplatedDecl();
+  else { // For typedef
+    NamedDecl *IIDecl = nullptr;
+    LookupResult Result(Actions, Tok.getIdentifierInfo(), Tok.getLocation(), Sema::LookupOrdinaryName);
+    Actions.LookupName(Result, getCurScope());
+    if (Result.getResultKind() == LookupResult::Found) {
+      IIDecl = Result.getFoundDecl();
+      QualType QT;
+      // TypedefNameDecl include TypedefDecl and TypeAliasDecl, for example:
+      //   `typedef trait F G;` or `typedef trait F<int> G;` or `typedef G = trait F ;` or `typedef G = trait F<int>;`
+      //   `impl G for int;`
+      if (auto * TDD = dyn_cast<TypedefNameDecl>(IIDecl))
+        QT = TDD->getUnderlyingType().getCanonicalType();
+      // TypeAliasTemplateDecl for example:
+      //   `typedef G<T> = trait F<T>;`
+      //   `impl G<int> for int;`
+      else if (auto * TATD = dyn_cast<TypeAliasTemplateDecl>(IIDecl)) {
+        TypeAliasDecl * TAD = TATD->getTemplatedDecl();
+        QT = TAD->getUnderlyingType().getCanonicalType();
       }
-    }
-  } else { // for typedef
-    ParsedType TypeRep = Actions.getTypeName(
-        *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
-        false, false, nullptr, false, false, true);
-    if (TypeRep) {
-      QualType QT = TypeRep.get().getCanonicalType();
-      if (TagDecl *TD = QT.getTypePtr()->getAsTagDecl()) {
-        Trait = dyn_cast<TraitDecl>(TD);
+      if (auto TT = dyn_cast<TraitType>(QT))
+        Trait = TT->getDecl();
+      else if (auto TST = dyn_cast<TemplateSpecializationType>(QT)) {
+        TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
+        Trait = dyn_cast_or_null<TraitDecl>(TempT->getTemplatedDecl());
+      }
+      if (Trait)
         TraitII = Trait->getIdentifier();
-      }
     }
   }
-
+  DeclContext::lookup_result Decls = Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
+  for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                            E = Decls.end();
+        I != E; ++I) {
+    if (isa<TraitDecl>(*I)) {
+      Trait = dyn_cast<TraitDecl>(*I);
+    } else if (isa<TraitTemplateDecl>(*I)) {
+      TraitTemplateDecl *TTD = dyn_cast<TraitTemplateDecl>(*I);
+      Trait = TTD->getTemplatedDecl();
+    }
+  }
   if (!Trait) {
     Diag(Tok.getLocation(), diag::err_unexpected_token_for_impl_trait_decl);
     SkipUntil(tok::semi);

@@ -435,6 +435,23 @@ QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
   QualType QT = TInfo->getType();
   while (QT->isPointerType())
     QT = QT->getPointeeType();
+  while (isa<TemplateSpecializationType>(QT) || isa<TypedefType>(QT)) {
+    // In this case:
+    //   typedef G<T> = trait F<T>;
+    //   impl G<int> for int;
+    // QT is a TemplateSpecializationType but not TypedefType.
+    if (const TemplateSpecializationType *TT = dyn_cast<TemplateSpecializationType>(QT)) {
+      if (TT->isTypeAlias())
+        QT = TT->getAliasedType();
+      else 
+        break;
+    // In this case:
+    //   typedef G = trait F<int>;
+    //   impl G for int;
+    // QT is a TypedefType.
+    } else if (const TypedefType *TT = dyn_cast<TypedefType>(QT))
+      QT = TT->desugar();
+  }
   // Remove ElaboratedType
   const TemplateSpecializationType *TST = dyn_cast<TemplateSpecializationType>(
       QT->getLocallyUnqualifiedSingleStepDesugaredType());
@@ -580,6 +597,16 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
   QualType InnerTy = T;
   while (InnerTy->isPointerType())
     InnerTy = InnerTy->getPointeeType();
+  while(isa<TemplateSpecializationType>(InnerTy) || isa<TypedefType>(InnerTy)) {
+    if (const TemplateSpecializationType *TT = dyn_cast<TemplateSpecializationType>(InnerTy)) {
+      if (TT->isTypeAlias())
+        InnerTy = TT->getAliasedType();
+      else
+        break;
+    } else if (const TypedefType *TT = dyn_cast<TypedefType>(InnerTy))
+      InnerTy = TT->desugar();
+  }
+  // Remove ElaboratedType
   if (dyn_cast<TemplateSpecializationType>(
           InnerTy->getLocallyUnqualifiedSingleStepDesugaredType())) {
     TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(InnerTy, Loc);
@@ -866,6 +893,15 @@ TraitDecl *Sema::TryDesugarTrait(QualType T) {
     TraitTy = T->getPointeeType();
     while (TraitTy->isPointerType())
       TraitTy = TraitTy->getPointeeType();
+    while (isa<TemplateSpecializationType>(TraitTy) || isa<TypedefType>(TraitTy)) {
+      if (const TemplateSpecializationType* TempTST = dyn_cast<TemplateSpecializationType>(TraitTy)) {
+        if (TempTST->isTypeAlias())
+          TraitTy = TempTST->getAliasedType();
+        else
+          break;
+      } else if (const TypedefType *TT = dyn_cast<TypedefType>(TraitTy))
+        TraitTy = TT->desugar();
+    }
     // Remove ElaboratedType
     const TemplateSpecializationType *TST =
         dyn_cast<TemplateSpecializationType>(

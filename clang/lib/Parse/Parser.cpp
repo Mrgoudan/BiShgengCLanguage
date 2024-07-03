@@ -787,8 +787,7 @@ static bool ShouldParseImplTraitDecl(Sema &S, const Token &Tok,
     return false;
   if (Tok.is(tok::identifier) &&
       Tok.getIdentifierInfo()->getName().equals("impl"))
-    if (TokNext.is(tok::kw_trait) ||
-        (TokNext.is(tok::identifier) && TokNext2.is(tok::kw_for)))
+    if (TokNext.isOneOf(tok::kw_trait, tok::identifier))
       return true;
   return false;
 }

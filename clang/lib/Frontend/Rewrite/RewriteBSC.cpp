@@ -706,7 +706,8 @@ const std::string RewriteBSC::GetRewrittenString() {
             }
           }
         }
-      }
+      } else if (TD->getUnderlyingType().getCanonicalType()->isTraitType())
+        break;
       // In the header file, skip the TypedefDecl containing instantiated type.
       // and move them to the .c file
       if (IsHBSFile && HasTemplateSpec)
