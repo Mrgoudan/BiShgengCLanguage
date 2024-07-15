@@ -5,6 +5,8 @@ typedef int trait; // expected-error {{declaration of anonymous trait must be a 
                    // expected-warning@-2 {{typedef requires a name}}
 trait x = 1;       // expected-error {{expected identifier or '('}}
 
+?   // expected-error {{expected identifier or '('}}
+
 int main() {
   return 0;
 }

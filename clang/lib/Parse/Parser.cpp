@@ -781,8 +781,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
 #if ENABLE_BSC
 static bool ShouldParseImplTraitDecl(Sema &S, const Token &Tok,
-                                     const Token &TokNext,
-                                     const Token &TokNext2) {
+                                     const Token &TokNext) {
   if (!S.getLangOpts().BSC)
     return false;
   if (Tok.is(tok::identifier) &&
@@ -1057,8 +1056,8 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   default:
   dont_know:
     #if ENABLE_BSC
-    if (getLangOpts().BSC && ShouldParseImplTraitDecl(Actions, Tok, NextToken(),
-                                                      GetLookAheadToken(2)))
+    if (getLangOpts().BSC &&
+        ShouldParseImplTraitDecl(Actions, Tok, NextToken()))
       return ParseImplTraitDeclaration();
 
     // parse BSC template declaration
