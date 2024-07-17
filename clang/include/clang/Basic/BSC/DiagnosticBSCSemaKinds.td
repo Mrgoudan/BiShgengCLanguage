@@ -38,9 +38,9 @@ def err_invalid_async_function : Error <
 // BSC ownership warnings and errors.
 def err_owned_inderictOwned_type_check : Error<
   "%select{"
-  "type of %1 cannot be 'owned' |"
-  "type of %1 cannot be 'owned', %2 contains 'owned' type |"
-  "type of %1 cannot be 'owned'(even indirectly), %2 contains 'owned' type}0">;
+  "type of %2 cannot qualified by '%1' |"
+  "type of %2 cannot qualified by '%1', %3 contains '%1' type |"
+  "type of %2 cannot qualified by '%1'(even indirectly), %3 contains '%1' type}0">;
 def err_owned_decl: Error<"%0 cannot be qualified by 'owned'">;
 def err_owned_funcPtr_incompatible : Error<"cannot cast %0 to %1">;
 def err_owned_qualcheck_incompatible : Error<

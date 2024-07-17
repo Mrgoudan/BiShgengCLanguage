@@ -10425,6 +10425,13 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     RHS = RHS.getUnqualifiedType();
   }
 
+#if ENABLE_BSC
+  LHS.removeLocalOwned();
+  RHS.removeLocalOwned();
+  LHS.removeLocalBorrow();
+  RHS.removeLocalBorrow();
+#endif
+
   QualType LHSCan = getCanonicalType(LHS),
            RHSCan = getCanonicalType(RHS);
 

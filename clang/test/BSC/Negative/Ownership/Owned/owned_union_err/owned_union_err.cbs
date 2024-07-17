@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 union D {
-    owned int a;  //expected-error {{type of union field cannot be 'owned'}}
+    owned int a;  //expected-error {{type of union field cannot qualified by 'owned'}}
 };
 
 
@@ -16,12 +16,12 @@ int main() {
 }
 
 union A {
-    owned int* a;   //expected-error {{type of union field cannot be 'owned'(even indirectly), 'owned int *' contains 'owned' type}}
+    owned int* a;   //expected-error {{type of union field cannot qualified by 'owned'(even indirectly), 'owned int *' contains 'owned' type}}
 };
 
 typedef owned int ownedInt;
 union B {
-    ownedInt a; //expected-error {{type of union field cannot be 'owned', 'ownedInt' (aka 'owned int') contains 'owned' type}}
+    ownedInt a; //expected-error {{type of union field cannot qualified by 'owned', 'ownedInt' (aka 'owned int') contains 'owned' type}}
 };
 
 struct S {
@@ -29,5 +29,5 @@ struct S {
 };
 
 union C {
-    struct S* s1; //expected-error {{type of union field cannot be 'owned'(even indirectly), 'struct S *' contains 'owned' type}}
+    struct S* s1; //expected-error {{type of union field cannot qualified by 'owned'(even indirectly), 'struct S *' contains 'owned' type}}
 };

@@ -30,11 +30,14 @@ void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, Stri
     ownedFields
   };
   if (T.getCanonicalType().isOwnedQualified() && !T.getTypePtr()->getAs<TypedefType>()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check) << ownedQualified << Env;
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+        << ownedQualified << "owned" << Env;
   } else if (T.getCanonicalType().isOwnedQualified() && T.getTypePtr()->getAs<TypedefType>()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check) << ownedTypedef << Env << T;
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+        << ownedTypedef << "owned" << Env << T;
   } else if (T.getCanonicalType().getTypePtr()->hasOwnedFields()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check) << ownedFields << Env << T;
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+        << ownedFields << "owned" << Env << T;
   }
 }
 
@@ -387,5 +390,23 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
     return false;
   }
   return true;
+}
+
+// for global borrow variable type check
+void Sema::CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
+                                           StringRef Env) {
+  enum { BorrowQualified, BorrowTypedef, BorrowFields };
+  if (T.getCanonicalType().isBorrowQualified() &&
+      !T.getTypePtr()->getAs<TypedefType>()) {
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+        << BorrowQualified << "borrow" << Env;
+  } else if (T.getCanonicalType().isBorrowQualified() &&
+             T.getTypePtr()->getAs<TypedefType>()) {
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+        << BorrowTypedef << "borrow" << Env << T;
+  } else if (T.getCanonicalType().getTypePtr()->hasBorrowFields()) {
+    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+        << BorrowFields << "borrow" << Env << T;
+  }
 }
 #endif

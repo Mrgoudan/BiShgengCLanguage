@@ -1,0 +1,123 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// If the function declaration and function implementation are inconsistent,
+// And both are safe functions, a compilation error is reported
+
+safe void test_1(int * owned p);    // expected-note {{previous declaration is here}}
+safe void test_1(int * p) {         // expected-error {{unsafe parameter type is forbidden in the safe function}}
+}                                   // expected-error@-1 {{conflicting types for 'test_1'}}
+
+safe void test_1_0(int * owned p);    // expected-note {{previous declaration is here}}
+safe void test_1_0(owned int * p) {   // expected-error {{unsafe parameter type is forbidden in the safe function}}
+}                                     // expected-error@-1 {{conflicting types for 'test_1_0'}}
+
+safe void test_1_1(int * owned p);           // expected-note {{previous declaration is here}}
+safe void test_1_1(owned int * owned p) {    // expected-error {{conflicting types for 'test_1_1'}}
+}
+
+safe void test_1_2(int ** owned p);           // expected-note {{previous declaration is here}}
+safe void test_1_2(owned int ** owned p) {    // expected-error {{conflicting types for 'test_1_2'}}
+}
+
+safe void test_2(int owned p);      // expected-note {{previous declaration is here}}
+safe void test_2(int p) {           // expected-error {{conflicting types for 'test_2'}}
+}
+
+safe int * test_3(int * owned p);           // expected-error {{unsafe return type is forbidden in the safe function}}
+                                            // expected-note@-1 {{previous declaration is here}}
+safe int * owned test_3(int * owned p) {    // expected-error {{conflicting types for 'test_3'}}
+    return p;
+}
+
+safe int * owned test_3_0(int * owned p);                 // expected-note {{previous declaration is here}}
+safe owned int * owned test_3_0(owned int * owned p) {    // expected-error {{conflicting types for 'test_3_0'}}
+    return p;
+}
+
+safe int ** owned test_3_1(int ** owned p);                 // expected-note {{previous declaration is here}}
+safe owned int ** owned test_3_1(owned int ** owned p) {    // expected-error {{conflicting types for 'test_3_1'}}
+    return p;
+}
+
+safe int owned test_4(void);                // expected-note {{previous declaration is here}}
+safe int test_4(void) {                     // expected-error {{conflicting types for 'test_4'}}
+    return 0;
+}
+
+safe void test_5(int *owned p);             // expected-note {{previous declaration is here}}
+safe void test_5(int *borrow p) {           // expected-error {{conflicting types for 'test_5'}}
+}
+
+safe int * owned test_6(int *owned p);      // expected-note {{previous declaration is here}}
+safe int * borrow test_6(int *borrow p) {   // expected-error {{conflicting types for 'test_6'}}
+    return p;
+}
+
+safe void test_7(int * borrow p);           // expected-note {{previous declaration is here}}
+safe void test_7(int * p) {                 // expected-error{{unsafe parameter type is forbidden in the safe function}}
+}                                           // expected-error@-1 {{conflicting types for 'test_7'}}
+
+int * a;
+safe int * borrow test_8(int * borrow p);   // expected-note {{previous declaration is here}}
+safe int * test_8(int * borrow p) {         // expected-error{{unsafe return type is forbidden in the safe function}}
+                                            // expected-error@-1{{conflicting types for 'test_8'}}
+    return a;
+}
+
+safe void test_80(int *borrow p);           // expected-note {{previous declaration is here}}
+safe void test_80(const int *borrow p) {    // expected-error{{conflicting types for 'test_80'}}
+}
+
+safe int *borrow test_81(int *borrow p);                // expected-note {{previous declaration is here}}
+safe const int *borrow test_81(const int *borrow p) {   // expected-error{{conflicting types for 'test_81'}}
+}
+
+// If the function declaration and function implementation are inconsistent,
+// And both are unsafe functions, Ignore this difference.
+
+void test_9(int * owned p);
+void test_9(int * p) {
+}
+
+unsafe void test_9_0(int * owned p);
+void test_9_0(int * p) {
+}
+
+unsafe void test_9_1(int * owned p);
+unsafe void test_9_1(int * p) {
+}
+
+void test_9_2(int * owned p);
+void test_9_2(owned int * p) {
+}
+
+void test_10(int owned p);
+void test_10(int p) {
+}
+
+int * owned test_11(int *p);
+int * owned test_11(int *owned p) {
+    return p;
+}
+
+int test_12(void);
+int owned test_12(void) {
+    return 0;
+}
+
+void test_13(int *owned p);
+void test_13(int *borrow p) {
+}
+
+int * owned test_14(int *owned p);
+int * borrow test_14(int *borrow p) {
+}
+
+void test_15(int * borrow p);
+void test_15(int * p) {
+}
+
+int * borrow test_16(int * borrow p);
+int * test_16(int * borrow p) {
+    return 0;
+}

@@ -4085,7 +4085,13 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       Diag(Old->getLocation(), diag::note_previous_declaration);
       return true;
     }
-    #endif
+    if (HasDiffBorrowOrOwnedParamsTypeAtBothSafeFunction(Old->getType(),
+                                                         New->getType())) {
+      Diag(New->getLocation(), diag::err_conflicting_types) << New;
+      Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
+      return true;
+    }
+#endif
     // C99 6.7.5.3p15: ...If one type has a parameter type list and the other
     // type is specified by a function definition that contains a (possibly
     // empty) identifier list, both shall agree in the number of parameters
@@ -8100,10 +8106,12 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // BSC global variable owned type check
   // 'typedef owned int myInt;' is legal
   bool IsTypedefName = D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef;
-  if (!IsTypedefName && getLangOpts().BSC && NewVD
-      && NewVD->getDeclContext()->isFileContext())
+  if (!IsTypedefName && getLangOpts().BSC && NewVD &&
+      NewVD->getDeclContext()->isFileContext()) {
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), R, "global variable");
-  #endif
+    CheckBorrowOrIndirectBorrowType(D.getIdentifierLoc(), R, "global variable");
+  }
+#endif
 
   return NewVD;
 }

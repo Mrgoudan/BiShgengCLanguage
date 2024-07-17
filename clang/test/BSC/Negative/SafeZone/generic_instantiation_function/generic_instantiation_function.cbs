@@ -98,7 +98,7 @@ safe T poo_b<T>(T a) {    // expected-error{{unsafe return type is forbidden in 
 }
 
 safe T poo_c<T>(T a) {
-  if (*a) {               // expected-error{{'*' operator is forbidden in the safe zone}}
+  if (*a) {
     return a;
   }
   return a;
@@ -109,7 +109,7 @@ int test_generic_type_point() {
   int *p;
   int* owned q = (int* owned)&a;
   int* m = poo_b(p);         // expected-note{{in instantiation of function template specialization 'poo_b<int *>' requested here}}
-  int* owned n = poo_c(q);   // expected-note{{in instantiation of function template specialization 'poo_c<int *owned>' requested here}}
+  int* owned n = poo_c(q);
   return 0;
 }
 

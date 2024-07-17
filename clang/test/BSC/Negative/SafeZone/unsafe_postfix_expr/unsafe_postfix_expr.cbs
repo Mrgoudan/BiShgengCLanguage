@@ -23,7 +23,7 @@ void UnsafeOperator() {
     union un pa = {10}; 
     a = pa.age;   // expected-error {{'.' operator used by union type is forbidden in the safe zone}}
     a = pb.age;   // ok , not union type
-    a = pc->age;  // expected-error {{'->' operator used by raw point type is forbidden in the safe zone}}
+    a = pc->age;  // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
     a = po->age;  // ok , not raw point type
   }
 }
