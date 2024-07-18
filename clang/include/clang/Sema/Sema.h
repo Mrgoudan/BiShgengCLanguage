@@ -12384,6 +12384,11 @@ public:
   bool CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType);
   void CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
                                        StringRef Env);
+  QualType GetBorrowAddressOperandQualType(QualType resultType,
+                                           ExprResult &Input,
+                                           const Expr *InputExpr,
+                                           UnaryOperatorKind &Opc,
+                                           SourceLocation OpLoc);
 #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

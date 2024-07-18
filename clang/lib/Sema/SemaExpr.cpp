@@ -14754,6 +14754,64 @@ bool Sema::IsAddrBorrowDerefOp(ExprResult &OrigOp) {
   }
   return false;
 }
+
+QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
+                                               ExprResult &Input,
+                                               const Expr *InputExpr,
+                                               UnaryOperatorKind &Opc,
+                                               SourceLocation OpLoc) {
+  if (Opc == UO_AddrMut || Opc == UO_AddrMutDeref) {
+    if (Opc == UO_AddrMut && IsAddrBorrowDerefOp(Input)) {
+      Opc = UO_AddrMutDeref;
+    } else {
+      if (InputExpr->getType().hasBorrow())
+        Diag(OpLoc, diag::err_borrow_on_borrow)
+            << "'&mut'" << InputExpr->getSourceRange();
+      if (InputExpr->getType().isConstQualified())
+        Diag(OpLoc, diag::err_mut_expr_unmodifiable)
+            << InputExpr->getSourceRange();
+      if (InputExpr->getType()->isFunctionProtoType())
+        Diag(OpLoc, diag::err_mut_expr_func) << InputExpr->getSourceRange();
+      if (IsInSafeZone()) {
+        if (auto DRE =
+                dyn_cast_or_null<DeclRefExpr>(InputExpr->IgnoreParenCasts())) {
+          if (auto VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+            if ((VD->isExternallyVisible() || VD->isStaticLocal() ||
+                 VD->getDeclContext()->isTranslationUnit()) &&
+                !VD->getType().isConstQualified())
+              Diag(OpLoc, diag::err_safe_mut) << InputExpr->getSourceRange();
+          }
+        }
+      }
+    }
+    if (resultType->isPointerType()) {
+      resultType = resultType.getUnqualifiedType();
+      resultType.removeLocalOwned();
+      resultType.addBorrow();
+    } else {
+      resultType.addBorrow();
+    }
+  } else if (Opc == UO_AddrConst || Opc == UO_AddrConstDeref) {
+    if (Opc == UO_AddrConst && IsAddrBorrowDerefOp(Input)) {
+      Opc = UO_AddrConstDeref;
+    } else {
+      if (InputExpr->getType().hasBorrow())
+        Diag(OpLoc, diag::err_borrow_on_borrow)
+            << "'&const'" << InputExpr->getSourceRange();
+    }
+    if (resultType->isFunctionPointerType()) {
+      resultType.addConst();
+      resultType.addBorrow();
+    } else if (resultType->isPointerType()) {
+      resultType = resultType.getUnqualifiedType();
+      resultType.removeLocalOwned();
+      resultType = resultType.addConstBorrow(Context);
+    } else {
+      resultType = resultType.addConstBorrow(Context);
+    }
+  }
+  return resultType;
+}
 #endif
 
 /// CheckAddressOfOperand - The operand of & must be either a function
@@ -16167,7 +16225,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
 #if ENABLE_BSC
   case UO_AddrMutDeref:
   case UO_AddrConstDeref:
-    llvm_unreachable("unexpected operator kind");
+    resultType = GetBorrowAddressOperandQualType(Input.get()->getType(), Input,
+                                                 InputExpr, Opc, OpLoc);
     break;
   case UO_AddrMut:
   case UO_AddrConst:
@@ -16177,57 +16236,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     CheckAddressOfNoDeref(InputExpr);
     RecordModifiableNonNullParam(*this, InputExpr);
 #if ENABLE_BSC
-    if (Opc == UO_AddrMut) {
-      if (IsAddrBorrowDerefOp(Input)) {
-        Opc = UO_AddrMutDeref;
-        if (resultType->isPointerType()) {
-          resultType = resultType.getUnqualifiedType();
-          resultType.removeLocalOwned();
-          resultType.addBorrow();
-        }
-      } else {
-        if (InputExpr->getType().hasBorrow())
-          Diag(OpLoc, diag::err_borrow_on_borrow) << "'&mut'"
-              << InputExpr->getSourceRange();
-        if (InputExpr->getType().isConstQualified())
-          Diag(OpLoc, diag::err_mut_expr_unmodifiable)
-              << InputExpr->getSourceRange();
-        if (InputExpr->getType()->isFunctionProtoType())
-          Diag(OpLoc, diag::err_mut_expr_func)
-                << InputExpr->getSourceRange();
-        if (IsInSafeZone()) {
-          if (auto DRE = dyn_cast_or_null<DeclRefExpr>(InputExpr->IgnoreParenCasts())) {
-            if (auto VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-              if ((VD->isExternallyVisible() || VD->isStaticLocal()
-                  || VD->getDeclContext()->isTranslationUnit())
-                  && !VD->getType().isConstQualified())
-                Diag(OpLoc, diag::err_safe_mut)
-                << InputExpr->getSourceRange();
-            }
-          }
-        }
-        resultType.addBorrow();
-      }
-    } else if (Opc == UO_AddrConst) {
-      if (IsAddrBorrowDerefOp(Input)) {
-        Opc = UO_AddrConstDeref;
-        if (resultType->isPointerType()) {
-          resultType = resultType.getUnqualifiedType();
-          resultType.removeLocalOwned();
-          resultType = resultType.addConstBorrow(Context);
-        }
-      } else {
-        if (InputExpr->getType().hasBorrow())
-          Diag(OpLoc, diag::err_borrow_on_borrow) << "'&const'"
-              << InputExpr->getSourceRange();
-        if (resultType->isFunctionPointerType()) {
-          resultType.addConst();
-          resultType.addBorrow();
-        } else {
-          resultType = resultType.addConstBorrow(Context);
-        }
-      }
-    }
+    resultType = GetBorrowAddressOperandQualType(resultType, Input, InputExpr,
+                                                 Opc, OpLoc);
 #endif
     break;
   case UO_Deref: {

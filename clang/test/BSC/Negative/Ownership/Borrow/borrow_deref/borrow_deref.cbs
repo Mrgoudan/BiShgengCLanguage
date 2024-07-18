@@ -13,6 +13,35 @@ int owned foo1() {
     return *b; // expected-error {{borrow type does not allow move ownership}}
 }
 
+void foo2() {
+    int * borrow b = &mut a;              // expected-error {{use of undeclared identifier 'a'}}
+    int * borrow c = &mut *p;             // expected-error {{use of undeclared identifier 'p'}}
+    const int * borrow d = &const q;      // expected-error {{use of undeclared identifier 'q'}}
+    const int * borrow e = &const *s;     // expected-error {{use of undeclared identifier 's'}}
+    return;
+}
+
+struct s<T> {};
+void test1<T>(){
+    struct s<T> *a;
+    struct s<T> * borrow g = &mut *a;
+}
+
+void test2<T>(){
+    struct s<T> *a;
+    int * borrow g = &mut *a; // expected-error {{incompatible borrow types, cannot cast 's<int> *borrow' to 'int *borrow'}}
+}
+
+void test3<T>(){
+    struct s<T> *a;
+    const struct s<T> * borrow g = &const *a;
+}
+
+void test4<T>(){
+    struct s<T> *a;
+    const int * borrow g = &const *a; // expected-error {{incompatible borrow types, cannot cast 'const s<int> *borrow' to 'const int *borrow'}}
+}
+
 void test() {
 	int a = 0;
     int *p1 = &a;
@@ -52,4 +81,8 @@ void test() {
     a4 = *b10; // expected-error {{borrow type does not allow move ownership}}
 
     foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is owned or indirect owned type, please fix it}}
+    test1<int>();
+    test2<int>(); // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}
+    test3<int>();
+    test4<int>(); // expected-note {{in instantiation of function template specialization 'test4<int>' requested here}}
 }
