@@ -1,0 +1,98 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+T* owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc( sizeof(T) );
+  *p = value;
+  return (T* owned)p;
+}
+
+void free_owned<T>(T* owned p) {
+  free( (T*)p );
+}
+
+int g = 5;
+const int *borrow test1(const int *borrow p) {
+  return &const g;
+}
+
+int *borrow test2(int *borrow p) {
+  return p;
+}
+
+const int *borrow test3(const int *borrow p) {
+  p = &const g;
+  return p;
+}
+
+int *borrow test4(int *borrow p) {
+  int local = 5;
+  int *oriPtr = &local;
+  return &mut * oriPtr;
+}
+
+int *borrow test5(int *borrow p) {
+  int local = 5;
+  int *oriPtr = &local;
+  p = &mut * oriPtr;
+  return p;
+}
+
+int *borrow test6(int *borrow p, int* a) {
+  return &mut * a;
+}
+
+int *borrow test7(int *borrow p, int* a) {
+  p = &mut * a;
+  return p;
+}
+
+int *borrow test8(int *borrow p) {
+  int* borrow p1 = &mut * p;
+  return p1;
+}
+
+int *borrow test9(int *borrow p) {
+  return &mut * p;
+}
+
+int* borrow test10(int *borrow p, int* a) {
+  if (a) {
+    return &mut * a;
+  }
+  return p;
+}
+
+int* borrow test11(int *borrow p, int a) {
+  if (1) {
+    return p;
+  }
+  return &mut a;  // Dead Code, this ReturnStmt is unreachable.
+}
+
+int* borrow test12(int* borrow p) {
+  int *owned oriPtr = safe_malloc<int>(0);
+  if (1) {
+    free_owned<int>(oriPtr);
+    return p;
+  }
+  return &mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
+}
+
+int main() {
+  int local = 5;
+  test1(&const local);
+  test2(&mut local);
+  test3(&const local);
+  test4(&mut local);
+  test5(&mut local);
+  test6(&mut local, &local);
+  test7(&mut local, &local);
+  test8(&mut local);
+  test9(&mut local);
+  test10(&mut local, &local);
+  test11(&mut local, 5);
+  test12(&mut local);
+  return 0;
+}

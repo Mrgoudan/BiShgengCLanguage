@@ -1,0 +1,85 @@
+// RUN: %clang_cc1 -verify %s
+
+void use_mut(int *borrow p) {}
+T* owned safe_malloc<T>(T value);
+void free_owned<T>(T* owned p);
+void free(void*);
+
+void test1() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  {
+    int local1 = 42;
+    p = &mut local1;
+  }
+  use_mut(p);
+}
+
+void test2(int* borrow p) {  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  {
+    int local1 = 42;
+    p = &mut local1;
+  }
+  use_mut(p);
+}
+
+void test3() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  if (1) {
+    int local1 = 42;
+    p = &mut local1;
+  }
+  use_mut(p);
+}
+
+void test4() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  if (local > 0) {
+    int local1 = 42;
+    p = &mut local1;
+  } else {
+    int local2 = 42;
+    p = &mut local2; 
+  }
+  use_mut(p);
+}
+
+void test5() {
+  int *owned oriPtr = safe_malloc<int>(0);
+  int *borrow p = &mut * oriPtr; // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  free_owned<int>(oriPtr);
+  use_mut(p);
+}
+
+void test6(int *owned oriPtr) {
+  int *borrow p = &mut * oriPtr; // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  free_owned<int>(oriPtr);
+  use_mut(p);
+}
+
+void test7() {
+  int a = 5;
+  int *owned oriPtr = safe_malloc<int>(0);
+  int *borrow p = &mut* oriPtr;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  if (a > 0) {
+    free_owned<int>(oriPtr);
+  } else {
+    free_owned<int>(oriPtr);
+  }
+  use_mut(p);
+}
+
+int main() {
+  int local = 5;
+  int *owned oriPtr = safe_malloc<int>(0); 
+  test1();
+  test2(&mut local);
+  test3();
+  test4();
+  test5();
+  test6(oriPtr);
+  test7();
+  return 0;
+}

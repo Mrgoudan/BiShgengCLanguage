@@ -172,3 +172,11 @@ def err_ownership_memory_leak_field : Error<
   "field memory leak of value: `%0`, %1 leak">;
 def err_ownership_memory_leak : Error<
   "memory leak of value: `%0`">;
+
+// BSC Borrow Checker errors.
+def err_borrow_live_longer_than_target_var : Error<
+  "borrow pointer variable '%0' lives longer than target variable">;
+def err_at_most_one_mut_borrow : Error<
+  "There should be at most one mutable borrow targeting to '%0' at the same time">;
+def err_return_value_borrow_local : Error<
+  "Return value cannot be a borrow from local variable '%0'">;

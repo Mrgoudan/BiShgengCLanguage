@@ -7,6 +7,7 @@ add_clang_library(clangAnalysis
   AnalysisDeclContext.cpp
   BodyFarm.cpp
   BSCOwnership.cpp
+  BSCBorrowCheck.cpp
   CalledOnceCheck.cpp
   CFG.cpp
   CFGReachabilityAnalysis.cpp

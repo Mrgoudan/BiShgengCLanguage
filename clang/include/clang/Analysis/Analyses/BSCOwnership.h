@@ -211,7 +211,6 @@ class OwnershipDiagReporter {
 
 public:
   OwnershipDiagReporter(Sema &S) : S(S) {}
-  ~OwnershipDiagReporter() { flushDiagnostics(); }
 
   void addDiags(llvm::SmallVector<DiagInfo, 3> &diags) {
     for (auto it = diags.begin(), ei = diags.end(); it != ei; ++it) {
@@ -227,7 +226,6 @@ public:
     DIV.push_back(DI);
   }
 
-private:
   void flushDiagnostics() {
     // Sort the diag info by SourceLocation. While not strictly
     // guaranteed to produce them in line/column order, this will provide
@@ -309,6 +307,8 @@ private:
       S.getDiagnostics().increaseOwnershipErrors();
     }
   }
+
+  unsigned getNumErrors() { return DIV.size(); }
 };
 
 void runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,

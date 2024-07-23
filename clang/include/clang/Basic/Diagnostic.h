@@ -497,6 +497,7 @@ private:
   /// Number of ownership errors reported
   #if ENABLE_BSC
   unsigned NumOwnershipErrors;
+  unsigned NumBorrowCheckErrors;
   #endif
 
   /// A function pointer that converts an opaque diagnostic
@@ -865,6 +866,10 @@ public:
   unsigned getNumOwnershipErrors() const { return NumOwnershipErrors; }
   void increaseOwnershipErrors() {
     NumOwnershipErrors++;
+  }
+  unsigned getNumBorrowCheckErrors() const { return NumBorrowCheckErrors; }
+  void increaseBorrowCheckErrors() {
+    NumBorrowCheckErrors++;
   }
   #endif
 

@@ -2216,7 +2216,7 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
   if (!DisableOwnershipCheck) {
     if (LangOpts.BSC && !isBSCCoroutine &&
         (getDiagnostics().getNumErrors() ==
-         getDiagnostics().getNumOwnershipErrors()) &&
+         getDiagnostics().getNumOwnershipErrors() + getDiagnostics().getNumBorrowCheckErrors()) &&
         D)
       if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D)) {
         auto md = dyn_cast_or_null<BSCMethodDecl>(D);

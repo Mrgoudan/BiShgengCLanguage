@@ -15,6 +15,7 @@
 
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/BSCOwnership.h"
+#include "clang/Analysis/Analyses/BSCBorrowCheck.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -224,8 +225,15 @@ void Sema::CheckBSCOwnership(const Decl *D) {
   AC.getCFGBuildOptions().setAllAlwaysAdd();
 
   OwnershipDiagReporter Reporter(*this);
-  if (AC.getCFG())
+  if (AC.getCFG()) {
     runOwnershipAnalysis(*cast<FunctionDecl>(D), *AC.getCFG(), AC, Reporter);
+    Reporter.flushDiagnostics();
+    // Run borrow check when there is no other ownership errors in current function.
+    if (!Reporter.getNumErrors()) {
+      BorrowCheckDiagReporter BorrowCheckReporter(*this);
+      runBorrowCheck(*cast<FunctionDecl>(D), *AC.getCFG(), BorrowCheckReporter, Context);
+    }
+  }
 }
 
 void Sema::CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL) {
