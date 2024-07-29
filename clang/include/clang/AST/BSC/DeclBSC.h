@@ -86,7 +86,9 @@ public:
 
   VarDecl *getTypeImpledVarDecl(QualType QT) {
     std::map<QualType, VarDecl *, QualTypeOrdering>::iterator find;
-    find = TypeImpled.find(QT);
+    if (QT.isNull())
+      return nullptr;
+    find = TypeImpled.find(QT.getCanonicalType().getUnqualifiedType());
     if (find == TypeImpled.end())
       return nullptr;
     return find->second;

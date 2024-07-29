@@ -443,7 +443,7 @@ QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
     if (const TemplateSpecializationType *TT = dyn_cast<TemplateSpecializationType>(QT)) {
       if (TT->isTypeAlias())
         QT = TT->getAliasedType();
-      else 
+      else
         break;
     // In this case:
     //   typedef G = trait F<int>;
