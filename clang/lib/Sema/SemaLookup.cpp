@@ -219,16 +219,23 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
   case Sema::LookupRedeclarationWithLinkage:
   case Sema::LookupLocalFriendName:
   case Sema::LookupDestructorName:
+#if ENABLE_BSC
+  case Sema::LookupBSCOwnedStructName:
+#endif
     IDNS = Decl::IDNS_Ordinary;
     if (CPlusPlus) {
       IDNS |= Decl::IDNS_Tag | Decl::IDNS_Member | Decl::IDNS_Namespace;
       if (Redeclaration)
         IDNS |= Decl::IDNS_TagFriend | Decl::IDNS_OrdinaryFriend;
     }
-    #if ENABLE_BSC
-    if (BSC)
+#if ENABLE_BSC
+    if (BSC) {
       IDNS |= Decl::IDNS_Member; // TODO: check if there are side-effects.
-    #endif
+      if (NameKind == Sema::LookupBSCOwnedStructName ||
+          NameKind == Sema::LookupDestructorName)
+        IDNS |= Decl::IDNS_Tag;
+    }
+#endif
     if (Redeclaration)
       IDNS |= Decl::IDNS_LocalExtern;
     break;

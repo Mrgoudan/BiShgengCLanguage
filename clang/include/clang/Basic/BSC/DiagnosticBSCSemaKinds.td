@@ -107,6 +107,22 @@ def err_safe_function : Error<"%0 is forbidden in the safe function">;
 def err_safe_zone_decl : Error<"%select{|'safe'|'unsafe'}0 can only appear before on function or compound statement"> ;
 def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;
 
+// BSC owned struct
+def err_invalid_member_use_in_class_method : Error <
+  "invalid implicit use of member %0 in struct member function">;
+def err_static_class_func : Error<
+  "function declared in struct scope cannot have 'static' storage class">;
+  def err_need_explicit_constructor_owned_struct : Error<"need explicit constructor because %0 has private field">;
+def err_struct_member_redeclared : Error<"struct member cannot be redeclared">;
+
+// BSC Destructor
+def invalid_param_for_destructor : Error<"the parameter of destructor must be '%0 this'">;
+def err_destructor_call : Error<"destructor %0 cannot be called directly">;
+def err_assignment_in_destructor : Error<"'this' cannot be moved in destructor">;
+def warn_destructor_execute : Warning<"the destructor may be not executed">,
+InGroup<BSCOwnedStruct>;
+def err_owned_struct_destructor_name : Error<"expected the owned struct name after '~' to name the enclosing owned struct">;
+def err_owned_struct_destructor_body : Error<"destructor must have a function body">;
 
 // Ownership Analysis errors.
 def err_ownership_read_invalid : Error<

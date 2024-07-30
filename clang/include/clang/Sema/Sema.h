@@ -2550,10 +2550,12 @@ public:
                          bool WantNontrivialTypeSourceInfo = false,
                          bool IsClassTemplateDeductionContext = true,
                          IdentifierInfo **CorrectedII = nullptr
-                         #if ENABLE_BSC
-                         , QualType ExtendedTy = QualType()
-                         #endif
-                         );
+#if ENABLE_BSC
+                         ,
+                         QualType ExtendedTy = QualType(),
+                         bool HasOwnedQualifiers = false
+#endif
+  );
   TypeSpecifierType isTagName(IdentifierInfo &II, Scope *S);
   bool isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S);
   void DiagnoseUnknownTypeName(IdentifierInfo *&II,
@@ -2929,11 +2931,13 @@ public:
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
   // FIXME: Not good enough to add two extra args.
   Decl *ActOnParamDeclarator(Scope *S, Declarator &D
-                             #if ENABLE_BSC
-                             , int ParamSize = 0,
-                             QualType ExtendedType = QualType()
-                             #endif
-                             );
+#if ENABLE_BSC
+                             ,
+                             int ParamSize = 0,
+                             QualType ExtendedType = QualType(),
+                             bool isDestructor = false
+#endif
+  );
   ParmVarDecl *BuildParmVarDeclForTypedef(DeclContext *DC,
                                           SourceLocation Loc,
                                           QualType T);
@@ -3213,6 +3217,34 @@ public:
   SmallVector<Decl *, 8> ActOnAsyncFunctionDefinition(FunctionDecl *FD);
 
   bool IsBSCCompatibleFutureType(QualType Ty);
+
+  // BSC Destructor related.
+  BSCMethodDecl *getOrInsertBSCDestructor(RecordDecl *RD);
+  void HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
+                               std::stack<FieldDecl *> InstanceFields);
+  void DesugarDestructor(RecordDecl *RD);
+  void DesugarDestructorCall(FunctionDecl *FD);
+  void CollectDestructMap(StmtResult Res, Scope *BeginScope, Scope *EndScope);
+  void CollDestructMapInFuncInstantiation(FunctionDecl *FD);
+  void CheckBSCDestructorDeclarator(FunctionDecl *NewFD);
+  void CheckBSCDestructorBody(FunctionDecl *NewFD);
+  // BSC Owned Struct related
+  bool IsOwnedStruct(std::string StructName, Scope *Scope);
+  void CheckCompletedBSCClass(Scope *S, RecordDecl *Record);
+  NamedDecl *
+  ActOnBSCMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
+                           MultiTemplateParamsArg TemplateParameterLists,
+                           Expr *BitfieldWidth);
+  void ActOnFinishBSCMemberSpecification(Scope *S, SourceLocation RLoc,
+                                         Decl *TagDecl, SourceLocation LBrac,
+                                         SourceLocation RBrac,
+                                         const ParsedAttributesView &AttrList);
+  /// ActOnStartBSCMemberDeclarations - Invoked when we have parsed a
+  /// record definition's base-specifiers clause and are starting its
+  /// member declarations.
+  void ActOnStartBSCMemberDeclarations(Scope *S, Decl *TagDecl,
+                                       SourceLocation LBraceLoc);
+  void CheckReturnStmtMemoryLeak(Expr *E);
   #endif
 
   /// We've found a use of a templated declaration that would trigger an
@@ -4260,6 +4292,10 @@ public:
     LookupOMPMapperName,
     /// Look up any declaration with any name.
     LookupAnyName
+#if ENABLE_BSC
+    ,
+    LookupBSCOwnedStructName
+#endif
   };
 
   /// Specifies whether (or how) name lookup is being performed for a
@@ -7615,11 +7651,6 @@ public:
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
-  NamedDecl *ActOnTraitMemberDeclarator(Scope *S, Declarator &D);
-
-  #if ENABLE_BSC
-  void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
-  #endif
 
   void ActOnFinishCXXMemberSpecification(Scope *S, SourceLocation RLoc,
                                          Decl *TagDecl, SourceLocation LBrac,
@@ -7630,6 +7661,8 @@ public:
   void ActOnFinishCXXNonNestedClass();
 
   #if ENABLE_BSC
+  NamedDecl *ActOnTraitMemberDeclarator(Scope *S, Declarator &D);
+  void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
   RecordDecl *ActOnDesugarVtableRecord(TraitDecl *TD);
   RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD);
   bool IsTraitExpr(Expr *Expr);
@@ -7956,7 +7989,12 @@ public:
       LookupResult &R, Scope *S, CXXScopeSpec &SS, QualType ObjectType,
       bool EnteringContext, bool &MemberOfUnknownSpecialization,
       RequiredTemplateKind RequiredTemplate = SourceLocation(),
-      AssumedTemplateKind *ATK = nullptr, bool AllowTypoCorrection = true);
+      AssumedTemplateKind *ATK = nullptr, bool AllowTypoCorrection = true
+#if ENABLE_BSC
+      ,
+      QualType T = QualType()
+#endif
+  );
 
   TemplateNameKind isTemplateName(Scope *S,
                                   CXXScopeSpec &SS,
@@ -8089,10 +8127,11 @@ public:
       ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
       bool &IsMemberSpecialization, bool &Invalid,
       bool SuppressDiagnostic = false
-      #if ENABLE_BSC
-      , QualType ExtendedTy = QualType()
-      #endif
-      );
+#if ENABLE_BSC
+      ,
+      QualType ExtendedTy = QualType()
+#endif
+  );
 
   DeclResult CheckClassTemplate(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
@@ -12302,6 +12341,9 @@ public:
   /// integer not in the range of enum values.
   void DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
                               Expr *SrcExpr);
+#if ENABLE_BSC
+  void DiagnoseAssignmentOwnedStruct(QualType DstType, Expr *SrcExpr);
+#endif
 
   /// CheckAssignmentConstraints - Perform type checking for assignment,
   /// argument passing, variable initialization, and function return values.

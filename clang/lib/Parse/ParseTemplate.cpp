@@ -308,6 +308,15 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   }
 
   if (Context == DeclaratorContext::Member) {
+#if ENABLE_BSC
+    if (getLangOpts().BSC) {
+      DeclGroupPtrTy D = ParseBSCClassMemberDeclaration(
+          AS, AccessAttrs, TemplateInfo, &DiagsFromTParams);
+      if (!D || !D.get().isSingleDecl())
+        return nullptr;
+      return D.get().getSingleDecl();
+    }
+#endif
     // We are parsing a member template.
     DeclGroupPtrTy D = ParseCXXClassMemberDeclaration(
         AS, AccessAttrs, TemplateInfo, &DiagsFromTParams);

@@ -3622,6 +3622,17 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       TypeResult T = getTypeAnnotation(Tok);
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
                                      DiagID, T, Policy);
+#if ENABLE_BSC
+      if (T.get() && !T.get().get().isNull() &&
+          (T.get().get().getCanonicalType()->isOwnedStructureType() ||
+           T.get()
+               .get()
+               .getCanonicalType()
+               ->isOwnedTemplateSpecializationType())) {
+        isInvalid = DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
+                                   getLangOpts());
+      }
+#endif
       if (isInvalid)
         break;
 
@@ -3781,15 +3792,26 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
           isConstructorDeclarator(/*Unqualified*/true))
         goto DoneWithDeclSpec;
-
+#if ENABLE_BSC
+      bool HasOwnedQualifiers = false;
+      if (getLangOpts().BSC) {
+        HasOwnedQualifiers = (DS.getTypeQualifiers() & DeclSpec::TQ_owned);
+      }
+#endif
       ParsedType TypeRep = Actions.getTypeName(
-          #if ENABLE_BSC
-          *SwitchTok.getIdentifierInfo(), SwitchTok.getLocation(), getCurScope(), nullptr,
-          #else
+#if ENABLE_BSC
+          *SwitchTok.getIdentifierInfo(), SwitchTok.getLocation(),
+          getCurScope(), nullptr,
+#else
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
-          #endif
+#endif
           false, false, nullptr, false, false,
-          isClassTemplateDeductionContext(DSContext));
+          isClassTemplateDeductionContext(DSContext), nullptr
+#if ENABLE_BSC
+          ,
+          QualType(), HasOwnedQualifiers
+#endif
+      );
 
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.
@@ -3857,7 +3879,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           DS.SetRangeEnd(NewEndLoc);
         }
       }
-
+#if ENABLE_BSC
+      if (getLangOpts().BSC &&
+          TypeRep.get().getTypePtr()->isOwnedStructureType()) {
+        DS.SetTypeQual(DeclSpec::TQ_owned, Loc, PrevSpec, DiagID,
+                       getLangOpts());
+      }
+#endif
       // Need to support trailing type qualifiers (e.g. "id<p> const").
       // If a type specifier follows, it will be diagnosed elsewhere.
       continue;
@@ -6262,7 +6290,47 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
     (this->*DirectDeclParser)(D);
     return;
   }
-  #endif
+
+  // Member function which is defined inside owned struct.
+  if (getLangOpts().BSC && Actions.CurContext->isRecord()) {
+    RecordDecl *RD = cast<RecordDecl>(Actions.CurContext);
+    if (RD->isOwnedDecl()) {
+      BSCScopeSpec BSS;
+      BSS.setBeginLoc(D.getBeginLoc());
+      QualType ExtendedTy(RD->getTypeForDecl(), 0);
+
+      const Type *BasedType = ExtendedTy.getCanonicalType().getTypePtr();
+      if (const InjectedClassNameType *ICT =
+              dyn_cast<const InjectedClassNameType>(BasedType)) {
+        ExtendedTy = ICT->getInjectedSpecializationType();
+      }
+      BSS.setExtendedType(ExtendedTy);
+      if (Actions.Context.BSCDeclContextMap.find(BasedType) ==
+          Actions.Context.BSCDeclContextMap.end()) {
+        if (const RecordType *RTy = dyn_cast<const RecordType>(
+                BasedType)) { // struct type or union type
+          Actions.Context.BSCDeclContextMap[BasedType] = RTy->getDecl();
+        } else if (const TemplateSpecializationType *TemplateTy =
+                       dyn_cast<const TemplateSpecializationType>(BasedType)) {
+          auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
+                                              .getAsTemplateDecl()
+                                              ->getTemplatedDecl());
+          Actions.Context.BSCDeclContextMap[BasedType] = DC;
+        } else if (const InjectedClassNameType *ICT =
+                       dyn_cast<const InjectedClassNameType>(BasedType)) {
+          QualType UP = ICT->getInjectedSpecializationType();
+          const TemplateSpecializationType *TemplateTy =
+              UP.getCanonicalType()->castAs<TemplateSpecializationType>();
+          auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
+                                              .getAsTemplateDecl()
+                                              ->getTemplatedDecl());
+          Actions.Context.BSCDeclContextMap[TemplateTy] = DC;
+        }
+      }
+      D.getBSCScopeSpec() = BSS;
+    }
+  }
+#endif
 
   // C++ member pointers start with a '::' or a nested-name.
   // Member pointers get special handling, since there's no place for the
@@ -6491,10 +6559,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
 
   // Add language judgement for BSC template entrance.
   if ((getLangOpts().CPlusPlus
-      #if ENABLE_BSC
-      || (getLangOpts().BSC && Actions.getCurScope()->isTemplateParamScope())
-      #endif
-      ) &&
+#if ENABLE_BSC
+       ||
+       (getLangOpts().BSC && (Actions.getCurScope()->isTemplateParamScope() ||
+                              Actions.getCurScope()->isClassScope()))
+#endif
+           ) &&
       D.mayHaveIdentifier()) {
     #if ENABLE_BSC
     if (IsParsingBSCGenericParameters) {
@@ -7150,7 +7220,13 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren)) {
-      #if ENABLE_BSC
+#if ENABLE_BSC
+      bool isDestructor = false;
+      if (getLangOpts().BSC &&
+          Actions.GetNameForDeclarator(D).getName().getNameKind() ==
+              DeclarationName::CXXDestructorName) {
+        isDestructor = true;
+      }
       QualType ExtendedType;
       if (D.getBSCScopeSpec().isNotEmpty() &&
           !D.getBSCScopeSpec().getExtendedType().isNull()) {
@@ -7160,7 +7236,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
                                       EllipsisLoc
                                       #if ENABLE_BSC
-                                      , ExtendedType, isTraitMem
+                                      , ExtendedType, isTraitMem, isDestructor
                                       #endif
                                       );
     #if ENABLE_BSC
@@ -7445,7 +7521,7 @@ void Parser::ParseParameterDeclarationClause(
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
     SourceLocation &EllipsisLoc
     #if ENABLE_BSC
-    , QualType ExtendedType, bool isTraitMem
+    , QualType ExtendedType, bool isTraitMem, bool isDestructor
     #endif
     ) {
 
@@ -7574,7 +7650,7 @@ void Parser::ParseParameterDeclarationClause(
       // added to the current scope.
       Decl *Param = Actions.ActOnParamDeclarator(getCurScope(), ParmDeclarator
                                                  #if ENABLE_BSC
-                                                 , ParamInfo.size(), ExtendedType
+                                                 , ParamInfo.size(), ExtendedType, isDestructor
                                                  #endif
                                                  );
       // Parse the default argument, if any. We parse the default

@@ -739,7 +739,13 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     // Late template parsing can begin.
     Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
     if (!PP.isIncrementalProcessingEnabled())
-      Actions.ActOnEndOfTranslationUnit();
+     { Actions.ActOnEndOfTranslationUnit();
+#if ENABLE_BSC
+      for (auto ins : Actions.Context.InstantiationVec) {
+        Actions.DesugarDestructor(ins);
+      }
+#endif
+    }
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
 
@@ -1194,6 +1200,13 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
       Decl* decls[] = {AnonRecord, TheDecl};
       return Actions.BuildDeclaratorGroup(decls);
     }
+#if ENABLE_BSC
+    if (DS.getTypeSpecType() == DeclSpec::TST_struct &&
+        (DS.getTypeQualifiers() & DeclSpec::TQ_owned)) {
+      Actions.DesugarDestructor(dyn_cast<RecordDecl>(TheDecl));
+    }
+#endif
+
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 

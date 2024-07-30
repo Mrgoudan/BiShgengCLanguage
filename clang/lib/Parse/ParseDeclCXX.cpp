@@ -2047,6 +2047,12 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     stripTypeAttributesOffDeclSpec(attrs, DS, TUK);
 
     // Declaration or definition of a class type
+#if ENABLE_BSC
+    if (getLangOpts().BSC && DS.getTypeQualifiers() & DeclSpec::TQ_owned) {
+      StartLoc = DS.getOwnedSpecLoc();
+    }
+#endif
+
     TagOrTempResult = Actions.ActOnTag(
         getCurScope(), TagType, TUK, StartLoc, SS, Name, NameLoc, attrs, AS,
         DS.getModulePrivateSpecLoc(), TParams, Owned, IsDependent,
@@ -2086,8 +2092,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     else if (getLangOpts().CPlusPlus)
       ParseCXXMemberSpecification(StartLoc, AttrFixitLoc, attrs, TagType,
                                   TagOrTempResult.get());
-    else {
-      #if ENABLE_BSC
+#if ENABLE_BSC
+    else if (getLangOpts().BSC) {
       Decl *D = nullptr;
       if (isParsingBSCTemplateStruct) {
         if (!TagOrTempResult.get()) {
@@ -2100,11 +2106,31 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       } else {
         D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
       }
-      #else
+      if (DS.getTypeQualifiers() & DeclSpec::TQ_owned) {
+        if (RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
+          RD->setOwnedDecl(true);
+        }
+      }
+      if (cast<RecordDecl>(D)->isOwnedDecl()) {
+        ParseBSCMemberSpecification(StartLoc, AttrFixitLoc, attrs, TagType,
+                                    cast<RecordDecl>(D));
+      } else {
+        // Parse the definition body.
+        ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
+
+        if (SkipBody.CheckSameAsPrevious &&
+            !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(),
+                                              SkipBody)) {
+          DS.SetTypeSpecError();
+          return;
+        }
+      }
+ 
+    }
+#endif
+    else {
       Decl *D =
           SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
-      #endif
-
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
 
@@ -2115,7 +2141,50 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       }
     }
   }
-
+#if ENABLE_BSC
+  if (getLangOpts().BSC && TUK == Sema::TUK_Declaration &&
+      TagType == DeclSpec::TST_struct && TagOrTempResult.get()) {
+    Decl *D = TagOrTempResult.get();
+    if (isa<RecordDecl>(D) && (DS.getTypeQualifiers() & DeclSpec::TQ_owned)) {
+      RecordDecl *RD = dyn_cast<RecordDecl>(D);
+      RD->setOwnedDecl(true);
+    }
+  }
+  if (getLangOpts().BSC &&
+      (TUK == Sema::TUK_Declaration || TUK == Sema::TUK_Definition) &&
+      TagType == DeclSpec::TST_struct && TagOrTempResult.get()) {
+    Decl *D = TagOrTempResult.get();
+    if (RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
+      bool Flag = RD->isOwnedDecl();
+      while (RD->getPreviousDecl() != nullptr) {
+        if (Flag != RD->getPreviousDecl()->isOwnedDecl()) {
+          Diag(StartLoc, diag::err_inconsistent_tag_name);
+          break;
+        }
+        RD = RD->getPreviousDecl();
+      }
+    }
+    if (ClassTemplateDecl *CTD = dyn_cast<ClassTemplateDecl>(D)) {
+      bool Flag = CTD->getBSCTemplatedDecl()->isOwnedDecl();
+      while (CTD->getPreviousDecl() != nullptr) {
+        if (Flag != CTD->getPreviousDecl()->getBSCTemplatedDecl()->isOwnedDecl()) {
+          Diag(StartLoc, diag::err_inconsistent_tag_name);
+          break;
+        }
+        CTD = CTD->getPreviousDecl();
+      }
+    }
+  }
+  if (getLangOpts().BSC && TUK != Sema::TUK_Definition &&
+      TUK != Sema::TUK_Declaration && TagType == DeclSpec::TST_struct &&
+      TagOrTempResult.get()) {
+    Decl *D = TagOrTempResult.get();
+    if (RecordDecl *RD = dyn_cast<RecordDecl>(D))
+      if (RD->isOwnedDecl()) {
+        Diag(StartLoc, diag::err_tag_name);
+      }
+  }
+#endif
   if (!TagOrTempResult.isInvalid())
     // Delayed processing of attributes.
     Actions.ProcessDeclAttributeDelayed(TagOrTempResult.get(), attrs);

@@ -4716,6 +4716,9 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setParamDestroyedInCallee(false);
   setArgPassingRestrictions(APK_CanPassInRegs);
   setIsRandomized(false);
+#if ENABLE_BSC
+  setOwnedDecl(false);
+#endif
 }
 
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,

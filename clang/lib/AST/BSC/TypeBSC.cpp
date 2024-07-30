@@ -96,6 +96,25 @@ bool Type::checkFunctionProtoType(SafeZoneSpecifier SZS) const {
   return false;
 }
 
+bool Type::isOwnedStructureType() const {
+  if (const auto *RT = getAs<RecordType>())
+    return RT->getDecl()->isStruct() && RT->getDecl()->isOwnedDecl();
+  return false;
+}
+
+bool Type::isOwnedTemplateSpecializationType() const {
+
+  if (const auto *RT = getAs<TemplateSpecializationType>()) {
+    if (RT->getTemplateName().getAsTemplateDecl() &&
+        RT->getTemplateName().getAsTemplateDecl()->getTemplatedDecl()) {
+      if (auto RD = dyn_cast<RecordDecl>(
+              RT->getTemplateName().getAsTemplateDecl()->getTemplatedDecl()))
+        return RD->isOwnedDecl();
+    }
+  }
+  return false;
+}
+
 void RecordType::initOwnedStatus() const {
   if (hasOwn != ownedStatus::unInitOwned)
     return;
@@ -107,7 +126,9 @@ void RecordType::initOwnedStatus() const {
     for (FieldDecl *FD :
          RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
       QualType FieldTy = FD->getType();
-      if (FieldTy.isOwnedQualified()) {
+      bool isOwnedStructType =
+          FieldTy.getCanonicalType()->isOwnedStructureType();
+      if (FieldTy.isOwnedQualified() && !isOwnedStructType) {
         hasOwn = ownedStatus::withOwned;
         return;
       }
@@ -115,7 +136,8 @@ void RecordType::initOwnedStatus() const {
       const Type *tempT = tempQT.getTypePtr();
       while (tempT->isPointerType()) {
         tempQT = tempT->getPointeeType();
-        if (tempQT.isOwnedQualified()) {
+        isOwnedStructType = tempQT.getCanonicalType()->isOwnedStructureType();
+        if (tempQT.isOwnedQualified() && !isOwnedStructType) {
           hasOwn = ownedStatus::withOwned;
           return;
         } else {

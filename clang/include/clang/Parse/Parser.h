@@ -1821,6 +1821,12 @@ private:
       bool *NotPrimaryExpression = nullptr, QualType T = QualType(),
       bool HasBSCScopeSpec = false, SourceLocation BL = SourceLocation());
   void CheckStmtTokInSafeZone(tok::TokenKind Kind);
+  ExprResult ParseCastExpression(CastParseKind ParseKind,
+                                 bool isAddressOfOperand = false,
+                                 TypeCastState isTypeCast = NotTypeCast,
+                                 bool isVectorLiteral = false,
+                                 bool *NotPrimaryExpression = nullptr,
+                                 QualType T = QualType());
 #else
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
@@ -1828,12 +1834,12 @@ private:
                                  TypeCastState isTypeCast,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
-#endif
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand = false,
                                  TypeCastState isTypeCast = NotTypeCast,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
+#endif
 
   /// Returns true if the next token cannot start an expression.
   bool isNotExpressionStart();
@@ -1913,8 +1919,18 @@ private:
   //===--------------------------------------------------------------------===//
   // C++ Expressions
   ExprResult tryParseCXXIdExpression(CXXScopeSpec &SS, bool isAddressOfOperand,
-                                     Token &Replacement);
-  ExprResult ParseCXXIdExpression(bool isAddressOfOperand = false);
+                                     Token &Replacement
+#if ENABLE_BSC
+                                     ,
+                                     QualType T = QualType()
+#endif
+  );
+  ExprResult ParseCXXIdExpression(bool isAddressOfOperand = false
+#if ENABLE_BSC
+                                  ,
+                                  QualType T = QualType()
+#endif
+  );
 
   bool areTokensAdjacent(const Token &A, const Token &B);
 
@@ -3111,11 +3127,12 @@ private:
       DeclaratorContext DeclaratorContext, ParsedAttributes &attrs,
       SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
       SourceLocation &EllipsisLoc
-      #if ENABLE_BSC
-      , QualType ExtendedType = QualType(),
-      bool isTraitMem = false
-      #endif
-      );
+#if ENABLE_BSC
+      ,
+      QualType ExtendedType = QualType(), bool isTraitMem = false,
+      bool isDestructor = false
+#endif
+  );
   void ParseBracketDeclarator(Declarator &D);
   void ParseMisplacedBracketDeclarator(Declarator &D);
 
@@ -3226,6 +3243,27 @@ private:
   ParseCXXClassMemberDeclarationWithPragmas(AccessSpecifier &AS,
                                             ParsedAttributes &AccessAttrs,
                                             DeclSpec::TST TagType, Decl *Tag);
+#if ENABLE_BSC
+  NamedDecl *ParseBSCInlineMethodDef(AccessSpecifier AS,
+                                     const ParsedAttributesView &AccessAttrs,
+                                     ParsingDeclarator &D,
+                                     const ParsedTemplateInfo &TemplateInfo);
+  void ParseBSCMemberSpecification(SourceLocation StartLoc,
+                                   SourceLocation AttrFixitLoc,
+                                   ParsedAttributes &Attrs, unsigned TagType,
+                                   Decl *TagDecl);
+  bool ParseBSCMemberDeclaratorBeforeInitializer(Declarator &DeclaratorInfo,
+                                                 ExprResult &BitfieldSize,
+                                                 LateParsedAttrList &LateAttrs);
+  DeclGroupPtrTy ParseBSCClassMemberDeclaration(
+      AccessSpecifier AS, ParsedAttributes &Attr,
+      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
+      ParsingDeclRAIIObject *DiagsFromTParams = nullptr);
+  DeclGroupPtrTy
+  ParseBSCClassMemberDeclarationWithPragmas(AccessSpecifier &AS,
+                                            ParsedAttributes &AccessAttrs,
+                                            DeclSpec::TST TagType, Decl *Tag);
+#endif
   void ParseConstructorInitializer(Decl *ConstructorDecl);
   MemInitResult ParseMemInitializer(Decl *ConstructorDecl);
   void HandleMemberFunctionDeclDelays(Declarator& DeclaratorInfo,

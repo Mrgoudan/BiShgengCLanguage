@@ -4740,16 +4740,29 @@ QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
 }
 
 QualType ASTContext::getRecordType(const RecordDecl *Decl) const {
-  if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
+  if (Decl->TypeForDecl)
+    return QualType(Decl->TypeForDecl, 0
+#if ENABLE_BSC
+                    , Decl->isOwnedDecl()
+#endif
+    );
 
   if (const RecordDecl *PrevDecl = Decl->getPreviousDecl())
     if (PrevDecl->TypeForDecl)
-      return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
+      return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0
+#if ENABLE_BSC
+                      , Decl->isOwnedDecl()
+#endif
+      );
 
   auto *newType = new (*this, TypeAlignment) RecordType(Decl);
   Decl->TypeForDecl = newType;
   Types.push_back(newType);
-  return QualType(newType, 0);
+  return QualType(newType, 0
+#if ENABLE_BSC
+                  , Decl->isOwnedDecl()
+#endif
+  );
 }
 
 #if ENABLE_BSC

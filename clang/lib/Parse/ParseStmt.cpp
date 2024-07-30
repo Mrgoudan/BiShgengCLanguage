@@ -374,18 +374,33 @@ Default:
   case tok::kw_goto:                // C99 6.8.6.1: goto-statement
     Res = ParseGotoStatement();
     SemiError = "goto";
+#if ENABLE_BSC
+    Actions.CollectDestructMap(Res.get(), getCurScope(), getCurScope());
+#endif
     break;
   case tok::kw_continue:            // C99 6.8.6.2: continue-statement
     Res = ParseContinueStatement();
     SemiError = "continue";
+#if ENABLE_BSC
+    Actions.CollectDestructMap(Res.get(), getCurScope(),
+                               getCurScope()->getContinueParent());
+#endif
     break;
   case tok::kw_break:               // C99 6.8.6.3: break-statement
     Res = ParseBreakStatement();
     SemiError = "break";
+#if ENABLE_BSC
+    Actions.CollectDestructMap(Res.get(), getCurScope(),
+                               getCurScope()->getFnParent());
+#endif
     break;
   case tok::kw_return:              // C99 6.8.6.4: return-statement
     Res = ParseReturnStatement();
     SemiError = "return";
+#if ENABLE_BSC
+    Actions.CollectDestructMap(Res.get(), getCurScope(),
+                               getCurScope()->getFnParent());
+#endif
     break;
   case tok::kw_co_return:            // C++ Coroutines: co_return statement
     Res = ParseReturnStatement();
@@ -1095,11 +1110,16 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   }
 #endif
   // Parse the statements in the body.
-  return ParseCompoundStatementBody(isStmtExpr
-                                    #if ENABLE_BSC
-                                    , SafeSpec, SafeLoc
-                                    #endif
-                                    );
+  StmtResult Stmt(ParseCompoundStatementBody(isStmtExpr
+#if ENABLE_BSC
+                                             ,
+                                             SafeSpec, SafeLoc
+#endif
+                                             ));
+#if ENABLE_BSC
+  Actions.CollectDestructMap(Stmt, getCurScope(), getCurScope());
+#endif
+  return Stmt;
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -2660,6 +2680,9 @@ Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
     FnBody = Actions.ActOnCompoundStmt(LBraceLoc, LBraceLoc, None, false);
   }
 
+#if ENABLE_BSC
+  Actions.CollectDestructMap(FnBody, getCurScope(), getCurScope());
+#endif
   BodyScope.Exit();
   return Actions.ActOnFinishFunctionBody(Decl, FnBody.get());
 }

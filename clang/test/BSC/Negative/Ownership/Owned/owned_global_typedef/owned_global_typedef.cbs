@@ -13,4 +13,4 @@ typedef owned struct B {
     int a;
 }BB;
 
-BB bb;  //expected-error {{type of global variable cannot qualified by 'owned', 'BB' (aka 'owned struct B') contains 'owned' type}}
+BB bb;  //expected-error {{type of global variable cannot qualified by 'owned', 'owned BB' (aka 'owned struct B') contains 'owned' type}}

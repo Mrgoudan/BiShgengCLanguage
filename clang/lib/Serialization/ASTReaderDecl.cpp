@@ -843,6 +843,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
 
   #if ENABLE_BSC
+  RD->setOwnedDecl(Record.readInt());
   ASTContext &C = Reader.getContext();
 
   enum CXXRecKind {

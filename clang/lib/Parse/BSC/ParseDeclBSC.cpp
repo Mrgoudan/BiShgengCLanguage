@@ -19,6 +19,7 @@
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "clang/Sema/Lookup.h"
 
 using namespace clang;
@@ -858,6 +859,698 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
       Tok.setKind(tok::semi);
     }
   }
+}
+NamedDecl *Parser::ParseBSCInlineMethodDef(
+    AccessSpecifier AS, const ParsedAttributesView &AccessAttrs,
+    ParsingDeclarator &D, const ParsedTemplateInfo &TemplateInfo) {
+  assert(D.isFunctionDeclarator() && "This isn't a function declarator!");
+  assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::equal) &&
+         "Current token not a '{', ':', '=', or 'try'!");
+
+  MultiTemplateParamsArg TemplateParams(
+      TemplateInfo.TemplateParams ? TemplateInfo.TemplateParams->data()
+                                  : nullptr,
+      TemplateInfo.TemplateParams ? TemplateInfo.TemplateParams->size() : 0);
+
+  NamedDecl *FnD = Actions.ActOnBSCMemberDeclarator(getCurScope(), AS, D,
+                                                    TemplateParams, nullptr);
+  if (FnD) {
+    Actions.ProcessDeclAttributeList(getCurScope(), FnD, AccessAttrs);
+  }
+
+  if (FnD)
+    HandleMemberFunctionDeclDelays(D, FnD);
+
+  D.complete(FnD);
+
+  if (SkipFunctionBodies && (!FnD || Actions.canSkipFunctionBody(FnD)) &&
+      trySkippingFunctionBody()) {
+    Actions.ActOnSkippedFunctionBody(FnD);
+    return FnD;
+  }
+
+  // In delayed template parsing mode, if we are within a class template
+  // or if we are about to parse function member template then consume
+  // the tokens and store them for parsing at the end of the translation unit.
+  if (getLangOpts().DelayedTemplateParsing &&
+      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Definition &&
+      !D.getDeclSpec().hasConstexprSpecifier() &&
+      !(FnD && FnD->getAsFunction() &&
+        FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
+      ((Actions.CurContext->isDependentContext() ||
+        (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+         TemplateInfo.Kind != ParsedTemplateInfo::ExplicitSpecialization)) &&
+       !Actions.IsInsideALocalClassWithinATemplateFunction())) {
+
+    CachedTokens Toks;
+    LexTemplateFunctionForLateParsing(Toks);
+
+    if (FnD) {
+      FunctionDecl *FD = FnD->getAsFunction();
+      Actions.CheckForFunctionRedefinition(FD);
+      Actions.MarkAsLateParsedTemplate(FD, FnD, Toks);
+    }
+
+    return FnD;
+  }
+
+  // Consume the tokens and store them for later parsing.
+
+  LexedMethod *LM = new LexedMethod(this, FnD);
+  getCurrentClass().LateParsedDeclarations.push_back(LM);
+  CachedTokens &Toks = LM->Toks;
+
+  // Consume everything up to (and including) the left brace of the
+  // function body.
+  if (ConsumeAndStoreFunctionPrologue(Toks)) {
+    // We didn't find the left-brace we expected after the
+    // constructor initializer.
+
+    // If we're code-completing and the completion point was in the broken
+    // initializer, we want to parse it even though that will fail.
+    if (PP.isCodeCompletionEnabled() &&
+        llvm::any_of(Toks, [](const Token &Tok) {
+          return Tok.is(tok::code_completion);
+        })) {
+      // If we gave up at the completion point, the initializer list was
+      // likely truncated, so don't eat more tokens. We'll hit some extra
+      // errors, but they should be ignored in code completion.
+      return FnD;
+    }
+
+    // We already printed an error, and it's likely impossible to recover,
+    // so don't try to parse this method later.
+    // Skip over the rest of the decl and back to somewhere that looks
+    // reasonable.
+    SkipMalformedDecl();
+    delete getCurrentClass().LateParsedDeclarations.back();
+    getCurrentClass().LateParsedDeclarations.pop_back();
+    return FnD;
+  } else {
+    // Consume everything up to (and including) the matching right brace.
+    ConsumeAndStoreUntil(tok::r_brace, Toks, /*StopAtSemi=*/false);
+  }
+
+  if (FnD) {
+    FunctionDecl *FD = FnD->getAsFunction();
+    // Track that this function will eventually have a body; Sema needs
+    // to know this.
+    Actions.CheckForFunctionRedefinition(FD);
+    FD->setWillHaveBody(true);
+  } else {
+    // If semantic analysis could not build a function declaration,
+    // just throw away the late-parsed declaration.
+    delete getCurrentClass().LateParsedDeclarations.back();
+    getCurrentClass().LateParsedDeclarations.pop_back();
+  }
+
+  return FnD;
+}
+
+Parser::DeclGroupPtrTy Parser::ParseBSCClassMemberDeclarationWithPragmas(
+    AccessSpecifier &AS, ParsedAttributes &AccessAttrs, DeclSpec::TST TagType,
+    Decl *TagDecl) {
+  ParenBraceBracketBalancer BalancerRAIIObj(*this);
+
+  switch (Tok.getKind()) {
+  case tok::kw___if_exists:
+  case tok::kw___if_not_exists:
+    ParseMicrosoftIfExistsClassDeclaration(TagType, AccessAttrs, AS);
+    return nullptr;
+
+  case tok::semi:
+    // Check for extraneous top-level semicolon.
+    ConsumeExtraSemi(InsideStruct, TagType);
+    return nullptr;
+
+    // Handle pragmas that can appear as member declarations.
+  case tok::annot_pragma_vis:
+    HandlePragmaVisibility();
+    return nullptr;
+  case tok::annot_pragma_pack:
+    HandlePragmaPack();
+    return nullptr;
+  case tok::annot_pragma_align:
+    HandlePragmaAlign();
+    return nullptr;
+  case tok::annot_pragma_ms_pointers_to_members:
+    HandlePragmaMSPointersToMembers();
+    return nullptr;
+  case tok::annot_pragma_ms_pragma:
+    HandlePragmaMSPragma();
+    return nullptr;
+  case tok::annot_pragma_ms_vtordisp:
+    HandlePragmaMSVtorDisp();
+    return nullptr;
+  case tok::annot_pragma_dump:
+    HandlePragmaDump();
+    return nullptr;
+
+  case tok::kw_private:
+    // FIXME: We don't accept GNU attributes on access specifiers in OpenCL mode
+    // yet.
+    if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
+      return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
+    LLVM_FALLTHROUGH;
+  case tok::kw_public: {
+    AccessSpecifier NewAS = getAccessSpecifierIfPresent();
+    assert(NewAS != AS_none);
+    // Current token is a C++ access specifier.
+    AS = NewAS;
+    SourceLocation ASLoc = Tok.getLocation();
+    unsigned TokLength = Tok.getLength();
+    ConsumeToken();
+    AccessAttrs.clear();
+    MaybeParseGNUAttributes(AccessAttrs);
+
+    SourceLocation EndLoc;
+    if (TryConsumeToken(tok::colon, EndLoc)) {
+    } else if (TryConsumeToken(tok::semi, EndLoc)) {
+      Diag(EndLoc, diag::err_expected)
+          << tok::colon << FixItHint::CreateReplacement(EndLoc, ":");
+    } else {
+      EndLoc = ASLoc.getLocWithOffset(TokLength);
+      Diag(EndLoc, diag::err_expected)
+          << tok::colon << FixItHint::CreateInsertion(EndLoc, ":");
+    }
+
+    if (Actions.ActOnAccessSpecifier(NewAS, ASLoc, EndLoc, AccessAttrs)) {
+      // found another attribute than only annotations
+      AccessAttrs.clear();
+    }
+
+    return nullptr;
+  }
+
+  case tok::annot_attr_openmp:
+  case tok::annot_pragma_openmp:
+    return ParseOpenMPDeclarativeDirectiveWithExtDecl(
+        AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
+
+  default:
+    if (tok::isPragmaAnnotation(Tok.getKind())) {
+      Diag(Tok.getLocation(), diag::err_pragma_misplaced_in_decl)
+          << DeclSpec::getSpecifierName(
+                 TagType, Actions.getASTContext().getPrintingPolicy());
+      ConsumeAnnotationToken();
+      return nullptr;
+    }
+    return ParseBSCClassMemberDeclaration(AS, AccessAttrs);
+  }
+}
+// map to ParseStructUnionBody
+void Parser::ParseBSCMemberSpecification(SourceLocation RecordLoc,
+                                         SourceLocation AttrFixitLoc,
+                                         ParsedAttributes &Attrs,
+                                         unsigned TagType, Decl *TagDecl) {
+  assert((TagType == DeclSpec::TST_class || TagType == DeclSpec::TST_struct) &&
+         "Invalid TagType!");
+
+  llvm::TimeTraceScope TimeScope("ParseClass", [&]() {
+    if (auto *TD = dyn_cast_or_null<NamedDecl>(TagDecl))
+      return TD->getQualifiedNameAsString();
+    return std::string("<anonymous>");
+  });
+
+  PrettyDeclStackTraceEntry CrashInfo(Actions.Context, TagDecl, RecordLoc,
+                                      "parsing class body");
+
+  // Enter a scope for the class.
+  ParseScope ClassScope(this, Scope::ClassScope | Scope::DeclScope);
+
+  // Note that we are parsing a new (potentially-nested) class definition.
+  ParsingClassDefinition ParsingDef(*this, TagDecl, true, false);
+
+  if (TagDecl)
+    Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
+
+  assert(Tok.is(tok::l_brace));
+  BalancedDelimiterTracker T(*this, tok::l_brace);
+  T.consumeOpen();
+
+  if (TagDecl)
+    Actions.ActOnStartBSCMemberDeclarations(getCurScope(), TagDecl,
+                                            T.getOpenLocation());
+
+  // C++ 11p3: Members of a class defined with the keyword class are private
+  // by default. Members of a class defined with the keywords struct or union
+  // are public by default.
+  // HLSL: In HLSL members of a class are public by default.
+  AccessSpecifier CurAS;
+  CurAS = AS_private;
+  ParsedAttributes AccessAttrs(AttrFactory);
+
+  if (TagDecl) {
+    // While we still have something to read, read the member-declarations.
+    while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
+           Tok.isNot(tok::eof)) {
+      // Each iteration of this loop reads one member-declaration.
+      ParseBSCClassMemberDeclarationWithPragmas(
+          CurAS, AccessAttrs, static_cast<DeclSpec::TST>(TagType), TagDecl);
+      MaybeDestroyTemplateIds();
+    }
+    T.consumeClose();
+  } else {
+    SkipUntil(tok::r_brace);
+  }
+
+  // If attributes exist after class contents, parse them.
+  ParsedAttributes attrs(AttrFactory);
+  MaybeParseGNUAttributes(attrs);
+
+  if (TagDecl)
+    Actions.ActOnFinishBSCMemberSpecification(getCurScope(), RecordLoc, TagDecl,
+                                              T.getOpenLocation(),
+                                              T.getCloseLocation(), attrs);
+
+  // C++11 [class.mem]p2:
+  //   Within the class member-specification, the class is regarded as complete
+  //   within function bodies, default arguments, exception-specifications, and
+  //   brace-or-equal-initializers for non-static data members (including such
+  //   things in nested classes).
+  if (TagDecl) {
+    // We are not inside a nested class. This class and its nested classes
+    // are complete and we can parse the delayed portions of method
+    // declarations and the lexed inline method definitions, along with any
+    // delayed attributes.
+
+    SourceLocation SavedPrevTokLocation = PrevTokLocation;
+    ParseLexedPragmas(getCurrentClass());
+    ParseLexedAttributes(getCurrentClass());
+    ParseLexedMethodDeclarations(getCurrentClass());
+
+    // // We've finished with all pending member declarations.
+    // Actions.ActOnFinishCXXMemberDecls();
+
+    // ParseLexedMemberInitializers(getCurrentClass());
+    ParseLexedMethodDefs(getCurrentClass());
+    PrevTokLocation = SavedPrevTokLocation;
+
+    // We've finished parsing everything, including default argument
+    // initializers.
+    Actions.ActOnFinishCXXNonNestedClass();
+  }
+
+  if (TagDecl)
+    Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
+
+  // Leave the class scope.
+  ParsingDef.Pop();
+  ClassScope.Exit();
+}
+
+Parser::DeclGroupPtrTy
+Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
+                                       ParsedAttributes &AccessAttrs,
+                                       const ParsedTemplateInfo &TemplateInfo,
+                                       ParsingDeclRAIIObject *TemplateDiags) {
+  if (Tok.is(tok::at)) { // TODO why not @def
+
+    Diag(Tok, diag::err_at_in_class);
+
+    ConsumeToken();
+    SkipUntil(tok::r_brace, StopAtSemi);
+    return nullptr;
+  }
+
+  // Turn on colon protection early, while parsing declspec, although there is
+  // nothing to protect there. It prevents from false errors if error recovery
+  // incorrectly determines where the declspec ends, as in the example:
+  //   struct A { enum class B { C }; };
+  //   const int C = 4;
+  //   struct D { A::B : C; };
+  ColonProtectionRAIIObject X(*this);
+
+  // Access declarations.
+  bool MalformedTypeSpec = false;
+  if (!TemplateInfo.Kind && Tok.isOneOf(tok::identifier, tok::coloncolon)) {
+    if (TryAnnotateCXXScopeToken())
+      MalformedTypeSpec = true;
+
+    bool isAccessDecl;
+    if (Tok.isNot(tok::annot_cxxscope))
+      isAccessDecl = false;
+    else if (NextToken().is(tok::identifier))
+      isAccessDecl = GetLookAheadToken(2).is(tok::semi);
+    else
+      isAccessDecl = NextToken().is(tok::kw_operator);
+
+    if (isAccessDecl) {
+      // Collect the scope specifier token we annotated earlier.
+      CXXScopeSpec SS;
+      ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                     /*ObjectHasErrors=*/false,
+                                     /*EnteringContext=*/false);
+
+      if (SS.isInvalid()) {
+        SkipUntil(tok::semi);
+        return nullptr;
+      }
+
+      // Try to parse an unqualified-id.
+      SourceLocation TemplateKWLoc;
+      UnqualifiedId Name;
+      if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
+                             /*ObjectHadErrors=*/false, false, true, true,
+                             false, &TemplateKWLoc, Name)) {
+        SkipUntil(tok::semi);
+        return nullptr;
+      }
+
+      // TODO: recover from mistakenly-qualified operator declarations.
+      if (ExpectAndConsume(tok::semi, diag::err_expected_after,
+                           "access declaration")) {
+        SkipUntil(tok::semi);
+        return nullptr;
+      }
+
+      // FIXME: We should do something with the 'template' keyword here.
+      return DeclGroupPtrTy::make(DeclGroupRef(Actions.ActOnUsingDeclaration(
+          getCurScope(), AS, /*UsingLoc*/ SourceLocation(),
+          /*TypenameLoc*/ SourceLocation(), SS, Name,
+          /*EllipsisLoc*/ SourceLocation(),
+          /*AttrList*/ ParsedAttributesView())));
+    }
+  }
+
+  // static_assert-declaration. A templated static_assert declaration is
+  // diagnosed in Parser::ParseSingleDeclarationAfterTemplate.
+  if (!TemplateInfo.Kind &&
+      Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+    SourceLocation DeclEnd;
+    return DeclGroupPtrTy::make(
+        DeclGroupRef(ParseStaticAssertDeclaration(DeclEnd)));
+  }
+
+  // Handle:  member-declaration ::= '__extension__' member-declaration
+  if (Tok.is(tok::kw___extension__)) {
+    // __extension__ silences extension warnings in the subexpression.
+    ExtensionRAIIObject O(Diags); // Use RAII to do this.
+    ConsumeToken();
+    return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo,
+                                          TemplateDiags);
+  }
+
+  ParsedAttributes DeclAttrs(AttrFactory);
+  // Optional C++11 attribute-specifier
+  MaybeParseCXX11Attributes(DeclAttrs);
+
+  // The next token may be an OpenMP pragma annotation token. That would
+  // normally be handled from ParseCXXClassMemberDeclarationWithPragmas, but in
+  // this case, it came from an *attribute* rather than a pragma. Handle it now.
+  if (Tok.is(tok::annot_attr_openmp))
+    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, DeclAttrs);
+
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+  MaybeParseMicrosoftAttributes(DeclSpecAttrs);
+
+  // Hold late-parsed attributes so we can attach a Decl to them later.
+  LateParsedAttrList CommonLateParsedAttrs;
+
+  // decl-specifier-seq:
+  // Parse the common declaration-specifiers piece.
+  ParsingDeclSpec DS(*this, TemplateDiags);
+  DS.takeAttributesFrom(DeclSpecAttrs);
+
+  if (MalformedTypeSpec)
+    DS.SetTypeSpecError();
+
+  // Turn off usual access checking for templates explicit specialization
+  // and instantiation.
+  // C++20 [temp.spec] 13.9/6.
+  // This disables the access checking rules for member function template
+  // explicit instantiation and explicit specialization.
+  bool IsTemplateSpecOrInst =
+      (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
+       TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+  SuppressAccessChecks diagsFromTag(*this, IsTemplateSpecOrInst);
+
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DeclSpecContext::DSC_class,
+                             &CommonLateParsedAttrs); //
+
+  if (IsTemplateSpecOrInst)
+    diagsFromTag.done();
+
+  // Turn off colon protection that was set for declspec.
+  X.restore();
+
+  // If we had a free-standing type definition with a missing semicolon, we
+  // may get this far before the problem becomes obvious.
+  if (DS.hasTagDefinition() &&
+      TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate &&
+      DiagnoseMissingSemiAfterTagDefinition(DS, AS, DeclSpecContext::DSC_class,
+                                            &CommonLateParsedAttrs))
+    return nullptr;
+
+  MultiTemplateParamsArg TemplateParams(
+      TemplateInfo.TemplateParams ? TemplateInfo.TemplateParams->data()
+                                  : nullptr,
+      TemplateInfo.TemplateParams ? TemplateInfo.TemplateParams->size() : 0);
+
+  if (TryConsumeToken(tok::semi)) {
+    if (DS.isFriendSpecified())
+      ProhibitAttributes(DeclAttrs);
+
+    RecordDecl *AnonRecord = nullptr;
+    Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
+        getCurScope(), AS, DS, DeclAttrs, TemplateParams, false, AnonRecord);
+    DS.complete(TheDecl);
+    if (AnonRecord) {
+      Decl *decls[] = {AnonRecord, TheDecl};
+      return Actions.BuildDeclaratorGroup(decls);
+    }
+    return Actions.ConvertDeclToDeclGroup(TheDecl);
+  }
+
+  ParsingDeclarator DeclaratorInfo(*this, DS, DeclAttrs,
+                                   DeclaratorContext::Member);
+  if (TemplateInfo.TemplateParams)
+    DeclaratorInfo.setTemplateParameterLists(TemplateParams);
+
+  // Hold late-parsed attributes so we can attach a Decl to them later.
+  LateParsedAttrList LateParsedAttrs;
+
+  SmallVector<Decl *, 8> DeclsInGroup;
+  ExprResult BitfieldSize;
+  bool ExpectSemi = true;
+
+  // Parse the first declarator.
+  if (ParseBSCMemberDeclaratorBeforeInitializer(DeclaratorInfo, BitfieldSize,
+                                                LateParsedAttrs)) {
+    TryConsumeToken(tok::semi);
+    return nullptr;
+  }
+
+  // Check for a member function definition.
+  if (BitfieldSize.isUnset()) {
+    FunctionDefinitionKind DefinitionKind = FunctionDefinitionKind::Declaration;
+    // function-definition:
+    //
+    // In C++11, a non-function declarator followed by an open brace is a
+    // braced-init-list for an in-class member initialization, not an
+    // erroneous function definition.
+    if (Tok.is(tok::l_brace) && !getLangOpts().CPlusPlus11) {
+      DefinitionKind = FunctionDefinitionKind::Definition;
+    } else if (DeclaratorInfo.isFunctionDeclarator()) {
+      if (Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try)) {
+        DefinitionKind = FunctionDefinitionKind::Definition;
+      }
+    }
+    DeclaratorInfo.setFunctionDefinitionKind(DefinitionKind);
+
+    if (DefinitionKind != FunctionDefinitionKind::Declaration) {
+      if (!DeclaratorInfo.isFunctionDeclarator()) {
+        Diag(DeclaratorInfo.getIdentifierLoc(), diag::err_func_def_no_params);
+        ConsumeBrace();
+        SkipUntil(tok::r_brace);
+
+        // Consume the optional ';'
+        TryConsumeToken(tok::semi);
+
+        return nullptr;
+      }
+
+      if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef) {
+        Diag(DeclaratorInfo.getIdentifierLoc(),
+             diag::err_function_declared_typedef);
+
+        // Recover by treating the 'typedef' as spurious.
+        DS.ClearStorageClassSpecs();
+      }
+
+      Decl *FunDecl = ParseBSCInlineMethodDef(AS, AccessAttrs, DeclaratorInfo,
+                                              TemplateInfo);
+
+      if (FunDecl) {
+        for (unsigned i = 0, ni = CommonLateParsedAttrs.size(); i < ni; ++i) {
+          CommonLateParsedAttrs[i]->addDecl(FunDecl);
+        }
+        for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i) {
+          LateParsedAttrs[i]->addDecl(FunDecl);
+        }
+      }
+      LateParsedAttrs.clear();
+
+      // Consume the ';' - it's optional unless we have a delete or default
+      if (Tok.is(tok::semi))
+        ConsumeExtraSemi(AfterMemberFunctionDefinition);
+
+      return DeclGroupPtrTy::make(DeclGroupRef(FunDecl));
+    }
+  }
+
+  // member-declarator-list:
+  //   member-declarator
+  //   member-declarator-list ',' member-declarator
+
+  while (true) {
+    // NOTE: If Sema is the Action module and declarator is an instance field,
+    // this call will *not* return the created decl; It will return null.
+    // See Sema::ActOnCXXMemberDeclarator for details.
+
+    NamedDecl *ThisDecl = nullptr;
+
+    ThisDecl = Actions.ActOnBSCMemberDeclarator(
+        getCurScope(), AS, DeclaratorInfo, TemplateParams, BitfieldSize.get());
+
+    if (VarTemplateDecl *VT =
+            ThisDecl ? dyn_cast<VarTemplateDecl>(ThisDecl) : nullptr)
+      // Re-direct this decl to refer to the templated decl so that we can
+      // initialize it.
+      ThisDecl = VT->getTemplatedDecl();
+
+    if (ThisDecl)
+      Actions.ProcessDeclAttributeList(getCurScope(), ThisDecl, AccessAttrs);
+
+    if (ThisDecl) {
+      if (!ThisDecl->isInvalidDecl()) {
+        // Set the Decl for any late parsed attributes
+        for (unsigned i = 0, ni = CommonLateParsedAttrs.size(); i < ni; ++i)
+          CommonLateParsedAttrs[i]->addDecl(ThisDecl);
+
+        for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i)
+          LateParsedAttrs[i]->addDecl(ThisDecl);
+      }
+      Actions.FinalizeDeclaration(ThisDecl);
+      DeclsInGroup.push_back(ThisDecl);
+
+      if (DeclaratorInfo.isFunctionDeclarator() &&
+          DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
+              DeclSpec::SCS_typedef)
+        HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
+    }
+    LateParsedAttrs.clear();
+
+    DeclaratorInfo.complete(ThisDecl);
+
+    // If we don't have a comma, it is either the end of the list (a ';')
+    // or an error, bail out.
+    SourceLocation CommaLoc;
+    if (!TryConsumeToken(tok::comma, CommaLoc)) {
+      if (getLangOpts().BSC && ThisDecl->getAsFunction()) {
+        if (BSCMethodDecl *BSCMD =
+                dyn_cast<BSCMethodDecl>(ThisDecl->getAsFunction())) {
+          if (BSCMD->isDestructor() && !ThisDecl->isInvalidDecl()) {
+            Actions.CheckBSCDestructorBody(
+                dyn_cast<FunctionDecl>(ThisDecl->getAsFunction()));
+          }
+        }
+      }
+      break;
+    }
+
+    if (Tok.isAtStartOfLine() &&
+        !MightBeDeclarator(DeclaratorContext::Member)) {
+      // This comma was followed by a line-break and something which can't be
+      // the start of a declarator. The comma was probably a typo for a
+      // semicolon.
+      Diag(CommaLoc, diag::err_expected_semi_declaration)
+          << FixItHint::CreateReplacement(CommaLoc, ";");
+      ExpectSemi = false;
+      break;
+    }
+
+    // Parse the next declarator.
+    DeclaratorInfo.clear();
+    BitfieldSize = ExprResult(/*Invalid=*/false);
+    DeclaratorInfo.setCommaLoc(CommaLoc);
+
+    // GNU attributes are allowed before the second and subsequent declarator.
+    // However, this does not apply for [[]] attributes (which could show up
+    // before or after the __attribute__ attributes).
+    DiagnoseAndSkipCXX11Attributes();
+    MaybeParseGNUAttributes(DeclaratorInfo);
+    DiagnoseAndSkipCXX11Attributes();
+
+    if (ParseBSCMemberDeclaratorBeforeInitializer(DeclaratorInfo, BitfieldSize,
+                                                  LateParsedAttrs))
+      break;
+  }
+
+  if (ExpectSemi &&
+      ExpectAndConsume(tok::semi, diag::err_expected_semi_decl_list)) {
+    // Skip to end of block or statement.
+    SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+    // If we stopped at a ';', eat it.
+    TryConsumeToken(tok::semi);
+    return nullptr;
+  }
+
+  return Actions.FinalizeDeclaratorGroup(getCurScope(), DS, DeclsInGroup);
+}
+
+bool Parser::ParseBSCMemberDeclaratorBeforeInitializer(
+    Declarator &DeclaratorInfo, ExprResult &BitfieldSize,
+    LateParsedAttrList &LateParsedAttrs) {
+  // member-declarator:
+  //   declarator requires-clause
+  //   declarator brace-or-equal-initializer[opt]
+  //   identifier attribute-specifier-seq[opt] ':' constant-expression
+  //       brace-or-equal-initializer[opt]
+  //   ':' constant-expression
+  //
+  // NOTE: the latter two productions are a proposed bugfix rather than the
+  // current grammar rules as of C++20.
+  if (Tok.isNot(tok::colon))
+    ParseDeclarator(DeclaratorInfo);
+  else
+    DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
+
+  if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
+    assert(DeclaratorInfo.isPastIdentifier() &&
+           "don't know where identifier would go yet?");
+    BitfieldSize = ParseConstantExpression();
+    if (BitfieldSize.isInvalid())
+      SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
+  } else {
+  }
+
+  // If a simple-asm-expr is present, parse it.
+  if (Tok.is(tok::kw_asm)) {
+    SourceLocation Loc;
+    ExprResult AsmLabel(ParseSimpleAsm(/*ForAsmLabel*/ true, &Loc));
+    if (AsmLabel.isInvalid())
+      SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
+
+    DeclaratorInfo.setAsmLabel(AsmLabel.get());
+    DeclaratorInfo.SetRangeEnd(Loc);
+  }
+
+  // If attributes exist after the declarator, but before an '{', parse them.
+  // However, this does not apply for [[]] attributes (which could show up
+  // before or after the __attribute__ attributes).
+  DiagnoseAndSkipCXX11Attributes();
+  MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+  DiagnoseAndSkipCXX11Attributes();
+
+  // If this has neither a name nor a bit width, something has gone seriously
+  // wrong. Skip until the semi-colon or }.
+  if (!DeclaratorInfo.hasName() && BitfieldSize.isUnset()) {
+    // If so, skip until the semi-colon or a }.
+    SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+    return true;
+  }
+  return false;
 }
 
 // The extended type of a BSC member function cannot be a generic typealias,

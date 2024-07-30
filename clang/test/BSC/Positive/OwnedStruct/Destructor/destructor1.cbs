@@ -1,0 +1,45 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+int x = 0;
+owned struct A {
+  ~A(A this) {
+    x++;
+  }
+};
+
+
+owned struct B {
+};
+
+owned struct C {
+public:
+    A a;
+};
+
+owned struct D {
+public:
+    A a;
+    ~D(D this) {
+    }
+};
+
+
+owned struct E {
+public:
+    A *a;
+};
+
+int foo() {
+  A a = {};
+  E e= {&a};
+  C c = {a};
+  return x;
+}
+int main() {
+  return foo()-1;
+}
+

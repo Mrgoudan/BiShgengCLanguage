@@ -681,14 +681,24 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                        bool isAddressOfOperand,
                                        TypeCastState isTypeCast,
                                        bool isVectorLiteral,
-                                       bool *NotPrimaryExpression) {
+                                       bool *NotPrimaryExpression
+#if ENABLE_BSC
+                                       ,
+                                       QualType T
+#endif
+) {
   bool NotCastExpr;
   ExprResult Res = ParseCastExpression(ParseKind,
                                        isAddressOfOperand,
                                        NotCastExpr,
                                        isTypeCast,
                                        isVectorLiteral,
-                                       NotPrimaryExpression);
+                                       NotPrimaryExpression
+#if ENABLE_BSC
+                                       ,
+                                       T
+#endif
+      );
   if (NotCastExpr)
     Diag(Tok, diag::err_expected_expression);
   return Res;
@@ -1180,7 +1190,13 @@ ExprResult Parser::ParseCastExpression(
           return ParseCastExpression(ParseKind, isAddressOfOperand,
                                      NotCastExpr, isTypeCast,
                                      isVectorLiteral,
-                                     NotPrimaryExpression);
+                                     NotPrimaryExpression
+#if ENABLE_BSC
+                                     ,
+                                     T
+#endif
+
+          );
       }
     }
 
@@ -1710,7 +1726,12 @@ ExprResult Parser::ParseCastExpression(
   }
 
   case tok::kw_operator: // [C++] id-expression: operator/conversion-function-id
-    Res = ParseCXXIdExpression(isAddressOfOperand);
+    Res = ParseCXXIdExpression(isAddressOfOperand
+#if ENABLE_BSC
+                               ,
+                               T
+#endif
+    );
     break;
 
   case tok::coloncolon: {

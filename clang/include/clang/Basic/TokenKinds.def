@@ -355,9 +355,17 @@ KEYWORD(mutable                     , KEYCXX)
 KEYWORD(namespace                   , KEYCXX)
 KEYWORD(new                         , KEYCXX)
 KEYWORD(operator                    , KEYCXX)
+#if ENABLE_BSC
+KEYWORD(private                     , KEYCXX|KEYBSC)
+#else
 KEYWORD(private                     , KEYCXX)
+#endif
 KEYWORD(protected                   , KEYCXX)
+#if ENABLE_BSC
+KEYWORD(public                      , KEYCXX|KEYBSC)
+#else
 KEYWORD(public                      , KEYCXX)
+#endif
 KEYWORD(reinterpret_cast            , KEYCXX)
 KEYWORD(static_cast                 , KEYCXX)
 KEYWORD(template                    , KEYCXX)

@@ -1,0 +1,36 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+int x = 0;
+owned struct A<T>{
+    ~A(A<T> this) {
+      x++;
+    }
+};
+int y = 1;
+ owned struct B<T> {
+ public:
+     A<int> a;
+    ~B(B<T> this) { 
+      y++;
+      A<int> a ={};
+    }
+};
+
+int f<T>(B<T> x){
+    B<T> z = x;
+   return 1; 
+}
+
+void test() {
+   A<int> a= {};
+   B<int> b={a};
+   f<int>(b);
+}
+int main(void) {
+   test();
+   
+   return x-y;
+}

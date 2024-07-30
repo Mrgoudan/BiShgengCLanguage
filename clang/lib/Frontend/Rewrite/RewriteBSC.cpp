@@ -447,7 +447,9 @@ public:
     if (RD->isTrait() || RD->getDesugaredTraitDecl()) {
       return true;
     }
-
+    if (RD->isOwnedDecl()) {
+      return true;
+    }
     for (auto Member : RD->fields()) {
       if (Visit(Member)) {
         return true;
@@ -845,6 +847,18 @@ const std::string RewriteBSC::GetRewrittenString() {
       break;
     }
     switch ((*D)->getKind()) {
+    case Decl::Record: {
+      RecordDecl *RD = cast<RecordDecl>(*D);
+      if (RD->isOwnedDecl()) {
+        for (auto Func : RD->decls()) {
+          if (isa<BSCMethodDecl>(Func)) { //
+            Func->print(Buf, Policy);
+            Buf << ";\n\n";
+          }
+        }
+      }
+      break;
+    }
     case Decl::BSCMethod:
     case Decl::Function: {
       FunctionDecl *FD = cast<FunctionDecl>(*D);
@@ -993,6 +1007,30 @@ const std::string RewriteBSC::GetRewrittenString() {
       break;
     }
     switch ((*D)->getKind()) {
+    case Decl::Record: {
+      RecordDecl *RD = cast<RecordDecl>(*D);
+      if (RD->isOwnedDecl()) {
+        for (auto Func : RD->decls()) {
+          if (isa<BSCMethodDecl>(Func)) {
+            FunctionDecl *FD = cast<FunctionDecl>(Func);
+            if (FD->doesThisDeclarationHaveABody()) {
+              FD->print(Buf, Policy);
+              Buf << "\n";
+            }
+          }
+          if (isa<FunctionTemplateDecl>(Func)) {
+            FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(Func);
+            for (auto *DD : FTD->specializations()) {
+              if (DD->doesThisDeclarationHaveABody()) {
+                DD->print(Buf, Policy);
+                Buf << "\n";
+              }
+            }
+          }
+        }
+      }
+      break;
+    }
     case Decl::BSCMethod:
     case Decl::Function: {
       FunctionDecl *FD = cast<FunctionDecl>(*D);

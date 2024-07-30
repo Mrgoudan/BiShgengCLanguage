@@ -64,6 +64,8 @@ public:
   SourceLocation getExtentedTypeBeginLoc() { return BLoc; }
   void setExtentedTypeBeginLoc(SourceLocation L) { BLoc = L; }
 
+  bool isDestructor() const { return IsDestructor; }
+  void setDestructor(bool flag) { this->IsDestructor = flag; }
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == BSCMethod; }
@@ -72,6 +74,7 @@ private:
   QualType ExtendedType;
   bool HasThisParam = false;
   SourceLocation BLoc;
+  bool IsDestructor = false;
 };
 
 class TraitDecl : public TagDecl {

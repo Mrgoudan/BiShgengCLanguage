@@ -10690,8 +10690,12 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
     D.setInvalidType();
   }
 
+#if ENABLE_BSC
+  if (!getLangOpts().BSC && FTIHasNonVoidParameters(FTI)) {
+#else
   // Make sure we don't have any parameters.
   if (FTIHasNonVoidParameters(FTI)) {
+#endif
     Diag(D.getIdentifierLoc(), diag::err_destructor_with_params);
 
     // Delete the parameters.

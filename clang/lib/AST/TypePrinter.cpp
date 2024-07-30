@@ -1391,6 +1391,10 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   T.print(OS, PP);
   for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
     if (ExtendedTypeStr[i] == ' ') {
+      if (i == 0) {
+        ExtendedTypeStr.replace(i, 1, "");
+        continue;
+      }
       ExtendedTypeStr.replace(i, 1, "_");
     } else if (ExtendedTypeStr[i] == '*') {
       // Since '*' is not allowed to appear in identifier,

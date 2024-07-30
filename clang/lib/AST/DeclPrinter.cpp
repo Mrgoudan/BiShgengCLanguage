@@ -198,6 +198,10 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   T.print(OS, PP);
   for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
     if (ExtendedTypeStr[i] == ' ') {
+      if (i == 0) {
+        ExtendedTypeStr.replace(i, 1, "");
+        continue;
+      }
       ExtendedTypeStr.replace(i, 1, "_");
     } else if (ExtendedTypeStr[i] == '*') {
       // Since '*' is not allowed to appear in identifier,
@@ -447,7 +451,17 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
   SmallVector<Decl*, 2> Decls;
   for (DeclContext::decl_iterator D = DC->decls_begin(), DEnd = DC->decls_end();
        D != DEnd; ++D) {
-
+#if ENABLE_BSC
+    if (auto *RD = dyn_cast<RecordDecl>(DC)) {
+      if (RD->isOwnedDecl()) {
+        if (auto VD = dyn_cast<VarDecl>(*D)) {
+          if (VD->getStorageClass() == SC_Static) {
+            continue;
+          }
+        }
+      }
+    }
+#endif
     // Don't print ObjCIvarDecls, as they are printed when visiting the
     // containing ObjCInterfaceDecl.
     if (isa<ObjCIvarDecl>(*D))
@@ -469,7 +483,12 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
         continue;
       #endif
     }
-
+#if ENABLE_BSC
+    if (auto FD = dyn_cast<FunctionTemplateDecl>(*D))
+      // Skip generic member functions for BSC.
+      if (Context.getLangOpts().BSC && isa<RecordDecl>(FD->getDeclContext()))
+        continue;
+#endif
     // The next bits of code handle stuff like "struct {int x;} a,b"; we're
     // forced to merge the declarations because there's no other way to
     // refer to the struct in question.  When that struct is named instead, we
@@ -504,11 +523,17 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     }
 
     if (isa<AccessSpecDecl>(*D)) {
-      Indentation -= Policy.Indentation;
-      this->Indent();
-      Print(D->getAccess());
-      Out << ":\n";
-      Indentation += Policy.Indentation;
+#if ENABLE_BSC
+      if (!Policy.RewriteBSC) {
+#endif
+        Indentation -= Policy.Indentation;
+        this->Indent();
+        Print(D->getAccess());
+        Out << ":\n";
+        Indentation += Policy.Indentation;
+#if ENABLE_BSC
+      }
+#endif
       continue;
     }
 
@@ -649,7 +674,15 @@ void DeclPrinter::VisitEnumDecl(EnumDecl *D) {
 void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
   if (!Policy.SuppressSpecifiers && D->isModulePrivate())
     Out << "__module_private__ ";
-  Out << D->getKindName();
+#if ENABLE_BSC
+  if (Policy.RewriteBSC && D->isOwnedDecl()) {
+    Out << "struct";
+  } else {
+#endif
+    Out << D->getKindName();
+#if ENABLE_BSC
+  }
+#endif
 
   prettyPrintAttributes(D);
 
@@ -769,9 +802,31 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       if (D->isTemplateInstantiation() && D->getStorageClass() != SC_Static)
         OS << "__attribute__((weak)) ";
       if (const BSCMethodDecl *BMD = dyn_cast<BSCMethodDecl>(D)) {
-        std::string FunctionNameStr =
-            GetTypePrefix(BMD->getExtendedType(), false, SubPolicy);
-        FunctionNameStr += D->getDeclName().getAsString();
+        std::string FunctionNameStr;
+        if (BMD->isDestructor()) {
+          if (isa<ClassTemplateSpecializationDecl>(D->getParent())) {
+            OS << "__attribute__((weak)) ";
+          }
+          FunctionNameStr = GetTypePrefix(
+              Context.getTypeDeclType(dyn_cast<RecordDecl>(D->getParent())),
+              false, SubPolicy);
+          FunctionNameStr += "D";
+        } else {
+          FunctionNameStr =
+              GetTypePrefix(BMD->getExtendedType(), false, SubPolicy);
+          FunctionNameStr += D->getDeclName().getAsString();
+          // Handle generic member for BSC owned struct.
+          if (BMD->isTemplateInstantiation()) {
+            if (const TemplateArgumentList *TArgs =
+                    D->getTemplateSpecializationArgs()) {
+              for (size_t i = 0; i < TArgs->size(); i++) {
+                std::string QT =
+                    RewriteBSCTemplateArgument(TArgs->get(i), SubPolicy);
+                FunctionNameStr += QT;
+              }
+            }
+          }
+        }
         OS << FunctionNameStr;
       } else if (D->isTemplateInstantiation()) {
         std::string FunctionNameStr = D->getDeclName().getAsString();
@@ -1047,11 +1102,27 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
       T.removeLocalConst();
     }
   }
+#if ENABLE_BSC
+  auto *RD = dyn_cast<RecordDecl>(D->getDeclContext());
+  if (RD && RD->isOwnedDecl()) {
+    std::string Prefix =
+        GetTypePrefix(RD->getTypeForDecl()->getCanonicalTypeInternal(), false,
+                      Policy) +
+        std::string(D->getName());
 
-  printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
-                    D->getIdentifier())
-                       ? D->getIdentifier()->deuglifiedName()
-                       : D->getName());
+    printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
+                      D->getIdentifier())
+                         ? D->getIdentifier()->deuglifiedName()
+                         : StringRef(Prefix.c_str()));
+  } else {
+#endif
+    printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
+                      D->getIdentifier())
+                         ? D->getIdentifier()->deuglifiedName()
+                         : D->getName());
+#if ENABLE_BSC
+  }
+#endif
 
   Expr *Init = D->getInit();
   if (!Policy.SuppressInitializers && Init) {

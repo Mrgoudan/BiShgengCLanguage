@@ -3616,6 +3616,9 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_PlaceholderType:
   case FK_ExplicitConstructor:
   case FK_AddressOfUnaddressableFunction:
+#if ENABLE_BSC
+  case FK_NeedExplicitConstructor:
+#endif
     return false;
 
   case FK_ReferenceInitOverloadFailed:
@@ -4495,6 +4498,25 @@ static void TryListInitialization(Sema &S,
     }
   }
 
+#if ENABLE_BSC
+  if (S.getLangOpts().BSC && (DestType->isOwnedStructureType() ||
+                              DestType->isOwnedTemplateSpecializationType())) {
+    // Check explicit constructor for owned struct has private field.
+    RecordDecl *RD = DestType->getAsRecordDecl();
+    auto FD = S.getCurFunctionDecl()->getFirstDecl();
+    bool IsInitedInMemberFunc = false;
+    if (FD && isa<RecordDecl>(FD->getLexicalDeclContext())) {
+      IsInitedInMemberFunc =
+          RD == dyn_cast<RecordDecl>(FD->getLexicalDeclContext());
+    }
+    for (const auto *field : RD->fields()) {
+      if (field->getAccess() == AS_private && !IsInitedInMemberFunc) {
+        Sequence.SetFailed(InitializationSequence::FK_NeedExplicitConstructor);
+        return;
+      }
+    }
+  }
+#endif
   // C++11 [dcl.init.list]p3:
   //   - If T is an aggregate, aggregate initialization is performed.
   if ((DestType->isRecordType() && !DestType->isAggregateType()) ||
@@ -9383,7 +9405,12 @@ bool InitializationSequence::Diagnose(Sema &S,
     S.Diag(Kind.getLocation(), diag::err_init_list_bad_dest_type)
       << (DestType->isRecordType()) << DestType << Args[0]->getSourceRange();
     break;
-
+#if ENABLE_BSC
+  case FK_NeedExplicitConstructor:
+    S.Diag(Kind.getLocation(), diag::err_need_explicit_constructor_owned_struct)
+        << DestType;
+    break;
+#endif
   case FK_ListConstructorOverloadFailed:
   case FK_ConstructorOverloadFailed: {
     SourceRange ArgsRange;
@@ -9712,6 +9739,11 @@ void InitializationSequence::dump(raw_ostream &OS) const {
     case FK_ExplicitConstructor:
       OS << "list copy initialization chose explicit constructor";
       break;
+#if ENABLE_BSC
+    case FK_NeedExplicitConstructor:
+      OS << "need explicit constructor"; // TODO: need confirm text
+      break;
+#endif
     }
     OS << '\n';
     return;

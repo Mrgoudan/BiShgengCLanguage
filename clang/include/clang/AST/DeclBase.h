@@ -1566,10 +1566,17 @@ class DeclContext {
 
     /// Indicates whether this struct has had its field layout randomized.
     uint64_t IsRandomized : 1;
+#if ENABLE_BSC
+    uint64_t IsOwned : 1;
+#endif
   };
 
   /// Number of non-inherited bits in RecordDeclBitfields.
+#if ENABLE_BSC
+  enum { NumRecordDeclBits = 16 };
+#else
   enum { NumRecordDeclBits = 15 };
+#endif
 
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor

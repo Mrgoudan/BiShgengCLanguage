@@ -1099,6 +1099,9 @@ public:
 
     /// List-copy-initialization chose an explicit constructor.
     FK_ExplicitConstructor,
+#if ENABLE_BSC
+    FK_NeedExplicitConstructor,
+#endif
   };
 
 private:

@@ -540,6 +540,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->getArgPassingRestrictions());
 
   #if ENABLE_BSC
+  Record.push_back(D->isOwnedDecl());
   enum { CXXRecNotTemplate = 0, CXXRecTemplate, CXXRecMemberSpecialization };
   if (ClassTemplateDecl *TemplD = D->getDescribedClassTemplate()) {
     Record.push_back(CXXRecTemplate);
@@ -2268,8 +2269,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   // getArgPassingRestrictions
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
-  // CXXRecNotTemplate/CXXRecTemplate/CXXRecMemberSpecialization
   #if ENABLE_BSC
+  // isOwned
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+  // CXXRecNotTemplate/CXXRecTemplate/CXXRecMemberSpecialization
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   // InstantiatedMembRecord
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));

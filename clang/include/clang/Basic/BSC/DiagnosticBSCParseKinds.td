@@ -14,6 +14,10 @@ def err_trait_def_not_at_top_level : Error<"trait is only allowed to be defined 
 def err_invalid_trait : Error<"invalid syntax, semi not expected after 'trait %0'">;
 def err_multi_trait_call_func : Error<"%0 cannot directly call functions">;
 
+// BSC owned struct
+def err_tag_name : Error<"must ignore 'owned struct' tag before struct name">;
+def err_inconsistent_tag_name : Error<"inconsistent tag before struct name">;
+
 // BSC generic warnings and errors.
 def err_extended_type_not_generic_typealias : Error<"extended type of a BSC member function cannot be a generic typealias">;
 def err_generic_typealias_not_within_function : Error<"BSC generic typealias cannot be declared within a function">;

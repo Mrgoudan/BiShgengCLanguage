@@ -207,7 +207,10 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   if (MD && !MD->getExtendedType().isNull()) {
     Out << "_ZN";
     mangleTypeName(MD->getExtendedType(), Out);
-    Out << D->getIdentifier()->getName();
+    if (MD->isDestructor())
+      Out << D->getDeclName().getAsString();
+    else
+      Out << D->getIdentifier()->getName();
     return;
   }
   #endif

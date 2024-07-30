@@ -195,4 +195,20 @@ TraitTemplateSpecializationDecl::getSpecializedTemplate() const {
   return SpecializedTemplate.get<TraitTemplateDecl *>();
 }
 
+BSCMethodDecl *RecordDecl::getBSCDestructor() const {
+  ASTContext &Context = getASTContext();
+  QualType ClassType = Context.getTypeDeclType(this);
+  DeclarationName Name = Context.DeclarationNames.getCXXDestructorName(
+      Context.getCanonicalType(ClassType));
+
+  DeclContext::lookup_result R = lookup(Name);
+
+  for (auto *Decl : R) {
+    auto *DD = dyn_cast<BSCMethodDecl>(Decl);
+    if (DD)
+      return DD;
+  }
+  return nullptr;
+}
+
 #endif // ENABLE_BSC

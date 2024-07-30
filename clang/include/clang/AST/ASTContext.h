@@ -490,9 +490,14 @@ public:
   #if ENABLE_BSC
   mutable llvm::DenseMap<const Type *, DeclContext *> BSCDeclContextMap;
 
+  mutable llvm::DenseMap<NamedDecl *,
+                         llvm::DenseMap<const Stmt *, SmallVector<VarDecl *>>>
+      DestructMap;
   /// A mapping to contain the declaration and its desugared decls.
   mutable llvm::DenseMap<const Decl *, SmallVector<NamedDecl *>>
       BSCDesugaredMap;
+  llvm::SmallVector<RecordDecl *> InstantiationVec;
+
   #endif
 
 private:

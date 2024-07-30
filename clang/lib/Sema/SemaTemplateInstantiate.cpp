@@ -2857,8 +2857,16 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       Instantiation->setInvalidDecl();
       continue;
     }
-
-    Decl *NewMember = Instantiator.Visit(Member);
+      Decl *NewMember;
+#if ENABLE_BSC
+      if (isa<BSCMethodDecl>(Member) &&
+          !dyn_cast<BSCMethodDecl>(Member)->isThisDeclarationADefinition()) {
+      } else {
+#endif
+        NewMember = Instantiator.Visit(Member);
+#if ENABLE_BSC
+      }
+#endif
     if (NewMember) {
       if (FieldDecl *Field = dyn_cast<FieldDecl>(NewMember)) {
         Fields.push_back(Field);
@@ -3020,6 +3028,9 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   }
 
   Consumer.HandleTagDeclDefinition(Instantiation);
+#if ENABLE_BSC
+  Context.InstantiationVec.push_back(Instantiation);
+#endif
 
   return Instantiation->isInvalidDecl();
 }

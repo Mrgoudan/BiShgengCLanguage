@@ -76,7 +76,11 @@ enum IMAKind {
 
   /// All possible referrents are instance members of an unrelated
   /// class.
-  IMA_Error_Unrelated
+  IMA_Error_Unrelated,
+#if ENABLE_BSC
+  /// The reference may be an implicit owned struct instance member access.
+  IMA_Error_Owned_Struct
+#endif
 };
 
 /// The given lookup names class member(s) and is not being used for
@@ -108,7 +112,12 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
     if (D->isCXXInstanceMember()) {
       isField |= isa<FieldDecl>(D) || isa<MSPropertyDecl>(D) ||
                  isa<IndirectFieldDecl>(D);
-
+#if ENABLE_BSC
+      if (RecordDecl *R = cast<RecordDecl>(D->getDeclContext())) {
+        if (R->isOwnedDecl())
+          return IMA_Error_Owned_Struct;
+      }
+#endif
       CXXRecordDecl *R = cast<CXXRecordDecl>(D->getDeclContext());
       Classes.insert(R->getCanonicalDecl());
     } else
@@ -257,7 +266,13 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
     if (TemplateArgs || TemplateKWLoc.isValid())
       return BuildTemplateIdExpr(SS, TemplateKWLoc, R, false, TemplateArgs);
     return AsULE ? AsULE : BuildDeclarationNameExpr(SS, R, false);
-
+#if ENABLE_BSC
+  case IMA_Error_Owned_Struct: {
+    Diag(R.getNameLoc(), diag::err_invalid_member_use_in_class_method)
+        << R.getLookupNameInfo().getName();
+    return ExprError();
+  }
+#endif
   case IMA_Error_StaticContext:
   case IMA_Error_Unrelated:
     diagnoseInstanceReference(*this, SS, R.getRepresentativeDecl(),
@@ -1238,7 +1253,40 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       Loc = SS.getRange().getBegin();
     BaseExpr = BuildCXXThisExpr(Loc, BaseExprType, /*IsImplicit=*/true);
   }
-
+#if ENABLE_BSC
+  // Check access if base is owned structure type and instance member is
+  // private.
+  if (getLangOpts().BSC &&
+      (BaseType->isOwnedStructureType() ||
+       BaseType->isOwnedTemplateSpecializationType()) &&
+      MemberDecl->getAccess() == AS_private) {
+    if (getCurFunctionDecl() && getCurFunctionDecl()->getParent() &&
+        isa<RecordDecl>(getCurFunctionDecl()->getParent())) {
+      RecordDecl *RD = cast<RecordDecl>(getCurFunctionDecl()->getParent());
+      if (RD->getTagKind() == TTK_Struct &&
+          getCurFunctionDecl()->getFirstDecl() &&
+          getCurFunctionDecl()->getFirstDecl()->getLexicalDeclContext() == RD) {
+        // member function(not extended)
+      } else { // declaring class is not inside member function
+        PartialDiagnostic PD =
+            PDiag(diag::err_access)
+            << 0 << MemberName
+            << Context.getTypeDeclType(BaseType->getAsRecordDecl())
+            << Context.getTypeDeclType(BaseType->getAsRecordDecl());
+        Diag(MemberLoc, PD);
+        return ExprError();
+      }
+    } else {
+      PartialDiagnostic PD =
+          PDiag(diag::err_access)
+          << 0 << MemberName
+          << Context.getTypeDeclType(BaseType->getAsRecordDecl())
+          << Context.getTypeDeclType(BaseType->getAsRecordDecl());
+      Diag(MemberLoc, PD);
+      return ExprError();
+    }
+  }
+#endif
   // Check the use of this member.
   if (DiagnoseUseOfDecl(MemberDecl, MemberLoc))
     return ExprError();

@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #if ENABLE_BSC
 #include "clang/Basic/Specifiers.h"
+#include <stack>
 #endif
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -239,7 +240,10 @@ public:
       : ErrorTrap(Diag) {
     Init(Parent, ScopeFlags);
   }
-
+#if ENABLE_BSC
+  /// collect some decls that need to emit destructor call
+  std::stack<VarDecl *> DeclsInScopeToEmitDestructorCall;
+#endif
   /// getFlags - Return the flags for this scope.
   unsigned getFlags() const { return Flags; }
 
@@ -335,9 +339,23 @@ public:
     if (auto *VD = dyn_cast<VarDecl>(D))
       if (!isa<ParmVarDecl>(VD))
         ReturnSlots.insert(VD);
-
+#if ENABLE_BSC
+    CollectLocalDecls(D);
+#endif
     DeclsInScope.insert(D);
   }
+
+#if ENABLE_BSC
+  void CollectLocalDecls(Decl *D) {
+    if (auto *VD = dyn_cast<VarDecl>(D)) {
+      if (!VD->hasGlobalStorage()) {
+        const Type *FieldType = VD->getType().getCanonicalType().getTypePtr();
+        if (FieldType->isOwnedStructureType())
+          DeclsInScopeToEmitDestructorCall.push(VD);
+      }
+    }
+  }
+#endif
 
   void RemoveDecl(Decl *D) {
     DeclsInScope.erase(D);

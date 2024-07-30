@@ -157,6 +157,8 @@ Decl *TemplateDeclInstantiator::VisitBSCMethodDecl(
   QualType ExtendedTy(Record->getTypeForDecl(), 0);
   Method->setExtendedType(ExtendedTy);
   Method->setExtentedTypeBeginLoc(D->getBeginLoc());
+  Method->setDestructor(D->isDestructor());
+  SemaRef.Context.BSCDeclContextMap[Record->getTypeForDecl()] = DC;
 
   if (D->isInlined())
     Method->setImplicitlyInline();

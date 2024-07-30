@@ -186,6 +186,13 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
   auto CheckLookupResult = [&](LookupResult &Found) -> ParsedType {
     auto IsAcceptableResult = [&](NamedDecl *D) -> bool {
       auto *Type = dyn_cast<TypeDecl>(D->getUnderlyingDecl());
+#if ENABLE_BSC
+      if (getLangOpts().BSC) {
+        if (auto CTD = dyn_cast<ClassTemplateDecl>(D)) {
+          Type = CTD->getTemplatedDecl();
+        }
+      }
+#endif
       if (!Type)
         return false;
 

@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -verify %s
+owned struct A {  
+   public:
+   int x;
+   int y ;
+  ~A(A this){
+  }
+};                       
+int f(A a){ return 1;}
+
+
+int main() {
+   A a;
+   A b  = a; // expected-error {{cannot read a, because it is uninitialized}}
+   f(a); // expected-error {{cannot read a, because it is uninitialized}}
+   return 0;
+}

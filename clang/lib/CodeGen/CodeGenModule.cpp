@@ -1387,27 +1387,33 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
   if (ShouldMangle)
     MC.mangleName(GD.getWithDecl(ND), Out);
   else {
-    IdentifierInfo *II = ND->getIdentifier();
-    assert(II && "Attempt to mangle unnamed decl.");
-    const auto *FD = dyn_cast<FunctionDecl>(ND);
-    #if ENABLE_BSC
+#if ENABLE_BSC
     const auto *MD = dyn_cast<BSCMethodDecl>(ND);
-    #endif
-
-    if (FD &&
-        FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
-      Out << "__regcall3__" << II->getName();
-    } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
-               GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
-      Out << "__device_stub__" << II->getName();
-    #if ENABLE_BSC
-    } else if (MD && !MD->getExtendedType().isNull()) {
-      Out << "_ZN";
-      MC.mangleTypeName(MD->getExtendedType(), Out); // TODO: change mangle rule
-      Out << II->getName();
-    #endif
+    if (MD && MD->isDestructor()) {
+      const NamedDecl *ND = cast<NamedDecl>(MD);
+      Out << ND->getDeclName();
     } else {
-      Out << II->getName();
+#endif
+      IdentifierInfo *II = ND->getIdentifier();
+      assert(II && "Attempt to mangle unnamed decl.");
+      const auto *FD = dyn_cast<FunctionDecl>(ND);
+
+      if (FD && FD->getType()->castAs<FunctionType>()->getCallConv() ==
+                    CC_X86RegCall) {
+        Out << "__regcall3__" << II->getName();
+      } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
+                 GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+        Out << "__device_stub__" << II->getName();
+#if ENABLE_BSC
+      } else if (MD && !MD->getExtendedType().isNull()) {
+        Out << "_ZN";
+        MC.mangleTypeName(MD->getExtendedType(),
+                          Out); // TODO: change mangle rule
+        Out << II->getName();
+#endif
+      } else {
+        Out << II->getName();
+      }
     }
   }
 
@@ -6383,12 +6389,23 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
           getContext().getTypedefType(cast<TypedefNameDecl>(D)));
     break;
 
-  case Decl::Record:
+  case Decl::Record: {
     if (CGDebugInfo *DI = getModuleDebugInfo())
       if (cast<RecordDecl>(D)->getDefinition())
         DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(D)));
+#if ENABLE_BSC
+    RecordDecl *RD = cast<RecordDecl>(D);
+    for (auto *I : RD->decls()) {
+      if (isa<BSCMethodDecl>(I)) {
+        EmitTopLevelDecl(I);
+      } else if (isa<RecordDecl>(I)) {
+        if (dyn_cast<RecordDecl>(I)->isOwnedDecl())
+          EmitTopLevelDecl(I);
+      }
+    }
     break;
-
+  }
+#endif
   case Decl::Enum:
     if (CGDebugInfo *DI = getModuleDebugInfo())
       if (cast<EnumDecl>(D)->getDefinition())

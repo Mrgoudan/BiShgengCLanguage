@@ -1,0 +1,27 @@
+// RUN: %clang_cc1 -verify %s
+
+
+owned struct A {  
+public:
+   ~A(A this){
+   }
+};
+
+ int test_switch(void) {
+    A a ={};
+    int xx = 1;
+    switch(xx) {
+        A b ; // expected-warning {{the destructor may be not executed}}
+        case 1: {
+           A c ={};
+           break;
+        }
+         
+     }
+     return 0;
+}
+int main(void) {
+    A a= {};
+    return 0;
+}
+

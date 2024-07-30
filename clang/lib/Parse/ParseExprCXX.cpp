@@ -733,72 +733,6 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
       ObjectType = nullptr;
     }
 
-    // nested-name-specifier:
-    //   nested-name-specifier 'template'[opt] simple-template-id '::'
-
-    // Parse the optional 'template' keyword, then make sure we have
-    // 'identifier <' after it.
-    if (Tok.is(tok::kw_template)) {
-      // If we don't have a scope specifier or an object type, this isn't a
-      // nested-name-specifier, since they aren't allowed to start with
-      // 'template'.
-      if (!HasScopeSpecifier && !ObjectType)
-        break;
-
-      TentativeParsingAction TPA(*this);
-      SourceLocation TemplateKWLoc = ConsumeToken();
-
-      UnqualifiedId TemplateName;
-      if (Tok.is(tok::identifier)) {
-        // Consume the identifier.
-        TemplateName.setIdentifier(Tok.getIdentifierInfo(), Tok.getLocation());
-        ConsumeToken();
-      } else if (Tok.is(tok::kw_operator)) {
-        // We don't need to actually parse the unqualified-id in this case,
-        // because a simple-template-id cannot start with 'operator', but
-        // go ahead and parse it anyway for consistency with the case where
-        // we already annotated the template-id.
-        if (ParseUnqualifiedIdOperator(SS, EnteringContext, ObjectType,
-                                       TemplateName)) {
-          TPA.Commit();
-          break;
-        }
-
-        if (TemplateName.getKind() !=
-                UnqualifiedIdKind::IK_OperatorFunctionId &&
-            TemplateName.getKind() != UnqualifiedIdKind::IK_LiteralOperatorId) {
-          Diag(TemplateName.getSourceRange().getBegin(),
-               diag::err_id_after_template_in_nested_name_spec)
-              << TemplateName.getSourceRange();
-          TPA.Commit();
-          break;
-        }
-      } else {
-        TPA.Revert();
-        break;
-      }
-
-      // If the next token is not '<', we have a qualified-id that refers
-      // to a template name, such as T::template apply, but is not a
-      // template-id.
-      if (Tok.isNot(tok::less)) {
-        TPA.Revert();
-        break;
-      }
-
-      // Commit to parsing the template-id.
-      TPA.Commit();
-      TemplateTy Template;
-      TemplateNameKind TNK = Actions.ActOnTemplateName(
-          getCurScope(), SS, TemplateKWLoc, TemplateName, ObjectType,
-          EnteringContext, Template, /*AllowInjectedClassName*/ true);
-      if (AnnotateTemplateIdToken(Template, TNK, SS, TemplateKWLoc,
-                                  TemplateName, false))
-        return true;
-
-      continue;
-    }
-
     if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
       if (CheckForDestructor && GetLookAheadToken(2).is(tok::tilde)) {
@@ -960,7 +894,12 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
 
 ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
                                            bool isAddressOfOperand,
-                                           Token &Replacement) {
+                                           Token &Replacement
+#if ENABLE_BSC
+                                           ,
+                                           QualType T
+#endif
+) {
   ExprResult E;
 
   // We may have already annotated this id-expression.
@@ -1014,7 +953,12 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
     E = Actions.ActOnIdExpression(
         getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
         isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-        &Replacement);
+        &Replacement
+#if ENABLE_BSC
+        ,
+        T
+#endif
+    );
     break;
   }
 
@@ -1065,7 +1009,12 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
 /// the only place where a qualified-id naming a non-static class member may
 /// appear.
 ///
-ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
+ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand
+#if ENABLE_BSC
+                                        ,
+                                        QualType T
+#endif
+) {
   // qualified-id:
   //   '::'[opt] nested-name-specifier 'template'[opt] unqualified-id
   //   '::' unqualified-id
@@ -1077,7 +1026,12 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 
   Token Replacement;
   ExprResult Result =
-      tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+      tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement
+#if ENABLE_BSC
+                              ,
+                              T
+#endif
+      );
   if (Result.isUnset()) {
     // If the ExprResult is valid but null, then typo correction suggested a
     // keyword replacement that needs to be reparsed.
@@ -3380,7 +3334,12 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     return false;
   }
 
-  if (getLangOpts().CPlusPlus &&
+  if ((getLangOpts().CPlusPlus
+
+#if ENABLE_BSC
+       || getLangOpts().BSC
+#endif
+       ) &&
       (AllowDestructorName || SS.isSet()) && Tok.is(tok::tilde)) {
     // C++ [expr.unary.op]p10:
     //   There is an ambiguity in the unary-expression ~X(), where X is a

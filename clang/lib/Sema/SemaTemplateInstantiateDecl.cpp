@@ -1174,7 +1174,6 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   if (Var->isStaticLocal())
     SemaRef.CheckStaticLocalForDllExport(Var);
-
   return Var;
 }
 
@@ -6166,6 +6165,64 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     CurrentInstantiationScope->InstantiatedLocal(D, Inst);
     return cast<LabelDecl>(Inst);
   }
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    if (RecordDecl *Record = dyn_cast<RecordDecl>(D)) {
+      if (!Record->isDependentContext())
+        return D;
+
+      // Determine whether this record is the "templated" declaration describing
+      // a class template or class template partial specialization.
+      ClassTemplateDecl *ClassTemplate = Record->getDescribedClassTemplate();
+      if (ClassTemplate)
+        ClassTemplate = ClassTemplate->getCanonicalDecl();
+      else if (ClassTemplatePartialSpecializationDecl *PartialSpec =
+                   dyn_cast<ClassTemplatePartialSpecializationDecl>(Record))
+        ClassTemplate =
+            PartialSpec->getSpecializedTemplate()->getCanonicalDecl();
+
+      // Walk the current context to find either the record or an instantiation
+      // of it.
+      DeclContext *DC = CurContext;
+      while (!DC->isFileContext()) {
+        // If we're performing substitution while we're inside the template
+        // definition, we'll find our own context. We're done.
+        if (DC->Equals(Record))
+          return Record;
+
+        if (RecordDecl *InstRecord = dyn_cast<RecordDecl>(DC)) {
+          // Check whether we're in the process of instantiating a class
+          // template specialization of the template we're mapping.
+          if (ClassTemplateSpecializationDecl *InstSpec =
+                  dyn_cast<ClassTemplateSpecializationDecl>(InstRecord)) {
+            ClassTemplateDecl *SpecTemplate =
+                InstSpec->getSpecializedTemplate();
+            if (ClassTemplate && isInstantiationOf(ClassTemplate, SpecTemplate))
+              return InstRecord;
+          }
+
+          // Check whether we're in the process of instantiating a member class.
+          if (isInstantiationOf(Record, InstRecord))
+            return InstRecord;
+        }
+
+        // Move to the outer template scope.
+        if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
+          if (FD->getFriendObjectKind() &&
+              FD->getDeclContext()->isFileContext()) {
+            DC = FD->getLexicalDeclContext();
+            continue;
+          }
+        }
+
+        DC = DC->getParent();
+      }
+
+      // Fall through to deal with other dependent record types (e.g.,
+      // anonymous unions in class templates).
+    }
+  }
+#endif
 
   if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D)) {
     if (!Record->isDependentContext())

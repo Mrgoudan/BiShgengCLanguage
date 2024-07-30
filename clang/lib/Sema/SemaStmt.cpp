@@ -1700,7 +1700,28 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
       }
     }
 }
-
+#if ENABLE_BSC
+void Sema::DiagnoseAssignmentOwnedStruct(QualType DstType, Expr *SrcExpr) {
+  if (!getLangOpts().BSC)
+    return;
+  if (getCurScope()->isFunctionScope() && getCurFunctionDecl() &&
+      getCurFunctionDecl()->getParent()) {
+    if (isa<BSCMethodDecl>(getCurFunctionDecl()) &&
+        isa<RecordDecl>(getCurFunctionDecl()->getParent())) {
+      auto *MD = cast<BSCMethodDecl>(getCurFunctionDecl());
+      auto RD = cast<RecordDecl>(getCurFunctionDecl()->getParent());
+      QualType ClassType = Context.getTypeDeclType(RD);
+      if (MD->isDestructor() &&
+          ("owned " + ClassType.getAsString()) == DstType.getAsString()) {
+        if (auto DRF = dyn_cast<DeclRefExpr>(SrcExpr)) {
+          if (isa<ParmVarDecl>(DRF->getDecl()))
+            Diag(SrcExpr->getExprLoc(), diag::err_assignment_in_destructor);
+        }
+      }
+    }
+  }
+}
+#endif
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
                                 SourceLocation LParenLoc, ConditionResult Cond,
                                 SourceLocation RParenLoc, Stmt *Body) {
@@ -3915,12 +3936,14 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
     return StmtError();
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (getLangOpts().BSC) {
-    if (auto RT = dyn_cast_or_null<ReturnStmt>(R.get()))
+    if (auto RT = dyn_cast_or_null<ReturnStmt>(R.get())) {
       CheckMoveVarMemoryLeak(RT->getRetValue(), ReturnLoc);
+      CheckReturnStmtMemoryLeak(RT->getRetValue());
+    }
   }
-  #endif
+#endif
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
     return R;
 
@@ -4127,7 +4150,15 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
             FunctionKind = 2;
           else if (isa<CXXDestructorDecl>(CurDecl))
             FunctionKind = 3;
-
+#if ENABLE_BSC
+          bool IsBSCDestructor = false;
+          if (isa<BSCMethodDecl>(CurDecl)) {
+            const auto *MD = dyn_cast<BSCMethodDecl>(CurDecl);
+            IsBSCDestructor = MD->isDestructor();
+          }
+          if (IsBSCDestructor)
+            FunctionKind = 3;
+#endif
           Diag(ReturnLoc, D)
               << CurDecl << FunctionKind << RetValExp->getSourceRange();
         }

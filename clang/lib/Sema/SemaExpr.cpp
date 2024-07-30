@@ -2655,7 +2655,12 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     AssumedTemplateKind AssumedTemplate;
     if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
                            MemberOfUnknownSpecialization, TemplateKWLoc,
-                           &AssumedTemplate))
+                           &AssumedTemplate
+#if ENABLE_BSC
+                           ,
+                           true, T
+#endif
+                           ))
       return ExprError();
 
     if (MemberOfUnknownSpecialization ||
@@ -2812,6 +2817,49 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
+
+#if ENABLE_BSC
+  if (getLangOpts().BSC && !R.empty()) {
+    if (auto RD = dyn_cast<RecordDecl>((*R.begin())->getDeclContext())) {
+      if (RD->isOwnedDecl()) {
+        // static member
+        if (R.begin().getAccess() == AS_private) {
+          if (getCurFunctionDecl() && getCurFunctionDecl()->getParent() &&
+              isa<RecordDecl>(getCurFunctionDecl()->getParent())) {
+            if (RD->getTagKind() == TTK_Struct &&
+                getCurFunctionDecl()->getFirstDecl() &&
+                getCurFunctionDecl()->getFirstDecl()->getLexicalDeclContext() ==
+                    RD) {
+              // member function(not extended)
+            } else { // declaring class is not inside member function
+              PartialDiagnostic PD = PDiag(diag::err_access)
+                                     << 0 << NameInfo.getName()
+                                     << Context.getTypeDeclType(RD)
+                                     << Context.getTypeDeclType(RD);
+              Diag(NameInfo.getLoc(), PD);
+              return ExprError();
+            }
+          } else {
+            PartialDiagnostic PD = PDiag(diag::err_access)
+                                   << 0 << NameInfo.getName()
+                                   << Context.getTypeDeclType(RD)
+                                   << Context.getTypeDeclType(RD);
+            Diag(NameInfo.getLoc(), PD);
+            return ExprError();
+          }
+        }
+
+        if (T.isNull() &&
+            (isa<FunctionDecl>(*R.begin()) || isa<FieldDecl>(*R.begin()) ||
+             isa<VarDecl>(*R.begin()))) {
+          Diag(NameInfo.getLoc(), diag::err_invalid_member_use_in_class_method)
+              << NameInfo.getName();
+          return ExprError();
+        }
+      }
+    }
+  }
+#endif
   if (!R.empty() && (*R.begin())->isCXXClassMember()) {
     bool MightBeImplicitMember;
     if (!IsAddressOfOperand)
@@ -7098,6 +7146,17 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         }
       }
     }
+    // Destructors cannot be invoked by users.
+    if (getLangOpts().BSC) {
+      const auto *MD = dyn_cast<BSCMethodDecl>(NDecl);
+
+      if (MD && MD->isDestructor()) {
+        Diag(Fn->getBeginLoc(), diag::err_destructor_call)
+            << NDecl->getDeclName();
+        return ExprError();
+      }
+    }
+
     #endif
 
     if (CallingNDeclIndirectly && !checkAddressOfFunctionIsAvailable(
@@ -17559,6 +17618,10 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   switch (ConvTy) {
   case Compatible:
       DiagnoseAssignmentEnum(DstType, SrcType, SrcExpr);
+#if ENABLE_BSC
+      DiagnoseAssignmentOwnedStruct(DstType, SrcExpr);
+#endif
+
       return false;
 
   case PointerToInt:

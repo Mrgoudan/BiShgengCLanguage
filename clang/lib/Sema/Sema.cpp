@@ -2218,8 +2218,12 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
         (getDiagnostics().getNumErrors() ==
          getDiagnostics().getNumOwnershipErrors()) &&
         D)
-      if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D))
-        CheckBSCOwnership(D);
+      if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D)) {
+        auto md = dyn_cast_or_null<BSCMethodDecl>(D);
+        // Don't check ownership rules of destructor parameters
+        if (!md || !md->isDestructor())
+          CheckBSCOwnership(D);
+      }
   }
 #endif
 

@@ -293,14 +293,25 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              bool WantNontrivialTypeSourceInfo,
                              bool IsClassTemplateDeductionContext,
                              IdentifierInfo **CorrectedII
-                             #if ENABLE_BSC
-                             , QualType ExtendedTy
-                             #endif
-                             ) {
+#if ENABLE_BSC
+                             ,
+                             QualType ExtendedTy, bool HasOwnedQualifiers
+#endif
+) {
+
+#if ENABLE_BSC
+
+  // FIXME: Consider allowing this outside C++1z mode as an extension.
+  bool AllowDeducedTemplate =
+      IsClassTemplateDeductionContext &&
+      (getLangOpts().CPlusPlus17 || getLangOpts().BSC) && !IsCtorOrDtorName &&
+      !isClassName && !HasTrailingDot;
+#else
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
                               getLangOpts().CPlusPlus17 && !IsCtorOrDtorName &&
                               !isClassName && !HasTrailingDot;
+#endif
 
   // Determine where we will perform name lookup.
   DeclContext *LookupCtx = nullptr;
@@ -354,10 +365,20 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   #endif
   }
 
+#if ENABLE_BSC
+  LookupNameKind Kind;
+  if (getLangOpts().BSC && IsOwnedStruct(II.getName().str(), S) &&
+      !HasOwnedQualifiers) {
+    Kind = LookupBSCOwnedStructName;
+  } else {
+    Kind = isClassName ? LookupNestedNameSpecifierName : LookupOrdinaryName;
+  }
+#else
   // FIXME: LookupNestedNameSpecifierName isn't the right kind of
   // lookup for class-names.
-  LookupNameKind Kind = isClassName ? LookupNestedNameSpecifierName :
-                                      LookupOrdinaryName;
+  LookupNameKind Kind =
+      isClassName ? LookupNestedNameSpecifierName : LookupOrdinaryName;
+#endif
   LookupResult Result(*this, &II, NameLoc, Kind);
   if (LookupCtx) {
     // Perform "qualified" name lookup into the declaration context we
@@ -903,8 +924,15 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
     // will reject it later.
     return NameClassification::Unknown();
   }
-
+#if ENABLE_BSC
+  LookupNameKind Kind = LookupOrdinaryName;
+  if (getLangOpts().BSC && IsOwnedStruct(Name->getName().str(), S)) {
+    Kind = LookupBSCOwnedStructName;
+  }
+  LookupResult Result(*this, Name, NameLoc, Kind);
+#else
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
+#endif
   LookupParsedName(Result, S, &SS, !CurMethod);
 
   if (SS.isInvalid())
@@ -4191,7 +4219,31 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
         New->setParams(Params);
       }
+#if ENABLE_BSC
+      if (getLangOpts().BSC) {
+        const BSCMethodDecl *OldBSCMethod = dyn_cast<BSCMethodDecl>(Old);
+        BSCMethodDecl *NewBSCMethod = dyn_cast<BSCMethodDecl>(New);
+        if (OldBSCMethod && NewBSCMethod) {
+          if (NewBSCMethod->getLexicalDeclContext()->isRecord()) {
+            if (!inTemplateInstantiation()) {
+              unsigned NewDiag;
+              if (NewBSCMethod->isDestructor())
+                NewDiag = diag::err_destructor_redeclared;
+              else
+                NewDiag = diag::err_struct_member_redeclared;
 
+              Diag(New->getLocation(), NewDiag);
+            } else {
+              Diag(New->getLocation(),
+                   diag::err_member_redeclared_in_instantiation)
+                  << New << New->getType();
+            }
+            Diag(OldLocation, PrevDiag) << Old << Old->getType();
+            return true;
+          }
+        }
+      }
+#endif
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
     }
   }
@@ -5286,8 +5338,6 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
     if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
     #if ENABLE_BSC
-    if (DS.getTypeQualifiers() & DeclSpec::TQ_owned)
-      Diag(DS.getOwnedSpecLoc(), DiagID) << "owned";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_borrow)
       Diag(DS.getBorrowSpecLoc(), DiagID) << "borrow";
     #endif
@@ -7989,6 +8039,22 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (!getLangOpts().CPlusPlus) {
     D.setRedeclaration(CheckVariableDeclaration(NewVD, Previous));
+#if ENABLE_BSC
+    if (getLangOpts().BSC && Previous.empty() &&
+        D.getBSCScopeSpec().isNotEmpty() &&
+        !D.getBSCScopeSpec().getExtendedType().isNull()) {
+      auto DC = getASTContext().BSCDeclContextMap[D.getBSCScopeSpec()
+                                                      .getExtendedType()
+                                                      .getCanonicalType()
+                                                      .getTypePtr()];
+      if (NewVD->getFirstDecl() &&
+          NewVD->getFirstDecl()->getLexicalDeclContext() != DC) {
+        Diag(D.getIdentifierLoc(), diag::err_no_member)
+            << Name << DC << D.getBSCScopeSpec().getExtendedType();
+        NewVD->setInvalidDecl();
+      }
+    }
+#endif
   } else {
     // If this is an explicit specialization of a static data member, check it.
     if (IsMemberSpecialization && !NewVD->isInvalidDecl() &&
@@ -9058,6 +9124,19 @@ static StorageClass getFunctionStorageClass(Sema &SemaRef, Declarator &D) {
       return SC_None;
     return SC_Extern;
   case DeclSpec::SCS_static: {
+#if ENABLE_BSC
+    if (SemaRef.getLangOpts().BSC &&
+        SemaRef.CurContext->getRedeclContext()->isRecord()) {
+      // C99 6.7.1p5:
+      //   The declaration of an identifier for a function that has
+      //   block scope shall have no explicit storage-class specifier
+      //   other than extern
+      // See also (C++ [dcl.stc]p4).
+      SemaRef.Diag(D.getDeclSpec().getStorageClassSpecLoc(),
+                   diag::err_static_class_func);
+      break;
+    } else
+#endif
     if (SemaRef.CurContext->getRedeclContext()->isFunctionOrMethod()) {
       // C99 6.7.1p5:
       //   The declaration of an identifier for a function that has
@@ -9104,7 +9183,10 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
     //       __attribute__((noreturn)) func other_func; // This has a prototype
 
     #if ENABLE_BSC
-    if (SemaRef.getLangOpts().BSC && D.getBSCScopeSpec().isNotEmpty()) {
+    if (SemaRef.getLangOpts().BSC &&
+        (D.getBSCScopeSpec().isNotEmpty() ||
+         Name.getNameKind() == DeclarationName::CXXDestructorName ||
+         DC->isRecord())) {
       ConstexprSpecKind ConstexprKind = D.getDeclSpec().getConstexprSpecifier();
       if (ConstexprKind == ConstexprSpecKind::Constinit) {
         SemaRef.Diag(D.getDeclSpec().getConstexprSpecLoc(),
@@ -9114,6 +9196,10 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         D.getMutableDeclSpec().ClearConstexprSpec();
       }
       Expr *TrailingRequiresClause = D.getTrailingRequiresClause();
+      if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
+        // This is a C++ destructor declaration.
+        R = SemaRef.CheckDestructorDeclarator(D, R, SC);
+      }
 
       // This is a bsc method declaration.
       // FIXME: check whether UsesFPIntrin(before arg "isInline") is false?
@@ -9124,6 +9210,9 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
       Ret->setHasThisParam(D.getBSCScopeSpec().HasThisParam);
       Ret->setExtendedType(D.getBSCScopeSpec().getExtendedType());
       Ret->setExtentedTypeBeginLoc(D.getBSCScopeSpec().getBeginLoc());
+      if (Name.getNameKind() == DeclarationName::CXXDestructorName) {
+        Ret->setDestructor(true);
+      }
       return Ret;
     }
     #endif
@@ -10235,6 +10324,16 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    if (BSCMethodDecl *BSCMD = dyn_cast<BSCMethodDecl>(NewFD)) {
+      if (BSCMD->isDestructor() && !NewFD->isInvalidDecl()) {
+        CheckBSCDestructorDeclarator(NewFD);
+      }
+    }
+  }
+#endif
+
   if (!getLangOpts().CPlusPlus) {
     // Perform semantic checking on the function declaration.
     if (!NewFD->isInvalidDecl() && NewFD->isMain())
@@ -10296,7 +10395,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (getLangOpts().BSC) {
       // Fake up an access specifier if it's supposed to be a class member.
       if (isa<RecordDecl>(NewFD->getDeclContext()))
-        NewFD->setAccess(AS_public);
+        if (NewFD->getAccess() == AS_none) {
+          NewFD->setAccess(AS_public);
+        }
     }
     #endif
   } else {
@@ -14163,6 +14264,13 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
       (getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
     Diag(VD->getLocation(), diag::err_unsafe_action)
         << "variable declaration in the top-level switch block";
+  } else {
+    const Type *VDType = VD->getType().getCanonicalType().getTypePtr();
+    if (getLangOpts().BSC && VDType->isOwnedStructureType() &&
+        getCurScope()->getParent() &&
+        (getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
+      Diag(VD->getLocation(), diag::warn_destructor_execute);
+    }
   }
 #endif
 
@@ -14519,7 +14627,7 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
 /// to introduce parameters into function prototype scope.
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
                                  #if ENABLE_BSC
-                                 , int ParamSize, QualType ExtendedType
+                                 , int ParamSize, QualType ExtendedType, bool isDestructor
                                  #endif
                                  ) {
   const DeclSpec &DS = D.getDeclSpec();
@@ -14576,7 +14684,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
   if (TypePtr)
     TypePtr = TypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
   // if TypePtr is nullptr, it is not a BSCMethod
-  if (TypePtr && DeclarationName(II).getAsString() == "this") {
+  if (TypePtr && DeclarationName(II).getAsString() == "this" && !isDestructor) {
     if (ParamSize == 0) {
       auto ThisTypePtr = parmDeclType.getTypePtrOrNull();
       if (ThisTypePtr) {
@@ -15805,6 +15913,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     PopDeclContext();
 
   PopFunctionScopeInfo(ActivePolicy, dcl);
+  if (auto *FD = dyn_cast<FunctionDecl>(dcl))
+    DesugarDestructorCall(FD);
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for
   // deletion in some later function.

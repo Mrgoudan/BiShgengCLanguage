@@ -94,7 +94,9 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
 
 void Scope::Init(Scope *parent, unsigned flags) {
   setFlags(parent, flags);
-
+#if ENABLE_BSC
+  std::stack<VarDecl *>().swap(DeclsInScopeToEmitDestructorCall);
+#endif
   DeclsInScope.clear();
   UsingDirectives.clear();
   Entity = nullptr;

@@ -824,8 +824,21 @@ class QualType {
 
 public:
   QualType() = default;
+#if ENABLE_BSC
+  QualType(const Type *Ptr, unsigned Quals, bool isOwned = false)
+      : Value(Ptr, Quals) {
+    if (isOwned)
+      addFastQualifiers(Qualifiers::Owned);
+  }
+  QualType(const ExtQuals *Ptr, unsigned Quals, bool isOwned = false)
+      : Value(Ptr, Quals) {
+    if (isOwned)
+      addFastQualifiers(Qualifiers::Owned);
+  }
+#else
   QualType(const Type *Ptr, unsigned Quals) : Value(Ptr, Quals) {}
   QualType(const ExtQuals *Ptr, unsigned Quals) : Value(Ptr, Quals) {}
+#endif
 
   unsigned getLocalFastQualifiers() const { return Value.getInt(); }
   void setLocalFastQualifiers(unsigned Quals) { Value.setInt(Quals); }
@@ -2252,6 +2265,8 @@ public:
   bool hasTraitType() const;
   bool isBSCCalculatedTypeInCompileTime() const;
   bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
+  bool isOwnedStructureType() const;
+  bool isOwnedTemplateSpecializationType() const;
   #endif
   bool isClassType() const;
   bool isStructureType() const;
@@ -7013,7 +7028,8 @@ inline void QualType::removeLocalConst() {
 
 #if ENABLE_BSC
 inline void QualType::removeLocalOwned() {
-  removeLocalFastQualifiers(Qualifiers::Owned);
+  if (!this->getCanonicalType()->isOwnedStructureType())
+    removeLocalFastQualifiers(Qualifiers::Owned);
 }
 
 inline void QualType::removeLocalBorrow() {

@@ -391,7 +391,12 @@ bool Sema::LookupTemplateName(LookupResult &Found,
                               bool &MemberOfUnknownSpecialization,
                               RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
-                              bool AllowTypoCorrection) {
+                              bool AllowTypoCorrection
+      #if ENABLE_BSC
+      , QualType T
+      #endif
+                              ) {
+
   if (ATK)
     *ATK = AssumedTemplateKind::None;
 
@@ -487,7 +492,14 @@ bool Sema::LookupTemplateName(LookupResult &Found,
 
     IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
-
+#if ENABLE_BSC
+  if (!T.isNull() && getLangOpts().BSC) {
+    DeclContext *DC =
+        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    if (DC)
+      LookupQualifiedName(Found, DC);
+  }
+#endif
   if (Found.isAmbiguous())
     return false;
 
@@ -3205,10 +3217,11 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     TemplateIdAnnotation *TemplateId,
     ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
     bool &IsMemberSpecialization, bool &Invalid, bool SuppressDiagnostic
-    #if ENABLE_BSC
-    , QualType ExtendedTy
-    #endif
-    ) {
+#if ENABLE_BSC
+    ,
+    QualType ExtendedTy
+#endif
+) {
   IsMemberSpecialization = false;
   Invalid = false;
 
@@ -3506,10 +3519,14 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
         continue;
       }
 
-      if (!SuppressDiagnostic)
+      if (!SuppressDiagnostic) {
+#if ENABLE_BSC
+        if (getLangOpts().BSC)
+          continue;
+#endif
         Diag(DeclLoc, diag::err_template_spec_needs_template_parameters)
-          << T
-          << getRangeOfTypeInNestedNameSpecifier(Context, T, SS);
+            << T << getRangeOfTypeInNestedNameSpecifier(Context, T, SS);
+      }
       Invalid = true;
       continue;
     }
@@ -3989,11 +4006,13 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
           ClassTemplate->getDeclContext(),
           ClassTemplate->getTemplatedDecl()->getBeginLoc(),
           ClassTemplate->getLocation(), ClassTemplate, Converted, nullptr);
-      #if ENABLE_BSC
+#if ENABLE_BSC
+      Decl->setOwnedDecl(ClassTemplate->getTemplatedDecl()->isOwnedDecl());
+
       if (TraitDecl *TD =
               ClassTemplate->getTemplatedDecl()->getDesugaredTraitDecl())
         Decl->setDesugaredTraitDecl(TD);
-      #endif
+#endif
       ClassTemplate->AddSpecialization(Decl, InsertPos);
       if (ClassTemplate->isOutOfLine())
         Decl->setLexicalDeclContext(ClassTemplate->getLexicalDeclContext());
@@ -4220,7 +4239,6 @@ TypeResult Sema::ActOnTemplateIdType(
     ElabTL.setElaboratedKeywordLoc(SourceLocation());
     ElabTL.setQualifierLoc(SS.getWithLocInContext(Context));
   }
-
   return CreateParsedType(Result, TLB.getTypeSourceInfo(Context, Result));
 }
 
@@ -4284,6 +4302,13 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
   if (Result.isNull())
     return TypeResult(true);
 
+#if ENABLE_BSC
+  if (TUK != Sema::TUK_Definition && getLangOpts().BSC &&
+      (Result->isOwnedStructureType() ||
+       Result->isOwnedTemplateSpecializationType())) {
+    Diag(TagLoc, diag::err_tag_name);
+  }
+#endif
   // Check the tag kind
   if (const RecordType *RT = Result->getAs<RecordType>()) {
     RecordDecl *D = RT->getDecl();
@@ -8206,6 +8231,13 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   if (Ctx) {
     if (Ctx->isFileContext())
       return false;
+#if ENABLE_BSC
+    if (RecordDecl *RD = dyn_cast<RecordDecl>(Ctx)) {
+      if (getLangOpts().BSC && RD->isOwnedDecl()) {
+        return false;
+      }
+    }
+#endif
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.

@@ -174,7 +174,9 @@ void Ownership::OwnershipStatus::initOwnedFields(RecordDecl *RD,
        fieldIt != RD->field_end(); ++fieldIt) {
     QualType FT = fieldIt->getType().getCanonicalType();
     std::string name = fieldName + fieldIt->getNameAsString();
-    if (FT.isOwnedQualified()) {
+    bool isOwnedStructType =
+        (FT->isOwnedStructureType() || FT->isOwnedTemplateSpecializationType());
+    if (FT.isOwnedQualified() && !isOwnedStructType) {
       if (structFields[VD].empty()) {
         llvm::SmallSet<std::string, 8> s1 = {};
         llvm::SmallSet<std::string, 8> s2 = {};
@@ -300,7 +302,12 @@ static bool IsTrackFields(QualType type) {
 
 static std::string WarningLog(VarDecl *VD, Ownership::OwnershipStatus &stat) {
   std::string warningName = "";
-  if (VD->getType().isOwnedQualified()) {
+
+  bool isOwnedStructType =
+      (VD->getType().getCanonicalType()->isOwnedStructureType() ||
+       VD->getType().getCanonicalType()->isOwnedTemplateSpecializationType());
+  if ((VD->getType().isOwnedQualified() && !isOwnedStructType) ||
+      (isOwnedStructType && !IsTrackFields(VD->getType()))) {
     warningName = VD->getNameAsString();
   } else if (IsTrackFields(VD->getType())) {
     // error handling
@@ -516,8 +523,9 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
 }
 
 void TransferFunctions::VisitScopeEnd(VarDecl *VD, SourceLocation SL) {
-  if (stat.is(VD, Ownership::Status::Owned) ||
-      stat.has(VD, Ownership::Status::Owned)) {
+  if ((stat.is(VD, Ownership::Status::Owned) ||
+       stat.has(VD, Ownership::Status::Owned)) &&
+      !VD->getType().getTypePtr()->isOwnedStructureType()) {
     // error handling
     DiagInfo DI(WarningLog(VD, stat), MemoryLeak, SL);
     reporter.addDiagInfo(DI);
@@ -762,13 +770,28 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
     // Enqueue the value to the successors.
     worklist.enqueueSuccessors(block);
   }
-
+  bool isDestructor = false;
+  if (auto md = dyn_cast<BSCMethodDecl>(&fd)) {
+    isDestructor = md->isDestructor();
+  }
   // check ownership rules of function parameters
   const CFGBlock *exit = &cfg.getExit();
   for (ParmVarDecl *PVD : fd.parameters()) {
     if (OS->blocksEndStatus[exit].is(PVD, Ownership::Status::Owned) ||
         OS->blocksEndStatus[exit].has(PVD, Ownership::Status::Owned)) {
-      DiagInfo DI(WarningLog(PVD, OS->blocksEndStatus[exit]), MemoryLeak, fd.getSourceRange().getEnd());
+
+      bool isOwnedStructType =
+          (PVD->getType().getCanonicalType()->isOwnedStructureType() ||
+           PVD->getType()
+               .getCanonicalType()
+               ->isOwnedTemplateSpecializationType());
+      if (isOwnedStructType && !IsTrackFields(PVD->getType()) && isDestructor) {
+        continue;
+      }
+      if (!isDestructor && isOwnedStructType)
+        continue;
+      DiagInfo DI(WarningLog(PVD, OS->blocksEndStatus[exit]), MemoryLeak,
+                  fd.getSourceRange().getEnd());
       reporter.addDiagInfo(DI);
     }
   }

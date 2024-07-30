@@ -56,6 +56,7 @@ struct ASTTemplateArgumentListInfo;
 class CompoundStmt;
 #if ENABLE_BSC
 class ClassTemplateDecl;
+class BSCMethodDecl;
 #endif
 class DependentFunctionTemplateSpecializationInfo;
 class EnumDecl;
@@ -4058,6 +4059,7 @@ public:
   void setDesugaredTraitDecl(TraitDecl *TD) { DesugaredTD = TD; }
 
   TraitDecl *getDesugaredTraitDecl() { return DesugaredTD; }
+  BSCMethodDecl *getBSCDestructor() const;
   #endif
 
   /// Whether this is an anonymous struct or union. To be an anonymous
@@ -4209,6 +4211,9 @@ public:
     return const_cast<FunctionDecl *>(
         const_cast<const RecordDecl *>(this)->isLocalClass());
   }
+
+  bool isOwnedDecl() const { return RecordDeclBits.IsOwned; }
+  void setOwnedDecl(bool value) { RecordDeclBits.IsOwned = value; }
   #endif
 
   /// Determine whether this class can be passed in registers. In C++ mode,

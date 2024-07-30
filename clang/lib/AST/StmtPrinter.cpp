@@ -1165,6 +1165,10 @@ static std::string GetTypePrefix(QualType T, bool isFront,
   T.print(OS, PP);
   for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
     if (ExtendedTypeStr[i] == ' ') {
+      if (i == 0) {
+        ExtendedTypeStr.replace(i, 1, "");
+        continue;
+      }
       ExtendedTypeStr.replace(i, 1, "_");
     } else if (ExtendedTypeStr[i] == '*') {
       // Since '*' is not allowed to appear in identifier,
@@ -1225,11 +1229,45 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
         return;
       }
     }
+    if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
+      if (BD->isDestructor()) {
+        auto *RD = dyn_cast<RecordDecl>(Node->getFoundDecl()->getDeclContext());
+        std::string ExtendedTypeStr = GetTypePrefix(
+            RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
+        OS << ExtendedTypeStr + "D";
+        return;
+      }
+    }
     if (Node->HasBSCScopeSpec) {
       if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
         std::string ExtendedTypeStr =
             GetTypePrefix(BD->getExtendedType(), false, Policy);
         OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
+        return;
+      }
+      if (auto *VD = dyn_cast<VarDecl>(Node->getFoundDecl())) {
+        if (auto *RD = dyn_cast<RecordDecl>(VD->getDeclContext())) {
+          std::string Prefix = GetTypePrefix(
+              RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
+
+          OS << Prefix + Node->getNameInfo().getAsString();
+          return;
+        }
+      }
+    }
+    if (Node->getFoundDecl()->isTemplateDecl()) {
+      if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getDecl())) {
+        std::string FunctionNameStr;
+        std::string ExtendedTypeStr =
+            GetTypePrefix(BD->getExtendedType(), false, Policy);
+        FunctionNameStr = ExtendedTypeStr + Node->getNameInfo().getAsString();
+        for (unsigned i = 0; i < BD->getTemplateSpecializationArgs()->size();
+             i++) {
+          std::string QT = RewriteBSCTemplateArgument(
+              BD->getTemplateSpecializationArgs()->get(i), Policy);
+          FunctionNameStr += QT;
+        }
+        OS << FunctionNameStr;
         return;
       }
     }
@@ -1727,6 +1765,10 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
   if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
     std::string ExtendedTypeStr =
         GetTypePrefix(BD->getExtendedType(), false, Policy);
+    OS << ExtendedTypeStr;
+  } else if (Policy.RewriteBSC && isa<VarDecl>(Node->getMemberDecl())) {
+    std::string ExtendedTypeStr =
+        GetTypePrefix(Node->getBase()->getType(), false, Policy);
     OS << ExtendedTypeStr;
   } else
   #endif
