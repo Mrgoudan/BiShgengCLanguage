@@ -31,15 +31,17 @@ enum BorrowKind : char {
 };
 
 struct TargetInfo {
-  VarDecl* TargetVD = nullptr;
+  VarDecl *TargetVD = nullptr;
   std::string TargetFieldPath;
-  
-  TargetInfo() {}
-  TargetInfo(VarDecl* targetVD) : TargetVD(targetVD) {}
-  TargetInfo(VarDecl* targetVD, std::string targetFieldPath) : TargetVD(targetVD), TargetFieldPath(targetFieldPath) {}
 
-  bool operator==(const TargetInfo &Other) const { 
-    return TargetVD == Other.TargetVD && TargetFieldPath == Other.TargetFieldPath;
+  TargetInfo() {}
+  TargetInfo(VarDecl *targetVD) : TargetVD(targetVD) {}
+  TargetInfo(VarDecl *targetVD, std::string targetFieldPath)
+      : TargetVD(targetVD), TargetFieldPath(targetFieldPath) {}
+
+  bool operator==(const TargetInfo &Other) const {
+    return TargetVD == Other.TargetVD &&
+           TargetFieldPath == Other.TargetFieldPath;
   }
 };
 
@@ -49,34 +51,40 @@ struct NonLexicalLifetimeRange {
   // For example,
   //     a.b.c = &mut local;  // BorrowFieldPath : ".b.c"
   //     p = &mut local;      // BorrowFieldPath : ""
-  std::string BorrowFieldPath;  
+  std::string BorrowFieldPath;
 
   unsigned Begin;
   unsigned End;
   BorrowKind Kind = BorrowKind::NoBorrow;
 
-  // Record the target(VarDecl and FieldPath) of a borrow during this NonLexicalLifetimeRange.
-  // For owned and other variables, TargetVD will be void.
-  // Borrow from a variable, TargetFieldPath is void string;
-  // Borrow from a member of a struct variable, TargetFieldPath records fields borrowed.
-  // For example:
+  // Record the target(VarDecl and FieldPath) of a borrow during this
+  // NonLexicalLifetimeRange. For owned and other variables, TargetVD will be
+  // void. Borrow from a variable, TargetFieldPath is void string; Borrow from a
+  // member of a struct variable, TargetFieldPath records fields borrowed. For
+  // example:
   //   int* borrow p1 = &mut local;     // TargetVD: local, TargetFieldPath: ""
   //   struct S* borrow p2 = &mut s;    // TargetVD: s,     TargetFieldPath: ""
-  //   int* borrow p3 = &mut s.a;       // TargetVD: s,     TargetFieldPath: ".a"
-  //   int* borrow p4 = &mut s.b.c;     // TargetVD: s,     TargetFieldPath: ".b.c"
+  //   int* borrow p3 = &mut s.a;       // TargetVD: s,     TargetFieldPath:
+  //   ".a" int* borrow p4 = &mut s.b.c;     // TargetVD: s, TargetFieldPath:
+  //   ".b.c"
   TargetInfo Target;
 
   NonLexicalLifetimeRange() {}
 
-  // These constructors are for borrow variables, which have binding targets. 
-  NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind, VarDecl* targetVD)
+  // These constructors are for borrow variables, which have binding targets.
+  NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
+                          VarDecl *targetVD)
       : Begin(begin), End(end), Kind(kind), Target(TargetInfo(targetVD)) {}
-  NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind, TargetInfo target)
+  NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
+                          TargetInfo target)
       : Begin(begin), End(end), Kind(kind), Target(target) {}
-  NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind, TargetInfo target, std::string borrowFieldPath)
-      : BorrowFieldPath(borrowFieldPath), Begin(begin), End(end), Kind(kind), Target(target) {}
+  NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
+                          TargetInfo target, std::string borrowFieldPath)
+      : BorrowFieldPath(borrowFieldPath), Begin(begin), End(end), Kind(kind),
+        Target(target) {}
 
-  // This constructor is for no-borrow variables, which don't have binding targets. 
+  // This constructor is for no-borrow variables, which don't have binding
+  // targets.
   NonLexicalLifetimeRange(unsigned begin, unsigned end)
       : Begin(begin), End(end) {}
 
@@ -101,22 +109,28 @@ using NonLexicalLifetime = llvm::DenseMap<VarDecl*, NonLexicalLifetimeOfVar>;
 
 struct BorrowInfo {
   std::string TargetFieldPath;
-  VarDecl* BorrowVD;
+  VarDecl *BorrowVD;
   std::string BorrowFieldPath;
   unsigned Begin;
-  unsigned End; 
+  unsigned End;
   BorrowKind Kind = BorrowKind::NoBorrow;
 
   BorrowInfo() {}
-  BorrowInfo(std::string targetFieldPath,
-             VarDecl* borrowVD, std::string borrowFieldPath,
-             unsigned begin, unsigned end, BorrowKind kind)
-      : TargetFieldPath(targetFieldPath),
-        BorrowVD(borrowVD), BorrowFieldPath(borrowFieldPath),
-        Begin(begin), End(end), Kind(kind) {}
+  BorrowInfo(std::string targetFieldPath, VarDecl *borrowVD,
+             std::string borrowFieldPath, unsigned begin, unsigned end,
+             BorrowKind kind)
+      : TargetFieldPath(targetFieldPath), BorrowVD(borrowVD),
+        BorrowFieldPath(borrowFieldPath), Begin(begin), End(end), Kind(kind) {}
+  bool operator==(const BorrowInfo &other) {
+    return TargetFieldPath == other.TargetFieldPath &&
+           BorrowVD == other.BorrowVD &&
+           BorrowFieldPath == other.BorrowFieldPath && Begin == other.Begin &&
+           End == other.End && Kind == other.Kind;
+  }
 };
 
-using BorrowTargetMapInfo = llvm::DenseMap<VarDecl*, llvm::SmallVector<BorrowInfo>>;
+using BorrowTargetMapInfo =
+    llvm::DenseMap<VarDecl *, llvm::SmallVector<BorrowInfo>>;
 
 enum BorrowCheckDiagKind {
   LiveLonger,

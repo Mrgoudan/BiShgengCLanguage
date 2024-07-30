@@ -14,6 +14,8 @@ void test_freeze_arrow_var1() {
     arr[1] = 2;                         // expected-error {{Can not modify 'arr' because be borrowed}}
     arr[2] = 2;                         // expected-error {{Can not modify 'arr' because be borrowed}}
     test1(arr);                         // expected-error {{Can not modify 'arr' because be borrowed}}
+    int arr2[10] = {};
+    arr2[arr[1]] = 5;
     int m = *c;
 }
 

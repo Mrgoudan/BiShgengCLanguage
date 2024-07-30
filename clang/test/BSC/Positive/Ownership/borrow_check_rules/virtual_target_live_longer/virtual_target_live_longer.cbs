@@ -7,17 +7,17 @@ void use_mut(int *borrow p) {}
 void test1() {
   int *a = (int *)malloc(sizeof(int));
   int *borrow p = &mut * a;
-  free(a);  // We assume the virtual target of naked pointer live longer than all local variables
   use_mut(p);
+  free(a);
 }
 
 void test2(int* a) {
   int *borrow p = &mut * a;
-  free(a);
   use_mut(p);
+  free(a);
 }
 
-void test3(int *borrow p) { // We assume the virtual target of borrow parameter live longer than all local variables
+void test3(int *borrow p) {
   int *borrow p1 = &mut * p;
   use_mut(p1);
 }

@@ -1,0 +1,30 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+// &mut *e e被冻结 不允许读写e以及它的成员
+void test1(int *p) {}
+
+void test_freeze_star_var1() {
+    int a = 1;
+    int * b = &a;
+    int * borrow c = &mut *b;    // expected-note {{previous borrow is here}}
+    a = 2; // ok；
+    b = &a;                      // expected-error {{Can not modify 'b' because be borrowed}}
+    int m = *c;
+}
+
+void test_freeze_star_var2() {
+    int a = 1;
+    int * b = &a;
+    int * borrow c = &mut *b;
+    a = 2; // ok；
+    b = &a; // ok
+}
+
+void test_freeze_star_var3() {
+    int a = 1;
+    int * b = &a;
+    int * borrow c = &mut *b;
+    a = 2; // ok；
+    int m = *c;
+    b = &a; // ok
+}
