@@ -127,6 +127,9 @@ class BorrowRuleChecker : public StmtVisitor<BorrowRuleChecker> {
 
 public:
   NonLexicalLifetime NLLForAllVars;
+  unsigned CurElemID = 0;
+  enum Operation { None, Read, Write };
+  Operation Op = None;
   BorrowRuleChecker(BorrowCheckDiagReporter &reporter, const NonLexicalLifetime& NLLForVars)
       : reporter(reporter), NLLForAllVars(NLLForVars) {}
 
@@ -139,13 +142,236 @@ public:
   // Then BorrowTargetMap will be:
   //   local1 : [ (p1, 5, 10), (p3, 6, 8) ], local2 : [ (p2, 3, 4), (p3, 6, 8) ]
   llvm::DenseMap<VarDecl*, llvm::SmallVector<std::tuple<VarDecl*, unsigned, unsigned>>> BorrowTargetMap;
+  // save valid borrowed data within the current scope
+  llvm::DenseMap<VarDecl*, std::list<std::tuple<VarDecl*, unsigned, unsigned>>> ActiveBorrowTargetMap;
+
   void BuildBorrowTargetMap();
+  void CheckBeBorrowedTarget(const CFGPath &Path);
   void CheckBorrowNLLShorterThanTarget();
   void CheckLifetimeOfBorrowReturnValue(unsigned NumElements);
-  // void VisitDeclStmt(DeclStmt *DS);
-  // void VisitBinaryOperator(BinaryOperator *BO);
-  // void VisitDeclRefExpr(DeclRefExpr *DRE);
+  void CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc);
+  VarDecl *FindTargetFromActiveBorrowTargetMap(VarDecl *VD);
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *E);
+  void VisitBinaryOperator(BinaryOperator *BO);
+  void VisitCallExpr(CallExpr *CE);
+  void VisitCastExpr(CastExpr *E);
+  void VisitDeclRefExpr(DeclRefExpr *DRE);
+  void VisitDeclStmt(DeclStmt *DS);
+  void VisitImplicitCastExpr(ImplicitCastExpr *E);
+  void VisitParenExpr(ParenExpr *Node);
+  void VisitUnaryOperator(UnaryOperator *UO);
+  void PushActiveBorrowTargetMap();
+  void PopActiveBorrowTargetMap();
 };
+
+// check current variable has been borrowed
+VarDecl *BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(VarDecl *VD) {
+  if (VD->getType().isBorrowQualified()) {
+    for (auto v : ActiveBorrowTargetMap) {
+      auto it = v.second.rbegin();
+      while (it != v.second.rend()) {
+        if (std::get<0>(*it) == VD) {
+          return v.first;
+        }
+        it++;
+      }
+    }
+  } else {
+    for (auto v : ActiveBorrowTargetMap) {
+      if (v.first == VD) {
+        return v.first;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+void BorrowRuleChecker::CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
+    if (VD->getType().isBorrowQualified()) {
+      auto it = ActiveBorrowTargetMap[TVD].rbegin();
+      if (VD->getType().isConstBorrow()) {
+        while (it != ActiveBorrowTargetMap[TVD].rend()) {
+          if (std::get<0>(*it) == VD) {
+            return;
+          }
+          // immut and mut borrow variables are not allowed to exist
+          // simultaneously.
+          if (!std::get<0>(*it)->getType().isConstBorrow()) {
+            BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow,
+                                   Loc, std::get<0>(*it)->getLocation());
+            reporter.addDiagInfo(DI);
+            return;
+          }
+          it++;
+        }
+      } else {
+        assert(it != ActiveBorrowTargetMap[TVD].rend());
+        if (std::get<0>(*it) == VD) {
+          return;
+        } else {
+          // Only allow used the last alive mut borrow variable.
+          BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow, Loc,
+                                 std::get<0>(*it)->getLocation());
+          reporter.addDiagInfo(DI);
+          return;
+        }
+      }
+    } else {
+      auto it = ActiveBorrowTargetMap[TVD].rbegin();
+      if (Op == Write) {
+        // Variables cannot be modified when be borrowed
+        BorrowCheckDiagInfo DI(VD->getNameAsString(), ModifyAfterBeBorrowed,
+                               Loc, std::get<0>(*it)->getLocation());
+        reporter.addDiagInfo(DI);
+      } else {
+        while (it != ActiveBorrowTargetMap[TVD].rend()) {
+          // Variables cannot be read when be mut borrowed
+          if (!std::get<0>(*it)->getType().isConstBorrow()) {
+            BorrowCheckDiagInfo DI(VD->getNameAsString(),
+                                   ReadAfterBeMutBorrowed, Loc,
+                                   std::get<0>(*it)->getLocation());
+            reporter.addDiagInfo(DI);
+            return;
+          }
+          it++;
+        }
+      }
+    }
+  }
+}
+
+void BorrowRuleChecker::VisitDeclRefExpr(DeclRefExpr *DRE) {
+  if (Op == None) {
+    return;
+  }
+  if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+    CheckValIsLegalUse(VD, DRE->getLocation());
+  }
+}
+
+void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
+  Operation TempOp = Op;
+  switch (UO->getOpcode()) {
+  case UO_PostInc:
+  case UO_PostDec:
+  case UO_PreInc:
+  case UO_PreDec:
+    Op = Write;
+    break;
+  default:
+    break;
+  }
+  Visit(UO->getSubExpr());
+  Op = TempOp;
+}
+
+void BorrowRuleChecker::VisitCallExpr(CallExpr *CE) {
+  Op = Write;
+  for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
+    Visit(*it);
+  }
+  Op = None;
+}
+
+void BorrowRuleChecker::VisitCastExpr(CastExpr *E) { Visit(E->getSubExpr()); }
+
+void BorrowRuleChecker::VisitParenExpr(ParenExpr *E) { Visit(E->getSubExpr()); }
+
+void BorrowRuleChecker::VisitImplicitCastExpr(ImplicitCastExpr *E) {
+  Visit(E->getSubExpr());
+}
+void BorrowRuleChecker::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
+  Visit(E->getLHS());
+  Visit(E->getRHS());
+}
+
+void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
+  if (BO->isAssignmentOp()) {
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+      if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        if (VD->getType().isBorrowQualified()) {
+          return;
+        }
+        Op = Write;
+        CheckValIsLegalUse(VD, DRE->getLocation());
+        Op = Read;
+        Visit(BO->getRHS());
+        return;
+      }
+    }
+    Op = Write;
+    Visit(BO->getLHS());
+    Op = Read;
+    Visit(BO->getRHS());
+  }
+  Op = None;
+}
+
+void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
+  for (auto *D : DS->decls()) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      if (VD->getType().isBorrowQualified()) {
+        return;
+      }
+      Expr *Init = VD->getInit();
+      if (Init) {
+        Op = Read;
+        Visit(Init);
+      }
+    }
+  }
+  Op = None;
+}
+
+void BorrowRuleChecker::PushActiveBorrowTargetMap() {
+  for (auto v : BorrowTargetMap) {
+    for (auto w : v.second) {
+      unsigned firstElemId = std::get<1>(w);
+      if (CurElemID == firstElemId) {
+        ActiveBorrowTargetMap[v.first].push_back(w);
+      }
+    }
+  }
+}
+
+void BorrowRuleChecker::PopActiveBorrowTargetMap() {
+  for (auto v : BorrowTargetMap) {
+    for (auto w : v.second) {
+      unsigned secondElemId = std::get<2>(w);
+      if (CurElemID == secondElemId) {
+        ActiveBorrowTargetMap[v.first].remove(w);
+      }
+    }
+    if (ActiveBorrowTargetMap[v.first].empty()) {
+      ActiveBorrowTargetMap.erase(v.first);
+    }
+  }
+}
+
+void BorrowRuleChecker::CheckBeBorrowedTarget(const CFGPath &Path) {
+  CurElemID = 1;
+  PushActiveBorrowTargetMap();
+  PopActiveBorrowTargetMap();
+  for (auto blockIt = Path.begin(); blockIt != Path.end(); blockIt++) {
+    const CFGBlock *block = *blockIt;
+
+    for (CFGBlock::const_iterator elemIt = block->begin(),
+                                  elemEI = block->end();
+         elemIt != elemEI; ++elemIt) {
+      const CFGElement &elem = *elemIt;
+      CurElemID++;
+      Op = None;
+      PushActiveBorrowTargetMap();
+      if (elem.getAs<CFGStmt>()) {
+        const Stmt *S = elem.castAs<CFGStmt>().getStmt();
+        Visit(const_cast<Stmt *>(S));
+      }
+      PopActiveBorrowTargetMap();
+    }
+  }
+}
 
 void BorrowRuleChecker::BuildBorrowTargetMap() {
   for (auto NLLOfVar : NLLForAllVars) {
@@ -551,6 +777,7 @@ void BorrowCheckImpl::BorrowCheckForPath(const CFGPath &Path, BorrowCheckDiagRep
   BRC.CheckBorrowNLLShorterThanTarget();
   if (fd.getReturnType().isBorrowQualified())
     BRC.CheckLifetimeOfBorrowReturnValue(NumElements);
+  BRC.CheckBeBorrowedTarget(Path);
 }
 
 void clang::runBorrowCheck(const FunctionDecl &fd, const CFG &cfg,

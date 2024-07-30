@@ -38,16 +38,18 @@ int *borrow test6(int *borrow p) {
 }
 
 int* borrow test7(int* borrow p) { // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+                                   // expected-note@-1  {{previous borrow is here}}
   int *owned oriPtr = safe_malloc<int>(0);
   p = &mut * oriPtr; 
-  free_owned<int>(oriPtr);
+  free_owned<int>(oriPtr);    // expected-error {{Can not modify 'oriPtr' because be borrowed}}
   return p; /* expected-error {{borrow pointer variable '_ReturnVar' lives longer than target variable}}
               expected-error {{Return value cannot be a borrow from local variable 'oriPtr'}} */
 }
 
 int* borrow test8(int *owned oriPtr, int* borrow p) { // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+                                                      // expected-note@-1  {{previous borrow is here}}
   p = &mut * oriPtr;
-  free_owned<int>(oriPtr);
+  free_owned<int>(oriPtr);      // expected-error {{Can not modify 'oriPtr' because be borrowed}}
   return p;  /* expected-error {{borrow pointer variable '_ReturnVar' lives longer than target variable}}
                 expected-error {{Return value cannot be a borrow from local variable 'oriPtr'}} */
 }

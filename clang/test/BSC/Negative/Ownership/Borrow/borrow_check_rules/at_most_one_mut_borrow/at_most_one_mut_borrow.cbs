@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
 void use_mut(int *borrow p) {}
 void use_immut(const int *borrow p) {}
 T* owned safe_malloc<T>(T value);
@@ -7,16 +9,16 @@ void free(void*);
 void test1() {
   int local = 42;
   int *borrow p1 = &mut local; 
-  int *borrow p2 = &mut local; 
-  use_mut(p1);   // error
+  int *borrow p2 = &mut local;     // expected-note {{previous borrow is here}}
+  use_mut(p1);                     // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
   use_mut(p2);
 }
 
 void test2() {
   int *owned oriPtr = safe_malloc<int>(0);
   int *borrow p1 = &mut *oriPtr; 
-  int *borrow p2 = &mut *oriPtr;
-  use_mut(p1);  // error
+  int *borrow p2 = &mut *oriPtr;    // expected-note {{previous borrow is here}}
+  use_mut(p1);                      // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
   use_mut(p2);
   free_owned<int>(oriPtr);
 }
@@ -32,39 +34,40 @@ void test4() {
   int local = 5;
   int *borrow p = &mut local;
   int *borrow p1 = &mut local; 
-  const int *borrow p2 = &const *p;
-  use_mut(p);    // error
-  use_mut(p1);   // error
+  const int *borrow p2 = &const *p;   // expected-note {{previous borrow is here}}
+                                      // expected-note@-1 {{previous borrow is here}}
+  use_mut(p);                         // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+  use_mut(p1);                        // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
   use_immut(p2);
 }
 
 void test5() {
   int local = 5;
   int *borrow p1 = &mut local;
-  const int *borrow p2 = &const local;  
-  use_mut(p1);  //error
+  const int *borrow p2 = &const local;  // expected-note {{previous borrow is here}}
+  use_mut(p1);                          // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
   use_immut(p2);
 }
 
 void test6(int* borrow p) {
   int local = 5;
   p = &mut local;
-  const int *borrow p1 = &const *p;
-  use_mut(p);   //error
+  const int *borrow p1 = &const *p;    // expected-note {{previous borrow is here}}
+  use_mut(p);                          // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
   use_immut(p1);
 }
 
 void test7(int* borrow p) {
-  int *borrow p1 = p;
-  use_mut(p);  // error, p is frozen
+  int *borrow p1 = p;                 // expected-note {{previous borrow is here}}
+  use_mut(p);                         // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
   use_mut(p1);
 }
 
 void test8() {
   int arr[5];
   int *borrow p = &mut arr[0];
-  int *borrow p1 = &mut arr[1];
-  use_mut(p);   // error
+  int *borrow p1 = &mut arr[1];       // expected-note {{previous borrow is here}}
+  use_mut(p);                         // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
   use_mut(p1);
 }
 
@@ -72,14 +75,14 @@ void use_two_borrow(int *borrow p1, int *borrow p2) {}
 void test9() {
   int local = 42;
   int *borrow p1 = &mut local;
-  int *borrow p2 = &mut local;
-  use_two_borrow(p1, p2);  // error
+  int *borrow p2 = &mut local;       // expected-note {{previous borrow is here}}
+  use_two_borrow(p1, p2);            // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
 }
 
 void test10() {
   int local = 5;
   int *borrow p1 = &mut local;
-  const int *borrow p2 = &const local;
+  const int *borrow p2 = &const local;     // expected-note {{previous borrow is here}}
   int *owned oriPtr = safe_malloc<int>(0);
   if (local > 0) {
     p1 = &mut *oriPtr; 
@@ -88,7 +91,7 @@ void test10() {
     p2 = &const *oriPtr;
     p1 = &mut *oriPtr;
   }
-  use_mut(p1);    //error only in `if` branch  
+  use_mut(p1);                             // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
   use_immut(p2);
   free_owned<int>(oriPtr);
 }
@@ -96,7 +99,7 @@ void test10() {
 void test11() {
   int local = 5;
   int *borrow p1 = &mut local;
-  const int *borrow p2 = &const local;
+  const int *borrow p2 = &const local;     // expected-note {{previous borrow is here}}
   int *owned oriPtr = safe_malloc<int>(0);
   if (1) {
     p1 = &mut *oriPtr; 
@@ -105,7 +108,7 @@ void test11() {
     p1 = &mut *oriPtr;
     p2 = &const *oriPtr;
   }
-  use_mut(p1);    // error only in `if` branch 
+  use_mut(p1);                             // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
   use_immut(p2);
   free_owned<int>(oriPtr);
 }

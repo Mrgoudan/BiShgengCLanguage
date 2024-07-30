@@ -68,15 +68,20 @@ enum BorrowCheckDiagKind {
   LiveLonger,
   AtMostOneMutBorrow,
   ReturnLocal,
+  ModifyAfterBeBorrowed,
+  ReadAfterBeMutBorrowed,
 };
 
 struct BorrowCheckDiagInfo {
   std::string Name;
   BorrowCheckDiagKind Kind;
   SourceLocation Loc;
+  SourceLocation PreLoc;
 
-  BorrowCheckDiagInfo(std::string Name, BorrowCheckDiagKind Kind, SourceLocation Loc)
-    : Name(Name), Kind(Kind), Loc(Loc) {}
+  BorrowCheckDiagInfo(std::string Name, BorrowCheckDiagKind Kind,
+                      SourceLocation Loc,
+                      SourceLocation PreLoc = SourceLocation())
+      : Name(Name), Kind(Kind), Loc(Loc), PreLoc(PreLoc) {}
 
   bool operator==(const BorrowCheckDiagInfo& other) const {
     return Name == other.Name &&
@@ -118,9 +123,18 @@ private:
           break;
         case AtMostOneMutBorrow:
           S.Diag(DI.Loc, diag::err_at_most_one_mut_borrow) << DI.Name;
+          S.Diag(DI.PreLoc, diag::note_previous_borrow);
           break;
         case ReturnLocal:
           S.Diag(DI.Loc, diag::err_return_value_borrow_local) << DI.Name;
+          break;
+        case ModifyAfterBeBorrowed:
+          S.Diag(DI.Loc, diag::err_modify_after_be_borrow) << DI.Name;
+          S.Diag(DI.PreLoc, diag::note_previous_borrow);
+          break;
+        case ReadAfterBeMutBorrowed:
+          S.Diag(DI.Loc, diag::err_read_after_be_mut_borrow) << DI.Name;
+          S.Diag(DI.PreLoc, diag::note_previous_borrow);
           break;
         default:
           llvm_unreachable("unknown error type");

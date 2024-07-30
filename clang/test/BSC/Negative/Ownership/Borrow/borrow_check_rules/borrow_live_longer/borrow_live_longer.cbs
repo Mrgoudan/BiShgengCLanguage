@@ -49,13 +49,15 @@ void test4() {
 void test5() {
   int *owned oriPtr = safe_malloc<int>(0);
   int *borrow p = &mut * oriPtr; // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
-  free_owned<int>(oriPtr);
+                                 // expected-note@-1 {{previous borrow is here}}
+  free_owned<int>(oriPtr);       // expected-error {{Can not modify 'oriPtr' because be borrowed}}
   use_mut(p);
 }
 
 void test6(int *owned oriPtr) {
   int *borrow p = &mut * oriPtr; // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
-  free_owned<int>(oriPtr);
+                                 // expected-note@-1 {{previous borrow is here}}
+  free_owned<int>(oriPtr);       // expected-error {{Can not modify 'oriPtr' because be borrowed}}
   use_mut(p);
 }
 
@@ -63,10 +65,12 @@ void test7() {
   int a = 5;
   int *owned oriPtr = safe_malloc<int>(0);
   int *borrow p = &mut* oriPtr;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+                                 // expected-note@-1 {{previous borrow is here}}
+                                 // expected-note@-2 {{previous borrow is here}}
   if (a > 0) {
-    free_owned<int>(oriPtr);
+    free_owned<int>(oriPtr);     // expected-error {{Can not modify 'oriPtr' because be borrowed}}
   } else {
-    free_owned<int>(oriPtr);
+    free_owned<int>(oriPtr);     // expected-error {{Can not modify 'oriPtr' because be borrowed}}
   }
   use_mut(p);
 }

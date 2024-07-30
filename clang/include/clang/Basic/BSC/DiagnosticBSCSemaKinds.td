@@ -180,3 +180,8 @@ def err_at_most_one_mut_borrow : Error<
   "There should be at most one mutable borrow targeting to '%0' at the same time">;
 def err_return_value_borrow_local : Error<
   "Return value cannot be a borrow from local variable '%0'">;
+def err_modify_after_be_borrow : Error<
+  "Can not modify '%0' because be borrowed">;
+def err_read_after_be_mut_borrow : Error<
+  "Can not read '%0' because be mut borrowed">;
+def note_previous_borrow : Note<"previous borrow is here">;

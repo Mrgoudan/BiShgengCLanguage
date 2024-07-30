@@ -1,0 +1,133 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+void test_freeze_ident1() {
+    int a = 1;
+    int * borrow c = &mut a;
+    // we can modify "a" when c life time is end;
+    a = 2;
+}
+
+void test_freeze_ident2() {
+    int a = 1;
+    int * borrow c = &mut a;    // expected-note {{previous borrow is here}}
+    a = 2;                      // expected-error {{Can not modify 'a' because be borrowed}}
+    int d = *c;
+}
+
+void test_freeze_ident2_0() {
+    int a = 1;
+    int * borrow c = &mut a;    // expected-note {{previous borrow is here}}
+    int m = a;                  // expected-error {{Can not read 'a' because be mut borrowed}}
+    int d = *c;
+}
+
+void test_freeze_ident3() {
+    int a = 1;
+    int b = 2;
+    int * borrow c = &mut a;
+    // "c" life time is end at before, and reactivate at after;
+    a = 2;
+    c = &mut b;
+}
+
+void test_freeze_ident4() {
+    int a = 1;
+    int * borrow c = &mut a;
+    int * borrow d = &mut a;    
+}
+
+void test_freeze_ident5() {
+    int a = 1;
+    int * borrow c = &mut a;
+    int * borrow d = &mut a;
+    int e = *c;
+}
+
+void test_freeze_ident6() {
+    int a = 1;
+    int * borrow c = &mut a;
+    int * borrow d = &mut a;
+    int e = *d;
+}
+
+void test_freeze_ident6_0() {
+    int a = 1;
+    int * borrow c = &mut a;
+    int * borrow d = &mut a;
+    int e = *d;
+    int f = *c;
+}
+
+void use(int * borrow a) {}
+
+void test_freeze_ident6_1() {
+    int a = 1;
+    int * borrow c = &mut a;
+    int * borrow d = &mut a;    // expected-note {{previous borrow is here}}
+    int e = *c;                 // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    use(d);
+    use(c);
+}
+
+void test_freeze_ident6_2() {
+    int a = 1;
+    int * borrow c = &mut a;
+    int * borrow d = c;          // expected-note {{previous borrow is here}}
+    int e = *c;                  // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    use(d);
+    use(c);
+}
+
+void test_freeze_ident7() {
+    int a = 1;
+    int * borrow c = &mut a;
+    const int * borrow d = &const a;
+}
+
+void test_freeze_ident8() {
+    int a = 1;
+    int * borrow c = &mut a;
+    const int * borrow d = &const a;
+    int e = *c;
+}
+
+void test_freeze_ident9() {
+    int a = 1;
+    int * borrow c = &mut a;
+    const int * borrow d = &const a;
+    int e = *d;
+}
+
+void test_freeze_ident10() {
+    int a = 1;
+    int * borrow c = &mut a;
+    const int * borrow d = &const a;
+    int b = *d;
+    int e = *c;
+}
+
+void const_use(const int * borrow a) {};
+
+void test_freeze_ident11() {
+    int a = 1;
+    int * borrow c = &mut a;            
+    const int * borrow d = &const a;    // expected-note {{previous borrow is here}}
+    int b = *c;                         // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    const_use(d);
+    use(c);
+}
+
+void test_freeze_ident12() {
+    int a = 1;
+    const int * borrow c = &const a;
+    const int * borrow d = &const a;
+    int b = *c;
+    int e = *d;
+}
+
+void test_freeze_ident13() {
+    int a = 1;
+    const int * borrow c = &const a;     // expected-note {{previous borrow is here}}
+    a = 2;                               // expected-error {{Can not modify 'a' because be borrowed}}
+    int b = *c;
+}

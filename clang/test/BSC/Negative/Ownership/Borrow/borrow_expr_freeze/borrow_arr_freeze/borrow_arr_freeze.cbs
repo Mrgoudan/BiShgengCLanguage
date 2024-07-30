@@ -1,0 +1,57 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+void test1(int *p) {}
+
+void test_freeze_arrow_var1() {
+    int arr[10] = {0};
+    int * borrow c = &mut arr[1];       // expected-note {{previous borrow is here}}
+                                        // expected-note@-1 {{previous borrow is here}}
+                                        // expected-note@-2 {{previous borrow is here}}
+                                        // expected-note@-3 {{previous borrow is here}}
+                                        // expected-note@-4 {{previous borrow is here}}
+    int a = arr[1];                     // expected-error {{Can not read 'arr' because be mut borrowed}}
+    int b = arr[2];                     // expected-error {{Can not read 'arr' because be mut borrowed}}
+    arr[1] = 2;                         // expected-error {{Can not modify 'arr' because be borrowed}}
+    arr[2] = 2;                         // expected-error {{Can not modify 'arr' because be borrowed}}
+    test1(arr);                         // expected-error {{Can not modify 'arr' because be borrowed}}
+    int m = *c;
+}
+
+void test2(int p[10][10]) {}
+
+void test_freeze_arrow_var2() {
+    int arr[10][10] = {0};
+    int * borrow k = &mut arr[1][1];    // 当前借用二级指针生命周期没有，错误无法触发
+    int a = arr[1][1];                  // 不允许读e成员
+    int b = arr[1][2];                  // 不允许读e成员
+    int c = arr[2][2];                  // 不允许读e成员
+    test1(arr[1]);                      // 不允许读写e成员
+    arr[1][1] = 2;                      // error 不允许写e成员
+    arr[1][2] = 2;                      // error 不允许写e成员
+    arr[2][2] = 2;                      // error 不允许写e成员
+    test2(arr);                         // 不允许读写e
+    int m = *k;
+}
+
+void test_freeze_arrow_var3() {
+    int arr[10] = {0};
+    int * borrow c = &mut arr[1];
+    int a = arr[1];
+    int b = arr[2];
+    arr[1] = 2;
+    arr[2] = 2;
+    test1(arr);
+}
+
+void test_freeze_arrow_var4() {
+    int arr[10][10] = {0};
+    int * borrow k = &mut arr[1][1];
+    int a = arr[1][1];
+    int b = arr[1][2];
+    int c = arr[2][2];
+    test1(arr[1]);
+    arr[1][1] = 2;
+    arr[1][2] = 2;
+    arr[2][2] = 2;
+    test2(arr);
+}
