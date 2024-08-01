@@ -196,9 +196,11 @@ public:
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitCallExpr(CallExpr *CE);
+  void VisitConditionalOperator(ConditionalOperator *E);
   void VisitCastExpr(CastExpr *E);
   void VisitDeclRefExpr(DeclRefExpr *DRE);
   void VisitDeclStmt(DeclStmt *DS);
+  void VisitInitListExpr(InitListExpr *E);
   void VisitParenExpr(ParenExpr *Node);
   void VisitUnaryOperator(UnaryOperator *UO);
   void PushActiveBorrowTargetMap();
@@ -310,6 +312,11 @@ void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
   case UO_PreDec:
     Op = Write;
     break;
+  case UO_AddrMut:
+  case UO_AddrConst:
+  case UO_AddrMutDeref:
+  case UO_AddrConstDeref:
+    return;
   default:
     break;
   }
@@ -318,11 +325,25 @@ void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
 }
 
 void BorrowRuleChecker::VisitCallExpr(CallExpr *CE) {
+  Operation TempOp = Op;
   Op = Write;
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
     Visit(*it);
   }
-  Op = None;
+  Op = TempOp;
+}
+
+void BorrowRuleChecker::VisitConditionalOperator(ConditionalOperator *E) {
+  Visit(E->getCond());
+  Visit(E->getTrueExpr());
+  Visit(E->getFalseExpr());
+}
+
+void BorrowRuleChecker::VisitInitListExpr(InitListExpr *E) {
+  for (unsigned i = 0, e = E->getNumInits(); i != e; ++i) {
+    if (Expr *Init = E->getInit(i))
+      Visit(Init);
+  }
 }
 
 void BorrowRuleChecker::VisitCastExpr(CastExpr *E) { Visit(E->getSubExpr()); }
@@ -335,6 +356,7 @@ void BorrowRuleChecker::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
 
 void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
   if (BO->isAssignmentOp()) {
+    Operation TempOp = Op;
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
       if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
         if (VD->getType().isBorrowQualified()) {
@@ -351,11 +373,12 @@ void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
     Visit(BO->getLHS());
     Op = Read;
     Visit(BO->getRHS());
+    Op = TempOp;
   }
-  Op = None;
 }
 
 void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
+  Operation TempOp = Op;
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       if (VD->getType().isBorrowQualified()) {
@@ -368,7 +391,7 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
       }
     }
   }
-  Op = None;
+  Op = TempOp;
 }
 
 void BorrowRuleChecker::PushActiveBorrowTargetMap() {

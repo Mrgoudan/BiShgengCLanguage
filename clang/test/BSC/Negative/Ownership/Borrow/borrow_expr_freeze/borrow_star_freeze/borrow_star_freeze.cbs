@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-// &mut *e e被冻结 不允许读写e以及它的成员
 void test1(int *p) {}
 
 void test_freeze_star_var1() {
