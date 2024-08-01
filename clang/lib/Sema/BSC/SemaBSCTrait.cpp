@@ -347,13 +347,6 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
     }
   }
 
-  if (ImplQT->isIncompleteType(&Def)) {
-    Sema::BoundTypeDiagnoser<> Diagnoser(
-        diag::err_typecheck_decl_incomplete_type);
-    Diagnoser.diagnose(S, TypeLoc, ImplQT);
-    return true;
-  }
-
   IdentifierInfo *FunctionID = nullptr;
   RecordDecl *VT = TD->getVtable();
   const TemplateSpecializationType *TST =
