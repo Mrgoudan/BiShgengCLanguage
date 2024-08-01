@@ -32,11 +32,11 @@ public:
   const FunctionDecl& fd;
 
   NonLexicalLifetime CalculateNLLForPath(const CFGPath &Path,
-                                         const llvm::DenseMap<ParmVarDecl*, VarDecl*>& ParamTarget,
+                                         const llvm::DenseMap<ParmVarDecl*, TargetInfo>& ParamTarget,
                                          unsigned NumElements);
   void BorrowCheckForPath(const CFGPath &Path, BorrowCheckDiagReporter &reporter, 
                           const NonLexicalLifetime& NLLForAllVars, unsigned NumElements);
-  void BuildParamTarget(llvm::DenseMap<ParmVarDecl*, VarDecl*>& ParamTarget);
+  void BuildParamTarget(llvm::DenseMap<ParmVarDecl*, TargetInfo>& ParamTarget);
   
   BorrowCheckImpl(ASTContext& ASTCtx, const FunctionDecl& FD)
       : Ctx(ASTCtx), fd(FD) {}
@@ -96,7 +96,18 @@ class NLLCalculator : public StmtVisitor<NLLCalculator> {
   // For other local variables, 
   // we should record the location they leave current scope.
   llvm::DenseMap<VarDecl*, unsigned> FoundVars;
+
+  // Only record borrow struct VarDecl and FieldPath when we traverse path in reverse order.
+  //     struct S { int* borrow p; };
+  //     void test() {
+  //         int local = 5;
+  //         struct S s = { .p = &mut local };
+  //         use(s.p);       // Record `s` and ".p"
+  //     }
+  std::map<std::pair<VarDecl*, std::string>, unsigned> FoundBorrowFields;
+
   unsigned NumElements;
+  bool CurrOpIsBorrowUse = false;
 public:
   // Record current CFGElement index we are visiting in the path.
   unsigned CurElemID;
@@ -112,14 +123,23 @@ public:
   void VisitReturnStmt(ReturnStmt *RS);
   void VisitCallExpr(CallExpr *CE);
   void VisitUnaryOperator(UnaryOperator *UO);
+  void VisitMemberExpr(MemberExpr *ME);
+  void VisitImplicitCastExpr(ImplicitCastExpr *ICE);
   void VisitScopeEnd(VarDecl *VD);
   void VisitScopeBegin(VarDecl *VD);
-  void HandleNLLAfterTraversing(const llvm::DenseMap<ParmVarDecl*, VarDecl*>& ParamTarget);
+  void HandleNLLAfterTraversing(const llvm::DenseMap<ParmVarDecl*, TargetInfo>& ParamTarget);
 
 private:
   void MarkBorrowLastUseLoc(Expr* E);
-  void VisitInitForTargets(Expr *InitE, llvm::SmallVector<VarDecl*>& TargetSet);
-  void UpdateNLLWhenTargetFound(VarDecl* OldTarget, const llvm::SmallVector<VarDecl*>& NewTargets);
+  void MarkBorrowFieldsLastUseLoc(Expr* E);
+  void VisitInitForTargets(Expr *InitE, llvm::SmallVector<TargetInfo>& Targets);
+  void VisitMEForBorrowFieldPath(MemberExpr *ME, std::pair<VarDecl*, std::string>& BorrowWithFieldPath);
+  void VisitMEForTargetFieldPath(MemberExpr *ME, TargetInfo& TargetWithFieldPath);
+  void UpdateNLLWhenTargetFound(TargetInfo OldTarget, const llvm::SmallVector<TargetInfo>& NewTargets);
+  void FindBorrowFieldsOfStruct(RecordDecl* RD, 
+                                llvm::SmallVector<std::pair<std::string, BorrowKind>>& BorrowFieldsOfStruct);
+  void FindBorrowFieldsOfStructDFS(FieldDecl* CurrFD, std::string FP,
+                                   llvm::SmallVector<std::pair<std::string, BorrowKind>>& BorrowFieldsOfStruct);
 };
 
 class BorrowRuleChecker : public StmtVisitor<BorrowRuleChecker> {
@@ -133,17 +153,23 @@ public:
   BorrowRuleChecker(BorrowCheckDiagReporter &reporter, const NonLexicalLifetime& NLLForVars)
       : reporter(reporter), NLLForAllVars(NLLForVars) {}
 
-  // Record the correspondence of borrowed and borrow variables.
-  // The key of map is borrowed variable(i.e. targets), the value is variables borrow from its key variable.
-  // For example, if we have such borrow correspondence as follows:
-  //    `p1` borrows from `local1` from index 5 to index 10 in the path.
-  //    `p2` borrows from `local2` from index 3 to index 4 in the path.
-  //    `p3` borrows from `local1` and 'local2' from index 6 to index 8 in the path.
-  // Then BorrowTargetMap will be:
-  //   local1 : [ (p1, 5, 10), (p3, 6, 8) ], local2 : [ (p2, 3, 4), (p3, 6, 8) ]
-  llvm::DenseMap<VarDecl*, llvm::SmallVector<std::tuple<VarDecl*, unsigned, unsigned>>> BorrowTargetMap;
-  // save valid borrowed data within the current scope
-  llvm::DenseMap<VarDecl*, std::list<std::tuple<VarDecl*, unsigned, unsigned>>> ActiveBorrowTargetMap;
+// Record the correspondence of borrowed and borrow variables.
+// The key of map is borrowed variable(i.e. targets), the value is variables borrow from its key variable.
+// For example, if we have such borrow correspondence as follows:
+//    `p1` borrows from `local1` from index 5 to index 10 in the path.
+//    `p2` borrows from `local2` from index 3 to index 4 in the path.
+//    `p3` borrows from `local1` and 'local2' from index 6 to index 8 in the path.
+//    `p4` borrows from `s.a.b` from index 11 to index 15 in the path.
+//    `g.c.d` borrows from `s.a.b` and `local2`from index 16 to index 18 in the path.
+// Then BorrowTargetMap will be:
+//   local1 : { [ "", p1, "", 5, 10 ],
+//              [ "", p3, "", 6, 8 ] }
+//   local2 : { [ "", p2, "", 3, 4 ],
+//              [ "", p3, "", 6, 8 ],
+//              [ "", g,  ".c.d", 16, 18 ] }
+//   s      : { [ ".a.b", p4, "", 11, 15 ],
+//              [ ".a.b", g, ".c.d", 16, 18 ] }
+  BorrowTargetMapInfo BorrowTargetMap;
 
   void BuildBorrowTargetMap();
   void CheckBeBorrowedTarget(const CFGPath &Path);
@@ -375,21 +401,27 @@ void BorrowRuleChecker::CheckBeBorrowedTarget(const CFGPath &Path) {
 
 void BorrowRuleChecker::BuildBorrowTargetMap() {
   for (auto NLLOfVar : NLLForAllVars) {
-    VarDecl* VD = NLLOfVar.first;
+    VarDecl* BorrowVD = NLLOfVar.first;
     NonLexicalLifetimeOfVar NLLRangesOfVar = NLLOfVar.second;
     for (auto NLLRange : NLLRangesOfVar) {
-      if (NLLRange.Target)
-        BorrowTargetMap[NLLRange.Target].push_back(std::tuple<VarDecl*, unsigned, unsigned>(VD, NLLRange.Range.first, NLLRange.Range.second));
+      if (NLLRange.Target.TargetVD)
+        BorrowTargetMap[NLLRange.Target.TargetVD].push_back(
+            BorrowInfo(NLLRange.Target.TargetFieldPath, BorrowVD, NLLRange.BorrowFieldPath, NLLRange.Begin, NLLRange.End, NLLRange.Kind));
     }
   }
   // DEBUG PRINT
+  llvm::outs() << "------print BorrowTargetMap-----\n";
   for (auto v : BorrowTargetMap) {
-    llvm::outs() << v.first->getNameAsString() << ": [ ";
+    llvm::outs() << v.first->getNameAsString() << "\n";
     for (auto w : v.second) {
-      VarDecl* V = std::get<0>(w);
-      llvm::outs() << "(" << V->getNameAsString() << ", " << std::get<1>(w) << ", " << std::get<2>(w) << "), ";
+      llvm::outs() << "  ";
+      if (w.TargetFieldPath.length())
+        llvm::outs() << w.TargetFieldPath;
+      else 
+        llvm::outs() << "--";
+      llvm::outs()   << "  " << w.BorrowVD->getNameAsString() << "  " << w.BorrowFieldPath << "  " << w.Begin << "  " << w.End << "  " << w.Kind << "\n" ;
     }
-    llvm::outs() << "]\n";
+    llvm::outs() << "\n";
   }
 }
 
@@ -398,17 +430,17 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
 void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
   for (auto BorrowAndTarget : BorrowTargetMap) {
     VarDecl* TargetVD = BorrowAndTarget.first;
-    unsigned TargetVDBegin = NLLForAllVars[TargetVD][0].Range.first;
-    unsigned TargetVDEnd = NLLForAllVars[TargetVD][0].Range.second;
     for (auto Borrow : BorrowAndTarget.second) {
-      VarDecl* BorrowVD = std::get<0>(Borrow);
-      QualType BorrowQT = BorrowVD->getType();
-      if (BorrowQT.isBorrowQualified()) { // Naked pointer also have target, but we don't need to consider it.
-        unsigned BorrowVDBegin = std::get<1>(Borrow);
-        unsigned BorrowVDEnd = std::get<2>(Borrow);
-        if (BorrowVDBegin <= TargetVDBegin || BorrowVDEnd >= TargetVDEnd) {
-          BorrowCheckDiagInfo DI(BorrowVD->getNameAsString(), LiveLonger, BorrowVD->getLocation());
-          reporter.addDiagInfo(DI);
+      unsigned BorrowBegin = Borrow.Begin;
+      unsigned BorrowEnd = Borrow.End;
+      for (auto NLLOfTarget : NLLForAllVars[TargetVD]) {
+        if (NLLOfTarget.BorrowFieldPath == Borrow.TargetFieldPath) {
+          unsigned TargetBegin = NLLOfTarget.Begin;
+          unsigned TargetEnd = NLLOfTarget.End;
+          if (BorrowBegin <= TargetBegin || BorrowEnd >= TargetEnd) {
+            BorrowCheckDiagInfo DI(Borrow.BorrowVD->getNameAsString(), LiveLonger, Borrow.BorrowVD->getLocation());
+            reporter.addDiagInfo(DI);     
+          }
         }
       }
     }
@@ -430,11 +462,11 @@ void BorrowRuleChecker::CheckLifetimeOfBorrowReturnValue(unsigned NumElements) {
   for (auto NLLOfVar : NLLForAllVars) {
     if (NLLOfVar.first->getNameAsString() == "_ReturnVar") {
       for (NonLexicalLifetimeRange& Range : NLLOfVar.second) {
-        NonLexicalLifetimeRange TargetNLLRange = NLLForAllVars[Range.Target][0];
-        unsigned TargetNLLBegin = TargetNLLRange.Range.first;
-        unsigned TargetNLLEnd = TargetNLLRange.Range.second;
+        NonLexicalLifetimeRange TargetNLLRange = NLLForAllVars[Range.Target.TargetVD][0];
+        unsigned TargetNLLBegin = TargetNLLRange.Begin;
+        unsigned TargetNLLEnd = TargetNLLRange.End;
         if (TargetNLLBegin > 0 || TargetNLLEnd < NumElements + 3) {
-          BorrowCheckDiagInfo DI(Range.Target->getNameAsString(), ReturnLocal, NLLOfVar.first->getLocation());
+          BorrowCheckDiagInfo DI(Range.Target.TargetVD->getNameAsString(), ReturnLocal, NLLOfVar.first->getLocation());
           reporter.addDiagInfo(DI);
         }
       }
@@ -448,21 +480,42 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
   //    int* borrow p = &mut local1;
   //    p = &mut local2;    // We handle it like `int* borrow p = &mut local2;`
   if (BO->isAssignmentOp()) {
-    if (DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
-      if (VarDecl* VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (VD->getType().isBorrowQualified()) {
+    if (BO->getLHS()->getType().isBorrowQualified()) {
+      BorrowKind BK = BO->getLHS()->getType().isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
+      // p = &mut local;
+      if (DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+        if (VarDecl* VD = dyn_cast<VarDecl>(DRE->getDecl())) {
           Expr *Init = BO->getRHS();
-          llvm::SmallVector<VarDecl*> Targets;
+          llvm::SmallVector<TargetInfo> Targets;
           VisitInitForTargets(Init, Targets);
           // When we find the target of a borrow,
           // we should update previous target in NLLForAllVars.
-          UpdateNLLWhenTargetFound(VD, Targets);
-          for (VarDecl* Target : Targets)
+          UpdateNLLWhenTargetFound(TargetInfo(VD), Targets);
+          for (TargetInfo Target : Targets)
             NLLForAllVars[VD].push_back(
-              NonLexicalLifetimeRange(CurElemID, FoundVars.count(VD) ? FoundVars[VD] : CurElemID, Target));
+              NonLexicalLifetimeRange(CurElemID, FoundVars.count(VD) ? FoundVars[VD] : CurElemID,
+                                      BK, Target));
           FoundVars.erase(VD);
         }
+      } else if (MemberExpr * ME = dyn_cast<MemberExpr>(BO->getLHS())) {
+        // s.a.b = &mut local;
+        std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+        VisitMEForBorrowFieldPath(ME, BorrowWithFieldPath);      
+        Expr *Init = BO->getRHS();
+        llvm::SmallVector<TargetInfo> Targets;
+        VisitInitForTargets(Init, Targets);
+        UpdateNLLWhenTargetFound(TargetInfo(BorrowWithFieldPath.first, BorrowWithFieldPath.second), Targets);
+        for (TargetInfo Target : Targets)
+          NLLForAllVars[BorrowWithFieldPath.first].push_back(
+              NonLexicalLifetimeRange(CurElemID, 
+                                      FoundBorrowFields.count(BorrowWithFieldPath) ? FoundBorrowFields[BorrowWithFieldPath] : CurElemID,
+                                      BK, Target, BorrowWithFieldPath.second));
+        FoundBorrowFields.erase(BorrowWithFieldPath); 
       }
+    } else {
+      CurrOpIsBorrowUse = true;
+      Visit(BO->getRHS());
+      CurrOpIsBorrowUse = false;
     }
   }
 }
@@ -474,6 +527,23 @@ void NLLCalculator::VisitDeclRefExpr(DeclRefExpr *DRE) {
     if (((!VD->isLocalVarDecl() && !isa<ParmVarDecl>(VD)) || VD->getType().isOwnedQualified())
          && !FoundVars.count(VD))
       FoundVars[VD] = CurElemID;
+
+    if (CurrOpIsBorrowUse) {
+      QualType VQT = VD->getType().getCanonicalType();
+      if (VQT.isBorrowQualified() && !FoundVars.count(VD))
+        FoundVars[VD] = CurElemID;
+      else if (VQT->hasBorrowFields()) {
+        if (auto RT = dyn_cast<RecordType>(VQT)) {
+          llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
+          FindBorrowFieldsOfStruct(RT->getDecl(), BorrowFieldsOfStruct);
+          for (auto FieldPath : BorrowFieldsOfStruct) {
+            std::pair<VarDecl*, std::string> BorrowWithFieldPath(VD, FieldPath.first);
+            if (!FoundBorrowFields.count(BorrowWithFieldPath))
+              FoundBorrowFields[BorrowWithFieldPath] = CurElemID;
+          }
+        }
+      }
+    }
   }
 }
 
@@ -481,11 +551,9 @@ void NLLCalculator::VisitReturnStmt(ReturnStmt *RS) {
   Expr *RV = RS->getRetValue();
   if (!RV) 
     return;
-  // For return stmt `return p;` or `return &mut* p`,
-  // we think borrow pointer `p` is used. 
-  MarkBorrowLastUseLoc(RV);
   QualType ReturnQT = RV->getType();
   if (ReturnQT.isBorrowQualified()) {
+    BorrowKind BK = ReturnQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
     // In order to check lifetime of borrow return value, we build a virtual ReturnVar.
     std::string Name = "_ReturnVar";
     IdentifierInfo *ID = &Ctx.Idents.get(Name);
@@ -493,76 +561,282 @@ void NLLCalculator::VisitReturnStmt(ReturnStmt *RS) {
                                         ID, ReturnQT, nullptr, SC_None);
     // ReturnVar itself only survive in current ReturnStmt,
     // but we still should get its target to check if this function returns a borrow of local variable.   
-    llvm::SmallVector<VarDecl*> Targets;
+    llvm::SmallVector<TargetInfo> Targets;
     VisitInitForTargets(RV, Targets);
-    for (VarDecl* Target : Targets)
-      NLLForAllVars[ReturnVD].push_back(NonLexicalLifetimeRange(CurElemID, CurElemID, Target));
+    for (TargetInfo Target : Targets)
+      NLLForAllVars[ReturnVD].push_back(NonLexicalLifetimeRange(CurElemID, CurElemID, BK, Target));
+  }
+
+  // For return stmt `return p;`, `return &mut* p`, `return *p;` or `return p->a`
+  // we think borrow pointer `p` is used. 
+  CurrOpIsBorrowUse = true;
+  Visit(RV);
+  CurrOpIsBorrowUse = false;
+}
+
+void NLLCalculator::VisitMemberExpr(MemberExpr *ME) {
+  if (CurrOpIsBorrowUse) {
+    QualType MQT = ME->getType().getCanonicalType();
+    if (MQT.isBorrowQualified()) {
+      // Use borrow pointer directly, such as `s.p`
+      std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+      VisitMEForBorrowFieldPath(ME, BorrowWithFieldPath);
+      if (!FoundBorrowFields.count(BorrowWithFieldPath))
+        FoundBorrowFields[BorrowWithFieldPath] = CurElemID;
+    } else if (MQT->hasBorrowFields()) {
+      // Use borrow pointer indirectly, such as `s.a`, a is a struct type and has borrow fields.
+      std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+      VisitMEForBorrowFieldPath(ME, BorrowWithFieldPath);
+      if (auto RT = dyn_cast<RecordType>(MQT)) {
+        llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
+        FindBorrowFieldsOfStruct(RT->getDecl(), BorrowFieldsOfStruct);
+        for (auto FieldPath : BorrowFieldsOfStruct) {
+          std::pair<VarDecl*, std::string> BorrowWithFieldPathCopy(BorrowWithFieldPath);
+          BorrowWithFieldPathCopy.second = BorrowWithFieldPathCopy.second + FieldPath.first;
+          if (!FoundBorrowFields.count(BorrowWithFieldPathCopy))
+            FoundBorrowFields[BorrowWithFieldPathCopy] = CurElemID;
+        }
+      }
+    } else
+      // Use borrow pointer indirectly, such as `p->a`
+      Visit(ME->getBase());
   }
 }
 
 void NLLCalculator::VisitCallExpr(CallExpr *CE) {
-  // For function call `use(p)` or `use(&mut* p)`,
+  // For function call `use(p)`, `use(&mut* p)`, `use(*p)` or `use(p->a)`,
   // we think borrow pointer `p` is used here. 
+  CurrOpIsBorrowUse = true;
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it)
-    MarkBorrowLastUseLoc(*it);
+    Visit(*it);
+  CurrOpIsBorrowUse = false;
+}
+
+void NLLCalculator::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
+  if (CurrOpIsBorrowUse)
+    Visit(ICE->getSubExpr());
 }
 
 void NLLCalculator::VisitUnaryOperator(UnaryOperator *UO) {
-  // For pointer deref `*p`,
+  // For pointer deref `*p`,`&mut *p`, `&const *p`
   // we think borrow pointer `p` is used here. 
-  if (UO->getOpcode() == UO_Deref)
-    MarkBorrowLastUseLoc(UO->getSubExpr());
+  if (CurrOpIsBorrowUse && 
+      (UO->getOpcode() == UO_Deref || UO->getOpcode() == UO_AddrMutDeref || UO->getOpcode() == UO_AddrConstDeref))
+    Visit(UO->getSubExpr());
 }
 
 void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->getType().isBorrowQualified()) {
+      QualType VQT = VD->getType().getCanonicalType();
+      if (VQT.isBorrowQualified()) {
+        BorrowKind BK = VQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
+        // VD itself is a borrow, int* borrow p = &mut local;
         Expr *Init = VD->getInit();
-        llvm::SmallVector<VarDecl*> Targets;
+        llvm::SmallVector<TargetInfo> Targets;
         VisitInitForTargets(Init, Targets);
         // When we find the target of a borrow,
         // we should update previous target in NLLForAllVars.
-        UpdateNLLWhenTargetFound(VD, Targets);  
-        for (VarDecl* Target : Targets)
+        UpdateNLLWhenTargetFound(TargetInfo(VD), Targets);  
+        for (TargetInfo Target : Targets)
           NLLForAllVars[VD].push_back(
-            NonLexicalLifetimeRange(CurElemID, FoundVars.count(VD) ? FoundVars[VD] : CurElemID, Target));
+            NonLexicalLifetimeRange(CurElemID, FoundVars.count(VD) ? FoundVars[VD] : CurElemID, BK, Target));
         FoundVars.erase(VD);
+      } else if (VQT->hasBorrowFields()) {
+        if (auto RT = dyn_cast<RecordType>(VQT)) {
+          RecordDecl* RD = RT->getDecl();
+          if (auto InitListE = dyn_cast<InitListExpr>(VD->getInit())) {
+            Expr **Inits = InitListE->getInits();
+            for (auto FD : RD->fields()) {
+              QualType FQT = FD->getType().getCanonicalType();
+              if (FQT.isBorrowQualified()) {
+                // VD has direct borrow fields, struct S s = { .p = &mut local };
+                BorrowKind BK = FQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
+                Expr *Init = Inits[FD->getFieldIndex()];
+                llvm::SmallVector<TargetInfo> Targets;
+                VisitInitForTargets(Init, Targets);
+                std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+                BorrowWithFieldPath.first = VD;
+                BorrowWithFieldPath.second = "." + FD->getNameAsString();
+                UpdateNLLWhenTargetFound(TargetInfo(BorrowWithFieldPath.first, BorrowWithFieldPath.second), Targets);
+                for (TargetInfo Target : Targets)
+                  NLLForAllVars[VD].push_back(
+                    NonLexicalLifetimeRange(CurElemID, 
+                                            FoundBorrowFields.count(BorrowWithFieldPath) ? FoundBorrowFields[BorrowWithFieldPath] : CurElemID,
+                                            BK, Target, BorrowWithFieldPath.second));
+                FoundBorrowFields.erase(BorrowWithFieldPath);
+              } else if (FQT->hasBorrowFields()) {
+                // VD has indirect borrow fields, `struct S s = { .g = g1 };`, `g` has borrow fields.
+                Expr *Init = Inits[FD->getFieldIndex()];
+                llvm::SmallVector<TargetInfo> Targets;
+                VisitInitForTargets(Init, Targets);
+                if (auto RT = dyn_cast<RecordType>(FQT)) {
+                  llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
+                  FindBorrowFieldsOfStruct(RT->getDecl(), BorrowFieldsOfStruct);
+                  for (auto FieldPath : BorrowFieldsOfStruct) {
+                    std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+                    BorrowWithFieldPath.first = VD;
+                    BorrowWithFieldPath.second = "." + FD->getNameAsString() + FieldPath.first;       
+                    llvm::SmallVector<TargetInfo> TargetsCopy(Targets);
+                    for (TargetInfo& Target : TargetsCopy) {
+                      Target.TargetFieldPath = Target.TargetFieldPath + FieldPath.first;
+                      NLLForAllVars[VD].push_back(
+                        NonLexicalLifetimeRange(CurElemID, 
+                                                FoundBorrowFields.count(BorrowWithFieldPath) ? FoundBorrowFields[BorrowWithFieldPath] : CurElemID,
+                                                FieldPath.second, Target));
+                    }
+                    UpdateNLLWhenTargetFound(TargetInfo(BorrowWithFieldPath.first, BorrowWithFieldPath.second), TargetsCopy);
+                    FoundBorrowFields.erase(BorrowWithFieldPath);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else if (VD->getInit()) {
+        CurrOpIsBorrowUse = true;
+        Visit(VD->getInit());
+        CurrOpIsBorrowUse = false;        
       }
     }
   }
 }
 
 void NLLCalculator::MarkBorrowLastUseLoc(Expr* E) {
-  DeclRefExpr* DRE = nullptr;
-  if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr());
-  } else if (auto UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_AddrMutDeref || UO->getOpcode() == UO_AddrConstDeref)
-      DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr());
+  if (E->getType().isBorrowQualified()) {
+    // Use borrow pointer directly.
+    if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
+        // `use(s.p)`, `s.p` is MemberExpr
+        std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+        VisitMEForBorrowFieldPath(ME, BorrowWithFieldPath);
+        if (!FoundBorrowFields.count(BorrowWithFieldPath))
+          FoundBorrowFields[BorrowWithFieldPath] = CurElemID;
+      } else if (auto DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
+        // `use(p)`, `p` is DeclRefExpr
+        if (VarDecl* VD = dyn_cast<VarDecl>(DRE->getDecl()))
+          if (!FoundVars.count(VD))
+            FoundVars[VD] = CurElemID;
+      }
+    } else if (auto UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_AddrMutDeref || UO->getOpcode() == UO_AddrConstDeref)
+        // `use(&mut *p)` or `use(&mut *s.p)`
+        MarkBorrowLastUseLoc(UO->getSubExpr());
+    }
+  } else if (E->getType()->hasBorrowFields()) {
+    // Use struct which has borrow fields.
+    if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
+        // `use(s.a)`, `s.a` has borrow fields
+        std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+        VisitMEForBorrowFieldPath(ME, BorrowWithFieldPath);
+        if (!FoundBorrowFields.count(BorrowWithFieldPath))
+          FoundBorrowFields[BorrowWithFieldPath] = CurElemID;
+      } else if (auto DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
+        // `use(s)`, `s` has borrow fields
+        if (VarDecl* VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+          std::pair<VarDecl*, std::string> BorrowWithFieldPath;
+          BorrowWithFieldPath.first = VD;
+          if (!FoundBorrowFields.count(BorrowWithFieldPath))
+            FoundBorrowFields[BorrowWithFieldPath] = CurElemID;
+        }
+      }
+    }
+  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    // `use(*p)`, `p` is borrow pointer
+    if (auto UO = dyn_cast<UnaryOperator>(ICE->getSubExpr())) {
+      if (UO->getOpcode() == UO_Deref)
+        MarkBorrowLastUseLoc(UO->getSubExpr());
+    }
   }
-
-  if (DRE)    
-    if (VarDecl* VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      if (VD->getType().isBorrowQualified() && !FoundVars.count(VD))
-        FoundVars[VD] = CurElemID;
 }
 
+void NLLCalculator::MarkBorrowFieldsLastUseLoc(Expr* E) {
+  if (auto ME = dyn_cast<MemberExpr>(E)) {
+    // `use(s.a)`, `s.a` is MemberExpr, if `s.a` has borrow fields, add its borrow fields.
+    // if (!FoundBorrowMembers.count(ME))
+    //   FoundBorrowMembers[ME] = CurElemID;
+  } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
+    // `use(s)`, `s` is DeclRefExpr, if `s` has borrow fields
+    // if (VarDecl* VD = dyn_cast<VarDecl>(DRE->getDecl()))
+    //   if (!FoundVars.count(VD))
+    //     FoundVars[VD] = CurElemID;
+  }
+}
 
-void NLLCalculator::VisitInitForTargets(Expr *InitE, llvm::SmallVector<VarDecl*>& Targets) {
+void NLLCalculator::VisitMEForBorrowFieldPath(MemberExpr *ME, std::pair<VarDecl*, std::string>& BorrowWithFieldPath) {
+  if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+    BorrowWithFieldPath.second = "." + FD->getNameAsString() + BorrowWithFieldPath.second;
+    if (auto BaseME = dyn_cast<MemberExpr>(ME->getBase()))
+      VisitMEForBorrowFieldPath(BaseME, BorrowWithFieldPath);
+    else if (auto BaseDRE = dyn_cast<DeclRefExpr>(ME->getBase())) {
+      VarDecl* BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl());
+      BorrowWithFieldPath.first = BaseVD;
+    }
+  }
+}
+
+void NLLCalculator::VisitMEForTargetFieldPath(MemberExpr *ME, TargetInfo& TargetWithFieldPath) {
+  if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+    TargetWithFieldPath.TargetFieldPath = "." + FD->getNameAsString() + TargetWithFieldPath.TargetFieldPath;
+    if (auto BaseME = dyn_cast<MemberExpr>(ME->getBase()))
+      VisitMEForTargetFieldPath(BaseME, TargetWithFieldPath);
+    else if (auto BaseDRE = dyn_cast<DeclRefExpr>(ME->getBase())) {
+      VarDecl* BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl());
+      TargetWithFieldPath.TargetVD = BaseVD;
+    }
+  }
+}
+
+void NLLCalculator::FindBorrowFieldsOfStruct(RecordDecl* RD,
+                                             llvm::SmallVector<std::pair<std::string, BorrowKind>>& BorrowFieldsOfStruct) {
+  for (FieldDecl* FD : RD->fields()) {
+    QualType FQT = FD->getType().getCanonicalType();
+    if (FQT.isBorrowQualified()) {
+      BorrowKind BK = FQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
+      std::string FP = "." + FD->getNameAsString();
+      BorrowFieldsOfStruct.push_back(std::pair<std::string, BorrowKind>(FP, BK));
+    } else if (FQT->hasBorrowFields()) {
+      FindBorrowFieldsOfStructDFS(FD, "", BorrowFieldsOfStruct);
+    }
+  }
+}
+
+void NLLCalculator::FindBorrowFieldsOfStructDFS(FieldDecl* CurrFD, std::string FP, 
+                                                llvm::SmallVector<std::pair<std::string, BorrowKind>>& BorrowFieldsOfStruct) {
+  QualType FQT = CurrFD->getType().getCanonicalType();
+  if (FQT.isBorrowQualified()) {
+    BorrowKind BK = FQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
+    FP = FP + "." + CurrFD->getNameAsString();
+    BorrowFieldsOfStruct.push_back(std::pair<std::string, BorrowKind>(FP, BK));
+  } else if (FQT->hasBorrowFields()) {
+    FP = FP + "." + CurrFD->getNameAsString();
+    if (auto RT = dyn_cast<RecordType>(FQT)) {
+      for (FieldDecl* FD : RT->getDecl()->fields())
+        FindBorrowFieldsOfStructDFS(FD, FP, BorrowFieldsOfStruct);
+    }
+  }
+}
+
+void NLLCalculator::VisitInitForTargets(Expr *InitE, llvm::SmallVector<TargetInfo>& Targets) {
   if (auto UO = dyn_cast<UnaryOperator>(InitE)) {
     if (UO->getOpcode() == UO_AddrMut || UO->getOpcode() == UO_AddrConst
         || UO->getOpcode() == UO_AddrMutDeref || UO->getOpcode() == UO_AddrConstDeref) {
       if (auto* DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
         // int* borrow p = &mut local;  local is DeclRefExpr.
         VarDecl* IVD = dyn_cast<VarDecl>(DRE->getDecl());
-        Targets.push_back(IVD);
+        Targets.push_back(TargetInfo(IVD));
       } else if (auto ASE = dyn_cast<ArraySubscriptExpr>(UO->getSubExpr())) {
         // int* borrow p = &mut arr[0];  arr[0] is ArraySubscriptExpr.
         VisitInitForTargets(ASE->getBase(), Targets);
       } else if (auto ICE = dyn_cast<ImplicitCastExpr>(UO->getSubExpr())) {
         // int* borrow p = &mut *q;  q is ImplicitCastExpr.
         VisitInitForTargets(ICE, Targets);
+      } else if (auto* ME = dyn_cast<MemberExpr>(UO->getSubExpr())) {
+        // int* borrow p = &mut s.a.b; s.a.b is MemberExpr.        
+        TargetInfo TargetWithFieldPath;
+        VisitMEForTargetFieldPath(ME, TargetWithFieldPath);
+        Targets.push_back(TargetWithFieldPath);
       }
     }
   } else if (auto ICE = dyn_cast<ImplicitCastExpr>(InitE)) {
@@ -571,6 +845,11 @@ void NLLCalculator::VisitInitForTargets(Expr *InitE, llvm::SmallVector<VarDecl*>
     if (auto* DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
       VarDecl* IVD = dyn_cast<VarDecl>(DRE->getDecl());
       Targets.push_back(IVD);
+    } else if (auto* ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
+      // int* borrow p = s.a.b; s.a.b is MemberExpr.        
+      TargetInfo TargetWithFieldPath;
+      VisitMEForTargetFieldPath(ME, TargetWithFieldPath);
+      Targets.push_back(TargetWithFieldPath);
     }
   } else if (auto CE = dyn_cast<CallExpr>(InitE)) {
     // CallExpr: int* borrow p3 = foo(&mut local1, &mut local2); 
@@ -593,9 +872,9 @@ void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
                                          VD->getBeginLoc(), VD->getLocation(), ID,
                                          QualType(), nullptr, SC_None);
     // Update previous NLL whose target is this naked pointer VD to virtual ParentVar 
-    llvm::SmallVector<VarDecl*> VirtualTarget;
-    VirtualTarget.push_back(VirtualVD);
-    UpdateNLLWhenTargetFound(VD, VirtualTarget);
+    llvm::SmallVector<TargetInfo> VirtualTarget;
+    VirtualTarget.push_back(TargetInfo(VirtualVD));
+    UpdateNLLWhenTargetFound(TargetInfo(VD), VirtualTarget);
     // Add NLL for virtual ParentVar.
     NLLForAllVars[VirtualVD].push_back(NonLexicalLifetimeRange(0, NumElements + 3));
   }
@@ -632,22 +911,23 @@ void NLLCalculator::VisitScopeEnd(VarDecl *VD) {
 // we should update the target of p3 from p2 to p1.
 // When we handle 1, we know p1 targeting to local1 and local2,
 // we should update the target of p2 and p3 from p1 to local1 and local2.
-void NLLCalculator::UpdateNLLWhenTargetFound(VarDecl* OldTarget, const llvm::SmallVector<VarDecl*>& NewTargets) {
+void NLLCalculator::UpdateNLLWhenTargetFound(TargetInfo OldTarget, const llvm::SmallVector<TargetInfo>& NewTargets) {
   for (auto& NLLOfVar : NLLForAllVars) {
     NonLexicalLifetimeOfVar& NLLRanges = NLLOfVar.second;
-    llvm::SmallVector<std::pair<unsigned, unsigned>> RangesNeedUpdate;
+    llvm::SmallVector<std::tuple<std::string, unsigned, unsigned, BorrowKind>> RangesNeedUpdate;
     // Remove ranges whose target is OldTarget
     for (auto it = NLLRanges.begin(); it != NLLRanges.end();) {
       if (it->Target == OldTarget) {
-        RangesNeedUpdate.push_back(it->Range);
+        RangesNeedUpdate.push_back(
+            std::tuple<std::string, unsigned, unsigned, BorrowKind>(it->BorrowFieldPath, it->Begin, it->End, it->Kind));
         it = NLLRanges.erase(it);
       } else
         ++it; 
     }
     // Build new ranges targeting to NewTarget and insert them to NLLRanges.
-    for (std::pair<unsigned, unsigned> RangeNeedUpdate : RangesNeedUpdate) {
-      for (VarDecl* NewTarget : NewTargets) {
-        NonLexicalLifetimeRange NewRange(RangeNeedUpdate, NewTarget);
+    for (std::tuple<std::string, unsigned, unsigned, BorrowKind> RangeNeedUpdate : RangesNeedUpdate) {
+      for (TargetInfo NewTarget : NewTargets) {
+        NonLexicalLifetimeRange NewRange(std::get<1>(RangeNeedUpdate), std::get<2>(RangeNeedUpdate), std::get<3>(RangeNeedUpdate), NewTarget, std::get<0>(RangeNeedUpdate));
         if (std::find(NLLRanges.begin(), NLLRanges.end(), NewRange) == NLLRanges.end())
           NLLRanges.push_back(NewRange);
       }
@@ -663,7 +943,7 @@ void NLLCalculator::UpdateNLLWhenTargetFound(VarDecl* OldTarget, const llvm::Sma
 //   NLL end of borrow or owned parameter     :last use location
 //   NLL end of no-borrow-no-owned parameter  :NumElements + 2
 //   NLL end of global/virtual ParentVar      :NumElements + 3
-void NLLCalculator::HandleNLLAfterTraversing(const llvm::DenseMap<ParmVarDecl*, VarDecl*>& ParamTarget) {
+void NLLCalculator::HandleNLLAfterTraversing(const llvm::DenseMap<ParmVarDecl*, TargetInfo>& ParamTarget) {
   // Handle parameter
   for (auto Param : ParamTarget) {
     ParmVarDecl* PVD = Param.first;
@@ -671,18 +951,19 @@ void NLLCalculator::HandleNLLAfterTraversing(const llvm::DenseMap<ParmVarDecl*, 
     // Handle borrow or naked pointer parameter which have virtual ParentVar.
     if (PQT->isPointerType() && !PQT.isOwnedQualified()) {
       // Update previous NLL whose target is PVD to virtual ParentVar 
-      llvm::SmallVector<VarDecl*> VirtualTarget;
+      llvm::SmallVector<TargetInfo> VirtualTarget;
       VirtualTarget.push_back(Param.second);
-      UpdateNLLWhenTargetFound(PVD, VirtualTarget);
+      UpdateNLLWhenTargetFound(TargetInfo(PVD), VirtualTarget);
       // Add NLL for virtual ParentVar.
-      NLLForAllVars[Param.second].push_back(NonLexicalLifetimeRange(0, NumElements + 3));
+      NLLForAllVars[Param.second.TargetVD].push_back(NonLexicalLifetimeRange(0, NumElements + 3));
       // Add NLL for param with target.
-      if (PQT.isBorrowQualified())  // PVD is borrow pointer
+      if (PQT.isBorrowQualified()) { // PVD is borrow pointer
+        BorrowKind BK = PQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
         NLLForAllVars[PVD].push_back(
-          NonLexicalLifetimeRange(1, FoundVars.count(PVD) ? FoundVars[PVD] : 1, Param.second));
-      else                          // PVD is naked pointer
+          NonLexicalLifetimeRange(1, FoundVars.count(PVD) ? FoundVars[PVD] : 1, BK, Param.second));
+      } else                          // PVD is naked pointer
         NLLForAllVars[PVD].push_back(
-          NonLexicalLifetimeRange(1, NumElements + 2, Param.second));
+          NonLexicalLifetimeRange(1, NumElements + 2));
     } else if (PQT.isOwnedQualified()) {
       // Add NLL for owned param.
       NLLForAllVars[PVD].push_back(NonLexicalLifetimeRange(1, FoundVars[PVD]));
@@ -698,7 +979,8 @@ void NLLCalculator::HandleNLLAfterTraversing(const llvm::DenseMap<ParmVarDecl*, 
 }
 
 // Compute non-lexical Lifetime for all variables in a certain path.
-NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(const CFGPath &Path, const llvm::DenseMap<ParmVarDecl*, VarDecl*>& ParamTarget,
+NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(const CFGPath &Path,
+                                                        const llvm::DenseMap<ParmVarDecl*, TargetInfo>& ParamTarget,
                                                         unsigned NumElements) {
   NLLCalculator Calculator(Ctx, const_cast<DeclContext*>(fd.getDeclContext()), NumElements);
 
@@ -742,11 +1024,15 @@ NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(const CFGPath &Path, con
   for (auto u : Calculator.NLLForAllVars) {
     llvm::outs() << u.first->getNameAsString() << "\n";   // VarDecl
     for (auto v : u.second) {   // NLL
-      llvm::outs() << "  " << v.Range.first << "->" << v.Range.second;
-      if (v.Target)
-        llvm::outs() << " " << v.Target->getNameAsString() << "\n";
+      llvm::outs() << "  ";
+      if (v.BorrowFieldPath.length())
+        llvm::outs() << v.BorrowFieldPath;
       else
-        llvm::outs() << "\n";
+        llvm::outs() << "--";
+      llvm::outs() << "  " << v.Begin << "  " << v.End;
+      if (v.Target.TargetVD)
+        llvm::outs() << "  " << v.Target.TargetVD->getNameAsString() << " " << v.Target.TargetFieldPath;
+      llvm::outs() << "\n";
     }
   }
   llvm::outs() << "\n";
@@ -756,7 +1042,7 @@ NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(const CFGPath &Path, con
 
 // For borrow or naked pointer parameter, we create virtual ParentVar as target.
 // Other kind of parameter don't have target. 
-void BorrowCheckImpl::BuildParamTarget(llvm::DenseMap<ParmVarDecl*, VarDecl*>& ParamTarget) {
+void BorrowCheckImpl::BuildParamTarget(llvm::DenseMap<ParmVarDecl*, TargetInfo>& ParamTarget) {
   for (ParmVarDecl *PVD : fd.parameters()) {
     if (PVD->getType()->isPointerType() && !PVD->getType().isOwnedQualified()) {
       std::string Name = "_ParentVar_" + PVD->getNameAsString();
@@ -764,9 +1050,8 @@ void BorrowCheckImpl::BuildParamTarget(llvm::DenseMap<ParmVarDecl*, VarDecl*>& P
       VarDecl *VD = VarDecl::Create(Ctx, const_cast<DeclContext*>(fd.getDeclContext()), 
                                     PVD->getBeginLoc(), PVD->getLocation(), ID,
                                     QualType(), nullptr, SC_None);
-      ParamTarget[PVD] = VD;
-    } else
-      ParamTarget[PVD] = nullptr;
+      ParamTarget[PVD] = TargetInfo(VD);
+    }
   }
 }
 
@@ -789,7 +1074,7 @@ void clang::runBorrowCheck(const FunctionDecl &fd, const CFG &cfg,
 
   BorrowCheckImpl BC(Ctx, fd);
 
-  llvm::DenseMap<ParmVarDecl*, VarDecl*> ParamTarget;
+  llvm::DenseMap<ParmVarDecl*, TargetInfo> ParamTarget;
   BC.BuildParamTarget(ParamTarget);
   
   // First we find all paths from entry block to exit block of a cfg.
