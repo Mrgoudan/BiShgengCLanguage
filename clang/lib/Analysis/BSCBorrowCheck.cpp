@@ -10,21 +10,31 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Decl.h"
+#include "clang/Basic/SourceLocation.h"
 #if ENABLE_BSC
 
 #include "clang/Analysis/Analyses/BSCBorrowCheck.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include <algorithm>
 #include <vector>
 #include <set>
 #include <map>
 using namespace clang;
+using namespace std;
 
 using CFGPath = std::vector<const CFGBlock*>;
 using CFGPathVec = std::vector<std::vector<const CFGBlock*>>;
+
+// This function checks if the current field is a prefix of the borrowed field.
+static bool IsPrefix(const string &currentField, const string &borrowedField) {
+  if (borrowedField.length() < currentField.length()) {
+      return false;
+  }
+  return borrowedField.compare(0, currentField.length(), currentField) == 0;
+}
 
 class BorrowCheckImpl {
 public:
@@ -183,7 +193,7 @@ public:
   void CheckBorrowNLLShorterThanTarget();
   void CheckLifetimeOfBorrowReturnValue(unsigned NumElements);
   void CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc);
-  VarDecl *FindTargetFromActiveBorrowTargetMap(VarDecl *VD);
+  VarDecl *FindTargetFromActiveBorrowTargetMap(const VarDecl *VD, std::string borrowFieldName = "");
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitCallExpr(CallExpr *CE);
@@ -192,19 +202,43 @@ public:
   void VisitDeclRefExpr(DeclRefExpr *DRE);
   void VisitDeclStmt(DeclStmt *DS);
   void VisitInitListExpr(InitListExpr *E);
+  void VisitMemberExpr(MemberExpr *E);
   void VisitParenExpr(ParenExpr *Node);
   void VisitUnaryOperator(UnaryOperator *UO);
   void PushActiveBorrowTargetMap();
   void PopActiveBorrowTargetMap();
+
+private:
+  void HandleDREWrite(const DeclRefExpr *DRE, std::string fieldName, bool borrowFlag);
+  void HandleDRERead(const DeclRefExpr *DRE, std::string fieldName, bool borrowFlag);
+
+  void CheckBorrowVar(const VarDecl *VD, const SourceLocation &Loc);
+  void CheckBorrowField(const VarDecl *VD, const SourceLocation &Loc, std::string fieldName);
+  void CheckMutBorrowVarUse(const VarDecl *VD, const SourceLocation &Loc, std::string borrowFieldPath = "");
+  void CheckMutBorrowFieldUse(const VarDecl *VD, const SourceLocation &Loc, std::string targetFieldPath, std::string borrowFieldPath = "");
+  void CheckConstBorrowVarUse(const VarDecl *VD, const SourceLocation &Loc, std::string borrowFieldPath = "");
+  void CheckConstBorrowFieldUse(const VarDecl *VD, const SourceLocation &Loc, std::string targetFieldPath, std::string borrowFieldPath = "");
+
+  void CheckNonBorrowVar(const VarDecl *VD, const SourceLocation &Loc);
+  void CheckNonBorrowVarWrite(const VarDecl *VD, const SourceLocation &Loc);
+  void CheckNonBorrowVarRead(const VarDecl *VD, const SourceLocation &Loc);
+
+  void CheckNonBorrowField(const VarDecl *VD, const SourceLocation &Loc, std::string fieldName);
+  void CheckNonBorrowFieldWrite(const VarDecl *VD, const SourceLocation &Loc, std::string fieldName);
+  void CheckNonBorrowFieldRead(const VarDecl *VD, const SourceLocation &Loc, std::string fieldName);
+
+  BorrowInfo GetBorrowInfo(const VarDecl *VD, std::string fieldName = "");
 };
 
 // check current variable has been borrowed
-VarDecl *BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(VarDecl *VD) {
-  if (VD->getType().isBorrowQualified()) {
+// for a borrow qualified variable, function returns the borrowee
+// for a non borrow qualified variable, function returns the borrower
+VarDecl *BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(const VarDecl *VD, string borrowFieldName) {
+  if (VD->getType().isBorrowQualified() || VD->getType().getCanonicalType()->hasBorrowFields()) {
     for (auto v : ActiveBorrowTargetMap) {
       auto it = v.second.rbegin();
       while (it != v.second.rend()) {
-        if (it->BorrowVD == VD) {
+        if (it->BorrowVD == VD && it->BorrowFieldPath == borrowFieldName) {
           return v.first;
         }
         it++;
@@ -230,6 +264,9 @@ VarDecl *BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(VarDecl *VD) {
   return nullptr;
 }
 
+// REFACTOR
+// check whether the variable is used legally
+// for a borrow or none borrow variable, we both need to check its use
 void BorrowRuleChecker::CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc) {
   if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
     if (VD->getType().isBorrowQualified()) {
@@ -263,6 +300,7 @@ void BorrowRuleChecker::CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc) {
       }
     } else {
       auto it = ActiveBorrowTargetMap[TVD].rbegin();
+      // when writing a variable, no borrow is allowed
       if (Op == Write) {
         // Variables cannot be modified when be borrowed
         BorrowCheckDiagInfo DI(VD->getNameAsString(), ModifyAfterBeBorrowed,
@@ -285,13 +323,21 @@ void BorrowRuleChecker::CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc) {
   }
 }
 
+// visit variable as a whole
 void BorrowRuleChecker::VisitDeclRefExpr(DeclRefExpr *DRE) {
   if (Op == None) {
     return;
   }
-  if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-    CheckValIsLegalUse(VD, DRE->getLocation());
+  if (Op == Write) {
+    HandleDREWrite(DRE, "", false);
   }
+  if (Op == Read) {
+    HandleDRERead(DRE, "", false);
+  }
+  // TO BE DELETED
+  // if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+  //   CheckValIsLegalUse(VD, DRE->getLocation());
+  // }
 }
 
 void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
@@ -341,6 +387,62 @@ void BorrowRuleChecker::VisitCastExpr(CastExpr *E) { Visit(E->getSubExpr()); }
 
 void BorrowRuleChecker::VisitParenExpr(ParenExpr *E) { Visit(E->getSubExpr()); }
 
+
+static std::pair<const Expr *, std::string> getMemberField(const MemberExpr *ME, bool &borrowFlag) {
+  const Expr *base = ME->getBase();
+  borrowFlag = ME->getType().isBorrowQualified();
+  std::string memberFieldName = "." + ME->getMemberNameInfo().getAsString(), borrowFieldName;
+  if (borrowFlag) {
+    borrowFieldName = "." + ME->getMemberNameInfo().getAsString();
+  }
+
+  while (true) {
+    if (const MemberExpr *me = dyn_cast<MemberExpr>(base)) {
+      borrowFlag |= me->getType().isBorrowQualified();
+      base = me->getBase();
+      memberFieldName = me->getMemberNameInfo().getAsString() + "." +
+                        memberFieldName;
+      if (borrowFlag) {
+        borrowFieldName = me->getMemberNameInfo().getAsString() + "." +
+                          borrowFieldName;
+      }
+    } else if (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(base)) {
+      base = ice->getSubExpr();
+    } else {
+      break;
+    }
+  }
+
+  if (borrowFlag) {
+    return {base, borrowFieldName};
+  }
+
+  return {base, memberFieldName};
+}
+
+void BorrowRuleChecker::VisitMemberExpr(MemberExpr *ME) {
+  if (Op == None) {
+    return;
+  }
+
+  bool borrowFlag = false;
+  auto memberField = getMemberField(ME, borrowFlag);
+
+  // manipulate struct member expr assign
+  if (Op == Write) {
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
+      HandleDREWrite(DRE, memberField.second, borrowFlag);
+    }
+  }
+  
+  // manipulate struct member expr use
+  if (Op == Read) {
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
+      HandleDRERead(DRE, memberField.second, borrowFlag);
+    }
+  }
+}
+
 void BorrowRuleChecker::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   Visit(E->getLHS());
 }
@@ -383,6 +485,299 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
     }
   }
   Op = TempOp;
+}
+
+void BorrowRuleChecker::HandleDREWrite(const DeclRefExpr *DRE, std::string fieldName, bool borrowFlag) {
+  if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+    if (fieldName == "") {
+      if (VD->getType().isBorrowQualified()) {
+        CheckBorrowVar(VD, DRE->getLocation());
+      } else {
+        CheckNonBorrowVar(VD, DRE->getLocation());
+      }
+    } else {
+      if (borrowFlag) {
+        CheckBorrowField(VD, DRE->getLocation(), fieldName);
+      } else {
+        CheckNonBorrowField(VD, DRE->getLocation(), fieldName);
+      }
+    }
+  }
+}
+
+void BorrowRuleChecker::HandleDRERead(const DeclRefExpr *DRE, std::string fieldName, bool borrowFlag) {
+  if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+    if (fieldName == "") {
+      if (VD->getType().isBorrowQualified()) {
+        CheckBorrowVar(VD, DRE->getLocation());
+      } else {
+        CheckNonBorrowVar(VD, DRE->getLocation());
+      }
+    } else {
+      if (borrowFlag) {
+        CheckBorrowField(VD, DRE->getLocation(), fieldName);
+      } else {
+        CheckNonBorrowField(VD, DRE->getLocation(), fieldName);
+      }
+    }
+  }
+}
+
+// for a borrow var or a borrow field, return the BorrowInfo
+// BorrowInfo.BorrowVD == VD
+BorrowInfo BorrowRuleChecker::GetBorrowInfo(const VarDecl *VD, string fieldName) {
+  // FIXME this condition is not suitable
+  if (VD->getType().isBorrowQualified() || VD->getType()->hasBorrowFields()) {
+    for (auto v : ActiveBorrowTargetMap) {
+      auto it = v.second.rbegin();
+      while (it != v.second.rend()) {
+        if (it->BorrowVD == VD) {
+          if (fieldName == "") {
+            return *it;
+          } else if (fieldName == it->BorrowFieldPath) {
+            return *it;
+          }
+        }
+        it++;
+      }
+    }
+  }
+
+  return BorrowInfo();
+}
+
+// VD is the borrow pointer variable
+void BorrowRuleChecker::CheckBorrowVar(const VarDecl *VD, const SourceLocation &Loc) {
+  BorrowInfo BI = GetBorrowInfo(VD);
+  if (!VD->getType().isConstBorrow()) {
+    if (BI.TargetFieldPath == "") {
+      CheckMutBorrowVarUse(VD, Loc);
+    } else {
+      CheckMutBorrowFieldUse(VD, Loc, BI.TargetFieldPath);
+    }
+  } else {
+    if (BI.TargetFieldPath == "") {
+      CheckConstBorrowVarUse(VD, Loc);
+    } else {
+      CheckConstBorrowFieldUse(VD, Loc, BI.TargetFieldPath);
+    }
+  }
+}
+
+void BorrowRuleChecker::CheckBorrowField(const VarDecl *VD, const SourceLocation &Loc, std::string fieldName) {
+  BorrowInfo BI = GetBorrowInfo(VD, fieldName);
+  if (BI.Kind == BorrowKind::Mut) {
+    if (BI.TargetFieldPath == "") {
+      CheckMutBorrowVarUse(VD, Loc, BI.BorrowFieldPath);
+    } else {
+      CheckMutBorrowFieldUse(VD, Loc, BI.TargetFieldPath, BI.BorrowFieldPath);
+    }
+  } else {
+    if (BI.TargetFieldPath == "") {
+      CheckConstBorrowVarUse(VD, Loc, BI.BorrowFieldPath);
+    } else {
+      CheckConstBorrowFieldUse(VD, Loc, BI.TargetFieldPath, BI.BorrowFieldPath);
+    }
+  }
+}
+
+// for const mut borrowed variable, only allow use the last alive mut borrow variable.
+// VD is the mut borrow pointer variable
+void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD, const SourceLocation &Loc, string borrowFieldPath) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    assert(it != ActiveBorrowTargetMap[TVD].rend());
+    if (it->BorrowVD == VD) {
+      return;
+    } else {
+      // Only allow used the last alive mut borrow variable.
+      BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow, Loc,
+                            it->BorrowVD->getLocation());
+      reporter.addDiagInfo(DI);
+      return;
+    }
+  }
+}
+
+// for mut borrowed field, borrow to itself, its parent and its child are not allowed to exist
+// VD is the mut borrow pointer variable
+void BorrowRuleChecker::CheckMutBorrowFieldUse(const VarDecl *VD, const SourceLocation &Loc, string targetFieldPath, string borrowFieldPath) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath) {
+        return;
+      }
+      // borrow to itself and its parent exist
+      if (IsPrefix(it->TargetFieldPath, targetFieldPath)) {
+        BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath, AtMostOneMutBorrow,
+                            Loc, it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
+      // borrow to its child exist
+      if (IsPrefix(targetFieldPath, it->TargetFieldPath)) {
+        BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath, AtMostOneMutBorrow,
+                            Loc, it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
+      it++;
+    }
+  }
+}
+
+// for const borrowed variable, mut borrow variables are not allowed to exist
+// VD is the mut borrow pointer variable
+void BorrowRuleChecker::CheckConstBorrowVarUse(const VarDecl *VD, const SourceLocation &Loc, string borrowFieldPath) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      if (it->BorrowVD == VD) {
+        return;
+      }
+      if (!(it->Kind == BorrowKind::Immut)) {
+        BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow,
+                              Loc, it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
+      it++;
+    }
+  }
+}
+
+// for const borrowed field, mut borrow to itself, its parent and its child are not allowed to exist
+// VD is the mut borrow pointer variable
+void BorrowRuleChecker::CheckConstBorrowFieldUse(const VarDecl *VD, const SourceLocation &Loc, string targetFieldPath, string borrowFieldPath) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath) {
+        return;
+      }
+      if (!(it->Kind == BorrowKind::Immut)) {
+        // mut borrow to itself and its parent exist
+        if (IsPrefix(it->TargetFieldPath, targetFieldPath)) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath, AtMostOneMutBorrow,
+                              Loc, it->BorrowVD->getLocation());
+          reporter.addDiagInfo(DI);
+          return;
+        }
+        // mut borrow to its child exist
+        if (IsPrefix(targetFieldPath, it->TargetFieldPath)) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath, AtMostOneMutBorrow,
+                              Loc, it->BorrowVD->getLocation());
+          reporter.addDiagInfo(DI);
+          return;
+        }
+      }
+      it++;
+    }
+  }
+}
+
+void BorrowRuleChecker::CheckNonBorrowVar(const VarDecl *VD, const SourceLocation &Loc) {
+  if (Op == Write) {
+    CheckNonBorrowVarWrite(VD, Loc);
+  }
+
+  if (Op == Read) {
+    CheckNonBorrowVarRead(VD, Loc);
+  }
+}
+
+// for struct type or primitive type, `any borrow` is not allowed when writing
+void BorrowRuleChecker::CheckNonBorrowVarWrite(const VarDecl *VD, const SourceLocation &Loc) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    // Variables cannot be modified when be borrowed
+    BorrowCheckDiagInfo DI(VD->getNameAsString(), ModifyAfterBeBorrowed,
+                           Loc, it->BorrowVD->getLocation());
+    reporter.addDiagInfo(DI);
+  }
+}
+
+// for struct type or primitive type, `any mutable borrow` is not allowed when reading
+void BorrowRuleChecker::CheckNonBorrowVarRead(const VarDecl *VD, const SourceLocation &Loc) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      // Variables cannot be read when be mut borrowed
+      if (!(it->Kind == BorrowKind::Immut)) {
+        BorrowCheckDiagInfo DI(VD->getNameAsString(),
+                               ReadAfterBeMutBorrowed, Loc,
+                               it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
+      it++;
+    }
+  }
+}
+
+void BorrowRuleChecker::CheckNonBorrowField(const VarDecl *VD, const SourceLocation &Loc, string fieldName) {
+  if (Op == Write) {
+    CheckNonBorrowFieldWrite(VD, Loc, fieldName);
+  }
+
+  if (Op == Read) {
+    CheckNonBorrowFieldRead(VD, Loc, fieldName);
+  }
+}
+
+// for struct field, `any borrow to itself, its parent and its child` is not allowed when writing
+void BorrowRuleChecker::CheckNonBorrowFieldWrite(const VarDecl *VD, const SourceLocation &Loc, string fieldName) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      // borrow to itself and its parent exist
+      if (IsPrefix(it->TargetFieldPath, fieldName)) {
+        BorrowCheckDiagInfo DI(VD->getNameAsString() + fieldName,
+                               ModifyAfterBeBorrowed,
+                               Loc, it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
+      // borrow to its child exist
+      if (IsPrefix(fieldName, it->TargetFieldPath)) {
+        BorrowCheckDiagInfo DI(VD->getNameAsString() + fieldName,
+                               ModifyAfterBeBorrowed,
+                               Loc, it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
+      it++;
+    }
+  }
+}
+
+// for struct field, `any mut borrow to itself, its parent and its child` is not allowed when writing
+void BorrowRuleChecker::CheckNonBorrowFieldRead(const VarDecl *VD, const SourceLocation &Loc, string fieldName) {
+  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
+    auto it = ActiveBorrowTargetMap[TVD].rbegin();
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      // mut borrow to itself and its parent exist
+      if (it->Kind == BorrowKind::Mut) {
+        if (IsPrefix(it->TargetFieldPath, fieldName)) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + fieldName,
+                                ModifyAfterBeBorrowed,
+                                Loc, it->BorrowVD->getLocation());
+          reporter.addDiagInfo(DI);
+          return;
+        }
+        // borrow to its child exist
+        if (IsPrefix(fieldName, it->TargetFieldPath)) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + fieldName,
+                                ModifyAfterBeBorrowed,
+                                Loc, it->BorrowVD->getLocation());
+          reporter.addDiagInfo(DI);
+          return;
+        }
+      }
+      it++;
+    }
+  }
 }
 
 void BorrowRuleChecker::PushActiveBorrowTargetMap() {
@@ -1017,7 +1412,7 @@ void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
     IdentifierInfo *ID = &Ctx.Idents.get(Name);
     VarDecl *VirtualVD = VarDecl::Create(Ctx, DC,
                                          VD->getBeginLoc(), VD->getLocation(), ID,
-                                         QualType(), nullptr, SC_None);
+                                         QualType(QT->getPointeeType()), nullptr, SC_None);
     // Update previous NLL whose target is this naked pointer VD to virtual
     // ParentVar
     llvm::SmallVector<TargetInfo> VirtualTarget;
@@ -1226,7 +1621,7 @@ void BorrowCheckImpl::BuildParamTarget(std::map<std::tuple<ParmVarDecl*, std::st
       IdentifierInfo *ID = &Ctx.Idents.get(Name);
       VarDecl *VD = VarDecl::Create(Ctx, const_cast<DeclContext*>(fd.getDeclContext()), 
                                     PVD->getBeginLoc(), PVD->getLocation(), ID,
-                                    QualType(), nullptr, SC_None);
+                                    QualType(PVD->getType()->getPointeeType()), nullptr, SC_None);
       if (PQT.isBorrowQualified()) {
         BorrowKind BK = PQT.isConstBorrow() ?  BorrowKind::Immut : BorrowKind::Mut;
         ParamTarget[std::tuple<ParmVarDecl*, std::string, BorrowKind>(PVD, "", BK)] = TargetInfo(VD);

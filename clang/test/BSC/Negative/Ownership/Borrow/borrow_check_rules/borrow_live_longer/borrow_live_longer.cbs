@@ -89,11 +89,11 @@ void test8() {
 struct S2 { int* owned b; };
 void test9() {
   int local = 42;
-  int *borrow p = &mut local;   // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  int *borrow p = &mut local;   // expected-note {{previous borrow is here}} expected-error {{borrow pointer variable 'p' lives longer than target variable}}
   {
     struct S2 s = { .b = safe_malloc<int>(5) };
     p = &mut *s.b;
-    free_owned<int>(s.b);
+    free_owned<int>(s.b); // expected-error {{Can not modify 's.b' because be borrowed}}
   }
   use_mut(p);
 }

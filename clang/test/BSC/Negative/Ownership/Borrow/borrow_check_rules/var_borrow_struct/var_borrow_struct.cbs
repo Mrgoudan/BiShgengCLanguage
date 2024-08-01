@@ -1,0 +1,91 @@
+// RUN: %clang_cc1 -verify %s
+
+typedef struct S {
+    int a;
+    int b;
+} S;
+
+void use_mut(S * borrow s);
+void use_const(const S * borrow s);
+T* owned safe_malloc<T>(T value);
+void free_owned<T>(T* owned p);
+void free(void*);
+
+void test1() {
+    S s = { .a = 1, .b = 2 };
+    S * borrow p = &mut s;
+    S * borrow q = &mut s; // expected-note {{previous borrow is here}}
+    use_mut(p); // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+    use_mut(q);
+}
+
+void test2() {
+  S tmp = {.a = 1, .b = 2};
+  S *owned oriPtr = safe_malloc<S>(tmp);
+  S *borrow p1 = &mut *oriPtr;
+  S *borrow p2 = &mut *oriPtr; // expected-note {{previous borrow is here}}
+  use_mut(p1); // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
+  use_mut(p2);
+  free_owned<S>(oriPtr);
+}
+
+void test3(S * oriPtr) {
+  S *borrow p1 = &mut * oriPtr;
+  S *borrow p2 = &mut * oriPtr;
+  use_mut(p1);
+  free(oriPtr);
+}
+
+void test4() {
+  S local = {.a = 1, .b = 2};
+  S *borrow p = &mut local;
+  S *borrow p1 = &mut local; 
+  const S *borrow p2 = &const *p;   // expected-note {{previous borrow is here}}
+                                      // expected-note@-1 {{previous borrow is here}}
+  use_mut(p);                         // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+  use_mut(p1);                        // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
+  use_const(p2);
+}
+
+void test5() {
+  S local = {.a = 1, .b = 2};
+  S *borrow p1 = &mut local;
+  const S *borrow p2 = &const local;  // expected-note {{previous borrow is here}}
+  use_mut(p1);                          // expected-error {{There should be at most one mutable borrow targeting to 'p1' at the same time}}
+  use_const(p2);
+}
+
+void test6(S* borrow p) {
+  S local = {.a = 1, .b = 2};
+  p = &mut local;
+  const S *borrow p1 = &const *p;    // expected-note {{previous borrow is here}}
+  use_mut(p);                          // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+  use_const(p1);
+}
+
+void test7(S* borrow p) {
+  S *borrow p1 = p;                 // expected-note {{previous borrow is here}}
+  use_mut(p);                         // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+  use_mut(p1);
+}
+
+void test8() {
+  S local = {.a = 1, .b = 2};
+  S * borrow p = &mut local; // expected-note {{previous borrow is here}}
+  local.b = 3; // expected-error {{Can not modify 'local.b' because be borrowed}}
+  use_mut(p);
+}
+
+void test9() {
+  S local = {.a = 1, .b = 2};
+  const S * borrow p = &const local; // expected-note {{previous borrow is here}}
+  local.b = 3; // expected-error {{Can not modify 'local.b' because be borrowed}}
+  use_const(p);
+}
+
+void test10() {
+  S local = {.a = 1, .b = 2};
+  S * borrow p = &mut local; // expected-note {{previous borrow is here}}
+  int x = local.b; // expected-error {{Can not modify 'local.b' because be borrowed}}
+  use_mut(p);
+}
