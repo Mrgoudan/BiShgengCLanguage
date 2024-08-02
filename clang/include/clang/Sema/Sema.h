@@ -4424,7 +4424,8 @@ public:
   bool LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation = false,
                   bool ForceNoCPlusPlus = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                           bool InUnqualifiedLookup = false);
+                           bool InUnqualifiedLookup = false,
+                           bool allowIncompleteCtx = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                            CXXScopeSpec &SS);
   bool LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
@@ -5663,8 +5664,13 @@ public:
   #if ENABLE_BSC
   QualType CompleteTraitType(QualType QT);
   QualType CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo);
+  QualType CompleteRecordType(RecordDecl *RD, SourceLocation BL,
+                              SourceLocation EL, QualType QT);
   VarDecl *DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
                             Declarator &TraitDeclarator,
+                            SourceLocation TypeLoc);
+  VarDecl *DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
+                            QualType ImplQT, QualType OriginTraitTy,
                             SourceLocation TypeLoc);
   QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
                                      SourceLocation Loc);

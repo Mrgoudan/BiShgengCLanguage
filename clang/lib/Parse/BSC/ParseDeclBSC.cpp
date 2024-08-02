@@ -542,10 +542,10 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
         TraitII = Trait->getIdentifier();
     }
   }
-  DeclContext::lookup_result Decls = Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
-  for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                            E = Decls.end();
-        I != E; ++I) {
+  DeclContext::lookup_result Decls =
+      Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
+  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
+       I != E; ++I) {
     if (isa<TraitDecl>(*I)) {
       Trait = dyn_cast<TraitDecl>(*I);
     } else if (isa<TraitTemplateDecl>(*I)) {

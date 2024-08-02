@@ -446,11 +446,12 @@ QualType Sema::CompleteTraitType(QualType QT) {
 }
 
 QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
+  return CompleteRecordType(RD, TInfo->getTypeLoc().getBeginLoc(), TInfo->getTypeLoc().getEndLoc(), TInfo->getType());
+}
+
+QualType Sema::CompleteRecordType(RecordDecl *RD, SourceLocation BL, SourceLocation EL, QualType QT) {
   ClassTemplateDecl *CTD = RD->getDescribedClassTemplate();
-  SourceLocation BL = TInfo->getTypeLoc().getBeginLoc();
-  SourceLocation EL = TInfo->getTypeLoc().getEndLoc();
   TemplateArgumentListInfo Args(BL, EL);
-  QualType QT = TInfo->getType();
   while (QT->isPointerType())
     QT = QT->getPointeeType();
   while (isa<TemplateSpecializationType>(QT) || isa<TypedefType>(QT)) {
@@ -458,15 +459,16 @@ QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
     //   typedef G<T> = trait F<T>;
     //   impl G<int> for int;
     // QT is a TemplateSpecializationType but not TypedefType.
-    if (const TemplateSpecializationType *TT = dyn_cast<TemplateSpecializationType>(QT)) {
+    if (const TemplateSpecializationType *TT =
+            dyn_cast<TemplateSpecializationType>(QT)) {
       if (TT->isTypeAlias())
         QT = TT->getAliasedType();
       else
         break;
-    // In this case:
-    //   typedef G = trait F<int>;
-    //   impl G for int;
-    // QT is a TypedefType.
+      // In this case:
+      //   typedef G = trait F<int>;
+      //   impl G for int;
+      // QT is a TypedefType.
     } else if (const TypedefType *TT = dyn_cast<TypedefType>(QT))
       QT = TT->desugar();
   }
@@ -490,35 +492,39 @@ QualType Sema::CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo) {
 VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
                                 Declarator &TraitDeclarator,
                                 SourceLocation TypeLoc) {
-  TraitDecl *TD = ITD->getTraitDecl();
-  SourceLocation TraitLoc = ITD->getLocation();
+  Scope *S = getCurScope();
+  return DesugarImplTrait(
+      ITD->getTraitDecl(), ITD->getLocation(),
+      GetTypeForDeclarator(TypeDeclarator, S)->getType().getCanonicalType(),
+      GetTypeForDeclarator(TraitDeclarator, S)->getType(), TypeLoc);
+}
+
+VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
+                                QualType ImplQT, QualType OriginTraitTy,
+                                SourceLocation TypeLoc) {
   CXXScopeSpec SS;
   Scope *S = getCurScope();
   DeclContext *DC = CurContext;
 
-  TypeSourceInfo *TraitInfo = GetTypeForDeclarator(TraitDeclarator, S);
-  QualType OriginTraitTy = TraitInfo->getType();
   RecordDecl *TraitVT = TD->getVtable();
   QualType TraitQT = TraitVT->getTypeForDecl()->getCanonicalTypeInternal();
   if (TraitVT->getDescribedClassTemplate())
-    TraitQT = CompleteRecordType(TraitVT, TraitInfo);
+    TraitQT = CompleteRecordType(TraitVT, TraitLoc, TraitLoc, OriginTraitTy);
   if (TraitQT.isNull())
     return nullptr;
   TraitQT = Context.getElaboratedType(ETK_Struct, nullptr, TraitQT);
-  TypeSourceInfo *TypeInfo = GetTypeForDeclarator(TypeDeclarator, S);
-  QualType ImplQT = TypeInfo->getType().getCanonicalType();
   VarDecl *LookupVar = TD->getTypeImpledVarDecl(ImplQT);
   // If we have the same ImplTraitDecl before, return nullptr
   if (LookupVar)
     return nullptr;
 
   std::string ImplTraitName = "__" + TypeAsString(ImplQT) + "_trait_" +
-                              TraitDeclarator.getIdentifier()->getName().str();
+                              TypeAsString(OriginTraitTy);
 
   IdentifierInfo *ITII = &Context.Idents.get(ImplTraitName);
   StorageClass SC = clang::SC_None;
   VarDecl *NewVD =
-      VarDecl::Create(Context, DC, ITD->getBeginLoc(), TraitLoc, ITII, TraitQT,
+      VarDecl::Create(Context, DC, TraitLoc, TraitLoc, ITII, TraitQT,
                       Context.getTrivialTypeSourceInfo(TraitQT), SC);
   NewVD->setLexicalDeclContext(CurContext);
 
@@ -530,8 +536,7 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
     const Type *BasedType = ImplQT.getCanonicalType().getTypePtr();
     if (Context.BSCDeclContextMap.find(BasedType) !=
         Context.BSCDeclContextMap.end()) {
-      LookupDC =
-          Context.BSCDeclContextMap[BasedType];
+      LookupDC = Context.BSCDeclContextMap[BasedType];
     }
     DeclContext::lookup_result Decls;
     if (LookupDC)
@@ -577,8 +582,7 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
           CK_FunctionToPointerDecay, Res.get(), nullptr, VK_PRValue,
           FPOptionsOverride());
       Res.get()->IsDesugaredCastExpr = true;
-      Res = BuildCStyleCastExpr(ITD->getLocation(), TInfo, ITD->getLocation(),
-                                Res.get())
+      Res = BuildCStyleCastExpr(TraitLoc, TInfo, TraitLoc, Res.get())
                 .get();
       Designation Desig;
       Desig.AddDesignator(Designator::getField(II, TraitLoc, TraitLoc));
@@ -586,12 +590,12 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
       InitExprs.push_back(Res.get());
     } else {
       Diag(TypeLoc, diag::err_trait_impl)
-          << II << TraitInfo->getType() << ImplQT;
+          << II << OriginTraitTy << ImplQT;
       return nullptr;
     }
   }
 
-  ExprResult ER = BuildInitList(ITD->getBeginLoc(), InitExprs, TraitLoc);
+  ExprResult ER = BuildInitList(TraitLoc, InitExprs, TraitLoc);
   InitListExpr *ILE = dyn_cast<InitListExpr>(ER.get());
   AddInitializerToDecl(NewVD, ILE, false);
   PushOnScopeChains(NewVD, S, true);
@@ -621,8 +625,10 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
   QualType InnerTy = T;
   while (InnerTy->isPointerType())
     InnerTy = InnerTy->getPointeeType();
-  while (isa<TemplateSpecializationType>(InnerTy) || isa<TypedefType>(InnerTy)) {
-    if (const TemplateSpecializationType *TT = dyn_cast<TemplateSpecializationType>(InnerTy)) {
+  while (isa<TemplateSpecializationType>(InnerTy) ||
+         isa<TypedefType>(InnerTy)) {
+    if (const TemplateSpecializationType *TT =
+            dyn_cast<TemplateSpecializationType>(InnerTy)) {
       if (TT->isTypeAlias())
         InnerTy = TT->getAliasedType();
       else
@@ -715,7 +721,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   if (Init == nullptr) // trait I *a;
     return NewVD;
 
-  if (Init->containsErrors())
+  if (Init->containsErrors()) // this is so trange
     return NewVD;
 
   Expr *UO = Init;
@@ -931,8 +937,10 @@ TraitDecl *Sema::TryDesugarTrait(QualType T) {
     TraitTy = T->getPointeeType();
     while (TraitTy->isPointerType())
       TraitTy = TraitTy->getPointeeType();
-    while (isa<TemplateSpecializationType>(TraitTy) || isa<TypedefType>(TraitTy)) {
-      if (const TemplateSpecializationType* TempTST = dyn_cast<TemplateSpecializationType>(TraitTy)) {
+    while (isa<TemplateSpecializationType>(TraitTy) ||
+           isa<TypedefType>(TraitTy)) {
+      if (const TemplateSpecializationType *TempTST =
+              dyn_cast<TemplateSpecializationType>(TraitTy)) {
         if (TempTST->isTypeAlias())
           TraitTy = TempTST->getAliasedType();
         else
@@ -1048,7 +1056,8 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
   bool RHSIsPointerType = RHSExpr->getType()->isPointerType();
   if (!RHSIsPointerType) {
     Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
-        << CompleteTraitType(LHSExpr->getType())->getPointeeType() << RHSExpr->getType();
+        << CompleteTraitType(LHSExpr->getType())->getPointeeType()
+        << RHSExpr->getType();
     return ExprError();
   }
 
@@ -1065,14 +1074,16 @@ ExprResult Sema::ActOnTraitReassign(Scope *S, SourceLocation TokLoc,
     TraitDecl *TD = TryDesugarTrait(RTy);
     if (!TD) {
       Diag(RHSExpr->getBeginLoc(), diag::err_type_has_not_impl_trait)
-          << CompleteTraitType(LHSExpr->getType())->getPointeeType() << RE->getType();
+          << CompleteTraitType(LHSExpr->getType())->getPointeeType()
+          << RE->getType();
       return ExprError();
     }
     return BuildBinOp(S, TokLoc, Opc, LHSExpr, RE);
   }
 
   RecordDecl *RD = dyn_cast<RecordType>(LTy.getCanonicalType())->getDecl();
-  QualType T = RE->getType()->getPointeeType().getUnqualifiedType().getCanonicalType();
+  QualType T =
+      RE->getType()->getPointeeType().getUnqualifiedType().getCanonicalType();
   T.removeLocalOwned();
   for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
        I != E; ++I) {
@@ -1143,8 +1154,8 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
                             CompleteTraitType(RHSExpr->getType())) == false) {
       Diag(TokLoc, diag::ext_typecheck_comparison_of_distinct_pointers)
           << CompleteTraitType(LHSExpr->getType())
-          << CompleteTraitType(RHSExpr->getType())
-          << LHSExpr->getSourceRange() << RHSExpr->getSourceRange();
+          << CompleteTraitType(RHSExpr->getType()) << LHSExpr->getSourceRange()
+          << RHSExpr->getSourceRange();
     }
 
     if (LHSExpr->getType()->isPointerType() ||
@@ -1214,7 +1225,8 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
   bool IsPointerType = BaseExpr->getType()->isPointerType();
   if (!IsPointerType) {
     Diag(TokLoc, diag::err_type_has_not_impl_trait)
-        << CompleteTraitType(BaseTrait->getType())->getPointeeType() << BaseExpr->getType();
+        << CompleteTraitType(BaseTrait->getType())->getPointeeType()
+        << BaseExpr->getType();
     return ExprError();
   }
   QualType T = BaseExpr->getType()->getPointeeType().getCanonicalType();
@@ -1223,7 +1235,8 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
   if (!LookupVar && !(T->isVoidType())) {
     // If expr not ImplTraitDecl, Diagnose warning;
     Diag(TokLoc, diag::warn_type_has_not_impl_trait)
-        << CompleteTraitType(BaseTrait->getType())->getPointeeType() << BaseExpr->getType();
+        << CompleteTraitType(BaseTrait->getType())->getPointeeType()
+        << BaseExpr->getType();
   }
   Expr *TraitExpr = nullptr;
   for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
@@ -1257,18 +1270,22 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
 //    e.g. trait F (call*)();     trait F<T> (call*)();
 //         trait F<T> (call*)();  trait F<int> (call*)();
 // a BSC function's param type can not be trait too.
-void Sema::checkBSCFunctionContainsTrait(Decl* D) {
-  const Type* T = nullptr;
-  if (auto* FD = dyn_cast_or_null<FunctionDecl>(D))
+void Sema::checkBSCFunctionContainsTrait(Decl *D) {
+  const Type *T = nullptr;
+  if (auto *FD = dyn_cast_or_null<FunctionDecl>(D))
     T = FD->getReturnType().getCanonicalType().getTypePtr();
-  else if (auto* PD = dyn_cast_or_null<ParmVarDecl>(D))
+  else if (auto *PD = dyn_cast_or_null<ParmVarDecl>(D))
     T = PD->getType().getCanonicalType().getTypePtr();
   else if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
     QualType Ty = VD->getType();
     if (Ty->isFunctionPointerType()) {
-      const Type* FPT = Ty->getAs<PointerType>()->getPointeeType().getCanonicalType().getTypePtr();
+      const Type *FPT = Ty->getAs<PointerType>()
+                            ->getPointeeType()
+                            .getCanonicalType()
+                            .getTypePtr();
       T = FPT->getAs<FunctionProtoType>()->getReturnType().getTypePtr();
-    } else return;
+    } else
+      return;
   } else
     return;
 

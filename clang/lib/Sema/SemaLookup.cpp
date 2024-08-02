@@ -208,9 +208,9 @@ namespace {
 // Retrieve the set of identifier namespaces that correspond to a
 // specific kind of name lookup.
 static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
-#if ENABLE_BSC
+                               #if ENABLE_BSC
                                bool BSC,
-#endif
+                               #endif
                                bool Redeclaration) {
   unsigned IDNS = 0;
   switch (NameKind) {
@@ -270,13 +270,9 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
   case Sema::LookupMemberName:
     IDNS = Decl::IDNS_Member;
     if (CPlusPlus
-#if ENABLE_BSC
+        #if ENABLE_BSC
         || BSC
-#endif
-    )
-      IDNS |= Decl::IDNS_Tag | Decl::IDNS_Ordinary;
     break;
-
   case Sema::LookupNestedNameSpecifierName:
     IDNS = Decl::IDNS_Type | Decl::IDNS_Namespace;
     break;
@@ -2432,7 +2428,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
 ///
 /// \returns true if lookup succeeded, false if it failed.
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                               bool InUnqualifiedLookup) {
+                               bool InUnqualifiedLookup, bool allowIncompleteCtx) {
   assert(LookupCtx && "Sema::LookupQualifiedName requires a lookup context");
 
   if (!R.getLookupName())
@@ -2442,6 +2438,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   assert((!isa<TagDecl>(LookupCtx) ||
           LookupCtx->isDependentContext() ||
           cast<TagDecl>(LookupCtx)->isCompleteDefinition() ||
+          allowIncompleteCtx ||
           cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
          "Declaration context must already be complete!");
 

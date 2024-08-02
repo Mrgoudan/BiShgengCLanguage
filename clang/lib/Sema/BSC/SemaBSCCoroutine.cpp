@@ -102,7 +102,7 @@ static BSCMethodDecl *lookupBSCMethodInRecord(Sema &S, std::string FuncName,
       S,
       DeclarationNameInfo(&(S.Context.Idents).get(FuncName), SourceLocation()),
       S.LookupOrdinaryName);
-  S.LookupQualifiedName(Result, RecordDecl);
+  S.LookupQualifiedName(Result, RecordDecl, false, true);
   BSCMethodDecl *BSCMethod = nullptr;
   if (!Result.empty())
     BSCMethod = dyn_cast_or_null<BSCMethodDecl>(Result.getFoundDecl());
@@ -193,7 +193,9 @@ buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr, Expr *FreeFuncExpr,
 }
 
 bool Sema::IsBSCCompatibleFutureType(QualType Ty) {
-  return implementedFutureType(*this, Ty) || Ty.getTypePtr()->isBSCFutureType();
+  return implementedFutureType(*this, Ty)
+      || (isa<PointerType>(Ty.getTypePtr()) && implementedFutureType(*this, cast<PointerType>(Ty.getTypePtr())->getPointeeType()))
+      || Ty.getTypePtr()->isBSCFutureType();
 }
 
 namespace {
@@ -649,63 +651,53 @@ generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
   return std::make_pair(VoidRD, IsExisted);
 }
 
-// TODO: Can we first desugar to "impl trait Future<> for type",
-// then call the trait interface to desugar again.
-static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
-                                    RecordDecl *VtableRD,
-                                    RecordDecl *PollResultRD,
-                                    BSCMethodDecl *PollFunc,
-                                    BSCMethodDecl *FreeFunc) {
-  std::string IName =
-      VtableRD->getDeclName().getAsString() + FD->getDeclName().getAsString();
-  VarDecl *VD = VarDecl::Create(
-      S.Context, S.Context.getTranslationUnitDecl(), FD->getBeginLoc(),
-      FD->getEndLoc(), &(S.Context.Idents).get(IName),
-      S.Context.getRecordType(VtableRD), nullptr, SC_None);
-  DeclGroupRef DG(VD);
-  S.PushOnScopeChains(VD, S.getCurScope(), true);
-  SmallVector<Expr *, 2> InitExprs;
+ // build struct Future for async function
+static RecordDecl *buildOpaqueFutureRecordDecl(
+    Sema &S, FunctionDecl *FD) {
+  DeclarationName funcName = FD->getDeclName();
+  SourceLocation SLoc = FD->getBeginLoc();
+  SourceLocation ELoc = FD->getEndLoc();
 
-  SmallVector<QualType, 1> Args;
-  Args.push_back(S.Context.VoidPtrTy);
 
-  QualType PollFuncType = S.Context.getPointerType(S.Context.getFunctionType(
-      S.Context.getRecordType(PollResultRD), Args, {}));
-  Expr *PollInit = S.BuildDeclRefExpr(PollFunc, PollFunc->getType(), VK_LValue,
-                                      SourceLocation());
-  PollInit->HasBSCScopeSpec = true;
-  PollInit = S.ImpCastExprToType(PollInit,
-                                 S.Context.getPointerType(PollInit->getType()),
-                                 CK_FunctionToPointerDecay)
-                 .get();
-  PollInit =
-      S.BuildCStyleCastExpr(SourceLocation(),
-                            S.Context.getTrivialTypeSourceInfo(PollFuncType),
-                            SourceLocation(), PollInit)
-          .get();
-  InitExprs.push_back(PollInit);
+  const std::string Recordname = "_Future" + funcName.getAsString();
+  RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
+                                        clang::TagDecl::TagKind::TTK_Struct);
+  // RD->startDefinition();
 
-  QualType FreeFuncType = S.Context.getPointerType(
-      S.Context.getFunctionType(S.Context.VoidTy, Args, {}));
-  Expr *FreeInit = S.BuildDeclRefExpr(FreeFunc, FreeFunc->getType(), VK_LValue,
-                                      SourceLocation());
-  FreeInit->HasBSCScopeSpec = true;
-  FreeInit = S.ImpCastExprToType(FreeInit,
-                                 S.Context.getPointerType(FreeInit->getType()),
-                                 CK_FunctionToPointerDecay)
-                 .get();
-  FreeInit =
-      S.BuildCStyleCastExpr(SourceLocation(),
-                            S.Context.getTrivialTypeSourceInfo(FreeFuncType),
-                            SourceLocation(), FreeInit)
-          .get();
-  InitExprs.push_back(FreeInit);
+  // RD->completeDefinition();
+  S.PushOnScopeChains(RD, S.getCurScope(), true);
+  return RD;
+}
 
-  Expr *ILE =
-      S.BuildInitList(SourceLocation(), InitExprs, SourceLocation()).get();
-  ILE->setType(S.Context.getRecordType(VtableRD));
-  VD->setInit(ILE);
-  return VD;
+static VarDecl *buildVtableInitDecl2(Sema &S, FunctionDecl *FD, QualType RecordType) {
+  auto SLoc = FD->getBeginLoc();
+
+  auto lookupInternal = [&](std::string Name) {
+    DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
+        DeclarationName(&(S.Context.Idents).get(Name)));
+    return Decls;
+  };
+
+  auto TraitDecl = lookupInternal("Future").find_first<TraitTemplateDecl>();
+  auto  T = S.Context.IntTy;
+
+  TemplateArgumentListInfo Args(SLoc, SLoc);
+  Args.addArgument(TemplateArgumentLoc(
+      TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, SLoc)));
+  QualType PollResultRecord =
+      S.CheckTemplateIdType(TemplateName(TraitDecl), SourceLocation(), Args);
+
+  if (PollResultRecord.isNull()) {
+    return nullptr;
+  }
+
+  auto x = S.DesugarImplTrait(
+    TraitDecl->getTemplatedDecl(),
+    SLoc,
+    RecordType,
+    S.Context.getElaboratedType(ETK_Trait, nullptr, PollResultRecord), SLoc);
+
+  return x;
 }
 
 static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
@@ -915,42 +907,9 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
                  .get();
   Stmts.push_back(BO);
 
-  std::string FatPointerVDName = "fp";
-  VarDecl *FatPointerVD = VarDecl::Create(
-      S.Context, NewFD, SLoc, SLoc, &(S.Context.Idents).get(FatPointerVDName),
-      S.Context.getRecordType(FatPointerRD),
-      S.Context.getTrivialTypeSourceInfo(S.Context.getRecordType(FatPointerRD),
-                                         SLoc),
-      SC_None);
 
-  DeclGroupRef FatPointerDG(FatPointerVD);
-  DeclStmt *FatPointerDS = new (S.Context) DeclStmt(FatPointerDG, SLoc, ELoc);
-  Stmts.push_back(FatPointerDS);
-
-  SmallVector<Expr *, 2> InitExprs;
   Expr *FutureRefExpr = S.BuildDeclRefExpr(VD, VD->getType(), VK_LValue, NLoc);
-  FutureRefExpr =
-      S.BuildCStyleCastExpr(
-           NLoc, S.Context.getTrivialTypeSourceInfo(S.Context.VoidPtrTy), NLoc,
-           FutureRefExpr)
-          .get();
-
-  Expr *VtableRefExpr =
-      S.BuildDeclRefExpr(VtableInit, VtableInit->getType(), VK_LValue, NLoc);
-
-  Expr *Unop =
-      S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, VtableRefExpr).get();
-  InitExprs.push_back(FutureRefExpr);
-  InitExprs.push_back(Unop);
-  Expr *ILE =
-      S.BuildInitList(SourceLocation(), InitExprs, SourceLocation()).get();
-  ILE->setType(S.Context.getRecordType(FatPointerRD));
-  FatPointerVD->setInit(ILE);
-
-  Expr *FatPointerRef = S.BuildDeclRefExpr(
-      FatPointerVD, FatPointerVD->getType(), VK_LValue, NLoc);
-  // No need for ImplicitCastExpr since BuildReturnStmt will generate for us.
-  Stmt *RS = S.BuildReturnStmt(NLoc, FatPointerRef).get();
+  Stmt *RS = S.BuildReturnStmt(NLoc, FutureRefExpr).get();
   Stmts.push_back(RS);
 
   CompoundStmt *CS =
@@ -962,14 +921,13 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-static FunctionDecl *
-buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *FD,
-                                   RecordDecl *FatPointerRD) {
+static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *FD,
+                                                 QualType FuncRetType) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
   DeclarationName funcName = FD->getDeclName();
-  QualType FuncRetType = S.Context.getRecordType(FatPointerRD);
+  // QualType FuncRetType = S.Context.getRecordType(FatPointerRD);
   SmallVector<QualType, 16> ParamTys;
   FunctionDecl::param_const_iterator pi;
   for (pi = FD->param_begin(); pi != FD->param_end(); pi++) {
@@ -2100,7 +2058,8 @@ public:
       if (FutureInitFunc) {
         IsOptimization =
             !(CE->getType().getTypePtr()->isBSCFutureType()) &&
-            implementedFutureType(SemaRef, CE->getType());
+            (implementedFutureType(SemaRef, CE->getType())
+              || (isa<PointerType>(CE->getType().getTypePtr()) && implementedFutureType(SemaRef, cast<PointerType>(CE->getType().getTypePtr())->getPointeeType())));
         // CHECK: Do I need all of this?
         std::vector<Expr *> CallArgs;
         for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
@@ -2149,8 +2108,17 @@ public:
                       AE->getType(), AwaitFD->getReturnType().getQualifiers());
       } else AEType = AE->getType();
 
+      while (AEType->isPointerType()) {
+        AEType = AEType->getPointeeType();
+      }
+
+
       const RecordType *FutureType = dyn_cast<RecordType>(
           AEType.getDesugaredType(SemaRef.Context));
+      assert(FutureType != nullptr &&
+            "struct future of async function is null");
+
+      // Are we putting things on this decl context already?
       RecordDecl *FutureStructRD = FutureType->getDecl();
       assert(FutureStructRD != nullptr &&
              "struct future of async function is null");
@@ -2396,7 +2364,41 @@ public:
 };
 }  // namespace
 
-static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
+static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
+                                        FunctionDecl *FD) {
+  SourceLocation SLoc = FD->getBeginLoc();
+  SourceLocation NLoc = FD->getNameInfo().getLoc();
+  SourceLocation ELoc = FD->getEndLoc();
+
+  std::string FName = "free";
+  QualType FuncRetType = S.Context.VoidTy;
+  QualType ParamType = S.Context.getPointerType(S.Context.getRecordType(RD));
+  SmallVector<QualType, 1> ParamTys;
+  ParamTys.push_back(ParamType);
+
+  QualType FuncType = S.Context.getFunctionType(FuncRetType, ParamTys, {});
+
+  BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(
+      S.Context, RD, SLoc, NLoc, ELoc, &(S.Context.Idents).get(FName), FuncType,
+      nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
+  NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
+
+  SmallVector<ParmVarDecl *, 1> ParmVarDecls;
+  ParmVarDecl *PVD = ParmVarDecl::Create(
+      S.Context, NewFD, SourceLocation(), SourceLocation(),
+      &(S.Context.Idents).get("this"), ParamType, nullptr, SC_None, nullptr);
+  ParmVarDecls.push_back(PVD);
+  NewFD->setParams(ParmVarDecls);
+  S.PushFunctionScope();
+
+  sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+  return NewFD;
+}
+
+static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
                                         FunctionDecl *FD, bool IsOptimization) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
@@ -2553,7 +2555,57 @@ static BSCMethodDecl *buildFreeFunction(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
+
+static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
+                                        RecordDecl *PollResultRD,
+                                        FunctionDecl *FD) {
+  SourceLocation SLoc = FD->getBeginLoc();
+  SourceLocation NLoc = FD->getNameInfo().getLoc();
+  SourceLocation ELoc = FD->getEndLoc();
+  QualType Ty = FD->getDeclaredReturnType();
+
+  std::string FName = "poll";
+
+  QualType FuncRetType = S.Context.getRecordType(PollResultRD);
+  QualType ParamType = S.Context.getPointerType(S.Context.getRecordType(RD));
+  SmallVector<QualType, 1> ParamTys;
+  ParamTys.push_back(ParamType);
+
+  QualType FuncType = S.Context.getFunctionType(FuncRetType, ParamTys, {});
+  QualType OriginType = S.Context.getFunctionType(Ty, ParamTys, {});
+
+  BSCMethodDecl *NewFD = buildAsyncBSCMethodDecl(
+      S.Context, RD, SLoc, NLoc, ELoc, &(S.Context.Idents).get(FName),
+      OriginType, nullptr, SC_None,
+      RD->getTypeForDecl()->getCanonicalTypeInternal());
+  NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
+  S.PushFunctionScope();
+
+  SmallVector<ParmVarDecl *, 1> ParmVarDecls;
+  ParmVarDecl *PVD = ParmVarDecl::Create(
+      S.Context, NewFD, SourceLocation(), SourceLocation(),
+      &(S.Context.Idents).get("this"), ParamType, nullptr, SC_None, nullptr);
+  ParmVarDecls.push_back(PVD);
+  NewFD->setParams(ParmVarDecls);
+
+  FunctionDecl *TransformedFD =
+      TransformToReturnVoid(S).TransformFunctionDecl(FD);
+
+  NewFD->setType(
+      S.Context.getFunctionType(TransformedFD->getReturnType(), ParamTys, {}));
+  S.PushDeclContext(S.getCurScope(), NewFD);
+
+  NewFD->setType(FuncType);
+  S.PopDeclContext();
+
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+  sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  return NewFD->isInvalidDecl() ? nullptr : NewFD;
+}
+
+static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
                                         RecordDecl *PollResultRD,
                                         FunctionDecl *FD,
                                         RecordDecl *FatPointerRD,
@@ -2772,6 +2824,26 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
         }
       }
     }
+  } else if ((isa<PointerType>(AwaitReturnTy.getTypePtr()) && implementedFutureType(*this, cast<PointerType>(AwaitReturnTy.getTypePtr())->getPointeeType()))) {
+    auto AwaitReturnTy2 = cast<PointerType>(AwaitReturnTy.getTypePtr())->getPointeeType();
+    const RecordType *FutureType =
+        dyn_cast<RecordType>(AwaitReturnTy2.getDesugaredType(Context));
+    RecordDecl *FutureRD = FutureType->getDecl();
+
+    BSCMethodDecl *PollFD = lookupBSCMethodInRecord(*this, "poll", FutureRD);
+    if (PollFD != nullptr) {
+      const RecordType *PollResultType = dyn_cast<RecordType>(
+          PollFD->getReturnType().getDesugaredType(Context));
+      RecordDecl *PollResult = PollResultType->getDecl();
+      for (RecordDecl::field_iterator FieldIt = PollResult->field_begin(),
+                                      Field_end = PollResult->field_end();
+           FieldIt != Field_end; ++FieldIt) {
+        if (FieldIt->getDeclName().getAsString() == "res") {
+          AwaitReturnTy = FieldIt->getType();
+        }
+      }
+    }
+
   }
 
   // build AwaitExpr
@@ -2825,10 +2897,47 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
     if (FatPointerType.isNull()) {
       return Decls;
     }
-    RecordDecl *FatPointerRD = FatPointerType->getAsRecordDecl();
+    // RecordDecl *FatPointerRD = FatPointerType->getAsRecordDecl();
+      RecordDecl *RD = buildOpaqueFutureRecordDecl(*this, FD);
+
+        Decls.push_back(RD);
+  Context.BSCDesugaredMap[FD].push_back(RD);
+
+    QualType PointerStructTy = Context.getPointerType(Context.getRecordType(RD));
+
+  RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
+
+  BSCMethodDecl *PollDecl = buildPollFunctionDeclaration(*this, RD, PollResultRD, FD);
+  BSCMethodDecl *FreeDecl = buildFreeFunctionDeclaration(*this, RD, FD);
+
+
+  // QualType VtableType = lookupGenericType(*this, FD->getBeginLoc(), ReturnTy,
+  //                                         "__Trait_Future_Vtable");
+  // if (VtableType.isNull()) {
+  //   return Decls;
+  // }
+  RecordDecl *VtableRD = VtableType->getAsRecordDecl();
+
+  // VarDecl *VtableDecl = buildVtableInitDecl(*this, FD, VtableRD, PollResultRD,
+  //                                           PollDecl, FreeDecl);
+  //                                           if (!VtableDecl) {
+  //   return Decls;
+  // }
+  // Decls.push_back(VtableDecl);
+  // Context.BSCDesugaredMap[FD].push_back(VtableDecl);
+
+
+  VarDecl *VtableDecl2 = buildVtableInitDecl2(*this, FD, Context.getRecordType(RD));
+                                            if (!VtableDecl2) {
+    return Decls;
+  }
+  Decls.push_back(VtableDecl2);
+  Context.BSCDesugaredMap[FD].push_back(VtableDecl2);
+
+
     if (!FD->isStatic()) {
       FunctionDecl *FutureInitDef =
-          buildFutureInitFunctionDeclaration(*this, FD, FatPointerRD);
+          buildFutureInitFunctionDeclaration(*this, FD, PointerStructTy);
       if (FutureInitDef) {
         Decls.push_back(FutureInitDef);
         Context.BSCDesugaredMap[FD].push_back(FutureInitDef);
@@ -2897,6 +3006,8 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   if (FatPointerType.isNull()) {
     return Decls;
   }
+
+
   RecordDecl *FatPointerRD = FatPointerType->getAsRecordDecl();
 
   LocalVarFinder VarFinder = LocalVarFinder(Context);
@@ -2906,12 +3017,14 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   bool IsOptimization = FD->isStatic() && !IsRecursiveCall;
   RecordDecl *RD = buildFutureRecordDecl(*this, FD, AwaitFinder.GetAwaitExpr(),
                                          VarFinder.GetLocalVarList());
+  QualType PointerStructTy = Context.getPointerType(Context.getRecordType(RD));
+
   if (!RD) {
     return Decls;
   }
   // Handle declaration first.
   FunctionDecl *FutureInitDef = buildFutureInitFunctionDeclaration(
-      *this, FD, IsOptimization ? RD : FatPointerRD);
+      *this, FD, IsOptimization ? Context.getRecordType(RD) : PointerStructTy);
   if (!FutureInitDef) {
     return Decls;
   }
@@ -2924,27 +3037,34 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Decls.push_back(RD);
   Context.BSCDesugaredMap[FD].push_back(RD);
 
-  BSCMethodDecl *PollDecl = buildPollFunction(*this, RD, PollResultRD, FD,
+  BSCMethodDecl *PollDecl = buildPollFunctionDefinition(*this, RD, PollResultRD, FD,
                                               FatPointerRD, FutureStateNumber);
   if (!PollDecl) {
     return Decls;
   }
   Decls.push_back(PollDecl);
   Context.BSCDesugaredMap[FD].push_back(PollDecl);
-  BSCMethodDecl *FreeDecl = buildFreeFunction(*this, RD, FD, IsOptimization);
+  BSCMethodDecl *FreeDecl = buildFreeFunctionDefinition(*this, RD, FD, IsOptimization);
   if (!FreeDecl) {
     return Decls;
   }
   Decls.push_back(FreeDecl);
   Context.BSCDesugaredMap[FD].push_back(FreeDecl);
 
-  VarDecl *VtableDecl = buildVtableInitDecl(*this, FD, VtableRD, PollResultRD,
-                                            PollDecl, FreeDecl);
-  if (!VtableDecl) {
+  // VarDecl *VtableDecl = buildVtableInitDecl(*this, FD, VtableRD, PollResultRD,
+  //                                           PollDecl, FreeDecl);
+  // if (!VtableDecl) {
+  //   return Decls;
+  // }
+  // Decls.push_back(VtableDecl);
+  // Context.BSCDesugaredMap[FD].push_back(VtableDecl);
+
+  VarDecl *VtableDecl2 = buildVtableInitDecl2(*this, FD, Context.getRecordType(RD));
+  if (!VtableDecl2) {
     return Decls;
   }
-  Decls.push_back(VtableDecl);
-  Context.BSCDesugaredMap[FD].push_back(VtableDecl);
+  Decls.push_back(VtableDecl2);
+  Context.BSCDesugaredMap[FD].push_back(VtableDecl2);
 
   FunctionDecl *FutureInit = nullptr;
   if (IsOptimization) {
@@ -2952,7 +3072,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
         buildFutureStructInitFunctionDefinition(*this, RD, FD);
   } else {
     FutureInit = buildFutureInitFunctionDefinition(*this, RD, FD, FatPointerRD,
-                                                   VtableDecl, FutureInitDef);
+                                                   VtableDecl2, FutureInitDef);
   }
 
   if (!FutureInit) {
