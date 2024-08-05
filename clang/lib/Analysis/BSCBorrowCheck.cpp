@@ -128,6 +128,7 @@ public:
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitMemberExpr(MemberExpr *ME);
   void VisitImplicitCastExpr(ImplicitCastExpr *ICE);
+  void VisitParenExpr(ParenExpr *PE);
   void VisitScopeEnd(VarDecl *VD);
   void VisitScopeBegin(VarDecl *VD);
   void HandleNLLAfterTraversing(
@@ -470,7 +471,7 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
       unsigned BorrowBegin = Borrow.Begin;
       unsigned BorrowEnd = Borrow.End;
       for (auto NLLOfTarget : NLLForAllVars[TargetVD]) {
-        if (NLLOfTarget.BorrowFieldPath == Borrow.TargetFieldPath) {
+        if (NLLOfTarget.Target.TargetFieldPath == "") {
           unsigned TargetBegin = NLLOfTarget.Begin;
           unsigned TargetEnd = NLLOfTarget.End;
           if (BorrowBegin <= TargetBegin || BorrowEnd >= TargetEnd) {
@@ -499,14 +500,15 @@ void BorrowRuleChecker::CheckLifetimeOfBorrowReturnValue(unsigned NumElements) {
   for (auto NLLOfVar : NLLForAllVars) {
     if (NLLOfVar.first->getNameAsString() == "_ReturnVar") {
       for (NonLexicalLifetimeRange& Range : NLLOfVar.second) {
-        NonLexicalLifetimeRange TargetNLLRange =
-            NLLForAllVars[Range.Target.TargetVD][0];
-        unsigned TargetNLLBegin = TargetNLLRange.Begin;
-        unsigned TargetNLLEnd = TargetNLLRange.End;
-        if (TargetNLLBegin > 0 || TargetNLLEnd < NumElements + 3) {
-          BorrowCheckDiagInfo DI(Range.Target.TargetVD->getNameAsString(),
-                                 ReturnLocal, NLLOfVar.first->getLocation());
-          reporter.addDiagInfo(DI);
+        for (auto TargetNLLRange : NLLForAllVars[Range.Target.TargetVD]) {
+          unsigned TargetNLLBegin = TargetNLLRange.Begin;
+          unsigned TargetNLLEnd = TargetNLLRange.End;
+          if (TargetNLLBegin > 0 || TargetNLLEnd < NumElements + 3) {
+            BorrowCheckDiagInfo DI(Range.Target.TargetVD->getNameAsString(),
+                                   ReturnLocal, NLLOfVar.first->getLocation());
+            reporter.addDiagInfo(DI);
+            return;
+          }
         }
       }
     }
@@ -636,15 +638,18 @@ void NLLCalculator::VisitReturnStmt(ReturnStmt *RS) {
   Expr *RV = RS->getRetValue();
   if (!RV) 
     return;
-  QualType ReturnQT = RV->getType();
+  QualType ReturnQT = RV->getType().getCanonicalType();
+  if (!ReturnQT.hasBorrow())
+    return;
+  
+  // In order to check lifetime of borrow return value, we build a virtual ReturnVar.
+  std::string Name = "_ReturnVar";
+  IdentifierInfo *ID = &Ctx.Idents.get(Name);
+  VarDecl *ReturnVD = VarDecl::Create(Ctx, DC, RV->getBeginLoc(), RV->getBeginLoc(),
+                                      ID, ReturnQT, nullptr, SC_None);
   if (ReturnQT.isBorrowQualified()) {
     BorrowKind BK =
         ReturnQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
-    // In order to check lifetime of borrow return value, we build a virtual ReturnVar.
-    std::string Name = "_ReturnVar";
-    IdentifierInfo *ID = &Ctx.Idents.get(Name);
-    VarDecl *ReturnVD = VarDecl::Create(Ctx, DC, RV->getBeginLoc(), RV->getBeginLoc(),
-                                        ID, ReturnQT, nullptr, SC_None);
     // ReturnVar itself only survive in current ReturnStmt,
     // but we still should get its target to check if this function returns a
     // borrow of local variable.
@@ -653,6 +658,9 @@ void NLLCalculator::VisitReturnStmt(ReturnStmt *RS) {
     for (TargetInfo Target : Targets)
       NLLForAllVars[ReturnVD].push_back(
           NonLexicalLifetimeRange(CurElemID, CurElemID, BK, Target));
+  } else if (ReturnQT->hasBorrowFields()) {
+    if (RecordDecl* RD = dyn_cast<RecordType>(ReturnQT)->getDecl())
+      VisitInitForBorrowFieldTargets(ReturnVD, "", RD, RV);
   }
 
   // For return stmt `return p;`, `return &mut* p`, `return *p;` or `return
@@ -707,6 +715,11 @@ void NLLCalculator::VisitCallExpr(CallExpr *CE) {
 void NLLCalculator::VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
   if (CurrOpIsBorrowUse)
     Visit(ICE->getSubExpr());
+}
+
+void NLLCalculator::VisitParenExpr(ParenExpr *PE) {
+  if (CurrOpIsBorrowUse)
+    Visit(PE->getSubExpr());
 }
 
 void NLLCalculator::VisitUnaryOperator(UnaryOperator *UO) {
@@ -1250,7 +1263,7 @@ void BorrowCheckImpl::BorrowCheckForPath(const CFGPath &Path, BorrowCheckDiagRep
   BorrowRuleChecker BRC(reporter, NLLForAllVars);
   BRC.BuildBorrowTargetMap();
   BRC.CheckBorrowNLLShorterThanTarget();
-  if (fd.getReturnType().isBorrowQualified())
+  if (fd.getReturnType().hasBorrow())
     BRC.CheckLifetimeOfBorrowReturnValue(NumElements);
   BRC.CheckBeBorrowedTarget(Path);
 }

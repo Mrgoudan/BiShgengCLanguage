@@ -75,6 +75,40 @@ void test7() {
   use_mut(p);
 }
 
+struct S1 { int a; };
+void test8() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  {
+    struct S1 s = { .a = 42,  };
+    p = &mut s.a;
+  }
+  use_mut(p);
+}
+
+struct S2 { int* owned b; };
+void test9() {
+  int local = 42;
+  int *borrow p = &mut local;   // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  {
+    struct S2 s = { .b = safe_malloc<int>(5) };
+    p = &mut *s.b;
+    free_owned<int>(s.b);
+  }
+  use_mut(p);
+}
+
+struct S3 { struct S1 c; };
+void test10() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  {
+    struct S1 s1 = { .a = 42 };
+    struct S3 s2 = { .c = s1 };
+    p = &mut s2.c.a;
+  }
+  use_mut(p);
+}
 int main() {
   int local = 5;
   int *owned oriPtr = safe_malloc<int>(0); 
@@ -85,5 +119,8 @@ int main() {
   test5();
   test6(oriPtr);
   test7();
+  test8();
+  test9();
+  test10();
   return 0;
 }

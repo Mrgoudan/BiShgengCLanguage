@@ -112,6 +112,26 @@ int* borrow test13(int* borrow p) {
   return &mut * oriPtr;  //Dead Code
 }
 
+struct S { int * borrow p; };
+struct S test14(struct S s) {
+  int local = 5;
+  s.p = &mut local;
+  return s;    //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+struct G { struct S s; };
+struct S test15(struct G g) {
+  int local = 5;
+  g.s.p = &mut local;
+  return g.s;    //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+struct G test16(struct G g) {
+  int local = 5;
+  g.s.p = &mut local;
+  return g;    //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
 int main() {
   int local = 5;
   int *owned oriPtr = safe_malloc<int>(0); 
@@ -127,6 +147,11 @@ int main() {
   test10(&mut local);
   test11(&mut local);
   test12(&mut local);
-  test13(&mut local);  
+  test13(&mut local);
+  struct S s = { .p = &mut local };
+  struct G g = { .s = s };
+  test14(s);
+  test15(g);
+  test16(g);
   return 0;
 }

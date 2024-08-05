@@ -80,6 +80,16 @@ int* borrow test12(int* borrow p) {
   return &mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
 }
 
+struct S { int * borrow p; };
+struct S test13(struct S s) {
+  return s;
+}
+
+struct S test14(struct S s, int* borrow p) {
+  s.p = p;
+  return s; 
+}
+
 int main() {
   int local = 5;
   test1(&const local);
@@ -94,5 +104,8 @@ int main() {
   test10(&mut local, &local);
   test11(&mut local, 5);
   test12(&mut local);
+  struct S s = { .p = &mut local };
+  test13(s);
+  test14(s, &mut local);
   return 0;
 }
