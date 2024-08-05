@@ -64,9 +64,8 @@ struct NonLexicalLifetimeRange {
   // example:
   //   int* borrow p1 = &mut local;     // TargetVD: local, TargetFieldPath: ""
   //   struct S* borrow p2 = &mut s;    // TargetVD: s,     TargetFieldPath: ""
-  //   int* borrow p3 = &mut s.a;       // TargetVD: s,     TargetFieldPath:
-  //   ".a" int* borrow p4 = &mut s.b.c;     // TargetVD: s, TargetFieldPath:
-  //   ".b.c"
+  //   int* borrow p3 = &mut s.a;       // TargetVD: s,     TargetFieldPath: ".a"
+  //   int* borrow p4 = &mut s.b.c;     // TargetVD: s,     TargetFieldPath: ".b.c"
   TargetInfo Target;
 
   NonLexicalLifetimeRange() {}
