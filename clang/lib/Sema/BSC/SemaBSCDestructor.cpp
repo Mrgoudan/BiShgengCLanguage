@@ -487,13 +487,16 @@ public:
         }
       }
     }
+
     for (auto *C : compoundStmt->children()) {
       Stmt *SS = const_cast<Stmt *>(C);
       if (DeclStmt *StmtDecl = dyn_cast<DeclStmt>(SS)) {
         for (auto *SD : StmtDecl->decls()) {
-          if (isa<VarDecl>(SD) &&
-              IsVarDeclWithOwnedStructureType(cast<VarDecl>(SD))) {
-            VarDecls.insert(VarDecls.begin(), cast<VarDecl>(SD));
+          if (auto VD = dyn_cast<VarDecl>(SD)) {
+            bool InTopLevelSwitchBlock = VD->isDefInTopLevelSwitchBlock();
+            if (IsVarDeclWithOwnedStructureType(VD) && !InTopLevelSwitchBlock) {
+              VarDecls.insert(VarDecls.begin(), VD);
+            }
           }
         }
       }
@@ -629,7 +632,6 @@ void Sema::CheckBSCDestructorDeclarator(FunctionDecl *NewFD) {
   }
 
   if (NewFD->getNumParams() == 0) {
-    // Diag(NewFD->getLocation(), diag::err_destructor_no_param);
     Diag(NewFD->getLocation(), diag::invalid_param_for_destructor) << TypeName;
     NewFD->setInvalidDecl();
     return;
@@ -652,6 +654,13 @@ void Sema::CheckBSCDestructorDeclarator(FunctionDecl *NewFD) {
          diag::invalid_param_for_destructor)
         << TypeName;
     NewFD->setInvalidDecl();
+    return;
+  }
+
+  if (NewFD->getNumParams() > 1) {
+    Diag(NewFD->getLocation(), diag::invalid_param_num_for_destructor);
+    NewFD->setInvalidDecl();
+    return;
   }
 }
 

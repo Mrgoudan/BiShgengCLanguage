@@ -391,7 +391,7 @@ Default:
     SemiError = "break";
 #if ENABLE_BSC
     Actions.CollectDestructMap(Res.get(), getCurScope(),
-                               getCurScope()->getFnParent());
+                               getCurScope()->getBreakParent());
 #endif
     break;
   case tok::kw_return:              // C99 6.8.6.4: return-statement

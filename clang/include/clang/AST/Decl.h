@@ -1328,6 +1328,9 @@ private:
   APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
                              bool IsConstantInitialization) const;
 
+#if ENABLE_BSC
+  bool IsDefInTopLevelSwitchBlock = false;
+#endif
 public:
   /// Return the already-evaluated value of this variable's
   /// initializer, or NULL if the value is not yet known. Returns pointer
@@ -1523,6 +1526,13 @@ public:
   void setEscapingByref() {
     NonParmVarDeclBits.EscapingByref = true;
   }
+
+#if ENABLE_BSC
+  bool isDefInTopLevelSwitchBlock() {return IsDefInTopLevelSwitchBlock;}
+  void setDefInTopLevelSwitchBlock(bool V) {
+    IsDefInTopLevelSwitchBlock = V;
+  }
+#endif
 
   /// Determines if this variable's alignment is dependent.
   bool hasDependentAlignment() const;

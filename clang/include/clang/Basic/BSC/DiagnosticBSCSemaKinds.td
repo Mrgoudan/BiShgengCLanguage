@@ -117,6 +117,7 @@ def err_struct_member_redeclared : Error<"struct member cannot be redeclared">;
 
 // BSC Destructor
 def invalid_param_for_destructor : Error<"the parameter of destructor must be '%0 this'">;
+def invalid_param_num_for_destructor : Error<"destructor can only have one parameter">;
 def err_destructor_call : Error<"destructor %0 cannot be called directly">;
 def err_assignment_in_destructor : Error<"'this' cannot be moved in destructor">;
 def warn_destructor_execute : Warning<"the destructor may be not executed">,

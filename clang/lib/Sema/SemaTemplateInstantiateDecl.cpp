@@ -1130,6 +1130,10 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                           D->getLocation(), D->getIdentifier(), DI->getType(),
                           DI, D->getStorageClass());
 
+#if ENABLE_BSC
+  Var->setDefInTopLevelSwitchBlock(D->isDefInTopLevelSwitchBlock());
+#endif
+
   // In ARC, infer 'retaining' for variables of retainable type.
   if (SemaRef.getLangOpts().ObjCAutoRefCount &&
       SemaRef.inferObjCARCLifetime(Var))

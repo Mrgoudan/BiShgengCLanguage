@@ -14270,6 +14270,7 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
         getCurScope()->getParent() &&
         (getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
       Diag(VD->getLocation(), diag::warn_destructor_execute);
+      VD->setDefInTopLevelSwitchBlock(true);
     }
   }
 #endif
