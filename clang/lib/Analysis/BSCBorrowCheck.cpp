@@ -41,6 +41,7 @@ public:
   ASTContext& Ctx;
   const FunctionDecl& fd;
 
+  CFGPathVec FindPathOfCFG(const CFG &cfg);
   NonLexicalLifetime CalculateNLLForPath(
       const CFGPath &Path,
       const std::map<std::tuple<ParmVarDecl*, std::string, BorrowKind>, TargetInfo> &ParamTarget,
@@ -51,51 +52,6 @@ public:
 
   BorrowCheckImpl(ASTContext& ASTCtx, const FunctionDecl& FD)
       : Ctx(ASTCtx), fd(FD) {}
-};
-
-// If the CFG is like this:
-//    BB4(Entry)
-//       |
-//      BB3
-//     /   \ 
-//   BB2   BB1
-//     \   /
-//     BB0(Exit)
-// The Successors of all BBs in the CFG is: 
-//     { 4:[3], 3:[2, 1], 2:[0], 1:[0] }
-// Then we will compute all paths from Entry block to Exit block:
-//     [4, 3, 2, 0], [4, 3, 1, 0]
-// TODO: This class should be modified,
-//       because it cannot handle the cfg with loops.
-class CFGPathFinder {
-  CFGPathVec CFGPaths;
-  const CFGBlock* EntryBB;
-  const CFGBlock* ExitBB;
-public:
-  CFGPathVec FindPathOfCFG(const CFG &cfg) {
-    EntryBB = &cfg.getEntry();
-    ExitBB = &cfg.getExit();
-    // Then we use DFS to find all paths from Entry block to Exit block .
-    FindPath(EntryBB, std::vector<const CFGBlock*>{ EntryBB });
-    return CFGPaths;
-  }
-
-private:
-  void FindPath(const CFGBlock* current, CFGPath path) {
-    if (current == ExitBB)
-      CFGPaths.push_back(path);
-    
-    for(const CFGBlock *next : current->succs()) {
-      if (!next)
-        continue;
-      CFGPath newpath1 = path;
-      if(find(path.begin(), path.end(), next) == path.end()) {
-        newpath1.push_back(next);
-        CFGPath newpath2 = newpath1;
-        FindPath(next, newpath2);
-      }
-    }
-  }
 };
 
 class NLLCalculator : public StmtVisitor<NLLCalculator> {
@@ -839,22 +795,6 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
             NLLRange.Begin, NLLRange.End, NLLRange.Kind));
     }
   }
-  // DEBUG PRINT
-  llvm::outs() << "------print BorrowTargetMap-----\n";
-  for (auto v : BorrowTargetMap) {
-    llvm::outs() << v.first->getNameAsString() << "\n";
-    for (auto w : v.second) {
-      llvm::outs() << "  ";
-      if (w.TargetFieldPath.length())
-        llvm::outs() << w.TargetFieldPath;
-      else
-        llvm::outs() << "--";
-      llvm::outs() << "  " << w.BorrowVD->getNameAsString() << "  "
-                   << w.BorrowFieldPath << "  " << w.Begin << "  " << w.End
-                   << "  " << w.Kind << "\n";
-    }
-    llvm::outs() << "\n";
-  }
 }
 
 // Core rule of borrow:
@@ -1547,6 +1487,45 @@ void NLLCalculator::HandleNLLAfterTraversing(
     NLLForAllVars[globalVar.first].push_back(NonLexicalLifetimeRange(0, NumElements + 3));
 }
 
+// If the CFG is like this:
+//    BB4(Entry)
+//       |
+//      BB3
+//     /   \ 
+//   BB2   BB1
+//     \   /
+//     BB0(Exit)
+// We will compute all paths from Entry block to Exit block:
+//     [4, 3, 2, 0], [4, 3, 1, 0]
+// DFS is used.
+static void VisitBlockForPath(CFGPathVec &CFGPaths, const CFGBlock* CurrentBB,
+                              const CFGBlock* ExitBB, CFGPath Visited) {
+  if (CurrentBB == ExitBB) {
+    Visited.push_back(CurrentBB);
+    CFGPaths.push_back(Visited);   // Get a path from Entry to Exit.
+    return;
+  }
+  for(const CFGBlock *NextBB : CurrentBB->succs()) {
+    if (!NextBB ||
+        (std::find(Visited.begin(), Visited.end(), CurrentBB) != Visited.end() &&
+         std::find(Visited.begin(), Visited.end(), NextBB) != Visited.end()))
+      continue;   // This path we have visited, continue and visit other NextBB.
+
+    CFGPath TmpVisited = Visited;
+    TmpVisited.push_back(CurrentBB);
+    VisitBlockForPath(CFGPaths, NextBB, ExitBB, TmpVisited);
+  }  
+}
+
+CFGPathVec BorrowCheckImpl::FindPathOfCFG(const CFG &cfg) {
+  const CFGBlock* EntryBB = &cfg.getEntry();
+  const CFGBlock* ExitBB = &cfg.getExit();
+  CFGPathVec CFGPaths;
+  CFGPath Visited;
+  VisitBlockForPath(CFGPaths, EntryBB, ExitBB, Visited);
+  return CFGPaths;
+}
+
 // Compute non-lexical Lifetime for all variables in a certain path.
 NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(
     const CFGPath &Path,
@@ -1558,7 +1537,6 @@ NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(
   // we should traverse the path in reverse order.
   for (auto revBlockIt = Path.rbegin(); revBlockIt != Path.rend(); revBlockIt++) {
     const CFGBlock* block = *revBlockIt;
-    llvm::outs() << "Current block id: " << block->getBlockID() << "    ";
     // we should also traverse the block in reverse order.
     for (CFGBlock::const_reverse_iterator revElemIt = block->rbegin(),
                                           revElemEI = block->rend();
@@ -1579,34 +1557,13 @@ NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(
         const VarDecl *VD = elem.castAs<CFGScopeEnd>().getVarDecl();
         Calculator.VisitScopeEnd(const_cast<VarDecl*>(VD));
       }
-      llvm::outs() << Calculator.CurElemID << " ";
       Calculator.CurElemID--;
     }
-    llvm::outs() << "\n";
   }
 
   // After traversing all CFGElement in path, we have got NLL for all local variables,
   // here we add NLL for global variables and parameters. 
   Calculator.HandleNLLAfterTraversing(ParamTarget);
-
-  // DEBUG PRINT
-  llvm::outs() << "----------------print NLL------------------\n";
-  for (auto u : Calculator.NLLForAllVars) {
-    llvm::outs() << u.first->getNameAsString() << "\n";   // VarDecl
-    for (auto v : u.second) {   // NLL
-      llvm::outs() << "  ";
-      if (v.BorrowFieldPath.length())
-        llvm::outs() << v.BorrowFieldPath;
-      else
-        llvm::outs() << "--";
-      llvm::outs() << "  " << v.Begin << "  " << v.End;
-      if (v.Target.TargetVD)
-        llvm::outs() << "  " << v.Target.TargetVD->getNameAsString() << " "
-                     << v.Target.TargetFieldPath;
-      llvm::outs() << "  " << v.Kind << "\n";
-    }
-  }
-  llvm::outs() << "\n";
 
   return Calculator.NLLForAllVars;
 }
@@ -1674,22 +1631,10 @@ void clang::runBorrowCheck(const FunctionDecl &fd, const CFG &cfg,
 
   std::map<std::tuple<ParmVarDecl*, std::string, BorrowKind>, TargetInfo> ParamTarget;
   BC.BuildParamTarget(ParamTarget);
-  
-  // First we find all paths from entry block to exit block of a cfg.
-  CFGPathFinder PathFinder;
-  CFGPathVec CFGAllPaths = PathFinder.FindPathOfCFG(cfg);
 
-  // DEBUG PRINT
-  llvm::outs() << "----------print PathSet----------" << "\n";
-  for (CFGPath Path : CFGAllPaths) {
-    for (const CFGBlock* bb : Path) {
-      llvm::outs() << bb->getBlockID() << "->";
-    }
-    llvm::outs() << "\n";
-  }
-  for (const CFGBlock *BB : cfg.const_reverse_nodes())
-    BB->dump();
-  
+  // First we find all paths from entry block to exit block of a cfg.
+  CFGPathVec CFGAllPaths = BC.FindPathOfCFG(cfg);
+
   // Calculation of NLL and borrow check will be executed for each path.
   for (CFGPath Path : CFGAllPaths) {
     // Count the number of all CFGElements in this path. 

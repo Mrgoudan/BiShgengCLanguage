@@ -1,0 +1,80 @@
+// RUN: %clang_cc1 -verify %s
+int rand();
+T* owned safe_malloc<T>(T value);
+void free_owned<T>(T* owned p);
+void free(void*);
+
+int *borrow test1(int *borrow p) {
+  int local = 42;
+  while (rand())
+    return &mut local;  //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+  return &mut local; //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+int *borrow test2(int *borrow p) {
+  int local = 42;
+  while (0)
+    return &mut local;
+  return &mut local; //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+int *borrow test3(int *borrow p) {
+  int local = 42;
+  while (rand())
+    p = &mut local;
+  return p;  //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+int *borrow test4(int *borrow p) {  //expected-error{{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    for (int i = 0; i < 5; i++) {
+      if (rand()) {
+        int local1 = 5;
+        p = &mut local1;
+      } else {
+        int local2 = 5;
+        p = &mut local2;        
+      }
+    }
+  }
+  return p;  /* expected-error{{borrow pointer variable '_ReturnVar' lives longer than target variable}}
+                expected-error{{Return value cannot be a borrow from local variable 'local1'}} 
+                expected-error{{Return value cannot be a borrow from local variable 'local2'}} */
+}
+
+struct S { int * borrow p; };
+struct S test5(struct S s) {
+  int local = 5;
+  while (rand())
+    s.p = &mut local;
+  return s;    //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+struct G { struct S s; };
+struct S test6(struct G g) {
+  int local = 5;
+  while (rand())
+    g.s.p = &mut local;
+  return g.s;    //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+struct G test7(struct G g) {
+  int local = 5;
+  while (rand())
+    g.s.p = &mut local;
+  return g;    //expected-error{{Return value cannot be a borrow from local variable 'local'}} 
+}
+
+int main() {
+  int local = 5;
+  test1(&mut local);
+  test2(&mut local);
+  test3(&mut local);
+  test4(&mut local);
+  struct S s = { .p = &mut local };
+  struct G g = { .s = s };
+  test5(s);
+  test6(g);
+  test7(g);
+  return 0;
+}

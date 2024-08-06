@@ -1,0 +1,148 @@
+// RUN: %clang_cc1 -verify %s
+int rand();
+void use_mut(int *borrow p) {}
+T* owned safe_malloc<T>(T value);
+void free_owned<T>(T* owned p);
+void free(void*);
+
+void test1() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    int local1 = 42;
+    p = &mut local1;
+  }
+  use_mut(p);
+}
+
+void test2() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  for (int i = 0; i < 5; i++) {
+    int local1 = 42;
+    p = &mut local1;
+  }
+  use_mut(p);
+}
+
+void test3(int* borrow p) {  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    int local1 = 42;
+    p = &mut local1;
+  }
+  use_mut(p);
+}
+
+void test4() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    if (rand()) {
+      int local1 = 42;
+      p = &mut local1;
+    } else {
+      int local2 = 42;
+      p = &mut local2;  
+    }
+  }
+  use_mut(p);
+}
+
+void test5() {
+  int *owned oriPtr = safe_malloc<int>(0);
+  int *borrow p = &mut * oriPtr; /* expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+                                    expected-note {{previous borrow is here}} */
+  while (rand()) {
+    if (rand()) {
+      free_owned<int>(oriPtr);  // expected-error {{Can not modify 'oriPtr' because be borrowed}}
+      use_mut(p);
+    } else
+      free_owned<int>(oriPtr);
+    return;
+  }
+  free_owned<int>(oriPtr);
+}
+
+void test6() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    while (rand()) {
+      for (int i = 0; i < 5; i++) {
+        int local1 = 42;
+        p = &mut local1;
+      }
+    }
+  }
+  use_mut(p);
+}
+
+void test7() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    if (rand()) {
+      for (int i = 0; i < 5; i++) {
+        int local1 = 42;
+        p = &mut local1;
+      }
+    } else {
+      for (int i = 0; i < 5; i++) {
+        int local2 = 42;
+        p = &mut local2;
+      }
+    }
+  }
+  use_mut(p);
+}
+
+struct S1 { int a; };
+void test8() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    struct S1 s = { .a = 42,  };
+    p = &mut s.a;
+  }
+  use_mut(p);
+}
+
+struct S2 { int* owned b; };
+void test9() {
+  int local = 42;
+  int *borrow p = &mut local;   /* expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+                                   expected-note {{previous borrow is here}} */
+  while (rand()) {
+    struct S2 s = { .b = safe_malloc<int>(5) };
+    p = &mut *s.b;
+    free_owned<int>(s.b); // expected-error {{Can not modify 's.b' because be borrowed}}
+  }
+  use_mut(p);
+}
+
+struct S3 { struct S1 c; };
+void test10() {
+  int local = 42;
+  int *borrow p = &mut local;  // expected-error {{borrow pointer variable 'p' lives longer than target variable}}
+  while (rand()) {
+    struct S1 s1 = { .a = 42 };
+    struct S3 s2 = { .c = s1 };
+    p = &mut s2.c.a;
+  }
+  use_mut(p);
+}
+
+int main() {
+  int local = 5;
+  test1();
+  test2();
+  test3(&mut local);
+  test4();
+  test5();
+  test6();
+  test7();
+  test8();
+  test9();
+  test10();
+  return 0;
+}
