@@ -427,6 +427,24 @@ public:
     return false;
   }
 
+  bool TraverseSwitchStmt(SwitchStmt *switchStmt) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseSwitchStmt(
+        switchStmt);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(switchStmt->getBody())) {
+      switchStmt->setBody(ReplaceCompoundMap[NewCompound]);
+    }
+    return false;
+  }
+
+  bool TraverseDefaultStmt(DefaultStmt *defaultStmt) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDefaultStmt(
+        defaultStmt);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(defaultStmt->getSubStmt())) {
+      defaultStmt->setSubStmt(ReplaceCompoundMap[NewCompound]);
+    }
+    return false;
+  }
+
   bool TraverseCaseStmt(CaseStmt *caseStmt) {
     RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseCaseStmt(caseStmt);
     if (auto NewCompound = dyn_cast<CompoundStmt>(caseStmt->getSubStmt())) {
