@@ -30,16 +30,16 @@ enum BorrowKind : char {
   Immut,
 };
 
-struct TargetInfo {
+struct BorrowTargetInfo {
   VarDecl *TargetVD = nullptr;
   std::string TargetFieldPath;
 
-  TargetInfo() {}
-  TargetInfo(VarDecl *targetVD) : TargetVD(targetVD) {}
-  TargetInfo(VarDecl *targetVD, std::string targetFieldPath)
+  BorrowTargetInfo() {}
+  BorrowTargetInfo(VarDecl *targetVD) : TargetVD(targetVD) {}
+  BorrowTargetInfo(VarDecl *targetVD, std::string targetFieldPath)
       : TargetVD(targetVD), TargetFieldPath(targetFieldPath) {}
 
-  bool operator==(const TargetInfo &Other) const {
+  bool operator==(const BorrowTargetInfo &Other) const {
     return TargetVD == Other.TargetVD &&
            TargetFieldPath == Other.TargetFieldPath;
   }
@@ -66,19 +66,19 @@ struct NonLexicalLifetimeRange {
   //   struct S* borrow p2 = &mut s;    // TargetVD: s,     TargetFieldPath: ""
   //   int* borrow p3 = &mut s.a;       // TargetVD: s,     TargetFieldPath: ".a"
   //   int* borrow p4 = &mut s.b.c;     // TargetVD: s,     TargetFieldPath: ".b.c"
-  TargetInfo Target;
+  BorrowTargetInfo Target;
 
   NonLexicalLifetimeRange() {}
 
   // These constructors are for borrow variables, which have binding targets.
   NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
                           VarDecl *targetVD)
-      : Begin(begin), End(end), Kind(kind), Target(TargetInfo(targetVD)) {}
+      : Begin(begin), End(end), Kind(kind), Target(BorrowTargetInfo(targetVD)) {}
   NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
-                          TargetInfo target)
+                          BorrowTargetInfo target)
       : Begin(begin), End(end), Kind(kind), Target(target) {}
   NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
-                          TargetInfo target, std::string borrowFieldPath)
+                          BorrowTargetInfo target, std::string borrowFieldPath)
       : BorrowFieldPath(borrowFieldPath), Begin(begin), End(end), Kind(kind),
         Target(target) {}
 
@@ -108,7 +108,7 @@ using NonLexicalLifetime = llvm::DenseMap<VarDecl*, NonLexicalLifetimeOfVar>;
 
 struct BorrowInfo {
   std::string TargetFieldPath;
-  VarDecl *BorrowVD;
+  VarDecl *BorrowVD = nullptr;
   std::string BorrowFieldPath;
   unsigned Begin;
   unsigned End;
