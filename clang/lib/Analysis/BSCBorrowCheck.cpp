@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Decl.h"
-#include "clang/Basic/SourceLocation.h"
 #if ENABLE_BSC
 
 #include "clang/Analysis/Analyses/BSCBorrowCheck.h"
@@ -120,6 +118,8 @@ public:
   unsigned CurElemID = 0;
   enum Operation { None, Read, Write };
   Operation Op = None;
+  enum InitStatus { NotInit, Init };
+  InitStatus Status = NotInit;
   BorrowRuleChecker(BorrowCheckDiagReporter &reporter, const NonLexicalLifetime& NLLForVars)
       : reporter(reporter), NLLForAllVars(NLLForVars) {}
 
@@ -428,6 +428,7 @@ void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
 
 void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
   Operation TempOp = Op;
+  Status = Init;
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       if (VD->getType().isBorrowQualified()) {
@@ -440,6 +441,7 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
       }
     }
   }
+  Status = NotInit;
   Op = TempOp;
 }
 
@@ -547,7 +549,7 @@ void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD, const SourceLoca
       return;
     } else {
       // Only allow used the last alive mut borrow variable.
-      BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow, Loc,
+      BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath, AtMostOneMutBorrow, Loc,
                             it->BorrowVD->getLocation());
       reporter.addDiagInfo(DI);
       return;
@@ -593,7 +595,7 @@ void BorrowRuleChecker::CheckConstBorrowVarUse(const VarDecl *VD, const SourceLo
         return;
       }
       if (!(it->Kind == BorrowKind::Immut)) {
-        BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow,
+        BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath, AtMostOneMutBorrow,
                               Loc, it->BorrowVD->getLocation());
         reporter.addDiagInfo(DI);
         return;
@@ -633,6 +635,10 @@ void BorrowRuleChecker::CheckConstBorrowFieldUse(const VarDecl *VD, const Source
   }
 }
 
+static void FindBorrowFieldsOfStruct(RecordDecl *RD, 
+                                     llvm::SmallVector<std::pair<std::string, BorrowKind>> 
+                                         &BorrowFieldsOfStruct);
+
 void BorrowRuleChecker::CheckNonBorrowVar(const VarDecl *VD, const SourceLocation &Loc) {
   if (Op == Write) {
     CheckNonBorrowVarWrite(VD, Loc);
@@ -640,6 +646,14 @@ void BorrowRuleChecker::CheckNonBorrowVar(const VarDecl *VD, const SourceLocatio
 
   if (Op == Read) {
     CheckNonBorrowVarRead(VD, Loc);
+  }
+  QualType QT = VD->getType().getCanonicalType();
+  if (Status == NotInit && QT->isRecordType() && QT->hasBorrowFields()) {
+    llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
+    FindBorrowFieldsOfStruct(QT->getAsRecordDecl(), BorrowFieldsOfStruct);
+    for (auto &Field : BorrowFieldsOfStruct) {
+      CheckBorrowField(VD, Loc, Field.first);
+    }
   }
 }
 
@@ -679,6 +693,16 @@ void BorrowRuleChecker::CheckNonBorrowField(const VarDecl *VD, const SourceLocat
 
   if (Op == Read) {
     CheckNonBorrowFieldRead(VD, Loc, fieldName);
+  }
+  QualType QT = VD->getType().getCanonicalType();
+  if (Status == NotInit && QT->isRecordType() && QT->hasBorrowFields()) {
+    llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
+    FindBorrowFieldsOfStruct(QT->getAsRecordDecl(), BorrowFieldsOfStruct);
+    for (auto &Field : BorrowFieldsOfStruct) {
+      if (IsPrefix(fieldName, Field.first)) {
+        CheckBorrowField(VD, Loc, Field.first);
+      }
+    }
   }
 }
 
