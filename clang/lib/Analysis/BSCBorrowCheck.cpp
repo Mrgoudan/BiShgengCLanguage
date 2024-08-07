@@ -175,8 +175,9 @@ public:
   void VisitDeclRefExpr(DeclRefExpr *DRE);
   void VisitDeclStmt(DeclStmt *DS);
   void VisitInitListExpr(InitListExpr *E);
-  void VisitMemberExpr(MemberExpr *E);
+  void VisitMemberExpr(MemberExpr *ME);
   void VisitParenExpr(ParenExpr *Node);
+  void VisitReturnStmt(ReturnStmt *RS);
   void VisitUnaryOperator(UnaryOperator *UO);
   void UpdateActiveBorrowTargetMap();
   void ClearActiveBorrowTargetMap();
@@ -233,7 +234,7 @@ BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(const VarDecl *VD,
       }
     }
   } else {
-    if (VD->getType()->isPointerType()) {
+    if (VD->getType()->isPointerType() && !VD->getType().isOwnedQualified()) {
       for (const auto &v : ActiveBorrowTargetMap) {
         if ((v.first)->getBeginLoc() == VD->getBeginLoc() &&
             (v.first)->getLocation() == VD->getLocation()) {
@@ -252,65 +253,6 @@ BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(const VarDecl *VD,
   return nullptr;
 }
 
-// REFACTOR
-// check whether the variable is used legally
-// for a borrow or none borrow variable, we both need to check its use
-void BorrowRuleChecker::CheckValIsLegalUse(VarDecl *VD, SourceLocation Loc) {
-  if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD)) {
-    if (VD->getType().isBorrowQualified()) {
-      auto it = ActiveBorrowTargetMap[TVD].rbegin();
-      if (VD->getType().isConstBorrow()) {
-        while (it != ActiveBorrowTargetMap[TVD].rend()) {
-          if (it->BorrowVD == VD) {
-            return;
-          }
-          // immut and mut borrow variables are not allowed to exist
-          // simultaneously.
-          if (!it->BorrowVD->getType().isConstBorrow()) {
-            BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow,
-                                   Loc, it->BorrowVD->getLocation());
-            reporter.addDiagInfo(DI);
-            return;
-          }
-          it++;
-        }
-      } else {
-        assert(it != ActiveBorrowTargetMap[TVD].rend());
-        if (it->BorrowVD == VD) {
-          return;
-        } else {
-          // Only allow used the last alive mut borrow variable.
-          BorrowCheckDiagInfo DI(VD->getNameAsString(), AtMostOneMutBorrow, Loc,
-                                 it->BorrowVD->getLocation());
-          reporter.addDiagInfo(DI);
-          return;
-        }
-      }
-    } else {
-      auto it = ActiveBorrowTargetMap[TVD].rbegin();
-      // when writing a variable, no borrow is allowed
-      if (Op == Write) {
-        // Variables cannot be modified when be borrowed
-        BorrowCheckDiagInfo DI(VD->getNameAsString(), ModifyAfterBeBorrowed,
-                               Loc, it->BorrowVD->getLocation());
-        reporter.addDiagInfo(DI);
-      } else {
-        while (it != ActiveBorrowTargetMap[TVD].rend()) {
-          // Variables cannot be read when be mut borrowed
-          if (!it->BorrowVD->getType().isConstBorrow()) {
-            BorrowCheckDiagInfo DI(VD->getNameAsString(),
-                                   ReadAfterBeMutBorrowed, Loc,
-                                   it->BorrowVD->getLocation());
-            reporter.addDiagInfo(DI);
-            return;
-          }
-          it++;
-        }
-      }
-    }
-  }
-}
-
 // visit variable as a whole
 void BorrowRuleChecker::VisitDeclRefExpr(DeclRefExpr *DRE) {
   if (Op == None) {
@@ -322,10 +264,6 @@ void BorrowRuleChecker::VisitDeclRefExpr(DeclRefExpr *DRE) {
   if (Op == Read) {
     HandleDRERead(DRE, "", false);
   }
-  // TO BE DELETED
-  // if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-  //   CheckValIsLegalUse(VD, DRE->getLocation());
-  // }
 }
 
 void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
@@ -375,6 +313,15 @@ void BorrowRuleChecker::VisitCastExpr(CastExpr *E) { Visit(E->getSubExpr()); }
 
 void BorrowRuleChecker::VisitParenExpr(ParenExpr *E) { Visit(E->getSubExpr()); }
 
+void BorrowRuleChecker::VisitReturnStmt(ReturnStmt *RS) {
+  if (RS->getRetValue()) {
+    Operation TempOp = Op;
+    Op = Write;
+    Visit(RS->getRetValue());
+    Op = TempOp;
+  }
+}
+
 static std::pair<const Expr *, std::string> getMemberField(const MemberExpr *ME,
                                                            bool &borrowFlag) {
   const Expr *base = ME->getBase();
@@ -399,6 +346,15 @@ static std::pair<const Expr *, std::string> getMemberField(const MemberExpr *ME,
       base = ice->getSubExpr();
     } else {
       break;
+    }
+  }
+
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(base)) {
+    if (DRE->getDecl()->getType().getCanonicalType().isBorrowQualified()) {
+      if (!borrowFlag) {
+        borrowFlag = true;
+        return {base, ""};
+      }
     }
   }
 
@@ -444,11 +400,6 @@ void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
         if (VD->getType().isBorrowQualified()) {
           return;
         }
-        Op = Write;
-        CheckValIsLegalUse(VD, DRE->getLocation());
-        Op = Read;
-        Visit(BO->getRHS());
-        return;
       }
     }
     Op = Write;
@@ -585,16 +536,21 @@ void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD,
                                              string borrowFieldPath) {
   if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
     auto it = ActiveBorrowTargetMap[TVD].rbegin();
-    assert(it != ActiveBorrowTargetMap[TVD].rend());
-    if (it->BorrowVD == VD) {
-      return;
-    } else {
-      // Only allow used the last alive mut borrow variable.
-      BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
-                             AtMostOneMutBorrow, Loc,
-                             it->BorrowVD->getLocation());
-      reporter.addDiagInfo(DI);
-      return;
+    while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      if (it->BorrowVD->getNameAsString() == "_ReturnVar") {
+        it++;
+        continue;
+      }
+      if (it->BorrowVD == VD) {
+        return;
+      } else {
+        // Only allow used the last alive mut borrow variable.
+        BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
+                               AtMostOneMutBorrow, Loc,
+                               it->BorrowVD->getLocation());
+        reporter.addDiagInfo(DI);
+        return;
+      }
     }
   }
 }
@@ -640,6 +596,10 @@ void BorrowRuleChecker::CheckConstBorrowVarUse(const VarDecl *VD,
   if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
     auto it = ActiveBorrowTargetMap[TVD].rbegin();
     while (it != ActiveBorrowTargetMap[TVD].rend()) {
+      if (it->BorrowVD->getNameAsString() == "_ReturnVar") {
+        it++;
+        continue;
+      }
       if (it->BorrowVD == VD) {
         return;
       }

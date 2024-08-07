@@ -6445,7 +6445,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         else
           return true;
       }
-      #endif
+      CheckMoveVarMemoryLeak(Arg, Arg->getBeginLoc());
+#endif
       if (RequireCompleteType(Arg->getBeginLoc(), ProtoArgType,
                               diag::err_call_incomplete_argument, Arg))
         return true;

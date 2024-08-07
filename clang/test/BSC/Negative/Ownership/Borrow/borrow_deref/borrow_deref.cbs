@@ -21,6 +21,41 @@ void foo2() {
     return;
 }
 
+int owned test_use(int owned a){
+    return a;
+}
+int foo3() {
+    int owned a = 1;
+    int owned * borrow b = &mut a;
+    int owned c = test_use(*b);     // expected-error {{borrow type does not allow move ownership}}
+    int d = (int)a;
+    return 0;
+}
+
+struct S1 {
+    int owned * borrow a;
+    int * b;
+};
+int foo4() {
+    int owned m = 1;
+    int n = 1;
+    struct S1 k = {&mut m, &n};
+    int owned a = *(k.a);          // expected-error {{borrow type does not allow move ownership}}
+    int b = *(k.b);
+}
+
+struct S2 {
+    int * a;
+    int * b;
+};
+int foo5() {
+    int m = 1;
+    int n = 1;
+    struct S2 owned * borrow k = &mut(struct S2 owned){&m, &n};
+    struct S2 owned a = *(k);    // expected-error {{borrow type does not allow move ownership}}
+}
+
+
 struct s<T> {};
 void test1<T>(){
     struct s<T> *a;
@@ -81,6 +116,7 @@ void test() {
     a4 = *b10; // expected-error {{borrow type does not allow move ownership}}
 
     foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is owned or indirect owned type, please fix it}}
+              // expected-error@-1 {{borrow type does not allow move ownership}}
     test1<int>();
     test2<int>(); // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}
     test3<int>();
