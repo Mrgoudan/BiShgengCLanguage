@@ -11,7 +11,7 @@
 extern async int f(int n);
 
 int main() {
-  trait Future<int>* this = f(5);
+  trait Future<int>* this = (trait Future<int>*)f(5);
   this->poll();
   this->free();
   return 0;

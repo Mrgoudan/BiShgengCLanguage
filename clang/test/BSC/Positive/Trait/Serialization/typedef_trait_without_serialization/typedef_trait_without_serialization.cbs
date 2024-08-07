@@ -35,8 +35,8 @@ int int::foo(int *this, int a) {
 
 impl G for int;
 // CHECK: ImplTraitDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:6, col:12> col:12 F 'int'
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:6, col:12> col:12 __int_trait_F 'struct __Trait_F_Vtable':'struct __Trait_F_Vtable' cinit
-// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:6, col:12> 'struct __Trait_F_Vtable'
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:12> col:12 __int_trait_F 'struct __Trait_F_Vtable':'struct __Trait_F_Vtable' cinit
+// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:12> 'struct __Trait_F_Vtable'
 // CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:12> 'int (*)(void *, int)' <BitCast>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:12> 'int (*)(int *, int)' <FunctionToPointerDecay> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int (int *, int)' lvalue BSCMethod 0x{{[^ ]*}} 'foo' 'int (int *, int)'

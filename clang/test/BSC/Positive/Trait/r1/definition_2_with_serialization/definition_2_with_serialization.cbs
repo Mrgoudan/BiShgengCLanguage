@@ -35,8 +35,8 @@ int union S_2::foo(union S_2* this, int a) {
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'int' lvalue ParmVar 0x{{[^ ]*}} 'a' 'int'
 
 impl trait F for union S_2;
-// CHECK: VarDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:6, col:18> col:18 __union_S_2_trait_F 'struct __Trait_F_Vtable':'struct __Trait_F_Vtable' cinit
-// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:6, col:18> 'struct __Trait_F_Vtable'
+// CHECK: VarDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:18> col:18 __union_S_2_trait_F 'struct __Trait_F_Vtable':'struct __Trait_F_Vtable' cinit
+// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:18> 'struct __Trait_F_Vtable'
 // CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:18> 'int (*)(void *, int)' <BitCast>
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:18> 'int (*)(union S_2 *, int)' <FunctionToPointerDecay> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:18> 'int (union S_2 *, int)' lvalue BSCMethod 0x{{[^ ]*}} 'foo' 'int (union S_2 *, int)'

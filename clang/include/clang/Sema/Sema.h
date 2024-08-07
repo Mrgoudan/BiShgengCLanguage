@@ -5671,7 +5671,7 @@ public:
                             SourceLocation TypeLoc);
   VarDecl *DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
                             QualType ImplQT, QualType OriginTraitTy,
-                            SourceLocation TypeLoc);
+                            SourceLocation TypeLoc, bool Initialize);
   QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
                                      SourceLocation Loc);
   TraitDecl *TryDesugarTrait(QualType T);

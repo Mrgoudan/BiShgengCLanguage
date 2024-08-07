@@ -21,12 +21,12 @@ async int f() {
 }
 
 async void g() {
-    trait Future<int>* a = read(1);
+    trait Future<int>* a = (trait Future<int>*)read(1);
     await a;
 }
 
 int main() {
-  trait Future<int>* this = f();
+  trait Future<int>* this = (trait Future<int>*)f();
   this->poll();
   this->free();
   return 0;

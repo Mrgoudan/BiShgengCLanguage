@@ -669,7 +669,7 @@ static RecordDecl *buildOpaqueFutureRecordDecl(
   return RD;
 }
 
-static VarDecl *buildVtableInitDecl2(Sema &S, FunctionDecl *FD, QualType RecordType) {
+static VarDecl *buildVtableInitDecl2(Sema &S, FunctionDecl *FD, QualType RecordType, QualType ReturnType, bool Initialize) {
   auto SLoc = FD->getBeginLoc();
 
   auto lookupInternal = [&](std::string Name) {
@@ -679,11 +679,10 @@ static VarDecl *buildVtableInitDecl2(Sema &S, FunctionDecl *FD, QualType RecordT
   };
 
   auto TraitDecl = lookupInternal("Future").find_first<TraitTemplateDecl>();
-  auto  T = S.Context.IntTy;
 
   TemplateArgumentListInfo Args(SLoc, SLoc);
   Args.addArgument(TemplateArgumentLoc(
-      TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, SLoc)));
+      TemplateArgument(ReturnType), S.Context.getTrivialTypeSourceInfo(ReturnType, SLoc)));
   QualType PollResultRecord =
       S.CheckTemplateIdType(TemplateName(TraitDecl), SourceLocation(), Args);
 
@@ -695,7 +694,7 @@ static VarDecl *buildVtableInitDecl2(Sema &S, FunctionDecl *FD, QualType RecordT
     TraitDecl->getTemplatedDecl(),
     SLoc,
     RecordType,
-    S.Context.getElaboratedType(ETK_Trait, nullptr, PollResultRecord), SLoc);
+    S.Context.getElaboratedType(ETK_Trait, nullptr, PollResultRecord), SLoc, Initialize);
 
   return x;
 }
@@ -2143,10 +2142,12 @@ public:
           DeclAccessPair::make(*FtField, FtField->getAccess()), false,
           MemberNameInfo, FtField->getType().getNonReferenceType(),
           VK_LValue, OK_Ordinary);
-      Expr *Unop = UnaryOperator::Create(
-          SemaRef.Context, FtExpr, UO_AddrOf, ParamType, VK_PRValue,
-          OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
-      PollArgs.push_back(Unop);
+      if (!FtField->getType()->isPointerType()){
+        FtExpr = UnaryOperator::Create(
+            SemaRef.Context, FtExpr, UO_AddrOf, ParamType, VK_PRValue,
+            OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+      }
+      PollArgs.push_back(FtExpr);
 
       PollFuncExpr = SemaRef.BuildDeclRefExpr(
           PollFD, PollFD->getType().getNonReferenceType(), VK_LValue,
@@ -2168,7 +2169,7 @@ public:
           FreeFD, FreeFD->getType().getNonReferenceType(), VK_LValue,
           E->getBeginLoc());
       FreeFuncExpr->HasBSCScopeSpec = true;
-      std::vector<Expr *> FreeArgs{Unop};
+      std::vector<Expr *> FreeArgs{FtExpr};
       Expr *FreeFuncCall =
           SemaRef
               .BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(), FreeArgs,
@@ -2927,7 +2928,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
   // Context.BSCDesugaredMap[FD].push_back(VtableDecl);
 
 
-  VarDecl *VtableDecl2 = buildVtableInitDecl2(*this, FD, Context.getRecordType(RD));
+  VarDecl *VtableDecl2 = buildVtableInitDecl2(*this, FD, Context.getRecordType(RD), ReturnTy, false);
                                             if (!VtableDecl2) {
     return Decls;
   }
@@ -3059,7 +3060,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   // Decls.push_back(VtableDecl);
   // Context.BSCDesugaredMap[FD].push_back(VtableDecl);
 
-  VarDecl *VtableDecl2 = buildVtableInitDecl2(*this, FD, Context.getRecordType(RD));
+  VarDecl *VtableDecl2 = buildVtableInitDecl2(*this, FD, Context.getRecordType(RD), ReturnTy, true);
   if (!VtableDecl2) {
     return Decls;
   }

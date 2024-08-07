@@ -22,13 +22,13 @@ async int int::f() {
 }
 
 async bool int::g() {
-    trait Future<int>* a = read(1);
+    trait Future<int>* a = (trait Future<int>*)read(1);
     await a;
     return false;
 }
 
 int main() {
-  trait Future<int>* this = int::f();
+  trait Future<int>* this = (trait Future<int>*)int::f();
   this->poll();
   this->free();
   return 0;

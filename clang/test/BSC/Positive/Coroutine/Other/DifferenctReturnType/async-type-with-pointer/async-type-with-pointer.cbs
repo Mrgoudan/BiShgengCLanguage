@@ -28,7 +28,7 @@ async int* f() {
 
 int main()
 {
-    trait Future<int*>* this = f();
+    trait Future<int*>* this = (trait Future<int*>*)f();
     this->poll();
     return 0;
 }

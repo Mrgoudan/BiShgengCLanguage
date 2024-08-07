@@ -19,7 +19,7 @@ async volatile int g(int x) {
 
 int main()
 {
-    trait Future<volatile int>* this = g(1);
+    trait Future<volatile int>* this = (trait Future<int>*)g(1);
     this->poll();
     return 0;
 }

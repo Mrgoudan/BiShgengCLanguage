@@ -496,12 +496,12 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
   return DesugarImplTrait(
       ITD->getTraitDecl(), ITD->getLocation(),
       GetTypeForDeclarator(TypeDeclarator, S)->getType().getCanonicalType(),
-      GetTypeForDeclarator(TraitDeclarator, S)->getType(), TypeLoc);
+      GetTypeForDeclarator(TraitDeclarator, S)->getType(), TypeLoc, true);
 }
 
 VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
                                 QualType ImplQT, QualType OriginTraitTy,
-                                SourceLocation TypeLoc) {
+                                SourceLocation TypeLoc, bool Initialize) {
   CXXScopeSpec SS;
   Scope *S = getCurScope();
   DeclContext *DC = CurContext;
@@ -518,8 +518,8 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
   if (LookupVar)
     return nullptr;
 
-  std::string ImplTraitName = "__" + TypeAsString(ImplQT) + "_trait_" +
-                              TypeAsString(OriginTraitTy);
+  std::string ImplTraitName = "__" + TypeAsString(ImplQT) + "_" +
+                              TypeAsString(OriginTraitTy.getCanonicalType());
 
   IdentifierInfo *ITII = &Context.Idents.get(ImplTraitName);
   StorageClass SC = clang::SC_None;
@@ -528,76 +528,81 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
                       Context.getTrivialTypeSourceInfo(TraitQT), SC);
   NewVD->setLexicalDeclContext(CurContext);
 
-  SmallVector<Expr *, 12> InitExprs;
-  for (RecordDecl::field_iterator FieldIt = TraitVT->field_begin();
-       FieldIt != TraitVT->field_end(); ++FieldIt) {
-    IdentifierInfo *II = FieldIt->getIdentifier();
-    DeclContext *LookupDC = nullptr;
-    const Type *BasedType = ImplQT.getCanonicalType().getTypePtr();
-    if (Context.BSCDeclContextMap.find(BasedType) !=
-        Context.BSCDeclContextMap.end()) {
-      LookupDC = Context.BSCDeclContextMap[BasedType];
-    }
-    DeclContext::lookup_result Decls;
-    if (LookupDC)
-      Decls = LookupDC->lookup(DeclarationName(II));
-    BSCMethodDecl *MD = nullptr;
-    if (Decls.isSingleResult()) {
-      for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                                E = Decls.end();
-           I != E; ++I) {
-        if (isa<BSCMethodDecl>(*I)) {
-          MD = dyn_cast<BSCMethodDecl>(*I);
-          break;
+  if (Initialize){
+    SmallVector<Expr *, 12> InitExprs;
+    for (RecordDecl::field_iterator FieldIt = TraitVT->field_begin();
+        FieldIt != TraitVT->field_end(); ++FieldIt) {
+      IdentifierInfo *II = FieldIt->getIdentifier();
+      DeclContext *LookupDC = nullptr;
+      const Type *BasedType = ImplQT.getCanonicalType().getTypePtr();
+      if (Context.BSCDeclContextMap.find(BasedType) !=
+          Context.BSCDeclContextMap.end()) {
+        LookupDC = Context.BSCDeclContextMap[BasedType];
+      }
+      DeclContext::lookup_result Decls;
+      if (LookupDC)
+        Decls = LookupDC->lookup(DeclarationName(II));
+      BSCMethodDecl *MD = nullptr;
+      if (Decls.isSingleResult()) {
+        for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                                  E = Decls.end();
+            I != E; ++I) {
+          if (isa<BSCMethodDecl>(*I)) {
+            MD = dyn_cast<BSCMethodDecl>(*I);
+            break;
+          }
         }
       }
-    }
 
-    if (MD) {
-      QualType FT = MD->getType();
-      assert(FT->isFunctionProtoType());
-      const FunctionProtoType *FPT = FT->getAs<FunctionProtoType>();
-      SmallVector<QualType, 16> ParamTys;
-      assert(FPT->getNumParams() >= 1 && FPT->getParamType(0)->isPointerType());
-      QualType VoidPT = Context.getQualifiedType(
-          Context.VoidTy,
-          FPT->getParamType(0)->getPointeeType().getLocalQualifiers());
-      VoidPT = Context.getPointerType(VoidPT);
-      VoidPT = Context.getQualifiedType(
-          VoidPT, FPT->getParamType(0).getLocalQualifiers());
-      ParamTys.push_back(VoidPT);
+      if (MD) {
+        QualType FT = MD->getType();
+        assert(FT->isFunctionProtoType());
+        const FunctionProtoType *FPT = FT->getAs<FunctionProtoType>();
+        SmallVector<QualType, 16> ParamTys;
+        assert(FPT->getNumParams() >= 1 && FPT->getParamType(0)->isPointerType());
+        QualType VoidPT = Context.getQualifiedType(
+            Context.VoidTy,
+            FPT->getParamType(0)->getPointeeType().getLocalQualifiers());
+        VoidPT = Context.getPointerType(VoidPT);
+        VoidPT = Context.getQualifiedType(
+            VoidPT, FPT->getParamType(0).getLocalQualifiers());
+        ParamTys.push_back(VoidPT);
 
-      for (unsigned int i = 1; i < FPT->getNumParams(); i++) {
-        ParamTys.push_back(FPT->getParamType(i));
+        for (unsigned int i = 1; i < FPT->getNumParams(); i++) {
+          ParamTys.push_back(FPT->getParamType(i));
+        }
+        QualType FuncTy = Context.getFunctionType(FPT->getReturnType(), ParamTys,
+                                                  FPT->getExtProtoInfo());
+        QualType ParenTy = Context.getParenType(FuncTy);
+        QualType PointerTy = Context.getPointerType(ParenTy);
+        TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(PointerTy);
+        ExprResult Res = BuildDeclRefExpr(MD, MD->getType(), VK_LValue, TraitLoc);
+        Res.get()->HasBSCScopeSpec = true;
+        Res = ImplicitCastExpr::Create(
+            Context, Context.getPointerType(Res.get()->getType()),
+            CK_FunctionToPointerDecay, Res.get(), nullptr, VK_PRValue,
+            FPOptionsOverride());
+        Res.get()->IsDesugaredCastExpr = true;
+        Res = BuildCStyleCastExpr(TraitLoc, TInfo, TraitLoc, Res.get())
+                  .get();
+        Designation Desig;
+        Desig.AddDesignator(Designator::getField(II, TraitLoc, TraitLoc));
+        Res = ActOnDesignatedInitializer(Desig, TraitLoc, false, Res);
+        InitExprs.push_back(Res.get());
+      } else {
+        Diag(TypeLoc, diag::err_trait_impl)
+            << II << OriginTraitTy << ImplQT;
+        return nullptr;
       }
-      QualType FuncTy = Context.getFunctionType(FPT->getReturnType(), ParamTys,
-                                                FPT->getExtProtoInfo());
-      QualType ParenTy = Context.getParenType(FuncTy);
-      QualType PointerTy = Context.getPointerType(ParenTy);
-      TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(PointerTy);
-      ExprResult Res = BuildDeclRefExpr(MD, MD->getType(), VK_LValue, TraitLoc);
-      Res.get()->HasBSCScopeSpec = true;
-      Res = ImplicitCastExpr::Create(
-          Context, Context.getPointerType(Res.get()->getType()),
-          CK_FunctionToPointerDecay, Res.get(), nullptr, VK_PRValue,
-          FPOptionsOverride());
-      Res.get()->IsDesugaredCastExpr = true;
-      Res = BuildCStyleCastExpr(TraitLoc, TInfo, TraitLoc, Res.get())
-                .get();
-      Designation Desig;
-      Desig.AddDesignator(Designator::getField(II, TraitLoc, TraitLoc));
-      Res = ActOnDesignatedInitializer(Desig, TraitLoc, false, Res);
-      InitExprs.push_back(Res.get());
-    } else {
-      Diag(TypeLoc, diag::err_trait_impl)
-          << II << OriginTraitTy << ImplQT;
-      return nullptr;
     }
-  }
 
-  ExprResult ER = BuildInitList(TraitLoc, InitExprs, TraitLoc);
-  InitListExpr *ILE = dyn_cast<InitListExpr>(ER.get());
-  AddInitializerToDecl(NewVD, ILE, false);
+    ExprResult ER = BuildInitList(TraitLoc, InitExprs, TraitLoc);
+    InitListExpr *ILE = dyn_cast<InitListExpr>(ER.get());
+    AddInitializerToDecl(NewVD, ILE, false);
+  } else {
+    // Add external keyword
+    NewVD->setStorageClass(SC_Extern);
+  }
   PushOnScopeChains(NewVD, S, true);
 
   if (IsImplTraitDeclIllegal(*this, TraitQT, ImplQT, TypeLoc, TD,
