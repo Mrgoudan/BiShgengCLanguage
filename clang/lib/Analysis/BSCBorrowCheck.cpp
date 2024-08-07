@@ -155,9 +155,9 @@ public:
   //              [ ".a.b", g, ".c.d", 16, 18 ] }
   BorrowTargetMapInfo BorrowTargetMap;
   // save valid borrowed data within the current scope
-  // For each target, we have all the borrowed refs.
-  // llvm::DenseMap<VarDecl *, std::list<BorrowInfo>> ActiveBorrowTargetMap;
-  BorrowTargetMapInfo ActiveBorrowTargetMap;
+  // For each target as the KEY, we have all the borrowed refs as VALUE
+  // TODO: To have the same type as BorrowTargetMap
+  llvm::DenseMap<VarDecl *, std::list<BorrowInfo>> ActiveBorrowTargetMap;
 
   void BuildBorrowTargetMap();
   void CheckBeBorrowedTarget(const CFGPath &Path);
@@ -839,16 +839,11 @@ void BorrowRuleChecker::UpdateActiveBorrowTargetMap() {
 }
 
 void BorrowRuleChecker::ClearActiveBorrowTargetMap() {
-  for (const auto &v :
-       BorrowTargetMap) { // ActiveBorrowTargetMap: llvm::DenseMap<VarDecl *,
-                          // std::list<BorrowInfo>>
+  for (const auto &v : BorrowTargetMap) {
     for (const auto &w : v.second) {
       unsigned secondElemId = w.End;
       if (CurElemID == secondElemId) {
-        auto vec = ActiveBorrowTargetMap[v.first];
-        auto it = std::find(vec.begin(), vec.end(), w);
-        if (it != vec.end())
-          vec.erase(it);
+        ActiveBorrowTargetMap[v.first].remove(w);
       }
     }
     if (ActiveBorrowTargetMap[v.first].empty()) {
