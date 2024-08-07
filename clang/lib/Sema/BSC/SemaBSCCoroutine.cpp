@@ -564,6 +564,8 @@ static RecordDecl *buildFutureRecordDecl(
     } else AEType = AE->getType();
 
     if (!S.IsBSCCompatibleFutureType(AEType)) {
+      assert(AwaitFD->isAsyncSpecified());
+
       QualType FatPointerType = lookupGenericType(
           S, FD->getBeginLoc(), AEType, "__Trait_Future");
       if (FatPointerType.isNull()) {
@@ -1290,24 +1292,26 @@ public:
       NewFD->setParams(ParmVarDecls);
       NewFD->setLexicalDeclContext(SemaRef.Context.getTranslationUnitDecl());
 
-      CompoundStmt *body = dyn_cast<CompoundStmt>(D->getBody());
-      Stmt *LastStmt = body->body_back();
-      if (!LastStmt || !dyn_cast<ReturnStmt>(LastStmt)) {
-        std::vector<Stmt *> Stmts;
-        for (auto *C : body->children()) {
-          Stmts.push_back(C);
+      CompoundStmt *body = llvm::dyn_cast_if_present<CompoundStmt>(D->getBody());
+      if (body) {
+        Stmt *LastStmt = body->body_back();
+        if (!LastStmt || !dyn_cast<ReturnStmt>(LastStmt)) {
+          std::vector<Stmt *> Stmts;
+          for (auto *C : body->children()) {
+            Stmts.push_back(C);
+          }
+          ReturnStmt *RS = ReturnStmt::Create(SemaRef.Context, SourceLocation(),
+                                              nullptr, nullptr);
+          Stmts.push_back(RS);
+          Sema::CompoundScopeRAII CompoundScope(SemaRef);
+          body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
+                                                    SourceLocation(), false)
+                    .getAs<CompoundStmt>();
         }
-        ReturnStmt *RS = ReturnStmt::Create(SemaRef.Context, SourceLocation(),
-                                            nullptr, nullptr);
-        Stmts.push_back(RS);
-        Sema::CompoundScopeRAII CompoundScope(SemaRef);
-        body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
-                                                  SourceLocation(), false)
-                   .getAs<CompoundStmt>();
-      }
 
-      Stmt *FuncBody = BaseTransform::TransformStmt(body).getAs<Stmt>();
-      NewFD->setBody(FuncBody);
+        Stmt *FuncBody = BaseTransform::TransformStmt(body).getAs<Stmt>();
+        NewFD->setBody(FuncBody);
+      }
     }
     return NewFD;
   }
