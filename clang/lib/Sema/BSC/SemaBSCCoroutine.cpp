@@ -554,8 +554,9 @@ static RecordDecl *buildFutureRecordDecl(
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
     CallExpr *CE = dyn_cast<CallExpr>(AE);
     QualType AEType;
+    FunctionDecl *AwaitFD;
     if (CE) {
-      FunctionDecl *AwaitFD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
+      AwaitFD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
       AEType =
           AwaitFD == nullptr
               ? AE->getType()
