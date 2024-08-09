@@ -27,7 +27,7 @@ static BSCMethodDecl *buildBSCMethodDecl(ASTContext &C, DeclContext *DC,
 
 bool IsVarDeclWithOwnedStructureType(VarDecl *VD) {
   const Type *VDType = VD->getType().getCanonicalType().getTypePtr();
-  if (VDType->isOwnedStructureType())
+  if (VDType->isOwnedStructureType() && !VD->hasGlobalStorage())
     return true;
   return false;
 }
@@ -54,34 +54,41 @@ BSCMethodDecl *Sema::getOrInsertBSCDestructor(RecordDecl *RD) {
     assert(RD->isOwnedDecl());
     QualType FuncRetType = getASTContext().VoidTy;
     QualType ParamType = getASTContext().getRecordType(RD);
+    if (const InjectedClassNameType *ICT =
+            dyn_cast<const InjectedClassNameType>(ParamType)) {
+      ParamType = ICT->getInjectedSpecializationType();
+    }
     ParamType.addOwned();
     SmallVector<QualType, 1> ParamTys;
     ParamTys.push_back(ParamType);
     QualType FuncType =
         getASTContext().getFunctionType(FuncRetType, ParamTys, {});
-
     DeclarationName Name = Context.DeclarationNames.getCXXDestructorName(
         Context.getCanonicalType(Context.getTypeDeclType(RD)));
 
-    std::string FName = "~" + RD->getDeclName().getAsString();
-
+    TypeSourceInfo *TInfo =
+        Context.getTrivialTypeSourceInfo(FuncType, RD->getEndLoc());
+    FunctionProtoTypeLoc ProtoLoc =
+        TInfo->getTypeLoc().IgnoreParens().castAs<FunctionProtoTypeLoc>();
     Destructor = buildBSCMethodDecl(
         getASTContext(), RD, RD->getEndLoc(), RD->getEndLoc(), Name, FuncType,
-        nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
+        TInfo, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
     SmallVector<ParmVarDecl *, 1> ParmVarDecls;
+    TypeSourceInfo *ParamTInfo =
+        Context.getTrivialTypeSourceInfo(ParamType, RD->getEndLoc());
     ParmVarDecl *PVD = ParmVarDecl::Create(
         getASTContext(), Destructor, RD->getEndLoc(), RD->getEndLoc(),
-        &(getASTContext().Idents).get("this"), ParamType, nullptr, SC_None,
+        &(getASTContext().Idents).get("this"), ParamType, ParamTInfo, SC_None,
         nullptr);
+    ProtoLoc.setParam(0, PVD);
+
     ParmVarDecls.push_back(PVD);
     Destructor->setParams(ParmVarDecls);
     RD->addDecl(Destructor);
     Destructor->setLexicalDeclContext(getASTContext().getTranslationUnitDecl());
     Destructor->setDestructor(true);
-
-    std::vector<Stmt *> Stmts;
     CompoundStmt *CS =
-        CompoundStmt::Create(getASTContext(), Stmts, FPOptionsOverride(),
+        CompoundStmt::Create(getASTContext(), {}, FPOptionsOverride(),
                              RD->getEndLoc(), RD->getEndLoc());
     Destructor->setBody(CS);
     PushOnScopeChains(Destructor, getCurScope(), false);
@@ -189,54 +196,50 @@ class InsertDestructorCallStmt
 public:
   explicit InsertDestructorCallStmt(Sema &SemaRef) : SemaRef(SemaRef) {}
 
+  Stmt *AddIfStmt(VarDecl *VD) {
+    assert(IsVarDeclWithOwnedStructureType(VD));
+    const Type *VDType = VD->getType().getCanonicalType().getTypePtr();
+    RecordDecl *RD = cast<RecordType>(VDType)->getDecl();
+    BSCMethodDecl *DestructorToCall = SemaRef.getOrInsertBSCDestructor(RD);
+    Expr *IDRE = SemaRef.BuildDeclRefExpr(VD, VD->getType().getCanonicalType(),
+                                          VK_LValue, SourceLocation());
+    SmallVector<Expr *, 1> Args;
+    Args.push_back(IDRE);
+    Expr *DestructorRef =
+        SemaRef.BuildDeclRefExpr(DestructorToCall, DestructorToCall->getType(),
+                                 VK_LValue, SourceLocation());
+    DestructorRef = SemaRef
+                        .ImpCastExprToType(DestructorRef,
+                                           SemaRef.Context.getPointerType(
+                                               DestructorRef->getType()),
+                                           CK_FunctionToPointerDecay)
+                        .get();
+    Expr *CE = SemaRef
+                   .BuildCallExpr(nullptr, DestructorRef, SourceLocation(),
+                                  Args, SourceLocation())
+                   .get();
+    Expr *FlagRefExpr = SemaRef.BuildDeclRefExpr(
+        FlagMap[VD], FlagMap[VD]->getType(), VK_LValue, SourceLocation());
+    FlagRefExpr =
+        SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_LNot, FlagRefExpr)
+            .get();
+    Sema::ConditionResult IfCond = SemaRef.ActOnCondition(
+        nullptr, SourceLocation(), FlagRefExpr, Sema::ConditionKind::Boolean);
+    Stmt *If = SemaRef
+                   .BuildIfStmt(
+                       SourceLocation(), IfStatementKind::Ordinary,
+                       /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
+                       /* RPL=*/SourceLocation(), CE, SourceLocation(), nullptr)
+                   .get();
+    return If;
+  }
+
   // Add if stmt for owned struct type vardecl.
-  std::vector<Stmt *> AddIfStmts(Stmt *stmt) {
+  std::vector<Stmt *> AddIfStmts(Stmt *S) {
     std::vector<Stmt *> IfStmts;
-    SmallVector<VarDecl *> VarDecls = SemaRef.Context.DestructMap[FD][stmt];
+    SmallVector<VarDecl *> VarDecls = SemaRef.Context.DestructMap[FD][S];
     for (auto *VD : VarDecls) {
-      Stmt *Body = nullptr;
-      if (IsVarDeclWithOwnedStructureType(VD)) {
-        const Type *VDType = VD->getType().getCanonicalType().getTypePtr();
-        RecordDecl *RD = cast<RecordType>(VDType)->getDecl();
-        BSCMethodDecl *DestructorToCall = RD->getBSCDestructor();
-        if (DestructorToCall == nullptr) {
-          continue;
-        }
-        Expr *IDRE = SemaRef.BuildDeclRefExpr(
-            VD, VD->getType().getCanonicalType(), VK_LValue, SourceLocation());
-        SmallVector<Expr *, 1> Args;
-        Args.push_back(IDRE);
-        Expr *DestructorRef = SemaRef.BuildDeclRefExpr(
-            DestructorToCall, DestructorToCall->getType(), VK_LValue,
-            SourceLocation());
-        DestructorRef = SemaRef
-                            .ImpCastExprToType(DestructorRef,
-                                               SemaRef.Context.getPointerType(
-                                                   DestructorRef->getType()),
-                                               CK_FunctionToPointerDecay)
-                            .get();
-        Expr *CE = SemaRef
-                       .BuildCallExpr(nullptr, DestructorRef, SourceLocation(),
-                                      Args, SourceLocation())
-                       .get();
-        Body = CE;
-      }
-      if (Body == nullptr)
-        continue;
-      Expr *FlagRefExpr = SemaRef.BuildDeclRefExpr(
-          FlagMap[VD], FlagMap[VD]->getType(), VK_LValue, SourceLocation());
-      FlagRefExpr =
-          SemaRef.CreateBuiltinUnaryOp(SourceLocation(), UO_LNot, FlagRefExpr)
-              .get();
-      Sema::ConditionResult IfCond = SemaRef.ActOnCondition(
-          nullptr, SourceLocation(), FlagRefExpr, Sema::ConditionKind::Boolean);
-      Stmt *If =
-          SemaRef
-              .BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
-                           /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
-                           /* RPL=*/SourceLocation(), Body, SourceLocation(),
-                           nullptr)
-              .get();
+      Stmt *If = AddIfStmt(VD);
       IfStmts.push_back(If);
     }
     return IfStmts;
@@ -280,10 +283,10 @@ public:
     return BinOpExpr;
   }
 
-  bool VisitCompoundStmt(CompoundStmt *compoundStmt) {
-    CompoundStmts.push_back(compoundStmt);
+  bool VisitCompoundStmt(CompoundStmt *CS) {
+    CompoundStmts.push_back(CS);
     std::vector<Stmt *> Statements;
-    if (compoundStmt == FD->getBody()) {
+    if (CS == FD->getBody()) {
       for (ParmVarDecl *PVD : FD->parameters()) {
         if (IsVarDeclWithOwnedStructureType(PVD)) {
           Statements.push_back(CreateMoveFlag(PVD));
@@ -291,18 +294,18 @@ public:
       }
     }
     bool HasControlTransferExpr = false;
-    for (auto *C : compoundStmt->children()) {
-      Stmt *SS = const_cast<Stmt *>(C);
-      if (isa<ReturnStmt>(SS) || isa<BreakStmt>(SS) || isa<ContinueStmt>(SS)) {
+    for (auto *C : CS->children()) {
+      Stmt *S = const_cast<Stmt *>(C);
+      if (isa<ReturnStmt>(S) || isa<BreakStmt>(S) || isa<ContinueStmt>(S)) {
         HasControlTransferExpr = true;
-        std::vector<Stmt *> IfStmts = AddIfStmts(SS);
+        std::vector<Stmt *> IfStmts = AddIfStmts(S);
         Statements.insert(Statements.end(), IfStmts.begin(), IfStmts.end());
       }
       RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(C);
-      if (isa<CompoundStmt>(SS)) {
-        Statements.push_back(ReplaceCompoundMap[dyn_cast<CompoundStmt>(SS)]);
-      } else if (isa<LabelStmt>(SS)) {
-        auto labelStmt = cast<LabelStmt>(SS);
+      if (isa<CompoundStmt>(S)) {
+        Statements.push_back(ReplaceCompoundMap[dyn_cast<CompoundStmt>(S)]);
+      } else if (isa<LabelStmt>(S)) {
+        auto labelStmt = cast<LabelStmt>(S);
         if (!isa<CompoundStmt>(labelStmt->getSubStmt())) {
           auto stmts = CreateStatements(labelStmt->getSubStmt());
           labelStmt->setSubStmt(stmts[0]);
@@ -314,8 +317,8 @@ public:
       } else {
         Statements.push_back(C);
       }
-      if (isa<DeclStmt>(SS)) {
-        for (auto *D : cast<DeclStmt>(SS)->decls()) {
+      if (isa<DeclStmt>(S)) {
+        for (auto *D : cast<DeclStmt>(S)->decls()) {
           if (isa<VarDecl>(D)) {
             VarDecl *VD = cast<VarDecl>(D);
             if (IsVarDeclWithOwnedStructureType(VD)) {
@@ -325,45 +328,46 @@ public:
         }
       }
 
-      if (isa<BinaryOperator>(SS) || isa<DeclStmt>(SS) || isa<CallExpr>(SS)) {
+      if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
         DeclRefFinder Finder = DeclRefFinder(SemaRef);
-        Finder.TraverseStmt(SS);
+        Finder.TraverseStmt(S);
         for (auto *D : Finder.MovedDecls) {
           Statements.push_back(MoveFlagStatusUpdate(D));
         }
       }
     }
     if (!HasControlTransferExpr) {
-      auto IfStmts = AddIfStmts(compoundStmt);
+      auto IfStmts = AddIfStmts(CS);
       Statements.insert(Statements.end(), IfStmts.begin(), IfStmts.end());
     }
-    auto NewCPStmt = CompoundStmt::Create(
-        SemaRef.getASTContext(), Statements, FPOptionsOverride(),
-        compoundStmt->getLBracLoc(), compoundStmt->getRBracLoc());
-    ReplaceCompoundMap[compoundStmt] = NewCPStmt;
+    auto NewCPStmt = CompoundStmt::Create(SemaRef.getASTContext(), Statements,
+                                          FPOptionsOverride(),
+                                          CS->getLBracLoc(), CS->getRBracLoc());
+    ReplaceCompoundMap[CS] = NewCPStmt;
     return false;
   }
 
-  std::vector<Stmt *> CreateStatements(Stmt *SS) {
+  std::vector<Stmt *> CreateStatements(Stmt *S) {
     std::vector<Stmt *> Statements;
-    if (isa<ReturnStmt>(SS) || isa<BreakStmt>(SS) || isa<ContinueStmt>(SS)) {
-      std::vector<Stmt *> IfStmts = AddIfStmts(SS);
+    if (isa<ReturnStmt>(S) || isa<BreakStmt>(S) || isa<ContinueStmt>(S)) {
+      std::vector<Stmt *> IfStmts = AddIfStmts(S);
       Statements.insert(Statements.end(), IfStmts.begin(), IfStmts.end());
     }
-    Statements.push_back(SS);
-    if (isa<DeclStmt>(SS)) {
-      for (auto *D : cast<DeclStmt>(SS)->decls()) {
+    Statements.push_back(S);
+    if (isa<DeclStmt>(S)) {
+      for (auto *D : cast<DeclStmt>(S)->decls()) {
         if (isa<VarDecl>(D)) {
           VarDecl *VD = cast<VarDecl>(D);
           if (IsVarDeclWithOwnedStructureType(VD)) {
             Statements.push_back(CreateMoveFlag(VD));
+            Statements.push_back(AddIfStmt(VD));
           }
         }
       }
     }
-    if (isa<BinaryOperator>(SS) || isa<DeclStmt>(SS) || isa<CallExpr>(SS)) {
+    if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
       DeclRefFinder Finder = DeclRefFinder(SemaRef);
-      Finder.TraverseStmt(SS);
+      Finder.TraverseStmt(S);
       for (auto *D : Finder.MovedDecls) {
         Statements.push_back(MoveFlagStatusUpdate(D));
       }
@@ -371,84 +375,95 @@ public:
     return Statements;
   }
 
-  Stmt *CreateNewCompoundStmt(Stmt *SS) {
-    auto Stmts = CreateStatements(SS);
+  Stmt *CreateNewCompoundStmt(Stmt *S) {
+    auto Stmts = CreateStatements(S);
     if (Stmts.size() <= 1)
-      return SS;
+      return S;
     return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
                                 FPOptionsOverride(), SourceLocation(),
                                 SourceLocation());
   }
 
-  bool TraverseWhileStmt(WhileStmt *whileStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseWhileStmt(whileStmt);
+  bool TraverseWhileStmt(WhileStmt *WS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseWhileStmt(WS);
     if (auto NewCompound =
-            ReplaceCompoundMap[dyn_cast<CompoundStmt>(whileStmt->getBody())]) {
-      whileStmt->setBody(NewCompound);
+            ReplaceCompoundMap[dyn_cast<CompoundStmt>(WS->getBody())]) {
+      WS->setBody(NewCompound);
     } else {
-      whileStmt->setBody(CreateNewCompoundStmt(whileStmt->getBody()));
+      WS->setBody(CreateNewCompoundStmt(WS->getBody()));
     }
     return false;
   }
 
-  bool TraverseIfStmt(IfStmt *ifStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseIfStmt(ifStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(ifStmt->getThen())) {
-      ifStmt->setThen(ReplaceCompoundMap[NewCompound]);
+  bool TraverseIfStmt(IfStmt *IS) {
+    if (IS->getThen()) {
+      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(
+          IS->getThen());
+      if (auto NewCompound = dyn_cast<CompoundStmt>(IS->getThen())) {
+        IS->setThen(ReplaceCompoundMap[NewCompound]);
+      } else {
+        IS->setThen(CreateNewCompoundStmt(IS->getThen()));
+      }
+    }
+    if (IS->getElse()) {
+      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(
+          IS->getElse());
+      if (auto NewCompound = dyn_cast<CompoundStmt>(IS->getElse())) {
+        IS->setElse(ReplaceCompoundMap[NewCompound]);
+      } else {
+        IS->setElse(CreateNewCompoundStmt(IS->getElse()));
+      }
+    }
+    return false;
+  }
+
+  bool TraverseDoStmt(DoStmt *DS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDoStmt(DS);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getBody())) {
+      DS->setBody(ReplaceCompoundMap[NewCompound]);
     } else {
-      ifStmt->setThen(CreateNewCompoundStmt(ifStmt->getThen()));
+      DS->setBody(CreateNewCompoundStmt(DS->getBody()));
     }
     return false;
   }
-  bool TraverseDoStmt(DoStmt *doStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDoStmt(doStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(doStmt->getBody())) {
-      doStmt->setBody(ReplaceCompoundMap[NewCompound]);
+  bool TraverseForStmt(ForStmt *FS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseForStmt(FS);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(FS->getBody())) {
+      FS->setBody(ReplaceCompoundMap[NewCompound]);
     } else {
-      doStmt->setBody(CreateNewCompoundStmt(doStmt->getBody()));
-    }
-    return false;
-  }
-  bool TraverseForStmt(ForStmt *forStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseForStmt(forStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(forStmt->getBody())) {
-      forStmt->setBody(ReplaceCompoundMap[NewCompound]);
-    } else {
-      forStmt->setBody(CreateNewCompoundStmt(forStmt->getBody()));
+      FS->setBody(CreateNewCompoundStmt(FS->getBody()));
     }
     return false;
   }
 
-  bool TraverseLabelStmt(LabelStmt *labelStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseLabelStmt(labelStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(labelStmt->getSubStmt())) {
-      labelStmt->setSubStmt(ReplaceCompoundMap[NewCompound]);
+  bool TraverseLabelStmt(LabelStmt *LS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseLabelStmt(LS);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(LS->getSubStmt())) {
+      LS->setSubStmt(ReplaceCompoundMap[NewCompound]);
     }
     return false;
   }
 
-  bool TraverseSwitchStmt(SwitchStmt *switchStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseSwitchStmt(
-        switchStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(switchStmt->getBody())) {
-      switchStmt->setBody(ReplaceCompoundMap[NewCompound]);
+  bool TraverseSwitchStmt(SwitchStmt *SS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseSwitchStmt(SS);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(SS->getBody())) {
+      SS->setBody(ReplaceCompoundMap[NewCompound]);
     }
     return false;
   }
 
-  bool TraverseDefaultStmt(DefaultStmt *defaultStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDefaultStmt(
-        defaultStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(defaultStmt->getSubStmt())) {
-      defaultStmt->setSubStmt(ReplaceCompoundMap[NewCompound]);
+  bool TraverseDefaultStmt(DefaultStmt *DS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDefaultStmt(DS);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getSubStmt())) {
+      DS->setSubStmt(ReplaceCompoundMap[NewCompound]);
     }
     return false;
   }
 
-  bool TraverseCaseStmt(CaseStmt *caseStmt) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseCaseStmt(caseStmt);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(caseStmt->getSubStmt())) {
-      caseStmt->setSubStmt(ReplaceCompoundMap[NewCompound]);
+  bool TraverseCaseStmt(CaseStmt *CS) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseCaseStmt(CS);
+    if (auto NewCompound = dyn_cast<CompoundStmt>(CS->getSubStmt())) {
+      CS->setSubStmt(ReplaceCompoundMap[NewCompound]);
     }
     return false;
   }
@@ -456,9 +471,11 @@ public:
   bool TraverseFunctionDecl(FunctionDecl *D) {
     FD = D;
     RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseFunctionDecl(D);
-    if (auto NewCompound =
-            ReplaceCompoundMap[dyn_cast<CompoundStmt>(D->getBody())]) {
-      D->setBody(NewCompound);
+    if (D->getBody() != nullptr) {
+      if (auto NewCompound =
+              ReplaceCompoundMap[dyn_cast<CompoundStmt>(D->getBody())]) {
+        D->setBody(NewCompound);
+      }
     }
     return false;
   }
@@ -473,14 +490,65 @@ class CalcDestructorMapForIns
   bool IsDestructor = false;
   std::stack<CompoundStmt *> VisitCompoundStmtStack;
   llvm::DenseMap<CompoundStmt *, SmallVector<VarDecl *>> CS2Vars;
+  std::stack<CompoundStmt *> VisitLoopCompoundStmtStack;
 
 public:
   explicit CalcDestructorMapForIns(Sema &SemaRef) : SemaRef(SemaRef) {}
 
-  bool VisitCompoundStmt(CompoundStmt *compoundStmt) {
-    VisitCompoundStmtStack.push(compoundStmt);
-    SmallVector<VarDecl *> &VarDecls = CS2Vars[compoundStmt];
-    if (compoundStmt == FD->getBody() && !IsDestructor) {
+  bool VisitReturnStmt(ReturnStmt *RS) {
+    if (!VisitCompoundStmtStack.empty()) {
+      std::stack<CompoundStmt *> tempStack = VisitCompoundStmtStack;
+      SmallVector<VarDecl *> newVarDecls;
+      while (!tempStack.empty()) {
+        auto CompoundStmt = tempStack.top();
+        newVarDecls.insert(newVarDecls.begin(), CS2Vars[CompoundStmt].begin(),
+                           CS2Vars[CompoundStmt].end());
+        tempStack.pop();
+      }
+      if (newVarDecls.size() != 0) {
+        SemaRef.Context.DestructMap[FD][RS] = newVarDecls;
+      }
+    }
+    return false;
+  }
+
+  void CalcDestructMapForBreakAndContinue(Stmt *S) {
+    if (!VisitLoopCompoundStmtStack.empty()) {
+      std::stack<CompoundStmt *> tempStack = VisitCompoundStmtStack;
+      SmallVector<VarDecl *> newVarDecls;
+      while (!tempStack.empty() &&
+             tempStack.top() != VisitLoopCompoundStmtStack.top()) {
+        auto CompoundStmt = tempStack.top();
+        newVarDecls.insert(newVarDecls.begin(), CS2Vars[CompoundStmt].begin(),
+                           CS2Vars[CompoundStmt].end());
+        tempStack.pop();
+      }
+      if (!tempStack.empty() &&
+          tempStack.top() == VisitLoopCompoundStmtStack.top()) {
+        auto CompoundStmt = tempStack.top();
+        newVarDecls.insert(newVarDecls.begin(), CS2Vars[CompoundStmt].begin(),
+                           CS2Vars[CompoundStmt].end());
+        tempStack.pop();
+      }
+      if (newVarDecls.size() != 0) {
+        SemaRef.Context.DestructMap[FD][S] = newVarDecls;
+      }
+    }
+  }
+
+  bool VisitBreakStmt(BreakStmt *BS) {
+    CalcDestructMapForBreakAndContinue(BS);
+    return false;
+  }
+  bool VisitContinueStmt(ContinueStmt *CS) {
+    CalcDestructMapForBreakAndContinue(CS);
+    return false;
+  }
+
+  bool TraverseCompoundStmt(CompoundStmt *CS) {
+    VisitCompoundStmtStack.push(CS);
+    SmallVector<VarDecl *> &VarDecls = CS2Vars[CS];
+    if (CS == FD->getBody() && !IsDestructor) {
       for (ParmVarDecl *PVD : FD->parameters()) {
         if (IsVarDeclWithOwnedStructureType(PVD)) {
           VarDecls.insert(VarDecls.begin(), PVD);
@@ -488,9 +556,9 @@ public:
       }
     }
 
-    for (auto *C : compoundStmt->children()) {
-      Stmt *SS = const_cast<Stmt *>(C);
-      if (DeclStmt *StmtDecl = dyn_cast<DeclStmt>(SS)) {
+    for (auto *C : CS->children()) {
+      Stmt *S = const_cast<Stmt *>(C);
+      if (DeclStmt *StmtDecl = dyn_cast<DeclStmt>(S)) {
         for (auto *SD : StmtDecl->decls()) {
           if (auto VD = dyn_cast<VarDecl>(SD)) {
             bool InTopLevelSwitchBlock = VD->isDefInTopLevelSwitchBlock();
@@ -500,33 +568,61 @@ public:
           }
         }
       }
-      if (isa<ReturnStmt>(SS) && !VisitCompoundStmtStack.empty()) {
-        std::stack<CompoundStmt *> tempStack = VisitCompoundStmtStack;
-        SmallVector<VarDecl *> newVarDecls;
-        while (!tempStack.empty()) {
-          auto CompoundStmt = tempStack.top();
-          newVarDecls.insert(newVarDecls.begin(), CS2Vars[CompoundStmt].begin(),
-                             CS2Vars[CompoundStmt].end());
-          tempStack.pop();
-        }
-        if (newVarDecls.size() != 0) {
-          SemaRef.Context.DestructMap[FD][SS] = newVarDecls;
-        }
-      }
-      if (isa<BreakStmt>(SS) || isa<ContinueStmt>(SS)) {
-        if (VarDecls.size() != 0) {
-          SemaRef.Context.DestructMap[FD][SS] = VarDecls;
-        }
-      }
       RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseStmt(C);
     }
     if (VarDecls.size() != 0) {
-      SemaRef.Context.DestructMap[FD][compoundStmt] = VarDecls;
+      SemaRef.Context.DestructMap[FD][CS] = VarDecls;
     }
     VisitCompoundStmtStack.pop();
+    return true;
+  }
+
+  bool TraverseSwitchStmt(SwitchStmt *SS) {
+    if (isa<CompoundStmt>(SS->getBody())) {
+      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(SS->getBody()));
+    }
+    RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseSwitchStmt(SS);
+
+    if (isa<CompoundStmt>(SS->getBody())) {
+      VisitLoopCompoundStmtStack.pop();
+    }
     return false;
   }
 
+  bool TraverseWhileStmt(WhileStmt *WS) {
+    if (isa<CompoundStmt>(WS->getBody())) {
+      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(WS->getBody()));
+    }
+    RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseWhileStmt(WS);
+
+    if (isa<CompoundStmt>(WS->getBody())) {
+      VisitLoopCompoundStmtStack.pop();
+    }
+    return false;
+  }
+
+  bool TraverseDoStmt(DoStmt *DS) {
+    if (isa<CompoundStmt>(DS->getBody())) {
+      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(DS->getBody()));
+    }
+    RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseDoStmt(DS);
+
+    if (isa<CompoundStmt>(DS->getBody())) {
+      VisitLoopCompoundStmtStack.pop();
+    }
+    return false;
+  }
+  bool TraverseForStmt(ForStmt *FS) {
+    if (isa<CompoundStmt>(FS->getBody())) {
+      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(FS->getBody()));
+    }
+
+    RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseForStmt(FS);
+    if (isa<CompoundStmt>(FS->getBody())) {
+      VisitLoopCompoundStmtStack.pop();
+    }
+    return false;
+  }
   bool TraverseFunctionDecl(FunctionDecl *D) {
     FD = D;
     if (auto MD = dyn_cast<BSCMethodDecl>(D)) {
@@ -534,49 +630,6 @@ public:
     }
     return RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseFunctionDecl(
         D);
-  }
-};
-
-class ConstructorCompound : public RecursiveASTVisitor<ConstructorCompound> {
-  Sema &SemaRef;
-
-public:
-  explicit ConstructorCompound(Sema &SemaRef) : SemaRef(SemaRef) {}
-
-  Stmt *CreateNewCompoundStmt(Stmt *SS) {
-    return CompoundStmt::Create(SemaRef.getASTContext(), {SS},
-                                FPOptionsOverride(), SourceLocation(),
-                                SourceLocation());
-  }
-
-  bool TraverseWhileStmt(WhileStmt *whileStmt) {
-    RecursiveASTVisitor<ConstructorCompound>::TraverseWhileStmt(whileStmt);
-    if (!isa<CompoundStmt>(whileStmt->getBody())) {
-      whileStmt->setBody(CreateNewCompoundStmt(whileStmt->getBody()));
-    }
-    return false;
-  }
-
-  bool TraverseIfStmt(IfStmt *ifStmt) {
-    RecursiveASTVisitor<ConstructorCompound>::TraverseIfStmt(ifStmt);
-    if (!isa<CompoundStmt>(ifStmt->getThen())) {
-      ifStmt->setThen(CreateNewCompoundStmt(ifStmt->getThen()));
-    }
-    return false;
-  }
-  bool TraverseDoStmt(DoStmt *doStmt) {
-    RecursiveASTVisitor<ConstructorCompound>::TraverseDoStmt(doStmt);
-    if (!isa<CompoundStmt>(doStmt->getBody())) {
-      doStmt->setBody(CreateNewCompoundStmt(doStmt->getBody()));
-    }
-    return false;
-  }
-  bool TraverseForStmt(ForStmt *forStmt) {
-    RecursiveASTVisitor<ConstructorCompound>::TraverseForStmt(forStmt);
-    if (!isa<CompoundStmt>(forStmt->getBody())) {
-      forStmt->setBody(CreateNewCompoundStmt(forStmt->getBody()));
-    }
-    return false;
   }
 };
 
@@ -591,8 +644,6 @@ void Sema::DesugarDestructorCall(FunctionDecl *FD) {
   if (FD->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate)
     return;
   CollDestructMapInFuncInstantiation(FD);
-  if (Context.DestructMap[FD].empty())
-    return;
   // Insert destructor function calls.
   InsertDestructorCallStmt IDCS(*this);
   IDCS.TraverseFunctionDecl(FD);
@@ -716,9 +767,6 @@ void Sema::CollectDestructMap(StmtResult Res, Scope *BeginScope,
 void Sema::CollDestructMapInFuncInstantiation(FunctionDecl *FD) {
   if (FD->getTemplatedKind() == FunctionDecl::TK_NonTemplate)
     return;
-  ConstructorCompound CC(*this);
-  CC.TraverseFunctionDecl(FD);
-
   CalcDestructorMapForIns CalcDestructorMapForInsObj(*this);
   CalcDestructorMapForInsObj.TraverseFunctionDecl(FD);
 }

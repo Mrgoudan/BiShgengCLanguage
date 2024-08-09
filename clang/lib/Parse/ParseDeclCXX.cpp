@@ -2114,6 +2114,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       if (cast<RecordDecl>(D)->isOwnedDecl()) {
         ParseBSCMemberSpecification(StartLoc, AttrFixitLoc, attrs, TagType,
                                     cast<RecordDecl>(D));
+        Actions.getOrInsertBSCDestructor(dyn_cast<RecordDecl>(D));
       } else {
         // Parse the definition body.
         ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));

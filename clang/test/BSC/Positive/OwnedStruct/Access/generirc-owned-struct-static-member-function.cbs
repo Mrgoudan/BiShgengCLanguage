@@ -33,6 +33,3 @@ int main() {
 // CHECK-NEXT: int __attribute__((weak)) struct_A_int_f(void) {
 // CHECK-NEXT:     return 1;
 // CHECK-NEXT: }
-// CHECK-EMPTY: 
-// CHECK-NEXT: void __attribute__((weak)) struct_A_int_D( struct A_int this) {
-// CHECK-NEXT: }

@@ -804,9 +804,6 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       if (const BSCMethodDecl *BMD = dyn_cast<BSCMethodDecl>(D)) {
         std::string FunctionNameStr;
         if (BMD->isDestructor()) {
-          if (isa<ClassTemplateSpecializationDecl>(D->getParent())) {
-            OS << "__attribute__((weak)) ";
-          }
           FunctionNameStr = GetTypePrefix(
               Context.getTypeDeclType(dyn_cast<RecordDecl>(D->getParent())),
               false, SubPolicy);

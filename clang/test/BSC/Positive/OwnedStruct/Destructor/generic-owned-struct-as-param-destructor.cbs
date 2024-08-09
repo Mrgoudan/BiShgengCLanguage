@@ -34,3 +34,67 @@ int main(void) {
    
    return x-y;
 }
+
+// CHECK:struct A_int {
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:struct B_int {
+// CHECK-NEXT:     struct A_int a;
+// CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT:void __attribute__((weak)) struct_A_int_D( struct A_int this);
+// CHECK-EMPTY:
+// CHECK-NEXT:void __attribute__((weak)) struct_B_int_D( struct B_int this);
+// CHECK-EMPTY:
+// CHECK-NEXT:int __attribute__((weak)) f_int( struct B_int x);
+// CHECK-EMPTY:
+// CHECK-NEXT:int x = 0;
+// CHECK-EMPTY:
+// CHECK-NEXT:int y = 1;
+// CHECK-EMPTY:
+// CHECK-NEXT:void test(void) {
+// CHECK-NEXT:     struct A_int a = {};
+// CHECK-NEXT:    _Bool a_is_moved = 0;
+// CHECK-NEXT:     struct B_int b = {a};
+// CHECK-NEXT:    _Bool b_is_moved = 0;
+// CHECK-NEXT:    a_is_moved = 1;
+// CHECK-NEXT:    f_int(b);
+// CHECK-NEXT:    b_is_moved = 1;
+// CHECK-NEXT:    if (!b_is_moved)
+// CHECK-NEXT:        struct_B_int_D(b);
+// CHECK-NEXT:    if (!a_is_moved)
+// CHECK-NEXT:        struct_A_int_D(a);
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:int main(void) {
+// CHECK-NEXT:   test();
+// CHECK-EMPTY:   
+// CHECK-NEXT:   return x-y;
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:void __attribute__((weak)) struct_A_int_D( struct A_int this) {
+// CHECK-NEXT:    x++;
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:void __attribute__((weak)) struct_B_int_D( struct B_int this) {
+// CHECK-NEXT:    _Bool this_is_moved = 0;
+// CHECK-NEXT:    y++;
+// CHECK-NEXT:     struct A_int a = {};
+// CHECK-NEXT:    _Bool a_is_moved = 0;
+// CHECK-NEXT:    if (!a_is_moved)
+// CHECK-NEXT:        struct_A_int_D(a);
+// CHECK-NEXT:    struct_A_int_D(this.a);
+// CHECK-NEXT:}
+// CHECK-EMPTY:
+// CHECK-NEXT:int __attribute__((weak)) f_int( struct B_int x) {
+// CHECK-NEXT:    _Bool x_is_moved = 0;
+// CHECK-NEXT:     struct B_int z = x;
+// CHECK-NEXT:    _Bool z_is_moved = 0;
+// CHECK-NEXT:    x_is_moved = 1;
+// CHECK-NEXT:    if (!z_is_moved)
+// CHECK-NEXT:        struct_B_int_D(z);
+// CHECK-NEXT:    if (!x_is_moved)
+// CHECK-NEXT:        struct_B_int_D(x);
+// CHECK-NEXT:    return 1;
+// CHECK-NEXT:}
+

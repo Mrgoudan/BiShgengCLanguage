@@ -16,8 +16,15 @@ public:
   }
 };
 
+owned struct C<T> {
+    ~C( C<T> this) {
+    y++;
+  }
+};
+
 int main() {
-   static B b ={};
-    A a ={};
-   return y-1;
+  static C<int> c = {};
+  static B b ={};
+  A a ={};
+  return y-1;
 }
