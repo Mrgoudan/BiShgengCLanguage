@@ -69,12 +69,14 @@ class NLLCalculator : public StmtVisitor<NLLCalculator> {
 
   // Only record borrow struct VarDecl and FieldPath when we traverse path in
   // reverse order. For example:
+  // @code
   //     struct S { int* borrow p; };
   //     void test() {
   //         int local = 5;
   //         struct S s = { .p = &mut local };
   //         use(s.p);       // Record `s` and ".p"
   //     }
+  // @endcode
   std::map<std::pair<VarDecl *, std::string>, unsigned> FoundBorrowFields;
 
   unsigned NumElements;
@@ -995,6 +997,7 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
       }
     } else {
       CurrOpIsBorrowUse = true;
+      Visit(BO->getLHS());
       Visit(BO->getRHS());
       CurrOpIsBorrowUse = false;
     }
@@ -1123,12 +1126,7 @@ void NLLCalculator::VisitParenExpr(ParenExpr *PE) {
 }
 
 void NLLCalculator::VisitUnaryOperator(UnaryOperator *UO) {
-  // For pointer deref `*p`,`&mut *p`, `&const *p`
-  // we think borrow pointer `p` is used here.
-  // we think borrow pointer `p` is used here.
-  if (CurrOpIsBorrowUse &&
-      (UO->getOpcode() == UO_Deref || UO->getOpcode() == UO_AddrMutDeref ||
-       UO->getOpcode() == UO_AddrConstDeref))
+  if (CurrOpIsBorrowUse)
     Visit(UO->getSubExpr());
 }
 
@@ -1162,6 +1160,7 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
   }
 }
 
+// This function finds targets for struct with borrow fields.
 void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
                                                    RecordDecl *RD,
                                                    Expr *InitE) {
@@ -1182,17 +1181,23 @@ void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
       std::pair<VarDecl *, std::string> BorrowWithFieldPath(
           VD, FP + FieldPath.first);
       if (auto DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
-        // struct S s = s1;
-        // s = s1;
-        // s.a = s1;
+        // For example:
+        // @code
+        //     struct S s = s1;
+        //     s = s1;
+        //     s.a = s1;
+        // @endcode
         if (VarDecl *IVD = dyn_cast<VarDecl>(DRE->getDecl())) {
           Target.TargetVD = IVD;
           Target.TargetFieldPath = FieldPath.first;
         }
       } else if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
-        // struct S s = s1.a;
-        // s = s1.a;
-        // s.a = s1.a;
+        // For example:
+        // @code        
+        //     struct S s = s1.a;
+        //     s = s1.a;
+        //     s.a = s1.a;
+        // @endcode
         std::pair<VarDecl *, std::string> TargetWithFieldPath;
         VisitMEForFieldPath(ME, TargetWithFieldPath);
         Target.TargetVD = TargetWithFieldPath.first;
@@ -1374,6 +1379,7 @@ void NLLCalculator::VisitMEForFieldPath(
   }
 }
 
+// This function finds targets for borrow pointer variables.
 void NLLCalculator::VisitInitForTargets(
     Expr *InitE, llvm::SmallVector<BorrowTargetInfo> &Targets) {
   if (auto *DRE = dyn_cast<DeclRefExpr>(InitE)) {
@@ -1486,13 +1492,12 @@ void NLLCalculator::VisitScopeEnd(VarDecl *VD) {
 //   int * borrow p3 = p2; // #3  
 //   //  p3:[3, 3]->p2
 // @endcode
-
 // Because we traverse path in reverse order, we handle in order #3->#2->#1.
-// When we handle 3, we know p3 targeting to p2,
+// When we handle #3, we know p3 targeting to p2,
 // but we don't know p2 targeting to which.
-// When we handle 2, we know p2 targeting to p1,
+// When we handle #2, we know p2 targeting to p1,
 // we should update the target of p3 from p2 to p1.
-// When we handle 1, we know p1 targeting to local1 and local2,
+// When we handle #1, we know p1 targeting to local1 and local2,
 // we should update the target of p2 and p3 from p1 to local1 and local2.
 void NLLCalculator::UpdateNLLWhenTargetFound(
     BorrowTargetInfo OldTarget,
@@ -1565,7 +1570,7 @@ void NLLCalculator::HandleNLLAfterTraversing(
       if (PQT->isPointerType() && !PQT.isOwnedQualified()) {
         // Handle borrow or naked pointer parameter which have virtual
         // ParentVar. Update previous NLL whose target is PVD to virtual
-        // ParentVar
+        // ParentVar.
         llvm::SmallVector<BorrowTargetInfo> VirtualTarget;
         VirtualTarget.push_back(Param.second);
         UpdateNLLWhenTargetFound(BorrowTargetInfo(PVD), VirtualTarget);
