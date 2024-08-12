@@ -1018,6 +1018,11 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
   if (Tok.is(tok::ellipsis))
     ConsumeToken();
 
+  #if ENABLE_BSC
+  if (Tok.isOneOf(tok::kw_borrow, tok::kw_owned))
+    ConsumeToken();
+  #endif
+
   if ((Tok.isOneOf(tok::identifier, tok::kw_operator) ||
        (Tok.is(tok::annot_cxxscope) && (NextToken().is(tok::identifier) ||
                                         NextToken().is(tok::kw_operator)))) &&
