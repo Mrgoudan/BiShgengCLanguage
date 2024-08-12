@@ -1,26 +1,27 @@
 // RUN: %clang_cc1 -verify %s
 
 int rand();
+int * owned assign();
 
 void func1() {
-    owned int a;
+    int * owned a;
     for (int i = 0; i < 10; i++) {
-        a = 5; // expected-error {{cannot assign a because its type is owned}}
+        a = assign(); // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func2() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     for (int i = 0; i < 10; i++) {
-        b = 5;
-        a = b; // expected-error {{cannot assign a because its type is owned}}
+        b = assign();
+        a = b; // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func3() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     int c;
     for (int i = 0; i < 10; i++) {
         if (c) {
@@ -29,9 +30,9 @@ void func3() {
         if (c) {
             continue;
         }
-        b = 5;
-        a = b; // expected-error {{cannot assign a because its type is owned}}
+        b = assign();
+        a = b; // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 int main() { return 0; }

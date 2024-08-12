@@ -18,8 +18,8 @@ void func1(int n) {
         default:
             break;
     }
-    b = (int * owned)&num; // expected-error {{cannot assign b because its type is owned}}
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+    b = (int * owned)&num; // expected-error {{assign to owned value: `b`}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func2(int n) {
     int num = 5;
@@ -45,8 +45,8 @@ void func2(int n) {
             break;
         }
     }
-    b = (int * owned)&num; // expected-error {{cannot assign b because its type is owned}}
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+    b = (int * owned)&num; // expected-error {{assign to owned value: `b`}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func3(int n) {
     int num = 5;
@@ -66,7 +66,7 @@ void func3(int n) {
         default:
             break;
     }
-}  // expected-error {{a's memory will leak at the end of scope}}
+}  // expected-error {{memory leak of value: `a`}}
 
 void func4(int n) {
     int num = 5;
@@ -84,7 +84,7 @@ void func4(int n) {
         case 2:
             a = (int * owned)&num;
         case 4: {
-            a = (int * owned)&num; // expected-error {{cannot assign a because its type is owned}}
+            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
         }
             break;
         case 5:
@@ -92,7 +92,7 @@ void func4(int n) {
         default:
             break;
     }
-    int * b = (int *)a; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+    int * b = (int *)a; // expected-error {{use of possibly uninitialized value: `a`}}
 }
 
 void func5(int n) {
@@ -107,7 +107,7 @@ void func5(int n) {
                 }
             }
         case 1:
-            a = (int * owned)&num; // expected-error {{cannot assign a because its type is owned}}
+            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
             break;
         case 4:
             for (int i = 0; i < 10; i++)
@@ -117,7 +117,7 @@ void func5(int n) {
         default:
             break;
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func6(int n) {
     int num = 5;
@@ -128,12 +128,12 @@ void func6(int n) {
             for (int i = 0; i < 10; i++)
                 break;
         case 2:
-            a = (int * owned)&num; // expected-error {{cannot assign a because its type is owned}}
+            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
             break;
         default:
             break;
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func7(int n) {
     int num = 5;
@@ -145,13 +145,13 @@ void func7(int n) {
                 b = a;
 
             if (num < 5)
-                b = a; // expected-error {{cannot assign b because its type is owned}} expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+                b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
             break;
         }
         case 1:
             b = a;
             {
-                b = a; // expected-error {{cannot assign b because its type is owned}} expected-error {{cannot read a, because it is moved at line: 152}}
+                b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
                 break;
             }
         case 4:
@@ -159,12 +159,12 @@ void func7(int n) {
             for (int i = 0; i < 10; i++)
                 break;
         case 5:
-            b = (int * owned)&num; // expected-error {{cannot assign b because its type is owned}}
+            b = (int * owned)&num; // expected-error {{assign to owned value: `b`}}
         default: {
             break;
         }
     }
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func8(int n) {
     int num = 5;
@@ -193,7 +193,7 @@ void func8(int n) {
             break;
         }
     }
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}}
 
 void func9(int n) {
     int num = 5;
@@ -216,11 +216,11 @@ void func9(int n) {
                 break;
         }
         case 5: {
-            b = a; // expected-error {{cannot assign b because its type is owned}} expected-error {{a cannot be accessed, because it is uninitialized or moved}}
+            b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
             break;
         }
         default: {
             break;
         }
     }
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}

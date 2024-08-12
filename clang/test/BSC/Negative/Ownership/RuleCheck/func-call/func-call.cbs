@@ -2,18 +2,18 @@
 
 int * owned IntPtrOwned() {
 	int * owned a;
-	return a; // expected-error {{cannot read a, because it is uninitialized}}
+	return a; // expected-error {{use of uninitialized value: `a`}}
 }
 
 void func1() {
 	int * owned a = IntPtrOwned();
 	int * owned b = a;
-	int * owned c = a; // expected-error {{cannot read a, because it is moved at line: 10}}
-} // expected-error {{b's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
+	int * owned c = a; // expected-error {{use of moved value: `a`}}
+} // expected-error {{memory leak of value: `c`}} expected-error {{memory leak of value: `b`}}
 
 void callee1(int * owned a, int * owned b) {
 	int c = 1;
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b}}
 
 void caller1(int * owned a, int * owned b) {
 	callee1(a, b);
@@ -21,23 +21,23 @@ void caller1(int * owned a, int * owned b) {
 
 void caller2(int * owned a, int * owned b) {
 	callee1(a, b);
-	callee1(a, b); // expected-error {{cannot read a, because it is moved at line: 23}} expected-error {{cannot read b, because it is moved at line: 23}}
+	callee1(a, b); // expected-error {{use of moved value: `a`}} expected-error {{use of moved value: `b`}}
 }
 
 void caller3(int * owned a, int * owned b) {
 	callee1(a, b);
-	int * owned c = a; // expected-error {{cannot read a, because it is moved at line: 28}}
-} // expected-error {{c's memory will leak at the end of scope}}
+	int * owned c = a; // expected-error {{use of moved value: `a`}}
+} // expected-error {{memory leak of value: `c`}}
 
 void caller4(int * owned a) {
 	int * owned b;
-	callee1(a, b); // expected-error {{cannot read b, because it is uninitialized}}
+	callee1(a, b); // expected-error {{use of uninitialized value: `b`}}
 }
 
 void caller5(int * owned a, int * owned b) {
 	int * owned c = a;
-	callee1(a, b); // expected-error {{cannot read a, because it is moved at line: 38}}
-} // expected-error {{c's memory will leak at the end of scope}}
+	callee1(a, b); // expected-error {{use of moved value: `a`}}
+} // expected-error {{memory leak of value: `c`}}
 
 int * owned IntPtrOwned1() {
 	int num = 1;
@@ -51,16 +51,16 @@ int * owned IntPtrOwned2(int * owned a) {
 
 void caller6(int * owned a) {
 	int * owned b = IntPtrOwned2(a);
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}}
 
 struct A {
-	int owned a;
-	int owned b;
+	int * owned a;
+	int * owned b;
 };
 
-void callee2(int owned a, int owned b) {
+void callee2(int * owned a, int * owned b) {
 	int c = 1;
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func10(struct A a) {
 	callee2(a.a, a.b);

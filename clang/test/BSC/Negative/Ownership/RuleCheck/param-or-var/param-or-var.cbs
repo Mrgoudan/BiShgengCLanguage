@@ -2,52 +2,48 @@
 
 struct A {};
 
-void func1(int * owned a) {} // expected-error {{a's memory will leak at the end of scope}}
+void func1(int * owned a) {} // expected-error {{memory leak of value: `a`}}
 
 void func2(int * owned a) {
 	{}
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
-void func3(int owned a) {} // expected-error {{a's memory will leak at the end of scope}}
-
-void func4(struct A owned a) {} // expected-error {{a's memory will leak at the end of scope}}
-
-void func5(struct A * owned a) {} // expected-error {{a's memory will leak at the end of scope}}
+void func5(struct A * owned a) {} // expected-error {{memory leak of value: `a`}}
 
 void func6(int * owned a) {
 	int num = 5;
-	a = (int * owned)&num; // expected-error {{cannot assign a because its type is owned}}
-} // expected-error {{a's memory will leak at the end of scope}}
+	a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func7() {
 	int num = 1;
-	int owned a;
-	a = (int owned)num;
-} // expected-error {{a's memory will leak at the end of scope}}
+	int * owned a;
+	a = (int * owned)&num;
+} // expected-error {{memory leak of value: `a`}}
 
 void func13(int * owned a) {
 	int * owned p = a;
 	int n = 0;
 	a = (int * owned)&n;
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{p's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `p`}}
 
 void func14(int * owned a, int * owned b) {
-	a = b; // expected-error {{cannot assign a because its type is owned}}
-} // expected-error {{a's memory will leak at the end of scope}}
+	a = b; // expected-error {{assign to owned value: `a`}}
+} // expected-error {{memory leak of value: `a`}}
 
 
 struct B {
-	int owned a;
-	int owned b;
+	int * owned a;
+	int * owned b;
 };
 
 void func15(struct B b) {
-	int owned a = b.a;
-} // expected-error {{b.b's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+	int * owned a = b.a;
+} // expected-error {{field memory leak of value: `b`, b.b is leak}} expected-error {{memory leak of value: `a`}}
 
 struct B func16(struct B b) {
-	int owned a = b.b;
-	return b; // expected-error {{b cannot be accessed, because it is uninitialized or moved}} expected-error {{a's memory will leak at the end of scope}}
+	int * owned a = b.b;
+	return b; // expected-error {{use of partially moved value: `b`, b.b is moved}} expected-error {{memory leak of value: `a`}}
 }
 
 int main() {

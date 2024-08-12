@@ -12,21 +12,17 @@ int * owned func1(int * owned a) {
 	return a;
 }
 
-int owned func2(int owned a) {
-	return a;
-}
-
 int * owned func3() {
 	int num = 1;
 	int * owned p = (int * owned)&num;
 	return p;
 }
 
-struct A owned func7(struct A owned a) {
+struct A func7(struct A a) {
 	return a;
 }
 
-struct A func8(struct A a) {
+struct A * owned func8(struct A * owned a) {
 	return a;
 }
 

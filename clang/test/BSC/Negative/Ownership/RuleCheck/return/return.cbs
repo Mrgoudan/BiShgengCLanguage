@@ -5,7 +5,7 @@ struct A {};
 void func4(int * owned a) {
 	return;
 	int * b = (int *)a;
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func5(int num) {
 	int b = 5;
@@ -14,21 +14,21 @@ void func5(int num) {
 	if (num > 0) {
 		a = p;
 	} else {
-		return; // expected-error {{p's memory will leak at the end of scope}}
+		return; // expected-error {{memory leak of value: `p`}}
 	}
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
-void func(struct A owned a) {
-	struct A owned b = a;
-} // expected-error {{b's memory will leak at the end of scope}}
+void func(struct A * owned a) {
+	struct A * owned b = a;
+} // expected-error {{memory leak of value: `b`}}
 
 void func9(int * owned a) {
 	{
 		int * p = (int *)a;
 	}
 	{
-		int * owned q = a; // expected-error {{cannot read a, because it is moved at line: 27}}
-	} // expected-error {{q's memory will leak at the end of scope}}
+		int * owned q = a; // expected-error {{use of moved value: `a`}}
+	} // expected-error {{memory leak of value: `q`}}
 }
 
 int main() {

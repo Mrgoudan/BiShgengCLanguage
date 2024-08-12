@@ -8,8 +8,8 @@ owned struct A {
 };                       
 A foo(){
    A a;
-   a.x = 1;
-   return a;  // expected-error {{cannot read a, because it is uninitialized}}
+   a.x = 1; // expected-error {{assign to part of uninitialized value: `a`}}
+   return a; // expected-error {{use of uninitialized value: `a`}}
 }
 
 int main() {

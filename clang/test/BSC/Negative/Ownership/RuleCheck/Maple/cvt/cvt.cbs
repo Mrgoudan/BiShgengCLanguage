@@ -30,12 +30,12 @@ struct A {
 };
 
 void case7() {
-    struct A * owned aaa = (struct A * owned)(void * owned)malloc(sizeof(struct A));
-    aaa->b = (struct B * owned)(void * owned)malloc(sizeof(struct B));
+    struct A * owned aaa = (struct A * owned)(struct A *)malloc(sizeof(struct A));
+    aaa->b = (struct B * owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of owned value: `aaa.b`}}
     free((void *)(void * owned)aaa->b);
-} // expected-error {{aaa's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `aaa`}}
 
 void case8() {
-    struct A * owned aaa = (struct A * owned)(void * owned)malloc(sizeof(struct A));
-    aaa->b = (struct B * owned)(void * owned)malloc(sizeof(struct B));
-} // expected-error {{aaa's memory will leak at the end of scope}}
+    struct A * owned aaa = (struct A * owned)(struct A *)malloc(sizeof(struct A));
+    aaa->b = (struct B * owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of owned value: `aaa.b`}}
+} // expected-error {{memory leak of value: `aaa`}} expected-error {{field memory leak of value: `aaa`, aaa.b is leak}}

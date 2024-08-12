@@ -31,7 +31,7 @@ void genericMemberFun() {
   int *n = struct MyStruct<int*>::foo_b(q);  // expected-note{{in instantiation of member function 'MyStruct<int *>::foo_b' requested here}}
   unsafeFun fun_c;
   struct MyStruct<unsafeFun>::foo_c(fun_c);  // expected-note{{in instantiation of member function 'MyStruct<void (*)(void)>::foo_c' requested here}}
-}// expected-error {{m's memory will leak at the end of scope}}
+}// expected-error {{memory leak of value: `m`}}
 
 trait F<T> {
   safe int foo(This* owned this, T b);

@@ -20,13 +20,13 @@ void sink(A * owned p) {
 }
 
 void new_sink(A * owned p) {
-	free_owned_new((void * owned)p);
+	free_owned_new((void * owned)p); // expected-error {{invalid cast to `void * owned` of not all moved value: `p`, p.a is owned}}
 }
 
 int main(int argc, char* argv[]) {
 	A * owned a = source(2);
 	if (argc == 1)	{
-		return 0; // expected-error {{a's memory will leak at the end of scope}}
+		return 0; // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, a.a is leak}}
 	}
 	sink(a);
 	return 0;

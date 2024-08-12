@@ -2,36 +2,36 @@
 
 int rand();
 
-void func1(owned int argA, owned int argB) {
-    owned int a;
+void func1(int * owned argA, int * owned argB) {
+    int * owned a;
     if (rand()) {
         a = argA;
     } else {
         a = argB;
     }
-} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}} expected-error {{memory leak of value: `a`}}
 
-void func2(owned int argA, owned int argB) {
-    owned int a;
+void func2(int * owned argA, int * owned argB) {
+    int * owned a;
     if (rand()) {
         a = argA;
     } else {
     }
-    owned int b = a; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
-} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+    int * owned b = a; // expected-error {{use of possibly uninitialized value: `a`}}
+} // expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}} expected-error {{memory leak of value: `b`}}
 
-void func3(owned int argA, owned int argB) {
-    owned int a;
+void func3(int * owned argA, int * owned argB) {
+    int * owned a;
     if (rand()) {
         a = argA;
     } else {
     }
-    owned int b = argA; // expected-error {{argA cannot be accessed, because it is uninitialized or moved}}
-} // expected-error {{argB's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+    int * owned b = argA; // expected-error {{use of moved value: `argA`}}
+} // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `argB`}}
 
-void func4() {
-    owned int a = 5;
-    owned int b;
+void func4(int local) {
+    int * owned a = (int * owned)&local;
+    int * owned b;
     switch (rand()) {
         case 0: {
             break;
@@ -50,12 +50,12 @@ void func4() {
         default:
             break;
     }
-    b = 5; // expected-error {{cannot assign b because its type is owned}}
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+    b = (int * owned)&local; // expected-error {{assign to owned value: `b`}}
+} // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `a`}}
 
-void func5(owned int argA, owned int argB) {
-    owned int a;
-    owned int b;
+void func5(int * owned argA, int * owned argB) {
+    int * owned a;
+    int * owned b;
     if (rand()) {
         a = argA;
         if (rand()) {
@@ -64,17 +64,17 @@ void func5(owned int argA, owned int argB) {
     } else {
         b = argB;
     }
-    b = a; // expected-error {{cannot assign b because its type is owned}} expected-error {{a cannot be accessed, because it is uninitialized or moved}}
-} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+    b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
+} // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}}
 
-void func6(owned int argA, owned int argB) {
-    owned int a;
-    owned int b;
+void func6(int * owned argA, int * owned argB) {
+    int * owned a;
+    int * owned b;
 label1:
     if (rand()) {
-        a = argA; // expected-error {{cannot assign a because its type is owned}} expected-error {{argA cannot be accessed, because it is uninitialized or moved}}
+        a = argA; // expected-error {{assign to owned value: `a`}} expected-error {{use of moved value: `argA`}}
         goto label1;
     }
-} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}}
 
 int main() { return 0; }

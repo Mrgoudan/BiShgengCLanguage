@@ -22,8 +22,6 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include <string>
 
@@ -33,6 +31,7 @@ class CFG;
 class CFGBlock;
 class Stmt;
 class DeclRefExpr;
+class DiagInfo;
 class SourceManager;
 
 class Ownership : public ManagedAnalysis {
@@ -42,82 +41,167 @@ public:
     Null = 0x2,
     Owned = 0x4,
     Moved = 0x8,
-    PartialMoved = 0x10,
-    AllMoved = 0x20,
+    PartialInit = 0x10,
+    PartialMoved = 0x20,
+    AllMoved = 0x40,
   };
 
   class OwnershipStatus {
   public:
+    enum Source { OPS, S, BOP };
     using OwnershipSet = llvm::BitVector;
-    llvm::DenseMap<const VarDecl *, OwnershipSet> status;
-    llvm::DenseMap<const VarDecl *, unsigned> pointer;
-    using OwnedFields = llvm::SmallVector<llvm::SmallSet<std::string, 8>, 2>;
-    llvm::DenseMap<const VarDecl *, OwnedFields> structFields;
-    llvm::DenseMap<const VarDecl *, SourceLocation> location;
+
+    // owned pointer struct status, e.g. struct S * owned s
+    using OPSOwnedField = llvm::SmallSet<std::string, 10>;
+    llvm::DenseMap<const VarDecl *, OwnershipSet> OPSStatus;
+    llvm::DenseMap<const VarDecl *, OPSOwnedField> OPSAllOwnedFields;
+    llvm::DenseMap<const VarDecl *, OPSOwnedField> OPSOwnedOwnedFields;
+
+    // struct status, e.g. struct S s
+    using SOwnedField = llvm::SmallSet<std::string, 10>;
+    llvm::DenseMap<const VarDecl *, OwnershipSet> SStatus;
+    llvm::DenseMap<const VarDecl *, SOwnedField> SAllOwnedFields;
+    llvm::DenseMap<const VarDecl *, SOwnedField> SOwnedOwnedFields;
+
+    // basic owned pointer status, e.g. int * owned p
+    using BOPOwnedField = llvm::SmallSet<std::string, 10>;
+    llvm::DenseMap<const VarDecl *, OwnershipSet> BOPStatus;
+    llvm::DenseMap<const VarDecl *, BOPOwnedField> BOPAllOwnedFields;
+    llvm::DenseMap<const VarDecl *, BOPOwnedField> BOPOwnedOwnedFields;
 
     bool equals(const OwnershipStatus &V) const;
-
     bool empty() const;
     bool is(const VarDecl *VD, Status S) const;
     bool has(const VarDecl *VD, Status S) const;
+    bool canAssign(const VarDecl *VD) const;
     void set(const VarDecl *VD, Status S);
     void reset(const VarDecl *VD, Status S);
-    bool contains(const VarDecl *VD) const;
-    void initOwnedFields(RecordDecl *RD, const VarDecl *VD, bool hasInit,
-                         std::string fieldName = "");
-    void addOwnedField(const VarDecl *VD, std::string name);
-    void moveOwnedField(const VarDecl *VD, std::string name);
-    void fieldsAllMoved(const VarDecl *VD);
-    bool hasMovedField(const VarDecl *VD, std::string name, bool needComplete);
+    void resetAll(const VarDecl *VD);
+    void init(const VarDecl *VD);
+    void setToOwned(const VarDecl *VD);
+    void setToMoved(const Expr *E);
 
-    OwnershipSet getStatus(const VarDecl * VD) const;
+    llvm::SmallVector<DiagInfo, 3> checkOPSUse(const VarDecl *VD,
+                                               const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkOPSFieldUse(const VarDecl *VD,
+                                                    const SourceLocation &Loc,
+                                                    std::string fullFieldName);
+    llvm::SmallVector<DiagInfo, 3> checkOPSAssign(const VarDecl *VD,
+                                                  const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3>
+    checkOPSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
+                        std::string fullFieldName);
 
-    OwnershipStatus() : status(0), pointer(0), structFields(0) {}
+    llvm::SmallVector<DiagInfo, 3> checkSUse(const VarDecl *VD,
+                                             const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkSFieldUse(const VarDecl *VD,
+                                                  const SourceLocation &Loc,
+                                                  std::string fullFieldName);
+    llvm::SmallVector<DiagInfo, 3> checkSAssign(const VarDecl *VD,
+                                                const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkSFieldAssign(const VarDecl *VD,
+                                                     const SourceLocation &Loc,
+                                                     std::string fullFieldName);
 
-    OwnershipStatus(llvm::DenseMap<const VarDecl *, OwnershipSet> status,
-                    llvm::DenseMap<const VarDecl *, unsigned> pointer,
-                    llvm::DenseMap<const VarDecl *, OwnedFields> structFields)
-        : status(status), pointer(pointer), structFields(structFields) {}
+    llvm::SmallVector<DiagInfo, 3> checkBOPUse(const VarDecl *VD,
+                                               const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkBOPFieldUse(const VarDecl *VD,
+                                                    const SourceLocation &Loc,
+                                                    std::string fullFieldName);
+    llvm::SmallVector<DiagInfo, 3> checkBOPAssign(const VarDecl *VD,
+                                                  const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3>
+    checkBOPFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
+                        std::string fullFieldName);
+
+    llvm::SmallVector<DiagInfo, 3> checkCastOPS(const VarDecl *VD,
+                                                const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkCastBOP(const VarDecl *VD,
+                                                const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkCastField(const VarDecl *VD,
+                                                  const SourceLocation &Loc,
+                                                  std::string fullFieldName);
+    llvm::SmallVector<DiagInfo, 3> checkMemoryLeak(const VarDecl *VD,
+                                                   const SourceLocation &Loc);
+
+    OwnershipStatus()
+        : OPSStatus(0), OPSAllOwnedFields(0), OPSOwnedOwnedFields(0),
+          SStatus(0), SAllOwnedFields(0), SOwnedOwnedFields(0), BOPStatus(0),
+          BOPAllOwnedFields(0), BOPOwnedOwnedFields(0) {}
+
+    OwnershipStatus(llvm::DenseMap<const VarDecl *, OwnershipSet> opss,
+                    llvm::DenseMap<const VarDecl *, OPSOwnedField> opsaof,
+                    llvm::DenseMap<const VarDecl *, OPSOwnedField> opsoof,
+                    llvm::DenseMap<const VarDecl *, OwnershipSet> ss,
+                    llvm::DenseMap<const VarDecl *, OPSOwnedField> saof,
+                    llvm::DenseMap<const VarDecl *, SOwnedField> soof,
+                    llvm::DenseMap<const VarDecl *, OwnershipSet> bops,
+                    llvm::DenseMap<const VarDecl *, BOPOwnedField> bopaof,
+                    llvm::DenseMap<const VarDecl *, BOPOwnedField> bopoof)
+        : OPSStatus(opss), OPSAllOwnedFields(opsaof),
+          OPSOwnedOwnedFields(opsoof), SStatus(ss), SAllOwnedFields(saof),
+          SOwnedOwnedFields(soof), BOPStatus(bops), BOPAllOwnedFields(bopaof),
+          BOPOwnedOwnedFields(bopoof) {}
+
+  private:
+    void initOPS(const RecordDecl *RD, const VarDecl *VD, Source source,
+                 int depth = 10, std::string parentFieldName = "");
+    void initS(const RecordDecl *RD, const VarDecl *VD, Source source,
+               int depth = 10, std::string parentFieldName = "");
+    void initBOP(QualType QT, const VarDecl *VD, Source source, int depth = 10,
+                 std::string parentFieldName = "");
+    std::string collectMovedFields(const VarDecl *VD);
 
     friend class OwnerShip;
   };
-
-private:
-  Ownership(void *impl);
-  void *impl;
 };
 
 enum DiagKind {
-  InvalidUse,
-  InvalidUseUninit,
-  InvalidUseMoved,
+  InvalidUseOfMoved,
+  InvalidUseOfPartiallyMoved,
+  InvalidUseOfAllMoved,
+  InvalidUseOfPossiblyUninit,
+  InvalidUseOfUninit,
+  InvalidAssignOfOwned,
+  InvalidAssignOfPartiallyMoved,
+  InvalidAssignOfPossiblyPartiallyMoved,
+  InvalidAssignOfAllMoved,
+  InvalidAssignFieldOfUninit,
+  InvalidAssignFieldOfOwned,
+  InvalidAssignFieldOfMoved,
+  InvalidAssignSubFieldOwned,
+  InvalidCastMoved,
+  InvalidCastOwned,
+  InvalidCastUninit,
+  InvalidCastFieldOwned,
+  FieldMemoryLeak,
   MemoryLeak,
-  PointerInnerMoved,
-  PointerInnerAssign,
-  PointerCast,
-  Reassign,
 };
 
-struct DiagInfo {
-  std::string Name;
-  DiagKind Kind;
+class DiagInfo {
+public:
   SourceLocation Loc;
-  unsigned PointerDepth;
+  DiagKind Kind;
+  std::string Name;
+  std::string Fields;
   SourceLocation Location;
 
-  DiagInfo(std::string Name, DiagKind Kind, SourceLocation Loc)
-    : Name(Name), Kind(Kind), Loc(Loc), PointerDepth(0), Location(SourceLocation()) {}
-  
-  DiagInfo(std::string Name, DiagKind Kind, SourceLocation Loc, SourceLocation location)
-    : Name(Name), Kind(Kind), Loc(Loc), PointerDepth(0), Location(location) {}
-  
+  DiagInfo(SourceLocation Loc, DiagKind Kind, std::string Name)
+      : Loc(Loc), Kind(Kind), Name(Name), Fields(""),
+        Location(SourceLocation()) {}
 
-  bool operator==(const DiagInfo& other) const {
-    return Name == other.Name &&
-           Kind == other.Kind &&
-           Loc == other.Loc &&
-           PointerDepth == other.PointerDepth &&
-           Location == other.Location;
+  DiagInfo(SourceLocation Loc, DiagKind Kind, std::string Name,
+           std::string fields)
+      : Loc(Loc), Kind(Kind), Name(Name), Fields(fields),
+        Location(SourceLocation()) {}
+
+  DiagInfo(SourceLocation Loc, DiagKind Kind, std::string Name,
+           std::string fields, SourceLocation location)
+      : Loc(Loc), Kind(Kind), Name(Name), Fields(fields), Location(location) {}
+
+  bool operator==(const DiagInfo &other) const {
+    return Loc == other.Loc && Kind == other.Kind && Name == other.Name &&
+           Fields == other.Fields && Location == other.Location;
   }
 };
 
@@ -129,9 +213,14 @@ public:
   OwnershipDiagReporter(Sema &S) : S(S) {}
   ~OwnershipDiagReporter() { flushDiagnostics(); }
 
+  void addDiags(llvm::SmallVector<DiagInfo, 3> &diags) {
+    for (auto it = diags.begin(), ei = diags.end(); it != ei; ++it) {
+      addDiagInfo(*it);
+    }
+  }
+
   void addDiagInfo(DiagInfo &DI) {
-    for (auto it = DIV.begin(), ei = DIV.end();
-          it != ei; ++it) {
+    for (auto it = DIV.begin(), ei = DIV.end(); it != ei; ++it) {
       if (DI == *it)
         return;
     }
@@ -140,44 +229,82 @@ public:
 
 private:
   void flushDiagnostics() {
-    // Sort the diag info by their SourceLocations. While not strictly
+    // Sort the diag info by SourceLocation. While not strictly
     // guaranteed to produce them in line/column order, this will provide
     // a stable ordering.
-    std::sort(DIV.begin(), DIV.end(), [this](const DiagInfo &a, const DiagInfo &b){
-      return S.getSourceManager().isBeforeInTranslationUnit(a.Loc, b.Loc);
-    });
+    std::sort(
+        DIV.begin(), DIV.end(), [this](const DiagInfo &a, const DiagInfo &b) {
+          return S.getSourceManager().isBeforeInTranslationUnit(a.Loc, b.Loc);
+        });
 
-    for (const DiagInfo & DI: DIV) {
+    for (const DiagInfo &DI : DIV) {
       switch (DI.Kind) {
-        case InvalidUse:
-          S.Diag(DI.Loc, diag::err_ownership_read_invalid) << DI.Name;
-          break;
-        case MemoryLeak:
-          S.Diag(DI.Loc, diag::err_ownership_scope_memory_leak) << DI.Name;
-          break;
-        case PointerInnerMoved:
-          S.Diag(DI.Loc, diag::err_ownership_pointer_inner_moved) << DI.Name;
-          break;
-        case PointerInnerAssign:
-          S.Diag(DI.Loc, diag::err_ownership_pointer_inner_assign) << DI.Name;
-          break;
-        case PointerCast:
-          S.Diag(DI.Loc, diag::err_ownership_cast_to_void_invalid) << DI.Name;
-          break;
-        case Reassign:
-          S.Diag(DI.Loc, diag::err_ownership_reassign) << DI.Name;
-          break;
-        case InvalidUseUninit:
-          S.Diag(DI.Loc, diag::err_ownership_read_invalid_uninit) << DI.Name;
-          break;
-        case InvalidUseMoved: {
-          unsigned line = S.getSourceManager().getPresumedLineNumber(DI.Location);
-          S.Diag(DI.Loc, diag::err_ownership_read_invalid_moved) << DI.Name << line;
-          break;
-        }
-        default:
-          llvm_unreachable("unknown error type");
-          break;
+      case InvalidUseOfMoved:
+        S.Diag(DI.Loc, diag::err_ownership_use_moved) << DI.Name;
+        break;
+      case InvalidUseOfPartiallyMoved:
+        S.Diag(DI.Loc, diag::err_ownership_use_partially_moved)
+            << DI.Name << DI.Fields;
+        break;
+      case InvalidUseOfAllMoved:
+        S.Diag(DI.Loc, diag::err_ownership_use_all_moved) << DI.Name;
+        break;
+      case InvalidUseOfUninit:
+        S.Diag(DI.Loc, diag::err_ownership_use_uninit) << DI.Name;
+        break;
+      case InvalidUseOfPossiblyUninit:
+        S.Diag(DI.Loc, diag::err_ownership_use_possibly_uninit) << DI.Name;
+        break;
+      case InvalidAssignOfOwned:
+        S.Diag(DI.Loc, diag::err_ownership_assign_owned) << DI.Name;
+        break;
+      case InvalidAssignOfPartiallyMoved:
+        S.Diag(DI.Loc, diag::err_ownership_assign_partially_moved)
+            << DI.Name << DI.Fields;
+        break;
+      case InvalidAssignOfPossiblyPartiallyMoved:
+        S.Diag(DI.Loc, diag::err_ownership_assign_possibly_partially_moved)
+            << DI.Name << DI.Fields;
+        break;
+      case InvalidAssignOfAllMoved:
+        S.Diag(DI.Loc, diag::err_ownership_assign_all_moved) << DI.Name;
+        break;
+      case InvalidAssignFieldOfUninit:
+        S.Diag(DI.Loc, diag::err_ownership_assign_field_uninit) << DI.Name;
+        break;
+      case InvalidAssignFieldOfOwned:
+        S.Diag(DI.Loc, diag::err_ownership_assign_field_owned) << DI.Name;
+        break;
+      case InvalidAssignFieldOfMoved:
+        S.Diag(DI.Loc, diag::err_ownership_assign_field_moved) << DI.Name;
+        break;
+      case InvalidAssignSubFieldOwned:
+        S.Diag(DI.Loc, diag::err_ownership_assign_field_subfield_owned)
+            << DI.Name << DI.Fields;
+        break;
+      case InvalidCastMoved:
+        S.Diag(DI.Loc, diag::err_ownership_cast_moved) << DI.Name;
+        break;
+      case InvalidCastOwned:
+        S.Diag(DI.Loc, diag::err_ownership_cast_owned) << DI.Name;
+        break;
+      case InvalidCastUninit:
+        S.Diag(DI.Loc, diag::err_ownership_cast_uninit) << DI.Name;
+        break;
+      case InvalidCastFieldOwned:
+        S.Diag(DI.Loc, diag::err_ownership_cast_subfield_owned)
+            << DI.Name << DI.Fields;
+        break;
+      case FieldMemoryLeak:
+        S.Diag(DI.Loc, diag::err_ownership_memory_leak_field)
+            << DI.Name << DI.Fields;
+        break;
+      case MemoryLeak:
+        S.Diag(DI.Loc, diag::err_ownership_memory_leak) << DI.Name;
+        break;
+      default:
+        llvm_unreachable("Unknown error type");
+        break;
       }
       S.getDiagnostics().increaseOwnershipErrors();
     }

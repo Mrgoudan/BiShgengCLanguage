@@ -6,4 +6,4 @@ void test () {
     int x = 10;
     int* p = &x;
     myInt p1 = (myInt)p;
-} // expected-error {{p1's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `p1`}}

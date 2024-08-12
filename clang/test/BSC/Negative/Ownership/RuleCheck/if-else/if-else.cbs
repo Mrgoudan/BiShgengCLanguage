@@ -9,7 +9,7 @@ void func1(int num) {
     } else {
         a = p;
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func2(int num) {
     int b = 5;
@@ -18,7 +18,7 @@ void func2(int num) {
     if (num > 0) {
         a = p;
     }
-} // expected-error {{p's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `p`}} expected-error {{memory leak of value: `a`}}
 
 void func3(int num) {
     int b = 5;
@@ -27,13 +27,13 @@ void func3(int num) {
     if (num > 0) {
         a = p;
     } else {}
-} // expected-error {{p's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `p`}} expected-error {{memory leak of value: `a`}}
 
 void func4(int num, int * owned a) {
     int * owned b;
     if (num > 0)
         b = a;
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func5(int num, int * owned a) {
     int n = 1;
@@ -43,12 +43,12 @@ void func5(int num, int * owned a) {
         if (num > 10) {
             b = a;
         }
-    } else if (num < - 10) { // expected-error {{c's memory will leak at the end of scope}}
-        b = a; // expected-error {{cannot assign b because its type is owned}}
+    } else if (num < - 10) { // expected-error {{memory leak of value: `c`}}
+        b = a; // expected-error {{assign to owned value: `b`}}
     } else {
-        b = a; // expected-error {{cannot assign b because its type is owned}}
+        b = a; // expected-error {{assign to owned value: `b`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func6(int num, int * owned a) {
     int n = 1;
@@ -60,12 +60,12 @@ void func6(int num, int * owned a) {
         } else {
             b = a;
         }
-    } else if (num < - 10) { // expected-error {{c's memory will leak at the end of scope}}
-        b = a; // expected-error {{cannot assign b because its type is owned}}
+    } else if (num < - 10) { // expected-error {{memory leak of value: `c`}}
+        b = a; // expected-error {{assign to owned value: `b`}}
     } else {
-        b = a; // expected-error {{cannot assign b because its type is owned}}
+        b = a; // expected-error {{assign to owned value: `b`}}
     }
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}}
 
 void func7(int num, int * owned a) {
     int n = 1;
@@ -73,10 +73,10 @@ void func7(int num, int * owned a) {
     if (num > 5) {
         int * owned c = b;
         b = a;
-    } else if (num < -10) { // expected-error {{c's memory will leak at the end of scope}}
-        b = a; // expected-error {{cannot assign b because its type is owned}}
+    } else if (num < -10) { // expected-error {{memory leak of value: `c`}}
+        b = a; // expected-error {{assign to owned value: `b`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func8(int num, int * owned argA, int * owned argB) {
     int * owned a;
@@ -84,8 +84,8 @@ void func8(int num, int * owned argA, int * owned argB) {
         a = argA;
     } else {
     }
-    int * owned b = a; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
-} // expected-error {{b's memory will leak at the end of scope}} expected-error {{argA's memory will leak at the end of scope}} expected-error {{argB's memory will leak at the end of scope}}
+    int * owned b = a; // expected-error {{use of possibly uninitialized value: `a`}}
+} // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}}
 
 void func9(int num, int * owned argA, int * owned argB) {
     int * owned a;
@@ -95,18 +95,16 @@ void func9(int num, int * owned argA, int * owned argB) {
 
     if (num < 10) {
         int * b = (int *)argB;
-        a = argA; // expected-error {{cannot assign a because its type is owned}} expected-error {{argA cannot be accessed, because it is uninitialized or moved}}
-    } else {
-        int * b = (int *)argB;
+        a = argA; // expected-error {{assign to owned value: `a`}} expected-error {{use of moved value: `argA`}}
     }
-} // expected-error {{argA's memory will leak at the end of scope}} expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `argB`}}
 
 void func10(int * owned a, int * owned b) {
     if (1 + 1) {
         int * owned d = a;
-    } else { // expected-error {{d's memory will leak at the end of scope}}
+    } else { // expected-error {{memory leak of value: `d`}}
     }
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}}
 
 void func11(int n) {
     int num = 5;
@@ -114,9 +112,9 @@ void func11(int n) {
     if (n > 0) {
         a = (int * owned)&num;
         if (n > 5)
-            a = (int * owned)&num; // expected-error {{cannot assign a because its type is owned}}
+            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func12(int n) {
     int num = 5;
@@ -124,5 +122,5 @@ void func12(int n) {
     if (n > 0) {
         a = (int * owned)&num;
     }
-    a = (int * owned)&num; // expected-error {{cannot assign a because its type is owned}}
-} // expected-error {{a's memory will leak at the end of scope}}
+    a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
+} // expected-error {{memory leak of value: `a`}}

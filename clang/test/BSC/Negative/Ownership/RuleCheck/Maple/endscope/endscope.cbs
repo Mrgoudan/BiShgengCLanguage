@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -verify %s
 
 struct C {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
 };
 
 struct B {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     struct C * owned c;
 };
 
@@ -15,58 +15,57 @@ struct A {
     struct B b;
     struct B * owned c;
     struct B d;
-    struct A * owned e;
     struct A *f;
 };
 
-void func1(owned struct A a) {} // expected-error {{a's memory will leak at the end of scope}}
+void func1(struct A a) {} // expected-error {{field memory leak of value: `a`, a.b, a.b.a, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b... are leak}}
 
-void func(owned struct A a) {
-    int x = (int)a.b.a;
-} // expected-error {{a's memory will leak at the end of scope}}
+void func(struct A a) {
+    int * x = (int *)a.b.a;
+} // expected-error {{field memory leak of value: `a`, a.b, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c... are leak}}
 
-void func2(owned struct A * owned a) {
-    int b = (int)a->b.a;
-} // expected-error {{a's memory will leak at the end of scope}}
+void func2(struct A * owned a) {
+    int *b = (int *)a->b.a;
+} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, a.b, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c... are leak}}
 
-void endscope_0(owned int * owned * owned * owned a, int *b) {} // expected-error {{a's memory will leak at the end of scope}}
+void endscope_0(int * owned * owned * owned a, int *b) {} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
 
-void endscope_00(owned int * owned * owned * owned a, int *b) {
-    int c = (int)***a;
-} // expected-error {{a's memory will leak at the end of scope}}
+void endscope_00(int * owned * owned * owned a, int *b) {
+    int c = ***a;
+} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
 
-void endscope_1(owned int * owned * owned * owned a) {
+void endscope_1(int * owned * owned * owned a) {
     {}
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
 
-void endscope_2(owned int * owned * owned * owned a) {
+void endscope_2(int * owned * owned * owned a) {
     return;
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
 
-void endscope_3(owned int * owned * owned * owned a) {
-    owned int * owned * owned * owned b = a;
-} // expected-error {{b's memory will leak at the end of scope}}
+void endscope_3(int * owned * owned * owned a) {
+    int * owned * owned * owned b = a;
+} // expected-error {{memory leak of value: `b`}} expected-error {{field memory leak of value: `b`, *b, **b are leak}}
 
-void endscope_4(owned int * owned * owned * owned a) {
-    owned int * owned * owned * owned b = a;
+void endscope_4(int * owned * owned * owned a) {
+    int * owned * owned * owned b = a;
     *b; // expected-warning {{expression result unused}}
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}} expected-error {{field memory leak of value: `b`, *b, **b are leak}}
 
 __attribute__((__noinline__))
 void * owned VoidPtrOwned() {
     void * owned a;
-    return a; // expected-error {{cannot read a, because it is uninitialized}}
+    return a; // expected-error {{use of uninitialized value: `a`}}
 }
 
-void endscope_5(owned int * owned * owned * owned a, owned int * owned * owned * owned b) {
+void endscope_5() {
     if (1) {
         void * owned c = VoidPtrOwned();
         void * owned d = VoidPtrOwned();
         void * owned e = VoidPtrOwned();
-    } // expected-error {{e's memory will leak at the end of scope}} expected-error {{d's memory will leak at the end of scope}} expected-error {{c's memory will leak at the end of scope}}
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+    } // expected-error {{memory leak of value: `e`}} expected-error {{memory leak of value: `d`}} expected-error {{memory leak of value: `c`}}
+}
 
-void endscope_6(owned int * owned * owned * owned a, owned int * owned * owned * owned b) {
+void endscope_6(int * owned * owned * owned a, int * owned * owned * owned b) {
     if (1) {
         void * owned c = VoidPtrOwned();
         void * owned d = VoidPtrOwned();
@@ -77,4 +76,4 @@ void endscope_6(owned int * owned * owned * owned a, owned int * owned * owned *
         return;
     }
     return;
-} // expected-error {{a's memory will leak at the end of scope}} expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}} expected-error {{memory leak of value: `b`}} expected-error {{field memory leak of value: `b`, *b, **b are leak}}

@@ -10,8 +10,8 @@ struct A {
     int a;
 };
 
-void eat(struct A owned a) {
-    struct A b = (struct A)a;
+void eat(struct A *owned a) {
+    struct A *b = (struct A*)a;
 }
 
 void f() {

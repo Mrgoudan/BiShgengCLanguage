@@ -10,8 +10,8 @@ int f(A a){ return 1;}
 
 
 int main() {
-   A a;
-   A b  = a; // expected-error {{cannot read a, because it is uninitialized}}
-   f(a); // expected-error {{cannot read a, because it is uninitialized}}
+   A a = {1, 2};
+   A b  = a;
+   f(a); // expected-error {{use of moved value: `a`}}
    return 0;
 }

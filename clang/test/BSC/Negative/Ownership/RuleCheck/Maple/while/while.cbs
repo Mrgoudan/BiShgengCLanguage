@@ -1,26 +1,27 @@
 // RUN: %clang_cc1 -verify %s
 
 int rand();
+int * owned assign();
 
 void func1() {
-    owned int a;
+    int * owned a;
     while (rand()) {
-        a = 5; // expected-error {{cannot assign a because its type is owned}}
+        a = assign(); // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func2() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     while (rand()) {
-        b = 5;
-        a = b; // expected-error {{cannot assign a because its type is owned}}
+        b = assign();
+        a = b; // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func3() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     int c;
     while (rand()) {
         if (c) {
@@ -29,14 +30,14 @@ void func3() {
         if (c) {
             continue;
         }
-        b = 5;
-        a = b; // expected-error {{cannot assign a because its type is owned}}
+        b = assign();
+        a = b; // expected-error {{assign to owned value: `a`}}
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func4() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -50,14 +51,14 @@ label1:
             continue;
         }
         while (rand()) {
-            b = 5; // expected-error {{cannot assign b because its type is owned}}
+            b = assign(); // expected-error {{assign to owned value: `b`}}
         }
     }
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}}
 
 void func5() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -71,14 +72,14 @@ label1:
             continue;
         }
         while (rand()) {
-            a = b; // expected-error {{cannot assign a because its type is owned}} expected-error {{cannot read b, because it is uninitialized}}
+            a = b; // expected-error {{assign to owned value: `a`}} expected-error {{use of uninitialized value: `b`}}
         }
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func6() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -92,15 +93,15 @@ label1:
             continue;
         }
         while (rand()) {
-            b = 5;
-            a = b; // expected-error {{cannot assign a because its type is owned}}
+            b = assign();
+            a = b; // expected-error {{assign to owned value: `a`}}
         }
     }
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func7() {
-    owned int a;
-    owned int b;
+    int * owned a;
+    int * owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -114,9 +115,9 @@ label1:
             continue;
         }
         while (rand()) {
-            b = 5; // expected-error {{cannot assign b because its type is owned}}
+            b = assign(); // expected-error {{assign to owned value: `b`}}
         }
     }
-} // expected-error {{b's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `b`}}
 
 int main() { return 0; }

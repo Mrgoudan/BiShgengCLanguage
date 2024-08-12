@@ -34,7 +34,7 @@ void ownedTest0() {
 
 int ownedTest1(owned int x, owned int* y, owned int* owned c, owned int* owned * d) {
     return 0;
-} // expected-error {{x's memory will leak at the end of scope}} expected-error{{c's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `c`}}
 // CHECK:       FunctionDecl 0x{{[^ ]*}} {{.*}}ownedTest1 'int (owned int, owned int *, owned int *owned, owned int *owned *)'
 // CHECK-NEXT:  ParmVarDecl 0x{{[^ ]*}} {{.*}}x 'owned int'
 // CHECK-NEXT:  ParmVarDecl 0x{{[^ ]*}} {{.*}}y 'owned int *'

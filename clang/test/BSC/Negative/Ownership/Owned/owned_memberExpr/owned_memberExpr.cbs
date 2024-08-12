@@ -10,15 +10,13 @@ struct A {
     owned struct Base base;
 };
 
-int owned foo(owned int* a) {
-    int owned x = 10;
-    return x;
+int * owned foo(owned int* a) {
+    return (int* owned)a;
 }
 
 void test2() {
     struct A owned a;
-    int res = a.b;                  //unlike const, a.b's QualType is int(not owned int) // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
-    owned int res2 = foo(a.c);      //a.c's QualType is owned int*(not owned int* owned)
-                                    // expected-error@-1 {{a cannot be accessed, because it is uninitialized or moved}}
-    int res3 = a.base.num; // expected-error {{a cannot be accessed, because it is uninitialized or moved}}
-} // expected-error {{res2's memory will leak at the end of scope}}
+    int res = a.b;                  //unlike const, a.b's QualType is int(not owned int)
+    int * owned res2 = foo(a.c);      //a.c's QualType is owned int*(not owned int* owned)
+    int res3 = a.base.num;
+} // expected-error {{memory leak of value: `res2`}}

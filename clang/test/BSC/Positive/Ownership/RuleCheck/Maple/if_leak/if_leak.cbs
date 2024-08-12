@@ -10,14 +10,15 @@ struct B {
     int * a;
 };
 
-struct B owned SafeMalloc(int *arg) {
-    struct B owned aaa = { .a = arg };
+struct B SafeMalloc(int *arg) {
+    struct B aaa = { .a = arg };
     return aaa;
 }
 
 void SafeMalloc1(int *arg) {
-    struct B owned aaa = { .a = arg };
-    struct B bbb = (struct B)aaa;
+    struct B aaa = { .a = arg };
+    struct B * owned bbb = (struct B * owned)&aaa;
+    struct B *ccc = (struct B *)bbb;
 }
 
 typedef struct AAA {
@@ -33,8 +34,9 @@ struct C {
 };
 
 void SafeMalloc2() {
-    struct C owned aaa = { .latch = &g_t.a };
-    struct C local = (struct C)aaa;
+    struct C aaa = { .latch = &g_t.a };
+    struct C * owned local = (struct C* owned)&aaa;
+    struct C *ccc = (struct C *)local;
 }
 
 int main() { return 0; }

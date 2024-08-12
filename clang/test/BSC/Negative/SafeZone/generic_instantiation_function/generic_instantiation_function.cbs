@@ -25,7 +25,7 @@ void genericFun(){
   int* owned m = max_b<int* owned>(p, q); // OK
   int *n = max_c<void *>((void*)0, (void *)0); // expected-note{{in instantiation of function template specialization 'max_c<void *>' requested here}}
 
-}// expected-error {{m's memory will leak at the end of scope}}
+}// expected-error {{memory leak of value: `m`}}
 
 safe int* foo_a<T>(int* a, T b) {   // expected-error{{unsafe return type is forbidden in the safe function}}
                                     // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}

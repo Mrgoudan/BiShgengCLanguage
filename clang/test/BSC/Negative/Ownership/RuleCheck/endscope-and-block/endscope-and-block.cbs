@@ -2,15 +2,15 @@
 
 void func1() {
     int num = 1;
-    int owned a;
-    a = (int owned)num;
-} // expected-error {{a's memory will leak at the end of scope}}
+    int owned * a;
+    a = (owned int *)&num;
+}
 
 void func2() {
     int num = 1;
     int * owned a;
     a = (int * owned)&num;
-} // expected-error {{a's memory will leak at the end of scope}}
+} // expected-error {{memory leak of value: `a`}}
 
 void func3(int * owned a) {
     {
@@ -23,8 +23,8 @@ void func4(int * owned a) {
         int * p = (int *)a;
     }
     {
-        int * owned q = (int * owned)a; // expected-error {{cannot read a, because it is moved at line: 23}}
-    } // expected-error {{q's memory will leak at the end of scope}}
+        int * owned q = (int * owned)a; // expected-error {{use of moved value: `a`}}
+    } // expected-error {{memory leak of value: `q`}}
 }
 
 void func5(int * owned a) {
@@ -32,7 +32,7 @@ void func5(int * owned a) {
         int * p = (int *)a;
         {
             int * owned q = (int * owned)p;
-        } // expected-error {{q's memory will leak at the end of scope}}
+        } // expected-error {{memory leak of value: `q`}}
     }
 }
 
@@ -42,6 +42,6 @@ void func6(int * owned a) {
         {
             int * owned q = (int * owned)p;
             {}
-        } // expected-error {{q's memory will leak at the end of scope}}
+        } // expected-error {{memory leak of value: `q`}}
     }
 }

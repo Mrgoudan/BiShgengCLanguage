@@ -125,21 +125,50 @@ InGroup<BSCOwnedStruct>;
 def err_owned_struct_destructor_name : Error<"expected the owned struct name after '~' to name the enclosing owned struct">;
 def err_owned_struct_destructor_body : Error<"destructor must have a function body">;
 
-// Ownership Analysis errors.
-def err_ownership_read_invalid : Error<
-  "%0 cannot be accessed, because it is uninitialized or moved">;
-def err_ownership_scope_memory_leak : Error<
-  "%0's memory will leak at the end of scope">;
-def err_ownership_pointer_inner_moved : Error<
-  "%0 cannot be moved because its pointee is moved">;
-def err_ownership_pointer_inner_assign : Error<
-  "pointer %0 inner assign error because inner is not moved">;
-def err_ownership_cast_to_void_invalid : Error <
-  "%0 cannot cast to 'void * owned' because inner is not moved">;
-def err_ownership_reassign : Error <
-  "cannot assign %0 because its type is owned">;
-def err_ownership_read_invalid_uninit : Error<
-  "cannot read %0, because it is uninitialized">;
-def err_ownership_read_invalid_moved : Error<
-  "cannot read %0, because it is moved at line: %1">;
+// BSC Ownership Analysis errors.
+// use
+def err_ownership_use_moved : Error<
+  "use of moved value: `%0`">;
+def err_ownership_use_partially_moved : Error<
+  "use of partially moved value: `%0`, %1 moved">;
+def err_ownership_use_all_moved: Error<
+  "use of all moved value: `%0`">;
+def err_ownership_use_uninit : Error<
+  "use of uninitialized value: `%0`">;
+def err_ownership_use_possibly_uninit : Error<
+  "use of possibly uninitialized value: `%0`">;
 
+// assign
+def err_ownership_assign_owned : Error<
+  "assign to owned value: `%0`">;
+def err_ownership_assign_partially_moved : Error<
+  "assign to partially moved value: `%0`, %1 moved">;
+def err_ownership_assign_possibly_partially_moved : Error<
+  "assign to possibly partially moved value: `%0`, %1 possibly moved">;
+def err_ownership_assign_all_moved : Error<
+  "assign to all moved value: `%0`">;
+// field assign
+def err_ownership_assign_field_uninit : Error<
+  "assign to part of uninitialized value: `%0`">;
+def err_ownership_assign_field_owned : Error<
+  "assign to part of owned value: `%0`">;
+def err_ownership_assign_field_moved : Error<
+  "assign to part of moved value: `%0`">;
+def err_ownership_assign_field_subfield_owned : Error<
+  "assign to subfield owned value: `%0`, %1 owned">;
+
+// cast to `void * owned`
+def err_ownership_cast_moved : Error<
+  "invalid cast to `void * owned` of moved value: `%0`">;
+def err_ownership_cast_owned : Error<
+  "invalid cast to `void * owned` of owned value: `%0`">;
+def err_ownership_cast_uninit: Error<
+  "invalid cast to `void * owned` of uninit value: `%0`">;
+def err_ownership_cast_subfield_owned : Error<
+  "invalid cast to `void * owned` of not all moved value: `%0`, %1 owned">;
+
+// memory leak
+def err_ownership_memory_leak_field : Error<
+  "field memory leak of value: `%0`, %1 leak">;
+def err_ownership_memory_leak : Error<
+  "memory leak of value: `%0`">;
