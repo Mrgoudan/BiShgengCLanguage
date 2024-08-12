@@ -31,7 +31,14 @@ static bool IsPrefix(const string &currentField, const string &borrowedField) {
   if (borrowedField.length() < currentField.length()) {
     return false;
   }
-  return borrowedField.compare(0, currentField.length(), currentField) == 0;
+
+  bool compareFlag = (borrowedField.compare(0, currentField.length(), currentField) == 0);
+
+  if (borrowedField.length() == currentField.length()) {
+    return compareFlag;
+  }
+
+  return compareFlag && (borrowedField[currentField.length()] == '.');
 }
 
 class BorrowCheckImpl {
@@ -185,10 +192,8 @@ public:
   void ClearActiveBorrowTargetMap();
 
 private:
-  void HandleDREWrite(const DeclRefExpr *DRE, std::string fieldName,
-                      bool borrowFlag);
-  void HandleDRERead(const DeclRefExpr *DRE, std::string fieldName,
-                     bool borrowFlag);
+  void HandleDRE(const DeclRefExpr *DRE, std::string fieldName,
+                 bool borrowFlag);
 
   void CheckBorrowVar(const VarDecl *VD, const SourceLocation &Loc);
   void CheckBorrowField(const VarDecl *VD, const SourceLocation &Loc,
@@ -260,12 +265,7 @@ void BorrowRuleChecker::VisitDeclRefExpr(DeclRefExpr *DRE) {
   if (Op == None) {
     return;
   }
-  if (Op == Write) {
-    HandleDREWrite(DRE, "", false);
-  }
-  if (Op == Read) {
-    HandleDRERead(DRE, "", false);
-  }
+  HandleDRE(DRE, "", false);
 }
 
 void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
@@ -375,18 +375,8 @@ void BorrowRuleChecker::VisitMemberExpr(MemberExpr *ME) {
   bool borrowFlag = false;
   auto memberField = getMemberField(ME, borrowFlag);
 
-  // manipulate struct member expr assign
-  if (Op == Write) {
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
-      HandleDREWrite(DRE, memberField.second, borrowFlag);
-    }
-  }
-
-  // manipulate struct member expr use
-  if (Op == Read) {
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
-      HandleDRERead(DRE, memberField.second, borrowFlag);
-    }
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
+    HandleDRE(DRE, memberField.second, borrowFlag);
   }
 }
 
@@ -431,27 +421,8 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
   Op = TempOp;
 }
 
-void BorrowRuleChecker::HandleDREWrite(const DeclRefExpr *DRE,
-                                       std::string fieldName, bool borrowFlag) {
-  if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-    if (fieldName == "") {
-      if (VD->getType().isBorrowQualified()) {
-        CheckBorrowVar(VD, DRE->getLocation());
-      } else {
-        CheckNonBorrowVar(VD, DRE->getLocation());
-      }
-    } else {
-      if (borrowFlag) {
-        CheckBorrowField(VD, DRE->getLocation(), fieldName);
-      } else {
-        CheckNonBorrowField(VD, DRE->getLocation(), fieldName);
-      }
-    }
-  }
-}
-
-void BorrowRuleChecker::HandleDRERead(const DeclRefExpr *DRE,
-                                      std::string fieldName, bool borrowFlag) {
+void BorrowRuleChecker::HandleDRE(const DeclRefExpr *DRE,
+                                  std::string fieldName, bool borrowFlag) {
   if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
     if (fieldName == "") {
       if (VD->getType().isBorrowQualified()) {
@@ -531,7 +502,7 @@ void BorrowRuleChecker::CheckBorrowField(const VarDecl *VD,
   }
 }
 
-// for const mut borrowed variable, only allow use the last alive mut borrow
+// for mut borrowed variable, only allow use the last alive mut borrow
 // variable. VD is the mut borrow pointer variable
 void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD,
                                              const SourceLocation &Loc,
@@ -815,6 +786,10 @@ void BorrowRuleChecker::ClearActiveBorrowTargetMap() {
 }
 
 void BorrowRuleChecker::CheckBeBorrowedTarget(const CFGPath &Path) {
+  // add global variable
+  CurElemID = 0;
+  UpdateActiveBorrowTargetMap();
+  // add param variable
   CurElemID = 1;
   UpdateActiveBorrowTargetMap();
   ClearActiveBorrowTargetMap();

@@ -1,0 +1,42 @@
+// RUN: %clang_cc1 -verify %s
+
+void int::setA(int* this) {
+    *this = 2;
+}
+
+void use_mut(int * borrow);
+void use_const(const int * borrow);
+
+void test1() {
+    int a = 1;
+    int * borrow p = &mut a; // expected-note {{previous borrow is here}}
+    a.setA(); // expected-error {{Can not modify 'a' because be borrowed}}
+    use_mut(p);
+}
+
+
+void test2() {
+    int a = 1;
+    const int * borrow p = &const a; // expected-note {{previous borrow is here}}
+    a.setA(); // expected-error {{Can not modify 'a' because be borrowed}}
+    use_const(p);
+}
+
+struct A {
+    int m;
+    int n;
+    int c;
+};
+
+void struct A::use(struct A* this) {
+    this->m = 2;
+    this->n = 3;
+}
+
+void use_mut_A(struct A * borrow);
+
+void test3(struct A a) {
+    struct A * borrow p = &mut a; // expected-note {{previous borrow is here}}
+    a.use(); // expected-error {{Can not modify 'a' because be borrowed}}
+    use_mut_A(p);
+}
