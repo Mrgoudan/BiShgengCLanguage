@@ -543,14 +543,12 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
       if (LookupDC)
         Decls = LookupDC->lookup(DeclarationName(II));
       BSCMethodDecl *MD = nullptr;
-      if (Decls.isSingleResult()) {
-        for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                                  E = Decls.end();
-            I != E; ++I) {
-          if (isa<BSCMethodDecl>(*I)) {
-            MD = dyn_cast<BSCMethodDecl>(*I);
-            break;
-          }
+      for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                                E = Decls.end();
+          I != E; ++I) {
+        if (isa<BSCMethodDecl>(*I) && dyn_cast<BSCMethodDecl>(*I)->isDefined()) {
+          MD = dyn_cast<BSCMethodDecl>(*I);
+          break;
         }
       }
 

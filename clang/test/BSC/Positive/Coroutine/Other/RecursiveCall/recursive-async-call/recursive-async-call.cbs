@@ -34,16 +34,16 @@ async int f() {
 
 
 // Declaration
-// CHECK: |-FunctionDecl {{.*}} <line:30:1, col:11> col:11 used __f 'struct __Trait_Future<int> (void)'
+// CHECK: |-FunctionDecl {{.*}} <line:30:1, col:11> col:11 __f 'struct _Futuref *(void)'
 
 // Make sure that function `__f` has body.
-// CHECK: |-FunctionDecl {{.*}} <line:30:1, line:33:1> line:30:11 used __f 'struct __Trait_Future<int> (void)'
+// CHECK: |-FunctionDecl {{.*}} <col:1, line:33:1> line:30:11 used __f 'struct _Futuref *(void)'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:1, line:33:1>
 // CHECK-NEXT: |   |-DeclStmt {{.*}} <line:30:1, line:33:1>
 
-// int main() {
-//   trait Future<int>* this = f();
-//   this->poll();
-//   this->free();
-//   return 0;
-// }
+int main() {
+  trait Future<int>* this = f();
+  this->poll();
+  this->free();
+  return 0;
+}

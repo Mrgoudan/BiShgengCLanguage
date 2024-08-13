@@ -105,7 +105,7 @@ static BSCMethodDecl *lookupBSCMethodInRecord(Sema &S, std::string FuncName,
   S.LookupQualifiedName(Result, RecordDecl, false, true);
   BSCMethodDecl *BSCMethod = nullptr;
   if (!Result.empty())
-    BSCMethod = dyn_cast_or_null<BSCMethodDecl>(Result.getFoundDecl());
+    BSCMethod = dyn_cast_or_null<BSCMethodDecl>(Result.getRepresentativeDecl());
   return BSCMethod;
 }
 
@@ -539,11 +539,18 @@ static QualType lookupGenericType(Sema &S, SourceLocation SLoc, QualType T,
 // build struct Future for async function
 static RecordDecl *buildFutureRecordDecl(
     Sema &S, FunctionDecl *FD, ArrayRef<Expr *> Args,
-    std::vector<std::pair<DeclarationName, QualType>> LocalVarList) {
+    std::vector<std::pair<DeclarationName, QualType>> LocalVarList,
+    bool IsOptimization) {
   std::vector<std::pair<DeclarationName, QualType>> paramList;
   DeclarationName funcName = FD->getDeclName();
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation ELoc = FD->getEndLoc();
+
+  const std::string Recordname = "_Future" + funcName.getAsString();
+  RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
+                                        clang::TagDecl::TagKind::TTK_Struct);
+  RD->startDefinition();
+
   for (FunctionDecl::param_const_iterator pi = FD->param_begin();
        pi != FD->param_end(); pi++) {
     paramList.push_back(std::make_pair<DeclarationName, QualType>(
@@ -554,7 +561,7 @@ static RecordDecl *buildFutureRecordDecl(
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
     CallExpr *CE = dyn_cast<CallExpr>(AE);
     QualType AEType;
-    FunctionDecl *AwaitFD;
+    FunctionDecl *AwaitFD = nullptr;
     if (CE) {
       AwaitFD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
       AEType =
@@ -564,21 +571,15 @@ static RecordDecl *buildFutureRecordDecl(
                     AE->getType(), AwaitFD->getReturnType().getQualifiers());
     } else AEType = AE->getType();
 
-    if (!S.IsBSCCompatibleFutureType(AEType)) {
+    if (AwaitFD && AwaitFD == FD) {
       assert(AwaitFD->isAsyncSpecified());
-
-      QualType FatPointerType = lookupGenericType(
-          S, FD->getBeginLoc(), AEType, "__Trait_Future");
-      if (FatPointerType.isNull()) {
-        return nullptr;
-      }
-
-      RecordDecl *FatPointerStruct = FatPointerType->getAsRecordDecl();
-      assert(FatPointerStruct != nullptr);
+      assert(!IsOptimization);
+      assert(CE);
+      // This only happen in the recursive case, and I'm building the thing exactly now
 
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
           &(S.Context.Idents).get("Ft_" + std::to_string(I + 1)),
-          S.Context.getRecordType(FatPointerStruct)));
+          S.Context.getPointerType(S.Context.getRecordType(RD))));
     } else if (implementedFutureType(S, AEType)) {
       const RecordType *FutureType = dyn_cast<RecordType>(
           AEType.getDesugaredType(S.Context));
@@ -596,10 +597,6 @@ static RecordDecl *buildFutureRecordDecl(
     }
   }
 
-  const std::string Recordname = "_Future" + funcName.getAsString();
-  RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
-                                        clang::TagDecl::TagKind::TTK_Struct);
-  RD->startDefinition();
   for (std::vector<std::pair<DeclarationName, QualType>>::iterator it =
            paramList.begin();
        it != paramList.end(); it++) {
@@ -704,8 +701,6 @@ static VarDecl *buildVtableInitDecl2(Sema &S, FunctionDecl *FD, QualType RecordT
 
 static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
                                                        FunctionDecl *FD,
-                                                       RecordDecl *FatPointerRD,
-                                                       VarDecl *VtableInit,
                                                        FunctionDecl *FDecl) {
   FunctionDecl *NewFD = nullptr;
   SourceLocation SLoc = FD->getBeginLoc();
@@ -3022,7 +3017,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   bool IsRecursiveCall = RecursiveCallVisitor(FD).VisitStmt(FD->getBody());
   bool IsOptimization = FD->isStatic() && !IsRecursiveCall;
   RecordDecl *RD = buildFutureRecordDecl(*this, FD, AwaitFinder.GetAwaitExpr(),
-                                         VarFinder.GetLocalVarList());
+                                         VarFinder.GetLocalVarList(), IsOptimization);
   QualType PointerStructTy = Context.getPointerType(Context.getRecordType(RD));
 
   if (!RD) {
@@ -3042,6 +3037,35 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
 
   Decls.push_back(RD);
   Context.BSCDesugaredMap[FD].push_back(RD);
+
+  FunctionDecl *FutureInit = nullptr;
+  if (IsOptimization) {
+    FutureInit =
+        buildFutureStructInitFunctionDefinition(*this, RD, FD);
+  } else {
+    FutureInit = buildFutureInitFunctionDefinition(*this, RD, FD, FutureInitDef);
+  }
+
+  if (!FutureInit) {
+    return Decls;
+  }
+  Decls.push_back(FutureInit);
+  Context.BSCDesugaredMap[FD].push_back(FutureInit);
+
+  BSCMethodDecl *PollDecl2 = buildPollFunctionDeclaration(*this, RD, PollResultRD, FD);
+  BSCMethodDecl *FreeDecl2 = buildFreeFunctionDeclaration(*this, RD, FD);
+
+  if (!PollDecl2) {
+    return Decls;
+  }
+  Decls.push_back(PollDecl2);
+  Context.BSCDesugaredMap[FD].push_back(PollDecl2);
+  if (!FreeDecl2) {
+    return Decls;
+  }
+  Decls.push_back(FreeDecl2);
+  Context.BSCDesugaredMap[FD].push_back(FreeDecl2);
+
 
   BSCMethodDecl *PollDecl = buildPollFunctionDefinition(*this, RD, PollResultRD, FD,
                                               FatPointerRD, FutureStateNumber);
@@ -3072,20 +3096,6 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Decls.push_back(VtableDecl2);
   Context.BSCDesugaredMap[FD].push_back(VtableDecl2);
 
-  FunctionDecl *FutureInit = nullptr;
-  if (IsOptimization) {
-    FutureInit =
-        buildFutureStructInitFunctionDefinition(*this, RD, FD);
-  } else {
-    FutureInit = buildFutureInitFunctionDefinition(*this, RD, FD, FatPointerRD,
-                                                   VtableDecl2, FutureInitDef);
-  }
-
-  if (!FutureInit) {
-    return Decls;
-  }
-  Decls.push_back(FutureInit);
-  Context.BSCDesugaredMap[FD].push_back(FutureInit);
 
   return Decls;
 }
