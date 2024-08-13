@@ -1,6 +1,7 @@
 // RUN: %clang %s -o %test.output
 // RUN: %test.output
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 int x = 0;
@@ -31,7 +32,6 @@ void test() {
 }
 int main(void) {
    test();
-   
    return x-y;
 }
 
@@ -68,11 +68,11 @@ int main(void) {
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:   test();
-// CHECK-EMPTY:   
 // CHECK-NEXT:   return x-y;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
 // CHECK-NEXT:void __attribute__((weak)) struct_A_int_D( struct A_int this) {
+// CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:    x++;
 // CHECK-NEXT:}
 // CHECK-EMPTY:

@@ -1,6 +1,7 @@
 // RUN: %clang %s -o %test.output
 // RUN: %test.output
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
@@ -39,7 +40,7 @@ int main() {
   return g_flag;
 }
 
-// CHECK:structstruct S {
+// CHECK:struct S {
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT:void struct_S_D( struct S this);
@@ -79,7 +80,7 @@ int main() {
 // CHECK-NEXT:        }
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
-// CHECK-NEXT:
+// CHECK-EMPTY:
 // CHECK-NEXT:int main() {
 // CHECK-NEXT:  foo();
 // CHECK-NEXT:  goo();

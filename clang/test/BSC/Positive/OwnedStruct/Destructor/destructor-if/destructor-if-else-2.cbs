@@ -1,6 +1,7 @@
 // RUN: %clang %s -o %test.output
 // RUN: %test.output
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
@@ -60,7 +61,7 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:int __attribute__((weak)) koo_char(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int g_flag = 2;
+// CHECK-NEXT:int g_flag = 3;
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:    foo_int();
@@ -68,7 +69,7 @@ int main() {
 // CHECK-NEXT:    koo_char();
 // CHECK-NEXT:    return g_flag;
 // CHECK-NEXT:}
-// CHECK-NEXT:
+// CHECK-EMPTY:
 // CHECK-NEXT:void struct_S_D( struct S this) {
 // CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:    g_flag--;

@@ -1238,23 +1238,6 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
         return;
       }
     }
-    if (Node->HasBSCScopeSpec) {
-      if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
-        std::string ExtendedTypeStr =
-            GetTypePrefix(BD->getExtendedType(), false, Policy);
-        OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
-        return;
-      }
-      if (auto *VD = dyn_cast<VarDecl>(Node->getFoundDecl())) {
-        if (auto *RD = dyn_cast<RecordDecl>(VD->getDeclContext())) {
-          std::string Prefix = GetTypePrefix(
-              RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
-
-          OS << Prefix + Node->getNameInfo().getAsString();
-          return;
-        }
-      }
-    }
     if (Node->getFoundDecl()->isTemplateDecl()) {
       if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getDecl())) {
         std::string FunctionNameStr;
@@ -1282,6 +1265,21 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       }
       OS << FunctionNameStr;
       return;
+    }
+    if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
+      std::string ExtendedTypeStr =
+          GetTypePrefix(BD->getExtendedType(), false, Policy);
+      OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
+      return;
+    }
+    if (auto *VD = dyn_cast<VarDecl>(Node->getFoundDecl())) {
+      if (auto *RD = dyn_cast<RecordDecl>(VD->getDeclContext())) {
+        std::string Prefix = GetTypePrefix(
+            RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
+
+        OS << Prefix + Node->getNameInfo().getAsString();
+        return;
+      }
     }
   }
   #endif
