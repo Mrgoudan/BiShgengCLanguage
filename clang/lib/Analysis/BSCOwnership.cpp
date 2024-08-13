@@ -483,7 +483,8 @@ void Ownership::OwnershipStatus::initS(const RecordDecl *RD, const VarDecl *VD,
           SAllOwnedFields[VD] = {};
           SOwnedOwnedFields[VD] = {};
         }
-        SAllOwnedFields[VD].insert(fieldName);
+        if (!(VD->getType()->isOwnedStructureType() && FT->isRecordType()))
+          SAllOwnedFields[VD].insert(fieldName);
       } else {
         llvm_unreachable("Unexpected branch");
       }
