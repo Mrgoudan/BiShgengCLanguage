@@ -2101,167 +2101,542 @@ warning: ignoring '-rewrite-bsc' option because rewriting input type 'c' is not 
 
 ### 所有权
 
-#### 概述：
+#### 0. 前言
 
-大多数时间类内存安全问题都是由多个指针指向同一块内存空间引起的，毕昇 C 所有权的几条基本原则是：
+<!-- C是什么 => 他有什么特性 => 可以怎么样 => 因此相比于其他语言在某些领域不可替代 => 但这些特性导致了内存安全问题 => 内存安全又分为哪几种 => BSC设计了什么特性解决了哪种内存安全问题 -->
 
-- 同一内存空间在同一时间只能存在一个变量拥有其所有权
-- 只有具备所有权才能对内存空间进行释放操作
-- 所有权可以通过赋值/函数传参/函数返回进行转移，而所有权被转移后的变量不可以再使用
-- 在一个函数内，具有所有权的变量在函数结束前只能通过函数调用转移所有权（包括释放内存）或通过函数返回转移所有权
-
-毕昇 C 通过关键字 `owned` 来声明一个具有所有权的变量，`owned` 作为类型修饰符引入，与 `const/volitile` 等类型修饰符的使用方法基本一致，下面通过一段代码示例来了解所有权系统。
-
-```c
-#include "bishengc_safety.h"	//在 bishengc_safety.cbs 中包含对如下函数声明的定义
-
-// 返回一个有所有权的指针
-int* owned create();
-// 输入一个有所有权的指针，返回一个有所有权的指针
-int* owned consume_and_return(int* owned p);
-
-void test() {
-    int* owned p = create();	//创建资源，p具备所有权，需要在某个地方转移或者释放
-    int* owned p2 = consume_and_return(p1)；	//p通过函数传参的形式转移了所有权，后面不可再使用，否则编译器报错
-    free(p2);	//free 的签名为 void free(int* owned), p2的所有权被转移（在free中完成释放），如果没有这个调用，编译器会报错
-}
-```
-
-#### 语法规则：
-
-1. `owned` 只允许在毕昇 C 编译单元使用
-
-2. owned 使用方法与 `const` 基本一致，允许修饰变量/函数入参/函数返回/struct 成员/多级指针等
-
-3. owned 传染性：包含 `owned` 修饰成员的 `struct` 或者指向 `owned` 单元的指针间接拥有 `owned` 属性
-
-   ```c
-   struct A {int* owned a}; // struct A 拥有简介 owned 属性
-   void test() {
-       int* owned * p;	// p 拥有间接 owned 属性
-   }
-   ```
-
-4. `owned` 类型或间接拥有 `owned` 属性的类型不能声明为全局变量
-
-   ```c
-   struct A {int* owned a};
-   struct A a;		// error: struct A 拥有间接 owned 属性，不能声明为全局变量
-   int* owned * p;	// error: p 拥有间接 owned 属性，不能声明为全局变量
-   ```
-
-5. `owned` 不能修饰 `union` 类型和 `union` 成员，且 `union` 成员不能间接有 `owned` 属性
-
-   ```c
-   union A {int a};
-   void test() {
-   	owned union A a;	// error: owned 不能直接修饰 union 类型
-   }
-   struct B {int* owned a;}
-   union C {
-   	int* owned a;	// error: owned 不能修饰 union 成员
-   	struct B b; 	// error: union 成员不能间接有 owned 属性，struct B 中包含了 owned
-   }
-   ```
-
-6. `owned` 类型或间接拥有 `owned` 属性的类型不能作为数组成员
-
-   ```c
-   struct A {int* owned a};
-   void test() {
-       struct A arr1[2];	// error: struct A 拥有间接 owned 属性，不能作为数组成员
-       owned int arr2[3];	// error: owned 类型不能作为数组成员
-   }
-   ```
-
-7. `owned` 修饰的指针或间接拥有 `owned` 属性的指针不支持指针偏移操作（自增/自减/与整数加减/数组索引等）
-
-   ```c
-   void test() {
-       int* owned p;
-       p++;	// error: owned 修饰的指针不支持++操作
-       p[3]; 	// error: owned 修饰的指针不支持数组索引操作
-   }
-   ```
-
-8. `owned` 类型与非 `owned` 类型不允许隐式转换
-
-   ```c
-   void test() {
-       int* b;
-       int* owned a = b;	// error: b 是非 owned 类型，不能转换为 owned 类型
-   }
-   ```
-
-9. 基础类型一致的情况下允许 `owned` 类型与非 `owned` 类型之间强制转换；基础类型不一致的情况下只允许`void* owned` 和 `T* owned` 之间相互转换
-
-   ```c
-   void test() {
-       int b;
-       owned int a = (owned int)b; 	// 合法，基础类型一致，支持强转
-       owned float c = (owned float)b;	// error: 基础类型不一致
-       int* owned p1;
-       void* owned p2 = (void* owned)p1;	// 合法，允许void* owned 和 T* owned 之间相互转换
-   }
-   ```
-
-10. 入参或返回类型包含 `owned` 类型或间接 `owned` 类型的函数指针，不支持隐式转换
-
-    ```c
-    typedef int (*FTP)(int*, int*);
-    typedef int (*FTPO)(int* owned, int*);
-    void test() {
-        FTP ftp1;
-        FTPO ftpo1 = ftp1;	// error: FTPO 的一个入参为 owned 类型， 不能与 FTP 隐式转换
-        FTPO ftpo2 = (FTPO)ftp1;	// 合法， 支持强转
-    }
-    ```
-
-12. 与 `const` 等其它类型修饰符不同，`struct` 成员不能从整体继承 `owned` 属性
-
-    ```c
-    strcut A {
-        int* owned b;
-        int c;
-    }
-    void test() {
-        owned struct A a;
-        int* owned num1 = a.b;	// a.b具有 owned 属性
-        int num2 = a.c;			// a.c 无 owned 属性， 即使 a 具有 owned 属性，这与 const 是不一样的
-    }
-    ```
+C 语言作为一种系统级编程语言，
+提供了对指针的高度灵活的直接操作以及利用内存管理函数使开发者手动精细控制和管理内存的能力，
+因而被广泛地应用于各种需要直接与硬件或内存等系统资源交互的领域和场景。
+然而，这种内存管理模式存在容易导致内存泄漏、释放后使用、空指针解引用、缓冲区溢出和越界读写等内存安全问题。
+内存安全问题不仅会造成资源的浪费，也可能导致程序行为错误，甚至导致程序崩溃，对程序的稳定性造成威胁。
+内存安全问题可以划分为时间内存安全和空间内存安全两大类，其中时间内存安全包含内存泄漏、释放后使用、空指针解引用等，空间内存安全包括缓冲区溢出、越界读写等。
+BiShengC 语言的内存管理主要解决的是程序的时间内存安全问题，利用**所有权特性**在编译期对潜在的内存安全问题进行检查，识别潜在的时间内存安全错误。
 
 
+#### 1. 特性简介
 
-#### 代码样例：
+<!-- BSC有所有权特性是什么 => 语法 => 一句话概括规则 => 简单示例 -->
 
-解引用空指针：
+BiShengC 语言的所有权特性被用于确保程序中的指针及其指向内存空间能被正确地管理。
+在 BiShengC 语言中，使用`owned`关键字用来修饰一个指针类型，表明该指针拥有其指向的内存的所有权。
+拥有所有权的指针必须确保其指向的内存在指针作用域结束前被显式释放，否则存在潜在的内存泄漏错误；
+此外，一块堆内存只能同时被一个`owned`指针所拥有，`owned`指针为移动语义，这样避免了释放后使用等内存安全问题的发生。
+以下是一段使用了所有权特性的 BiShengC 语言代码，用于了解所有权特性：
 
 ```c
-void consume(int* owned p) {
-    int* owned p1 = p;
-    free(p1);
-}
- void test() {
-     int* owned p1 = (int* owned)malloc(sizeof(int));
-     consume(p1);
-     int res = *p1;	// error p1 所有权通过函数传参转移了，此处不允许再使用p1
- }
-```
+#include "bishengc_safety.h" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 
-内存泄漏：
-
-```c
-int* owned consume_and_return(int* owned p) {
-    int* owned p1 = p;
-    return p1;
+int * owned takes_and_gives_back(int * owned p) {
+    return p;
 }
-void test() {
-    int* owned p1 = (int* owned)malloc(sizeof(int));
-    int* owned p2 = consum_and_return(p1);
+
+safe void test(void) {
+    int * owned p = safe_malloc(2); // 通过提供的 safe_malloc 申请一块大小为 sizeof(int) 的堆内存，并将值设置为2
+    int * owned q = p; // 将 p 指向的堆内存转移给 q，后续不可再使用 p 访问这块内存，否则编译报错
+    q = takes_and_gives_back(q); // 通过函数参数转移走 q 的所有权，但通过函数返回值归还所有权
+    safe_free((void * owned)q); // 在 q 的作用域结束前调用 safe_free 安全释放堆内存，此处不释放则会报内存泄漏错误
     return;
-}	//error p2 内存泄漏
+}
 ```
+
+注：目前 BiShengC 语言的所有权特性规则检查已经完全转移至 clang 编译器前端完成，不再依赖于原先的 MAPLE IR，因此可直接使用 clang 编译器对 BiShengC 程序进行编译。
+
+注：在安全区，`owned`指针指向的内存一定为通过`safe_malloc`函数申请出的堆内存，`owned`指针不可能指向栈内存。
+
+
+#### 2. 语法及语义规则
+
+<!-- 引入的语法 => EBNF => 具体规则（包含代码示例） -->
+
+为实现所有权特性，BiShengC 语言引入了`owned`关键字用于修饰指针类型的变量。
+该关键字与`const`、`restrict`以及`volatile`均属于类型修饰符，其语法如下：
+
+```
+type-qualifier:
+  const | restrict | volatile | ownership-qualifier
+
+ownership-qualifier:
+  owned
+```
+
+具体而言，所有权特性的语法及部分语义规则有以下几点：
+
+1. `owned`关键字仅允许在 BiShengC 语言编译单元内使用；
+
+2. `owned`关键字仅被允许用于修饰指针类型，不允许修饰非指针类型，修饰多级指针时，每级指针的类型修饰可以不一样，规则与`const`类似；
+
+    ```c
+    safe void test(void) {
+        int * owned p = safe_malloc(2); // 允许
+        // int owned a = 2; // 不允许
+        double * owned q = safe_malloc(1.1); // 允许
+        // double owned b = 1.1; // 不允许
+        int * owned * owned pp = safe_malloc(p); // 允许
+        double * d = (double *)malloc(sizeof(double));
+        double * * owned qq = safe_malloc(d); // 允许
+    }
+    ```
+
+3. 允许使用`owned`关键字修饰结构体指针及结构体的指针成员；
+
+    ```c
+    struct S {
+        int m;
+        int n;
+    };
+
+    struct R {
+        int * owned p; // 允许
+        double * owned q; // 允许
+    }
+
+    safe void test(void) {
+        struct S s = { .m = 1, .n = 2 };
+        struct S * owned sp = safe_malloc(s1); // 允许
+        // struct S owned so = { .m = 1, .n = 2 }; // 不允许
+        struct R r = { .p = safe_malloc(1), .q = safe_malloc(2.5) }; // 允许
+        struct R * owned rp = safe_malloc(r); // 允许
+        // struct R owned ro = { .p = safe_malloc(2), .q = safe_malloc(1.5) }; // 不允许
+    }
+    ```
+
+4. `owned`不允许修饰`union`类型和`union`的成员，且`union`的每个成员均不能拥有`owned`修饰的成员；
+
+    ```c
+    struct S {
+        int a;
+        int b;
+    };
+
+    struct T {
+        int * owned p;
+        struct S S;
+    };
+
+    union A {
+        int a;
+        // int * owned p; // 不允许
+        struct S s;
+        // struct S * owned sp; // 不允许
+        // struct T t; // 不允许
+        // struct T * owned tp; // 不允许
+        struct T * trp; // 允许，不跟踪裸指针指向的变量的 owned 成员
+    };
+    ```
+
+5. `owned`修饰的类型或拥有`owned`修饰的成员的类型不可以作为数组的成员；
+
+    ```c
+    struct A {
+        int * owned p;
+    };
+
+    safe void test(void) {
+        // int * owned arr_i[2] = ...; // 不允许
+        // struct A arr_a[2] = ...; // 不允许，struct A 拥有 owned 修饰的成员
+    }
+    ```
+
+6. `owned`修饰的指针不支持算术运算符（指针偏移操作），但支持比较运算符；
+
+    ```c
+    safe void test(void) {
+        int * owned p = safe_malloc(2);
+        int * owned q = safe_malloc(3);
+        // p++; // 不允许
+        // p[3] = ...; // 不允许
+        if (p == q) { // 允许
+            ...
+        }
+    }
+    ```
+
+7. `owned`修饰的类型与非`owned`修饰的类型之间不允许隐式类型转换；
+
+    ```c
+    safe void test(void) {
+        int *b = (int*)malloc(sizeof(int));
+        // int * owned p = b; // 不允许 
+        int * owned q = safe_malloc(3);
+        // int *c = q; // 不允许 
+    }
+    ```
+
+8. 基本类型一致时，允许`owned`指针类型与非`owned`指针类型之间的显式强制类型转换，且这种转换只能在非安全区进行；
+基本类型不一致时，只允许`void * owned`类型与`T * owned`类型之间的相互强制转换；
+
+    ```c
+    void test() {
+        int *b = (int *)malloc(sizeof(int));
+        int * owned p = (int * owned) b; // 允许，b 和 p 的基本类型均为 int
+        double * d = (double *)malloc(sizeof(double));
+        // int * owned q = (int * owned)d; // 不允许，基本类型不一致
+        double * owned dd = safe_malloc(1.5);
+        void * owned v = (void * owned)dd; // 允许
+    }
+    ```
+
+9. `owned`允许修饰指向`trait`的指针，假设有一个具体类型`S`，它实现了`trait T`，则：
+
+    - `S * owned`类型可以隐式转换为`trait T * owned`类型；
+    - `trait T * owned`类型允许被显式转换为`void * owned`类型。
+
+10. 通过函数指针调用函数的时候，规则与一般的函数调用一样，会在函数调用时检查形参类型与实参类型是否匹配及返回类型与返回值类型是否匹配；
+
+    ```c
+    int add(int *a, int *b);
+    typedef int (*FTP)(int *, int *);
+    typedef int (*FTOP)(int * owned, int *);
+
+    void test() {
+        FTP ftp = add;
+        int * owned ap = safe_malloc(1);
+        int * owned bp = safe_malloc(2);
+        // ftp(ap, bp); // 不允许，类型不匹配
+        // FTOP ftop = add; // 不允许，类型不匹配
+    }
+    ```
+
+
+#### 3. 所有权状态转移规则
+
+在对所有权特性的语法和部分语义有了解后，本节将对所有权的状态转移规则进行详细阐述。
+为更好地理解所有权特性对内存安全带来的保障，首先需要明白程序执行时的堆栈内存模型。
+
+总体而言，程序执行时内存可分为栈区和堆区两个部分，这两部分内存一起为程序在运行时提供内存空间。
+栈区即为调用栈，保存的是程序执行所需要维护的所有信息。
+每当一次函数调用发生时，就会创建一个对应的栈帧，函数调用的上下文、函数的入参以及函数体内的局部变量就存在这个栈帧中。
+栈帧的基址一般由 rbp 寄存器指向，而栈顶由 rsp 寄存器指向，两个寄存器共同标识了一个函数的栈帧。
+当一次函数调用结束时，相应的栈帧就会在函数返回前被销毁，相应的内存空间也就得到释放。
+这个过程是通过调整 rbp 寄存器的值为调用者的栈帧基址、rsp 的值为调用者的栈顶地址完成的，这也是为什么栈区的变量不需要显式释放。
+对于堆区，则存放的是那些在运行时动态分配内存的数据。
+一个典型的例子是对于`int *p = malloc(sizeof(int))`这种操作，需要由操作系统在堆区找到一块适合大小的内存空间用于分配，然后将这块内存的地址存在 p 中，指针 p 是程序的一个栈上变量。
+虽然堆区的内存分配更为灵活，但却缺乏组织，不正确的内存管理很容易导致堆区的内存泄漏。
+例如，当一次函数调用完成后，其局部变量 p 被销毁，而其指向的堆内存未被显式地调用`free(p)`进行回收，则这块堆内存将永远无法被回收，产生了内存安全错误。
+
+<div align="center">
+    <img src=./BiShengCLanguageUserManualImages/memory-leak-example.png width=60% />
+</div>
+
+利用 BiShengC 语言提供的所有权特性，可以用`owned`关键字对那些需要管理的指针进行标识，这样就可以在程序编译时检查出潜在的错误，避免在运行时出现错误。
+以下是 BiShengC 语言所有权的核心规则：
+
+1. 在 BiShengC 语言中每一个值都被一个`owned`指针变量所拥有，该`owned`指针变量即为值的所有者；
+2. 一个值同时只能被一个`owned`指针变量所拥有，即一个值只能拥有一个所有者；
+3. 当`owned`指针变量离开作用域范围时，需要释放其拥有的值所在的堆内存。
+
+基于以上核心规则，接下来结合详细的代码示例进行具体介绍。
+
+##### 3.1 转移所有权
+
+**1. 一个拥有所有权的变量`s1`被赋值给另一个变量`s2`是一个移动语义，该操作后变量`s1`失去了对值的所有权，原先的变量`s1`无法再使用。**
+以下是一段代码示例及说明：
+
+```c
+safe void test(void) {
+    int * owned p = safe_malloc(10);
+    int * owned q = p;
+    int * owned m = p; // error
+}
+```
+
+在这个例子中，`p`拥有一块堆内存的所有权，这块内存大小为`sizeof(int)`，存储的值为10。
+在声明`q`时，将`p`的所有权转移给了`q`，`p`不再拥有对这块堆内存的所有权。
+则在声明`m`时，便不可再将`p`的所有权转移给`m`，编译器会在此处报错。
+因此，利用所有权特性，可以保证一个值只能拥有一个所有者。
+（那么如果没有这条规则会出现什么后果呢？三个指针会同时指向一块内存，在作用域结束时对这块内存释放三次，出现重复释放的错误）
+
+**2. 一个拥有所有权的变量`s1`作为整体被赋值给另一个变量`s2`时，如果`s1`内部还有其他拥有所有权的指针，则会全部都转移给`s2`。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int *p;
+    int * owned q;
+};
+
+safe void test(void) {
+    struct S s = {
+            .p = (int *)malloc(sizeof(int)),
+            .q = safe_malloc(1)
+        };
+    struct S * owned s1 = safe_malloc(s);
+    struct S * owned s2 = s2;
+    int * owned p = s1->q; // error
+}
+```
+
+在这个例子中，将`s1`指向堆内存的所有权转移给了`s2`，但同时`s1`内部还有一个拥有所有权的指针`s1->q`，因此也会一并将他的所有权转移给`s2->q`，后续再使用`s1->q`时便会报错。
+
+**3. 一个拥有所有权的变量`s1`作为整体被赋值给另一个变量`s2`时，如果`s1`内部还有其他拥有所有权的指针，则必须保证内部其他`owned`指针均拥有所有权，才能将`s1`赋值给`s2`。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void test(void) {
+    struct S s = {
+            .p = safe_malloc(2),
+            .q = safe_malloc(3)
+        };
+    struct S * owned s1 = safe_malloc(s);
+    int * owned p = s1->p;
+    struct S * owned s2 = s1; // error
+}
+```
+
+在这个例子中，我们先将`s1->p`的所有权转移走，然后试图整体转移`s1`的所有权给`s2`，但此时`s1->p`已经不再持有对任何一块堆内存的所有权，因此这个操作是不合法的。
+
+**4. 一个拥有所有权的变量`s1`在失去其所有权后，可以通过赋值的方式使其再次拥有指向某块堆内存的所有权，这样就可以再次使用`s1`。**
+以下是一段代码示例及说明：
+
+```c
+safe void test(void) {
+    int * owned p = safe_malloc(10);
+    int * owned q = p;
+    p = safe_malloc(4);
+    int * owned m = p;
+}
+```
+
+在这个例子中，`p`的所有权转移给`q`后，再次调用了`safe_malloc`函数为其重新赋予了一块堆内存的所有权，因此后续仍可将`p`的所有权转移给`m`。
+
+**5. 不允许将所有权转移给一个已经拥有所有权的变量。**
+以下是一段代码示例及说明：
+
+```c
+safe void test(void) {
+    int * owned p = safe_malloc(12);
+    int * owned q = safe_malloc(67);
+    q = p; // error
+}
+```
+
+在这个例子中，试图将`p`的所有权转移给`q`，但`q`此时已经拥有所有权，再试图转移的话会使`q`原先指向的堆内存泄漏，因此无法进行转移，会在编译时报错。
+
+**6. 如果一个变量`s1`拥有所有权，而其内部的`owned`指针变量的所有权已被转移，如果想再次赋予内部变量所有权，需要保证内部变量的所有父`owned`指针变量均拥有所有权。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void test(void) {
+    struct S s = {
+            .p = safe_malloc(2),
+            .q = safe_malloc(3)
+        };
+    struct S * owned s1 = safe_malloc(s);
+    struct S * owned s2 = s1;
+    s1->p = safe_malloc(5); // error
+}
+```
+
+在这个例子中，`s1`、`s1->p`以及`s1->q`的所有权均被转移给了`s2`，后续再试图赋予`s1->p`所有权时，其父`owned`变量指针`s1`尚未拥有所有权，因此此次操作是非法的，会在编译时报错。
+
+##### 3.2 作用域结束时的内存释放
+
+**1. 对于所有的`owned`指针变量，会在其词法作用域结束时检查其是否依然拥有堆内存的所有权，如果依然拥有，则存在内存泄漏错误。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void test(void) {
+    int * owned p = safe_malloc(2);
+    struct S s = {
+            .p = safe_malloc(2),
+            .q = safe_malloc(3)
+        };
+    struct S * owned s1 = safe_malloc(s);
+    struct S * owned s2 = s1;
+} // error
+```
+
+在这个例子中，当作用域结束时，编译器会发现`p`、`s2`、`s2->p`以及`s2->q`依然拥有其指向的堆内存的所有权，即这些堆内存都没有被释放，因此会编译失败并报告内存泄漏。
+
+##### 3.3 强制类型转换
+
+**1. 允许将`T * owned`类型的变量通过强制类型转换转为`void * owned`类型，但转换成功的条件为变量依然拥有所有权且其内部的`owned`指针变量均已不拥有所有权。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void test(void) {
+    struct S s = {
+            .p = safe_malloc(2),
+            .q = safe_malloc(3)
+        };
+    struct S * owned s1 = safe_malloc(s);
+    int * owned p = s1->p;
+    safe_free((void * owned)s1); // error
+}
+```
+
+在这个例子中，试图将`s1`强制类型转换为`void * owned`类型，但`s1->q`依然拥有所有权，因此转换失败。
+
+**2. BiShengC 语言提供了`safe_free`函数用于释放`owned`指针变量指向的堆内存，该函数的入参要求为`void * owned`类型。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void test(void) {
+    struct S s = {
+            .p = safe_malloc(2),
+            .q = safe_malloc(3)
+        };
+    struct S * owned s1 = safe_malloc(s);
+    int * owned p = s1->p;
+    safe_free((void * owned)p);
+    safe_free((void * owned)s1->q);
+    safe_free((void * owned)s1);
+}
+```
+
+在这个例子中，分别释放了`p`、`s1->q`以及`s1`指向的堆内存，不存在任何内存泄漏问题，使用`safe_free`完成了正确的堆内存释放。
+
+##### 3.4 函数调用与返回
+
+**1. 函数调用和返回时，如果函数的形参或函数的返回值为`owned`指针类型，则要求传入的实参以及返回值必须拥有堆内存的所有权。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+struct S * owned foo(struct S s) {
+    struct S * ret = safe_malloc(s);
+    return ret;
+}
+
+safe void test(void) {
+    struct S s = {
+            .p = safe_malloc(2),
+            .q = safe_malloc(3)
+        };
+    int * owned p = s.p;
+    struct S * owned s1 = foo(s); // error
+}
+```
+
+在这个例子中，传入`foo`函数的结构体变量`s`内部有两个`owned`指针变量，而`s.p`已经被转移走，因此这次函数调用是非法的，会编译报错。
+
+#### 4. 相关库和 API
+
+##### 4.1 `safe_malloc`
+
+`safe_malloc`是 BiShengC 语言提供的一个安全的内存分配函数。
+该函数接收一个泛型类型`T`的变量，表示要分配的内存的大小以及分配后对内存的初始化。
+该函数的返回值为`T * owned`类型，即指向分配好的堆内存的`owned`指针。
+一些具体的使用例子如下。
+
+在 C 语言中，如果我们需要申请一段堆内存，我们可以使用`malloc`函数进行分配，然后给该内存赋值，如：
+
+```c
+void example() {
+    int *p = (int *)malloc(sizeof(int));
+    *p = 2;
+}
+```
+
+然而，这样分配的内存不会在`p`的作用域结束时检查是否调用了`free`进行释放，会造成内存泄漏。
+此外，如果再使用一个指针也指向该内存，并在作用域结束时释放，则会出现重复释放的问题，如：
+
+```c
+void example() {
+    int *p = (int *)malloc(sizeof(int));
+    *p = 2;
+    int *q = p;
+    free(p);
+    free(q); // error: double free!
+}
+```
+
+使用 BiShengC 语言即可解决这种问题，相应的代码如下：
+
+```c
+safe void example(void) {
+    int * owned p = (int * owned)safe_malloc(2);
+    int * owned q = p;
+    safe_free((void * owned)q);
+}
+```
+
+在使用 BiShengC 语言改写后的代码中，如果我们在函数退出前什么都不做，则会出现编译错误`"memory leak of value: `q`"`，避免了内存泄漏问题的发生；
+如果我们在函数退出前同时调用`safe_free((void * owned)p)`和`safe_free((void * owned)q)`，则会出现编译错误`"use of moved value: `p`"`，避免了重复释放问题的发生。
+
+那么对于更为复杂的结构体类型，该如何正确使用`safe_malloc`进行内存分配呢？
+对于结构体类型，需要首先在栈上构造出相应的变量，然后传给`safe_malloc`在堆上完成相应内存的分配，以下代码为具体示例：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void example(void) {
+    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
+    struct S * owned sp = safe_malloc(s);
+    ...
+}
+```
+
+##### 4.2 `safe_free`
+
+`safe_free`是 BiShengC 语言提供的一个安全的内存释放函数。
+该函数接收一个`void * owned`类型的指针，表示要释放的内存的地址。
+该函数的返回值为`void`类型。
+因此，在调用`safe_free`进行释放前需要将`owned`指针显式地强制转换为`void * owned`类型，具体的转换规则可参考 [3.3](#33-强制类型转换) 节。
+一些具体的使用例子如下。
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void example(void) {
+    int * owned pa = safe_malloc(199);
+    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
+    struct S * owned sp = safe_malloc(s);
+    safe_free((void * owned)pa);
+    safe_free((void * owned)sp->p);
+    safe_free((void * owned)sp->q);
+    safe_free((void * owned)sp); // 必须先释放 sp->p 和 sp->q，才能释放 sp
+}
+```
+
+##### 4.3 TODO
+
+#### 5. 源源变换
+
+BiShengC 语言的 clang 编译器支持源源变换功能，即将`.cbs`文件转换为等价的`.c`文件。
+所有权特性仅引入了`owned`关键字表示所有权，在源源变换时只会去掉所有的`owned`关键字，然后生成相应的`.c`代码。
+关于源源变换的详细细节，请参考手册的源源变换章节。
+
+
+#### 6. 代码示例
+
+以下代码为利用 BiShengC 语言的所有权特性实现的一段代码，其功能为...TODO
 
 
 
