@@ -4424,8 +4424,11 @@ public:
   bool LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation = false,
                   bool ForceNoCPlusPlus = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                           bool InUnqualifiedLookup = false,
-                           bool allowIncompleteCtx = false);
+                           bool InUnqualifiedLookup = false
+                           #ifdef ENABLE_BSC
+                           , bool allowIncompleteCtx = false
+                           #endif
+                           );
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                            CXXScopeSpec &SS);
   bool LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
@@ -5670,6 +5673,8 @@ public:
                             Declarator &TraitDeclarator,
                             SourceLocation TypeLoc);
   VarDecl *DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
+                            SourceLocation TraitLocBegin, SourceLocation TraitLocEnd,
+                            SourceRange TraitImplRange,
                             QualType ImplQT, QualType OriginTraitTy,
                             SourceLocation TypeLoc, bool Initialize);
   QualType DesugarTraitToStructTrait(TraitDecl *TD, QualType T,

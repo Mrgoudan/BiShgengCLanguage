@@ -495,13 +495,19 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
   Scope *S = getCurScope();
   return DesugarImplTrait(
       ITD->getTraitDecl(), ITD->getLocation(),
+      TraitDeclarator.getBeginLoc(),
+      TraitDeclarator.getEndLoc(),
+      ITD->getSourceRange(),
       GetTypeForDeclarator(TypeDeclarator, S)->getType().getCanonicalType(),
       GetTypeForDeclarator(TraitDeclarator, S)->getType(), TypeLoc, true);
 }
 
 VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
-                                QualType ImplQT, QualType OriginTraitTy,
-                                SourceLocation TypeLoc, bool Initialize) {
+                                SourceLocation TraitLocBegin,
+                                SourceLocation TraitLocEnd,
+                                SourceRange TraitImplRange, QualType ImplQT,
+                                QualType OriginTraitTy, SourceLocation TypeLoc,
+                                bool Initialize) {
   CXXScopeSpec SS;
   Scope *S = getCurScope();
   DeclContext *DC = CurContext;
@@ -509,7 +515,7 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
   RecordDecl *TraitVT = TD->getVtable();
   QualType TraitQT = TraitVT->getTypeForDecl()->getCanonicalTypeInternal();
   if (TraitVT->getDescribedClassTemplate())
-    TraitQT = CompleteRecordType(TraitVT, TraitLoc, TraitLoc, OriginTraitTy);
+    TraitQT = CompleteRecordType(TraitVT, TraitLocBegin, TraitLocEnd, OriginTraitTy);
   if (TraitQT.isNull())
     return nullptr;
   TraitQT = Context.getElaboratedType(ETK_Struct, nullptr, TraitQT);
@@ -524,7 +530,7 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
   IdentifierInfo *ITII = &Context.Idents.get(ImplTraitName);
   StorageClass SC = clang::SC_None;
   VarDecl *NewVD =
-      VarDecl::Create(Context, DC, TraitLoc, TraitLoc, ITII, TraitQT,
+      VarDecl::Create(Context, DC, TraitImplRange.getBegin(), TraitImplRange.getEnd(), ITII, TraitQT,
                       Context.getTrivialTypeSourceInfo(TraitQT), SC);
   NewVD->setLexicalDeclContext(CurContext);
 
@@ -574,18 +580,18 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
         QualType ParenTy = Context.getParenType(FuncTy);
         QualType PointerTy = Context.getPointerType(ParenTy);
         TypeSourceInfo *TInfo = Context.getTrivialTypeSourceInfo(PointerTy);
-        ExprResult Res = BuildDeclRefExpr(MD, MD->getType(), VK_LValue, TraitLoc);
+        ExprResult Res = BuildDeclRefExpr(MD, MD->getType(), VK_LValue, TraitImplRange.getBegin());
         Res.get()->HasBSCScopeSpec = true;
         Res = ImplicitCastExpr::Create(
             Context, Context.getPointerType(Res.get()->getType()),
             CK_FunctionToPointerDecay, Res.get(), nullptr, VK_PRValue,
             FPOptionsOverride());
         Res.get()->IsDesugaredCastExpr = true;
-        Res = BuildCStyleCastExpr(TraitLoc, TInfo, TraitLoc, Res.get())
+        Res = BuildCStyleCastExpr(TraitImplRange.getBegin(), TInfo, TraitImplRange.getEnd(), Res.get())
                   .get();
         Designation Desig;
-        Desig.AddDesignator(Designator::getField(II, TraitLoc, TraitLoc));
-        Res = ActOnDesignatedInitializer(Desig, TraitLoc, false, Res);
+        Desig.AddDesignator(Designator::getField(II, TraitImplRange.getBegin(), TraitImplRange.getBegin()));
+        Res = ActOnDesignatedInitializer(Desig, TraitImplRange.getBegin(), false, Res);
         InitExprs.push_back(Res.get());
       } else {
         Diag(TypeLoc, diag::err_trait_impl)
@@ -594,7 +600,7 @@ VarDecl *Sema::DesugarImplTrait(TraitDecl *TD, SourceLocation TraitLoc,
       }
     }
 
-    ExprResult ER = BuildInitList(TraitLoc, InitExprs, TraitLoc);
+    ExprResult ER = BuildInitList(TraitImplRange.getBegin(), InitExprs, TraitImplRange.getEnd());
     InitListExpr *ILE = dyn_cast<InitListExpr>(ER.get());
     AddInitializerToDecl(NewVD, ILE, false);
   } else {
