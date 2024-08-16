@@ -49,9 +49,9 @@ int main() {
 // CHECK-NEXT:     struct S1_int s1;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S1_int_D( struct S1_int this);
+// CHECK-NEXT:static void struct_S1_int_D( struct S1_int this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S2_int_D( struct S2_int this);
+// CHECK-NEXT:static void struct_S2_int_D( struct S2_int this);
 // CHECK-EMPTY:
 // CHECK-NEXT:int g_flag1 = 1;
 // CHECK-EMPTY:
@@ -93,12 +93,12 @@ int main() {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S1_int_D( struct S1_int this) {
+// CHECK-NEXT:static void struct_S1_int_D( struct S1_int this) {
 // CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:    g_flag1--;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S2_int_D( struct S2_int this) {
+// CHECK-NEXT:static void struct_S2_int_D( struct S2_int this) {
 // CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:    g_flag2--;
 // CHECK-NEXT:    struct_S1_int_D(this.s1);

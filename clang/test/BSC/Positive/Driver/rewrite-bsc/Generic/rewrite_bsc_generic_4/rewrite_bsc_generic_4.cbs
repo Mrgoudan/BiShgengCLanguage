@@ -25,7 +25,7 @@ int main() {
 // CHECK-NEXT:    int a;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) test_struct_Block(struct Block a);
+// CHECK-NEXT:static void test_struct_Block(struct Block a);
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:  int b1 = 2;
@@ -33,6 +33,6 @@ int main() {
 // CHECK-NEXT:  test_struct_Block(bb);
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) test_struct_Block(struct Block a)   {
+// CHECK-NEXT:static void test_struct_Block(struct Block a)   {
 // CHECK-NEXT:      int c = 1;
 // CHECK-NEXT:  }

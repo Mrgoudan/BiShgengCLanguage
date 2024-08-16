@@ -55,11 +55,11 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:void struct_S_D( struct S this);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo_int(void);
+// CHECK-NEXT:static int foo_int(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) goo_char(void);
+// CHECK-NEXT:static int goo_char(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) koo_char(void);
+// CHECK-NEXT:static int koo_char(void);
 // CHECK-EMPTY:
 // CHECK-NEXT:int g_flag = 3;
 // CHECK-EMPTY:
@@ -75,7 +75,7 @@ int main() {
 // CHECK-NEXT:    g_flag--;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo_int(void) {
+// CHECK-NEXT:static int foo_int(void) {
 // CHECK-NEXT:    if (1)
 // CHECK-NEXT:        if (1) {
 // CHECK-NEXT:             struct S s1 = {};
@@ -93,7 +93,7 @@ int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) goo_char(void) {
+// CHECK-NEXT:static int goo_char(void) {
 // CHECK-NEXT:    if (0) {
 // CHECK-NEXT:         struct S s1 = {};
 // CHECK-NEXT:        _Bool s1_is_moved = 0;
@@ -109,7 +109,7 @@ int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) koo_char(void) {
+// CHECK-NEXT:static int koo_char(void) {
 // CHECK-NEXT:     struct S s1 = {};
 // CHECK-NEXT:    _Bool s1_is_moved = 0;
 // CHECK-NEXT:    if (0) {

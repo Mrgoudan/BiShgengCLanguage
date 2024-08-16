@@ -39,7 +39,7 @@ void struct G<T>::dump(This* this) {
 }
 void struct G<T>::bar(const This* const this) {
 }
-// CHECK: void __attribute__((weak)) struct_G_int_bar(const struct G_int *const this) {
+// CHECK: static void struct_G_int_bar(const struct G_int *const this) {
 // CHECK-NEXT:}
 
 int main() {

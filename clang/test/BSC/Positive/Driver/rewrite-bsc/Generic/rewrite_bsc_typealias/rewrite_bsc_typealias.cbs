@@ -66,9 +66,9 @@ int main() {
 // CHECK-NEXT:     int c;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: void __attribute__((weak)) foo2_int(void);
+// CHECK-NEXT: static void foo2_int(void);
 // CHECK-EMPTY:
-// CHECK-NEXT: void __attribute__((weak)) foo4_int(void);
+// CHECK-NEXT: static void foo4_int(void);
 // CHECK-EMPTY:
 // CHECK-NEXT: void foo1(void) {
 // CHECK-NEXT:     long a;
@@ -91,7 +91,7 @@ int main() {
 // CHECK-NEXT:     return 0;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: void __attribute__((weak)) foo2_int(void) {
+// CHECK-NEXT: static void foo2_int(void) {
 // CHECK-NEXT:     long a;
 // CHECK-NEXT:     int b;
 // CHECK-NEXT:     int c;
@@ -99,5 +99,5 @@ int main() {
 // CHECK-NEXT:     int e;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: void __attribute__((weak)) foo4_int(void) {
+// CHECK-NEXT: static void foo4_int(void) {
 // CHECK-NEXT: }

@@ -24,9 +24,9 @@ int main() {
   return 0;
 }
 
-// CHECK: int __attribute__((weak)) max_int_int(int a, int b);
+// CHECK: static int max_int_int(int a, int b);
 // CHECK-EMPTY:
-// CHECK-NEXT:float __attribute__((weak)) max_float_float(float a, float b);
+// CHECK-NEXT:static float max_float_float(float a, float b);
 // CHECK-EMPTY:
 // CHECK-NEXT:int int_increase(int *this) {
 // CHECK-NEXT:  return *this += 1;
@@ -42,14 +42,14 @@ int main() {
 // CHECK-NEXT:  return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) max_int_int(int a, int b)   {
+// CHECK-NEXT:static int max_int_int(int a, int b)   {
 // CHECK-NEXT:      int x = 1;
 // CHECK-NEXT:      int_increase(&x);
 // CHECK-NEXT:      int c = int_increase(&x);
 // CHECK-NEXT:      return a > b ? a : b;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:float __attribute__((weak)) max_float_float(float a, float b)   {
+// CHECK-NEXT:static float max_float_float(float a, float b)   {
 // CHECK-NEXT:      int x = 1;
 // CHECK-NEXT:      int_increase(&x);
 // CHECK-NEXT:      int c = int_increase(&x);

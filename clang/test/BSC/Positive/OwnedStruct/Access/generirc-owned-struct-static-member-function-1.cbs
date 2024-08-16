@@ -25,9 +25,9 @@ int main() {
 // CHECK-NEXT:    char z;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:char __attribute__((weak)) struct_A_char_foo(char a);
+// CHECK-NEXT:static char struct_A_char_foo(char a);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_A_char_D( struct A_char this);
+// CHECK-NEXT:static void struct_A_char_D( struct A_char this);
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:    char y = 's';
@@ -39,10 +39,10 @@ int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:char __attribute__((weak)) struct_A_char_foo(char a) {
+// CHECK-NEXT:static char struct_A_char_foo(char a) {
 // CHECK-NEXT:    return a;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_A_char_D( struct A_char this) {
+// CHECK-NEXT:static void struct_A_char_D( struct A_char this) {
 // CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:}

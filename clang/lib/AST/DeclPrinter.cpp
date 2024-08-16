@@ -777,6 +777,17 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation, Context);
   }
 
+#if ENABLE_BSC
+  // Since template instantiation happend per file, we have to add static
+  // keyword to tempalte instantiated functions while rewriting. Otherwise, it
+  // may have multi-definition problems.
+  if (Policy.RewriteBSC) {
+    if (D->isTemplateInstantiation() && D->getStorageClass() != SC_Static) {
+      Out << "static ";
+    }
+  }
+#endif
+
   PrintingPolicy SubPolicy(Policy);
   SubPolicy.SuppressSpecifiers = false;
   std::string Proto;
@@ -799,8 +810,6 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       // For instantiated functions which have same template arg type
       // in different source files, linker will report multi definition error.
       // Hence, we add weak attribute to solve this.
-      if (D->isTemplateInstantiation() && D->getStorageClass() != SC_Static)
-        OS << "__attribute__((weak)) ";
       if (const BSCMethodDecl *BMD = dyn_cast<BSCMethodDecl>(D)) {
         std::string FunctionNameStr;
         if (BMD->isDestructor()) {

@@ -64,31 +64,31 @@ int main() {
 // CHECK-NEXT:    short a;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo1_5(void);
+// CHECK-NEXT:static short foo1_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo1_n5(void);
+// CHECK-NEXT:static short foo1_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:unsigned short __attribute__((weak)) foo2_5(void);
+// CHECK-NEXT:static unsigned short foo2_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo3_5(void);
+// CHECK-NEXT:static short foo3_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo3_n5(void);
+// CHECK-NEXT:static short foo3_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo4_int_5(void);
+// CHECK-NEXT:static short foo4_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo4_int_n5(void);
+// CHECK-NEXT:static short foo4_int_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo5_5(void);
+// CHECK-NEXT:static short foo5_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo5_n5(void);
+// CHECK-NEXT:static short foo5_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) foo6_5_10(void);
+// CHECK-NEXT:static void foo6_5_10(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:_Bool __attribute__((weak)) foo8_1(void);
+// CHECK-NEXT:static _Bool foo8_1(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:_Bool __attribute__((weak)) foo8_0(void);
+// CHECK-NEXT:static _Bool foo8_0(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S_5_bar(struct S_5 *this);
+// CHECK-NEXT:static void struct_S_5_bar(struct S_5 *this);
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:    int a1_0 = foo1_5();
@@ -109,60 +109,60 @@ int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo1_5(void) {
+// CHECK-NEXT:static short foo1_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo1_n5(void) {
+// CHECK-NEXT:static short foo1_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:unsigned short __attribute__((weak)) foo2_5(void) {
+// CHECK-NEXT:static unsigned short foo2_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo3_5(void) {
+// CHECK-NEXT:static short foo3_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo3_n5(void) {
+// CHECK-NEXT:static short foo3_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo4_int_5(void) {
+// CHECK-NEXT:static short foo4_int_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo4_int_n5(void) {
+// CHECK-NEXT:static short foo4_int_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo5_5(void) {
+// CHECK-NEXT:static short foo5_5(void) {
 // CHECK-NEXT:    short a = 5;
 // CHECK-NEXT:    return a;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:short __attribute__((weak)) foo5_n5(void) {
+// CHECK-NEXT:static short foo5_n5(void) {
 // CHECK-NEXT:    short a = -5;
 // CHECK-NEXT:    return a;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) foo6_5_10(void) {
+// CHECK-NEXT:static void foo6_5_10(void) {
 // CHECK-NEXT:    int arr[15];
 // CHECK-NEXT:    for (int i = 0; i < 5 + 10; i++) {
 // CHECK-NEXT:        arr[i] = i;
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:_Bool __attribute__((weak)) foo8_1(void) {
+// CHECK-NEXT:static _Bool foo8_1(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:_Bool __attribute__((weak)) foo8_0(void) {
+// CHECK-NEXT:static _Bool foo8_0(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S_5_bar(struct S_5 *this) {
+// CHECK-NEXT:static void struct_S_5_bar(struct S_5 *this) {
 // CHECK-NEXT:    this->a = 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:

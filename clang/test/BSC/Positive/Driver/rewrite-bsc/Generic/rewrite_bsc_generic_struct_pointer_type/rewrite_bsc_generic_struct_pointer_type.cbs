@@ -15,14 +15,14 @@ int main() {
 // CHECK: struct S_int_char {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct S_int_char *__attribute__((weak)) newS_int_char(int a);
+// CHECK-NEXT: static struct S_int_char *newS_int_char(int a);
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {
 // CHECK-NEXT:     struct S_int_char *a = newS_int_char(42);
 // CHECK-NEXT:     return 0;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: struct S_int_char *__attribute__((weak)) newS_int_char(int a) {
+// CHECK-NEXT: static struct S_int_char *newS_int_char(int a) {
 // CHECK-NEXT:     struct S_int_char *r = malloc(sizeof(struct S_int_char));
 // CHECK-NEXT:     return r;
 // CHECK-NEXT: }

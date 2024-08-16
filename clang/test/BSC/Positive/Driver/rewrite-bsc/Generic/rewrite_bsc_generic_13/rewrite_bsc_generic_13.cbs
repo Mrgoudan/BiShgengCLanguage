@@ -22,7 +22,7 @@ int case2() {
 
 int main() { return 0; }
 
-// CHECK: int __attribute__((weak)) f_int(int value);
+// CHECK: static int f_int(int value);
 // CHECK-EMPTY:
 // CHECK-NEXT: int case0(void) {
 // CHECK-NEXT:     f_int(0);
@@ -41,6 +41,6 @@ int main() { return 0; }
 // CHECK-EMPTY:
 // CHECK-NEXT: int main() { return 0; }
 // CHECK-EMPTY:
-// CHECK-NEXT: int __attribute__((weak)) f_int(int value) {
+// CHECK-NEXT: static int f_int(int value) {
 // CHECK-NEXT:     return value;
 // CHECK-NEXT: }

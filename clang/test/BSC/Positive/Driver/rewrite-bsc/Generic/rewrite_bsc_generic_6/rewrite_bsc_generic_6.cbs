@@ -36,7 +36,7 @@ int main() {
 // CHECK-NEXT:      int a;
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct Foo_int __attribute__((weak)) max_struct_B(struct B a);
+// CHECK-NEXT: static struct Foo_int max_struct_B(struct B a);
 // CHECK-EMPTY:
 // CHECK-NEXT: int struct_B_increase(struct B *this) {
 // CHECK-NEXT:      return 0;
@@ -51,7 +51,7 @@ int main() {
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: struct Foo_int __attribute__((weak)) max_struct_B(struct B a) {
+// CHECK-NEXT: static struct Foo_int max_struct_B(struct B a) {
 // CHECK-NEXT:       struct Foo_int f;
 // CHECK-NEXT:       struct B x;
 // CHECK-NEXT:       struct_B_increase(&x);

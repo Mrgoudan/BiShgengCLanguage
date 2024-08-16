@@ -44,7 +44,7 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:typedef struct A MyStruct;
 // CHECK-EMPTY:
-// CHECK-NEXT:struct S_int_char *__attribute__((weak)) newS_int_char(int a);
+// CHECK-NEXT:static struct S_int_char *newS_int_char(int a);
 // CHECK-EMPTY:
 // CHECK-NEXT:struct S_int_char b;
 // CHECK-EMPTY:
@@ -74,7 +74,7 @@ int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:struct S_int_char *__attribute__((weak)) newS_int_char(int a) {
+// CHECK-NEXT:static struct S_int_char *newS_int_char(int a) {
 // CHECK-NEXT:    int b = sizeof(struct S_int_char);
 // CHECK-NEXT:    struct S_int_char *r;
 // CHECK-NEXT:    return r;

@@ -42,11 +42,11 @@ int main(void) {
 // CHECK-NEXT:     struct A_int a;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_A_int_D( struct A_int this);
+// CHECK-NEXT:static void struct_A_int_D( struct A_int this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_B_int_D( struct B_int this);
+// CHECK-NEXT:static void struct_B_int_D( struct B_int this);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) f_int( struct B_int x);
+// CHECK-NEXT:static int f_int( struct B_int x);
 // CHECK-EMPTY:
 // CHECK-NEXT:int x = 0;
 // CHECK-EMPTY:
@@ -71,12 +71,12 @@ int main(void) {
 // CHECK-NEXT:   return x-y;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_A_int_D( struct A_int this) {
+// CHECK-NEXT:static void struct_A_int_D( struct A_int this) {
 // CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:    x++;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_B_int_D( struct B_int this) {
+// CHECK-NEXT:static void struct_B_int_D( struct B_int this) {
 // CHECK-NEXT:    _Bool this_is_moved = 0;
 // CHECK-NEXT:    y++;
 // CHECK-NEXT:     struct A_int a = {};
@@ -86,7 +86,7 @@ int main(void) {
 // CHECK-NEXT:    struct_A_int_D(this.a);
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) f_int( struct B_int x) {
+// CHECK-NEXT:static int f_int( struct B_int x) {
 // CHECK-NEXT:    _Bool x_is_moved = 0;
 // CHECK-NEXT:     struct B_int z = x;
 // CHECK-NEXT:    _Bool z_is_moved = 0;

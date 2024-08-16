@@ -52,7 +52,7 @@ int main() {
     return 0;
 }
 
-// CHECK:void __attribute__((weak)) foo_int(int a) {
+// CHECK:static void foo_int(int a) {
 // CHECK-NEXT:    if (0)
 // CHECK-NEXT:        ;
 // CHECK-NEXT:    else if (0)
@@ -62,14 +62,14 @@ int main() {
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) foo_int_P(int *a) {
+// CHECK-NEXT:static void foo_int_P(int *a) {
 // CHECK-NEXT:    if (1) {
 // CHECK-NEXT:        printf("T is pointer\n");
 // CHECK-NEXT:        void *p = (void *)a;
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) foo_struct_G(struct G a) {
+// CHECK-NEXT:static void foo_struct_G(struct G a) {
 // CHECK-NEXT:    if (0)
 // CHECK-NEXT:        ;
 // CHECK-NEXT:    else if (1)
@@ -77,7 +77,7 @@ int main() {
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S_int_foo(struct S_int *this) {
+// CHECK-NEXT:static void struct_S_int_foo(struct S_int *this) {
 // CHECK-NEXT:    if (0)
 // CHECK-NEXT:        ;
 // CHECK-NEXT:    else if (0)
@@ -87,14 +87,14 @@ int main() {
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S_int_P_foo(struct S_int_P *this) {
+// CHECK-NEXT:static void struct_S_int_P_foo(struct S_int_P *this) {
 // CHECK-NEXT:    if (1) {
 // CHECK-NEXT:        printf("T is pointer\n");
 // CHECK-NEXT:        void *p = (void *)this->a;
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S_struct_G_foo(struct S_struct_G *this) {
+// CHECK-NEXT:static void struct_S_struct_G_foo(struct S_struct_G *this) {
 // CHECK-NEXT:    if (0)
 // CHECK-NEXT:        ;
 // CHECK-NEXT:    else if (1)

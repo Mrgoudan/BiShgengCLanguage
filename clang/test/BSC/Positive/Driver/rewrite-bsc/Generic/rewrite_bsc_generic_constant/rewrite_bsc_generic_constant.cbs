@@ -102,45 +102,45 @@ int main() {
 // CHECK-NEXT:struct S6_n5_int {
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo1_int_5(void);
+// CHECK-NEXT:static int foo1_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo1_int_n5(void);
+// CHECK-NEXT:static int foo1_int_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:unsigned int __attribute__((weak)) foo2_int_5(void);
+// CHECK-NEXT:static unsigned int foo2_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:long long __attribute__((weak)) foo3_int_5(void);
+// CHECK-NEXT:static long long foo3_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo4_int_5(void);
+// CHECK-NEXT:static int foo4_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo4_int_n5(void);
+// CHECK-NEXT:static int foo4_int_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo5_5(void);
+// CHECK-NEXT:static int foo5_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo5_n5(void);
+// CHECK-NEXT:static int foo5_n5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo6_5_int(void);
+// CHECK-NEXT:static int foo6_5_int(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo6_n5_int(void);
+// CHECK-NEXT:static int foo6_n5_int(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S1_int_5_bar(struct S1_int_5 *this);
+// CHECK-NEXT:static void struct_S1_int_5_bar(struct S1_int_5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S1_int_n5_bar(struct S1_int_n5 *this);
+// CHECK-NEXT:static void struct_S1_int_n5_bar(struct S1_int_n5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S2_int_5_bar(struct S2_int_5 *this);
+// CHECK-NEXT:static void struct_S2_int_5_bar(struct S2_int_5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S3_int_5_bar(struct S3_int_5 *this);
+// CHECK-NEXT:static void struct_S3_int_5_bar(struct S3_int_5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S4_int_5_bar(struct S4_int_5 *this);
+// CHECK-NEXT:static void struct_S4_int_5_bar(struct S4_int_5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S4_int_n5_bar(struct S4_int_n5 *this);
+// CHECK-NEXT:static void struct_S4_int_n5_bar(struct S4_int_n5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S5_5_bar(struct S5_5 *this);
+// CHECK-NEXT:static void struct_S5_5_bar(struct S5_5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S5_n5_bar(struct S5_n5 *this);
+// CHECK-NEXT:static void struct_S5_n5_bar(struct S5_n5 *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S6_5_int_bar(struct S6_5_int *this);
+// CHECK-NEXT:static void struct_S6_5_int_bar(struct S6_5_int *this);
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S6_n5_int_bar(struct S6_n5_int *this);
+// CHECK-NEXT:static void struct_S6_n5_int_bar(struct S6_n5_int *this);
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:    int a1_0 = foo1_int_5();
@@ -176,74 +176,74 @@ int main() {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo1_int_5(void) {
+// CHECK-NEXT:static int foo1_int_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo1_int_n5(void) {
+// CHECK-NEXT:static int foo1_int_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:unsigned int __attribute__((weak)) foo2_int_5(void) {
+// CHECK-NEXT:static unsigned int foo2_int_5(void) {
 // CHECK-NEXT:    return 5U;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:long long __attribute__((weak)) foo3_int_5(void) {
+// CHECK-NEXT:static long long foo3_int_5(void) {
 // CHECK-NEXT:    return 5LL;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo4_int_5(void) {
+// CHECK-NEXT:static int foo4_int_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo4_int_n5(void) {
+// CHECK-NEXT:static int foo4_int_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
 
-// CHECK-NEXT:int __attribute__((weak)) foo5_5(void) {
+// CHECK-NEXT:static int foo5_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo5_n5(void) {
+// CHECK-NEXT:static int foo5_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo6_5_int(void) {
+// CHECK-NEXT:static int foo6_5_int(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:int __attribute__((weak)) foo6_n5_int(void) {
+// CHECK-NEXT:static int foo6_n5_int(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S1_int_5_bar(struct S1_int_5 *this) {
+// CHECK-NEXT:static void struct_S1_int_5_bar(struct S1_int_5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S1_int_n5_bar(struct S1_int_n5 *this) {
+// CHECK-NEXT:static void struct_S1_int_n5_bar(struct S1_int_n5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S2_int_5_bar(struct S2_int_5 *this) {
+// CHECK-NEXT:static void struct_S2_int_5_bar(struct S2_int_5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S3_int_5_bar(struct S3_int_5 *this) {
+// CHECK-NEXT:static void struct_S3_int_5_bar(struct S3_int_5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S4_int_5_bar(struct S4_int_5 *this) {
+// CHECK-NEXT:static void struct_S4_int_5_bar(struct S4_int_5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S4_int_n5_bar(struct S4_int_n5 *this) {
+// CHECK-NEXT:static void struct_S4_int_n5_bar(struct S4_int_n5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S5_5_bar(struct S5_5 *this) {
+// CHECK-NEXT:static void struct_S5_5_bar(struct S5_5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S5_n5_bar(struct S5_n5 *this) {
+// CHECK-NEXT:static void struct_S5_n5_bar(struct S5_n5 *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S6_5_int_bar(struct S6_5_int *this) {
+// CHECK-NEXT:static void struct_S6_5_int_bar(struct S6_5_int *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:void __attribute__((weak)) struct_S6_n5_int_bar(struct S6_n5_int *this) {
+// CHECK-NEXT:static void struct_S6_n5_int_bar(struct S6_n5_int *this) {
 // CHECK-NEXT:}
 // CHECK-EMPTY:

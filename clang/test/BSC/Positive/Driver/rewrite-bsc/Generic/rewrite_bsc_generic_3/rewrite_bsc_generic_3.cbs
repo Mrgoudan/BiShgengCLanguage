@@ -30,9 +30,9 @@ int main() {
 // CHECK-NEXT:  int blood;
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:struct Block __attribute__((weak)) bar_int_int(int a, int b);
+// CHECK-NEXT:static struct Block bar_int_int(int a, int b);
 // CHECK-EMPTY:
-// CHECK-NEXT:struct Block __attribute__((weak)) bar_double_float(double a, float b);
+// CHECK-NEXT:static struct Block bar_double_float(double a, float b);
 // CHECK-EMPTY:
 // CHECK-NEXT:int main(void) {
 // CHECK-NEXT:  struct Block br1 = bar_int_int(1, 2);
@@ -40,7 +40,7 @@ int main() {
 // CHECK-NEXT:  return 0;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:struct Block __attribute__((weak)) bar_int_int(int a, int b)   {
+// CHECK-NEXT:static struct Block bar_int_int(int a, int b)   {
 // CHECK-NEXT:      struct Block grass = {"green", 1};
 // CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
 // CHECK-NEXT:      struct Block oak;
@@ -49,7 +49,7 @@ int main() {
 // CHECK-NEXT:      return grass;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
-// CHECK-NEXT:struct Block __attribute__((weak)) bar_double_float(double a, float b)   {
+// CHECK-NEXT:static struct Block bar_double_float(double a, float b)   {
 // CHECK-NEXT:      struct Block grass = {"green", 1};
 // CHECK-NEXT:      struct Block obsidian = {.color = "black", .blood = 100};
 // CHECK-NEXT:      struct Block oak;

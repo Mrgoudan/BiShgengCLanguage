@@ -21,15 +21,15 @@ int main() {
 // CHECK-NEXT:     int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
-// CHECK-NEXT: int __attribute__((weak)) struct_A_int_f(void);
+// CHECK-NEXT: static int struct_A_int_f(void);
 // CHECK-EMPTY: 
-// CHECK-NEXT: void __attribute__((weak)) struct_A_int_D( struct A_int this);
+// CHECK-NEXT: static void struct_A_int_D( struct A_int this);
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {
 // CHECK-NEXT:     int a = struct_A_int_f();
 // CHECK-NEXT:     return a - 1;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: int __attribute__((weak)) struct_A_int_f(void) {
+// CHECK-NEXT: static int struct_A_int_f(void) {
 // CHECK-NEXT:     return 1;
 // CHECK-NEXT: }
