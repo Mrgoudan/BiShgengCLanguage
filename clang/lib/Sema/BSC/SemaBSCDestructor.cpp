@@ -165,17 +165,24 @@ public:
   DeclRefFinder(Sema &SemaRef) : SemaRef(SemaRef) {}
 
   bool VisitDeclRefExpr(DeclRefExpr *E) {
-    const Type *VarDeclType = E->getType().getCanonicalType().getTypePtr();
-    if (VarDeclType->isOwnedStructureType()) {
-      RecordDecl *ThisRD = cast<RecordType>(VarDeclType)->getDecl();
-      BSCMethodDecl *DestructorToCall = ThisRD->getBSCDestructor();
-      if (DestructorToCall) {
-        if (isa<VarDecl>(E->getDecl())) {
-          MovedDecls.push_back(cast<VarDecl>(E->getDecl()));
-        }
-      }
+    if (isa<VarDecl>(E->getDecl()) &&
+        IsVarDeclWithOwnedStructureType(cast<VarDecl>(E->getDecl()))) {
+      MovedDecls.push_back(cast<VarDecl>(E->getDecl()));
     }
     return true;
+  }
+  bool VisitBinaryOperator(const BinaryOperator *BOp) {
+    if (isa<DeclRefExpr>(BOp->getLHS())) {
+      auto E = cast<DeclRefExpr>(BOp->getLHS());
+      if (isa<VarDecl>(E->getDecl()) &&
+          IsVarDeclWithOwnedStructureType(cast<VarDecl>(E->getDecl()))) {
+        ReAssignedDecls.push_back(cast<VarDecl>(E->getDecl()));
+      }
+    }
+    if (BOp->getRHS()) {
+      RecursiveASTVisitor<DeclRefFinder>::TraverseStmt(BOp->getRHS());
+    }
+    return false;
   }
 
   bool VisitUnaryOperator(const UnaryOperator *UOp) { return false; }
@@ -183,6 +190,7 @@ public:
   bool VisitMemberExpr(const MemberExpr *MA) { return false; }
 
   llvm::SmallVector<VarDecl *> MovedDecls;
+  llvm::SmallVector<VarDecl *> ReAssignedDecls;
 };
 llvm::DenseMap<CompoundStmt *, CompoundStmt *> ReplaceCompoundMap;
 
@@ -267,10 +275,10 @@ public:
   }
 
   // Create xx_is_moved = 1;
-  Stmt *MoveFlagStatusUpdate(VarDecl *D) {
+  Stmt *MoveFlagStatusUpdate(VarDecl *D, uint64_t Value = 1) {
     Expr *LHS = SemaRef.BuildDeclRefExpr(FlagMap[D], FlagMap[D]->getType(),
                                          VK_LValue, SourceLocation());
-    llvm::APInt One(SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), 1);
+    llvm::APInt One(SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), Value);
     Expr *IInit = IntegerLiteral::Create(
         SemaRef.Context, One, SemaRef.Context.IntTy, SourceLocation());
     IInit = SemaRef
@@ -331,6 +339,9 @@ public:
       if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
         DeclRefFinder Finder = DeclRefFinder(SemaRef);
         Finder.TraverseStmt(S);
+        for (auto *D : Finder.ReAssignedDecls) {
+          Statements.push_back(MoveFlagStatusUpdate(D, 0));
+        }
         for (auto *D : Finder.MovedDecls) {
           Statements.push_back(MoveFlagStatusUpdate(D));
         }
@@ -368,6 +379,9 @@ public:
     if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
       DeclRefFinder Finder = DeclRefFinder(SemaRef);
       Finder.TraverseStmt(S);
+      for (auto *D : Finder.ReAssignedDecls) {
+        Statements.push_back(MoveFlagStatusUpdate(D, 0));
+      }
       for (auto *D : Finder.MovedDecls) {
         Statements.push_back(MoveFlagStatusUpdate(D));
       }
@@ -497,12 +511,21 @@ public:
 
   bool VisitReturnStmt(ReturnStmt *RS) {
     if (!VisitCompoundStmtStack.empty()) {
+      DeclRefFinder Finder = DeclRefFinder(SemaRef);
+      Finder.TraverseStmt(RS);
+      SmallVector<VarDecl *> MovedDecls = Finder.MovedDecls;
       std::stack<CompoundStmt *> tempStack = VisitCompoundStmtStack;
       SmallVector<VarDecl *> newVarDecls;
       while (!tempStack.empty()) {
         auto CompoundStmt = tempStack.top();
-        newVarDecls.insert(newVarDecls.begin(), CS2Vars[CompoundStmt].begin(),
-                           CS2Vars[CompoundStmt].end());
+        for (auto iter = CS2Vars[CompoundStmt].begin();
+             iter != CS2Vars[CompoundStmt].end(); iter++) {
+          VarDecl *D = *iter;
+          if (std::find(MovedDecls.begin(), MovedDecls.end(), D) ==
+              MovedDecls.end()) {
+            newVarDecls.insert(newVarDecls.end(), D);
+          }
+        }
         tempStack.pop();
       }
       if (newVarDecls.size() != 0) {
