@@ -1,4 +1,17 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
+union U1 {
+    int a;
+    int *borrow p; // expected-error {{type of union field cannot qualified by 'borrow'}}
+};
+
+struct R {
+    int *borrow p;
+};
+union U2 {
+    struct R r;  // expected-error {{type of union field cannot qualified by 'borrow'(even indirectly), 'struct R' contains 'borrow' type}}
+    int *borrow p; // expected-error {{type of union field cannot qualified by 'borrow'}}
+};
+
 struct S {
   int num;
   int * owned p;

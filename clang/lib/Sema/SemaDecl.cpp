@@ -17967,9 +17967,11 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclSt
       << DeclSpec::getSpecifierName(TSCS);
 
   #if ENABLE_BSC
-  // BSC union fileds owned type check
-  if (getLangOpts().BSC && Tag->isUnion())
+  // BSC union fileds owned and borrow type check
+  if (getLangOpts().BSC && Tag->isUnion()) {
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "union field");
+    CheckBorrowOrIndirectBorrowType(D.getIdentifierLoc(), T, "union field");
+  }
   #endif
 
   // Check to see if this name was declared as a member previously

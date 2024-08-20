@@ -6398,21 +6398,23 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       if (!ImplicitArg)
         return true;
 
-      if (!Member->isArrow()) { // foo.getA
-        ImplicitArg = UnaryOperator::Create(
-            this->Context, ImplicitArg, UO_AddrOf,
-            this->Context.getPointerType(ImplicitArg->getType()), VK_PRValue,
-            OK_Ordinary, SourceLocation(), false,
-            this->CurFPFeatureOverrides());
-      }
-
       const FunctionProtoType *FPT =
           dyn_cast<FunctionProtoType>(Member->getType());
-      auto typeQual = FPT->getParamType(0)
-                          .getTypePtr()
-                          ->getPointeeType()
-                          .getCVRQualifiers();
-      if (typeQual & Qualifiers::Const || typeQual & Qualifiers::Volatile) {
+      QualType thisQPT = FPT->getParamType(0);
+      if (!Member->isArrow()) { // foo.getA
+        // When the first parameter `this` of member function is borrow qualified,
+        // add `&mut` or `&const` when desugaring.  
+        UnaryOperator::Opcode UO = 
+          thisQPT.isBorrowQualified() ? (thisQPT.isConstBorrow() ? UO_AddrConst : UO_AddrMut) : UO_AddrOf;
+        ImplicitArg = UnaryOperator::Create(
+          this->Context, ImplicitArg, UO,
+          this->Context.getPointerType(ImplicitArg->getType()), VK_PRValue,
+          OK_Ordinary, SourceLocation(), false,
+          this->CurFPFeatureOverrides());
+      }
+
+      auto typeQual = thisQPT.getTypePtr()->getPointeeType().getCVRQualifiers();
+      if (typeQual & Qualifiers::Const || typeQual & Qualifiers::Volatile || thisQPT.isBorrowQualified()) {
         ImplicitCastExpr *Implict = ImplicitCastExpr::Create(
             this->Context, FPT->getParamType(0), CK_NoOp, ImplicitArg, nullptr,
             VK_PRValue, FPOptionsOverride());
