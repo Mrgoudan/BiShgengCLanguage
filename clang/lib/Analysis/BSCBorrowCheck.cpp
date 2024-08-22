@@ -339,10 +339,10 @@ static std::pair<const Expr *, std::string> getMemberField(const MemberExpr *ME,
       borrowFlag |= me->getType().isBorrowQualified();
       base = me->getBase();
       memberFieldName =
-          me->getMemberNameInfo().getAsString() + "." + memberFieldName;
+          "." + me->getMemberNameInfo().getAsString() + memberFieldName;
       if (borrowFlag) {
         borrowFieldName =
-            me->getMemberNameInfo().getAsString() + "." + borrowFieldName;
+            "." + me->getMemberNameInfo().getAsString() + borrowFieldName;
       }
     } else if (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(base)) {
       base = ice->getSubExpr();
@@ -915,6 +915,38 @@ FindBorrowFieldsOfStruct(RecordDecl *RD,
   }
 }
 
+static void FindNakedPointerFieldsOfStructDFS(
+    FieldDecl *CurrFD, std::string FP,
+    llvm::SmallVector<std::string>
+        &NakedPointerFieldsOfStruct) {
+  QualType FQT = CurrFD->getType().getCanonicalType();
+  if (FQT->isPointerType() && !FQT.isOwnedQualified() && !FQT.isBorrowQualified())
+    NakedPointerFieldsOfStruct.push_back(FP + "." + CurrFD->getNameAsString());
+  // If field is struct or struct pointer, find fields of this struct.
+  RecordDecl *RD = nullptr;
+  if (auto RT = dyn_cast<RecordType>(FQT))
+    RD = RT->getDecl();
+  else if (FQT->isPointerType()) 
+    if (auto RT = dyn_cast<RecordType>(FQT->getPointeeType())) 
+      RD = RT->getDecl();
+  if (RD)
+    for (FieldDecl *FD : RD->fields())
+      FindNakedPointerFieldsOfStructDFS(FD, FP + "." + CurrFD->getNameAsString(), NakedPointerFieldsOfStruct);
+}
+
+static void
+FindNakedPointerFieldsOfStruct(RecordDecl *RD,
+                               llvm::SmallVector<std::string>
+                                   &NakedPointerFieldsOfStruct) {
+  for (FieldDecl *FD : RD->fields()) {
+    QualType FQT = FD->getType().getCanonicalType();
+    if (FQT->isPointerType() && !FQT.isOwnedQualified() && !FQT.isBorrowQualified())
+      NakedPointerFieldsOfStruct.push_back("." + FD->getNameAsString());
+    else if (FQT->isRecordType() || (FQT->isPointerType() && isa<RecordType>(FQT->getPointeeType())))
+      FindNakedPointerFieldsOfStructDFS(FD, "", NakedPointerFieldsOfStruct);
+  }
+}
+
 void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
   // A borrow variable is reassigned, we would handle it like DeclStmt.
   // For example:
@@ -1350,7 +1382,14 @@ void NLLCalculator::VisitMEForFieldPath(
     else if (auto BaseDRE = dyn_cast<DeclRefExpr>(ME->getBase())) {
       VarDecl *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl());
       VDAndFP.first = BaseVD;
-    }
+    } else if (auto BaseICE = dyn_cast<ImplicitCastExpr>(ME->getBase())) {
+      if (auto BaseME = dyn_cast<MemberExpr>(BaseICE->getSubExpr()))
+        VisitMEForFieldPath(BaseME, VDAndFP);
+      else if (auto BaseDRE = dyn_cast<DeclRefExpr>(BaseICE->getSubExpr())) {
+        VarDecl *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl());
+        VDAndFP.first = BaseVD;
+      }
+    } 
   }
 }
 
@@ -1418,7 +1457,7 @@ void NLLCalculator::VisitInitForTargets(
 }
 
 void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
-  QualType QT = VD->getType();
+  QualType QT = VD->getType().getCanonicalType();
   if (QT->isPointerType() && !QT.isOwnedQualified() &&
       !QT.isBorrowQualified()) {
     // For local naked pointer, we create virtual ParentVar as target.
@@ -1435,6 +1474,34 @@ void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
     // Add NLL for virtual ParentVar.
     NLLForAllVars[VirtualVD].push_back(
         NonLexicalLifetimeRange(0, NumElements + 3));
+  }
+  // Build virtual target for all naked pointer fields in struct.
+  RecordDecl *RD = nullptr;
+  if (auto RT = dyn_cast<RecordType>(QT))
+    RD = RT->getDecl();
+  else if (QT->isPointerType()) 
+    if (auto RT = dyn_cast<RecordType>(QT->getPointeeType())) 
+      RD = RT->getDecl();
+  if (RD) {
+    llvm::SmallVector<std::string> NakedPointerFieldsOfStruct;
+    FindNakedPointerFieldsOfStruct(RD, NakedPointerFieldsOfStruct);
+    for (const auto &FieldPath : NakedPointerFieldsOfStruct) {
+      std::string FP = FieldPath;
+      FP.erase(std::remove(FP.begin(), FP.end(), '.'), FP.end());
+      std::string Name = "_ParentVar_" + VD->getNameAsString() + FP;
+      IdentifierInfo *ID = &Ctx.Idents.get(Name);
+      VarDecl *VirtualVD =
+          VarDecl::Create(Ctx, DC, VD->getBeginLoc(), VD->getLocation(), ID,
+                          QualType(QT->getPointeeType()), nullptr, SC_None);
+      // Update previous NLL whose target is this naked pointer VD to virtual
+      // ParentVar.
+      llvm::SmallVector<BorrowTargetInfo> VirtualTarget;
+      VirtualTarget.push_back(BorrowTargetInfo(VirtualVD));
+      UpdateNLLWhenTargetFound(BorrowTargetInfo(VD, FieldPath), VirtualTarget);
+      // Add NLL for virtual ParentVar.
+      NLLForAllVars[VirtualVD].push_back(
+          NonLexicalLifetimeRange(0, NumElements + 3));
+    }
   }
   if (!QT.isBorrowQualified()) {
     // For no-borrow local variable, its NLL is continous, and ScopeBegin marks
@@ -1671,6 +1738,7 @@ void BorrowCheckImpl::BuildParamTarget(
              BorrowTargetInfo> &ParamTarget) {
   for (ParmVarDecl *PVD : fd.parameters()) {
     QualType PQT = PVD->getType().getCanonicalType();
+    bool HasVirtualTarget = false;
     if (PQT->isPointerType() && !PQT.isOwnedQualified()) {
       std::string Name = "_ParentVar_" + PVD->getNameAsString();
       IdentifierInfo *ID = &Ctx.Idents.get(Name);
@@ -1686,7 +1754,7 @@ void BorrowCheckImpl::BuildParamTarget(
       } else
         ParamTarget[std::tuple<ParmVarDecl *, std::string, BorrowKind>(
             PVD, "", BorrowKind::NoBorrow)] = BorrowTargetInfo(VD);
-      continue;
+      HasVirtualTarget = true;
     } else if (PQT->hasBorrowFields()) {
       if (auto RT = dyn_cast<RecordType>(PQT)) {
         RecordDecl *RD = RT->getDecl();
@@ -1711,8 +1779,32 @@ void BorrowCheckImpl::BuildParamTarget(
         }
       }
     }
-    ParamTarget[std::tuple<ParmVarDecl *, std::string, BorrowKind>(
-        PVD, "", BorrowKind::NoBorrow)] = BorrowTargetInfo();
+    if (!HasVirtualTarget)
+      ParamTarget[std::tuple<ParmVarDecl *, std::string, BorrowKind>(
+          PVD, "", BorrowKind::NoBorrow)] = BorrowTargetInfo();
+    // Build virtual target for all naked pointer fields in struct.
+    RecordDecl *RD = nullptr;
+    if (auto RT = dyn_cast<RecordType>(PQT))
+      RD = RT->getDecl();
+    else if (PQT->isPointerType()) 
+      if (auto RT = dyn_cast<RecordType>(PQT->getPointeeType())) 
+        RD = RT->getDecl();
+    if (RD) {
+      llvm::SmallVector<std::string> NakedPointerFieldsOfStruct;
+      FindNakedPointerFieldsOfStruct(RD, NakedPointerFieldsOfStruct);
+      for (const auto &FieldPath : NakedPointerFieldsOfStruct) {
+        std::string FP = FieldPath;
+        FP.erase(std::remove(FP.begin(), FP.end(), '.'), FP.end());
+        std::string Name = "_ParentVar_" + PVD->getNameAsString() + FP;
+        IdentifierInfo *ID = &Ctx.Idents.get(Name);
+        VarDecl *VD = VarDecl::Create(
+            Ctx, const_cast<DeclContext *>(fd.getDeclContext()),
+            PVD->getBeginLoc(), PVD->getLocation(), ID, QualType(), nullptr,
+            SC_None);
+        ParamTarget[std::tuple<ParmVarDecl *, std::string, BorrowKind>(
+            PVD, FieldPath, BorrowKind::NoBorrow)] = BorrowTargetInfo(VD);
+      }
+    }
   }
 }
 

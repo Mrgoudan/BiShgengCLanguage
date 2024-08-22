@@ -1,0 +1,105 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+struct P {
+  int *b;
+};
+
+struct Q {
+  struct P g;
+};
+
+int *borrow test1(struct P *borrow p) {
+    return &mut *p->b;
+}
+
+int *borrow test2(struct P *p, int *borrow p1) {
+    return &mut *p->b;
+}
+
+int *borrow test3(struct P p, int *borrow p1) {
+    return &mut *p.b;
+}
+
+int *borrow test4(struct Q *borrow q) {
+    return &mut *q->g.b;
+}
+
+int *borrow test5(struct Q *q, int *borrow p) {
+    return &mut *q->g.b;
+}
+
+int *borrow test6(struct Q q, int *borrow p) {
+    return &mut *q.g.b;
+}
+
+int *borrow test7(int *borrow p) {
+    struct Q q;
+    int *borrow r = &mut *q.g.b;
+    return r;
+}
+
+int *borrow test8(int *borrow p) {
+    struct Q q;
+    struct Q *q1 = &q;
+    int *borrow r = &mut *q1->g.b;
+    return r;
+}
+
+int *borrow test9(int *borrow p) {
+    struct Q q;
+    struct Q *borrow q1 = &mut q;
+    int *borrow r = &mut *q1->g.b;
+    return r;
+}
+
+int *borrow test10(struct P *borrow p, int index) {
+    return &mut p->b[index];
+}
+
+int *borrow test11(struct P *p, int index, int *borrow p1) {
+    return &mut p->b[index];
+}
+
+int *borrow test12(struct P p, int index, int *borrow p1) {
+    return &mut p.b[index];
+}
+
+int *borrow test13(struct Q *borrow q, int index) {
+    return &mut q->g.b[index];
+}
+
+int *borrow test14(struct Q *q, int index, int *borrow p) {
+    return &mut q->g.b[index];
+}
+
+int *borrow test15(struct Q q, int index, int *borrow p) {
+    return &mut q.g.b[index];
+}
+
+int main() {
+  int local = 5;
+  struct P p = { .b = &local };
+  struct Q q = { .g = p };
+  test1(&mut p);
+  test2(&p, &mut local);
+  test3(p, &mut local);
+  test4(&mut q);
+  test5(&q, &mut local);
+  test6(q, &mut local);
+  test7(&mut local);
+  test8(&mut local);
+  test9(&mut local);
+  test10(&mut p, 5);
+  test11(&p, 5, &mut local);
+  test12(p, 5, &mut local);
+  test13(&mut q, 5);
+  test14(&q, 5, &mut local);
+  test15(q, 5, &mut local);
+  return 0;
+}
