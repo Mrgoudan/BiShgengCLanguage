@@ -308,6 +308,9 @@ bool Sema::IsUnsafeType(QualType Type) {
   if (Type->isUnionType()) {
     return true;
   }
+  if (Type->isOwnedStructureType()) {
+    return false;
+  }
   if (Type->isStructureType()) {
     if (const auto *RT = Type->getAs<RecordType>()) {
       RecordDecl *RD = RT->getDecl();
