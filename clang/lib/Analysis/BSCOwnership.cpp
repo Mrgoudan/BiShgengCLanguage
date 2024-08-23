@@ -49,6 +49,16 @@ public:
 // Common static functions.
 //===----------------------------------------------------------------------===//
 
+static bool IsCallExpr(Expr *E) {
+  if (isa<CallExpr>(E))
+    return true;
+
+  if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    return isa<CallExpr>(ICE->getSubExpr());
+  }
+  return false;
+}
+
 // IsTrackedType judges if the status of a variable needs to be tracked.
 // We track 3 kind of variable according to its type:
 // 1. the basic owned pointer type such as `int * owned p`
@@ -1626,7 +1636,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     Expr *LHS = BO->getLHS();
     Expr *RHS = BO->getRHS();
 
-    bool IsCall = dyn_cast_or_null<CallExpr>(RHS);
+    bool IsCall = IsCallExpr(RHS);
     if (!IsCall) {
       op = Move;
       Visit(RHS);
@@ -1698,7 +1708,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
         stat.setToOwned(VD);
 
         // manipulate the init expr if it is not CallExpr
-        bool IsCall = dyn_cast_or_null<CallExpr>(Init);
+        bool IsCall = IsCallExpr(Init);
         if (!IsCall) {
           op = Move;
           Visit(Init);
@@ -1710,12 +1720,13 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
 }
 
 void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
-  Expr *RV = RS->getRetValue();
-  bool IsCall = dyn_cast_or_null<CallExpr>(RV);
-  if (RV && !IsCall) {
-    op = Move;
-    Visit(RV);
-    op = None;
+  if (Expr *RV = RS->getRetValue()) {
+    bool IsCall = IsCallExpr(RV);
+    if (RV && !IsCall) {
+      op = Move;
+      Visit(RV);
+      op = None;
+    }
   }
 }
 
