@@ -82,10 +82,12 @@ public:
     void setToMoved(const Expr *E);
 
     llvm::SmallVector<DiagInfo, 3> checkOPSUse(const VarDecl *VD,
-                                               const SourceLocation &Loc);
+                                               const SourceLocation &Loc,
+                                               bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkOPSFieldUse(const VarDecl *VD,
                                                     const SourceLocation &Loc,
-                                                    std::string fullFieldName);
+                                                    std::string fullFieldName,
+                                                    bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkOPSAssign(const VarDecl *VD,
                                                   const SourceLocation &Loc);
     llvm::SmallVector<DiagInfo, 3>
@@ -93,10 +95,12 @@ public:
                         std::string fullFieldName);
 
     llvm::SmallVector<DiagInfo, 3> checkSUse(const VarDecl *VD,
-                                             const SourceLocation &Loc);
+                                             const SourceLocation &Loc,
+                                             bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkSFieldUse(const VarDecl *VD,
                                                   const SourceLocation &Loc,
-                                                  std::string fullFieldName);
+                                                  std::string fullFieldName,
+                                                  bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkSAssign(const VarDecl *VD,
                                                 const SourceLocation &Loc);
     llvm::SmallVector<DiagInfo, 3> checkSFieldAssign(const VarDecl *VD,
@@ -104,10 +108,12 @@ public:
                                                      std::string fullFieldName);
 
     llvm::SmallVector<DiagInfo, 3> checkBOPUse(const VarDecl *VD,
-                                               const SourceLocation &Loc);
+                                               const SourceLocation &Loc,
+                                               bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkBOPFieldUse(const VarDecl *VD,
                                                     const SourceLocation &Loc,
-                                                    std::string fullFieldName);
+                                                    std::string fullFieldName,
+                                                    bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkBOPAssign(const VarDecl *VD,
                                                   const SourceLocation &Loc);
     llvm::SmallVector<DiagInfo, 3>

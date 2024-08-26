@@ -775,7 +775,8 @@ string Ownership::OwnershipStatus::collectMovedFields(const VarDecl *VD) {
 
 SmallVector<DiagInfo, 3>
 Ownership::OwnershipStatus::checkOPSUse(const VarDecl *VD,
-                                        const SourceLocation &Loc) {
+                                        const SourceLocation &Loc,
+                                        bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   // check the status of the variable
@@ -794,16 +795,17 @@ Ownership::OwnershipStatus::checkOPSUse(const VarDecl *VD,
                                VD->getNameAsString(), collectMovedFields(VD)));
     }
   }
-  // change the status to moved
-  OPSOwnedOwnedFields[VD].clear();
-  resetAll(VD);
-  set(VD, Ownership::Status::Moved);
-
+  if (!isGetAddr) {
+    // change the status to moved
+    OPSOwnedOwnedFields[VD].clear();
+    resetAll(VD);
+    set(VD, Ownership::Status::Moved);
+  }
   return diags;
 }
 
 SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldUse(
-    const VarDecl *VD, const SourceLocation &Loc, string fullFieldName) {
+    const VarDecl *VD, const SourceLocation &Loc, string fullFieldName, bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   if (OPSAllOwnedFields[VD].count(fullFieldName)) {
@@ -821,22 +823,24 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldUse(
       diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfPartiallyMoved,
                                VD->getNameAsString(), collectMovedFields(VD)));
     }
-    // change the status of the fields
-    OPSOwnedOwnedFields[VD].erase(fullFieldName);
-    // remove ownedPrefixStrs from OPSOwnedOwnedFields
-    for (auto str : ownedPrefixStrs) {
-      OPSOwnedOwnedFields[VD].erase(str);
-    }
-    if (OPSAllOwnedFields[VD].size() != OPSOwnedOwnedFields[VD].size()) {
-      if (!is(VD, Ownership::Status::Moved)) {
-        resetAll(VD);
-        set(VD, Ownership::Status::PartialMoved);
+    if (!isGetAddr) {
+      // change the status of the fields
+      OPSOwnedOwnedFields[VD].erase(fullFieldName);
+      // remove ownedPrefixStrs from OPSOwnedOwnedFields
+      for (auto str : ownedPrefixStrs) {
+        OPSOwnedOwnedFields[VD].erase(str);
       }
-    }
-    if (OPSOwnedOwnedFields[VD].empty()) {
-      if (!is(VD, Ownership::Status::Moved)) {
-        resetAll(VD);
-        set(VD, Ownership::Status::AllMoved);
+      if (OPSAllOwnedFields[VD].size() != OPSOwnedOwnedFields[VD].size()) {
+        if (!is(VD, Ownership::Status::Moved)) {
+          resetAll(VD);
+          set(VD, Ownership::Status::PartialMoved);
+        }
+      }
+      if (OPSOwnedOwnedFields[VD].empty()) {
+        if (!is(VD, Ownership::Status::Moved)) {
+          resetAll(VD);
+          set(VD, Ownership::Status::AllMoved);
+        }
       }
     }
   }
@@ -964,7 +968,8 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldAssign(
 
 SmallVector<DiagInfo, 3>
 Ownership::OwnershipStatus::checkSUse(const VarDecl *VD,
-                                      const SourceLocation &Loc) {
+                                      const SourceLocation &Loc,
+                                      bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   // owned struct special manipulation
@@ -978,20 +983,23 @@ Ownership::OwnershipStatus::checkSUse(const VarDecl *VD,
                                VD->getNameAsString()));
       }
     }
-    resetAll(VD);
-    set(VD, Moved);
+    if (!isGetAddr) {
+      resetAll(VD);
+      set(VD, Moved);
+    }
   }
 
   if (SAllOwnedFields[VD].size() != SOwnedOwnedFields[VD].size() && diags.empty()) {
     diags.push_back(DiagInfo(Loc, InvalidUseOfPartiallyMoved,
                              VD->getNameAsString(), collectMovedFields(VD)));
   }
-  SOwnedOwnedFields[VD].clear();
+  if (!isGetAddr)
+    SOwnedOwnedFields[VD].clear();
   return diags;
 }
 
 SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkSFieldUse(
-    const VarDecl *VD, const SourceLocation &Loc, string fullFieldName) {
+    const VarDecl *VD, const SourceLocation &Loc, string fullFieldName, bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   // owned struct special manipulation
@@ -1019,9 +1027,11 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkSFieldUse(
       diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfPartiallyMoved,
                                VD->getNameAsString(), collectMovedFields(VD)));
     }
-    SOwnedOwnedFields[VD].erase(fullFieldName);
-    for (auto str : ownedPrefixStrs) {
-      SOwnedOwnedFields[VD].erase(str);
+    if (!isGetAddr) {
+      SOwnedOwnedFields[VD].erase(fullFieldName);
+      for (auto str : ownedPrefixStrs) {
+        SOwnedOwnedFields[VD].erase(str);
+      }
     }
   }
 
@@ -1134,7 +1144,8 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkSFieldAssign(
 
 SmallVector<DiagInfo, 3>
 Ownership::OwnershipStatus::checkBOPUse(const VarDecl *VD,
-                                        const SourceLocation &Loc) {
+                                        const SourceLocation &Loc,
+                                        bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   // check the status of the variable
@@ -1156,18 +1167,20 @@ Ownership::OwnershipStatus::checkBOPUse(const VarDecl *VD,
           DiagInfo(Loc, DiagKind::InvalidUseOfAllMoved, VD->getNameAsString()));
     }
   }
-  // change the status to moved
-  if (!is(VD, Uninitialized)) {
-    BOPOwnedOwnedFields[VD].clear();
-    resetAll(VD);
-    set(VD, Ownership::Status::Moved);
+  if (!isGetAddr) {
+    // change the status to moved
+    if (!is(VD, Uninitialized)) {
+      BOPOwnedOwnedFields[VD].clear();
+      resetAll(VD);
+      set(VD, Ownership::Status::Moved);
+    }
   }
 
   return diags;
 }
 
 SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkBOPFieldUse(
-    const VarDecl *VD, const SourceLocation &Loc, string fullFieldName) {
+    const VarDecl *VD, const SourceLocation &Loc, string fullFieldName, bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   // check field's parent
@@ -1203,22 +1216,24 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkBOPFieldUse(
                                fullFieldName + VD->getNameAsString(),
                                collectMovedFields(VD)));
     }
-    // change the status of the fields
-    BOPOwnedOwnedFields[VD].erase(fullFieldName);
-    // remove ownedPrefixStrs from BOPOwnedOwnedFields
-    for (auto str : ownedPrefixStrs) {
-      BOPOwnedOwnedFields[VD].erase(str);
-    }
-    if (BOPAllOwnedFields[VD].size() != BOPOwnedOwnedFields[VD].size()) {
-      if (!is(VD, Ownership::Status::Moved)) {
-        resetAll(VD);
-        set(VD, Ownership::Status::PartialMoved);
+    if (!isGetAddr) {
+      // change the status of the fields
+      BOPOwnedOwnedFields[VD].erase(fullFieldName);
+      // remove ownedPrefixStrs from BOPOwnedOwnedFields
+      for (auto str : ownedPrefixStrs) {
+        BOPOwnedOwnedFields[VD].erase(str);
       }
-    }
-    if (BOPOwnedOwnedFields[VD].empty()) {
-      if (!is(VD, Ownership::Status::Moved)) {
-        resetAll(VD);
-        set(VD, Ownership::Status::AllMoved);
+      if (BOPAllOwnedFields[VD].size() != BOPOwnedOwnedFields[VD].size()) {
+        if (!is(VD, Ownership::Status::Moved)) {
+          resetAll(VD);
+          set(VD, Ownership::Status::PartialMoved);
+        }
+      }
+      if (BOPOwnedOwnedFields[VD].empty()) {
+        if (!is(VD, Ownership::Status::Moved)) {
+          resetAll(VD);
+          set(VD, Ownership::Status::AllMoved);
+        }
       }
     }
   }
@@ -1527,7 +1542,7 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   const CFGBlock *currentBlock;
   OwnershipDiagReporter &reporter;
 
-  enum Operation { None, Assign, Move };
+  enum Operation { None, Assign, Move, GetAddr };
   mutable Operation op = Operation::None;
 
 public:
@@ -1572,7 +1587,7 @@ void TransferFunctions::VisitMemberExpr(MemberExpr *ME) {
   }
 
   // manipulate struct member expr use
-  if (op == Move) {
+  if (op == Move || op == GetAddr) {
     if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first))
       HandleDREUse(DRE, memberField.second);
   }
@@ -1583,7 +1598,7 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DRE) {
     HandleDREAssign(DRE, "");
   }
 
-  if (op == Move) {
+  if (op == Move || op == GetAddr) {
     HandleDREUse(DRE, "");
   }
 }
@@ -1594,7 +1609,7 @@ void TransferFunctions::VisitDeclRefExpr(const DeclRefExpr *DRE,
     HandleDREAssign(DRE, fieldName);
   }
 
-  if (op == Move) {
+  if (op == Move || op == GetAddr) {
     HandleDREUse(DRE, fieldName);
   }
 }
@@ -1625,10 +1640,15 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
     VisitDeclRefExpr(DRE, suffix);
     return;
   }
-  if (UO->getOpcode() != UO_AddrConstDeref &&
-      UO->getOpcode() != UO_AddrMutDeref &&
-      UO->getOpcode() != UO_AddrOf)
-    Visit(UO->getSubExpr());
+  if (UO->getOpcode() == UO_AddrConstDeref ||
+      UO->getOpcode() == UO_AddrMutDeref ||
+      UO->getOpcode() == UO_AddrConst ||
+      UO->getOpcode() == UO_AddrMut ||
+      UO->getOpcode() == UO_AddrOf) {
+    op = GetAddr;
+  }
+  Visit(UO->getSubExpr());
+  op = None;
 }
 
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
@@ -1650,11 +1670,11 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
 }
 
 void TransferFunctions::VisitCallExpr(CallExpr *CE) {
-  op = Move;
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
+    op = Move;
     Visit(*it);
+    op = None;
   }
-  op = None;
 }
 
 void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
@@ -1803,19 +1823,19 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     if (stat.OPSStatus.count(VD)) {
       if (fullFieldName == "") {
         SmallVector<DiagInfo, 3> diags =
-            stat.checkOPSUse(VD, DRE->getLocation());
+            stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr);
         reporter.addDiags(diags);
       } else if (fullFieldName == "*") {
         for (string field : stat.OPSAllOwnedFields[VD]) {
           if (field.find('.') == string::npos) {
             SmallVector<DiagInfo, 3> diags =
-                stat.checkOPSFieldUse(VD, DRE->getLocation(), field);
+                stat.checkOPSFieldUse(VD, DRE->getLocation(), field, op == GetAddr);
             reporter.addDiags(diags);
           }
         }
       } else {
         SmallVector<DiagInfo, 3> diags =
-            stat.checkOPSFieldUse(VD, DRE->getLocation(), fullFieldName);
+            stat.checkOPSFieldUse(VD, DRE->getLocation(), fullFieldName, op == GetAddr);
         reporter.addDiags(diags);
       }
     }
@@ -1823,11 +1843,11 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     // situation 3 and 4
     if (stat.SStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<DiagInfo, 3> diags = stat.checkSUse(VD, DRE->getLocation());
+        SmallVector<DiagInfo, 3> diags = stat.checkSUse(VD, DRE->getLocation(), op == GetAddr);
         reporter.addDiags(diags);
       } else {
         SmallVector<DiagInfo, 3> diags =
-            stat.checkSFieldUse(VD, DRE->getLocation(), fullFieldName);
+            stat.checkSFieldUse(VD, DRE->getLocation(), fullFieldName, op == GetAddr);
         reporter.addDiags(diags);
       }
     }
@@ -1836,11 +1856,11 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     if (stat.BOPStatus.count(VD)) {
       if (fullFieldName == "") {
         SmallVector<DiagInfo, 3> diags =
-            stat.checkBOPUse(VD, DRE->getLocation());
+            stat.checkBOPUse(VD, DRE->getLocation(), op == GetAddr);
         reporter.addDiags(diags);
       } else {
         SmallVector<DiagInfo, 3> diags =
-            stat.checkBOPFieldUse(VD, DRE->getLocation(), fullFieldName);
+            stat.checkBOPFieldUse(VD, DRE->getLocation(), fullFieldName, op == GetAddr);
         reporter.addDiags(diags);
       }
     }

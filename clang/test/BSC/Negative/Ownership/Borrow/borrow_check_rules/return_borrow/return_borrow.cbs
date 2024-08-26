@@ -95,8 +95,7 @@ int* borrow test12(int* borrow p) {
   int *owned oriPtr = safe_malloc<int>(0);
   if (local > 0) {
     free_owned<int>(oriPtr);
-    return &mut * oriPtr;  /* expected-error{{Return value cannot be a borrow from local variable 'oriPtr'}} 
-                              expected-error{{borrow pointer variable '_ReturnVar' lives longer than target variable}} */
+    return &mut * oriPtr; // expected-error {{use of moved value: `oriPtr`}}
   }
   free_owned<int>(oriPtr);
   return p;
@@ -106,8 +105,7 @@ int* borrow test13(int* borrow p) {
   int *owned oriPtr = safe_malloc<int>(0);
   if (1) {
     free_owned<int>(oriPtr);
-    return &mut * oriPtr;   /* expected-error{{Return value cannot be a borrow from local variable 'oriPtr'}} 
-                              expected-error{{borrow pointer variable '_ReturnVar' lives longer than target variable}} */
+    return &mut * oriPtr; // expected-error {{use of moved value: `oriPtr`}}
   }
   return &mut * oriPtr;  //Dead Code
 }
