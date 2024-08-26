@@ -1,6 +1,7 @@
 // RUN: %clang %s -o %t.output
 // RUN: %t.output
 // expected-no-diagnostics
+#include <stdlib.h>
 
 T* owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );

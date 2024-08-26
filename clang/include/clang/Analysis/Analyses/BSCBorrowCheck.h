@@ -113,6 +113,7 @@ struct BorrowInfo {
   unsigned Begin;
   unsigned End;
   BorrowKind Kind = BorrowKind::NoBorrow;
+  bool Expired = false;
 
   BorrowInfo() {}
   BorrowInfo(std::string targetFieldPath, VarDecl *borrowVD,
@@ -137,6 +138,7 @@ enum BorrowCheckDiagKind {
   ReturnLocal,
   ModifyAfterBeBorrowed,
   ReadAfterBeMutBorrowed,
+  UseExpiredBorrowVar,
 };
 
 struct BorrowCheckDiagInfo {
@@ -202,6 +204,9 @@ private:
         case ReadAfterBeMutBorrowed:
           S.Diag(DI.Loc, diag::err_read_after_be_mut_borrow) << DI.Name;
           S.Diag(DI.PreLoc, diag::note_previous_borrow);
+          break;
+        case UseExpiredBorrowVar:
+          S.Diag(DI.Loc, diag::err_use_expired_borrow_var) << DI.Name;
           break;
         default:
           llvm_unreachable("unknown error type");

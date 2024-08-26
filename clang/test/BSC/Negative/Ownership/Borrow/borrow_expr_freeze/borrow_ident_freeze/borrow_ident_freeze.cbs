@@ -55,7 +55,7 @@ void test_freeze_ident6_0() {
     int * borrow c = &mut a;
     int * borrow d = &mut a;
     int e = *d;
-    int f = *c;
+    int f = *c;                 // expected-error {{Can not use 'c' because expired}}
 }
 
 void test_freeze_ident6_1() {
@@ -159,7 +159,7 @@ int test_freeze_ident15(int * borrow m){
   int * borrow f = &mut *c;         // expected-note {{previous borrow is here}}
   int g = f == e ? *f : *e;         // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
   use(f);
-  use(e);
+  use(e);                           // expected-error {{Can not use 'e' because expired}}
   return 0;
 }
 

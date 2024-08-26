@@ -185,3 +185,5 @@ def err_modify_after_be_borrow : Error<
 def err_read_after_be_mut_borrow : Error<
   "Can not read '%0' because be mut borrowed">;
 def note_previous_borrow : Note<"previous borrow is here">;
+def err_use_expired_borrow_var : Error<
+  "Can not use '%0' because expired">;

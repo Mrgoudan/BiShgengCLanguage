@@ -518,6 +518,29 @@ std::string GetVDRealString(const VarDecl *VD) {
   return str;
 }
 
+// Performing mut borrowing on the same target will render previously borrowed
+// variables invalid
+// @code
+// int * borrow p1 = &mut local;
+// int * borrow p2 = &mut local;
+// use(p2);
+// use(p1);   // p1 is expired
+// @endcode
+void ExpireOtherBorrowInfo(std::list<BorrowInfo> &BList, BorrowInfo CBI) {
+  for (auto it = BList.begin(); it != BList.end(); it++) {
+    if (*it == CBI) {
+      continue;
+    }
+    if (CBI.TargetFieldPath == "") {
+      it->Expired = true;
+    } else if (IsPrefix(CBI.TargetFieldPath, it->TargetFieldPath)) {
+      it->Expired = true;
+    } else if (IsPrefix(it->TargetFieldPath, CBI.TargetFieldPath)) {
+      it->Expired = true;
+    }
+  }
+}
+
 // for mut borrowed variable, only allow use the last alive mut borrow
 // variable. VD is the mut borrow pointer variable
 void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD,
@@ -531,6 +554,13 @@ void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD,
         continue;
       }
       if (it->BorrowVD == VD) {
+        if (it->Expired) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString(), UseExpiredBorrowVar,
+                                 Loc);
+          reporter.addDiagInfo(DI);
+        } else {
+          ExpireOtherBorrowInfo(ActiveBorrowTargetMap[TVD], *it);
+        }
         return;
       } else {
         // Only allow used the last alive mut borrow variable.
@@ -554,6 +584,13 @@ void BorrowRuleChecker::CheckMutBorrowFieldUse(const VarDecl *VD,
     auto it = ActiveBorrowTargetMap[TVD].rbegin();
     while (it != ActiveBorrowTargetMap[TVD].rend()) {
       if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath) {
+        if (it->Expired) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
+                                 UseExpiredBorrowVar, Loc);
+          reporter.addDiagInfo(DI);
+        } else {
+          ExpireOtherBorrowInfo(ActiveBorrowTargetMap[TVD], *it);
+        }
         return;
       }
       // borrow to itself and its parent exist
@@ -590,6 +627,11 @@ void BorrowRuleChecker::CheckConstBorrowVarUse(const VarDecl *VD,
         continue;
       }
       if (it->BorrowVD == VD) {
+        if (it->Expired) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
+                                 UseExpiredBorrowVar, Loc);
+          reporter.addDiagInfo(DI);
+        }
         return;
       }
       if (!(it->Kind == BorrowKind::Immut)) {
@@ -613,6 +655,11 @@ void BorrowRuleChecker::CheckConstBorrowFieldUse(const VarDecl *VD,
     auto it = ActiveBorrowTargetMap[TVD].rbegin();
     while (it != ActiveBorrowTargetMap[TVD].rend()) {
       if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath) {
+        if (it->Expired) {
+          BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
+                                 UseExpiredBorrowVar, Loc);
+          reporter.addDiagInfo(DI);
+        }
         return;
       }
       if (!(it->Kind == BorrowKind::Immut)) {

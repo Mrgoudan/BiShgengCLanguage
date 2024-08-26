@@ -92,7 +92,7 @@ void test10() {
     p1 = &mut *oriPtr;
   }
   use_mut(p1);                             // expected-error {{There should be at most one mutable borrow targeting to 'oriPtr' at the same time}}
-  use_immut(p2);
+  use_immut(p2);                           // expected-error {{Can not use 'p2' because expired}}
   free_owned<int>(oriPtr);
 }
 

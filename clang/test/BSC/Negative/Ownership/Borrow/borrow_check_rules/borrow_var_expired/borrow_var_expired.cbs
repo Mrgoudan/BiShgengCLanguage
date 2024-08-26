@@ -1,0 +1,138 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+void borrow_expired_01() {
+    int a = 1;
+    int * borrow p1 = &mut a;
+    int * borrow p2 = &mut a;
+    int b = *p2;
+    int c = *p1;             // expected-error {{Can not use 'p1' because expired}}
+}
+
+void borrow_expired_02() {
+    int a = 1;
+    int * borrow p1 = &mut a;
+    const int * borrow p2 = &const a;
+    int b = *p2;
+    int c = *p1;   // ok
+}
+
+void borrow_expired_03() {
+    int a = 1;
+    const int * borrow p1 = &const a;
+    int * borrow p2 = &mut a;
+    int b = *p2;
+    int c = *p1;             // expected-error {{Can not use 'p1' because expired}}
+}
+
+void borrow_expired_04() {
+    int a = 1;
+    const int * borrow p1 = &const a;
+    const int * borrow p2 = &const a;
+    int b = *p2;
+    int c = *p1;   // ok
+}
+
+struct S
+{
+    int a;
+    int b;
+};
+
+void borrow_expired_05() {
+    struct S s = {1, 1};
+    int * borrow p1 = &mut s.a;
+    int * borrow p2 = &mut s.b;
+    int b = *p2;
+    int c = *p1;    //ok
+}
+
+void borrow_expired_06() {
+    struct S s = {1, 1};
+    int * borrow p1 = &mut s.a;
+    const int * borrow p2 = &const s.b;
+    int b = *p2;
+    int c = *p1;   // ok
+}
+
+void borrow_expired_07() {
+    struct S s = {1, 1};
+    const int * borrow p1 = &const s.a;
+    int * borrow p2 = &mut s.b;
+    int b = *p2;
+    int c = *p1;   // ok
+}
+
+void borrow_expired_08() {
+    struct S s = {1, 1};
+    const int * borrow p1 = &const s.a;
+    const int * borrow p2 = &const s.b;
+    int b = *p2;
+    int c = *p1;   // ok
+}
+
+void use_test01(struct S * borrow a){}
+void use_test02(const struct S * borrow a){}
+
+void borrow_expired_09() {
+    struct S s = {1, 1};
+    struct S * borrow p1 = &mut s;
+    int * borrow p2 = &mut s.b;
+    int b = *p2;
+    use_test01(p1);               // expected-error {{Can not use 'p1' because expired}}
+}
+
+void borrow_expired_10() {
+    struct S s = {1, 1};
+    struct S * borrow p1 = &mut s;
+    const int * borrow p2 = &const s.b;
+    int b = *p2;   
+    use_test01(p1); // ok
+}
+
+void borrow_expired_11() {
+    struct S s = {1, 1};
+    const struct S * borrow p1 = &const s;
+    int * borrow p2 = &mut s.b;
+    int b = *p2;   
+    use_test02(p1);                // expected-error {{Can not use 'p1' because expired}}
+}
+
+void borrow_expired_12() {
+    struct S s = {1, 1};
+    const struct S * borrow p1 = &const s;
+    const int * borrow p2 = &const s.b;
+    int b = *p2;   // ok
+    use_test02(p1);
+}
+
+void borrow_expired_13() {
+    struct S s = {1, 1};
+    int * borrow p1 = &mut s.b;
+    struct S * borrow p2 = &mut s;
+    use_test01(p2);  
+    int b = *p1;                    // expected-error {{Can not use 'p1' because expired}}
+}
+
+void borrow_expired_14() {
+    struct S s = {1, 1};
+    const int * borrow p1 = &const s.b;
+    struct S * borrow p2 = &mut s;
+    use_test01(p2);
+    int b = *p1;                    // expected-error {{Can not use 'p1' because expired}}
+}
+
+void borrow_expired_15() {
+    struct S s = {1, 1};
+    int * borrow p1 = &mut s.b;
+    const struct S * borrow p2 = &const s;
+    use_test02(p2);
+    int b = *p1;
+}
+
+void borrow_expired_16() {
+    struct S s = {1, 1};
+    const int * borrow p1 = &const s.b;
+    const struct S * borrow p2 = &const s;
+    use_test02(p2);
+    int b = *p1;   // ok
+}

@@ -22,8 +22,8 @@ void test1() {
   const int *borrow p2 = &const * oriPtr;
   int *borrow p3 = &mut * oriPtr;
   use_mut(p3);
-  use_immut(p2);
-  use_mut(p1);  
+  // use_immut(p2);
+  // use_mut(p1);  
   free(oriPtr);
 }
 
@@ -65,7 +65,7 @@ void test4() {
     p2 = &mut * oriPtr;  
   }
   use_mut(p1);
-  use_mut(p2);
+  // use_mut(p2);
   free_owned<int>(oriPtr);
 }
 
@@ -86,7 +86,7 @@ void test6() {
   int *borrow p1 = &mut local;
   int *borrow p2 = use_borrow_and_return(p1);
   use_mut(p2);
-  use_mut(p1);
+  // use_mut(p1);
 }
 
 int main() {
