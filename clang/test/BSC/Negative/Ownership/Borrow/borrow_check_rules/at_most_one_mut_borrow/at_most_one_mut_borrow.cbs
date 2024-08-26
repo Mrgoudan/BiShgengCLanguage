@@ -113,6 +113,18 @@ void test11() {
   free_owned<int>(oriPtr);
 }
 
+struct S {
+    int a;
+};
+
+void test12() {
+    struct S s = { .a = 5 };
+    const struct S *borrow p1 = &const s;
+    struct S *borrow p2 = &mut s;  // expected-note {{previous borrow is here}}
+    struct S s1 = *p1;  // expected-error {{There should be at most one mutable borrow targeting to 's' at the same time}}
+    struct S s2 = *p2;    
+}
+
 int main() {
   int local = 5;
   test1();
@@ -125,6 +137,7 @@ int main() {
   test8();
   test9();
   test10();
-  test11(); 
+  test11();
+  test12();
   return 0;
 }

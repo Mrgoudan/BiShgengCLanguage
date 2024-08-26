@@ -98,7 +98,10 @@ public:
   NLLCalculator(ASTContext &ASTCtx, DeclContext *DeclCtx, unsigned NumElems)
       : Ctx(ASTCtx), DC(DeclCtx), NumElements(NumElems),
         CurElemID(NumElems + 1) {}
-
+  void VisitIfStmt(IfStmt *IS);
+  void VisitForStmt(ForStmt *FS);
+  void VisitWhileStmt(WhileStmt *WS);
+  void VisitDoStmt(DoStmt *DS);
   void VisitDeclStmt(DeclStmt *DS);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitDeclRefExpr(DeclRefExpr *DRE);
@@ -1053,6 +1056,7 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
                   BK, Target, BorrowWithFieldPath.second));
         FoundBorrowFields.erase(BorrowWithFieldPath);
       }
+      return;
     } else if (QT->hasBorrowFields()) {
       if (RecordDecl *RD = dyn_cast<RecordType>(QT)->getDecl()) {
         if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
@@ -1068,13 +1072,13 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
                                          BO->getRHS());
         }
       }
-    } else {
-      CurrOpIsBorrowUse = true;
-      Visit(BO->getLHS());
-      Visit(BO->getRHS());
-      CurrOpIsBorrowUse = false;
+      return;
     }
   }
+  CurrOpIsBorrowUse = true;
+  Visit(BO->getLHS());
+  Visit(BO->getRHS());
+  CurrOpIsBorrowUse = false;
 }
 
 void NLLCalculator::VisitDeclRefExpr(DeclRefExpr *DRE) {
@@ -1203,6 +1207,29 @@ void NLLCalculator::VisitUnaryOperator(UnaryOperator *UO) {
     Visit(UO->getSubExpr());
 }
 
+void NLLCalculator::VisitIfStmt(IfStmt *IS) {
+  CurrOpIsBorrowUse = true;
+  Visit(IS->getCond());
+  CurrOpIsBorrowUse = false;
+}
+
+void NLLCalculator::VisitWhileStmt(WhileStmt *WS) {
+  CurrOpIsBorrowUse = true;
+  Visit(WS->getCond());
+  CurrOpIsBorrowUse = false;
+}
+
+void NLLCalculator::VisitForStmt(ForStmt *FS) {
+  CurrOpIsBorrowUse = true;
+  Visit(FS->getCond());
+  CurrOpIsBorrowUse = false;
+}
+
+void NLLCalculator::VisitDoStmt(DoStmt *DS) {
+  CurrOpIsBorrowUse = true;
+  Visit(DS->getCond());
+  CurrOpIsBorrowUse = false;
+}
 void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
@@ -1831,6 +1858,10 @@ NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(
   for (auto revBlockIt = Path.rbegin(); revBlockIt != Path.rend();
        revBlockIt++) {
     const CFGBlock *block = *revBlockIt;
+ 
+    if (const Stmt *TS = block->getTerminatorStmt())
+      Calculator.Visit(const_cast<Stmt *>(TS));
+
     // we should also traverse the block in reverse order.
     for (CFGBlock::const_reverse_iterator revElemIt = block->rbegin(),
                                           revElemEI = block->rend();

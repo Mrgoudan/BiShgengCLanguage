@@ -733,8 +733,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
     if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
       QualType QT = UO->getSubExpr()->getType();
       if (QT.isLocalBorrowQualified() && UO->getOpcode() == UO_Deref) {
-        T= T.removeConstForBorrow(Context);
-        CK = CK_BitCast;
+        T = T.removeConstForBorrow(Context);
       }
     }
   }

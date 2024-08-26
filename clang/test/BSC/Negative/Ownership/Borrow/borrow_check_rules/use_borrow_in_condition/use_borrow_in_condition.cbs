@@ -1,0 +1,80 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+void use_mut(int *borrow p) {}
+void use_immut(const int *borrow p) {}
+T* owned safe_malloc<T>(T value);
+void free_owned<T>(T* owned p);
+void free(void*);
+
+void test1() {
+    int e = 1;
+    const int * borrow p1 = &const e;  // expected-note {{previous borrow is here}}
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    if (*p1 == 2) {
+        e = 5;
+    }
+
+    int f = 1;
+    const int * borrow p2 = &const f;  // expected-note {{previous borrow is here}}
+    f = 2;   //expected-error{{Can not modify 'f' because be borrowed}}
+    if (*p2) {
+        f = 5;
+    }
+
+    int g = 1;
+    const int * borrow p3 = &const g;   // expected-note {{previous borrow is here}}
+    g = 2;   //expected-error{{Can not modify 'g' because be borrowed}}
+    if (*p3 < 0 || *p3 > 5 || *p3 + *p3 > 10) {
+        g = 5;
+    }
+
+    int h = 1;
+    int * borrow p4 = &mut h;  // expected-note {{previous borrow is here}}
+    int k = h;  //expected-error{{Can not read 'h' because be mut borrowed}}
+    if (*p4) {
+        h = 5;
+    }
+}
+
+struct S {
+    int a;
+    int *owned b;
+};
+void test2() {
+    int local = 5;
+    struct S s = { .a = 1, .b = safe_malloc<int>(1) };
+    const struct S* borrow p = &const s;// expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
+    s.a = 2;  //expected-error{{Can not modify 's.a' because be borrowed}}
+    free_owned<int>(s.b);   //expected-error{{Can not modify 's.b' because be borrowed}}
+    if (p->a == 2 && *(p->b) == 2) {
+        s.a = 5;
+    }
+}
+
+void test3() {
+    int e = 1;
+    const int * borrow p = &const e;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    while (*p > 0) {
+        e--;   //expected-error{{Can not modify 'e' because be borrowed}}
+    }
+}
+
+void test4() {
+    int e = 1;
+    const int * borrow p = &const e;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    for (int i = 0; i < *p; i++) {
+        e--;   //expected-error{{Can not modify 'e' because be borrowed}}
+    }
+}
+
+void test5() {
+    int e = 1;
+    const int * borrow p = &const e;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    do {
+        e--;   //expected-error{{Can not modify 'e' because be borrowed}}
+    } while (*p > 0);
+}
+
