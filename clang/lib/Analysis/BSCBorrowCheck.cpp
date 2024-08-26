@@ -128,6 +128,9 @@ private:
   void UpdateNLLWhenTargetFound(
       BorrowTargetInfo OldTarget,
       const llvm::SmallVector<BorrowTargetInfo> &NewTargets);
+  void UpdateTargetOfFieldsOfBorrowStruct(
+      BorrowTargetInfo OldTarget,
+      BorrowTargetInfo NewTarget);
 };
 
 class BorrowRuleChecker : public StmtVisitor<BorrowRuleChecker> {
@@ -969,6 +972,10 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
                 CurElemID, FoundVars.count(VD) ? FoundVars[VD] : CurElemID, BK,
                 Target));
           FoundVars.erase(VD);
+          if (isa<RecordType>(QT->getPointeeType())) {
+            if (!(isa<CallExpr>(BO->getRHS()) || isa<ConditionalOperator>(BO->getRHS())))
+              UpdateTargetOfFieldsOfBorrowStruct(VD, Targets[0]);
+          }
         }
       } else if (MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS())) {
         // s.a.b = &mut local;
@@ -1155,6 +1162,24 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
               CurElemID, FoundVars.count(VD) ? FoundVars[VD] : CurElemID, BK,
               Target));
         FoundVars.erase(VD);
+        // If a borrow pointer targets to another struct with the same type,
+        // we should update the target of borrow variables
+        // whose target is the member from the borrow pointer.
+        // For example:
+        // @code
+        //   S* borrow p = &mut s;  // We should update the target of q from `p.a` to `s.a`
+        //   int *borrow q = &mut p->a; 
+        // @endcode
+        // TODO: Also should handle the borrow pointers borrow from function call
+        // @code
+        //   S* borrow p = call(p1, p2);
+        //   int *borrow q = &mut p->a;  //how to describe the target of q?
+        // @endcode
+        if (isa<RecordType>(VQT->getPointeeType())) {
+          // If InitExpr is not CallExpr Or ConditionalOperator, this borrow pointer must have only one target.
+          if (!(isa<CallExpr>(VD->getInit()) || isa<ConditionalOperator>(VD->getInit())))
+            UpdateTargetOfFieldsOfBorrowStruct(BorrowTargetInfo(VD), Targets[0]);
+        }
       } else if (VQT->hasBorrowFields()) {
         if (RecordDecl *RD = dyn_cast<RecordType>(VQT)->getDecl())
           VisitInitForBorrowFieldTargets(VD, "", RD, VD->getInit());
@@ -1449,7 +1474,8 @@ void NLLCalculator::VisitInitForTargets(
     // local1 and local2. we add local1 and local2 to Targets.
     for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it)
       if (Expr *ArgExpr = dyn_cast<Expr>(*it))
-        VisitInitForTargets(ArgExpr, Targets);
+        if (ArgExpr->getType().isBorrowQualified() || ArgExpr->getType()->hasBorrowFields())
+          VisitInitForTargets(ArgExpr, Targets);
   } else if (auto CO = dyn_cast<ConditionalOperator>(InitE)) {
     VisitInitForTargets(CO->getLHS(), Targets);
     VisitInitForTargets(CO->getRHS(), Targets);
@@ -1513,10 +1539,10 @@ void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
 }
 
 void NLLCalculator::VisitScopeEnd(VarDecl *VD) {
-  // For no-borrow and no-owned local variable, ScopeEnd marks the end of its
+  // For no-borrow and no-owned local variable or owned struct, ScopeEnd marks the end of its
   // NLL.
   QualType QT = VD->getType();
-  if (!QT.isBorrowQualified() && !QT.isOwnedQualified())
+  if ((!QT.isBorrowQualified() && !QT.isOwnedQualified()) || QT->isOwnedStructureType())
     FoundVars[VD] = CurElemID;
 }
 
@@ -1574,6 +1600,50 @@ void NLLCalculator::UpdateNLLWhenTargetFound(
   }
 }
 
+// Update targets for borrow pointers whose target is field of another borrow pointer.
+// For example:
+// @code 
+//   struct S *borrow p = &mut s;
+//   int *borrow q = &mut p->b;
+// @endcode
+// when we find p targeting to s, we should update the target of q from p.b to s.b.
+// Another example:
+// @code 
+//   g.s = &mut g1.s1;
+//   int *borrow q = &mut g.s->b;
+// @endcode
+// when we find g.s targeting to g1.s1, we should update the target of q.k from g.s.b to g1.s1.b.
+void NLLCalculator::UpdateTargetOfFieldsOfBorrowStruct(
+    BorrowTargetInfo OldTarget, BorrowTargetInfo NewTarget) {
+  for (auto &NLLOfVar : NLLForAllVars) {
+    NonLexicalLifetimeOfVar &NLLRanges = NLLOfVar.second;
+    llvm::SmallVector<NonLexicalLifetimeRange> RangesNeedUpdate;
+    // Remove ranges whose targetVD is VD
+    for (auto it = NLLRanges.begin(); it != NLLRanges.end();) {
+      if (it->Target.TargetVD == OldTarget.TargetVD &&
+          OldTarget.TargetFieldPath != it->Target.TargetFieldPath &&
+          IsPrefix(OldTarget.TargetFieldPath, it->Target.TargetFieldPath)) {
+        RangesNeedUpdate.push_back(*it);
+        it = NLLRanges.erase(it);
+      } else
+        ++it;
+    }
+
+    // Build new ranges targeting to NewTarget and insert them to NLLRanges.
+    for (NonLexicalLifetimeRange &RangeNeedUpdate : RangesNeedUpdate) {
+      RangeNeedUpdate.Target.TargetVD = NewTarget.TargetVD;
+      std::string FP = RangeNeedUpdate.Target.TargetFieldPath;
+      FP.replace(FP.find(OldTarget.TargetFieldPath),
+                 OldTarget.TargetFieldPath.length(),
+                 NewTarget.TargetFieldPath);
+      RangeNeedUpdate.Target.TargetFieldPath = FP;
+      if (std::find(NLLRanges.begin(), NLLRanges.end(), RangeNeedUpdate) ==
+          NLLRanges.end())
+        NLLRanges.push_back(RangeNeedUpdate);
+    }
+  }
+}
+
 // In order to calculate NLL for global and parameter,
 // we use virtual CFGElement index to mark the begin and end of global variable
 // and parameter
@@ -1591,7 +1661,7 @@ void NLLCalculator::HandleNLLAfterTraversing(
     ParmVarDecl *PVD = std::get<0>(Param.first);
     std::string PFP = std::get<1>(Param.first);
     BorrowKind PBK = std::get<2>(Param.first);
-    QualType PQT = PVD->getType();
+    QualType PQT = PVD->getType().getCanonicalType();
     if (PFP.size() > 0) {
       llvm::SmallVector<BorrowTargetInfo> VirtualTarget;
       VirtualTarget.push_back(Param.second);
@@ -1625,6 +1695,8 @@ void NLLCalculator::HandleNLLAfterTraversing(
               PQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
           NLLForAllVars[PVD].push_back(NonLexicalLifetimeRange(
               1, FoundVars.count(PVD) ? FoundVars[PVD] : 1, BK, Param.second));
+          if (isa<RecordType>(PQT->getPointeeType()))
+            UpdateTargetOfFieldsOfBorrowStruct(BorrowTargetInfo(PVD), VirtualTarget[0]);
         } else // PVD is naked pointer
           NLLForAllVars[PVD].push_back(
               NonLexicalLifetimeRange(1, NumElements + 2));
