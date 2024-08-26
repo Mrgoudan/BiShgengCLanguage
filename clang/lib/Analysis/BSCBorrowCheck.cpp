@@ -505,6 +505,19 @@ void BorrowRuleChecker::CheckBorrowField(const VarDecl *VD,
   }
 }
 
+std::string GetVDRealString(const VarDecl *VD) {
+  std::string str = VD->getNameAsString();
+  size_t pos = str.find("_ParentVar_");
+  if (pos != string::npos) {
+    str.erase(pos, strlen("_ParentVar_"));
+  }
+  pos = str.find("_FieldVar_");
+  if (pos != string::npos) {
+    str.erase(str.begin() + pos, str.end());
+  }
+  return str;
+}
+
 // for mut borrowed variable, only allow use the last alive mut borrow
 // variable. VD is the mut borrow pointer variable
 void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD,
@@ -521,7 +534,7 @@ void BorrowRuleChecker::CheckMutBorrowVarUse(const VarDecl *VD,
         return;
       } else {
         // Only allow used the last alive mut borrow variable.
-        BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
+        BorrowCheckDiagInfo DI(GetVDRealString(TVD),
                                AtMostOneMutBorrow, Loc,
                                it->BorrowVD->getLocation());
         reporter.addDiagInfo(DI);
@@ -545,7 +558,7 @@ void BorrowRuleChecker::CheckMutBorrowFieldUse(const VarDecl *VD,
       }
       // borrow to itself and its parent exist
       if (IsPrefix(it->TargetFieldPath, targetFieldPath)) {
-        BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath,
+        BorrowCheckDiagInfo DI(GetVDRealString(TVD) + it->TargetFieldPath,
                                AtMostOneMutBorrow, Loc,
                                it->BorrowVD->getLocation());
         reporter.addDiagInfo(DI);
@@ -553,7 +566,7 @@ void BorrowRuleChecker::CheckMutBorrowFieldUse(const VarDecl *VD,
       }
       // borrow to its child exist
       if (IsPrefix(targetFieldPath, it->TargetFieldPath)) {
-        BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath,
+        BorrowCheckDiagInfo DI(GetVDRealString(TVD) + it->TargetFieldPath,
                                AtMostOneMutBorrow, Loc,
                                it->BorrowVD->getLocation());
         reporter.addDiagInfo(DI);
@@ -580,8 +593,7 @@ void BorrowRuleChecker::CheckConstBorrowVarUse(const VarDecl *VD,
         return;
       }
       if (!(it->Kind == BorrowKind::Immut)) {
-        BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
-                               AtMostOneMutBorrow, Loc,
+        BorrowCheckDiagInfo DI(GetVDRealString(TVD), AtMostOneMutBorrow, Loc,
                                it->BorrowVD->getLocation());
         reporter.addDiagInfo(DI);
         return;
@@ -606,7 +618,7 @@ void BorrowRuleChecker::CheckConstBorrowFieldUse(const VarDecl *VD,
       if (!(it->Kind == BorrowKind::Immut)) {
         // mut borrow to itself and its parent exist
         if (IsPrefix(it->TargetFieldPath, targetFieldPath)) {
-          BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath,
+          BorrowCheckDiagInfo DI(GetVDRealString(TVD) + it->TargetFieldPath,
                                  AtMostOneMutBorrow, Loc,
                                  it->BorrowVD->getLocation());
           reporter.addDiagInfo(DI);
@@ -614,7 +626,7 @@ void BorrowRuleChecker::CheckConstBorrowFieldUse(const VarDecl *VD,
         }
         // mut borrow to its child exist
         if (IsPrefix(targetFieldPath, it->TargetFieldPath)) {
-          BorrowCheckDiagInfo DI(VD->getNameAsString() + it->TargetFieldPath,
+          BorrowCheckDiagInfo DI(GetVDRealString(TVD) + it->TargetFieldPath,
                                  AtMostOneMutBorrow, Loc,
                                  it->BorrowVD->getLocation());
           reporter.addDiagInfo(DI);
@@ -1514,7 +1526,7 @@ void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
     for (const auto &FieldPath : NakedPointerFieldsOfStruct) {
       std::string FP = FieldPath;
       FP.erase(std::remove(FP.begin(), FP.end(), '.'), FP.end());
-      std::string Name = "_ParentVar_" + VD->getNameAsString() + FP;
+      std::string Name = "_ParentVar_" + VD->getNameAsString() + "_FieldVar_" + FP;
       IdentifierInfo *ID = &Ctx.Idents.get(Name);
       VarDecl *VirtualVD =
           VarDecl::Create(Ctx, DC, VD->getBeginLoc(), VD->getLocation(), ID,
@@ -1841,7 +1853,7 @@ void BorrowCheckImpl::BuildParamTarget(
           std::get<2>(BorrowWithFieldPath) = FieldPath.second;
           std::string FP = FieldPath.first;
           FP.erase(std::remove(FP.begin(), FP.end(), '.'), FP.end());
-          std::string Name = "_ParentVar_" + PVD->getNameAsString() + FP;
+          std::string Name = "_ParentVar_" + PVD->getNameAsString() + "_FieldVar_" + FP;
           IdentifierInfo *ID = &Ctx.Idents.get(Name);
           VarDecl *VD = VarDecl::Create(
               Ctx, const_cast<DeclContext *>(fd.getDeclContext()),
@@ -1867,7 +1879,7 @@ void BorrowCheckImpl::BuildParamTarget(
       for (const auto &FieldPath : NakedPointerFieldsOfStruct) {
         std::string FP = FieldPath;
         FP.erase(std::remove(FP.begin(), FP.end(), '.'), FP.end());
-        std::string Name = "_ParentVar_" + PVD->getNameAsString() + FP;
+        std::string Name = "_ParentVar_" + PVD->getNameAsString() + "_FieldVar_" + FP;
         IdentifierInfo *ID = &Ctx.Idents.get(Name);
         VarDecl *VD = VarDecl::Create(
             Ctx, const_cast<DeclContext *>(fd.getDeclContext()),

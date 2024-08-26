@@ -62,7 +62,7 @@ void test_freeze_ident6_1() {
     int a = 1;
     int * borrow c = &mut a;
     int * borrow d = &mut a;    // expected-note {{previous borrow is here}}
-    int e = *c;                 // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    int e = *c;                 // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     int f = *d;
 }
 
@@ -70,7 +70,7 @@ void test_freeze_ident6_2() {
     int a = 1;
     int * borrow c = &mut a;
     int * borrow d = c;          // expected-note {{previous borrow is here}}
-    int e = *c;                  // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    int e = *c;                  // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     int f = *d;
 }
 
@@ -80,7 +80,7 @@ void test_freeze_ident6_3() {
     int a = 1;
     int * borrow c = &mut a;
     int * borrow d = c;          // expected-note {{previous borrow is here}}
-    int e = *c;                  // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    int e = *c;                  // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     use(d);
 }
 
@@ -118,7 +118,7 @@ void test_freeze_ident11() {
     int a = 1;
     int * borrow c = &mut a;            
     const int * borrow d = &const a;    // expected-note {{previous borrow is here}}
-    int b = *c;                         // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
+    int b = *c;                         // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     const_use(d);
 }
 
@@ -157,7 +157,7 @@ int test_freeze_ident15(int * borrow m){
   d = &b;
   int * borrow e = &mut *c;
   int * borrow f = &mut *c;         // expected-note {{previous borrow is here}}
-  int g = f == e ? *f : *e;         // expected-error {{There should be at most one mutable borrow targeting to 'e' at the same time}}
+  int g = f == e ? *f : *e;         // expected-error {{There should be at most one mutable borrow targeting to 'c' at the same time}}
   use(f);
   use(e);
   return 0;

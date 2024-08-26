@@ -17,7 +17,7 @@ void test1() {
     S local = {.a = 1, .b = 2};
     int * borrow p = &mut local.a;
     S * borrow s = &mut local; // expected-note {{previous borrow is here}}
-    use_mutI(p); // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+    use_mutI(p); // expected-error {{There should be at most one mutable borrow targeting to 'local' at the same time}}
     use_mutS(s);
 }
 
@@ -25,7 +25,7 @@ void test2() {
     S local = {.a = 1, .b = 2};
     const int * borrow p = &const local.a;
     S * borrow s = &mut local; // expected-note {{previous borrow is here}}
-    use_constI(p); // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+    use_constI(p); // expected-error {{There should be at most one mutable borrow targeting to 'local' at the same time}}
     use_mutS(s);
 }
 
@@ -33,6 +33,6 @@ void test3() {
     S local = {.a = 1, .b = 2};
     int * borrow p = &mut local.a;
     const S * borrow s = &const local; // expected-note {{previous borrow is here}}
-    use_mutI(p); // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+    use_mutI(p); // expected-error {{There should be at most one mutable borrow targeting to 'local' at the same time}}
     use_constS(s);
 }

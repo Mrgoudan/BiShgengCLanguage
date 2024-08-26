@@ -20,8 +20,8 @@ void test1() {
     int *borrow q2 = &mut *p->b;
     const int *borrow q3 = &const p->a;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
     const int *borrow q4 = &const *p->b;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
-    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'q1.a' at the same time}}
-    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'q2' at the same time}}
+    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'v.a' at the same time}}
+    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'v' at the same time}}
     use_immut(q3);
     use_immut(q4);
 
@@ -31,8 +31,8 @@ void test1() {
     q2 = &mut *p->b;
     q3 = &const p->a;
     q4 = &const *p->b;
-    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'q1.v.a' at the same time}}
-    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'q2' at the same time}}
+    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'k.v.a' at the same time}}
+    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'k' at the same time}}
     use_immut(q3);
     use_immut(q4);
 }
@@ -42,8 +42,8 @@ void test2(struct V * borrow p) {
     int *borrow q2 = &mut *p->b;
     const int *borrow q3 = &const p->a;   // expected-note {{previous borrow is here}}
     const int *borrow q4 = &const *p->b;   // expected-note {{previous borrow is here}}
-    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'q1.a' at the same time}}
-    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'q2.b' at the same time}}
+    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'p.a' at the same time}}
+    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'p.b' at the same time}}
     use_immut(q3);
     use_immut(q4);
 }
@@ -53,8 +53,8 @@ void struct V::foo(This *borrow this) {
     int *borrow q2 = &mut *this->b;
     const int *borrow q3 = &const this->a;   // expected-note {{previous borrow is here}}
     const int *borrow q4 = &const *this->b;   // expected-note {{previous borrow is here}}
-    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'q1.a' at the same time}}
-    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'q2.b' at the same time}}
+    use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'this.a' at the same time}}
+    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'this.b' at the same time}}
     use_immut(q3);
     use_immut(q4);
 }

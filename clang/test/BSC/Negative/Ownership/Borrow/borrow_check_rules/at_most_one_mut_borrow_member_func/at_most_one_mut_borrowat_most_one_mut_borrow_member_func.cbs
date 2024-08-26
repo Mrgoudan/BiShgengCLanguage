@@ -15,7 +15,7 @@ void test1() {
     int a = 5;
     int * borrow p = a.get_mut_borrow();
     int * borrow q = a.get_mut_borrow();  // expected-note {{previous borrow is here}}
-    use_mut(p);  // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+    use_mut(p);  // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     use_mut(q);  
 }
 
@@ -23,7 +23,7 @@ void test2() {
     int a = 5;
     const int * borrow p = a.get_immut_borrow();
     int * borrow q = a.get_mut_borrow();  // expected-note {{previous borrow is here}}
-    use_immut(p);  // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
+    use_immut(p);  // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     use_mut(q);
 }
 

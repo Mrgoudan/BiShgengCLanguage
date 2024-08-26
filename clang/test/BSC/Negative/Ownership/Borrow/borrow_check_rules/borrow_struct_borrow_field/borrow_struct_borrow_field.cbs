@@ -9,8 +9,8 @@ typedef struct A {
 void useSA(A);
 
 void test1(A a) {
-    A b = a; // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
-    useSA(a); // expected-error {{There should be at most one mutable borrow targeting to 'a.p' at the same time}} expected-error {{There should be at most one mutable borrow targeting to 'a.q' at the same time}}
+    A b = a;  // expected-note {{previous borrow is here}}
+    useSA(a); // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
     useSA(b);
 }
 
@@ -22,13 +22,13 @@ typedef struct B {
 void useSB(B);
 
 void test2(B b) {
-    A m = b.a; // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
-    useSB(b); // expected-error {{There should be at most one mutable borrow targeting to 'b.a.p' at the same time}} expected-error {{There should be at most one mutable borrow targeting to 'b.a.q' at the same time}}
+    A m = b.a; // expected-note {{previous borrow is here}}
+    useSB(b);  // expected-error {{There should be at most one mutable borrow targeting to 'b' at the same time}}
     useSA(m);
 }
 
 void test3(B b) {
-    A m = b.a; // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
-    useSA(b.a); // expected-error {{There should be at most one mutable borrow targeting to 'b.a.p' at the same time}} expected-error {{There should be at most one mutable borrow targeting to 'b.a.q' at the same time}}
+    A m = b.a;  // expected-note {{previous borrow is here}}
+    useSA(b.a); // expected-error {{There should be at most one mutable borrow targeting to 'b' at the same time}}
     useSA(m);
 }

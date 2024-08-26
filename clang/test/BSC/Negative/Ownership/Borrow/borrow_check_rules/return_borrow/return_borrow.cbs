@@ -150,7 +150,7 @@ int main() {
   test13(&mut local);
   struct S s = { .p = &mut local };
   struct G g = { .s = s }; // expected-note {{previous borrow is here}}
-  test14(s); // expected-error {{There should be at most one mutable borrow targeting to 's.p' at the same time}}
+  test14(s); // expected-error {{There should be at most one mutable borrow targeting to 'local' at the same time}}
   test15(g);
   test16(g);
   return 0;

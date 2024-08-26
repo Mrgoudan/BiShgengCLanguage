@@ -24,6 +24,6 @@ void test2() {
     R r = {.a = 1, .b = 2};
     S s = {.p = &mut r.a, .q = &mut r.b};
     int * borrow pp = &mut r.a; // expected-note {{previous borrow is here}}
-    use_mutI(s.p); // expected-error {{There should be at most one mutable borrow targeting to 's.a' at the same time}}
+    use_mutI(s.p); // expected-error {{There should be at most one mutable borrow targeting to 'r.a' at the same time}}
     use_mutI(pp);
 }
