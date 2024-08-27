@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump -verify %s
+// RUN: %clang_cc1 -verify %s
 
 typedef struct A {
     int * borrow p;
@@ -31,4 +31,52 @@ void test3(B b) {
     A m = b.a;  // expected-note {{previous borrow is here}}
     useSA(b.a); // expected-error {{There should be at most one mutable borrow targeting to 'b' at the same time}}
     useSA(m);
+}
+
+void use_mut(int *borrow p);
+void use_immut(const int *borrow p);
+
+struct V {
+    int a;
+};
+
+struct M {
+    int *borrow ma;
+    const int *borrow na;
+};
+
+void test4() {
+    struct V v = { .a = 5 };
+    struct V * borrow p = &mut v;
+    int *borrow q1 = &mut p->a;
+    const int *borrow q2 = &const p->a;
+    struct M m = { .ma = q1, .na = q2 }; // expected-note {{previous borrow is here}}
+    use_mut(m.ma);
+    use_immut(m.na); // expected-error {{Can not use 'm.na' because expired}}
+
+    // reassign
+    struct V v1 = { .a = 5 };
+    p = &mut v1;
+    m.ma = &mut p->a;
+    m.na = &const p->a;
+    use_mut(m.ma);  // expected-error {{There should be at most one mutable borrow targeting to 'v1.a' at the same time}}
+    use_immut(m.na);
+}
+
+void test5() {
+    struct V v = { .a = 5 };
+    struct V * borrow p = &mut v;
+    int *borrow q1 = &mut p->a;
+    const int *borrow q2 = &const p->a;
+    struct M m = { .ma = q1, .na = q2 }; // expected-note {{previous borrow is here}}
+    use_mut(m.ma);
+    use_immut(m.na); // expected-error {{Can not use 'm.na' because expired}}
+
+    // reassign
+    struct V v1 = { .a = 5 };
+    p = &mut v1;
+    m.na = &const p->a;
+    m.ma = &mut p->a;
+    use_immut(m.na);  // expected-error {{There should be at most one mutable borrow targeting to 'v1.a' at the same time}}
+    use_mut(m.ma);
 }

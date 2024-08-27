@@ -586,7 +586,8 @@ void BorrowRuleChecker::CheckMutBorrowFieldUse(const VarDecl *VD,
   if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
     auto it = ActiveBorrowTargetMap[TVD].rbegin();
     while (it != ActiveBorrowTargetMap[TVD].rend()) {
-      if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath) {
+      if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath &&
+          it->Kind == Mut && it->BorrowFieldPath == borrowFieldPath) {
         if (it->Expired) {
           BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
                                  UseExpiredBorrowVar, Loc);
@@ -657,7 +658,8 @@ void BorrowRuleChecker::CheckConstBorrowFieldUse(const VarDecl *VD,
   if (VarDecl *TVD = FindTargetFromActiveBorrowTargetMap(VD, borrowFieldPath)) {
     auto it = ActiveBorrowTargetMap[TVD].rbegin();
     while (it != ActiveBorrowTargetMap[TVD].rend()) {
-      if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath) {
+      if (it->BorrowVD == VD && it->TargetFieldPath == targetFieldPath &&
+          it->Kind == Immut && it->BorrowFieldPath == borrowFieldPath) {
         if (it->Expired) {
           BorrowCheckDiagInfo DI(VD->getNameAsString() + borrowFieldPath,
                                  UseExpiredBorrowVar, Loc);
