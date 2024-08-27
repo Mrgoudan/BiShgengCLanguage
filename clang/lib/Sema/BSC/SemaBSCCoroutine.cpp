@@ -1899,15 +1899,15 @@ public:
     SourceLocation BLoc = FD->getBeginLoc();
     SourceLocation ELoc = FD->getEndLoc();
 
-    RecordDecl::field_iterator FutureStateField, TheFieldIt;
-    for (TheFieldIt = FutureRD->field_begin();
+    RecordDecl::field_iterator FutureStateField = FutureRD->field_end();
+    for (RecordDecl::field_iterator TheFieldIt = FutureRD->field_begin();
          TheFieldIt != FutureRD->field_end(); ++TheFieldIt) {
       if (TheFieldIt->getDeclName().getAsString() == "__future_state") {
         FutureStateField = TheFieldIt;
         break;
       }
     }
-    if (TheFieldIt != FutureRD->field_end()) {
+    if (FutureStateField != FutureRD->field_end()) {
       DeclarationName Name = FutureStateField->getDeclName();
       DeclarationNameInfo MemberNameInfo(Name, FutureStateField->getLocation());
       Expr *LHSExpr = SemaRef.BuildMemberExpr(
