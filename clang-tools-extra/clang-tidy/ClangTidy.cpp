@@ -585,7 +585,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS, 
+                  bool IsNoClangDiagnostic) {
   ErrorReporter Reporter(Context, Fix, std::move(BaseFS));
   llvm::vfs::FileSystem &FileSystem =
       Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
@@ -601,7 +602,22 @@ void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
       // Change the directory to the one used during the analysis.
       FileSystem.setCurrentWorkingDirectory(Error.BuildDirectory);
     }
-    Reporter.reportDiagnostic(Error);
+
+    // Situations if users want to disable clang diagnostic checker.
+    std::string CheckName = Error.DiagnosticName;
+    if (IsNoClangDiagnostic) {
+      std::string CastChecker = "bsc-explicit-cast";
+      std::string AccessChecker = "bsc-access-specific-type";
+      if (CheckName.find(CastChecker) != std::string::npos ||
+          CheckName.find(AccessChecker) != std::string::npos) {
+        llvm::outs() << "--------- flag begin ---------\n";
+        Reporter.reportDiagnostic(Error);
+        llvm::outs() << "--------- flag end ---------\n";
+      }
+    } else {
+      Reporter.reportDiagnostic(Error);
+    }
+
     // Return to the initial directory to correctly resolve next Error.
     FileSystem.setCurrentWorkingDirectory(InitialWorkingDir.get());
   }

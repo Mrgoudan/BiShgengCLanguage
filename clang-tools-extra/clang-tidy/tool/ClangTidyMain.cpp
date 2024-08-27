@@ -262,6 +262,12 @@ option is recognized.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> NoClangDiagnostic("no-clang-diagnostic", cl::desc(R"(
+Disabled default clang diagnostic information. 
+Only run checkers specified by users.
+)"),
+                                cl::init(false), cl::cat(ClangTidyCategory));
+
 namespace clang {
 namespace tidy {
 
@@ -617,8 +623,13 @@ int clangTidyMain(int argc, const char **argv) {
 
   unsigned WErrorCount = 0;
 
+
+  bool IsNoClangDiagnostic = false;
+  if (NoClangDiagnostic)
+    IsNoClangDiagnostic = true;
+
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS);
+               WErrorCount, BaseFS, IsNoClangDiagnostic);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;
