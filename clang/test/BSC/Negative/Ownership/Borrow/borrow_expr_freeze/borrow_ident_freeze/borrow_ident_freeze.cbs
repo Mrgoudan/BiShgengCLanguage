@@ -175,3 +175,91 @@ int test_freeze_ident16() {
   use(s.b);
   return 0;
 }
+
+void test_freeze_ident17(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    int *borrow c = &mut *b;
+    int *d = (int *)b;
+}
+
+void test_freeze_ident18(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    int *borrow c = &mut *b;               // expected-error {{borrow pointer variable 'c' lives longer than target variable}}
+                                           // expected-note@-1 {{previous borrow is here}}
+    int *d = (int *)b;                     // expected-error {{Can not read 'b' because be mut borrowed}}
+    use(c);
+}
+
+void test_freeze_ident19(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    int *borrow c = &mut *b;               // expected-error {{borrow pointer variable 'c' lives longer than target variable}}
+                                           // expected-note@-1 {{previous borrow is here}}
+    int *owned d = b;                      // expected-error {{Can not modify 'b' because be borrowed}}         
+    use(c);
+    int *e = (int *)d;
+}
+
+void test_freeze_ident20(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    const int *borrow c = &const *b;       // expected-error {{borrow pointer variable 'c' lives longer than target variable}}
+                                           // expected-note@-1 {{previous borrow is here}}
+    int *owned d = b;                      // expected-error {{Can not modify 'b' because be borrowed}}         
+    const_use(c);
+    int * e = (int *)d;
+}
+
+owned struct F
+{
+  public:
+    int a;
+};
+
+void owend_struct_use1(F *borrow b){}
+
+void test_freeze_ident21(){
+    F f = {1};
+    F *borrow b = &mut f;           // expected-note {{previous borrow is here}}
+    F k = f;                        // expected-error {{Can not modify 'f' because be borrowed}}  
+    owend_struct_use1(b);
+}
+
+void owend_struct_use2(const F *borrow b){}
+
+void test_freeze_ident22(){
+    F f = {1};
+    const F *borrow b = &const f;       // expected-note {{previous borrow is here}}
+    F k = f;                            // expected-error {{Can not modify 'f' because be borrowed}}
+    owend_struct_use2(b);
+}
+
+struct H
+{
+    int *owned a;
+    int b;
+};
+
+void owend_struct_use3(struct H *borrow b){}
+
+void test_freeze_ident23(){
+    int a = 1;
+    struct H h = {(int *owned)&a, 2};
+    struct H *borrow b = &mut h;        // expected-note {{previous borrow is here}}
+    struct H g = h;                     // expected-error {{Can not modify 'h' because be borrowed}}
+    owend_struct_use3(b);
+    int *c = (int *)g.a;
+}
+
+void owend_struct_use4(const struct H *borrow b){}
+
+void test_freeze_ident24(){
+    int a = 1;
+    struct H h = {(int *owned)&a, 2};
+    const struct H * borrow b = &const h;   // expected-note {{previous borrow is here}}
+    struct H g = h;                         // expected-error {{Can not modify 'h' because be borrowed}}
+    owend_struct_use4(b);
+    int *c = (int *)g.a;
+}

@@ -393,16 +393,18 @@ void BorrowRuleChecker::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
 void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
   if (BO->isAssignmentOp()) {
     Operation TempOp = Op;
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (VD->getType().isBorrowQualified()) {
-          return;
-        }
-      }
+    if (BO->getLHS()->getType().isBorrowQualified()) {
+      return;
     }
     Op = Write;
     Visit(BO->getLHS());
-    Op = Read;
+
+    if (BO->getRHS()->getType().getCanonicalType().isOwnedQualified() ||
+        BO->getRHS()->getType().getCanonicalType()->hasOwnedFields()) {
+      Op = Write;
+    } else {
+      Op = Read;
+    }
     Visit(BO->getRHS());
     Op = TempOp;
   }
@@ -418,7 +420,12 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
       }
       Expr *Init = VD->getInit();
       if (Init) {
-        Op = Read;
+        if (Init->getType().getCanonicalType().isOwnedQualified() ||
+            Init->getType().getCanonicalType()->hasOwnedFields()) {
+          Op = Write;
+        } else {
+          Op = Read;
+        }
         Visit(Init);
       }
     }
