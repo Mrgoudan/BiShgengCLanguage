@@ -186,8 +186,7 @@ void test_freeze_ident17(){
 void test_freeze_ident18(){
     int a = 1;
     int *owned b = (int *owned)&a;
-    int *borrow c = &mut *b;               // expected-error {{borrow pointer variable 'c' lives longer than target variable}}
-                                           // expected-note@-1 {{previous borrow is here}}
+    int *borrow c = &mut *b;               // expected-note {{previous borrow is here}}
     int *d = (int *)b;                     // expected-error {{Can not read 'b' because be mut borrowed}}
     use(c);
 }
@@ -195,8 +194,7 @@ void test_freeze_ident18(){
 void test_freeze_ident19(){
     int a = 1;
     int *owned b = (int *owned)&a;
-    int *borrow c = &mut *b;               // expected-error {{borrow pointer variable 'c' lives longer than target variable}}
-                                           // expected-note@-1 {{previous borrow is here}}
+    int *borrow c = &mut *b;               // expected-note {{previous borrow is here}}
     int *owned d = b;                      // expected-error {{Can not modify 'b' because be borrowed}}         
     use(c);
     int *e = (int *)d;
@@ -205,8 +203,7 @@ void test_freeze_ident19(){
 void test_freeze_ident20(){
     int a = 1;
     int *owned b = (int *owned)&a;
-    const int *borrow c = &const *b;       // expected-error {{borrow pointer variable 'c' lives longer than target variable}}
-                                           // expected-note@-1 {{previous borrow is here}}
+    const int *borrow c = &const *b;       // expected-note {{previous borrow is here}}
     int *owned d = b;                      // expected-error {{Can not modify 'b' because be borrowed}}         
     const_use(c);
     int * e = (int *)d;

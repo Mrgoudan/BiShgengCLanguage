@@ -1093,11 +1093,7 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
 void NLLCalculator::VisitDeclRefExpr(DeclRefExpr *DRE) {
   if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
     // Add global variables to record which globals are used.
-    // Also add owned variables(local or parameter) to record the last location
-    // used.
-    if (((!VD->isLocalVarDecl() && !isa<ParmVarDecl>(VD)) ||
-         VD->getType().isOwnedQualified()) &&
-        !FoundVars.count(VD))
+    if (!VD->isLocalVarDecl() && !isa<ParmVarDecl>(VD) && !FoundVars.count(VD))
       FoundVars[VD] = CurElemID;
 
     if (CurrOpIsBorrowUse) {
@@ -1634,10 +1630,8 @@ void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
 }
 
 void NLLCalculator::VisitScopeEnd(VarDecl *VD) {
-  // For no-borrow and no-owned local variable or owned struct, ScopeEnd marks the end of its
-  // NLL.
-  QualType QT = VD->getType();
-  if ((!QT.isBorrowQualified() && !QT.isOwnedQualified()) || QT->isOwnedStructureType())
+  // For no-borrow local variable, ScopeEnd marks the end of its NLL.
+  if (!VD->getType().isBorrowQualified())
     FoundVars[VD] = CurElemID;
 }
 
@@ -1745,8 +1739,8 @@ void NLLCalculator::UpdateTargetOfFieldsOfBorrowStruct(
 //   NLL begin of global/virtual ParentVar    :0
 //   NLL begin of parameter                   :1
 //   local variables                          :from 2 to NumElements + 1
-//   NLL end of borrow or owned parameter     :last use location
-//   NLL end of no-borrow-no-owned parameter  :NumElements + 2
+//   NLL end of borrow parameter              :last use location
+//   NLL end of no-borrow parameter           :NumElements + 2
 //   NLL end of global/virtual ParentVar      :NumElements + 3
 void NLLCalculator::HandleNLLAfterTraversing(
     const std::map<std::tuple<ParmVarDecl *, std::string, BorrowKind>,
@@ -1795,10 +1789,6 @@ void NLLCalculator::HandleNLLAfterTraversing(
         } else // PVD is naked pointer
           NLLForAllVars[PVD].push_back(
               NonLexicalLifetimeRange(1, NumElements + 2));
-      } else if (PQT.isOwnedQualified()) {
-        // Add NLL for owned param.
-        NLLForAllVars[PVD].push_back(
-            NonLexicalLifetimeRange(1, FoundVars[PVD]));
       } else
         // Add NLL for other param.
         NLLForAllVars[PVD].push_back(

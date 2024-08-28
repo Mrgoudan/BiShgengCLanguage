@@ -125,6 +125,22 @@ void test12() {
     struct S s2 = *p2;    
 }
 
+owned struct M {
+public:
+    int a;
+};
+void useM_mut(M * borrow m) {}
+void useM_immut(const M * borrow m) {}
+
+void test13() {
+    int local = 1;
+    M m = { .a = local };
+    const M * borrow p1 = &const m;
+    M * borrow p2 = &mut m;   // expected-note {{previous borrow is here}}
+    useM_immut(p1);  // expected-error {{There should be at most one mutable borrow targeting to 'm' at the same time}}
+    useM_mut(p2);
+}
+
 int main() {
   int local = 5;
   test1();
@@ -139,5 +155,6 @@ int main() {
   test10();
   test11();
   test12();
+  test13();
   return 0;
 }

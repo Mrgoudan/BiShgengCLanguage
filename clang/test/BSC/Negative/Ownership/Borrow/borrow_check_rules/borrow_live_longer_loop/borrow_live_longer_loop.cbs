@@ -50,8 +50,7 @@ void test4() {
 
 void test5() {
   int *owned oriPtr = safe_malloc<int>(0);
-  int *borrow p = &mut * oriPtr; /* expected-error {{borrow pointer variable 'p' lives longer than target variable}}
-                                    expected-note {{previous borrow is here}} */
+  int *borrow p = &mut * oriPtr; // expected-note {{previous borrow is here}}
   while (rand()) {
     if (rand()) {
       free_owned<int>(oriPtr);  // expected-error {{Can not modify 'oriPtr' because be borrowed}}
