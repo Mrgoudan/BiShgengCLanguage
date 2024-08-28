@@ -2814,10 +2814,20 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildInitList(SourceLocation LBraceLoc,
-                             MultiExprArg Inits,
+  ExprResult RebuildInitList(SourceLocation LBraceLoc, MultiExprArg Inits,
+#if ENABLE_BSC
+                             unsigned DesugaredIndex,
+#endif
                              SourceLocation RBraceLoc) {
+#if ENABLE_BSC
+    auto res = SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc);
+    if (res.isUsable() && isa<InitListExpr>(res.get())) {
+      res.getAs<InitListExpr>()->setDesugaredIndex(DesugaredIndex);
+    }
+    return res;
+#else
     return SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc);
+#endif
   }
 
   /// Build a new designated initializer expression.
@@ -3979,13 +3989,23 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   SmallVector<Expr*, 8> NewArgs;
   bool ArgChanged = false;
   if (getDerived().TransformExprs(Construct->getArgs(), Construct->getNumArgs(),
-                                  /*IsCall*/true, NewArgs, &ArgChanged))
+                                  /*IsCall*/ true, NewArgs, &ArgChanged))
     return ExprError();
 
   // If this was list initialization, revert to syntactic list form.
-  if (Construct->isListInitialization())
+  if (Construct->isListInitialization()) {
+#if ENABLE_BSC
+    unsigned DesugaredIndex = 0;
+    if (auto ILE = dyn_cast<InitListExpr>(Construct)) {
+      DesugaredIndex = ILE->getDesugaredIndex();
+    }
+    return getDerived().RebuildInitList(Construct->getBeginLoc(), NewArgs,
+                                        DesugaredIndex, Construct->getEndLoc());
+#else
     return getDerived().RebuildInitList(Construct->getBeginLoc(), NewArgs,
                                         Construct->getEndLoc());
+#endif
+  }
 
   // Build a ParenListExpr to represent anything else.
   SourceRange Parens = Construct->getParenOrBraceRange();
@@ -6296,7 +6316,7 @@ QualType TreeTransform<Derived>::TransformConditionalType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() 
+  if (getDerived().AlwaysRebuild()
       || Old_CondExpr != New_CondExpr
       || Old_ConditionalTypeInfo1 != New_ConditionalTypeInfo1
       || Old_ConditionalTypeInfo2 != New_ConditionalTypeInfo2) {
@@ -11172,7 +11192,7 @@ TreeTransform<Derived>::TransformCallExpr(CallExpr *E) {
   ExprResult Callee = getDerived().TransformExpr(E->getCallee());
   if (Callee.isInvalid())
     return ExprError();
-  
+
   #if ENABLE_BSC
   // Keep flag unchanged in transformation.
   Callee.get()->IsDesugaredBSCMethodCall = E->getCallee()->IsDesugaredBSCMethodCall;
@@ -11548,10 +11568,13 @@ TreeTransform<Derived>::TransformInitListExpr(InitListExpr *E) {
   }
 
   return getDerived().RebuildInitList(E->getLBraceLoc(), Inits,
+#if ENABLE_BSC
+                                      E->getDesugaredIndex(),
+#endif
                                       E->getRBraceLoc());
 }
 
-template<typename Derived>
+template <typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
   Designation Desig;
@@ -12860,7 +12883,7 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
       return ExprError();
 
     if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression()
-       #if ENABLE_BSC 
+       #if ENABLE_BSC
        && E->getDimensionExpression()
        #endif
        )
