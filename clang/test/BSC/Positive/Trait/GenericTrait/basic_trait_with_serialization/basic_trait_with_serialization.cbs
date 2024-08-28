@@ -94,12 +94,12 @@ void int::free(int* this) {}
 impl trait Future<int> for int;
 // CHECK: VarDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:6, col:28> col:28 __int_trait_Future 'struct __Trait_Future_Vtable<int>':'struct __Trait_Future_Vtable<int>' cinit
 // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:6, col:28> 'struct __Trait_Future_Vtable<int>':'struct __Trait_Future_Vtable<int>'
-// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:28> 'struct PollResult<int> (*)(void *, int)' <BitCast>
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:28> 'struct PollResult<int> (*)(int *, int)' <FunctionToPointerDecay> part_of_explicit_cast
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:28> 'struct PollResult<int> (int *, int)' lvalue BSCMethod 0x{{[^ ]*}} 'poll' 'struct PollResult<int> (int *, int)'
-// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:28> 'void (*)(void *)' <BitCast>
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:28> 'void (*)(int *)' <FunctionToPointerDecay> part_of_explicit_cast
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:28> 'void (int *)' lvalue BSCMethod 0x{{[^ ]*}} 'free' 'void (int *)'
+// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:6> 'struct PollResult<int> (*)(void *, int)' <BitCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:6> 'struct PollResult<int> (*)(int *, int)' <FunctionToPointerDecay> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:6> 'struct PollResult<int> (int *, int)' lvalue BSCMethod 0x{{[^ ]*}} 'poll' 'struct PollResult<int> (int *, int)'
+// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:6> 'void (*)(void *)' <BitCast>
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:6> 'void (*)(int *)' <FunctionToPointerDecay> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:6> 'void (int *)' lvalue BSCMethod 0x{{[^ ]*}} 'free' 'void (int *)'
 
 trait Future<int> *f(trait Future<int> *a) {
     return a;

@@ -2174,7 +2174,33 @@ public:
               .BuildCallExpr(nullptr, FreeFuncExpr, SourceLocation(), FreeArgs,
                              SourceLocation())
               .get();
+
       ThenBodyStmt = FreeFuncCall;
+
+      // If the future is a pointer type, we need to set it back to 0
+      if (FtField->getType()->isPointerType()) {
+        llvm::APInt ResultVal(SemaRef.Context.getTargetInfo().getIntWidth(), 0);
+        Expr *IntegerExpr =
+            IntegerLiteral::Create(SemaRef.Context, ResultVal,
+                                   SemaRef.Context.IntTy, SourceLocation());
+
+        Expr *RAssignExpr = CStyleCastExpr::Create(
+            SemaRef.Context, FtField->getType(), VK_PRValue, CK_NullToPointer,
+            IntegerExpr, nullptr, FPOptionsOverride(),
+            SemaRef.Context.getTrivialTypeSourceInfo(FtField->getType(), SourceLocation()),
+            SourceLocation(), SourceLocation());
+        Expr *NullptrAssign =
+            SemaRef
+                .BuildBinOp(nullptr, SourceLocation(), BO_Assign,
+                            /* LHSExpr=*/FtExpr, /* RHSExpr=*/RAssignExpr)
+                .get();
+
+        SmallVector<Stmt *, 2> BodyStmts = {FreeFuncCall, NullptrAssign};
+        ThenBodyStmt = CompoundStmt::Create(SemaRef.Context, BodyStmts,
+                                            FPOptionsOverride(),
+                                            SourceLocation(), SourceLocation());
+      }
+
     } else {
       RecordDecl *FatPointerRD =
           dyn_cast<RecordType>(
@@ -2438,7 +2464,11 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
   std::stack<RecordDecl::field_iterator> Futures;
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
        FieldIt != RD->field_end(); ++FieldIt) {
-    if (FieldIt->getType().getTypePtr()->isBSCFutureType() &&
+    auto FieldTy = FieldIt->getType();
+    if ((FieldTy.getTypePtr()->isBSCFutureType() ||
+         (isa<PointerType>(FieldTy.getTypePtr()) &&
+          implementedFutureType(
+              S, cast<PointerType>(FieldTy.getTypePtr())->getPointeeType()))) &&
         StartsWith(FieldIt->getDeclName().getAsString(), "Ft_")) {
       Futures.push(FieldIt);
     }
@@ -2446,73 +2476,118 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
 
   while (!Futures.empty()) {
     RecordDecl::field_iterator FtField = Futures.top();
-    RecordDecl *FatPointerRD =
-        dyn_cast<RecordType>(FtField->getType().getDesugaredType(S.Context))
-            ->getDecl();
     Futures.pop();
+    Expr *DataExpr = nullptr;
+    Expr *FreeFuncExpr = nullptr;
+    if (FtField->getType().getTypePtr()->isBSCFutureType()){
+      // If its BSCFutureType (the trait) call the free function from the vtable
+      RecordDecl *FatPointerRD =
+          dyn_cast<RecordType>(FtField->getType().getDesugaredType(S.Context))
+              ->getDecl();
 
-    Expr *DRE = S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
-    Expr *PDRE =
-        ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
-                                 nullptr, VK_PRValue, FPOptionsOverride());
+      Expr *DRE = S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
+      Expr *PDRE =
+          ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
+                                  nullptr, VK_PRValue, FPOptionsOverride());
 
-    // Generating `FutureExpr` as followed:
-    // @code
-    // this.Ft_<x>
-    // @endcode
-    Expr *FutureExpr = S.BuildMemberExpr(
-        PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
-        SourceLocation(), *FtField,
-        DeclAccessPair::make(PVD, FtField->getAccess()), false,
-        DeclarationNameInfo(), FtField->getType().getNonReferenceType(),
-        VK_LValue, OK_Ordinary);
+      // Generating `FutureExpr` as followed:
+      // @code
+      // this.Ft_<x>
+      // @endcode
+      Expr *FutureExpr = S.BuildMemberExpr(
+          PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *FtField,
+          DeclAccessPair::make(PVD, FtField->getAccess()), false,
+          DeclarationNameInfo(), FtField->getType().getNonReferenceType(),
+          VK_LValue, OK_Ordinary);
 
-    RecordDecl::field_iterator PtrField, VtableField, FPFieldIt;
-    for (FPFieldIt = FatPointerRD->field_begin();
-         FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {
-      if (FPFieldIt->getDeclName().getAsString() == "data") {
-        PtrField = FPFieldIt;
-      } else if (FPFieldIt->getDeclName().getAsString() == "vtable") {
-        VtableField = FPFieldIt;
+      RecordDecl::field_iterator PtrField, VtableField, FPFieldIt;
+      for (FPFieldIt = FatPointerRD->field_begin();
+          FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {
+        if (FPFieldIt->getDeclName().getAsString() == "data") {
+          PtrField = FPFieldIt;
+        } else if (FPFieldIt->getDeclName().getAsString() == "vtable") {
+          VtableField = FPFieldIt;
+        }
       }
-    }
 
-    // Generating `VtableExpr` as followed:
-    // @code
-    // this.Ft_<x>.vtable
-    // @endcode
-    Expr *VtableExpr = S.BuildMemberExpr(
-        FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
-        SourceLocation(), *VtableField,
-        DeclAccessPair::make(FatPointerRD, VtableField->getAccess()), false,
-        DeclarationNameInfo(), VtableField->getType(), VK_LValue, OK_Ordinary);
-    VtableExpr = ImplicitCastExpr::Create(S.Context, VtableExpr->getType(),
-                                          CK_NoOp, VtableExpr, nullptr,
-                                          VK_PRValue, FPOptionsOverride());
+      // Generating `VtableExpr` as followed:
+      // @code
+      // this.Ft_<x>.vtable
+      // @endcode
+      Expr *VtableExpr = S.BuildMemberExpr(
+          FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *VtableField,
+          DeclAccessPair::make(FatPointerRD, VtableField->getAccess()), false,
+          DeclarationNameInfo(), VtableField->getType(), VK_LValue, OK_Ordinary);
+      VtableExpr = ImplicitCastExpr::Create(S.Context, VtableExpr->getType(),
+                                            CK_NoOp, VtableExpr, nullptr,
+                                            VK_PRValue, FPOptionsOverride());
 
-    RecordDecl::field_iterator FreeFuncField, FreeFuncFieldIt;
-    const RecordType *RT = dyn_cast<RecordType>(
-        VtableField->getType()->getPointeeType().getDesugaredType(S.Context));
-    RecordDecl *VtableRD = RT->getDecl();
-    for (FreeFuncFieldIt = VtableRD->field_begin();
-         FreeFuncFieldIt != VtableRD->field_end(); ++FreeFuncFieldIt) {
-      if (FreeFuncFieldIt->getDeclName().getAsString() == "free") {
-        FreeFuncField = FreeFuncFieldIt;
+      RecordDecl::field_iterator FreeFuncField, FreeFuncFieldIt;
+      const RecordType *RT = dyn_cast<RecordType>(
+          VtableField->getType()->getPointeeType().getDesugaredType(S.Context));
+      RecordDecl *VtableRD = RT->getDecl();
+      for (FreeFuncFieldIt = VtableRD->field_begin();
+          FreeFuncFieldIt != VtableRD->field_end(); ++FreeFuncFieldIt) {
+        if (FreeFuncFieldIt->getDeclName().getAsString() == "free") {
+          FreeFuncField = FreeFuncFieldIt;
+        }
       }
+
+      DataExpr = S.BuildMemberExpr(
+          FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *PtrField,
+          DeclAccessPair::make(FatPointerRD, PtrField->getAccess()), false,
+          DeclarationNameInfo(), PtrField->getType(), VK_LValue, OK_Ordinary);
+
+      FreeFuncExpr = S.BuildMemberExpr(
+          VtableExpr, true, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *FreeFuncField,
+          DeclAccessPair::make(FatPointerRD, FreeFuncField->getAccess()), false,
+          DeclarationNameInfo(), FreeFuncField->getType(), VK_LValue,
+          OK_Ordinary);
+    } else {
+      // If not, the free function can be obtained directly
+      auto AEType = FtField->getType();
+
+      // Remove all pointers from type
+      while (AEType->isPointerType()) {
+        AEType = AEType->getPointeeType();
+      }
+
+      const RecordType *FutureType = dyn_cast<RecordType>(
+          AEType.getDesugaredType(S.Context));
+      assert(FutureType != nullptr &&
+            "struct future of async function is null");
+
+      RecordDecl *FutureStructRD = FutureType->getDecl();
+      assert(FutureStructRD != nullptr &&
+             "struct future of async function is null");
+
+      BSCMethodDecl *FreeFD = lookupBSCMethodInRecord(S, "free", FutureStructRD);
+      assert(FreeFD != nullptr && "free function of async function is null");
+
+      FreeFuncExpr = S.BuildDeclRefExpr(
+          FreeFD, FreeFD->getType().getNonReferenceType(), VK_LValue,
+          SLoc);
+
+      FreeFuncExpr->HasBSCScopeSpec = true;
+
+      Expr *DRE = S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
+      Expr *PDRE =
+          ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
+                                  nullptr, VK_PRValue, FPOptionsOverride());
+
+      DataExpr = S.BuildMemberExpr(
+          PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
+          SourceLocation(), *FtField,
+          DeclAccessPair::make(PVD, FtField->getAccess()), false,
+          DeclarationNameInfo(), FtField->getType().getNonReferenceType(),
+          VK_LValue, OK_Ordinary);
     }
-
-    Expr *DataExpr = S.BuildMemberExpr(
-        FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
-        SourceLocation(), *PtrField,
-        DeclAccessPair::make(FatPointerRD, PtrField->getAccess()), false,
-        DeclarationNameInfo(), PtrField->getType(), VK_LValue, OK_Ordinary);
-
-    Expr *FreeFuncExpr = S.BuildMemberExpr(
-        VtableExpr, true, SourceLocation(), NestedNameSpecifierLoc(),
-        SourceLocation(), *FreeFuncField,
-        DeclAccessPair::make(FatPointerRD, FreeFuncField->getAccess()), false,
-        DeclarationNameInfo(), FreeFuncField->getType(), VK_LValue,
-        OK_Ordinary);
+    assert(DataExpr);
+    assert(FreeFuncExpr);
     Stmt *If = buildIfStmtForFreeFutureObj(S, DataExpr, FreeFuncExpr);
     Stmts.push_back(If);
   }
@@ -3057,6 +3132,13 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Context.BSCDesugaredMap[FD].push_back(FreeDecl2);
 
 
+  BSCMethodDecl *FreeDecl = buildFreeFunctionDefinition(*this, RD, FD, IsOptimization);
+  if (!FreeDecl) {
+    return Decls;
+  }
+  Decls.push_back(FreeDecl);
+  Context.BSCDesugaredMap[FD].push_back(FreeDecl);
+
   BSCMethodDecl *PollDecl = buildPollFunctionDefinition(*this, RD, PollResultRD, FD,
                                               FatPointerRD, FutureStateNumber);
   if (!PollDecl) {
@@ -3064,12 +3146,6 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   }
   Decls.push_back(PollDecl);
   Context.BSCDesugaredMap[FD].push_back(PollDecl);
-  BSCMethodDecl *FreeDecl = buildFreeFunctionDefinition(*this, RD, FD, IsOptimization);
-  if (!FreeDecl) {
-    return Decls;
-  }
-  Decls.push_back(FreeDecl);
-  Context.BSCDesugaredMap[FD].push_back(FreeDecl);
 
   VarDecl *VtableDecl = buildVtableInitDecl(*this, FD, Context.getRecordType(RD), ReturnTy, true);
   if (!VtableDecl) {

@@ -13,7 +13,7 @@ async int read(int a) {
   return 0;
 }
 
-async int f(int start) { 
+async int f(int start) {
   int result = await read(await read(start));
   return result;
 }

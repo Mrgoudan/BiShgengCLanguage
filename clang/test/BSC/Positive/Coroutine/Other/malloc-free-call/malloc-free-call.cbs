@@ -152,18 +152,18 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: void struct__Futuref_free(struct _Futuref *this) {
-// CHECK-NEXT:   if (this->Ft_2.data != 0) {
-// CHECK-NEXT:     this->Ft_2.vtable->free(this->Ft_2.data);
-// CHECK-NEXT:     this->Ft_2.data = (void *)0;
-// CHECK-NEXT:   }
-// CHECK-NEXT:   if (this->Ft_1.data != 0) {
-// CHECK-NEXT:     this->Ft_1.vtable->free(this->Ft_1.data);
-// CHECK-NEXT:     this->Ft_1.data = (void *)0;
-// CHECK-NEXT:   }
-// CHECK-NEXT:   if (this != 0) {
-// CHECK-NEXT:     free((void *)this);
-// CHECK-NEXT:     this = (struct _Futuref *)(void *)0;
-// CHECK-NEXT:   }
+// CHECK-NEXT:      if (this->Ft_2 != 0) {
+// CHECK-NEXT:          struct__Futureread_free((void *)this->Ft_2);
+// CHECK-NEXT:          this->Ft_2 = (struct _Futureread *)(void *)0;
+// CHECK-NEXT:      }
+// CHECK-NEXT:      if (this->Ft_1 != 0) {
+// CHECK-NEXT:          struct__Futureread_free((void *)this->Ft_1);
+// CHECK-NEXT:          this->Ft_1 = (struct _Futureread *)(void *)0;
+// CHECK-NEXT:      }
+// CHECK-NEXT:      if (this != 0) {
+// CHECK-NEXT:          free((void *)this);
+// CHECK-NEXT:          this = (struct _Futuref *)(void *)0;
+// CHECK-NEXT:      }
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: struct __Trait_Future_Vtable_int __Trait_Future_Vtablef = {(struct PollResult_int (*)(void *))struct__Futuref_poll, (void (*)(void *))struct__Futuref_free};
