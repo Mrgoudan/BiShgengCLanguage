@@ -2564,6 +2564,15 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
   SourceLocation ELoc = FD->getEndLoc();
   QualType Ty = FD->getDeclaredReturnType();
 
+  S.PushFunctionScope();
+  S.PushDeclContext(S.getCurScope(), FD);
+    FunctionDecl *TransformedFD =
+      TransformToReturnVoid(S).TransformFunctionDecl(FD);
+  S.PopDeclContext();
+  S.PopFunctionScopeInfo();
+
+
+
   std::string FName = "poll";
 
   QualType FuncRetType = S.Context.getRecordType(PollResultRD);
@@ -2588,9 +2597,6 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
       &(S.Context.Idents).get("this"), ParamType, nullptr, SC_None, nullptr);
   ParmVarDecls.push_back(PVD);
   NewFD->setParams(ParmVarDecls);
-
-  FunctionDecl *TransformedFD =
-      TransformToReturnVoid(S).TransformFunctionDecl(FD);
 
   NewFD->setType(
       S.Context.getFunctionType(TransformedFD->getReturnType(), ParamTys, {}));
