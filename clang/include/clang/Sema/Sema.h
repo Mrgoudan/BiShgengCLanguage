@@ -12411,8 +12411,8 @@ public:
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;
   SafeZoneSpecifier getInstantiationSafeZoneSpecifier();
-  bool HasDiffBorrowOrOwnedParamsTypeAtBothSafeFunction(QualType LHS,
-                                                        QualType RHS);
+  bool HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
+                                                    QualType RHS);
   ExprResult CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, bool IsConstexpr);
   // borrow
   bool IsAddrBorrowDerefOp(ExprResult &Operand);

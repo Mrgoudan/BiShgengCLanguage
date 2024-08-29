@@ -4102,24 +4102,26 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   // duplicate function decls like "void f(int); void f(enum X);" properly.
   if (!getLangOpts().CPlusPlus
       ) {
-    #if ENABLE_BSC
+  #if ENABLE_BSC
     // If any declaration of a BSC function or function
     // template has a constexpr specifier then all its declarations shall
     // contain the constexpr specifier.
-    if (getLangOpts().BSC && New->getConstexprKind() != Old->getConstexprKind()) {
-      Diag(New->getLocation(), diag::err_constexpr_redecl_mismatch)
-        << New << static_cast<int>(New->getConstexprKind())
-        << static_cast<int>(Old->getConstexprKind());
-      Diag(Old->getLocation(), diag::note_previous_declaration);
-      return true;
+    if (getLangOpts().BSC) {
+      if (New->getConstexprKind() != Old->getConstexprKind()) {
+        Diag(New->getLocation(), diag::err_constexpr_redecl_mismatch)
+          << New << static_cast<int>(New->getConstexprKind())
+          << static_cast<int>(Old->getConstexprKind());
+        Diag(Old->getLocation(), diag::note_previous_declaration);
+        return true;
+      }
+      if (HasDiffBorrowOrOwnedParamsTypeAtBothFunction(Old->getType(),
+                                                       New->getType())) {
+        Diag(New->getLocation(), diag::err_conflicting_types) << New;
+        Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
+        return true;
+      }
     }
-    if (HasDiffBorrowOrOwnedParamsTypeAtBothSafeFunction(Old->getType(),
-                                                         New->getType())) {
-      Diag(New->getLocation(), diag::err_conflicting_types) << New;
-      Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
-      return true;
-    }
-#endif
+  #endif
     // C99 6.7.5.3p15: ...If one type has a parameter type list and the other
     // type is specified by a function definition that contains a (possibly
     // empty) identifier list, both shall agree in the number of parameters

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // If the function declaration and function implementation are inconsistent,
-// And both are safe functions, a compilation error is reported
+// a compilation error is reported
 
 safe void test_1(int * owned p);    // expected-note {{previous declaration is here}}
 safe void test_1(int * p) {         // expected-error {{unsafe parameter type is forbidden in the safe function}}
@@ -72,52 +72,76 @@ safe int *borrow test_81(int *borrow p);                // expected-note {{previ
 safe const int *borrow test_81(const int *borrow p) {   // expected-error{{conflicting types for 'test_81'}}
 }
 
-// If the function declaration and function implementation are inconsistent,
-// And both are unsafe functions, Ignore this difference.
-
-void test_9(int * owned p);
-void test_9(int * p) {
+void test_9(int * owned p);   // expected-note {{previous declaration is here}}
+void test_9(int * p) {    // expected-error{{conflicting types for 'test_9'}}
 }
 
-unsafe void test_9_0(int * owned p);
-void test_9_0(int * p) {
+unsafe void test_9_0(int * owned p);     // expected-note {{previous declaration is here}}
+void test_9_0(int * p) {       // expected-error{{conflicting types for 'test_9_0'}}
 }
 
-unsafe void test_9_1(int * owned p);
-unsafe void test_9_1(int * p) {
+unsafe void test_9_1(int * owned p);// expected-note {{previous declaration is here}}
+unsafe void test_9_1(int * p) {   // expected-error{{conflicting types for 'test_9_1'}}
 }
 
-void test_9_2(int * owned p);
-void test_9_2(owned int * p) {
+void test_9_2(int * owned p);// expected-note {{previous declaration is here}}
+void test_9_2(owned int * p) {// expected-error{{conflicting types for 'test_9_2'}}
 }
 
-void test_10(int owned p);
-void test_10(int p) {
+void test_10(int owned p);// expected-note {{previous declaration is here}}
+void test_10(int p) {   // expected-error{{conflicting types for 'test_10'}}
 }
 
-int * owned test_11(int *p);
-int * owned test_11(int *owned p) {
+int * owned test_11(int *p);// expected-note {{previous declaration is here}}
+int * owned test_11(int *owned p) {   // expected-error{{conflicting types for 'test_11'}}
     return p;
 }
 
-int test_12(void);
-int owned test_12(void) {
+int test_12(void);// expected-note {{previous declaration is here}}
+int owned test_12(void) {   // expected-error{{conflicting types for 'test_12'}}
     return 0;
 }
 
-void test_13(int *owned p);
-void test_13(int *borrow p) {
+void test_13(int *owned p);// expected-note {{previous declaration is here}}
+void test_13(int *borrow p) {  // expected-error{{conflicting types for 'test_13'}}
 }
 
-int * owned test_14(int *owned p);
-int * borrow test_14(int *borrow p) {
+int * owned test_14(int *owned p);  // expected-note {{previous declaration is here}}
+int * borrow test_14(int *borrow p) {   // expected-error{{conflicting types for 'test_14'}}
 }
 
-void test_15(int * borrow p);
-void test_15(int * p) {
+void test_15(int * borrow p);  // expected-note {{previous declaration is here}}
+void test_15(int * p) {   // expected-error{{conflicting types for 'test_15'}}
 }
 
-int * borrow test_16(int * borrow p);
-int * test_16(int * borrow p) {
+int * borrow test_16(int * borrow p);  // expected-note {{previous declaration is here}}
+int * test_16(int * borrow p) {    // expected-error{{conflicting types for 'test_16'}}
     return 0;
+}
+
+safe int * borrow test_17(int * borrow p);  // expected-note {{previous declaration is here}}
+int * test_17(int * borrow p) {    // expected-error{{conflicting types for 'test_17'}}
+    return 0;
+}
+
+safe void test_18(int * borrow p);  // expected-note {{previous declaration is here}}
+void test_18(int * p) {   // expected-error{{conflicting types for 'test_18'}}
+}
+
+safe void test_19(int * owned p);   // expected-note {{previous declaration is here}}
+void test_19(int * p) {    // expected-error{{conflicting types for 'test_19'}}
+}
+
+safe int * owned test_20(int * owned p);   // expected-note {{previous declaration is here}}
+int * test_20(int * p) {    // expected-error{{conflicting types for 'test_20'}}
+    return 0;
+}
+
+int * borrow test_21(const int * borrow p);  // expected-note {{previous declaration is here}}
+int * borrow test_21(int * borrow p) {    // expected-error{{conflicting types for 'test_21'}}
+    return p;
+}
+
+void test_22(const int * borrow p);  // expected-note {{previous declaration is here}}
+void test_22(const int * p) {    // expected-error{{conflicting types for 'test_22'}}
 }

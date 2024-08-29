@@ -433,49 +433,4 @@ SafeZoneSpecifier Sema::getInstantiationSafeZoneSpecifier() {
   }
   return SafeZoneSpec;
 }
-
-bool HasDiffBorrorOrOwnedQualifiers(QualType LHSType, QualType RHSType) {
-  if (LHSType.isOwnedQualified() != RHSType.isOwnedQualified()) {
-    return true;
-  }
-  if (LHSType.isBorrowQualified() != RHSType.isBorrowQualified()) {
-    return true;
-  }
-  if (LHSType->isPointerType() && RHSType->isPointerType()) {
-    QualType LHSPType = LHSType->getPointeeType();
-    QualType RHSPType = RHSType->getPointeeType();
-    return HasDiffBorrorOrOwnedQualifiers(LHSPType, RHSPType);
-  }
-  return false;
-}
-
-bool Sema::HasDiffBorrowOrOwnedParamsTypeAtBothSafeFunction(QualType LHS,
-                                                            QualType RHS) {
-  const FunctionProtoType *LSHFuncType = LHS->getAs<FunctionProtoType>();
-  const FunctionProtoType *RSHFuncType = RHS->getAs<FunctionProtoType>();
-  if (!LSHFuncType || !RSHFuncType) {
-    return false;
-  }
-
-  if (LSHFuncType->getFunSafeZoneSpecifier() != SZ_Safe ||
-      RSHFuncType->getFunSafeZoneSpecifier() != SZ_Safe) {
-    return false;
-  }
-  QualType LHSRetType = LSHFuncType->getReturnType();
-  QualType RHSRetType = RSHFuncType->getReturnType();
-  if (HasDiffBorrorOrOwnedQualifiers(LHSRetType, RHSRetType)) {
-    return true;
-  }
-  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
-    return true;
-  }
-  for (unsigned i = 0; i < LSHFuncType->getNumParams(); i++) {
-    QualType LHSParType = LSHFuncType->getParamType(i).getUnqualifiedType();
-    QualType RHSParType = RSHFuncType->getParamType(i).getUnqualifiedType();
-    if (HasDiffBorrorOrOwnedQualifiers(LHSParType, RHSParType)) {
-      return true;
-    }
-  }
-  return false;
-}
 #endif
