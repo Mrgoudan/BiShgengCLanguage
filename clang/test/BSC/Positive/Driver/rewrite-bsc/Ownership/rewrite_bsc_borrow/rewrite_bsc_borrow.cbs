@@ -13,7 +13,7 @@ void int::foo(This * borrow this) {}
 typedef int * borrow myInt;
 typedef int* borrow (*PF2)(struct R);
 
-void test() {
+void test1() {
     int x = 0;
     float y = 1.0;
     int * borrow p = &mut x;
@@ -27,6 +27,13 @@ void test() {
     int * borrow p7 = &mut *(&x);
     p7 = &mut *p;
     int * p8 = (int *)p5;
+}
+
+void test2() {
+    int x = 0;
+    int y = 1;
+    struct R r1 = { &mut x, &const y };
+    struct R r2 = { .p1 = &mut x, .p2 = &const y };    
 }
 
 int main() {
@@ -45,7 +52,7 @@ int main() {
 // CHECK-NEXT: void int_foo(int * this) {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: void test(void) {
+// CHECK-NEXT: void test1(void) {
 // CHECK-NEXT:     int x = 0;
 // CHECK-NEXT:     float y = 1.;
 // CHECK-NEXT:     int * p = &x;
@@ -58,4 +65,11 @@ int main() {
 // CHECK-NEXT:     int * p7 = &*(&x);
 // CHECK-NEXT:     p7 = &*p;
 // CHECK-NEXT:     int *p8 = (int *)p5;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: void test2(void) {
+// CHECK-NEXT:     int x = 0;
+// CHECK-NEXT:     int y = 1;
+// CHECK-NEXT:     struct R r1 = {&x, &y};
+// CHECK-NEXT:     struct R r2 = {.p1 = &x, .p2 = &y};
 // CHECK-NEXT: }

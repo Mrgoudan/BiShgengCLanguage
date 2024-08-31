@@ -1,0 +1,57 @@
+// RUN: %clang_cc1 -verify %s
+
+owned struct G;
+owned struct G {
+    public:
+        G* g;
+};
+
+void use_G_mut(G * borrow g);
+void use_G_const(const G * borrow g);
+
+void test1(G g1) {
+    G g = { .g = &g1 };
+    G *borrow p1 = &mut g;
+    const G *borrow p2 = &const g;     // expected-note {{previous borrow is here}}
+    G *borrow p3 = &mut *g.g;
+    const G *borrow p4 = &const *g.g;  // expected-note {{previous borrow is here}}
+    G *borrow p5 = &mut *g.g->g;
+    const G *borrow p6 = &const *g.g->g;  // expected-note {{previous borrow is here}}
+    use_G_mut(p1);  // expected-error {{There should be at most one mutable borrow targeting to 'g' at the same time}}
+    use_G_const(p2);
+    use_G_mut(p3);      // expected-error {{There should be at most one mutable borrow targeting to 'g' at the same time}}
+    use_G_const(p4);
+    use_G_mut(p5);   // expected-error {{There should be at most one mutable borrow targeting to 'g' at the same time}}
+    use_G_const(p6);   
+}
+
+owned struct K;
+owned struct S {
+    public:
+        K* k;
+};
+owned struct K {
+    public:
+        S* s;
+};
+
+void use_S_mut(S * borrow s);
+void use_S_const(const S * borrow s);
+void use_K_mut(K * borrow k);
+void use_K_const(const K * borrow k);
+
+void test2(S s1) {
+    K k = { .s = &s1 };
+    K *borrow p1 = &mut k;
+    const K *borrow p2 = &const k;    // expected-note {{previous borrow is here}}
+    S *borrow p3 = &mut *k.s;
+    const S *borrow p4 = &const *k.s;// expected-note {{previous borrow is here}}
+    K *borrow p5 = &mut *k.s->k;
+    const K *borrow p6 = &const *k.s->k;// expected-note {{previous borrow is here}}
+    use_K_mut(p1);   // expected-error {{There should be at most one mutable borrow targeting to 'k' at the same time}}
+    use_K_const(p2);
+    use_S_mut(p3);  // expected-error {{There should be at most one mutable borrow targeting to 'k' at the same time}}
+    use_S_const(p4);
+    use_K_mut(p5);  // expected-error {{There should be at most one mutable borrow targeting to 'k' at the same time}}
+    use_K_const(p6);   
+}

@@ -891,7 +891,7 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
     VarDecl *BorrowVD = NLLOfVar.first;
     NonLexicalLifetimeOfVar NLLRangesOfVar = NLLOfVar.second;
     for (const auto &NLLRange : NLLRangesOfVar) {
-      if (NLLRange.Target.TargetVD)
+      if (NLLRange.Kind != BorrowKind::NoBorrow)
         BorrowTargetMap[NLLRange.Target.TargetVD].push_back(BorrowInfo(
             NLLRange.Target.TargetFieldPath, BorrowVD, NLLRange.BorrowFieldPath,
             NLLRange.Begin, NLLRange.End, NLLRange.Kind));
@@ -907,7 +907,7 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
       unsigned BorrowBegin = Borrow.Begin;
       unsigned BorrowEnd = Borrow.End;
       for (const auto &NLLOfTarget : NLLForAllVars[TargetVD]) {
-        if (NLLOfTarget.Target.TargetFieldPath == "") {
+        if (NLLOfTarget.BorrowFieldPath == "") {
           unsigned TargetBegin = NLLOfTarget.Begin;
           unsigned TargetEnd = NLLOfTarget.End;
           if (BorrowBegin <= TargetBegin || BorrowEnd >= TargetEnd) {
@@ -992,7 +992,8 @@ FindBorrowFieldsOfStruct(RecordDecl *RD,
 static void FindNakedPointerFieldsOfStructDFS(
     FieldDecl *CurrFD, std::string FP,
     llvm::SmallVector<std::string>
-        &NakedPointerFieldsOfStruct) {
+        &NakedPointerFieldsOfStruct,
+    llvm::SmallSet<RecordDecl *, 16> &FoundRD) {
   QualType FQT = CurrFD->getType().getCanonicalType();
   if (FQT->isPointerType() && !FQT.isOwnedQualified() && !FQT.isBorrowQualified())
     NakedPointerFieldsOfStruct.push_back(FP + "." + CurrFD->getNameAsString());
@@ -1003,9 +1004,25 @@ static void FindNakedPointerFieldsOfStructDFS(
   else if (FQT->isPointerType()) 
     if (auto RT = dyn_cast<RecordType>(FQT->getPointeeType())) 
       RD = RT->getDecl();
-  if (RD)
-    for (FieldDecl *FD : RD->fields())
-      FindNakedPointerFieldsOfStructDFS(FD, FP + "." + CurrFD->getNameAsString(), NakedPointerFieldsOfStruct);
+  if (RD) {
+    // When current struct we have visited, we stop recursion.
+    // We do this to prevent infinite recursion
+    // if a struct has field with its owned type, for example:
+    // @code
+    //     owned struct K;
+    //     owned struct K {
+    //         public:
+    //             K* k;
+    //     };
+    // @endcode
+    if (FoundRD.count(RD))
+      return;
+    else {
+      FoundRD.insert(RD);
+      for (FieldDecl *FD : RD->fields())
+        FindNakedPointerFieldsOfStructDFS(FD, FP + "." + CurrFD->getNameAsString(), NakedPointerFieldsOfStruct, FoundRD);
+    }
+  }
 }
 
 static void
@@ -1016,8 +1033,10 @@ FindNakedPointerFieldsOfStruct(RecordDecl *RD,
     QualType FQT = FD->getType().getCanonicalType();
     if (FQT->isPointerType() && !FQT.isOwnedQualified() && !FQT.isBorrowQualified())
       NakedPointerFieldsOfStruct.push_back("." + FD->getNameAsString());
-    else if (FQT->isRecordType() || (FQT->isPointerType() && isa<RecordType>(FQT->getPointeeType())))
-      FindNakedPointerFieldsOfStructDFS(FD, "", NakedPointerFieldsOfStruct);
+    if (FQT->isRecordType() || (FQT->isPointerType() && isa<RecordType>(FQT->getPointeeType()))) {
+      llvm::SmallSet<RecordDecl *, 16> FoundRD;
+      FindNakedPointerFieldsOfStructDFS(FD, "", NakedPointerFieldsOfStruct, FoundRD);
+    }
   }
 }
 
