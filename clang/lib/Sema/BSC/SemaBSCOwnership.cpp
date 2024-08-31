@@ -128,6 +128,9 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
     if (!IsPointer) {
       return false;
     } else {
+      // owned struct S* <-> void* //legal
+      if (LHSPtrType->isVoidPointerType() || RHSPtrType->isVoidPointerType())
+        return true;
       return CheckOwnedQualTypeAssignment(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType(), RLoc);
     }
   }
@@ -202,7 +205,7 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
 bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
   if (!dyn_cast<CallExpr>(E)) return false;
   QualType RetType = E->getType().getCanonicalType();
-  if (RetType.isOwnedQualified() || RetType->hasOwnedFields()) {
+  if (RetType.isOwnedQualified() || (RetType->isRecordType() && RetType->hasOwnedFields())) {
     std::string ExprString;
     llvm::raw_string_ostream ExprStream(ExprString);
     E->printPretty(ExprStream, nullptr, clang::PrintingPolicy(getLangOpts()));

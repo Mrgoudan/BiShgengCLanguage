@@ -18,15 +18,16 @@ struct A {
     struct A *f;
 };
 
-void func1(struct A a) {} // expected-error {{field memory leak of value: `a`, a.b, a.b.a, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b... are leak}}
+void func1(struct A a) {} // expected-error {{field memory leak of value: `a`, a.b.a, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c... are leak}}
 
 void func(struct A a) {
     int * x = (int *)a.b.a;
-} // expected-error {{field memory leak of value: `a`, a.b, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c... are leak}}
+} // expected-error {{field memory leak of value: `a`, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c, a.c.c.a... are leak}}
 
 void func2(struct A * owned a) {
     int *b = (int *)a->b.a;
-} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, a.b, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c... are leak}}
+} // expected-error {{memory leak of value: `a`}}
+  // expected-error@-1 {{field memory leak of value: `a`, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c, a.c.c.a... are leak}}
 
 void endscope_0(int * owned * owned * owned a, int *b) {} // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
 

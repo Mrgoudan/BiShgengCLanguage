@@ -19,7 +19,7 @@ void func2() {
 
 void func3() {
     struct A * owned a;
-    struct A b = *a; // expected-error {{use of moved value: `a.a`}} expected-error {{use of moved value: `a.b`}}
+    struct A b = *a; // expected-error {{use of uninitialized value: `a`}}
 } // expected-error {{field memory leak of value: `b`, b.a, b.b are leak}} expected-error {{memory leak of value: `a`}}
 
 void func4() {

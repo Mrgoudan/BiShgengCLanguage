@@ -32,8 +32,8 @@ ownedA* func2(ownedA* sa) {
 
 void test2(ownedA* sa) {
     int res1 = sa->a;
-    func2(sa)->a;   // expected-error {{memory leak because temporary variable 'func2(sa)' is owned or indirect owned type, please fix it}}
-    int res2 = func2(sa)->a;    // expected-error {{memory leak because temporary variable 'func2(sa)' is owned or indirect owned type, please fix it}}
+    func2(sa)->a; // expected-warning {{expression result unused}}
+    int res2 = func2(sa)->a;
     return;
 }
 
@@ -52,6 +52,6 @@ typedef struct {
 CC* fun4(CC* c) { return c; }
 
 void test4(CC* c) {
-    fun4(c)->p1++;  // expected-error {{memory leak because temporary variable 'fun4(c)' is owned or indirect owned type, please fix it}}
-    fun4(c)->p2 += 1;   // expected-error {{memory leak because temporary variable 'fun4(c)' is owned or indirect owned type, please fix it}}
+    fun4(c)->p1++;
+    *fun4(c)->p2 += 1;
 }

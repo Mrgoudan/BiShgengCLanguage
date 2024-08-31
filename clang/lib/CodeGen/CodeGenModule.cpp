@@ -1659,6 +1659,13 @@ CodeGenModule::getFunctionLinkage(GlobalDecl GD) {
 
   GVALinkage Linkage = getContext().GetGVALinkageForFunction(D);
 
+  #if ENABLE_BSC
+  if (const auto *MD = dyn_cast<BSCMethodDecl>(D)) {
+    if (MD->getDeclContext()->isRecord() && !MD->isOutOfLine()) {
+      return llvm::GlobalValue::LinkOnceODRLinkage;
+    }
+  }
+  #endif
   if (const auto *Dtor = dyn_cast<CXXDestructorDecl>(D))
     return getCXXABI().getCXXDestructorLinkage(Linkage, Dtor, GD.getDtorType());
 

@@ -65,10 +65,10 @@ void caller3(void * owned a) {
 void caller4(struct A * owned a) {
     struct A b = (struct A)*a;
     callee2((void * owned)a);
-} // expected-error {{field memory leak of value: `b`, b.b, b.b.a, b.b.b, b.b.c, b.b.c.a, b.b.c.b, b.c, b.c.a, b.c.b... are leak}}
+} // expected-error {{field memory leak of value: `b`, b.b.a, b.b.b, b.b.c, b.b.c.a, b.b.c.b, b.c, b.c.a, b.c.b, b.c.c... are leak}}
 
 void caller5(struct A * owned a) {
-    callee2((void * owned)a); // expected-error {{invalid cast to `void * owned` of not all moved value: `a`, a.b, a.b.a, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b... are owned}}
+    callee2((void * owned)a); // expected-error {{invalid cast to `void * owned` of not all moved value: `a`, a.b.a, a.b.b, a.b.c, a.b.c.a, a.b.c.b, a.c, a.c.a, a.c.b, a.c.c... are owned}}
 }
 
 int main() { return 0; }

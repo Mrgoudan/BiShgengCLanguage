@@ -83,12 +83,15 @@ public:
 
     llvm::SmallVector<DiagInfo, 3> checkOPSUse(const VarDecl *VD,
                                                const SourceLocation &Loc,
-                                               bool isGetAddr);
+                                               bool isGetAddr,
+                                               bool isStar = false);
     llvm::SmallVector<DiagInfo, 3> checkOPSFieldUse(const VarDecl *VD,
                                                     const SourceLocation &Loc,
                                                     std::string fullFieldName,
                                                     bool isGetAddr);
     llvm::SmallVector<DiagInfo, 3> checkOPSAssign(const VarDecl *VD,
+                                                  const SourceLocation &Loc);
+    llvm::SmallVector<DiagInfo, 3> checkOPSAssignStar(const VarDecl *VD,
                                                   const SourceLocation &Loc);
     llvm::SmallVector<DiagInfo, 3>
     checkOPSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
