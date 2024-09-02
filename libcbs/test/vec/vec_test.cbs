@@ -1,0 +1,24 @@
+#include "../../src/vec/vec.hbs"
+
+void test1() {
+	Vec<int> v1 = Vec<int>::new();
+	v1.set(0, 2);
+	int x1 = v1.remove(0);
+	v1.push(5);
+	int x2 = v1.pop();
+	_Bool flag = v1.is_empty();
+	size_t length = v1.length();
+	size_t cap = v1.capacity();
+	v1.clear();
+	Vec<int> v2 = Vec<int>::with_capacity(10);
+	v2.shrink_to_fit();
+	v2.push(3.2);
+	v2.set(1, 2);
+	v2.pop();
+	v2.clear();
+}
+
+int main() {
+    test1();
+    return 0;
+}
