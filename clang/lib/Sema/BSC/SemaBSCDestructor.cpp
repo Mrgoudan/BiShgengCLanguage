@@ -164,6 +164,12 @@ class DeclRefFinder : public RecursiveASTVisitor<DeclRefFinder> {
 public:
   DeclRefFinder(Sema &SemaRef) : SemaRef(SemaRef) {}
 
+  bool VisitCallExpr(CallExpr *CE) {
+    for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
+      RecursiveASTVisitor<DeclRefFinder>::TraverseStmt(*it);
+    }
+    return false;
+  }
   bool VisitDeclRefExpr(DeclRefExpr *E) {
     if (isa<VarDecl>(E->getDecl()) &&
         IsVarDeclWithOwnedStructureType(cast<VarDecl>(E->getDecl()))) {
