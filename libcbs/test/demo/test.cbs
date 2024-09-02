@@ -1,0 +1,16 @@
+#include <stdio.h> // depends on libc
+
+void foo(int x);
+
+// test generic feature
+T bar<T>(T x) {
+  return x;  
+}
+
+#include "src/demo/f1.hbs"
+
+int main() {
+  int x = 1;
+  foo(x);
+  return 0;
+}
