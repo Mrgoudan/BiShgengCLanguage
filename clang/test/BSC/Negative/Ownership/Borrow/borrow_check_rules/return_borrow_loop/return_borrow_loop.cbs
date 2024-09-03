@@ -37,8 +37,7 @@ int *borrow test4(int *borrow p) {  //expected-error{{borrow pointer variable 'p
       }
     }
   }
-  return p;  /* expected-error{{borrow pointer variable '_ReturnVar' lives longer than target variable}}
-                expected-error{{Return value cannot be a borrow from local variable 'local1'}} 
+  return p;  /* expected-error{{Return value cannot be a borrow from local variable 'local1'}} 
                 expected-error{{Return value cannot be a borrow from local variable 'local2'}} */
 }
 

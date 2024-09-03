@@ -21,7 +21,7 @@ void test1() {
     const int *borrow q3 = &const p->a;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
     const int *borrow q4 = &const *p->b;   // expected-note {{previous borrow is here}} expected-note {{previous borrow is here}}
     use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'v.a' at the same time}}
-    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'v' at the same time}}
+    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'v.b' at the same time}}
     use_immut(q3);
     use_immut(q4);
 
@@ -32,7 +32,7 @@ void test1() {
     q3 = &const p->a;
     q4 = &const *p->b;
     use_mut(q1);    // expected-error {{There should be at most one mutable borrow targeting to 'k.v.a' at the same time}}
-    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'k' at the same time}}
+    use_mut(q2);    // expected-error {{There should be at most one mutable borrow targeting to 'k.v.b' at the same time}}
     use_immut(q3);
     use_immut(q4);
 }

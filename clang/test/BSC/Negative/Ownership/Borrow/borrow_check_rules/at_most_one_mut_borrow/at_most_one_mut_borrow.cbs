@@ -141,6 +141,24 @@ void test13() {
     useM_mut(p2);
 }
 
+#define NULL ((void*)0)
+void test14(int *a) {
+    int *borrow p1 = (int *borrow)a;
+    int *borrow p2 = (int *borrow)a;  // expected-note {{previous borrow is here}}
+    use_mut(p1);  // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
+    use_mut(p2);
+}
+
+void test15(int *a) {
+    int *borrow p1 = (int *borrow)NULL;
+    int *borrow p2 = (int *borrow)NULL;   // expected-note {{previous borrow is here}}
+    p1 = (int *borrow)a;
+    p2 = (int *borrow)a; 
+    use_mut(p1);  // expected-error {{There should be at most one mutable borrow targeting to 'a' at the same time}}
+    use_mut(p2);
+}
+
+
 int main() {
   int local = 5;
   test1();
@@ -156,5 +174,7 @@ int main() {
   test11();
   test12();
   test13();
+  test14(&local);
+  test15(&local);
   return 0;
 }
