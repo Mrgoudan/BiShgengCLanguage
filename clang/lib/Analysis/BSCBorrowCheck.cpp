@@ -1532,10 +1532,7 @@ void NLLCalculator::VisitInitForTargets(
   }
 
   if (auto UO = dyn_cast<UnaryOperator>(InitE)) {
-    if (UO->getOpcode() == UO_AddrMut || UO->getOpcode() == UO_AddrConst ||
-        UO->getOpcode() == UO_AddrMutDeref ||
-        UO->getOpcode() == UO_AddrConstDeref)
-      VisitInitForTargets(UO->getSubExpr(), Targets);
+    VisitInitForTargets(UO->getSubExpr(), Targets);
   } else if (auto ICE = dyn_cast<ImplicitCastExpr>(InitE)) {
     // int* borrow p = p1;  `p1` is ImplicitCastExpr.
     VisitInitForTargets(ICE->getSubExpr(), Targets);
@@ -1544,7 +1541,10 @@ void NLLCalculator::VisitInitForTargets(
     VisitInitForTargets(ASE->getBase(), Targets);
   } else if (auto CCE = dyn_cast<CStyleCastExpr>(InitE)) {
     // int* borrow p = (int *borrow)a;  `(int *borrow)a` is CStyleCastExpr.
-    VisitInitForTargets(CCE->getSubExpr(), Targets);  
+    VisitInitForTargets(CCE->getSubExpr(), Targets);
+  } else if (auto PE = dyn_cast<ParenExpr>(InitE)) {
+    // int* borrow p = &mut *(a.b);  `(a.b)` is ParenExpr.
+    VisitInitForTargets(PE->getSubExpr(), Targets);  
   } else if (auto CE = dyn_cast<CallExpr>(InitE)) {
     // int* borrow p = foo(&mut local1, &mut local2);
     // the lifetime of p should be smaller than the lifetime intersection of
