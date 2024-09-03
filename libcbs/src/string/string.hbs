@@ -1,7 +1,7 @@
 #ifndef BISHENG_C_SAFETY_STRING_H
 #define BISHENG_C_SAFETY_STRING_H
 
-#include "../vec/vec.hbs"
+#include "src/vec/vec.hbs"
 #include <stdint.h>
 
 extern const size_t bsc_string_no_pos;
@@ -25,12 +25,11 @@ safe size_t String::find(const String* borrow this, char c);
 unsafe String String::from(const char* str);
 safe const char* borrow String::get(const String* borrow this, size_t index);
 safe char* borrow String::get_mut(String* borrow this, size_t index);
-safe int String::is_empty(const String* borrow this);
+safe _Bool String::is_empty(const String* borrow this);
 safe size_t String::length(const String* borrow this);
 safe String String::new(void);
 safe void String::set(String* borrow this, size_t index, char value);
 safe void String::set_len(String* borrow this, size_t len);
-safe void string_swap(String s1, String s2);
 safe String String::with_capacity(size_t cap);
 
 #endif

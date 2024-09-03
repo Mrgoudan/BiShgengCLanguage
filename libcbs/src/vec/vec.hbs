@@ -1,7 +1,7 @@
 #ifndef BISHENG_C_SAFETY_VEC_H
 #define BISHENG_C_SAFETY_VEC_H
 
-#include "../raw_vec/raw_vec.hbs"
+#include "src/raw_vec/raw_vec.hbs"
 #include <string.h>
 
 owned struct Vec<T> {
@@ -52,8 +52,10 @@ safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
 	return &mut this->buf.ptr[index];
 }
 
-safe int Vec<T>::is_empty(const Vec<T>* borrow this) {
-	return this->len == 0;
+safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this) {
+	unsafe {
+		return this->len == 0;
+	}
 }
 
 safe size_t Vec<T>::length(const Vec<T>* borrow this) {

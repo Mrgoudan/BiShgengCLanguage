@@ -1,4 +1,4 @@
-#include "bishengc_safety.hbs"
+#include "src/bishengc_safety/bishengc_safety.hbs"
 #include <execinfo.h>
 #include <stdio.h>
 

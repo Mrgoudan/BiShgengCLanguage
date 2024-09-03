@@ -1,4 +1,4 @@
-#include "string.hbs"
+#include "src/string/string.hbs"
 #include <stdint.h>
 
 const size_t bsc_string_no_pos = SIZE_MAX;
@@ -56,8 +56,8 @@ safe char* borrow String::get_mut(String* borrow this, size_t index) {
     return this->vec.get_mut(index);
 }
 
-safe int String::is_empty(const String* borrow this) {
-    return this->length() == 0;
+safe _Bool String::is_empty(const String* borrow this) {
+    return this->vec.is_empty();
 }
 
 safe size_t String::length(const String* borrow this) {
@@ -76,12 +76,6 @@ safe void String::set(String* borrow this, size_t index, char value) {
 
 safe void String::set_len(String* borrow this, size_t len) {
     this->vec.len = len;
-}
-
-safe void string_swap(String s1, String s2) {
-    String tmp = s1;
-    s1 = s2;
-    s2 = tmp;
 }
 
 safe String String::with_capacity(size_t cap) {

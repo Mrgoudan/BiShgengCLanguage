@@ -1,4 +1,10 @@
-#include "../../src/vec/vec.hbs"
+#include "src/vec/vec.hbs"
+
+void print(const Vec<int>* borrow v) {
+    for (size_t i = 0; i < v->length(); i++) {
+            printf("v[%zx] = %d\n", i, *v->get(i));
+    }
+}
 
 void test1() {
 	Vec<int> v1 = Vec<int>::new();
@@ -16,6 +22,21 @@ void test1() {
 	v2.set(1, 2);
 	v2.pop();
 	v2.clear();
+}
+
+void test2() {
+	Vec<int> v1 = Vec<int>::new();
+	v1.set(0, 2);
+	v1.push(5);
+	Vec<int> v2 = Vec<int>::with_capacity(10);
+	v2.shrink_to_fit();
+	v2.push(3.2);
+	v2.set(1, 2);
+	v2.push(526);
+	v2.push(64);
+	safe_swap(&mut v1, &mut v2);
+	print(&const v1);
+	print(&const v2);
 }
 
 int main() {

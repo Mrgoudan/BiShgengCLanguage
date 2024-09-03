@@ -13,7 +13,6 @@ void default_bad_alloc_handler(size_t size);
 void default_out_of_bound_handler(size_t len, size_t index);
 void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
 
-// safe T *owned safe_malloc<T>(T t);
 safe void safe_free(void * owned p);
 
 safe T *owned safe_malloc<T>(T t) {
@@ -24,6 +23,14 @@ safe T *owned safe_malloc<T>(T t) {
 		}
 		*addr = t;
 		return (T *owned)addr;
+	}
+}
+
+safe void safe_swap<T>(T* borrow left, T* borrow right) {
+	unsafe {
+		T tmp = *(T *)left;
+        *left = *(T *)right;
+        *right = tmp;
 	}
 }
 
