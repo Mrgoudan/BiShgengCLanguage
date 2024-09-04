@@ -1928,40 +1928,26 @@ class TransformToHasSingleState
 }  // namespace
 
 namespace {
-/// Look for Return Stmt
-class ARFinder : public StmtVisitor<ARFinder> {
-  Sema &SemaRef;
+class TransformARToCS : public TreeTransform<TransformARToCS> {
+  typedef TreeTransform<TransformARToCS> BaseTransform;
   Expr *PDRE;
   RecordDecl *FutureRD;
   BSCMethodDecl *FD;
-  QualType ReturnTy;
-  std::vector<Stmt *> ReturnStmts;
-  const int UnitNum = 3;
-  int ReturnNum;
-  llvm::DenseMap<ReturnStmt *, int> ARMap;
   std::map<std::string, int> IdentifierNumber;
 
-public:
-  ARFinder(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD,
-           QualType ReturnTy)
-      : SemaRef(SemaRef),
-        PDRE(PDRE),
-        FutureRD(FutureRD),
-        FD(FD),
-        ReturnTy(ReturnTy) {
-    ReturnNum = 0;
-  }
 
-  void VisitReturnStmt(ReturnStmt *S) {
-    int ARSecond = ReturnStmts.size();
-    SetARMap(S, ARSecond);
-    ReturnNum++;
-    ReturnStmt *RSS =
-        ReturnStmt::Create(SemaRef.Context, SourceLocation(),
-                           cast<ReturnStmt>(S)->getRetValue(), nullptr);
-    const Expr *RetVal = RSS->getRetValue();
-    Expr *RHSExpr = const_cast<Expr *>(RetVal);
+ public:
+  TransformARToCS(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
+      : BaseTransform(SemaRef), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {}
+
+  // make sure redo semantic analysis
+  bool AlwaysRebuild() { return true; }
+
+  StmtResult TransformReturnStmt(ReturnStmt *S) {
+    std::vector<Stmt *> ReturnStmts;
+    Expr *RHSExpr = S->getRetValue();
     SourceLocation BLoc = FD->getBeginLoc();
+    SourceLocation ELoc = FD->getEndLoc();
 
     RecordDecl::field_iterator FutureStateField, TheFieldIt;
     for (TheFieldIt = FutureRD->field_begin();
@@ -2053,148 +2039,52 @@ public:
             .get();
 
     Expr *CE =
-        SemaRef.BuildCallExpr(nullptr, CompletedRef, BLoc, Args, BLoc).get();
+        SemaRef.BuildCallExpr(nullptr, CompletedRef, BLoc, Args, ELoc).get();
     Stmt *RS = SemaRef.BuildReturnStmt(BLoc, CE).get();
     ReturnStmts.push_back(RS);
-    return;
-  }
+    CompoundStmt *CS =
+      CompoundStmt::Create(SemaRef.Context, ReturnStmts, FPOptionsOverride(), BLoc, ELoc);
 
-  void VisitStmt(Stmt *S) {
-    for (auto *C : S->children()) {
-      if (C) {
-        Visit(C);
-      }
-    }
-  }
-
-  int GetReturnNum() { return ReturnNum; }
-
-  std::vector<Stmt *> GetReturnStmts() { return ReturnStmts; }
-
-  int GetUnitNum() { return UnitNum; }
-
-  void SetARMap(ReturnStmt *RS, int index) {
-    assert(RS && "Passed null Return");
-    ARMap[RS] = index;
-  }
-
-  int GetARMap(ReturnStmt *RS) {
-    llvm::DenseMap<ReturnStmt *, int>::iterator I = ARMap.find(RS);
-    if (I != ARMap.end()) return I->second;
-    return -1;
+    return CS;
   }
 };
 }  // namespace
 
 namespace {
-class TransformARToCS : public TreeTransform<TransformARToCS> {
-  typedef TreeTransform<TransformARToCS> BaseTransform;
-  ARFinder ARInitlizer;
-  int ReturnNum;
-  int ReturnIndex;
+class TransformAEToCS : public TreeTransform<TransformAEToCS> {
+  typedef TreeTransform<TransformAEToCS> BaseTransform;
+  int AwaitIndex;
+  std::vector<AwaitExpr *> AEStmts;
+  std::vector<LabelDecl *> &LabelDecls;
+  int AwaitCount = 0;
+
+  ParmVarDecl *PVD;
+  Expr *PDRE;
+  RecordDecl *FutureRD;
+  std::vector<Expr *> AwaitStmts;
+  BSCMethodDecl *FD;
+
+
 
  public:
-  TransformARToCS(Sema &SemaRef, ARFinder ARInitlizer)
-      : BaseTransform(SemaRef), ARInitlizer(ARInitlizer) {
-    ReturnIndex = 0;
-    ReturnNum = ARInitlizer.GetReturnNum();
+  TransformAEToCS(Sema &SemaRef,
+                  std::vector<LabelDecl *> &LabelDecls, ParmVarDecl *PVD, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
+      : BaseTransform(SemaRef),
+        LabelDecls(LabelDecls),
+        PVD(PVD),
+        PDRE(PDRE),
+        FutureRD(FutureRD),
+        FD(FD) {
+    AwaitIndex = 1;
   }
 
   // make sure redo semantic analysis
   bool AlwaysRebuild() { return true; }
 
-  StmtResult TransformCompoundStmt(CompoundStmt *S) {
-    if (S == nullptr) return S;
-
-    int UnitNum = ARInitlizer.GetUnitNum();
-    std::vector<Stmt *> ReturnStmts = ARInitlizer.GetReturnStmts();
-    int StmtsSize = ReturnStmts.size();
-
-    std::vector<Stmt *> Statements;
-    for (auto *C : S->children()) {
-      Stmt *SS = const_cast<Stmt *>(C);
-      if (auto *RS = dyn_cast<ReturnStmt>(SS)) {
-        int index = ARInitlizer.GetARMap(RS);
-        assert(index != -1);
-        for (int i = index; i < index + UnitNum; i++) {
-          assert(i < StmtsSize);
-          Statements.push_back(ReturnStmts[i]);
-        }
-        continue;
-      }
-      // special case: substmt of a label stmt is a return stmt.
-      // @code
-      // LABEL:
-      //     return xx;
-      // @endcode
-      if (auto *LS = dyn_cast<LabelStmt>(SS)) {
-        if (auto *RS = dyn_cast<ReturnStmt>(LS->getSubStmt())) {
-          int index = ARInitlizer.GetARMap(RS);
-          assert(index != -1);
-          for (int i = index; i < index + UnitNum; i++) {
-            assert(i < StmtsSize);
-            if (i == index) {
-              LabelStmt *NewLS = new (SemaRef.Context)
-                  LabelStmt(SourceLocation(), LS->getDecl(), ReturnStmts[i]);
-              Statements.push_back(NewLS);
-            } else {
-              Statements.push_back(ReturnStmts[i]);
-            }
-          }
-          continue;
-        }
-      }
-      SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
-      Statements.push_back(SS);
-    }
-    Sema::CompoundScopeRAII CompoundScope(SemaRef);
-    CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
-                           S->getBeginLoc(), Statements, S->getEndLoc(), false)
-                           .getAs<CompoundStmt>();
-    return CS;
-  }
-
-  StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
-    return S;
-  }
-};
-}  // namespace
-
-namespace {
-class AEFinder : public StmtVisitor<AEFinder> {
-  Sema &SemaRef;
-  ParmVarDecl *PVD;
-  Expr *PDRE;
-  RecordDecl *FutureRD;
-  BSCMethodDecl *FD;
-  std::vector<Stmt *> AwaitStmts;
-  const int UnitNum = 5;
-  int AwaitCount = 0;
-  llvm::DenseMap<AwaitExpr *, int> AEMap;
-  llvm::DenseMap<AwaitExpr *, Expr *> AEReplaceMap;
-
- public:
-  AEFinder(Sema &SemaRef, ParmVarDecl *PVD, Expr *PDRE, RecordDecl *FutureRD,
-           BSCMethodDecl *FD)
-      : SemaRef(SemaRef), PVD(PVD), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {
-    AwaitCount = 0;
-  }
-
-  void VisitStmt(Stmt *S) {
-    for (auto *C : S->children()) {
-      if (C) {
-        Visit(C);
-      }
-    }
-  }
-
-  void VisitAwaitExpr(AwaitExpr *E) {
-    Visit(E->getSubExpr());
+  ExprResult TransformAwaitExpr(AwaitExpr *E) {
+    auto TransformedSE = BaseTransform::TransformExpr(E->getSubExpr());
     AwaitCount++;
-    int AESecond = AwaitStmts.size();
-    SetAEMap(E, AESecond);
-    AwaitExpr *AtEr = E;
-    auto *AE = AtEr->getSubExpr();
+    auto *AE = TransformedSE.get();
     RecordDecl::field_iterator FtField, FtFieldIt;
     for (FtFieldIt = FutureRD->field_begin();
          FtFieldIt != FutureRD->field_end(); ++FtFieldIt) {
@@ -2215,22 +2105,15 @@ class AEFinder : public StmtVisitor<AEFinder> {
 
     bool IsOptimization = false;
     // Handle nested call
-    if (isa<CallExpr>(AE)) {
-      CallExpr *CE = const_cast<CallExpr *>(cast<CallExpr>(AE));
+    if (CallExpr *CE = dyn_cast<CallExpr>(AE)) {
       FunctionDecl *FutureInitFunc = CE->getDirectCallee();
       if (FutureInitFunc) {
         IsOptimization =
             !(CE->getType().getTypePtr()->isBSCFutureType()) &&
             implementedFutureType(SemaRef, CE->getType());
+        // CHECK: Do I need all of this?
         std::vector<Expr *> CallArgs;
         for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
-          if (auto *KReplaceAE = dyn_cast<AwaitExpr>(CE->getArg(I))) {
-            Expr *VReplaceAE = GetAEReplaceMap(KReplaceAE);
-            if (VReplaceAE != nullptr) {
-              CallArgs.push_back(VReplaceAE);
-              continue;
-            }
-          }
           CallArgs.push_back(CE->getArg(I));
         }
 
@@ -2267,6 +2150,7 @@ class AEFinder : public StmtVisitor<AEFinder> {
       CallExpr *CE = dyn_cast<CallExpr>(AE);
       QualType AEType;
       if (CE) {
+        // TODO: improve this
         FunctionDecl *AwaitFD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
         AEType =
             AwaitFD == nullptr
@@ -2437,7 +2321,18 @@ class AEFinder : public StmtVisitor<AEFinder> {
     DeclGroupRef AwaitResultDG(AwaitResultVD);
     DeclStmt *AwaitResultDS = new (SemaRef.Context)
         DeclStmt(AwaitResultDG, SourceLocation(), SourceLocation());
-    AwaitStmts.push_back(AwaitResultDS);
+
+    Stmt::EmptyShell Empty;
+    Stmt *Null = new (SemaRef.Context) NullStmt(Empty);
+    LabelStmt *LS =
+        BaseTransform::RebuildLabelStmt(
+            SourceLocation(),
+            cast<LabelDecl>(LabelDecls[AwaitIndex++]),
+            SourceLocation(), Null)
+            .getAs<LabelStmt>();
+    AwaitStmts.push_back(cast<Expr>(LS));
+
+    AwaitStmts.push_back(cast<Expr>(AwaitResultDS));
 
     std::string PollResultVDName = "PR_" + std::to_string(AwaitCount);
     VarDecl *PollResultVD =
@@ -2449,181 +2344,65 @@ class AEFinder : public StmtVisitor<AEFinder> {
     DeclGroupRef PollResultDG(PollResultVD);
     DeclStmt *PollResultDS = new (SemaRef.Context)
         DeclStmt(PollResultDG, SourceLocation(), SourceLocation());
-    AwaitStmts.push_back(PollResultDS);
+    AwaitStmts.push_back(cast<Expr>(PollResultDS));
 
     IfStmt *If =
         processAwaitExprStatus(SemaRef, AwaitCount, FutureRD, PDRE, PVD,
                                PollResultVD, AwaitResultVD, FD, ThenBodyStmt);
-    if (If != nullptr) AwaitStmts.push_back(If);
+    if (If != nullptr) AwaitStmts.push_back(cast<Expr>(If));
 
     Expr *AwaitResultRef = SemaRef.BuildDeclRefExpr(
         AwaitResultVD, AwaitResultVD->getType(), VK_LValue, SourceLocation());
     AwaitResultRef = ImplicitCastExpr::Create(
         SemaRef.Context, AwaitResultVD->getType(), CK_LValueToRValue,
         AwaitResultRef, nullptr, VK_PRValue, FPOptionsOverride());
-    SetAEReplaceMap(E, AwaitResultRef);
-    AwaitStmts.push_back(cast<Stmt>(AwaitResultRef));
+    return AwaitResultRef;
   }
 
-  int GetAwaitCount() { return AwaitCount; }
 
-  std::vector<Stmt *> GetAwaitStmts() { return AwaitStmts; }
+  Decl *TransformDefinition(SourceLocation Loc, Decl *D) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      Expr *Init = const_cast<Expr *>(VD->getInit());
+      bool HasAwait = hasAwaitExpr(Init);
+      if (HasAwait && Init != nullptr) {
+        Init = BaseTransform::TransformExpr(Init).get();
 
-  int GetUnitNum() { return UnitNum; }
+        VarDecl *NewVD = VarDecl::Create(
+            SemaRef.Context, VD->getDeclContext(), VD->getBeginLoc(),
+            VD->getEndLoc(), VD->getIdentifier(), VD->getType(),
+            VD->getTypeSourceInfo(), VD->getStorageClass());
 
-  void SetAEMap(AwaitExpr *AE, int index) {
-    assert(AE && "Passed null AwaitExpr");
-    AEMap[AE] = index;
-  }
-
-  int GetAEMap(AwaitExpr *AE) {
-    llvm::DenseMap<AwaitExpr *, int>::iterator I = AEMap.find(AE);
-    if (I != AEMap.end()) return I->second;
-    return -1;
-  }
-
-  void SetAEReplaceMap(AwaitExpr *AE, Expr *AEReplace) {
-    assert(AE && "Passed null AwaitExpr");
-    AEReplaceMap[AE] = AEReplace;
-  }
-
-  Expr *GetAEReplaceMap(AwaitExpr *AE) {
-    llvm::DenseMap<AwaitExpr *, Expr *>::iterator I = AEReplaceMap.find(AE);
-    if (I != AEReplaceMap.end()) return cast<Expr>(I->second);
-    return nullptr;
-  }
-};
-}  // namespace
-
-namespace {
-class TransformAEToCS : public TreeTransform<TransformAEToCS> {
-  typedef TreeTransform<TransformAEToCS> BaseTransform;
-  AEFinder AEInitlizer;
-  int AwaitNum;
-  int AwaitIndex;
-  std::vector<AwaitExpr *> AEStmts;
-  std::vector<LabelDecl *> &LabelDecls;
-
- public:
-  TransformAEToCS(Sema &SemaRef, AEFinder AEInitlizer,
-                  std::vector<LabelDecl *> &LabelDecls)
-      : BaseTransform(SemaRef),
-        AEInitlizer(AEInitlizer),
-        LabelDecls(LabelDecls) {
-    AwaitIndex = 0;
-    AwaitNum = AEInitlizer.GetAwaitCount();
-  }
-
-  // make sure redo semantic analysis
-  bool AlwaysRebuild() { return true; }
-
-  ExprResult TransformAwaitExpr(AwaitExpr *E) {
-    return AEInitlizer.GetAEReplaceMap(E);
-  }
-
-  StmtResult TransformDeclStmt(DeclStmt *S) {
-    SmallVector<Decl *, 4> Decls;
-    for (auto *D : S->decls()) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-        Expr *Init = const_cast<Expr *>(VD->getInit());
-        bool HasAwait = hasAwaitExpr(Init);
-        if (HasAwait && Init != nullptr) {
-          Init = BaseTransform::TransformExpr(Init).get();
-          SemaRef.AddInitializerToDecl(VD, Init, /*DirectInit=*/false);
-        }
+        SemaRef.AddInitializerToDecl(NewVD, Init, /*DirectInit=*/false);
+        transformedLocalDecl(VD, NewVD);
+        return NewVD;
       }
-      Decls.push_back(D);
     }
-    return BaseTransform::RebuildDeclStmt(Decls, S->getBeginLoc(),
-                                          S->getEndLoc());
-  }
 
-  StmtResult TransformReturnStmt(ReturnStmt *S) { return S; }
+    return BaseTransform::TransformDefinition(Loc, D);
+  }
 
   StmtResult TransformCompoundStmt(CompoundStmt *S) {
+    return this->TransformCompoundStmt(S, false);
+  }
+
+  StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
     if (S == nullptr) return S;
 
-    int UnitNum = AEInitlizer.GetUnitNum();
-    std::vector<Stmt *> AwaitStmts = AEInitlizer.GetAwaitStmts();
-    int StmtsSize = AwaitStmts.size();
-
     std::vector<Stmt *> Statements;
-    for (auto *C : S->children()) {
-      Stmt *SS = const_cast<Stmt *>(C);
-      AEStmts.clear();
-      GetAwaitExpr(SS);
-      int AESize = AEStmts.size();
-      if (AESize > 0) {
-        int BaseIndex = Statements.size() - 1;
-        for (int i = 0; i < AESize; i++) {
-          int index = AEInitlizer.GetAEMap(AEStmts[i]);
-
-          if (index == -1) continue;
-
-          for (int j = index; j < index + UnitNum - 1; j++) {
-            if (j == index + 1) {
-              Stmt::EmptyShell Empty;
-              Stmt *Null = new (SemaRef.Context) NullStmt(Empty);
-              LabelStmt *LS =
-                  BaseTransform::RebuildLabelStmt(
-                      SourceLocation(),
-                      cast<LabelDecl>(LabelDecls[AwaitIndex + i + 1]),
-                      SourceLocation(), Null)
-                      .getAs<LabelStmt>();
-              Statements.push_back(LS);
-              Statements.push_back(AwaitStmts[j]);
-              continue;
-            }
-
-            if (j < StmtsSize) Statements.push_back(AwaitStmts[j]);
-          }
-        }
-        auto StartsWith = [](const std::string &str,
-                             const std::string &prefix) {
-          if (str.length() >= prefix.length()) {
-            return 0 == str.compare(0, prefix.length(), prefix);
-          }
-          return false;
-        };
-        if (isa<DeclStmt>(SS) && cast<DeclStmt>(SS)->isSingleDecl() &&
-            BaseIndex >= 0) {
-          VarDecl *VD = cast<VarDecl>(cast<DeclStmt>(SS)->getSingleDecl());
-          if (StartsWith(VD->getNameAsString(), "__RES_RETURN")) {
-            Stmt *LastStmt = Statements[BaseIndex];
-            Statements.erase(Statements.begin() + BaseIndex);
-            Statements.push_back(LastStmt);
-          }
-        }
-
-        AwaitIndex = AwaitIndex + AESize;
-      }
-
-      if (isa<AwaitExpr>(SS)) continue;
-
+    for (auto *SS : S->children()) {
+      auto prevSize = AwaitStmts.size();
       SS = BaseTransform::TransformStmt(SS).getAs<Stmt>();
+      for (size_t i = prevSize; i < AwaitStmts.size(); ++i) {
+        Statements.push_back(AwaitStmts[i]);
+      }
+      AwaitStmts.resize(prevSize);
       Statements.push_back(SS);
     }
     Sema::CompoundScopeRAII CompoundScope(SemaRef);
     CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
-                           S->getBeginLoc(), Statements, S->getEndLoc(), false)
+                           S->getBeginLoc(), Statements, S->getEndLoc(), IsStmtExpr)
                            .getAs<CompoundStmt>();
     return CS;
-  }
-
-  StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
-    return S;
-  }
-
-  void GetAwaitExpr(Stmt *S) {
-    if (S == nullptr || isa<CompoundStmt>(S)) return;
-
-    for (auto *C : S->children()) {
-      GetAwaitExpr(C);
-    }
-
-    if (isa<AwaitExpr>(S)) {
-      AEStmts.push_back(cast<AwaitExpr>(S));
-    }
   }
 };
 }  // namespace
@@ -2906,19 +2685,13 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
   FuncBody = SingleStateRes.get();
 
   NewFD->setType(FuncType);
-  ARFinder ARInitlizer = ARFinder(S, FutureObj, RD, NewFD, Ty);
-  ARInitlizer.Visit(FuncBody);
 
   StmtResult ARToCSRes =
-      TransformARToCS(S, ARInitlizer).TransformStmt(FuncBody);
+      TransformARToCS(S, FutureObj, RD, NewFD).TransformStmt(FuncBody);
   FuncBody = ARToCSRes.get();
 
-  AEFinder AEInitlizer =
-      AEFinder(S, NewFD->getParamDecl(0), FutureObj, RD, NewFD);
-  AEInitlizer.Visit(FuncBody);
-
   StmtResult AEToCSRes =
-      TransformAEToCS(S, AEInitlizer, LabelDecls).TransformStmt(FuncBody);
+      TransformAEToCS(S, LabelDecls, NewFD->getParamDecl(0), FutureObj, RD, NewFD).TransformStmt(FuncBody);
   S.PopDeclContext();
 
   for (auto *C : AEToCSRes.get()->children()) {
