@@ -730,8 +730,12 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   NewFD->setParams(ParmVarDecls);
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
   S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  Sema::ContextRAII savedContext(S, NewFD);
+  LocalInstantiationScope Scope(S);
+
   S.PushFunctionScope();
-  S.PushDeclContext(S.getCurScope(), NewFD);
 
   std::string IName = "data";
   VarDecl *VD = VarDecl::Create(
@@ -911,7 +915,6 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   CompoundStmt *CS =
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
-  S.PopDeclContext();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   return NewFD;
@@ -998,8 +1001,14 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   }
   NewFD->setParams(ParmVarDecls);
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  Sema::ContextRAII savedContext(S, NewFD);
+  LocalInstantiationScope Scope(S);
+
   S.PushFunctionScope();
-  S.PushDeclContext(S.getCurScope(), NewFD);
 
   // Instantiate the struct object and assign values to it
   std::string IName = "fi";
@@ -1079,10 +1088,8 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
   CompoundStmt *CS =
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
-  S.PopDeclContext();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
-  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   return NewFD;
 }
 
@@ -2408,6 +2415,7 @@ static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
       S.Context, RD, SLoc, NLoc, ELoc, &(S.Context.Idents).get(FName), FuncType,
       nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
 
   SmallVector<ParmVarDecl *, 1> ParmVarDecls;
@@ -2420,7 +2428,6 @@ static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
 
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
-  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   return NewFD;
 }
 
@@ -2442,6 +2449,8 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
       S.Context, RD, SLoc, NLoc, ELoc, &(S.Context.Idents).get(FName), FuncType,
       nullptr, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
 
   SmallVector<ParmVarDecl *, 1> ParmVarDecls;
@@ -2626,7 +2635,7 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
-  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+
   return NewFD;
 }
 
@@ -2640,10 +2649,13 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
   QualType Ty = FD->getDeclaredReturnType();
 
   S.PushFunctionScope();
-  S.PushDeclContext(S.getCurScope(), FD);
-    FunctionDecl *TransformedFD =
+    FunctionDecl *TransformedFD = nullptr;
+{  Sema::ContextRAII savedContext(S, FD);
+  LocalInstantiationScope Scope(S);
+
+    TransformedFD =
       TransformToReturnVoid(S).TransformFunctionDecl(FD);
-  S.PopDeclContext();
+}
   S.PopFunctionScopeInfo();
 
 
@@ -2663,6 +2675,13 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
       OriginType, nullptr, SC_None,
       RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  Sema::ContextRAII savedContext(S, NewFD);
+  LocalInstantiationScope Scope(S);
+
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
   S.PushFunctionScope();
 
@@ -2675,12 +2694,9 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
 
   NewFD->setType(
       S.Context.getFunctionType(TransformedFD->getReturnType(), ParamTys, {}));
-  S.PushDeclContext(S.getCurScope(), NewFD);
 
   NewFD->setType(FuncType);
-  S.PopDeclContext();
 
-  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   return NewFD->isInvalidDecl() ? nullptr : NewFD;
@@ -2697,10 +2713,16 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
   QualType Ty = FD->getDeclaredReturnType();
 
   S.PushFunctionScope();
-  S.PushDeclContext(S.getCurScope(), FD);
-    FunctionDecl *TransformedFD =
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  FunctionDecl *TransformedFD = nullptr;
+{  Sema::ContextRAII savedContext(S, FD);
+  LocalInstantiationScope Scope(S);
+
+    TransformedFD =
       TransformToReturnVoid(S).TransformFunctionDecl(FD);
-  S.PopDeclContext();
+}
   S.PopFunctionScopeInfo();
 
   std::string FName = "poll";
@@ -2718,6 +2740,13 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
       OriginType, nullptr, SC_None,
       RD->getTypeForDecl()->getCanonicalTypeInternal());
   NewFD->setLexicalDeclContext(S.Context.getTranslationUnitDecl());
+  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  Sema::ContextRAII savedContext(S, NewFD);
+  LocalInstantiationScope Scope(S);
+
   S.Context.BSCDeclContextMap[RD->getTypeForDecl()] = RD;
   S.PushFunctionScope();
 
@@ -2795,7 +2824,6 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
 
   NewFD->setType(
       S.Context.getFunctionType(TransformedFD->getReturnType(), ParamTys, {}));
-  S.PushDeclContext(S.getCurScope(), NewFD);
 
   TransformToAP DT = TransformToAP(S, FutureObj, RD, NewFD);
   StmtResult MemberChangeRes = DT.TransformStmt(TransformedFD->getBody());
@@ -2813,7 +2841,6 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
 
   StmtResult AEToCSRes =
       TransformAEToCS(S, LabelDecls, NewFD->getParamDecl(0), FutureObj, RD, NewFD).TransformStmt(FuncBody);
-  S.PopDeclContext();
 
   for (auto *C : AEToCSRes.get()->children()) {
     Stmts.push_back(C);
@@ -2834,7 +2861,6 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
   CompoundStmt *CS =
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
-  S.PushOnScopeChains(NewFD, S.getCurScope(), true);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
   S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
   return NewFD->isInvalidDecl() ? nullptr : NewFD;
