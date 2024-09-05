@@ -1,4 +1,4 @@
-#include "src/string/string.hbs"
+#include "string.hbs"
 
 void test1() {
 	String s1 = String::new();
@@ -9,7 +9,7 @@ void test1() {
 	s1.set(3, 'l');
 	s1.set(4, 'o');
 	s1.set(5, '\0');
-	s2 = String::with_capacity(7);
+	String s2 = String::with_capacity(7);
 	safe_swap(&mut s1, &mut s2);
 }
 

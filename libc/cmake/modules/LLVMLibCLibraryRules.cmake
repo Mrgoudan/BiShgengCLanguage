@@ -81,10 +81,12 @@ function(add_entrypoint_library target_name)
   endforeach(dep)
   list(REMOVE_DUPLICATES all_deps)
   set(objects "")
+  # Pack multiple object files into a BIG OBJECT "objects"
   foreach(dep IN LISTS all_deps)
     list(APPEND objects $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
   endforeach(dep)
 
+  # Create a static library using those object files.
   add_library(
     ${target_name}
     STATIC

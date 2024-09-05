@@ -15,6 +15,10 @@ endif()
 
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
+# Let cmake understand bishengc file extension and its features.
+# It has to be set before project(...)
+set(CMAKE_C_SYSROOT_FLAG_CODE "list(APPEND CMAKE_C_SOURCE_FILE_EXTENSIONS cbs)")
+
 if(NOT DEFINED LLVM_VERSION_MAJOR)
   set(LLVM_VERSION_MAJOR 15)
 endif()
@@ -84,7 +88,7 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;polly;pstl")
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libcbs;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;polly;pstl")
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo

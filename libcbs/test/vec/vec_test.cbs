@@ -1,4 +1,4 @@
-#include "src/vec/vec.hbs"
+#include "vec.hbs"
 
 void print(const Vec<int>* borrow v) {
     for (size_t i = 0; i < v->length(); i++) {

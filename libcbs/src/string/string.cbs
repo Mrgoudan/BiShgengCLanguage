@@ -1,4 +1,4 @@
-#include "src/string/string.hbs"
+#include "string.hbs"
 #include <stdint.h>
 
 const size_t bsc_string_no_pos = SIZE_MAX;

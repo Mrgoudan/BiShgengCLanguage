@@ -1,4 +1,4 @@
-#include "src/bishengc_safety.hbs"
+#include "bishengc_safety.hbs"
 
 struct S {
     int* owned a;
