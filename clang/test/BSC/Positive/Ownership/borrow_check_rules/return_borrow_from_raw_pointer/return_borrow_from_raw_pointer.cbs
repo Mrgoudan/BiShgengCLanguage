@@ -81,6 +81,43 @@ int *borrow test15(struct Q q, int index, int *borrow p) {
     return &mut q.g.b[index];
 }
 
+struct M {
+    int* owned a;
+};
+
+struct N {
+  struct M* m;
+};
+
+int *borrow test16(struct N n, int *borrow p) {
+    return &mut *n.m->a;
+}
+
+int *owned *borrow test17(struct N n, int *borrow p) {
+    return &mut n.m->a;
+}
+
+int *borrow struct N::test18(This* borrow this) {
+    return &mut *this->m->a;
+}
+
+int *borrow struct N::test19(This* this, int* borrow p) {
+    return &mut *this->m->a;
+}
+
+owned struct S {
+public:
+    int *owned *borrow a; //成员变量为 owned borrow
+    int *owned *borrow test20(S *this) {
+        int *owned *borrow a = this->a;
+        return a;
+    }
+};
+
+int *owned *borrow S::test21(This* this) {
+    return this->a;
+}
+
 int main() {
   int local = 5;
   struct P p = { .b = &local };
@@ -100,5 +137,16 @@ int main() {
   test13(&mut q, 5);
   test14(&q, 5, &mut local);
   test15(q, 5, &mut local);
+  int *owned c = (int* owned)&local;
+  struct M m = { .a = c };
+  struct N n = { .m = &m };
+  test16(n, &mut local);
+  test17(n, &mut local);
+  n.test18();
+  n.test19(&mut local);
+  S s = { .a = &mut m.a };
+  s.test20();
+  s.test21();
+  int* d = (int*) m.a;
   return 0;
 }

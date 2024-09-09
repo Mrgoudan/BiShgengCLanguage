@@ -78,3 +78,65 @@ void test5() {
     } while (*p > 0);
 }
 
+void test6() {
+    int e = 1;
+    int f = 2;
+    const int * borrow p1 = &const e;   // expected-note {{previous borrow is here}}
+    const int * borrow p2 = &const f;
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    for ( ; ; ) {
+        while (p2 == p1)
+            return;
+    }
+}
+
+void test7() {
+    int e = 1;
+    int f = 2;
+    const int * borrow p1 = &const e;   // expected-note {{previous borrow is here}}
+    const int * borrow p2 = &const f;
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    for ( ; ; ) {
+        while (p2 == p1)
+            return;
+    }
+}
+
+void test8() {
+    int e = 1;
+    int f = 2;
+    const int * borrow p1 = &const e;   // expected-note {{previous borrow is here}}
+    const int * borrow p2 = &const f;  // expected-note {{previous borrow is here}}
+    e = 2;   //expected-error{{Can not modify 'e' because be borrowed}}
+    for (p2 = p1; *p2 > 0; ) {
+        e--;    //expected-error{{Can not modify 'e' because be borrowed}}
+    }
+}
+
+void test9() {
+    int e = 1;
+    int f = 2;
+    const int * borrow p1 = &const e;
+    const int * borrow p2 = &const f;  // expected-note {{previous borrow is here}}
+    for ( ; e = 2, f = 2; ) {   //expected-error{{Can not modify 'f' because be borrowed}}
+        if (e) {
+            return;
+        } else {
+            p1 = p2;
+        }
+    }
+}
+
+void test10() {
+    int e = 1;
+    int f = 2;
+    const int * borrow p1 = &const e;   // expected-note {{previous borrow is here}}
+    const int * borrow p2 = &const f;  // expected-note {{previous borrow is here}}
+    for ( ; e = 2, f = 2; ) {   //expected-error{{Can not modify 'f' because be borrowed}} expected-error{{Can not modify 'e' because be borrowed}}
+        if (p1 == p2) {
+            return;
+        } else {
+            p1 = p2;
+        }
+    }
+}

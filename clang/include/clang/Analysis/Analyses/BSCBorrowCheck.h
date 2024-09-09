@@ -33,18 +33,19 @@ enum BorrowKind : char {
 struct BorrowTargetInfo {
   VarDecl *TargetVD = nullptr;
   std::string TargetFieldPath;
-  bool TargetIsNakedPointer = false;
+  bool TargetIsRawPointerOrItsField = false;
 
   BorrowTargetInfo() {}
-  BorrowTargetInfo(VarDecl *targetVD, bool targetIsNakedPointer = false)
-      : TargetVD(targetVD), TargetIsNakedPointer(targetIsNakedPointer) {}
-  BorrowTargetInfo(VarDecl *targetVD, std::string targetFieldPath, bool targetIsNakedPointer = false)
-      : TargetVD(targetVD), TargetFieldPath(targetFieldPath), TargetIsNakedPointer(targetIsNakedPointer) {}
+  BorrowTargetInfo(VarDecl *targetVD, bool targetIsRawPointerOrItsField = false)
+      : TargetVD(targetVD), TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField) {}
+  BorrowTargetInfo(VarDecl *targetVD, std::string targetFieldPath, bool targetIsRawPointerOrItsField = false)
+      : TargetVD(targetVD), TargetFieldPath(targetFieldPath),
+        TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField) {}
 
   bool operator==(const BorrowTargetInfo &Other) const {
     return TargetVD == Other.TargetVD &&
            TargetFieldPath == Other.TargetFieldPath &&
-           TargetIsNakedPointer == Other.TargetIsNakedPointer;
+           TargetIsRawPointerOrItsField == Other.TargetIsRawPointerOrItsField;
   }
 };
 
@@ -111,7 +112,7 @@ using NonLexicalLifetime = llvm::DenseMap<VarDecl*, NonLexicalLifetimeOfVar>;
 
 struct BorrowInfo {
   std::string TargetFieldPath;
-  bool TargetIsNakedPointer;
+  bool TargetIsRawPointerOrItsField;
   VarDecl *BorrowVD = nullptr;
   std::string BorrowFieldPath;
   unsigned Begin;
@@ -120,15 +121,15 @@ struct BorrowInfo {
   bool Expired = false;
 
   BorrowInfo() {}
-  BorrowInfo(std::string targetFieldPath, bool targetIsNakedPointer,
+  BorrowInfo(std::string targetFieldPath, bool targetIsRawPointerOrItsField,
              VarDecl *borrowVD, std::string borrowFieldPath,
              unsigned begin, unsigned end, BorrowKind kind)
-      : TargetFieldPath(targetFieldPath), TargetIsNakedPointer(targetIsNakedPointer),
+      : TargetFieldPath(targetFieldPath), TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField),
         BorrowVD(borrowVD), BorrowFieldPath(borrowFieldPath),
         Begin(begin), End(end), Kind(kind) {}
   bool operator==(const BorrowInfo &other) {
     return TargetFieldPath == other.TargetFieldPath &&
-           TargetIsNakedPointer == other.TargetIsNakedPointer &&
+           TargetIsRawPointerOrItsField == other.TargetIsRawPointerOrItsField &&
            BorrowVD == other.BorrowVD &&
            BorrowFieldPath == other.BorrowFieldPath && Begin == other.Begin &&
            End == other.End && Kind == other.Kind;

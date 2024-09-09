@@ -260,3 +260,46 @@ void test_freeze_ident24(){
     owend_struct_use4(b);
     int *c = (int *)g.a;
 }
+
+void test_freeze_ident25(){
+    int a = 1;
+    int *borrow p1 = &mut a;  // expected-note {{previous borrow is here}}
+    a = 5;   // expected-error {{Can not modify 'a' because be borrowed}}
+    int *borrow p2 = p1;
+}
+
+void test_freeze_ident26(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    int *borrow p1 = &mut *b;   // expected-note {{previous borrow is here}}
+    int *d = (int *)b;   // expected-error {{Can not read 'b' because be mut borrowed}}
+    int *borrow p2 = p1;
+}
+
+void test_freeze_ident27(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    int *borrow p1 = &mut *b;
+    int *borrow p2 = p1; // expected-note {{previous borrow is here}}
+    int *d = (int *)b;   // expected-error {{Can not read 'b' because be mut borrowed}}
+    use(p2);
+}
+
+void test_freeze_ident28(){
+    int a = 1;
+    int *owned b = (int *owned)&a;
+    int *borrow p1 = &mut *b;   // expected-note {{previous borrow is here}}
+    int *d = (int *)b;   // expected-error {{Can not read 'b' because be mut borrowed}}
+    int *borrow p2 = p1;   // expected-note {{previous borrow is here}}  expected-note {{previous borrow is here}}
+    b = (int *owned)&a;  // expected-error {{Can not modify 'b' because be borrowed}}
+    d = (int *)b;   // expected-error {{Can not read 'b' because be mut borrowed}}
+    use(p2);
+}
+
+void test_freeze_ident29(){
+    int a = 1;
+    int *borrow p1 = &mut a;   // expected-note {{previous borrow is here}}
+    int *borrow p2 = &mut a;
+    a = 5;   // expected-error {{Can not modify 'a' because be borrowed}}
+    p2 = p1;
+}

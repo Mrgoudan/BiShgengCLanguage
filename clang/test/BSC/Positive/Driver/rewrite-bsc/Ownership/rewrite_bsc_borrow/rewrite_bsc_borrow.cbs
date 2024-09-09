@@ -14,6 +14,7 @@ typedef int * borrow myInt;
 typedef int* borrow (*PF2)(struct R);
 
 void test1() {
+    int x1 = 0;
     int x = 0;
     float y = 1.0;
     int * borrow p = &mut x;
@@ -22,7 +23,7 @@ void test1() {
     myInt p3 = p;
     const int * borrow p4= (const int * borrow)&x;
 
-    int * owned p5 = (int * owned)&x;
+    int * owned p5 = (int * owned)&x1;
     const int * borrow b6 = &const *p3;
     int * borrow p7 = &mut *(&x);
     p7 = &mut *p;
@@ -53,6 +54,7 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: void test1(void) {
+// CHECK-NEXT:     int x1 = 0;
 // CHECK-NEXT:     int x = 0;
 // CHECK-NEXT:     float y = 1.;
 // CHECK-NEXT:     int * p = &x;
@@ -60,7 +62,7 @@ int main() {
 // CHECK-NEXT:     const int * p2 = &x;
 // CHECK-NEXT:     int * p3 = p;
 // CHECK-NEXT:     const int * p4 = (const int *)&x;
-// CHECK-NEXT:     int * p5 = (int *)&x;
+// CHECK-NEXT:     int * p5 = (int *)&x1;
 // CHECK-NEXT:     const int * b6 = &*p3;
 // CHECK-NEXT:     int * p7 = &*(&x);
 // CHECK-NEXT:     p7 = &*p;

@@ -89,3 +89,10 @@ void test10() {
   int x = local.b; // expected-error {{Can not modify 'local.b' because be borrowed}}
   use_mut(p);
 }
+
+void test11() {
+  S local = {.a = 1, .b = 2};
+  int * borrow p1 = &mut local.a; // expected-note {{previous borrow is here}}
+  local.a = 5;  // expected-error {{Can not modify 'local.a' because be borrowed}}
+  int * borrow p2 = p1;
+}

@@ -134,6 +134,7 @@ private:
   void UpdateTargetOfFieldsOfBorrowStruct(
       BorrowTargetInfo OldTarget,
       BorrowTargetInfo NewTarget);
+  bool HasRawPointer(Expr *E);
 };
 
 class BorrowRuleChecker : public StmtVisitor<BorrowRuleChecker> {
@@ -887,7 +888,7 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
         if (NLLRange.Kind != BorrowKind::NoBorrow)
           BorrowTargetMap[NLLRange.Target.TargetVD].push_back(BorrowInfo(
               NLLRange.Target.TargetFieldPath,
-              NLLRange.Target.TargetIsNakedPointer,
+              NLLRange.Target.TargetIsRawPointerOrItsField,
               BorrowVD, NLLRange.BorrowFieldPath,
               NLLRange.Begin, NLLRange.End, NLLRange.Kind));
       }
@@ -901,10 +902,10 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
   for (const auto &BorrowAndTarget : BorrowTargetMap) {
     VarDecl *TargetVD = BorrowAndTarget.first;
     for (const auto &Borrow : BorrowAndTarget.second) {
-      // We don't track lifetime of naked pointer,
-      // so if a borrow pointer targets to a naked pointer,
+      // We don't track lifetime of raw pointer,
+      // so if a borrow pointer targets to a raw pointer or its field,
       // we skip checking. 
-      if (!Borrow.TargetIsNakedPointer) {
+      if (!Borrow.TargetIsRawPointerOrItsField) {
         unsigned BorrowBegin = Borrow.Begin;
         unsigned BorrowEnd = Borrow.End;
         for (const auto &NLLOfTarget : NLLForAllVars[TargetVD]) {
@@ -940,10 +941,10 @@ void BorrowRuleChecker::CheckLifetimeOfBorrowReturnValue(unsigned NumElements) {
   for (const auto &NLLOfVar : NLLForAllVars) {
     if (NLLOfVar.first->getNameAsString() == "_ReturnVar") {
       for (const NonLexicalLifetimeRange &Range : NLLOfVar.second) {
-        // We don't track lifetime of naked pointer,
-        // so if a function return a borrow pointer targeting to a naked pointer,
+        // We don't track lifetime of raw pointer,
+        // so if a function return a borrow pointer targeting to a raw pointer or its field,
         // we skip checking.
-        if (!Range.Target.TargetIsNakedPointer) {
+        if (!Range.Target.TargetIsRawPointerOrItsField) {
           for (const auto &TargetNLLRange :
               NLLForAllVars[Range.Target.TargetVD]) {
             unsigned TargetNLLBegin = TargetNLLRange.Begin;
@@ -1040,6 +1041,9 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
                   BK, Target, BorrowWithFieldPath.second));
         FoundBorrowFields.erase(BorrowWithFieldPath);
       }
+      CurrOpIsBorrowUse = true;
+      Visit(BO->getRHS());
+      CurrOpIsBorrowUse = false;
       return;
     } else if (QT->hasBorrowFields()) {
       if (RecordDecl *RD = dyn_cast<RecordType>(QT)->getDecl()) {
@@ -1056,9 +1060,14 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
                                          BO->getRHS());
         }
       }
+      CurrOpIsBorrowUse = true;
+      Visit(BO->getRHS());
+      CurrOpIsBorrowUse = false;
       return;
     }
   }
+  // For borrow variable assignment statement, we only check RHS to find borrow use location,
+  // for other kind statement, we should check both LHS and RHS.
   CurrOpIsBorrowUse = true;
   Visit(BO->getLHS());
   Visit(BO->getRHS());
@@ -1188,28 +1197,37 @@ void NLLCalculator::VisitUnaryOperator(UnaryOperator *UO) {
 }
 
 void NLLCalculator::VisitIfStmt(IfStmt *IS) {
-  CurrOpIsBorrowUse = true;
-  Visit(IS->getCond());
-  CurrOpIsBorrowUse = false;
+  if (IS->getCond()) {
+    CurrOpIsBorrowUse = true;
+    Visit(IS->getCond());
+    CurrOpIsBorrowUse = false;
+  }
 }
 
 void NLLCalculator::VisitWhileStmt(WhileStmt *WS) {
-  CurrOpIsBorrowUse = true;
-  Visit(WS->getCond());
-  CurrOpIsBorrowUse = false;
+  if (WS->getCond()) {
+    CurrOpIsBorrowUse = true;
+    Visit(WS->getCond());
+    CurrOpIsBorrowUse = false;
+  }
 }
 
 void NLLCalculator::VisitForStmt(ForStmt *FS) {
-  CurrOpIsBorrowUse = true;
-  Visit(FS->getCond());
-  CurrOpIsBorrowUse = false;
+  if (FS->getCond()) {
+    CurrOpIsBorrowUse = true;
+    Visit(FS->getCond());
+    CurrOpIsBorrowUse = false;
+  }
 }
 
 void NLLCalculator::VisitDoStmt(DoStmt *DS) {
-  CurrOpIsBorrowUse = true;
-  Visit(DS->getCond());
-  CurrOpIsBorrowUse = false;
+  if (DS->getCond()) {
+    CurrOpIsBorrowUse = true;
+    Visit(DS->getCond());
+    CurrOpIsBorrowUse = false;
+  }
 }
+
 void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
@@ -1249,7 +1267,8 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
       } else if (VQT->hasBorrowFields()) {
         if (RecordDecl *RD = dyn_cast<RecordType>(VQT)->getDecl())
           VisitInitForBorrowFieldTargets(VD, "", RD, VD->getInit());
-      } else if (VD->getInit()) {
+      }
+      if (VD->getInit()) {
         CurrOpIsBorrowUse = true;
         Visit(VD->getInit());
         CurrOpIsBorrowUse = false;
@@ -1464,6 +1483,28 @@ void NLLCalculator::VisitCallExprForBorrowFieldTargets(
   }
 }
 
+// Find if target of a borrow pointer is raw pointer type
+// or has raw pointer type in its type field path.
+// For example,
+// @code
+//     int * borrow p1 = &mut *a;      // target of p1 is `a`, `a` is raw pointer type
+//     int * borrow p2 = &mut *b.c.d;  // target of p2 is `a.b.c`, `b.c.d` is raw pointer type
+//     int * borrow p3 = &mut b.e->f;  // target of p2 is `b.e->f`, `b.e` is raw pointer type
+// @endcode
+// p1, p2, p3 all have a target which is raw pointer or is the field of a raw pointer.  
+bool NLLCalculator::HasRawPointer(Expr *E) {
+  QualType QT = E->getType();
+  if (QT->isPointerType() && !QT.isOwnedQualified() && !QT.isBorrowQualified())
+    return true;
+
+  if (auto ME = dyn_cast<MemberExpr>(E))
+    return HasRawPointer(ME->getBase());    
+  else if (auto ICE = dyn_cast<ImplicitCastExpr>(E))
+    return HasRawPointer(ICE->getSubExpr());    
+
+  return false;
+}
+
 void NLLCalculator::VisitMEForFieldPath(
     MemberExpr *ME, std::pair<VarDecl *, std::string> &VDAndFP) {
   if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
@@ -1499,9 +1540,8 @@ void NLLCalculator::VisitInitForTargets(
             Targets.push_back(BorrowTargetInfo(IVD, FieldPath.first));
         }
       } else {
-        bool targetIsNakedPOinter = VQT->isPointerType() &&
-            !VQT.isOwnedQualified() && !VQT.isBorrowQualified();
-        Targets.push_back(BorrowTargetInfo(IVD, targetIsNakedPOinter));
+        bool targetIsRawPointer = HasRawPointer(DRE);
+        Targets.push_back(BorrowTargetInfo(IVD, targetIsRawPointer));
       }
     }
     return;
@@ -1521,12 +1561,10 @@ void NLLCalculator::VisitInitForTargets(
                                TargetWithFieldPath.second + FieldPath.first));
       }
     } else {
-      bool targetIsNakedPointer = MQT->isPointerType() &&
-                                  !MQT.isOwnedQualified() &&
-                                  !MQT.isBorrowQualified();
+      bool targetIsRawPointerOrItsField = HasRawPointer(ME);
       Targets.push_back(BorrowTargetInfo(TargetWithFieldPath.first,
                                          TargetWithFieldPath.second,
-                                         targetIsNakedPointer));
+                                         targetIsRawPointerOrItsField));
     }
     return;
   }
