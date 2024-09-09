@@ -64,16 +64,19 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
 }
 
 bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
-  bool FoundLess = false;
+  int LessCount = 0;
   int i = 0;
   Token CurrTok = Tok;
   Token NextTok = PP.LookAhead(i);
   while (!NextTok.isOneOf(tok::semi, tok::l_brace, tok::eof, tok::equal)) {
     if (CurrTok.is(tok::less))
-      FoundLess = true;
-    if (CurrTok.is(tok::greater) && FoundLess)
-      FoundLess = false;
-    if (!FoundLess) {
+      LessCount++;
+    if (CurrTok.is(tok::greater))
+      LessCount--;
+    if (CurrTok.is(tok::greatergreater))
+      LessCount = LessCount - 2;
+    if (LessCount < 0) return false;
+    if (!LessCount) {
       if (CurrTok.is(tok::coloncolon))
         return true;
       if (NextTok.isOneOf(tok::comma, tok::greater))
@@ -88,7 +91,7 @@ bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
 bool Parser::IsBSCStaticMemberFunctionCall() {
   assert(Tok.isOneOf(tok::identifier, tok::kw_union, tok::kw_enum, tok::kw_struct));
   Token NextTok = Tok.is(tok::identifier) ? PP.LookAhead(0) : PP.LookAhead(1);
-  if (NextTok.is(tok::coloncolon)) 
+  if (NextTok.is(tok::coloncolon))
     return true;
   if (NextTok.is(tok::less)) {
     if (Tok.isOneOf(tok::kw_struct, tok::kw_union)) {
