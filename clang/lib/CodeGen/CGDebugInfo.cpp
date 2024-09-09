@@ -918,6 +918,10 @@ static void stripUnusedQualifiers(Qualifiers &Q) {
   Q.removeAddressSpace();
   Q.removeObjCLifetime();
   Q.removeUnaligned();
+#if ENABLE_BSC
+  Q.removeOwned();
+  Q.removeBorrow();
+#endif
 }
 
 static llvm::dwarf::Tag getNextQualifier(Qualifiers &Q) {

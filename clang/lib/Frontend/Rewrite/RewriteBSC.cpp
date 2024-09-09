@@ -890,7 +890,7 @@ const std::string RewriteBSC::GetRewrittenString() {
       ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
       for (auto *DD : CT->specializations()) {
         for (auto *DDD : DD->decls()) {
-          if (isa<FunctionDecl>(DDD)) {
+          if (isa<FunctionDecl>(DDD) && DDD->hasBody()) {
             DDD->print(Buf, Policy);
             Buf << ";\n\n";
           }

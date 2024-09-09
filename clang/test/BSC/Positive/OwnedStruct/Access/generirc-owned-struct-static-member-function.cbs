@@ -22,8 +22,6 @@ int main() {
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
 // CHECK-NEXT: static int struct_A_int_f(void);
-// CHECK-EMPTY: 
-// CHECK-NEXT: static void struct_A_int_D( struct A_int this);
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {
 // CHECK-NEXT:     int a = struct_A_int_f();

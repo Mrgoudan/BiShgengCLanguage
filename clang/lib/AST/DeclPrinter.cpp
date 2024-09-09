@@ -782,7 +782,13 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   // keyword to tempalte instantiated functions while rewriting. Otherwise, it
   // may have multi-definition problems.
   if (Policy.RewriteBSC) {
-    if (D->isTemplateInstantiation() && D->getStorageClass() != SC_Static) {
+    bool OwnedStructFlag = false;
+    if (const RecordDecl *RD = dyn_cast<RecordDecl>(D->getDeclContext())) {
+        if (RD->getTypeForDecl() && RD->getTypeForDecl()->isOwnedStructureType() && !D->isOutOfLine()) {
+          OwnedStructFlag = true;
+        }
+    }
+    if ((D->isTemplateInstantiation() || OwnedStructFlag) && D->getStorageClass() != SC_Static) {
       Out << "static ";
     }
   }
