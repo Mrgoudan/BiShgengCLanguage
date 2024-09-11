@@ -98,6 +98,23 @@ BSCMethodDecl *Sema::getOrInsertBSCDestructor(RecordDecl *RD) {
   return Destructor;
 }
 
+// Collect all owned struct type fields that has destructor,
+// including nested owned struct type fields.
+static void CollectAllFieldsWithPendingInstantiatedDestructor(RecordDecl *RD,
+                                                              std::stack<RecordDecl *> &OwnedStructFields) {
+  for (RecordDecl::field_iterator FieldIt = RD->field_begin();
+       FieldIt != RD->field_end(); ++FieldIt) {
+    const Type *FieldType = FieldIt->getType().getCanonicalType().getTypePtr();
+    if (FieldType->isOwnedStructureType()) {
+      RecordDecl *RD = cast<RecordType>(FieldType)->getDecl();
+      if (RD->getBSCDestructor() && !RD->getBSCDestructor()->isInvalidDecl()) {
+        OwnedStructFields.push(RD);
+        CollectAllFieldsWithPendingInstantiatedDestructor(RD, OwnedStructFields);
+      }
+    }
+  }
+}
+
 void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
                                    std::stack<FieldDecl *> InstanceFields) {
   if (InstanceFields.empty())
@@ -147,6 +164,32 @@ void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
                                  SourceLocation())
                        .get();
         Stmts.push_back(CE);
+
+        // If a owned struct has nested owned structs which should be instantiated,
+        // we add destructors of all nested owned structs to PendingInstantiations,
+        // the functions in which will be instantiated in ActOnEndOfTranslationUnit().
+        // For example:
+        // @code
+        //     owned struct A<T> {};
+        //     owned struct B<T> { A<T> a; };
+        //     owned struct C { B<int> b; };
+        // @endcode
+        // When desugar destructor of C, above we have added destructor of B<int> to PendingInstantiations,
+        // here we add destructor of A<int> to PendingInstantiations.
+        std::stack<RecordDecl *> OwnedStructFields;
+        CollectAllFieldsWithPendingInstantiatedDestructor(ThisRD,
+                                                          OwnedStructFields);
+        while (!OwnedStructFields.empty()) {
+          RecordDecl *RDOfOwnerStructField = OwnedStructFields.top();
+          OwnedStructFields.pop();
+          BSCMethodDecl *DestructorOfOwnerStructField =
+              RDOfOwnerStructField->getBSCDestructor();
+          SourceLocation PointOfInstantiation =
+              DestructorOfOwnerStructField->getPointOfInstantiation();
+          DestructorOfOwnerStructField->setInstantiationIsPending(true);
+          PendingInstantiations.push_back(
+              std::make_pair(DestructorOfOwnerStructField, PointOfInstantiation));
+        }
       }
     }
     CompoundStmt *NewCS =
