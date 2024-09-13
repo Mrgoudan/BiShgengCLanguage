@@ -13,7 +13,7 @@ public:
 public:
 	~Vec(Vec<T> this) {
 		for (size_t index = 0; index < this.len; index++) {
-			T tmp = this.buf.ptr[index];
+			_BSC_UNUSED T tmp = this.buf.ptr[index];
 			// IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
 		}
 		// AUTO INSERT: ~RawVec(this.buf)
@@ -27,7 +27,7 @@ safe size_t Vec<T>::capacity(const Vec<T>* borrow this) {
 safe void Vec<T>::clear(Vec<T>* borrow this) {
 	unsafe {
 		for (size_t index = 0; index < this->len; index++) {
-			T tmp = this->buf.ptr[index];
+			_BSC_UNUSED T tmp = this->buf.ptr[index];
 			// IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
 		}
 		this->len = 0;
@@ -114,7 +114,7 @@ safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value) {
 	}
 	if (index < this->len) {
 		unsafe {
-			T tmp = this->buf.ptr[index];
+			_BSC_UNUSED T tmp = this->buf.ptr[index];
 			T* ptr = this->buf.ptr + index;
 			*ptr = value;
 		}

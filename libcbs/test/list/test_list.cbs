@@ -1,4 +1,10 @@
+// Always enable asserts.
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
 #include "list.hbs"
+#include <assert.h>
 
 void test1(){
     LinkedList<int> l = LinkedList<int>::new();

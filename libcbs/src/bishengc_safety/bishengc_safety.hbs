@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#define _BSC_UNUSED __attribute__((unused))
+
 typedef void (*BSCBadAllocHandler)(size_t);
 typedef void (*BSCOutOfBoundHandler)(size_t, size_t);
 

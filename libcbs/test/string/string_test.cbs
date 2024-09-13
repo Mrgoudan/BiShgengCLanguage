@@ -1,8 +1,15 @@
+// Always enable asserts.
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
 #include "string.hbs"
+#include <assert.h>
 
 void test1() {
 	String s1 = String::new();
 	size_t l = s1.length();
+	assert(0 == l);
 	s1.set(0, 'h');
 	s1.set(1, 'e');
 	s1.set(2, 'l');
