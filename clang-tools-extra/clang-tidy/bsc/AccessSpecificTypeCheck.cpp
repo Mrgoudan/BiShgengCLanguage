@@ -33,7 +33,7 @@ llvm::SmallVector<const clang::Expr *, 6> AvoidCallMemberList;
 
 void AccessSpecificTypeCheck::registerMatchers(MatchFinder *Finder) {
   for (auto TargetType : TargetTypes) {
-    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS(memberExpr(hasType(asString(std::string(TargetType)))))).bind("AvoidStore"), this);
+    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS(hasDescendant(memberExpr(hasType(asString(std::string(TargetType)))).bind("NestedStore")))).bind("AvoidStore"), this);
     Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))), hasAncestor(callExpr(callee(namedDecl(hasAnyName(AvoidCalls)))))).bind("AvoidCall"), this);
     Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType)))).bind("TargetType"), this);
   }
@@ -41,15 +41,18 @@ void AccessSpecificTypeCheck::registerMatchers(MatchFinder *Finder) {
 
 void AccessSpecificTypeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *StoreTypeMember = Result.Nodes.getNodeAs<BinaryOperator>("AvoidStore");
+  const auto *NestedStoreMember = Result.Nodes.getNodeAs<MemberExpr>("NestedStore");
   const auto *AvoidCallMember = Result.Nodes.getNodeAs<MemberExpr>("AvoidCall");
   const auto *TargetTypeMember = Result.Nodes.getNodeAs<MemberExpr>("TargetType");
 
   if (StoreTypeMember) {
-    const auto *LHS = dyn_cast<MemberExpr>(StoreTypeMember->getLHS());
-    if (LHS) {
+    if (const auto *LHS = dyn_cast<MemberExpr>(StoreTypeMember->getLHS())) {
       AoivdStoreMemberList.push_back(LHS);
     }
   }
+
+  if (NestedStoreMember)
+    AoivdStoreMemberList.push_back(NestedStoreMember);
 
   if (AvoidCallMember)
     AvoidCallMemberList.push_back(AvoidCallMember);
