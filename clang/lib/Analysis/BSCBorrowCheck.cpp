@@ -126,7 +126,7 @@ private:
                                            Expr *InitE);
   void VisitCallExprForBorrowFieldTargets(
       CallExpr *CE, llvm::SmallVector<BorrowTargetInfo> &Targets);
-  void VisitMEForFieldPath(MemberExpr *ME,
+  void VisitMEForFieldPath(Expr *ME,
                            std::pair<VarDecl *, std::string> &VDAndFP);
   void UpdateNLLWhenTargetFound(
       BorrowTargetInfo OldTarget,
@@ -972,10 +972,14 @@ static void FindBorrowFieldsOfStructDFS(
     FP = FP + "." + CurrFD->getNameAsString();
     BorrowFieldsOfStruct.push_back(std::pair<std::string, BorrowKind>(FP, BK));
   } else if (FQT->hasBorrowFields()) {
-    FP = FP + "." + CurrFD->getNameAsString();
+    while (FQT->isPointerType())
+      FQT = FQT->getPointeeType().getCanonicalType();
     if (auto RT = dyn_cast<RecordType>(FQT)) {
-      for (FieldDecl *FD : RT->getDecl()->fields())
-        FindBorrowFieldsOfStructDFS(FD, FP, BorrowFieldsOfStruct);
+      if (RecordDecl *RD = RT->getDecl()) {
+        FP = FP + "." + CurrFD->getNameAsString();
+        for (FieldDecl *FD : RD->fields())
+          FindBorrowFieldsOfStructDFS(FD, FP, BorrowFieldsOfStruct);
+      }
     }
   }
 }
@@ -1046,18 +1050,22 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
       CurrOpIsBorrowUse = false;
       return;
     } else if (QT->hasBorrowFields()) {
-      if (RecordDecl *RD = dyn_cast<RecordType>(QT)->getDecl()) {
-        if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
-          if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      while (QT->isPointerType())
+        QT = QT->getPointeeType().getCanonicalType();
+      if (auto RT = dyn_cast<RecordType>(QT)) {
+        if (RecordDecl *RD = RT->getDecl()) {
+          if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
+            if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
             // s = s1;
-            VisitInitForBorrowFieldTargets(VD, "", RD, BO->getRHS());
-        } else if (MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS())) {
-          // s.a = a1;
-          std::pair<VarDecl *, std::string> BorrowWithFieldPath;
-          VisitMEForFieldPath(ME, BorrowWithFieldPath);
-          VisitInitForBorrowFieldTargets(BorrowWithFieldPath.first,
-                                         BorrowWithFieldPath.second, RD,
-                                         BO->getRHS());
+              VisitInitForBorrowFieldTargets(VD, "", RD, BO->getRHS());
+          } else if (MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS())) {
+            // s.a = a1;
+            std::pair<VarDecl *, std::string> BorrowWithFieldPath;
+            VisitMEForFieldPath(ME, BorrowWithFieldPath);
+            VisitInitForBorrowFieldTargets(BorrowWithFieldPath.first,
+                                           BorrowWithFieldPath.second, RD,
+                                           BO->getRHS());
+          }
         }
       }
       CurrOpIsBorrowUse = true;
@@ -1085,6 +1093,8 @@ void NLLCalculator::VisitDeclRefExpr(DeclRefExpr *DRE) {
       if (VQT.isBorrowQualified() && !FoundVars.count(VD))
         FoundVars[VD] = CurElemID;
       else if (VQT->hasBorrowFields()) {
+        while (VQT->isPointerType())
+          VQT = VQT->getPointeeType().getCanonicalType();
         if (auto RT = dyn_cast<RecordType>(VQT)) {
           llvm::SmallVector<std::pair<std::string, BorrowKind>>
               BorrowFieldsOfStruct;
@@ -1134,8 +1144,11 @@ void NLLCalculator::VisitReturnStmt(ReturnStmt *RS) {
       NLLForAllVars[ReturnVD].push_back(
           NonLexicalLifetimeRange(CurElemID, CurElemID, BK, Target));
   } else if (ReturnQT->hasBorrowFields()) {
-    if (RecordDecl *RD = dyn_cast<RecordType>(ReturnQT)->getDecl())
-      VisitInitForBorrowFieldTargets(ReturnVD, "", RD, RV);
+    while (ReturnQT->isPointerType())
+      ReturnQT = ReturnQT->getPointeeType().getCanonicalType();
+    if (auto RT = dyn_cast<RecordType>(ReturnQT))
+      if (RecordDecl *RD = RT->getDecl())
+        VisitInitForBorrowFieldTargets(ReturnVD, "", RD, RV);
   }
 }
 
@@ -1151,6 +1164,8 @@ void NLLCalculator::VisitMemberExpr(MemberExpr *ME) {
     } else if (MQT->hasBorrowFields()) {
       // Use borrow pointer indirectly, such as `s.a`, a is a struct type and
       // has borrow fields.
+      while (MQT->isPointerType())
+        MQT = MQT->getPointeeType().getCanonicalType();
       std::pair<VarDecl *, std::string> BorrowWithFieldPath;
       VisitMEForFieldPath(ME, BorrowWithFieldPath);
       if (auto RT = dyn_cast<RecordType>(MQT)) {
@@ -1265,8 +1280,11 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
             UpdateTargetOfFieldsOfBorrowStruct(BorrowTargetInfo(VD), Targets[0]);
         }
       } else if (VQT->hasBorrowFields()) {
-        if (RecordDecl *RD = dyn_cast<RecordType>(VQT)->getDecl())
-          VisitInitForBorrowFieldTargets(VD, "", RD, VD->getInit());
+        while (VQT->isPointerType())
+          VQT = VQT->getPointeeType().getCanonicalType();
+        if (auto RT = dyn_cast<RecordType>(VQT))
+          if (RecordDecl *RD = RT->getDecl())
+            VisitInitForBorrowFieldTargets(VD, "", RD, VD->getInit());
       }
       if (VD->getInit()) {
         CurrOpIsBorrowUse = true;
@@ -1378,6 +1396,8 @@ void NLLCalculator::VisitFieldInitForBorrowFieldTargets(FieldDecl *FD,
                                   BK, Target, BorrowWithFieldPath.second));
     FoundBorrowFields.erase(BorrowWithFieldPath);
   } else if (FQT->hasBorrowFields()) {
+    while (FQT->isPointerType())
+      FQT = FQT->getPointeeType().getCanonicalType();
     if (auto RT = dyn_cast<RecordType>(FQT)) {
       RecordDecl *RD = RT->getDecl();
       if (auto ICE = dyn_cast<ImplicitCastExpr>(InitE)) {
@@ -1456,26 +1476,31 @@ void NLLCalculator::VisitCallExprForBorrowFieldTargets(
       if (ArgQT.isBorrowQualified())
         VisitInitForTargets(ArgExpr, Targets);
       else if (ArgQT->hasBorrowFields()) {
-        if (auto ICE = dyn_cast<ImplicitCastExpr>(ArgExpr)) {
-          RecordDecl *ArgRD = dyn_cast<RecordType>(ArgQT)->getDecl();
-          llvm::SmallVector<std::pair<std::string, BorrowKind>>
-              BorrowFieldsOfStruct;
-          FindBorrowFieldsOfStruct(ArgRD, BorrowFieldsOfStruct);
-          for (const auto &FieldPath : BorrowFieldsOfStruct) {
-            BorrowTargetInfo Target;
-            if (auto DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
-              if (VarDecl *ArgVD = dyn_cast<VarDecl>(DRE->getDecl())) {
-                Target.TargetVD = ArgVD;
-                Target.TargetFieldPath = FieldPath.first;
+        while (ArgQT->isPointerType())
+          ArgQT = ArgQT->getPointeeType().getCanonicalType();
+        if (auto ArgRT = dyn_cast<RecordType>(ArgQT)) {
+          if (RecordDecl *ArgRD = ArgRT->getDecl()) {
+            if (auto ICE = dyn_cast<ImplicitCastExpr>(ArgExpr)) {
+              llvm::SmallVector<std::pair<std::string, BorrowKind>>
+                  BorrowFieldsOfStruct;
+              FindBorrowFieldsOfStruct(ArgRD, BorrowFieldsOfStruct);
+              for (const auto &FieldPath : BorrowFieldsOfStruct) {
+                BorrowTargetInfo Target;
+                if (auto DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
+                  if (VarDecl *ArgVD = dyn_cast<VarDecl>(DRE->getDecl())) {
+                    Target.TargetVD = ArgVD;
+                    Target.TargetFieldPath = FieldPath.first;
+                  }
+                } else if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
+                  std::pair<VarDecl *, std::string> TargetWithFieldPath;
+                  VisitMEForFieldPath(ME, TargetWithFieldPath);
+                  Target.TargetVD = TargetWithFieldPath.first;
+                  Target.TargetFieldPath =
+                      TargetWithFieldPath.second + FieldPath.first;
+                }
+                Targets.push_back(Target);
               }
-            } else if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
-              std::pair<VarDecl *, std::string> TargetWithFieldPath;
-              VisitMEForFieldPath(ME, TargetWithFieldPath);
-              Target.TargetVD = TargetWithFieldPath.first;
-              Target.TargetFieldPath =
-                  TargetWithFieldPath.second + FieldPath.first;
             }
-            Targets.push_back(Target);
           }
         }
       }
@@ -1506,22 +1531,25 @@ bool NLLCalculator::HasRawPointer(Expr *E) {
 }
 
 void NLLCalculator::VisitMEForFieldPath(
-    MemberExpr *ME, std::pair<VarDecl *, std::string> &VDAndFP) {
-  if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-    VDAndFP.second = "." + FD->getNameAsString() + VDAndFP.second;
-    if (auto BaseME = dyn_cast<MemberExpr>(ME->getBase()))
-      VisitMEForFieldPath(BaseME, VDAndFP);
-    else if (auto BaseDRE = dyn_cast<DeclRefExpr>(ME->getBase())) {
-      VarDecl *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl());
-      VDAndFP.first = BaseVD;
-    } else if (auto BaseICE = dyn_cast<ImplicitCastExpr>(ME->getBase())) {
-      if (auto BaseME = dyn_cast<MemberExpr>(BaseICE->getSubExpr()))
-        VisitMEForFieldPath(BaseME, VDAndFP);
-      else if (auto BaseDRE = dyn_cast<DeclRefExpr>(BaseICE->getSubExpr())) {
-        VarDecl *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl());
-        VDAndFP.first = BaseVD;
-      }
-    } 
+    Expr *E, std::pair<VarDecl *, std::string> &VDAndFP) {
+  if (auto ME = dyn_cast<MemberExpr>(E)) {
+    if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      VDAndFP.second = "." + FD->getNameAsString() + VDAndFP.second;
+      VisitMEForFieldPath(ME->getBase(), VDAndFP);
+    }
+  } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      VDAndFP.first = VD;
+  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    VisitMEForFieldPath(ICE->getSubExpr(), VDAndFP);
+  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
+    VisitMEForFieldPath(PE->getSubExpr(), VDAndFP);
+  } else if (auto UO = dyn_cast<UnaryOperator>(E)) {
+    VisitMEForFieldPath(UO->getSubExpr(), VDAndFP);
+  } else if (auto ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+    VisitMEForFieldPath(ASE->getBase(), VDAndFP);
+  } else if (auto CCE = dyn_cast<CStyleCastExpr>(E)) {
+    VisitMEForFieldPath(CCE->getSubExpr(), VDAndFP);
   }
 }
 
@@ -1532,6 +1560,8 @@ void NLLCalculator::VisitInitForTargets(
     if (VarDecl *IVD = dyn_cast<VarDecl>(DRE->getDecl())) {
       QualType VQT = IVD->getType().getCanonicalType();
       if (VQT->hasBorrowFields()) {
+        while (VQT->isPointerType())
+          VQT = VQT->getPointeeType().getCanonicalType();
         if (auto RT = dyn_cast<RecordType>(VQT)) {
           llvm::SmallVector<std::pair<std::string, BorrowKind>>
               BorrowFieldsOfStruct;
@@ -1551,6 +1581,8 @@ void NLLCalculator::VisitInitForTargets(
     VisitMEForFieldPath(ME, TargetWithFieldPath);
     QualType MQT = ME->getType().getCanonicalType();
     if (MQT->hasBorrowFields()) {
+      while (MQT->isPointerType())
+        MQT = MQT->getPointeeType().getCanonicalType();
       if (auto RT = dyn_cast<RecordType>(MQT)) {
         llvm::SmallVector<std::pair<std::string, BorrowKind>>
             BorrowFieldsOfStruct;
@@ -1582,7 +1614,7 @@ void NLLCalculator::VisitInitForTargets(
     VisitInitForTargets(CCE->getSubExpr(), Targets);
   } else if (auto PE = dyn_cast<ParenExpr>(InitE)) {
     // int* borrow p = &mut *(a.b);  `(a.b)` is ParenExpr.
-    VisitInitForTargets(PE->getSubExpr(), Targets);  
+    VisitInitForTargets(PE->getSubExpr(), Targets);
   } else if (auto CE = dyn_cast<CallExpr>(InitE)) {
     // int* borrow p = foo(&mut local1, &mut local2);
     // the lifetime of p should be smaller than the lifetime intersection of

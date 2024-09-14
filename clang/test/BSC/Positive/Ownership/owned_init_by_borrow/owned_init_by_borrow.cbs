@@ -1,0 +1,53 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include <stdlib.h>
+
+int *borrow *owned safe_malloc1(int *borrow bp) {
+  int *borrow * p = (int *borrow *) malloc( sizeof(int *borrow) );
+  *p = bp;
+  return (int *borrow *owned)p;
+}
+
+void safe_free1(int *borrow *owned p) {
+  free( (int *borrow *)p );
+}
+
+void test1() {
+  int a = 0;
+  int *borrow p = &mut a;
+  int* borrow *owned ap = safe_malloc1(p);
+  safe_free1(ap);
+}
+
+struct M {
+    int* borrow ma;
+};
+
+struct M *owned safe_malloc2(struct M m) {
+  struct M * p = (struct M *) malloc( sizeof(struct M) );
+  *p = m;
+  return (struct M *owned)p;
+}
+
+void safe_free2(struct M *owned p) {
+  free( (struct M *)p );
+}
+
+void test2() {
+  int a = 0;
+  struct M m = { &mut a };
+  struct M *owned mp = safe_malloc2(m);
+  struct M *owned *mpp = &mp;
+  safe_free2(mp);
+}
+
+int main() {
+  test1();
+  test2();
+  return 0;
+}

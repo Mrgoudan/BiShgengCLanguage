@@ -3066,7 +3066,7 @@ int main() {
 
 ```C
 int* borrow f1(int* borrow p);
-int* borrow f2(int* borrow p1， int* borrow p2);
+int* borrow f2(int* borrow p1, int* borrow p2);
 
 void test() {
     int local = 5;
@@ -3081,7 +3081,7 @@ void test() {
        导致 p2 相当于是对 local1 和 local2 的一个可变借用, 所以返回值 p2 的被借用对象是 local1 和 local2, 
        在 p2 的生命周期结束之前，local1 和 local2 一直被冻结。*/
 }
-​```
+```
 
 #### 6. struct定义中包含借用类型
 1. 结构体的成员可以是借用类型，带有借用类型成员的结构体变量在定义的时候必须初始化。

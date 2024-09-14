@@ -80,3 +80,19 @@ void test5() {
     use_immut(m.na);  // expected-error {{There should be at most one mutable borrow targeting to 'v1.a' at the same time}}
     use_mut(m.ma);
 }
+
+void test6() {
+  int a = 0;
+  int b = 0;
+  struct M m = { &mut a, &const b };
+  struct M * mp = &m;
+  int *borrow p1 = mp->ma;
+  int *borrow p2 = mp->ma;  // expected-note {{previous borrow is here}}
+  use_mut(p1);   // expected-error {{There should be at most one mutable borrow targeting to 'mp.ma' at the same time}}
+  use_mut(p2);
+  struct M ** mpp = &mp;
+  int *borrow p3 = (*mpp)->ma;
+  int *borrow p4 = (*mpp)->ma;  // expected-note {{previous borrow is here}}
+  use_mut(p3);   // expected-error {{There should be at most one mutable borrow targeting to 'mpp.ma' at the same time}}
+  use_mut(p4);  
+}
