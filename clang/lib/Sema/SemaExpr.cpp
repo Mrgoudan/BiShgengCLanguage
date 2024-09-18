@@ -2571,6 +2571,17 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
       TemplateArgs);
 }
 
+static bool IsFunctionTemplateScope(const Scope *S) {
+  if (S && S->isFunctionScope()) {
+    const DeclContext *DC = S->getEntity();
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
+      if (FD->getDescribedFunctionTemplate())
+        return true;
+    }
+  }
+  return false;
+}
+
 ExprResult
 Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                         SourceLocation TemplateKWLoc, UnqualifiedId &Id,
@@ -2704,7 +2715,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   if (R.empty() && HasTrailingLParen && II &&
       (getLangOpts().implicitFunctionsAllowed())
 #if ENABLE_BSC
-      && !(getLangOpts().BSC && !T.isNull())
+      && !(getLangOpts().BSC && (!T.isNull() || IsFunctionTemplateScope(S)))
 #endif
   ) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
@@ -6402,8 +6413,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       QualType thisQPT = FPT->getParamType(0);
       if (!Member->isArrow()) { // foo.getA
         // When the first parameter `this` of member function is borrow qualified,
-        // add `&mut` or `&const` when desugaring.  
-        UnaryOperator::Opcode UO = 
+        // add `&mut` or `&const` when desugaring.
+        UnaryOperator::Opcode UO =
           thisQPT.isBorrowQualified() ? (thisQPT.isConstBorrow() ? UO_AddrConst : UO_AddrMut) : UO_AddrOf;
         ImplicitArg = UnaryOperator::Create(
           this->Context, ImplicitArg, UO,
