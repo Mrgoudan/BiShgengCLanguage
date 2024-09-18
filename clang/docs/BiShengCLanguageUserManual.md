@@ -2113,7 +2113,7 @@ C 语言作为一种系统级编程语言，
 然而，这种内存管理模式存在容易导致内存泄漏、释放后使用、空指针解引用、缓冲区溢出和越界读写等内存安全问题。
 内存安全问题不仅会造成资源的浪费，也可能导致程序行为错误，甚至导致程序崩溃，对程序的稳定性造成威胁。
 内存安全问题可以划分为时间内存安全和空间内存安全两大类，其中时间内存安全包含内存泄漏、释放后使用、空指针解引用等，空间内存安全包括缓冲区溢出、越界读写等。
-BiShengC 语言的内存管理主要解决的是程序的时间内存安全问题，利用**所有权特性**在编译期对潜在的内存安全问题进行检查，识别潜在的时间内存安全错误。
+BiShengC 语言的内存管理为解决程序的时间内存安全问题，利用了**所有权特性**在编译期对潜在的内存安全问题进行检查，识别潜在的时间内存安全错误。
 
 
 #### 1. 特性简介
@@ -2137,12 +2137,12 @@ safe void test(void) {
     int * owned p = safe_malloc(2); // 通过提供的 safe_malloc 申请一块大小为 sizeof(int) 的堆内存，并将值设置为2
     int * owned q = p; // 将 p 指向的堆内存转移给 q，后续不可再使用 p 访问这块内存，否则编译报错
     q = takes_and_gives_back(q); // 通过函数参数转移走 q 的所有权，但通过函数返回值归还所有权
-    safe_free((void * owned)q); // 在 q 的作用域结束前调用 safe_free 安全释放堆内存，此处不释放则会报内存泄漏错误
+    unsafe {
+        safe_free((void * owned)q); // 在 q 的作用域结束前调用 safe_free 安全释放堆内存，此处不释放则会报内存泄漏错误
+    }
     return;
 }
 ```
-
-注：目前 BiShengC 语言的所有权特性规则检查已经完全转移至 clang 编译器前端完成，不再依赖于原先的 MAPLE IR，因此可直接使用 clang 编译器对 BiShengC 程序进行编译。
 
 注：在安全区，`owned`指针指向的内存一定为通过`safe_malloc`函数申请出的堆内存，`owned`指针不可能指向栈内存。
 
@@ -2484,7 +2484,9 @@ safe void test(void) {
         };
     struct S * owned s1 = safe_malloc(s);
     int * owned p = s1->p;
-    safe_free((void * owned)s1); // error
+    unsafe {
+        safe_free((void * owned)s1); // error
+    }
 }
 ```
 
@@ -2506,9 +2508,11 @@ safe void test(void) {
         };
     struct S * owned s1 = safe_malloc(s);
     int * owned p = s1->p;
-    safe_free((void * owned)p);
-    safe_free((void * owned)s1->q);
-    safe_free((void * owned)s1);
+    unsafe {
+        safe_free((void * owned)p);
+        safe_free((void * owned)s1->q);
+        safe_free((void * owned)s1);
+    }
 }
 ```
 
@@ -2542,104 +2546,11 @@ safe void test(void) {
 
 在这个例子中，传入`foo`函数的结构体变量`s`内部有两个`owned`指针变量，而`s.p`已经被转移走，因此这次函数调用是非法的，会编译报错。
 
-#### 4. 相关库和 API
-
-##### 4.1 `safe_malloc`
-
-`safe_malloc`是 BiShengC 语言提供的一个安全的内存分配函数。
-该函数接收一个泛型类型`T`的变量，表示要分配的内存的大小以及分配后对内存的初始化。
-该函数的返回值为`T * owned`类型，即指向分配好的堆内存的`owned`指针。
-一些具体的使用例子如下。
-
-在 C 语言中，如果我们需要申请一段堆内存，我们可以使用`malloc`函数进行分配，然后给该内存赋值，如：
-
-```c
-void example() {
-    int *p = (int *)malloc(sizeof(int));
-    *p = 2;
-}
-```
-
-然而，这样分配的内存不会在`p`的作用域结束时检查是否调用了`free`进行释放，会造成内存泄漏。
-此外，如果再使用一个指针也指向该内存，并在作用域结束时释放，则会出现重复释放的问题，如：
-
-```c
-void example() {
-    int *p = (int *)malloc(sizeof(int));
-    *p = 2;
-    int *q = p;
-    free(p);
-    free(q); // error: double free!
-}
-```
-
-使用 BiShengC 语言即可解决这种问题，相应的代码如下：
-
-```c
-safe void example(void) {
-    int * owned p = (int * owned)safe_malloc(2);
-    int * owned q = p;
-    safe_free((void * owned)q);
-}
-```
-
-在使用 BiShengC 语言改写后的代码中，如果我们在函数退出前什么都不做，则会出现编译错误`"memory leak of value: `q`"`，避免了内存泄漏问题的发生；
-如果我们在函数退出前同时调用`safe_free((void * owned)p)`和`safe_free((void * owned)q)`，则会出现编译错误`"use of moved value: `p`"`，避免了重复释放问题的发生。
-
-那么对于更为复杂的结构体类型，该如何正确使用`safe_malloc`进行内存分配呢？
-对于结构体类型，需要首先在栈上构造出相应的变量，然后传给`safe_malloc`在堆上完成相应内存的分配，以下代码为具体示例：
-
-```c
-struct S {
-    int * owned p;
-    int * owned q;
-};
-
-safe void example(void) {
-    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
-    struct S * owned sp = safe_malloc(s);
-    ...
-}
-```
-
-##### 4.2 `safe_free`
-
-`safe_free`是 BiShengC 语言提供的一个安全的内存释放函数。
-该函数接收一个`void * owned`类型的指针，表示要释放的内存的地址。
-该函数的返回值为`void`类型。
-因此，在调用`safe_free`进行释放前需要将`owned`指针显式地强制转换为`void * owned`类型，具体的转换规则可参考 [3.3](#33-强制类型转换) 节。
-一些具体的使用例子如下。
-
-```c
-struct S {
-    int * owned p;
-    int * owned q;
-};
-
-safe void example(void) {
-    int * owned pa = safe_malloc(199);
-    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
-    struct S * owned sp = safe_malloc(s);
-    safe_free((void * owned)pa);
-    safe_free((void * owned)sp->p);
-    safe_free((void * owned)sp->q);
-    safe_free((void * owned)sp); // 必须先释放 sp->p 和 sp->q，才能释放 sp
-}
-```
-
-##### 4.3 TODO
-
-#### 5. 源源变换
+#### 4. 源源变换
 
 BiShengC 语言的 clang 编译器支持源源变换功能，即将`.cbs`文件转换为等价的`.c`文件。
 所有权特性仅引入了`owned`关键字表示所有权，在源源变换时只会去掉所有的`owned`关键字，然后生成相应的`.c`代码。
 关于源源变换的详细细节，请参考手册的源源变换章节。
-
-
-#### 6. 代码示例
-
-以下代码为利用 BiShengC 语言的所有权特性实现的一段代码，其功能为...TODO
-
 
 
 ### 借用
@@ -3798,19 +3709,230 @@ int A::f(A* this) {
 
 ## 标准库
 
-### LinkedList
+### 安全 API
 
-#### 概述：
+#### `safe_malloc`
+
+`safe_malloc`是 BiShengC 语言提供的一个安全的内存分配函数。
+该函数接收一个泛型类型`T`的变量，表示要分配的内存的大小以及分配后对内存的初始化。
+该函数的返回值为`T * owned`类型，即指向分配好的堆内存的`owned`指针。
+一些具体的使用例子如下。
+
+在 C 语言中，如果我们需要申请一段堆内存，我们可以使用`malloc`函数进行分配，然后给该内存赋值，如：
+
+```c
+void example() {
+    int *p = (int *)malloc(sizeof(int));
+    *p = 2;
+}
+```
+
+然而，这样分配的内存不会在`p`的作用域结束时检查是否调用了`free`进行释放，会造成内存泄漏。
+此外，如果再使用一个指针也指向该内存，并在作用域结束时释放，则会出现重复释放的问题，如：
+
+```c
+void example() {
+    int *p = (int *)malloc(sizeof(int));
+    *p = 2;
+    int *q = p;
+    free(p);
+    free(q); // error: double free!
+}
+```
+
+使用 BiShengC 语言即可解决这种问题，相应的代码如下：
+
+```c
+safe void example(void) {
+    int * owned p = safe_malloc(2);
+    int * owned q = p;
+    unsafe {
+        safe_free((void * owned)q);
+    }
+}
+```
+
+在使用 BiShengC 语言改写后的代码中，如果我们在函数退出前什么都不做，则会出现编译错误`"memory leak of value: `q`"`，避免了内存泄漏问题的发生；
+如果我们在函数退出前同时调用`safe_free((void * owned)p)`和`safe_free((void * owned)q)`，则会出现编译错误`"use of moved value: `p`"`，避免了重复释放问题的发生。
+
+那么对于更为复杂的结构体类型，该如何正确使用`safe_malloc`进行内存分配呢？
+对于结构体类型，需要首先在栈上构造出相应的变量，然后传给`safe_malloc`在堆上完成相应内存的分配，以下代码为具体示例：
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void example(void) {
+    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
+    struct S * owned sp = safe_malloc(s);
+    ...
+}
+```
+
+#### `safe_free`
+
+`safe_free`是 BiShengC 语言提供的一个安全的内存释放函数。
+该函数接收一个`void * owned`类型的指针，表示要释放的内存的地址。
+该函数的返回值为`void`类型。
+因此，在调用`safe_free`进行释放前需要将`owned`指针显式地强制转换为`void * owned`类型，具体的转换规则可参考 [3.3](#33-强制类型转换) 节。
+一些具体的使用例子如下。
+
+```c
+struct S {
+    int * owned p;
+    int * owned q;
+};
+
+safe void example(void) {
+    int * owned pa = safe_malloc(199);
+    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
+    struct S * owned sp = safe_malloc(s);
+    {
+        safe_free((void * owned)pa);
+        safe_free((void * owned)sp->p);
+        safe_free((void * owned)sp->q);
+        safe_free((void * owned)sp); // 必须先释放 sp->p 和 sp->q，才能释放 sp
+    }
+}
+```
+
+#### `safe_swap`
+
+`safe_swap`是 BiShengC 语言提供的一个安全交换两个变量的值的函数。
+该函数是一个泛型函数,接收两个类型为`T* borrow`类型的参数,即需要交换的变量的值的借用。
+该函数的返回值为`void`类型,该 API 的主要作用为在交换两个变量的值时,同时能交换两个变量所拥有的所有权.
+一个具体的使用例子如下。
+
+```c
+owned struct S {
+public:
+    int* owned p;
+    int* owned q;
+    ~S(S this) {
+        safe_free((void* owned)p);
+        safe_free((void* owned)q);
+    }
+};
+
+safe void example(void) {
+    S s1 = { .p = safe_malloc(1), .q = safe_malloc(2) };
+    S s2 = { .p = safe_malloc(3), .q = safe_malloc(4) };
+    safe_swap(&mut s1, &mut s2); // 交换后,s1.p为3,s1.q为4
+}
+```
+
+### 安全数据结构
+
+#### `Vec`
+
+`Vec`是 BiShengC 语言提供的安全动态数组类型,数组元素的数据存储在堆上，它是一个泛型数据结构，接受一个类型参数 T 表示其内部存储的数据的类型，其使用示例如下：
+
+```c
+#include "vec.hbs"
+
+safe void example(void) {
+    Vec<int> vec = Vec<int>::new(); // 分配一个空的动态数组
+    vec.push(1); // 向数组中插入元素
+    vec.push(2); // 向数组中插入元素
+
+    size_t len = vec.length();
+    int elem = *vec.get(0); // elem is 1
+
+    vec.set(0, 7); // 将索引为0处的值置为7
+    elem = *vec.get(0); // elem is 7
+
+    vec.shrink_to_fit();
+    // vec作用域结束时自动调用析构函数释放堆内存空间,无需手动释放
+}
+```
+
+索引：
+`Vec`目前不支持直接使用索引进行访问，但其提供了`set`和`get`等方法,可以传入想要访问的元素的索引，通过函数调用的方式进行访问。
+
+容量及重新分配：
+`Vec`的容量是为将来添加到`Vec`中的任何元素预先分配的内存空间大小，不要将其与`Vec`的长度向混淆，`Vec`的长度表示的是当前`Vec`内实际存储的元素的数量。
+如果`Vec`的长度超过其容量，则容量会自动增长，且其元素也需要重新分配(这由Vec内部实现)。
+
+`Vec`提供的对外接口及相应的使用用例如下：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`safe size_t Vec<T>::capacity(const Vec<T>* borrow this)`|返回数组的容量|size_t cap = vec.capacity();|
+|`safe void Vec<T>::clear(Vec<T>* borrow this)`|清空数组的所有元素|vec.clear();|
+|`safe const T* borrow Vec<T>::get(Vec<T>* borrow this, size_t index)`|获取数组中下标为index的元素的不可变借用(**要做边界检查**)|const int* borrow elem = vec.get(2);|
+|`safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index)`|获取数组中下标为index的元素的可变借用(**要做边界检查**)|int* borrow elem = vec.get_mut(2);|
+|`safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this)`|判断数组是否为空|_Bool flag = vec.is_empty();|
+|`safe size_t Vec<T>::length(const Vec<T>* borrow this)`|返回数组的长度|size_t len = vec.length();|
+|`safe Vec<T> Vec<T>::new(void)`|创建一个空的数组|Vec<int> vec = Vec<int>::new();|
+|`safe T Vec<T>::pop(Vec<T>* borrow this)`|弹出数组中最后一个元素(**要做边界检查**)|int last = vec.pop();|
+|`safe void Vec<T>::push(Vec<T>* borrow this, T value)`|向数组的尾部插入一个值为value的元素|vec.push(2);|
+|`safe T Vec<T>::remove(Vec<T>* borrow this, size_t index)`|从数组中移除下标为index的元素(**要做边界检查**)|int m = vec.remove(3);|
+|`safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value)`|将数组中下标为index的元素置为value(**要做边界检查**)|vec.set(3, 5);|
+|`safe void Vec<T>::shrink_to_fit(Vec<T>* borrow this)`|调整数组占用的内存空间,将容量缩减到数组的长度|vec.shrink_to_fit();|
+|`safe Vec<T> Vec<T>::with_capacity(size_t cap)`|创建一个容量为cap的空数组|Vec<int> vec = Vec<int>::with_capacity(120);|
+
+注：`Vec`提供的安全 API 内部实现了严格的边界访问检查逻辑，确保在使用这些 API 时不会出现越界访问的问题。当发生越界访问时，程序打印当前的函数调用栈，并终止执行。
+
+#### `String`
+
+`String`是 BiShengC 语言提供的 C 风格的安全字符串类型，用于安全地管理分配在堆上的字符串。它拥有字符串内容的所有权，字符串的内容存储在堆分配的缓冲区中。其使用示例如下：
+
+```c
+String hello = String::from("Hello, world!");
+
+hello.push('w');
+hello.set(0, 'k');
+
+String world = String::from("hello bishengc");
+hello.equals(world);
+
+String new_s = world.slice(1, 4);
+```
+
+内部表示：
+`String`内部由三个部分组成：指向某些字节的指针、长度和容量。该指针指向`String`用于存储其数据的内部缓冲区，长度是当前存储在缓冲区中的字节数，容量是当前缓冲区的大小（以字节为单位）。因此，长度会始终小于或等于容量。存储字节的缓冲区始终分配在堆上。
+
+`String`提供的对外接口及相应的使用用例如下：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`safe char* borrow String::as_mut_str(String* borrow this)`|返回对字符串的可变借用|char* borrow str = s.as_mut_str();|
+|`safe const char* borrow String::as_str(const String* borrow this)`|返回对字符串的不可变借用|const char* borrow str = s.as_str();|
+|`safe char String::at(const String* borrow this, size_t index)`|返回字符串的下标为index处的值（**要做边界检查**）|char c = s.at(2);|
+|`safe size_t String::capacity(const String* borrow this)`|返回字符串的容量|size_t cap = s.capacity();|
+|`safe _Bool String::equals(const String* borrow this, const String* borrow other);`|比较两个字符串是否相等|_Bool flag = str1.equals(str2);|
+|`safe size_t String::find(const String* borrow this, char c)`|查找字符串中是否有字符c，返回第一次找到时的下标，如果没有找到，则返回bsc_string_no_pos|size_t pos = s.find('A');|
+|`unsafe String String::from(const char* str)`|根据字符串字面量创建字符串|String s = String::from("hello");|
+|`safe const T* borrow String::get(const String* borrow this, size_t index)`|获取字符串中下标为index的元素的不可变借用(**要做边界检查**)|const char* borrow elem = s.get(2);|
+|`safe T* borrow String::get_mut(String* borrow this, size_t index)`|获取字符串中下标为index的元素的可变借用(**要做边界检查**)|char* borrow elem = s.get_mut(2);|
+|`safe _Bool String::is_empty(const String* borrow this)`|判断字符串是否为空|_Bool flag = s.is_empty();|
+|`safe size_t String::length(const String* borrow this)`|返回字符串的长度|size_t len = s.length();|
+|`safe String String::new(void)`|创建一个空的字符串|String s = String::new();|
+|`safe void String::push(String* borrow this, char value)`|向字符串的尾部插入一个值为value的元素|s.push('h');|
+|`safe void String::set(String* borrow this, size_t index, char value)`|将字符串中下标为index的元素置为value(**要做边界检查**)|s.set(3, '5');|
+|`safe void String::set_len(String* borrow this, size_t len)`|将字符串的长度设置为len|s.set_len(10);|
+|`safe void String::shrink_to_fit(String* borrow this)`|调整字符串占用的内存空间,将容量缩减到字符串的长度|s.shrink_to_fit();|
+|`safe String String::slice(const String* borrow this, size_t start, size_t length);`|字符串切片|String new_string = s.slice(0, 5);|
+|`safe String String::with_capacity(size_t cap)`|创建一个容量为cap的空字符串|String s = String::with_capacity(20);|
+
+注：`bsc_string_no_pos`实际上是一个很大的 size_t 类型的值，即 SIZE_MAX。
+
+
+#### LinkedList
+
+##### 概述：
 
 LinkedList是由双向链表来实现的，支持前后两种移动方向。
 
-#### 头文件:
+##### 头文件:
 
 ```c
 #include "list.hbs"
 ```
 
-#### API:
+##### API:
 
 | 对外接口                                             | 接口功能                                                     | 代码示例                                                     |
 | ---------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |

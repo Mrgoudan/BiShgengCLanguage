@@ -100,7 +100,7 @@ safe T Vec<T>::remove(Vec<T>* borrow this, size_t index) {
 		T ret = this->buf.ptr[index];
 		T* dest = this->buf.ptr + index;
 		T* src = this->buf.ptr + index + 1;
-		memcpy(dest, src, this->len - index - 1);
+		memcpy((void*)dest, (void*)src, this->len - index - 1);
 		this->len -= 1;
 		return ret;
 	}
