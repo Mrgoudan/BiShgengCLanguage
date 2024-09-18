@@ -3175,7 +3175,7 @@ void test() {
     p->print();
 }
 ```
-2. ​允许指向类型 T 的借用转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的转换，是不允许的。
+2. 允许指向类型 T 的借用转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的转换，是不允许的。
 ```C
 void test() {
     int x = 10;
@@ -3673,19 +3673,6 @@ int main(void) {
     }
     ```
 
-22. 安全函数声明和定义时的参数类型或返回值类型不允许存在owned或borrow差异，非安全函数不做此限制。
-
-    ```c
-    safe int * borrow test1(int * borrow a);
-    safe int * owned test1(int * owned a){
-        return a;
-    };  // error: 参数类型和返回值类型存在owned或borrow差异
-    int * borrow test2(int * borrow a);
-    int * test2(int * a) {
-        return a;
-    };  // ok, 非安全函数忽略参数类型和返回值类型的owned或borrow差异
-    ```
-
 ## owned struct 类型
 
 `owned struct` 是一种自定义类型，与 `struct` 不同，主要体现在非拷贝语义上，一律是 `move` 语义整体跟踪。这意味着原变量中的资源所有权会转移到新变量或参数中。本节依次介绍如何定义 `owned struct` 类型，如何创建 `owned struct` 实例。
@@ -3808,6 +3795,38 @@ int A::f(A* this) {
 `owned struct` 允许使用 `struct initializer` 语法创建实例，也允许单独对每个成员变量初始化（如果成员变量是 `public`, 此时与 `struct` 一样单独跟踪每个成员的初始化状态，但是需要在安全区状态下保证在发生 `move`、传参、析构和返回等场景下该变量一定已经完整初始化, 非安全区不做保证。同时为了方便 `owned struct` 类型在使用的时候不携带 `owned struct` 关键字。
 
 
+
+## 标准库
+
+### LinkedList
+
+#### 概述：
+
+LinkedList是由双向链表来实现的，支持前后两种移动方向。
+
+#### 头文件:
+
+```c
+#include "list.hbs"
+```
+
+#### API:
+
+| 对外接口                                             | 接口功能                                                     | 代码示例                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| LinkedList<T> LinkedList<T>::new()                   | 创建一个链表对象。                                           | #include "list.hbs"<br />// 新增int类型链表对象<br />LinkedList<int> list = LinkedList<int>::new(); |
+| void LinkedList<T>::push_back(T el)                  | 向链表尾端插入一个数据。                                     | list.push_back(5); // 向链表尾插入数据5                      |
+| void LinkedList<T>::push_front(T el)                 | 向链表表头插入一个数据。                                     | list.push_front(6); // 向链表头插入数据6                     |
+| size_t LinkedList<T>::length()                       | 返回链表中已有数据个数。                                     | assert(2 == list.length());                                  |
+| _Bool LinkedList<T>::is_empty()                      | 判断表是否为空表。                                           | list.push_back(4); <br />assert(0 == list.is_empty())        |
+| T LinkedList<T>::pop_back()                          | 返回表尾数据，并将该数据从链表中删除。表不可以为空表。       | assert(5 == list.pop_back());                                |
+| T LinkedList<T>::pop_front()                         | 返回表头数据，并将该数据从链表中删除。表不可以为空表。       | assert(6 == list.pop_front());                               |
+| void LinkedList<T>::remove(T el)                     | 删除链表中所有指定数据。                                     | list.push_back(4);<br />list.remove(4); // 删除链表中所有值为4的元素 |
+| void LinkedList<T>::clear()                          | 删除链表中所有数据。                                         | list.clear();                                                |
+| T LinkedList<T>::front()                             | 返回表头数据，表不可以为空表。                               | list.push_front(3);<br />assert(3 == list.front())           |
+| T LinkedList<T>::back()                              | 返回表尾数据，表不可以为空表。                               | list.push_back(3); <br />assert(3 == list.back())            |
+| _Bool LinkedList<T>::contains(T el)                  | 检查表是否包含指定数据。                                     | list.push_back(6); <br />assert(1 == list.contains(6))       |
+| LinkedList<T> LinkedList<T>::split_off(size_t index) | 在索引处将链表拆分为两个链表，<br />索引值不能大于链表中数据个数，<br />新链表包含索引值以及往后的数据。<br />若索引值为0，则旧链表将为空表，<br />若索引值等于表数据个数，则新链表将为空。 | LinkedList<int> l = LinkedList<int>::new();<br />l.push_back(5);<br />l.push_back(6);<br />l.push_front(4);<br />l.push_front(3);<br />LinkedList<int> j = l.split_off(2);<br />// 链表被拆为l和j两个表<br />assert(2 == l.length());      // 3 4<br />assert(2 == j.length());      // 5 6 |
 
 # 附录
 
