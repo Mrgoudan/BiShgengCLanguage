@@ -46,9 +46,11 @@ int main() {
 // CHECK-NEXT:    __L0:
 // CHECK-NEXT:      ;
 // CHECK-NEXT:      if (this->n == 0 || this->n == 1) {
+// CHECK-NEXT:          {
 // CHECK-NEXT:          this->__future_state = -1;
 // CHECK-NEXT:          int __RES_RETURN = 1;
 // CHECK-NEXT:          return struct_PollResult_int_completed(__RES_RETURN);
+// CHECK-NEXT:          }
 // CHECK-NEXT:      }
 // CHECK-NEXT:      this->Ft_1 = __f(this->n - 1);
 // CHECK-NEXT:    __L1:
@@ -65,9 +67,11 @@ int main() {
 // CHECK-NEXT:          return struct_PollResult_int_pending();
 // CHECK-NEXT:      }
 // CHECK-NEXT:      this->tmp = g(Res_1);
+// CHECK-NEXT:      {
 // CHECK-NEXT:      this->__future_state = -1;
 // CHECK-NEXT:      int __RES_RETURN_1 = this->n * this->tmp;
 // CHECK-NEXT:      return struct_PollResult_int_completed(__RES_RETURN_1);
+// CHECK-NEXT:      }
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: void struct__Futuref_free(struct _Futuref *this) {

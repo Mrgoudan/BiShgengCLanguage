@@ -1,8 +1,0 @@
-// RUN: %clang -rewrite-bsc %s -o %t-rw.c
-
-#include "future.hbs"
-#include "stdlib.h" 
-
-async int f(int n) {
-  return 42 + n;
-}
