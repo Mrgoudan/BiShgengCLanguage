@@ -1715,14 +1715,19 @@ public:
 }  // namespace
 
 namespace {
-class TransformToHasSingleState
-    : public TreeTransform<TransformToHasSingleState> {
-  typedef TreeTransform<TransformToHasSingleState> BaseTransform;
+class TransformToHasSingleStateAndReturnStatements
+    : public TreeTransform<TransformToHasSingleStateAndReturnStatements> {
+  typedef TreeTransform<TransformToHasSingleStateAndReturnStatements> BaseTransform;
   TransformToAP DT;
+  Expr *PDRE;
+  RecordDecl *FutureRD;
+  BSCMethodDecl *FD;
+  std::map<std::string, int> IdentifierNumber;
+
 
 public:
-  TransformToHasSingleState(Sema &SemaRef, TransformToAP DT)
-      : BaseTransform(SemaRef), DT(DT) {}
+  TransformToHasSingleStateAndReturnStatements(Sema &SemaRef, TransformToAP DT, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
+      : BaseTransform(SemaRef), DT(DT), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {}
 
   // make sure redo semantic analysis
   bool AlwaysRebuild() { return true; }
@@ -1882,23 +1887,6 @@ public:
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
     return S;
   }
-};
-}  // namespace
-
-namespace {
-class TransformARToCS : public TreeTransform<TransformARToCS> {
-  typedef TreeTransform<TransformARToCS> BaseTransform;
-  Expr *PDRE;
-  RecordDecl *FutureRD;
-  BSCMethodDecl *FD;
-  std::map<std::string, int> IdentifierNumber;
-
-public:
-  TransformARToCS(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
-      : BaseTransform(SemaRef), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {}
-
-  // make sure redo semantic analysis
-  bool AlwaysRebuild() { return true; }
 
   StmtResult TransformReturnStmt(ReturnStmt *S) {
     std::vector<Stmt *> ReturnStmts;
@@ -2494,6 +2482,21 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
           dyn_cast<RecordType>(FtField->getType().getDesugaredType(S.Context))
               ->getDecl();
 
+      assert(isa<ClassTemplateSpecializationDecl>(FatPointerRD));
+      ClassTemplateSpecializationDecl *CTSD =
+          cast<ClassTemplateSpecializationDecl>(FatPointerRD);
+      const TemplateArgumentList &args = CTSD->getTemplateArgs();
+      assert(args.size() == 1);
+
+      // Make sure these three generic types are fully instantiated.
+      (void)lookupGenericType(S, FD->getBeginLoc(), args[0].getAsType(),
+                                             "PollResult");
+      (void)lookupGenericType(S, FD->getBeginLoc(), args[0].getAsType(),
+                              "__Trait_Future_Vtable");
+      (void)lookupGenericType(S, FD->getBeginLoc(), args[0].getAsType(),
+                              "__Trait_Future");
+
+
       Expr *DRE = S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
       Expr *PDRE =
           ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
@@ -2829,15 +2832,11 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
   StmtResult MemberChangeRes = DT.TransformStmt(TransformedFD->getBody());
   Stmt *FuncBody = MemberChangeRes.get();
 
-  StmtResult SingleStateRes =
-      TransformToHasSingleState(S, DT).TransformStmt(FuncBody);
-  FuncBody = SingleStateRes.get();
-
   NewFD->setType(FuncType);
 
-  StmtResult ARToCSRes =
-      TransformARToCS(S, FutureObj, RD, NewFD).TransformStmt(FuncBody);
-  FuncBody = ARToCSRes.get();
+  StmtResult SingleStateRes =
+      TransformToHasSingleStateAndReturnStatements(S, DT, FutureObj, RD, NewFD).TransformStmt(FuncBody);
+  FuncBody = SingleStateRes.get();
 
   StmtResult AEToCSRes =
       TransformAEToCS(S, LabelDecls, NewFD->getParamDecl(0), FutureObj, RD, NewFD).TransformStmt(FuncBody);
@@ -3142,21 +3141,6 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   }
   Decls.push_back(FutureInit);
   Context.BSCDesugaredMap[FD].push_back(FutureInit);
-
-  BSCMethodDecl *PollDecl2 = buildPollFunctionDeclaration(*this, RD, PollResultRD, FD);
-  BSCMethodDecl *FreeDecl2 = buildFreeFunctionDeclaration(*this, RD, FD);
-
-  if (!PollDecl2) {
-    return Decls;
-  }
-  Decls.push_back(PollDecl2);
-  Context.BSCDesugaredMap[FD].push_back(PollDecl2);
-  if (!FreeDecl2) {
-    return Decls;
-  }
-  Decls.push_back(FreeDecl2);
-  Context.BSCDesugaredMap[FD].push_back(FreeDecl2);
-
 
   BSCMethodDecl *FreeDecl = buildFreeFunctionDefinition(*this, RD, FD, IsOptimization);
   if (!FreeDecl) {
