@@ -38,6 +38,16 @@ int test_for2() {
   return 0;
 }
 
+int test_for3() {
+  A aaa = {};
+  for (int i = ({0;}); i < 6; i++) {
+    if (i == 3) {
+      return 2;
+    }
+  }
+
+  return 0;
+}
 
 int main() {
   test_for();
@@ -51,6 +61,10 @@ int main() {
   test_for2();
   if (y != 13) {
     return 3;
+  }
+  test_for3();
+  if (y != 14) {
+    return 4;
   }
   return 0;
 }

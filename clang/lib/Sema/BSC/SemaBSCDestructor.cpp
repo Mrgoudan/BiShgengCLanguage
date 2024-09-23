@@ -451,12 +451,14 @@ public:
   }
 
   bool TraverseWhileStmt(WhileStmt *WS) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseWhileStmt(WS);
-    if (auto NewCompound =
-            ReplaceCompoundMap[dyn_cast<CompoundStmt>(WS->getBody())]) {
-      WS->setBody(NewCompound);
-    } else {
-      WS->setBody(CreateNewCompoundStmt(WS->getBody()));
+    if (WS->getBody()){
+      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(WS->getBody());
+      if (auto NewCompound =
+              ReplaceCompoundMap[dyn_cast<CompoundStmt>(WS->getBody())]) {
+        WS->setBody(NewCompound);
+      } else {
+        WS->setBody(CreateNewCompoundStmt(WS->getBody()));
+      }
     }
     return false;
   }
@@ -484,20 +486,24 @@ public:
   }
 
   bool TraverseDoStmt(DoStmt *DS) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDoStmt(DS);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getBody())) {
-      DS->setBody(ReplaceCompoundMap[NewCompound]);
-    } else {
-      DS->setBody(CreateNewCompoundStmt(DS->getBody()));
+    if (DS->getBody()){
+      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(DS->getBody());
+      if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getBody())) {
+        DS->setBody(ReplaceCompoundMap[NewCompound]);
+      } else {
+        DS->setBody(CreateNewCompoundStmt(DS->getBody()));
+      }
     }
     return false;
   }
   bool TraverseForStmt(ForStmt *FS) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseForStmt(FS);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(FS->getBody())) {
-      FS->setBody(ReplaceCompoundMap[NewCompound]);
-    } else {
-      FS->setBody(CreateNewCompoundStmt(FS->getBody()));
+    if (FS->getBody()){
+      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(FS->getBody());
+      if (auto NewCompound = dyn_cast<CompoundStmt>(FS->getBody())) {
+        FS->setBody(ReplaceCompoundMap[NewCompound]);
+      } else {
+        FS->setBody(CreateNewCompoundStmt(FS->getBody()));
+      }
     }
     return false;
   }
@@ -511,9 +517,11 @@ public:
   }
 
   bool TraverseSwitchStmt(SwitchStmt *SS) {
-    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseSwitchStmt(SS);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(SS->getBody())) {
-      SS->setBody(ReplaceCompoundMap[NewCompound]);
+    if (SS->getBody()){
+      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(SS->getBody());
+      if (auto NewCompound = dyn_cast<CompoundStmt>(SS->getBody())) {
+        SS->setBody(ReplaceCompoundMap[NewCompound]);
+      }
     }
     return false;
   }
