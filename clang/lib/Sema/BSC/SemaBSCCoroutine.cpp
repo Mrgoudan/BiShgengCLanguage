@@ -921,6 +921,9 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
+/**
+ * Build the Future init declaration
+ */
 static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S,
                                                         FunctionDecl *FD,
                                                         QualType FuncRetType) {
@@ -1297,6 +1300,7 @@ public:
 
       CompoundStmt *body =
           llvm::dyn_cast_if_present<CompoundStmt>(D->getBody());
+      // If transforming a declaration without body this may not be present
       if (body) {
         Stmt *LastStmt = body->body_back();
         if (!LastStmt || !dyn_cast<ReturnStmt>(LastStmt)) {
@@ -1718,6 +1722,10 @@ public:
 }  // namespace
 
 namespace {
+/**
+ * Transform the function body so it manages a single state and the return
+ * statement wraps the results in PollResult
+ */
 class TransformToHasSingleStateAndReturnStatements
     : public TreeTransform<TransformToHasSingleStateAndReturnStatements> {
   typedef TreeTransform<TransformToHasSingleStateAndReturnStatements>
@@ -1993,8 +2001,8 @@ public:
         SemaRef.BuildCallExpr(nullptr, CompletedRef, BLoc, Args, ELoc).get();
     Stmt *RS = SemaRef.BuildReturnStmt(BLoc, CE).get();
     ReturnStmts.push_back(RS);
-    CompoundStmt *CS =
-      CompoundStmt::Create(SemaRef.Context, ReturnStmts, FPOptionsOverride(), BLoc, ELoc);
+    CompoundStmt *CS = CompoundStmt::Create(SemaRef.Context, ReturnStmts,
+                                            FPOptionsOverride(), BLoc, ELoc);
 
     return CS;
   }
@@ -2061,28 +2069,6 @@ public:
               implementedFutureType(
                   SemaRef, cast<PointerType>(CE->getType().getTypePtr())
                                ->getPointeeType())));
-        // CHECK: Do I need all of this?
-        std::vector<Expr *> CallArgs;
-        for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
-          CallArgs.push_back(CE->getArg(I));
-        }
-
-        Expr *FDRef = SemaRef.BuildDeclRefExpr(
-            FutureInitFunc, FutureInitFunc->getType().getNonReferenceType(),
-            VK_LValue, SourceLocation());
-        FDRef->HasBSCScopeSpec = true;
-        FDRef = SemaRef
-                    .ImpCastExprToType(FDRef,
-                                       SemaRef.Context.getPointerType(
-                                           FutureInitFunc->getType()),
-                                       CK_FunctionToPointerDecay)
-                    .get();
-        FDRef->HasBSCScopeSpec = true;
-
-        RHSExpr = SemaRef
-                      .BuildCallExpr(nullptr, FDRef, SourceLocation(), CallArgs,
-                                     SourceLocation())
-                      .get();
       }
     }
 
@@ -2314,8 +2300,7 @@ public:
     Stmt *Null = new (SemaRef.Context) NullStmt(Empty);
     LabelStmt *LS =
         BaseTransform::RebuildLabelStmt(
-            SourceLocation(),
-            cast<LabelDecl>(LabelDecls[AwaitIndex++]),
+            SourceLocation(), cast<LabelDecl>(LabelDecls[AwaitIndex++]),
             SourceLocation(), Null)
             .getAs<LabelStmt>();
     AwaitStmts.push_back(LS);
@@ -2373,7 +2358,8 @@ public:
   }
 
   StmtResult TransformCompoundStmt(CompoundStmt *S, bool IsStmtExpr) {
-    if (S == nullptr) return S;
+    if (S == nullptr)
+      return S;
 
     std::vector<Stmt *> Statements;
     for (auto *SS : S->children()) {
@@ -2386,13 +2372,14 @@ public:
       Statements.push_back(SS);
     }
     Sema::CompoundScopeRAII CompoundScope(SemaRef);
-    CompoundStmt *CS = BaseTransform::RebuildCompoundStmt(
-                           S->getBeginLoc(), Statements, S->getEndLoc(), IsStmtExpr)
-                           .getAs<CompoundStmt>();
+    CompoundStmt *CS =
+        BaseTransform::RebuildCompoundStmt(S->getBeginLoc(), Statements,
+                                           S->getEndLoc(), IsStmtExpr)
+            .getAs<CompoundStmt>();
     return CS;
   }
 };
-}  // namespace
+} // namespace
 
 static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
                                                    FunctionDecl *FD) {

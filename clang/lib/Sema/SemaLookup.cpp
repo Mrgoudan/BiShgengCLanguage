@@ -272,7 +272,7 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
     if (CPlusPlus
 #if ENABLE_BSC
         || BSC
-        #endif
+#endif
     )
       IDNS |= Decl::IDNS_Tag | Decl::IDNS_Ordinary;
     break;
@@ -2429,10 +2429,18 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
 /// \param InUnqualifiedLookup true if this is qualified name lookup that
 /// occurs as part of unqualified name lookup.
 ///
+/// \param allowIncompleteCtx (Only in BishengC) allow to lookup a Qualified
+/// name from an incomplete context
+///
 /// \returns true if lookup succeeded, false if it failed.
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                               bool InUnqualifiedLookup,
-                               bool allowIncompleteCtx) {
+                               bool InUnqualifiedLookup
+#ifdef ENABLE_BSC
+                               ,
+                               bool allowIncompleteCtx
+#endif
+
+) {
   assert(LookupCtx && "Sema::LookupQualifiedName requires a lookup context");
 
   if (!R.getLookupName())
