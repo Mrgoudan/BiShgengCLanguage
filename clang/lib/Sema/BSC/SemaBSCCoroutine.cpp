@@ -545,12 +545,10 @@ static QualType lookupGenericType(Sema &S, SourceLocation SLoc, QualType T,
 }  // namespace
 
 // build struct Future declaration for async function
-static RecordDecl *buildOpaqueFutureRecordDecl(
-    Sema &S, FunctionDecl *FD) {
+static RecordDecl *buildOpaqueFutureRecordDecl(Sema &S, FunctionDecl *FD) {
   DeclarationName funcName = FD->getDeclName();
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation ELoc = FD->getEndLoc();
-
 
   const std::string Recordname = "_Future" + funcName.getAsString();
   RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
@@ -598,7 +596,8 @@ static RecordDecl *buildFutureRecordDecl(
     if (AwaitFD && AwaitFD == FD) {
       // A recursive await
       assert(CE);
-      // This only happen in the recursive case, and I'm building the thing exactly now
+      // This only happen in the recursive case, and I'm building the thing
+      // exactly now
       assert(AwaitFD->isAsyncSpecified());
 
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
@@ -666,13 +665,16 @@ generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
 }
 
 // Future trait implementation
-static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD, QualType RecordType, QualType ReturnType, bool Initialize) {
+static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
+                                    QualType RecordType, QualType ReturnType,
+                                    bool Initialize) {
   auto SLoc = FD->getBeginLoc();
   auto ELoc = FD->getEndLoc();
 
   auto lookupInternal = [&](std::string Name) {
-    DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
-        DeclarationName(&(S.Context.Idents).get(Name)));
+    DeclContext::lookup_result Decls =
+        S.Context.getTranslationUnitDecl()->lookup(
+            DeclarationName(&(S.Context.Idents).get(Name)));
     return Decls;
   };
 
@@ -680,7 +682,8 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD, QualType RecordTy
 
   TemplateArgumentListInfo Args(SLoc, SLoc);
   Args.addArgument(TemplateArgumentLoc(
-      TemplateArgument(ReturnType), S.Context.getTrivialTypeSourceInfo(ReturnType, SLoc)));
+      TemplateArgument(ReturnType),
+      S.Context.getTrivialTypeSourceInfo(ReturnType, SLoc)));
   QualType InstantiatedTrait =
       S.CheckTemplateIdType(TemplateName(TraitDecl), SourceLocation(), Args);
 
@@ -689,13 +692,10 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD, QualType RecordTy
   }
 
   auto x = S.DesugarImplTrait(
-    TraitDecl->getTemplatedDecl(),
-    SLoc,
-    SLoc,
-    ELoc,
-    SourceRange(SLoc, ELoc),
-    RecordType,
-    S.Context.getElaboratedType(ETK_Trait, nullptr, InstantiatedTrait), SLoc, Initialize);
+      TraitDecl->getTemplatedDecl(), SLoc, SLoc, ELoc, SourceRange(SLoc, ELoc),
+      RecordType,
+      S.Context.getElaboratedType(ETK_Trait, nullptr, InstantiatedTrait), SLoc,
+      Initialize);
 
   return x;
 }
@@ -909,7 +909,6 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
                  .get();
   Stmts.push_back(BO);
 
-
   Expr *FutureRefExpr = S.BuildDeclRefExpr(VD, VD->getType(), VK_LValue, NLoc);
   Stmt *RS = S.BuildReturnStmt(NLoc, FutureRefExpr).get();
   Stmts.push_back(RS);
@@ -922,8 +921,9 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *FD,
-                                                 QualType FuncRetType) {
+static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S,
+                                                        FunctionDecl *FD,
+                                                        QualType FuncRetType) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
@@ -1295,7 +1295,8 @@ public:
       NewFD->setParams(ParmVarDecls);
       NewFD->setLexicalDeclContext(SemaRef.Context.getTranslationUnitDecl());
 
-      CompoundStmt *body = llvm::dyn_cast_if_present<CompoundStmt>(D->getBody());
+      CompoundStmt *body =
+          llvm::dyn_cast_if_present<CompoundStmt>(D->getBody());
       if (body) {
         Stmt *LastStmt = body->body_back();
         if (!LastStmt || !dyn_cast<ReturnStmt>(LastStmt)) {
@@ -1309,7 +1310,7 @@ public:
           Sema::CompoundScopeRAII CompoundScope(SemaRef);
           body = BaseTransform::RebuildCompoundStmt(SourceLocation(), Stmts,
                                                     SourceLocation(), false)
-                    .getAs<CompoundStmt>();
+                     .getAs<CompoundStmt>();
         }
 
         Stmt *FuncBody = BaseTransform::TransformStmt(body).getAs<Stmt>();
@@ -1719,17 +1720,20 @@ public:
 namespace {
 class TransformToHasSingleStateAndReturnStatements
     : public TreeTransform<TransformToHasSingleStateAndReturnStatements> {
-  typedef TreeTransform<TransformToHasSingleStateAndReturnStatements> BaseTransform;
+  typedef TreeTransform<TransformToHasSingleStateAndReturnStatements>
+      BaseTransform;
   TransformToAP DT;
   Expr *PDRE;
   RecordDecl *FutureRD;
   BSCMethodDecl *FD;
   std::map<std::string, int> IdentifierNumber;
 
-
 public:
-  TransformToHasSingleStateAndReturnStatements(Sema &SemaRef, TransformToAP DT, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
-      : BaseTransform(SemaRef), DT(DT), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {}
+  TransformToHasSingleStateAndReturnStatements(Sema &SemaRef, TransformToAP DT,
+                                               Expr *PDRE, RecordDecl *FutureRD,
+                                               BSCMethodDecl *FD)
+      : BaseTransform(SemaRef), DT(DT), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {
+  }
 
   // make sure redo semantic analysis
   bool AlwaysRebuild() { return true; }
@@ -2052,8 +2056,11 @@ public:
       if (FutureInitFunc) {
         IsOptimization =
             !(CE->getType().getTypePtr()->isBSCFutureType()) &&
-            (implementedFutureType(SemaRef, CE->getType())
-              || (isa<PointerType>(CE->getType().getTypePtr()) && implementedFutureType(SemaRef, cast<PointerType>(CE->getType().getTypePtr())->getPointeeType())));
+            (implementedFutureType(SemaRef, CE->getType()) ||
+             (isa<PointerType>(CE->getType().getTypePtr()) &&
+              implementedFutureType(
+                  SemaRef, cast<PointerType>(CE->getType().getTypePtr())
+                               ->getPointeeType())));
         // CHECK: Do I need all of this?
         std::vector<Expr *> CallArgs;
         for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
@@ -2107,11 +2114,10 @@ public:
         AEType = AEType->getPointeeType();
       }
 
-
       const RecordType *FutureType = dyn_cast<RecordType>(
           AEType.getDesugaredType(SemaRef.Context));
       assert(FutureType != nullptr &&
-            "struct future of async function is null");
+             "struct future of async function is null");
 
       RecordDecl *FutureStructRD = FutureType->getDecl();
       assert(FutureStructRD != nullptr &&
@@ -2137,7 +2143,7 @@ public:
           DeclAccessPair::make(*FtField, FtField->getAccess()), false,
           MemberNameInfo, FtField->getType().getNonReferenceType(),
           VK_LValue, OK_Ordinary);
-      if (!FtField->getType()->isPointerType()){
+      if (!FtField->getType()->isPointerType()) {
         // Only do it if it's not a pointer already
         FtExpr = UnaryOperator::Create(
             SemaRef.Context, FtExpr, UO_AddrOf, ParamType, VK_PRValue,
@@ -2184,7 +2190,8 @@ public:
         Expr *RAssignExpr = CStyleCastExpr::Create(
             SemaRef.Context, FtField->getType(), VK_PRValue, CK_NullToPointer,
             IntegerExpr, nullptr, FPOptionsOverride(),
-            SemaRef.Context.getTrivialTypeSourceInfo(FtField->getType(), SourceLocation()),
+            SemaRef.Context.getTrivialTypeSourceInfo(FtField->getType(),
+                                                     SourceLocation()),
             SourceLocation(), SourceLocation());
         Expr *NullptrAssign =
             SemaRef
@@ -2388,7 +2395,7 @@ public:
 }  // namespace
 
 static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
-                                        FunctionDecl *FD) {
+                                                   FunctionDecl *FD) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
@@ -2422,7 +2429,8 @@ static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
 }
 
 static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
-                                        FunctionDecl *FD, bool IsOptimization) {
+                                                  FunctionDecl *FD,
+                                                  bool IsOptimization) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
@@ -2478,7 +2486,7 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
     Futures.pop();
     Expr *DataExpr = nullptr;
     Expr *FreeFuncExpr = nullptr;
-    if (FtField->getType().getTypePtr()->isBSCFutureType()){
+    if (FtField->getType().getTypePtr()->isBSCFutureType()) {
       // If its BSCFutureType (the trait) call the free function from the vtable
       RecordDecl *FatPointerRD =
           dyn_cast<RecordType>(FtField->getType().getDesugaredType(S.Context))
@@ -2492,17 +2500,17 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
 
       // Make sure these three generic types are fully instantiated.
       (void)lookupGenericType(S, FD->getBeginLoc(), args[0].getAsType(),
-                                             "PollResult");
+                              "PollResult");
       (void)lookupGenericType(S, FD->getBeginLoc(), args[0].getAsType(),
                               "__Trait_Future_Vtable");
       (void)lookupGenericType(S, FD->getBeginLoc(), args[0].getAsType(),
                               "__Trait_Future");
 
-
-      Expr *DRE = S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
+      Expr *DRE =
+          S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
       Expr *PDRE =
           ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
-                                  nullptr, VK_PRValue, FPOptionsOverride());
+                                   nullptr, VK_PRValue, FPOptionsOverride());
 
       // Generating `FutureExpr` as followed:
       // @code
@@ -2517,7 +2525,7 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
 
       RecordDecl::field_iterator PtrField, VtableField, FPFieldIt;
       for (FPFieldIt = FatPointerRD->field_begin();
-          FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {
+           FPFieldIt != FatPointerRD->field_end(); ++FPFieldIt) {
         if (FPFieldIt->getDeclName().getAsString() == "data") {
           PtrField = FPFieldIt;
         } else if (FPFieldIt->getDeclName().getAsString() == "vtable") {
@@ -2533,7 +2541,8 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
           FutureExpr, false, SourceLocation(), NestedNameSpecifierLoc(),
           SourceLocation(), *VtableField,
           DeclAccessPair::make(FatPointerRD, VtableField->getAccess()), false,
-          DeclarationNameInfo(), VtableField->getType(), VK_LValue, OK_Ordinary);
+          DeclarationNameInfo(), VtableField->getType(), VK_LValue,
+          OK_Ordinary);
       VtableExpr = ImplicitCastExpr::Create(S.Context, VtableExpr->getType(),
                                             CK_NoOp, VtableExpr, nullptr,
                                             VK_PRValue, FPOptionsOverride());
@@ -2543,7 +2552,7 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
           VtableField->getType()->getPointeeType().getDesugaredType(S.Context));
       RecordDecl *VtableRD = RT->getDecl();
       for (FreeFuncFieldIt = VtableRD->field_begin();
-          FreeFuncFieldIt != VtableRD->field_end(); ++FreeFuncFieldIt) {
+           FreeFuncFieldIt != VtableRD->field_end(); ++FreeFuncFieldIt) {
         if (FreeFuncFieldIt->getDeclName().getAsString() == "free") {
           FreeFuncField = FreeFuncFieldIt;
         }
@@ -2570,28 +2579,29 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
         AEType = AEType->getPointeeType();
       }
 
-      const RecordType *FutureType = dyn_cast<RecordType>(
-          AEType.getDesugaredType(S.Context));
+      const RecordType *FutureType =
+          dyn_cast<RecordType>(AEType.getDesugaredType(S.Context));
       assert(FutureType != nullptr &&
-            "struct future of async function is null");
+             "struct future of async function is null");
 
       RecordDecl *FutureStructRD = FutureType->getDecl();
       assert(FutureStructRD != nullptr &&
              "struct future of async function is null");
 
-      BSCMethodDecl *FreeFD = lookupBSCMethodInRecord(S, "free", FutureStructRD);
+      BSCMethodDecl *FreeFD =
+          lookupBSCMethodInRecord(S, "free", FutureStructRD);
       assert(FreeFD != nullptr && "free function of async function is null");
 
       FreeFuncExpr = S.BuildDeclRefExpr(
-          FreeFD, FreeFD->getType().getNonReferenceType(), VK_LValue,
-          SLoc);
+          FreeFD, FreeFD->getType().getNonReferenceType(), VK_LValue, SLoc);
 
       FreeFuncExpr->HasBSCScopeSpec = true;
 
-      Expr *DRE = S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
+      Expr *DRE =
+          S.BuildDeclRefExpr(PVD, ParamType, VK_LValue, SourceLocation());
       Expr *PDRE =
           ImplicitCastExpr::Create(S.Context, ParamType, CK_LValueToRValue, DRE,
-                                  nullptr, VK_PRValue, FPOptionsOverride());
+                                   nullptr, VK_PRValue, FPOptionsOverride());
 
       DataExpr = S.BuildMemberExpr(
           PDRE, true, SourceLocation(), NestedNameSpecifierLoc(),
@@ -2644,26 +2654,23 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-
 static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
-                                        RecordDecl *PollResultRD,
-                                        FunctionDecl *FD) {
+                                                   RecordDecl *PollResultRD,
+                                                   FunctionDecl *FD) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
   QualType Ty = FD->getDeclaredReturnType();
 
   S.PushFunctionScope();
-    FunctionDecl *TransformedFD = nullptr;
-{  Sema::ContextRAII savedContext(S, FD);
-  LocalInstantiationScope Scope(S);
+  FunctionDecl *TransformedFD = nullptr;
+  {
+    Sema::ContextRAII savedContext(S, FD);
+    LocalInstantiationScope Scope(S);
 
-    TransformedFD =
-      TransformToReturnVoid(S).TransformFunctionDecl(FD);
-}
+    TransformedFD = TransformToReturnVoid(S).TransformFunctionDecl(FD);
+  }
   S.PopFunctionScopeInfo();
-
-
 
   std::string FName = "poll";
 
@@ -2708,10 +2715,10 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
 }
 
 static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
-                                        RecordDecl *PollResultRD,
-                                        FunctionDecl *FD,
-                                        RecordDecl *FatPointerRD,
-                                        int FutureStateNumber) {
+                                                  RecordDecl *PollResultRD,
+                                                  FunctionDecl *FD,
+                                                  RecordDecl *FatPointerRD,
+                                                  int FutureStateNumber) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
@@ -2722,12 +2729,12 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.
   FunctionDecl *TransformedFD = nullptr;
-{  Sema::ContextRAII savedContext(S, FD);
-  LocalInstantiationScope Scope(S);
+  {
+    Sema::ContextRAII savedContext(S, FD);
+    LocalInstantiationScope Scope(S);
 
-    TransformedFD =
-      TransformToReturnVoid(S).TransformFunctionDecl(FD);
-}
+    TransformedFD = TransformToReturnVoid(S).TransformFunctionDecl(FD);
+  }
   S.PopFunctionScopeInfo();
 
   std::string FName = "poll";
@@ -2837,11 +2844,13 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
   NewFD->setType(FuncType);
 
   StmtResult SingleStateRes =
-      TransformToHasSingleStateAndReturnStatements(S, DT, FutureObj, RD, NewFD).TransformStmt(FuncBody);
+      TransformToHasSingleStateAndReturnStatements(S, DT, FutureObj, RD, NewFD)
+          .TransformStmt(FuncBody);
   FuncBody = SingleStateRes.get();
 
-  StmtResult AEToCSRes =
-      TransformAEToCS(S, LabelDecls, NewFD->getParamDecl(0), FutureObj, RD, NewFD).TransformStmt(FuncBody);
+  StmtResult AEToCSRes = TransformAEToCS(S, LabelDecls, NewFD->getParamDecl(0),
+                                         FutureObj, RD, NewFD)
+                             .TransformStmt(FuncBody);
 
   for (auto *C : AEToCSRes.get()->children()) {
     Stmts.push_back(C);
@@ -2932,8 +2941,12 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
         }
       }
     }
-  } else if ((isa<PointerType>(AwaitReturnTy.getTypePtr()) && implementedFutureType(*this, cast<PointerType>(AwaitReturnTy.getTypePtr())->getPointeeType()))) {
-    auto AwaitReturnTy2 = cast<PointerType>(AwaitReturnTy.getTypePtr())->getPointeeType();
+  } else if ((isa<PointerType>(AwaitReturnTy.getTypePtr()) &&
+              implementedFutureType(
+                  *this, cast<PointerType>(AwaitReturnTy.getTypePtr())
+                             ->getPointeeType()))) {
+    auto AwaitReturnTy2 =
+        cast<PointerType>(AwaitReturnTy.getTypePtr())->getPointeeType();
     const RecordType *FutureType =
         dyn_cast<RecordType>(AwaitReturnTy2.getDesugaredType(Context));
     RecordDecl *FutureRD = FutureType->getDecl();
@@ -3132,10 +3145,10 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
 
   FunctionDecl *FutureInit = nullptr;
   if (IsOptimization) {
-    FutureInit =
-        buildFutureStructInitFunctionDefinition(*this, RD, FD);
+    FutureInit = buildFutureStructInitFunctionDefinition(*this, RD, FD);
   } else {
-    FutureInit = buildFutureInitFunctionDefinition(*this, RD, FD, FutureInitDef);
+    FutureInit =
+        buildFutureInitFunctionDefinition(*this, RD, FD, FutureInitDef);
   }
 
   if (!FutureInit) {
@@ -3144,28 +3157,29 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   Decls.push_back(FutureInit);
   Context.BSCDesugaredMap[FD].push_back(FutureInit);
 
-  BSCMethodDecl *FreeDecl = buildFreeFunctionDefinition(*this, RD, FD, IsOptimization);
+  BSCMethodDecl *FreeDecl =
+      buildFreeFunctionDefinition(*this, RD, FD, IsOptimization);
   if (!FreeDecl) {
     return Decls;
   }
   Decls.push_back(FreeDecl);
   Context.BSCDesugaredMap[FD].push_back(FreeDecl);
 
-  BSCMethodDecl *PollDecl = buildPollFunctionDefinition(*this, RD, PollResultRD, FD,
-                                              FatPointerRD, FutureStateNumber);
+  BSCMethodDecl *PollDecl = buildPollFunctionDefinition(
+      *this, RD, PollResultRD, FD, FatPointerRD, FutureStateNumber);
   if (!PollDecl) {
     return Decls;
   }
   Decls.push_back(PollDecl);
   Context.BSCDesugaredMap[FD].push_back(PollDecl);
 
-  VarDecl *VtableDecl = buildVtableInitDecl(*this, FD, Context.getRecordType(RD), ReturnTy, true);
+  VarDecl *VtableDecl =
+      buildVtableInitDecl(*this, FD, Context.getRecordType(RD), ReturnTy, true);
   if (!VtableDecl) {
     return Decls;
   }
   Decls.push_back(VtableDecl);
   Context.BSCDesugaredMap[FD].push_back(VtableDecl);
-
 
   return Decls;
 }

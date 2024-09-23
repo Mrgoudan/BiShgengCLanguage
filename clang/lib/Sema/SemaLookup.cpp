@@ -208,17 +208,17 @@ namespace {
 // Retrieve the set of identifier namespaces that correspond to a
 // specific kind of name lookup.
 static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
-                               #if ENABLE_BSC
+#if ENABLE_BSC
                                bool BSC,
-                               #endif
+#endif
                                bool Redeclaration) {
-  unsigned IDNS = 0;
-  switch (NameKind) {
-  case Sema::LookupObjCImplicitSelfParam:
-  case Sema::LookupOrdinaryName:
-  case Sema::LookupRedeclarationWithLinkage:
-  case Sema::LookupLocalFriendName:
-  case Sema::LookupDestructorName:
+    unsigned IDNS = 0;
+    switch (NameKind) {
+    case Sema::LookupObjCImplicitSelfParam:
+    case Sema::LookupOrdinaryName:
+    case Sema::LookupRedeclarationWithLinkage:
+    case Sema::LookupLocalFriendName:
+    case Sema::LookupDestructorName:
 #if ENABLE_BSC
   case Sema::LookupBSCOwnedStructName:
 #endif
@@ -270,8 +270,11 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
   case Sema::LookupMemberName:
     IDNS = Decl::IDNS_Member;
     if (CPlusPlus
-        #if ENABLE_BSC
+#if ENABLE_BSC
         || BSC
+        #endif
+    )
+      IDNS |= Decl::IDNS_Tag | Decl::IDNS_Ordinary;
     break;
   case Sema::LookupNestedNameSpecifierName:
     IDNS = Decl::IDNS_Type | Decl::IDNS_Namespace;
@@ -2428,18 +2431,17 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
 ///
 /// \returns true if lookup succeeded, false if it failed.
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
-                               bool InUnqualifiedLookup, bool allowIncompleteCtx) {
+                               bool InUnqualifiedLookup,
+                               bool allowIncompleteCtx) {
   assert(LookupCtx && "Sema::LookupQualifiedName requires a lookup context");
 
   if (!R.getLookupName())
     return false;
 
   // Make sure that the declaration context is complete.
-  assert((!isa<TagDecl>(LookupCtx) ||
-          LookupCtx->isDependentContext() ||
+  assert((!isa<TagDecl>(LookupCtx) || LookupCtx->isDependentContext() ||
           cast<TagDecl>(LookupCtx)->isCompleteDefinition() ||
-          allowIncompleteCtx ||
-          cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
+          allowIncompleteCtx || cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
          "Declaration context must already be complete!");
 
   struct QualifiedLookupInScope {

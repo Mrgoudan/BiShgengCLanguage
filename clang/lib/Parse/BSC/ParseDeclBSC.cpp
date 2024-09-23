@@ -1625,8 +1625,8 @@ void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
   ParsedType PT2 = Ty2.get();
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID,
-                            CondResult, CondExpr.get(), PT1, PT2,
+  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID, CondResult, CondExpr.get(),
+                            PT1, PT2,
                             Actions.getASTContext().getPrintingPolicy()))
     Diag(KWLoc, DiagID) << PrevSpec;
 }
