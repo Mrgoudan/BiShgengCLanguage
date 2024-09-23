@@ -192,10 +192,18 @@ buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr, Expr *FreeFuncExpr,
   return If;
 }
 
+/**
+ * Is a BSC compatible future if and only if:
+ * - Implements the Future trait
+ * - is of the form *T, and T implements the Future trait
+ * - is of the form trait Future<T>*
+ */
 bool Sema::IsBSCCompatibleFutureType(QualType Ty) {
-  return implementedFutureType(*this, Ty)
-      || (isa<PointerType>(Ty.getTypePtr()) && implementedFutureType(*this, cast<PointerType>(Ty.getTypePtr())->getPointeeType()))
-      || Ty.getTypePtr()->isBSCFutureType();
+  return implementedFutureType(*this, Ty) ||
+         (isa<PointerType>(Ty.getTypePtr()) &&
+          implementedFutureType(
+              *this, cast<PointerType>(Ty.getTypePtr())->getPointeeType())) ||
+         Ty.getTypePtr()->isBSCFutureType();
 }
 
 namespace {
@@ -536,6 +544,21 @@ static QualType lookupGenericType(Sema &S, SourceLocation SLoc, QualType T,
 
 }  // namespace
 
+// build struct Future declaration for async function
+static RecordDecl *buildOpaqueFutureRecordDecl(
+    Sema &S, FunctionDecl *FD) {
+  DeclarationName funcName = FD->getDeclName();
+  SourceLocation SLoc = FD->getBeginLoc();
+  SourceLocation ELoc = FD->getEndLoc();
+
+
+  const std::string Recordname = "_Future" + funcName.getAsString();
+  RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
+                                        clang::TagDecl::TagKind::TTK_Struct);
+  S.PushOnScopeChains(RD, S.getCurScope(), true);
+  return RD;
+}
+
 // build struct Future for async function
 static RecordDecl *buildFutureRecordDecl(
     Sema &S, FunctionDecl *FD, ArrayRef<Expr *> Args,
@@ -544,18 +567,20 @@ static RecordDecl *buildFutureRecordDecl(
   DeclarationName funcName = FD->getDeclName();
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation ELoc = FD->getEndLoc();
-
+  // Create Record declaration
   const std::string Recordname = "_Future" + funcName.getAsString();
   RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
                                         clang::TagDecl::TagKind::TTK_Struct);
   RD->startDefinition();
 
+  // Gather Function parameters
   for (FunctionDecl::param_const_iterator pi = FD->param_begin();
        pi != FD->param_end(); pi++) {
     paramList.push_back(std::make_pair<DeclarationName, QualType>(
         (*pi)->getDeclName(), (*pi)->getType()));
   }
 
+  // Gather all awaited expressions
   for (unsigned I = 0; I != Args.size(); ++I) {
     auto *AE = cast<AwaitExpr>(Args[I])->getSubExpr();
     CallExpr *CE = dyn_cast<CallExpr>(AE);
@@ -571,6 +596,7 @@ static RecordDecl *buildFutureRecordDecl(
     } else AEType = AE->getType();
 
     if (AwaitFD && AwaitFD == FD) {
+      // A recursive await
       assert(CE);
       // This only happen in the recursive case, and I'm building the thing exactly now
       assert(AwaitFD->isAsyncSpecified());
@@ -578,16 +604,6 @@ static RecordDecl *buildFutureRecordDecl(
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
           &(S.Context.Idents).get("Ft_" + std::to_string(I + 1)),
           S.Context.getPointerType(S.Context.getRecordType(RD))));
-    } else if (implementedFutureType(S, AEType)) {
-      const RecordType *FutureType = dyn_cast<RecordType>(
-          AEType.getDesugaredType(S.Context));
-      RecordDecl *FutureDecl = FutureType->getDecl();
-      assert(FutureDecl != nullptr &&
-             "struct future of async function is null");
-
-      LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
-          &(S.Context.Idents).get("Ft_" + std::to_string(I + 1)),
-          S.Context.getRecordType(FutureDecl)));
     } else {
       LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
           &(S.Context.Idents).get("Ft_" + std::to_string(I + 1)),
@@ -649,21 +665,7 @@ generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
   return std::make_pair(VoidRD, IsExisted);
 }
 
- // build struct Future for async function
-static RecordDecl *buildOpaqueFutureRecordDecl(
-    Sema &S, FunctionDecl *FD) {
-  DeclarationName funcName = FD->getDeclName();
-  SourceLocation SLoc = FD->getBeginLoc();
-  SourceLocation ELoc = FD->getEndLoc();
-
-
-  const std::string Recordname = "_Future" + funcName.getAsString();
-  RecordDecl *RD = buildAsyncDataRecord(S.Context, Recordname, SLoc, ELoc,
-                                        clang::TagDecl::TagKind::TTK_Struct);
-  S.PushOnScopeChains(RD, S.getCurScope(), true);
-  return RD;
-}
-
+// Future trait implementation
 static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD, QualType RecordType, QualType ReturnType, bool Initialize) {
   auto SLoc = FD->getBeginLoc();
   auto ELoc = FD->getEndLoc();
