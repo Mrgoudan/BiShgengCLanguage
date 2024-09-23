@@ -2297,7 +2297,9 @@ public:
         DeclStmt(AwaitResultDG, SourceLocation(), SourceLocation());
 
     Stmt::EmptyShell Empty;
-    Stmt *Null = new (SemaRef.Context) NullStmt(Empty);
+    NullStmt *Null = new (SemaRef.Context) NullStmt(Empty);
+    Null->setSemiLoc(SourceLocation());
+
     LabelStmt *LS =
         BaseTransform::RebuildLabelStmt(
             SourceLocation(), cast<LabelDecl>(LabelDecls[AwaitIndex++]),
@@ -2845,7 +2847,8 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
     Stmts.push_back(C);
   }
   Stmt::EmptyShell Empty;
-  Stmt *Null = new (S.Context) NullStmt(Empty);
+  NullStmt *Null = new (S.Context) NullStmt(Empty);
+  Null->setSemiLoc(SourceLocation());
   int CurStmtSize = Stmts.size();
   if (CurStmtSize > StmtSize) {
     LabelStmt *LS =
