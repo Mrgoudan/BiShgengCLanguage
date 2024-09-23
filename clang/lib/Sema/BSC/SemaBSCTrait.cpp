@@ -737,7 +737,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   if (Init == nullptr) // trait I *a;
     return NewVD;
 
-  if (Init->containsErrors()) // this is so trange
+  if (Init->containsErrors())
     return NewVD;
 
   Expr *UO = Init;

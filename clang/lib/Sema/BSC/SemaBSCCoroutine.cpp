@@ -2381,6 +2381,7 @@ public:
 };
 } // namespace
 
+// Build only the declaration of the free function
 static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
                                                    FunctionDecl *FD) {
   SourceLocation SLoc = FD->getBeginLoc();
@@ -2459,6 +2460,7 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
        FieldIt != RD->field_end(); ++FieldIt) {
     auto FieldTy = FieldIt->getType();
+    // Free trait pointer or known pointers
     if ((FieldTy.getTypePtr()->isBSCFutureType() ||
          (isa<PointerType>(FieldTy.getTypePtr()) &&
           implementedFutureType(
