@@ -120,82 +120,84 @@ void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
   if (InstanceFields.empty())
     return;
   Stmt *FuncBody = Destructor->getBody();
-  if (auto *CS = dyn_cast<CompoundStmt>(FuncBody)) {
-    std::vector<Stmt *> Stmts;
-    for (auto *C : CS->children()) {
-      Stmts.push_back(C);
-    }
-    while (!InstanceFields.empty()) {
-      FieldDecl *Field = InstanceFields.top();
-      InstanceFields.pop();
+  if (FuncBody) {
+    if (auto *CS = dyn_cast<CompoundStmt>(FuncBody)) {
+      std::vector<Stmt *> Stmts;
+      for (auto *C : CS->children()) {
+        Stmts.push_back(C);
+      }
+      while (!InstanceFields.empty()) {
+        FieldDecl *Field = InstanceFields.top();
+        InstanceFields.pop();
 
-      const Type *FieldType = Field->getType().getCanonicalType().getTypePtr();
-      if (FieldType->isOwnedStructureType()) {
-        RecordDecl *ThisRD = cast<RecordType>(FieldType)->getDecl();
-        BSCMethodDecl *DestructorToCall = ThisRD->getBSCDestructor();
-        ParmVarDecl *PVD = Destructor->getParamDecl(0);
-        QualType ParamType = getASTContext().getRecordType(RD);
-        ParamType.addOwned();
+        const Type *FieldType = Field->getType().getCanonicalType().getTypePtr();
+        if (FieldType->isOwnedStructureType()) {
+          RecordDecl *ThisRD = cast<RecordType>(FieldType)->getDecl();
+          BSCMethodDecl *DestructorToCall = ThisRD->getBSCDestructor();
+          ParmVarDecl *PVD = Destructor->getParamDecl(0);
+          QualType ParamType = getASTContext().getRecordType(RD);
+          ParamType.addOwned();
 
-        Expr *DRE =
-            BuildDeclRefExpr(PVD, ParamType, VK_LValue, CS->getRBracLoc());
-        if (!ParamType->getAsCXXRecordDecl()) {
-          DRE = ImplicitCastExpr::Create(Context, ParamType, CK_LValueToRValue,
-                                         DRE, nullptr, VK_PRValue,
-                                         FPOptionsOverride());
-        }
-        Expr *MemberExpr = BuildMemberExpr(
-            DRE, false, SourceLocation(), NestedNameSpecifierLoc(),
-            SourceLocation(), Field,
-            DeclAccessPair::make(RD, Field->getAccess()), false,
-            DeclarationNameInfo(), Field->getType().getNonReferenceType(),
-            VK_LValue, OK_Ordinary);
-        SmallVector<Expr *, 1> Args;
-        Args.push_back(MemberExpr);
-        Expr *DestructorRef =
-            BuildDeclRefExpr(DestructorToCall, DestructorToCall->getType(),
-                             VK_LValue, SourceLocation());
-        DestructorRef =
-            ImpCastExprToType(DestructorRef,
-                              Context.getPointerType(DestructorRef->getType()),
-                              CK_FunctionToPointerDecay)
-                .get();
-        Expr *CE = BuildCallExpr(nullptr, DestructorRef, SourceLocation(), Args,
-                                 SourceLocation())
-                       .get();
-        Stmts.push_back(CE);
+          Expr *DRE =
+              BuildDeclRefExpr(PVD, ParamType, VK_LValue, CS->getRBracLoc());
+          if (!ParamType->getAsCXXRecordDecl()) {
+            DRE = ImplicitCastExpr::Create(Context, ParamType, CK_LValueToRValue,
+                                          DRE, nullptr, VK_PRValue,
+                                          FPOptionsOverride());
+          }
+          Expr *MemberExpr = BuildMemberExpr(
+              DRE, false, SourceLocation(), NestedNameSpecifierLoc(),
+              SourceLocation(), Field,
+              DeclAccessPair::make(RD, Field->getAccess()), false,
+              DeclarationNameInfo(), Field->getType().getNonReferenceType(),
+              VK_LValue, OK_Ordinary);
+          SmallVector<Expr *, 1> Args;
+          Args.push_back(MemberExpr);
+          Expr *DestructorRef =
+              BuildDeclRefExpr(DestructorToCall, DestructorToCall->getType(),
+                              VK_LValue, SourceLocation());
+          DestructorRef =
+              ImpCastExprToType(DestructorRef,
+                                Context.getPointerType(DestructorRef->getType()),
+                                CK_FunctionToPointerDecay)
+                  .get();
+          Expr *CE = BuildCallExpr(nullptr, DestructorRef, SourceLocation(), Args,
+                                  SourceLocation())
+                        .get();
+          Stmts.push_back(CE);
 
-        // If a owned struct has nested owned structs which should be instantiated,
-        // we add destructors of all nested owned structs to PendingInstantiations,
-        // the functions in which will be instantiated in ActOnEndOfTranslationUnit().
-        // For example:
-        // @code
-        //     owned struct A<T> {};
-        //     owned struct B<T> { A<T> a; };
-        //     owned struct C { B<int> b; };
-        // @endcode
-        // When desugar destructor of C, above we have added destructor of B<int> to PendingInstantiations,
-        // here we add destructor of A<int> to PendingInstantiations.
-        std::stack<RecordDecl *> OwnedStructFields;
-        CollectAllFieldsWithPendingInstantiatedDestructor(ThisRD,
-                                                          OwnedStructFields);
-        while (!OwnedStructFields.empty()) {
-          RecordDecl *RDOfOwnerStructField = OwnedStructFields.top();
-          OwnedStructFields.pop();
-          BSCMethodDecl *DestructorOfOwnerStructField =
-              RDOfOwnerStructField->getBSCDestructor();
-          SourceLocation PointOfInstantiation =
-              DestructorOfOwnerStructField->getPointOfInstantiation();
-          DestructorOfOwnerStructField->setInstantiationIsPending(true);
-          PendingInstantiations.push_back(
-              std::make_pair(DestructorOfOwnerStructField, PointOfInstantiation));
+          // If a owned struct has nested owned structs which should be instantiated,
+          // we add destructors of all nested owned structs to PendingInstantiations,
+          // the functions in which will be instantiated in ActOnEndOfTranslationUnit().
+          // For example:
+          // @code
+          //     owned struct A<T> {};
+          //     owned struct B<T> { A<T> a; };
+          //     owned struct C { B<int> b; };
+          // @endcode
+          // When desugar destructor of C, above we have added destructor of B<int> to PendingInstantiations,
+          // here we add destructor of A<int> to PendingInstantiations.
+          std::stack<RecordDecl *> OwnedStructFields;
+          CollectAllFieldsWithPendingInstantiatedDestructor(ThisRD,
+                                                            OwnedStructFields);
+          while (!OwnedStructFields.empty()) {
+            RecordDecl *RDOfOwnerStructField = OwnedStructFields.top();
+            OwnedStructFields.pop();
+            BSCMethodDecl *DestructorOfOwnerStructField =
+                RDOfOwnerStructField->getBSCDestructor();
+            SourceLocation PointOfInstantiation =
+                DestructorOfOwnerStructField->getPointOfInstantiation();
+            DestructorOfOwnerStructField->setInstantiationIsPending(true);
+            PendingInstantiations.push_back(
+                std::make_pair(DestructorOfOwnerStructField, PointOfInstantiation));
+          }
         }
       }
+      CompoundStmt *NewCS =
+          CompoundStmt::Create(getASTContext(), Stmts, FPOptionsOverride(),
+                              CS->getLBracLoc(), CS->getRBracLoc());
+      Destructor->setBody(NewCS);
     }
-    CompoundStmt *NewCS =
-        CompoundStmt::Create(getASTContext(), Stmts, FPOptionsOverride(),
-                             CS->getLBracLoc(), CS->getRBracLoc());
-    Destructor->setBody(NewCS);
   }
 }
 
