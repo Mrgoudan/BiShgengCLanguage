@@ -633,6 +633,8 @@ const std::string RewriteBSC::GetRewrittenString() {
 
   std::vector<Decl *> DeclList;
   std::set<Decl *> HasTemplateSpecSet;
+  // avoid repeatedly rewrite of Template Functions.
+  std::set<Decl *> RewritedFunctionDeclarationSet;
   auto EndsWith = [](const std::string &str, const std::string &suffix) {
     if (str.length() >= suffix.length()) {
       return 0 == str.compare(str.length() - suffix.length(), suffix.length(),
@@ -881,8 +883,12 @@ const std::string RewriteBSC::GetRewrittenString() {
     case Decl::FunctionTemplate: {
       FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(*D);
       for (auto *DD : FTD->specializations()) {
-        DD->print(Buf, Policy);
-        Buf << ";\n\n";
+        auto IT = RewritedFunctionDeclarationSet.find(DD);
+        if (IT == RewritedFunctionDeclarationSet.end()) {
+          RewritedFunctionDeclarationSet.insert(DD);
+          DD->print(Buf, Policy);
+          Buf << ";\n\n";
+        }
       }
       break;
     }
@@ -1054,10 +1060,12 @@ const std::string RewriteBSC::GetRewrittenString() {
 
     case Decl::FunctionTemplate: {
       FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(*D);
-      for (auto *DD : FTD->specializations()) {
-        if (DD->doesThisDeclarationHaveABody()) {
-          DD->print(Buf, Policy);
-          Buf << "\n";
+      if (FTD->isThisDeclarationADefinition()) {
+        for (auto *DD : FTD->specializations()) {
+          if (DD->doesThisDeclarationHaveABody()) {
+            DD->print(Buf, Policy);
+            Buf << "\n";
+          }
         }
       }
       break;
