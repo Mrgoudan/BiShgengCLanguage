@@ -2,8 +2,8 @@
 
 owned struct A {
     int a;
-    int f(A this) { return this.a; } // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'struct A*', but found 'owned struct A'}}
-    int g(A this); // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'struct A*', but found 'owned struct A'}}
+    int f(A this) { return this.a; } // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'owned struct A*', but found 'owned struct A'}}
+    int g(A this); // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'owned struct A*', but found 'owned struct A'}}
 };
 
 int A::q(int b, A* this); // expected-error {{'this' cannot be the name of a parameter}}

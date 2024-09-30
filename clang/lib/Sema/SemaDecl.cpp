@@ -14749,8 +14749,12 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
     Qualifiers ThisQual = parmDeclType->getPointeeType().getLocalQualifiers();
     Qualifiers ThisPointerQual = parmDeclType.getLocalQualifiers();
     parmDeclType = Context.getQualifiedType(ExtendedType, ThisQual);
-    parmDeclType = Context.getQualifiedType(
+    // for Destructor, skip set pointer;
+    // For example    ~S(This this);
+    if (!isDestructor) {
+      parmDeclType = Context.getQualifiedType(
         Context.getPointerType(parmDeclType), ThisPointerQual);
+    }
     TInfo = Context.CreateTypeSourceInfo(parmDeclType);
     // if EntendedType is a generic type,
     // TemplateArgumentLocInfo is needed when instantiation,

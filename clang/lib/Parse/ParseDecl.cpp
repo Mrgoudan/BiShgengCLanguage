@@ -6304,6 +6304,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
               dyn_cast<const InjectedClassNameType>(BasedType)) {
         ExtendedTy = ICT->getInjectedSpecializationType();
       }
+      // add owned qualifiers for ExtendedTy.
+      ExtendedTy.addFastQualifiers(Qualifiers::Owned);
       BSS.setExtendedType(ExtendedTy);
       if (Actions.Context.BSCDeclContextMap.find(BasedType) ==
           Actions.Context.BSCDeclContextMap.end()) {
