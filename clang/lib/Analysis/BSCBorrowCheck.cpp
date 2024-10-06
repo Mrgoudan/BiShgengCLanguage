@@ -906,6 +906,18 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
       // so if a borrow pointer targets to a raw pointer or its field,
       // we skip checking. 
       if (!Borrow.TargetIsRawPointerOrItsField) {
+        if (Borrow.BorrowVD == TargetVD) {
+          // If a struct has a borrow field which borrows another field,
+          // for example:
+          // @code
+          //     struct S s = { .m = 0, .p = &const s.m };
+          // @endcode
+          // Here report error, because s.p has the same lifetime with its target s.p.
+          BorrowCheckDiagInfo DI(Borrow.BorrowVD->getNameAsString(),
+                                 LiveLonger, Borrow.BorrowVD->getLocation());
+          reporter.addDiagInfo(DI);
+          continue;
+        }
         unsigned BorrowBegin = Borrow.Begin;
         unsigned BorrowEnd = Borrow.End;
         for (const auto &NLLOfTarget : NLLForAllVars[TargetVD]) {
