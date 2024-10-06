@@ -14856,12 +14856,14 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
         }
       }
     }
-    if (resultType->isPointerType()) {
-      resultType = resultType.getUnqualifiedType();
-      resultType.removeLocalOwned();
-      resultType.addBorrow();
-    } else {
-      resultType.addBorrow();
+    if (!resultType.isNull()) {
+      if (resultType->isPointerType()) {
+        resultType = resultType.getUnqualifiedType();
+        resultType.removeLocalOwned();
+        resultType.addBorrow();
+      } else {
+        resultType.addBorrow();
+      }
     }
   } else if (Opc == UO_AddrConst || Opc == UO_AddrConstDeref) {
     if (Opc == UO_AddrConst && IsAddrBorrowDerefOp(Input)) {
@@ -14871,15 +14873,17 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
         Diag(OpLoc, diag::err_borrow_on_borrow)
             << "'&const'" << InputExpr->getSourceRange();
     }
-    if (resultType->isFunctionPointerType()) {
-      resultType.addConst();
-      resultType.addBorrow();
-    } else if (resultType->isPointerType()) {
-      resultType = resultType.getUnqualifiedType();
-      resultType.removeLocalOwned();
-      resultType = resultType.addConstBorrow(Context);
-    } else {
-      resultType = resultType.addConstBorrow(Context);
+    if (!resultType.isNull()) {
+      if (resultType->isFunctionPointerType()) {
+        resultType.addConst();
+        resultType.addBorrow();
+      } else if (resultType->isPointerType()) {
+        resultType = resultType.getUnqualifiedType();
+        resultType.removeLocalOwned();
+        resultType = resultType.addConstBorrow(Context);
+      } else {
+        resultType = resultType.addConstBorrow(Context);
+      }
     }
   }
   return resultType;
