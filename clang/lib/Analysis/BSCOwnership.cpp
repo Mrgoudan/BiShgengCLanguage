@@ -724,11 +724,11 @@ void Ownership::OwnershipStatus::setToMoved(const Expr *E) {
     const Expr *e = UO;
     while (UO->getOpcode() == UO_Deref) {
       if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(e)) {
-        E = ICE->getSubExpr();
+        e = ICE->getSubExpr();
       } else if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(e)) {
         UO = uo;
         suffix += "*";
-        E = UO->getSubExpr();
+        e = UO->getSubExpr();
       } else {
         break;
       }

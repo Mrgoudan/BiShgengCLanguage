@@ -2,6 +2,8 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
+#define NULL ((void*)0)
+
 struct K<T> {
     T a;
 };
@@ -25,6 +27,18 @@ void struct M<T>::foo3(This *this) {
 void foo<T>(struct K<T> *borrow p) {
     struct K<T> ret = *p;
     T *a = (T*)ret.a;    
+}
+
+typedef struct BinaryTrieNode {
+    struct BinaryTrieNode *zero;
+    struct BinaryTrieNode *one;
+} BinTrieNode;
+
+void BinTrieDestroy(BinTrieNode **root)
+{
+    if (*root == NULL) {
+        return;
+    }
 }
 
 int main() {
