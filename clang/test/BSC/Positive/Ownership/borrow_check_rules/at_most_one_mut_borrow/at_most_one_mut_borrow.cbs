@@ -72,19 +72,10 @@ void test4() {
   free_owned<int>(oriPtr);
 }
 
-
-void test5() {
-  int local = 5;
-  int *borrow p = &mut local;
-  int *borrow p1 = &mut *p;
-  use_mut(p1);
-  use_mut(&mut *p);
-}
-
 int* borrow use_borrow_and_return(int *borrow p) {
   return p;
 }
-void test6() {
+void test5() {
   int local = 42;
   int *borrow p1 = &mut local;
   int *borrow p2 = use_borrow_and_return(p1);
@@ -98,6 +89,5 @@ int main() {
   test3();
   test4();
   test5();
-  test6();
   return 0;
 }

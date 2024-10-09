@@ -110,6 +110,7 @@ int main() {
   test12(&mut local);
   struct S s = { .p = &mut local };
   test13(s);
-  test14(s, &mut local);
+  int local2 = 5;
+  test14(s, &mut local2);
   return 0;
 }

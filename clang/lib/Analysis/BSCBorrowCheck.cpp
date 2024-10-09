@@ -145,6 +145,7 @@ public:
   unsigned CurElemID = 0;
   enum Operation { None, Read, Write };
   Operation Op = None;
+  bool IsVisitingCallExpr = false;
   enum InitStatus { NotInit, Init };
   InitStatus Status = NotInit;
   BorrowRuleChecker(BorrowCheckDiagReporter &reporter,
@@ -284,11 +285,17 @@ void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
   case UO_PreDec:
     Op = Write;
     break;
-  case UO_AddrMut:
   case UO_AddrConst:
-  case UO_AddrMutDeref:
   case UO_AddrConstDeref:
     return;
+  case UO_AddrMut:
+  case UO_AddrMutDeref: {
+    if (IsVisitingCallExpr) {
+      Op = Write;
+      break;
+    } else
+      return;
+  }
   default:
     break;
   }
@@ -299,10 +306,12 @@ void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
 void BorrowRuleChecker::VisitCallExpr(CallExpr *CE) {
   Operation TempOp = Op;
   Op = Write;
+  IsVisitingCallExpr = true;
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
     Visit(*it);
   }
   Op = TempOp;
+  IsVisitingCallExpr = false;
 }
 
 void BorrowRuleChecker::VisitConditionalOperator(ConditionalOperator *E) {

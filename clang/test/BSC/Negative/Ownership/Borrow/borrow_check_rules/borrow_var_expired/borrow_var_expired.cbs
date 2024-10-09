@@ -136,3 +136,12 @@ void borrow_expired_16() {
     use_test02(p2);
     int b = *p1;   // ok
 }
+
+void use_mut(int *borrow p) {}
+void borrow_expired_17() {
+    int local = 5;
+    int *borrow p = &mut local;
+    int *borrow p1 = &mut *p;
+    use_mut(p1);
+    use_mut(&mut *p);  // expected-error {{Can not use 'p' because expired}}
+}

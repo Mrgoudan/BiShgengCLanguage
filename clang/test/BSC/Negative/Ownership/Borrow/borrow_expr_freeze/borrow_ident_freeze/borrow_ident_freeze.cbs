@@ -303,3 +303,10 @@ void test_freeze_ident29(){
     a = 5;   // expected-error {{Can not modify 'a' because be borrowed}}
     p2 = p1;
 }
+
+void test_freeze_ident30(){
+    int local = 5;
+    int *borrow p = &mut local;  // expected-note {{previous borrow is here}}
+    use(&mut local);  // expected-error {{Can not modify 'local' because be borrowed}}
+    use(p);
+}
