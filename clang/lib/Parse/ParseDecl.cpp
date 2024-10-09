@@ -3824,6 +3824,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         // https://gitee.com/bisheng_c_language_dep/llvm-project/issues/I8HS93
         if (SwitchTok.isNot(tok::identifier))
           continue;
+        if (IsParsingBSCGenericParameters && HandleBSCUnknownTypeName(DS, SwitchTok))
+          continue;
         #endif
         if (Tok.isNot(tok::identifier))
           continue;

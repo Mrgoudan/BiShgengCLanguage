@@ -1653,4 +1653,45 @@ bool DeclSpec::SetConditionalType(SourceLocation KWLoc,
   ConditionalType2 = Ty2;
   return false;
 }
+
+/// [BSC] HandleBSCUnknownTypeName - This method is called when we have an non-typename
+/// identifier in a declspec (which normally terminates the decl spec).  
+/// In this case, the declspec is malformed. For example:
+/// 
+///      typedef long long int LLInt;
+///      struct Array<LLint B> {};
+///
+bool Parser::HandleBSCUnknownTypeName(DeclSpec &DS, Token Tok) {
+  SourceLocation Loc = Tok.getLocation();
+  // This is almost certainly an invalid type name. Let Sema emit a diagnostic
+  // and attempt to recover.
+  ParsedType T;
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  Actions.DiagnoseUnknownTypeName(II, Loc, getCurScope(), nullptr, T, false);
+  if (T) {
+    // The action has suggested that the type T could be used. Set that as
+    // the type in the declaration specifiers, consume the would-be type
+    // name token, and we're done.
+    const char *PrevSpec;
+    unsigned DiagID;
+    DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec, DiagID, T,
+                      Actions.getASTContext().getPrintingPolicy());
+    DS.SetRangeEnd(Tok.getLocation());
+    BSCGenericLookAhead++;
+    return true;
+    // There may be other declaration specifiers after this.
+  } else if (II != Tok.getIdentifierInfo()) {
+    // If no type was suggested, the correction is to a keyword
+    Tok.setKind(II->getTokenID());
+    // There may be other declaration specifiers after this.
+    BSCGenericLookAhead++;
+    return true;
+  }
+
+  // Otherwise, the action had no suggestion for us.  Mark this as an error.
+  DS.SetTypeSpecError();
+  DS.SetRangeEnd(Tok.getLocation());
+  BSCGenericLookAhead++;
+  return true;
+}
 #endif

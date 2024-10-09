@@ -514,10 +514,10 @@ struct Array_1<T, int N>
 };
 
 // 使用了 typedef别名 作为泛型常量的泛型struct
-struct Array_2<LLint B, int C, T>
+struct Array_2<LLInt B, int C, T>
 {
-  	LLint data[B];
-  	int data[C];
+  	LLInt data1[B];
+  	int data2[C];
   	T a;
 };
 

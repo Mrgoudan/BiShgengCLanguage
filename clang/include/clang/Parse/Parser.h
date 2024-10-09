@@ -2475,6 +2475,7 @@ private:
   void TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs);
   bool ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS);
   void ParseConditionalSpecifier(DeclSpec &DS);
+  bool HandleBSCUnknownTypeName(DeclSpec &DS, Token Tok);
   #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
