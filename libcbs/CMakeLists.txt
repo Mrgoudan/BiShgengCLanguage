@@ -7,8 +7,10 @@ set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
 string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
 
 if(NOT BSC_CLANG)
-  find_program(BSC_CLANG NAMES clang clang-X.Y)  
+  find_program(BSC_CLANG NAMES clang clang-X.Y)
 endif()
+
+set(CMAKE_EXE_LINKER_FLAGS "-lpthread")
 
 set(CMAKE_C_COMPILER ${BSC_CLANG})
 

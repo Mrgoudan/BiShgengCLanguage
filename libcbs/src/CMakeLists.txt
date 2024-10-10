@@ -1,6 +1,7 @@
 add_library(
     stdcbs STATIC
     bishengc_safety/bishengc_safety.cbs
+    scheduler/scheduler.cbs
     string/string.cbs
     hash/sip.cbs
     raw_table/raw_table.cbs
@@ -14,6 +15,7 @@ target_include_directories(stdcbs
     bishengc_safety
     raw_vec
     vec
+    scheduler
     string
     list
     hash
@@ -33,10 +35,12 @@ install(TARGETS stdcbs
 )
 
 # install the header files
-install(FILES  
+install(FILES
     bishengc_safety/bishengc_safety.hbs
-    vec/vec.hbs 
-    raw_vec/raw_vec.hbs 
+    vec/vec.hbs
+    raw_vec/raw_vec.hbs
+    scheduler/queue.hbs
+    scheduler/scheduler.hbs
     string/string.hbs
     list/list.hbs
     hash/sip.hbs
