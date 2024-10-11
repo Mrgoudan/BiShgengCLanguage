@@ -133,8 +133,10 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   // In BSC, generic function always does mangling.
   if (getASTContext().getLangOpts().BSC) {
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
-      return FD->getTemplatedKind() ==
-             FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization;
+      if (FD->getTemplatedKind() ==
+          FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization) {
+        return true;
+      }
     }
   }
   #endif
