@@ -2645,11 +2645,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
   if (DependentID)
     return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
-                                      IsAddressOfOperand, TemplateArgs
-                                      #if ENABLE_BSC
-                                      , T
-                                      #endif
-                                      );
+                                      IsAddressOfOperand, TemplateArgs);
   // Perform the required lookup.
   LookupResult R(*this, NameInfo,
                  (Id.getKind() == UnqualifiedIdKind::IK_ImplicitSelfParam)

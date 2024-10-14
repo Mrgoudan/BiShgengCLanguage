@@ -60,7 +60,11 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
   }
   return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
                              isTypeCast, isVectorLiteral, NotPrimaryExpression,
-                             T, HasBSCScopeSpec, DS.getBeginLoc());
+                             T, HasBSCScopeSpec, DS.getBeginLoc()
+                             #if ENABLE_BSC
+                             , SS
+                             #endif
+                             );
 }
 
 bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {

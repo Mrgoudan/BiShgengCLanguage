@@ -1819,7 +1819,7 @@ private:
       CastParseKind ParseKind, bool isAddressOfOperand, bool &NotCastExpr,
       TypeCastState isTypeCast, bool isVectorLiteral = false,
       bool *NotPrimaryExpression = nullptr, QualType T = QualType(),
-      bool HasBSCScopeSpec = false, SourceLocation BL = SourceLocation());
+      bool HasBSCScopeSpec = false, SourceLocation BL = SourceLocation(), CXXScopeSpec SS = CXXScopeSpec());
   void CheckStmtTokInSafeZone(tok::TokenKind Kind);
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand = false,

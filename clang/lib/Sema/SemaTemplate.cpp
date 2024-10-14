@@ -752,11 +752,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  SourceLocation TemplateKWLoc,
                                  const DeclarationNameInfo &NameInfo,
                                  bool isAddressOfOperand,
-                           const TemplateArgumentListInfo *TemplateArgs
-                           #if ENABLE_BSC
-                           , QualType ExtendedTy
-                           #endif
-                           ) {
+                           const TemplateArgumentListInfo *TemplateArgs) {
   DeclContext *DC = getFunctionLevelDeclContext();
 
   // C++11 [expr.prim.general]p12:
@@ -792,31 +788,16 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
         FirstQualifierInScope, NameInfo, TemplateArgs);
   }
 
-  return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs
-                                   #if ENABLE_BSC
-                                   , ExtendedTy
-                                   #endif
-                                   );
+  return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 }
 
 ExprResult
 Sema::BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                                 SourceLocation TemplateKWLoc,
                                 const DeclarationNameInfo &NameInfo,
-                                const TemplateArgumentListInfo *TemplateArgs
-                                #if ENABLE_BSC
-                                , QualType ExtendedTy
-                                #endif
-                                ) {
+                                const TemplateArgumentListInfo *TemplateArgs) {
   // DependentScopeDeclRefExpr::Create requires a valid QualifierLoc
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
-  #if ENABLE_BSC
-  if (!ExtendedTy.isNull()) {
-    TagDecl *TD = dyn_cast_or_null<TagDecl>(getASTContext().BSCDeclContextMap[ExtendedTy.getCanonicalType().getTypePtr()]);
-    assert(TD && "no corresponding DeclContext found for this type");
-    QualifierLoc = TD->getQualifierLoc();
-  }
-  #endif
   if (!QualifierLoc)
     return ExprError();
 
@@ -1025,12 +1006,6 @@ ParsedTemplateArgument Sema::ActOnTemplateTypeArgument(TypeResult ParsedType) {
   if (T.isNull())
     return ParsedTemplateArgument();
   assert(TInfo && "template argument with no location");
-
-#if ENABLE_BSC
-  if (getLangOpts().BSC && T.isBorrowQualified())
-    Diag(TInfo->getTypeLoc().getBeginLoc(), diag::err_borrow_template_args)
-        << TInfo->getTypeLoc().getSourceRange();
-#endif
 
   // If we might have formed a deduced template specialization type, convert
   // it to a template template argument.

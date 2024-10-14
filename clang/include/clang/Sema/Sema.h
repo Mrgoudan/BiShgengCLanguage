@@ -5602,11 +5602,7 @@ public:
                                         SourceLocation TemplateKWLoc,
                                         const DeclarationNameInfo &NameInfo,
                                         bool isAddressOfOperand,
-                                const TemplateArgumentListInfo *TemplateArgs
-                                #if ENABLE_BSC
-                                , QualType ExtendedTy = QualType()
-                                #endif
-                                );
+                                const TemplateArgumentListInfo *TemplateArgs);
 
   /// If \p D cannot be odr-used in the current expression evaluation context,
   /// return a reason explaining why. Otherwise, return NOUR_None.
@@ -5663,11 +5659,7 @@ public:
   BuildDependentDeclRefExpr(const CXXScopeSpec &SS,
                             SourceLocation TemplateKWLoc,
                             const DeclarationNameInfo &NameInfo,
-                            const TemplateArgumentListInfo *TemplateArgs
-                            #if ENABLE_BSC
-                            , QualType ExtendedTy = QualType()
-                            #endif
-                            );
+                            const TemplateArgumentListInfo *TemplateArgs);
   #if ENABLE_BSC
   QualType CompleteTraitType(QualType QT);
   QualType CompleteRecordType(RecordDecl *RD, TypeSourceInfo *TInfo);

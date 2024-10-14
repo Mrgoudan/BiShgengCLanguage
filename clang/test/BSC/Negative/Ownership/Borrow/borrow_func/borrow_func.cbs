@@ -21,9 +21,8 @@ int *borrow struct R::foo(int a) { // expected-error {{no borrow qualified type 
 }
 
 struct MyStruct<T> {};
-struct MyStruct<int * borrow> s; //expected-error {{type of template arguments cannot be qualified by 'borrow'}}
+struct MyStruct<int * borrow> s;
 struct MyStruct<int borrow> s1;  //expected-error {{borrow type requires a pointer or reference ('int' is invalid)}}
-                                 //expected-error@-1 {{type of template arguments cannot be qualified by 'borrow'}}
 
 typedef int* borrow (*PF)(); // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
 int *borrow (*PF1)(int a);   // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}

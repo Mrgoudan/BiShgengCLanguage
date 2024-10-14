@@ -929,7 +929,7 @@ ExprResult Parser::ParseCastExpression(
     CastParseKind ParseKind, bool isAddressOfOperand, bool &NotCastExpr,
     TypeCastState isTypeCast, bool isVectorLiteral, bool *NotPrimaryExpression
     #if ENABLE_BSC
-    , QualType T, bool HasBSCScopeSpec, SourceLocation BL
+    , QualType T, bool HasBSCScopeSpec, SourceLocation BL, CXXScopeSpec SS
     #endif
     ) {
   ExprResult Res;
@@ -1305,6 +1305,9 @@ ExprResult Parser::ParseCastExpression(
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     #if ENABLE_BSC
+    if (getLangOpts().BSC) {
+      ScopeSpec = SS;
+    }
     if (!T.isNull())
       Validator.setExtendType(T.getTypePtr());
     #endif

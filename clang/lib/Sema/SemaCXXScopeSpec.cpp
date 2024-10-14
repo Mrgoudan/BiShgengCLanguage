@@ -182,7 +182,11 @@ bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
 ///
 /// \param NNS a dependent nested name specifier.
 CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier *NNS) {
+  #if ENABLE_BSC
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) && "Only callable in C++ and BSC");
+  #else
   assert(getLangOpts().CPlusPlus && "Only callable in C++");
+  #endif
   assert(NNS->isDependent() && "Only dependent nested-name-specifier allowed");
 
   if (!NNS->getAsType())
