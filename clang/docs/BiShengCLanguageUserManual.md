@@ -3894,7 +3894,7 @@ safe void example(void) {
 |---|---|---|
 |`safe size_t Vec<T>::capacity(const Vec<T>* borrow this)`|返回数组的容量|size_t cap = vec.capacity();|
 |`safe void Vec<T>::clear(Vec<T>* borrow this)`|清空数组的所有元素|vec.clear();|
-|`safe const T* borrow Vec<T>::get(Vec<T>* borrow this, size_t index)`|获取数组中下标为index的元素的不可变借用(**要做边界检查**)|const int* borrow elem = vec.get(2);|
+|`safe const T* borrow Vec<T>::get(const Vec<T>* borrow this, size_t index)`|获取数组中下标为index的元素的不可变借用(**要做边界检查**)|const int* borrow elem = vec.get(2);|
 |`safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index)`|获取数组中下标为index的元素的可变借用(**要做边界检查**)|int* borrow elem = vec.get_mut(2);|
 |`safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this)`|判断数组是否为空|_Bool flag = vec.is_empty();|
 |`safe size_t Vec<T>::length(const Vec<T>* borrow this)`|返回数组的长度|size_t len = vec.length();|
@@ -3982,6 +3982,115 @@ LinkedList是由双向链表来实现的，支持前后两种移动方向。
 | T LinkedList<T>::back()                              | 返回表尾数据，表不可以为空表。                               | list.push_back(3); <br />assert(3 == list.back())            |
 | _Bool LinkedList<T>::contains(T el)                  | 检查表是否包含指定数据。                                     | list.push_back(6); <br />assert(1 == list.contains(6))       |
 | LinkedList<T> LinkedList<T>::split_off(size_t index) | 在索引处将链表拆分为两个链表，<br />索引值不能大于链表中数据个数，<br />新链表包含索引值以及往后的数据。<br />若索引值为0，则旧链表将为空表，<br />若索引值等于表数据个数，则新链表将为空。 | LinkedList<int> l = LinkedList<int>::new();<br />l.push_back(5);<br />l.push_back(6);<br />l.push_front(4);<br />l.push_front(3);<br />LinkedList<int> j = l.split_off(2);<br />// 链表被拆为l和j两个表<br />assert(2 == l.length());      // 3 4<br />assert(2 == j.length());      // 5 6 |
+
+#### `Option`
+
+`Option`是 BiShengC 语言提供的用于处理可选值的一个安全数据结构，用来表示一个值可能存在或不存在这两种情况。
+它是一个泛型数据结构，具有一个泛型参数`T`，用于表示其存储的可选值的类型。使用`Option`可以安全地处理一些函数的返回值，避免使用空指针等数据结构来表示一个值不存在的情况。
+`Option`有两种状态，即`Some`和`None`，`Some`状态中会包含所需要的类型的值，而`None`状态中没有存储相应的值。
+它的一个使用示例如下：
+
+```c
+#include "option.hbs" // Option类型声明在该头文件中，使用时需包含该头文件
+
+Option<size_t> string_find(String str) {
+    size_t pos = str.find('k');
+    if (pos == bsc_string_no_pos) {
+        return Option<size_t>::None(); // 如果没有找到k，则返回None
+    } else {
+        return Option<size_t>::Some(pos); // 如果找到了k，则返回Some，且Some中包含相应的值pos
+    }
+}
+
+void use_option() {
+    size_t pos = -1;
+    String s = String::from("hello");
+    Option<size_t> res = string_find(s);
+    if (res.is_some()) { // 判断res是Some还是None
+        pos = option_unwrap(res); // 对于Some，则调用option_unwrap获取其中的值
+    } else {
+        return; // 对于None，则不做处理
+    }
+}
+```
+
+这个例子中首先定义了一个函数`string_find`，对`String`的`find`方法进行了封装，用于处理找到字符k和没有找到字符k的情况。接下来在使用处，可以使用`is_some`方法处理返回的`Option<size_t>`类型的值，从而获取里面的数据或者不做处理。这种写法可以安全地处理一些函数的返回值，提高程序的安全性。
+
+`Option`是一个owned struct类型的数据结构，因此其自带析构函数，可以安全地释放其所占用的内存空间，无需使用者进行手动内存释放。
+
+`Option`提供的对外接口及相应的使用用例如下：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`safe _Bool Option<T>::is_none(const Option<T>* borrow this)`|判断`Option`是否为`None`，若是则返回1，否则返回0|_Bool flag = option.is_none();|
+|`safe _Bool Option<T>::is_some(const Option<T>* borrow this)`|判断`Option`是否为`Some`，若是则返回1，否则返回0|_Bool falg = option.is_some();|
+|`safe Option<T> Option<T>::Some(T t)`|创建一个状态为`Some`的`Option`值，其中包含的`T`类型的结果的值为`t`|Option<size_t> option = Option<size_t>::Some(3);|
+|`safe Option<T> Option<T>::None(void)`|创建一个状态为`None`的`Option`值，其中不包含`T`的类型的结果值|Option<size_t> option = Option<size_t>::None();|
+|`safe T option_unwrap<T>(Option<T> option)`|展开option，从中取出存储的T类型的值，对于`Some`可以成功取出`T`类型的值，对于`None`则会导致运行时终止|size_t index = option_unwrap(option);|
+
+注：`option_unwrap`函数并非`Option`类型的成员方法，且其再展开`None`时会运行时终止，因此建议在调用该函数前使用`is_some`或`is_none`对`Option`的状态先进行判断。
+
+#### `HashMap`
+
+`HashMap`是 BiShengC 语言提供的安全哈希表类型，哈希表的键和值都存储在堆上，它是一个泛型数据结构，具有三个泛型参数`K`、`V`和`S`。
+其中`K`代表的是键的类型，`V`代表的是值的类型，而`S`代表的是该`HashMap`所使用的哈希函数。
+
+我们可以用各种类型来作为键的类型，包含除float和double以外的各种基本类型，以及自定义的数据类型。
+在将一个类型作为键的类型时，该类型必须实现了`hash`和`equals`这两个方法。BiShengC 已经为基本类型提供了这两个方法，无需使用者再次手动实现。
+
+对于哈希函数，BiShengC 提供了一个`SipHasher13`作为默认的哈希函数。该类型有两个方法用于创建其实例：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`SipHasher13 SipHasher13::new()`|创建默认的`SipHasher13`|SipHasher13 sh = SipHasher13::new();|
+|`SipHasher13 SipHasher13::new_with_keys(uint64_t key0, uint64_t key1)`|使用`key0`和`key1`创建`SipHasher13`，BiShengC 还提供了`RandomState`类型，用于创建随机的`key0`和`key1`值|RandomState rs = RandomState::new();<br/>SipHasher13 sh = SipHasher13::new_with_keys(rs.k0, rs.k1);|
+
+`HashMap`的一个使用实例如下：
+
+```c
+#include "hash_map.hbs" // HashMap类型声明在该头文件中，使用时需包含该头文件
+
+// 使用HashMap来统计一个数组中各个值出现的次数
+void hash_map_example(Vec<int> vec) {
+    HashMap<int, int, SipHasher13> map = HashMap<int, int, SipHasher13>::with_hasher(SipHasher13::new()); // 创建HashMap
+
+    for (size_t i = 0; i < vec.length(); i++) {
+        const int* borrow cur = vec.get(i);
+        if (map.contains_key(cur)) { // 判断map中是否已经有cur
+            int* borrow v = map.get_mut(cur); // 获取键对应的值的可变借用
+            *v = *v + 1; // 更新相应的值
+        } else {
+            int k = *cur;
+            map.insert(k, 1); // 向map中插入键值对
+        }
+    }
+
+    _Bool empty_flag = map.is_empty(); // 判断map是否为空
+    int x = 3;
+    _Bool key_flag = map.contains_key(&const x); // 判断map是否有键3
+    Option<int> removed = map.remove(&const x);
+    if (removed.is_some()) {
+        int v = option_unwrap(removed);
+    }
+    map.clear(); // 清空map的所有元素
+}
+```
+
+`HashMap`提供的对外接口及相应的使用用例如下：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`safe size_t HashMap<K, V, S>::capacity(const HashMap<K, V, S>* borrow this)`|返回哈希表的容量|size_t cap = map.capacity();|
+|`safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* borrow this)`|清空哈希表的所有键值对，但表的容量保持不变|map.clear();|
+|`safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, const K* borrow k)`|判断哈希表是否存在值为\*k的键|int x = 1;<br/>_Bool flag = map.contains_key(&const x);|
+|`safe Option<V* borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* borrow this, const K* borrow k)`|获取值为\*k的键对应的值的可变借用，若表中不存在键\*k，则返回None|int x = 1;<br/>int* borrow v = map.get_mut(&const x);|
+|`safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t additional)`|调整哈希表的容量，使其调整后在不扩容的情况下能至少再存入additional个元素（一般来说，该方法无需手动调用，在调用insert时会被隐式调用一次）|map.reserve(1);|
+|`safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* borrow this, K k, V v)`|向哈希表中插入键为k、值为v的键值对|map.insert(1, 2);|
+|`safe _Bool HashMap<K, V, S>::is_empty(const HashMap<K, V, S>* borrow this)`|判断哈希表是否为空|_Bool empty map.is_empty();|
+|`safe size_t HashMap<K, V, S>::length(const HashMap<K, V, S>* borrow this)`|返回哈希表中存储的键值对的数量|size_t len = map.length();|
+|`safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* borrow this, const K* borrow k)`|从哈希表中移除键为\*k的键值对，并返回对应的值，如果哈希表不存在键\*k，则返回None|int x = 3;<br/>Option<int> removed = map.remove(&const x);<br/>if (removed.is_some()) { int y = option_unwrap(removed); }|
+|`safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S hash_builder)`|创建初始容量为cap、哈希函数为hash_builder的哈希表|HashMap<int, int, SipHasher13> map = HashMap<int, int, SipHasher13>::new_with_cap_and_hasher(3, SipHasher13::new());|
+|`safe HashMap<K, V, S> HashMap<K, V, S>::with_hasher(S hash_builder)`|创建初始容量为0，哈希函数为hash_builder的哈希表|HashMap<int, int, SipHasher13> map = HashMap<int, int, SipHasher13>::new_with_hasher(SipHasher13::new());|
 
 # 附录
 
