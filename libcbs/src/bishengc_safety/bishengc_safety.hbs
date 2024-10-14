@@ -7,13 +7,18 @@
 
 typedef void (*BSCBadAllocHandler)(size_t);
 typedef void (*BSCOutOfBoundHandler)(size_t, size_t);
+typedef void (*BSCOverflowHandler)();
 
 extern BSCBadAllocHandler bsc_bad_alloc_handler;
 extern BSCOutOfBoundHandler bsc_out_of_bound_handler;
+extern BSCOverflowHandler bsc_overflow_handler;
 
 void default_bad_alloc_handler(size_t size);
 void default_out_of_bound_handler(size_t len, size_t index);
+void default_overflow_handler();
 void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
+
+safe void bsc_unwrap_failed(void);
 
 safe void safe_free(void * owned p);
 

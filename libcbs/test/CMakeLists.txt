@@ -7,5 +7,6 @@ endfunction()
 
 add_subdirectory(bishengc_safety)
 add_subdirectory(list)
+add_subdirectory(map)
 add_subdirectory(string)
 add_subdirectory(vec)

@@ -4,10 +4,9 @@
 
 BSCBadAllocHandler bsc_bad_alloc_handler = default_bad_alloc_handler;
 BSCOutOfBoundHandler bsc_out_of_bound_handler = default_out_of_bound_handler;
+BSCOverflowHandler bsc_overflow_handler = default_overflow_handler;
 
-void default_bad_alloc_handler(size_t size) {
-    fprintf(stderr, "Error: Failed to allocate %zu bytes of memory.\n", size);
-
+static void bsc_stack_dump_and_exit() {
     void *callstack[10];
     int num_frames = backtrace(callstack, 10);
     char **symbols = backtrace_symbols(callstack, num_frames);
@@ -18,25 +17,36 @@ void default_bad_alloc_handler(size_t size) {
     }
     free(symbols);
     exit(EXIT_FAILURE);
+}
+
+void default_bad_alloc_handler(size_t size) {
+    fprintf(stderr, "Error: Failed to allocate %zu bytes of memory.\n", size);
+
+    bsc_stack_dump_and_exit();
 }
 
 void default_out_of_bound_handler(size_t len, size_t index) {
     fprintf(stderr, "Error: Index out of bound: len is %zu but index is %zu\n", len, index);
 
-    void *callstack[10];
-    int num_frames = backtrace(callstack, 10);
-    char **symbols = backtrace_symbols(callstack, num_frames);
+    bsc_stack_dump_and_exit();
+}
 
-    fprintf(stderr, "Call stack:\n");
-    for (int i = 0; i < num_frames; i++) {
-        fprintf(stderr, "%s\n", symbols[i]);
-    }
-    free(symbols);
-    exit(EXIT_FAILURE);
+void default_overflow_handler() {
+    fprintf(stderr, "Error: Integer overflow occurred\n");
+
+    bsc_stack_dump_and_exit();
 }
 
 void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler) {
 	bsc_bad_alloc_handler = handler;
+}
+
+safe void bsc_unwrap_failed(void) {
+    unsafe {
+        fprintf(stderr, "Error: called `unwrap()` on an illegal value\n");
+
+        bsc_stack_dump_and_exit();
+    }
 }
 
 safe void safe_free(void * owned p) {

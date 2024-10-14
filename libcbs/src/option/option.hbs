@@ -1,0 +1,86 @@
+#ifndef BISHENG_C_SAFETY_OPTION_H
+#define BISHENG_C_SAFETY_OPTION_H
+
+#include "bishengc_safety.hbs"
+#include <string.h>
+
+typedef enum {
+    None,
+    Some
+} OptionState;
+
+// Optional values.
+//
+// Type `Option` represents an optional value:
+// every `Option` is either `Some` and contains a value, or `None`, and does not.
+owned struct Option<T> {
+// FIXME: makes it private later
+public:
+    OptionState state;
+    char val[sizeof(T)];
+
+    ~Option(Option<T> this) {
+        if (this.state == Some) {
+            T* ptr = (T *)this.val;
+            T tmp = *ptr;
+            // IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
+        }
+    }
+};
+
+// Returns `true` if the option is a `None` value.
+safe _Bool Option<T>::is_none(const Option<T>* borrow this) {
+    unsafe {
+        return this->state == None;
+    }
+}
+
+// Returns `true` if the option is a `Some` value.
+safe _Bool Option<T>::is_some(const Option<T>* borrow this) {
+    unsafe {
+        return this->state == Some;
+    }
+}
+
+// Creates a `Some` value.
+safe Option<T> Option<T>::Some(T t) {
+    unsafe {
+        Option<T> o = {
+            .state = Some,
+            .val = {0}
+        };
+        memcpy(o.val, (const void *)&t, sizeof(T));
+        T* forget = &t; // forget value `t` to avoid calling its destructor
+        *forget = t;
+        return o;
+    }
+}
+
+// Creates a `None` value.
+safe Option<T> Option<T>::None(void) {
+    unsafe {
+        Option<T> o = {
+            .state = None,
+            .val = {0}
+        };
+        return o;
+    }
+}
+
+// Returns the contained `Some` value, consuming the `option` value.
+//
+// Aborts if the `option` value equals `None`.
+safe T option_unwrap<T>(Option<T> option) {
+    if (option.is_none()) {
+        bsc_unwrap_failed();
+    }
+    unsafe {
+        T* ptr = (T *)option.val;
+        T t = *ptr;
+        Option<T>* forget = &option; // forget value `option` to avoid calling its destructor
+        *forget = option;
+        return t;
+    }
+}
+
+#endif

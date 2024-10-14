@@ -2,6 +2,8 @@ add_library(
     stdcbs STATIC
     bishengc_safety/bishengc_safety.cbs
     string/string.cbs
+    hash/sip.cbs
+    raw_table/raw_table.cbs
 )
 
 # Do not optimize, otherwise there will be missing symbols in std
@@ -14,6 +16,11 @@ target_include_directories(stdcbs
     vec
     string
     list
+    hash
+    map
+    option
+    raw_table
+    result
 )
 
 # TODO: make it work
@@ -32,5 +39,10 @@ install(FILES
     raw_vec/raw_vec.hbs 
     string/string.hbs
     list/list.hbs
+    hash/sip.hbs
+    map/hash_map.hbs
+    option/option.hbs
+    raw_table/raw_table.hbs
+    result/result.hbs
     DESTINATION include/libcbs
 )
