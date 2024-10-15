@@ -1838,9 +1838,12 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
 
 void TransferFunctions::VisitCallExpr(CallExpr *CE) {
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
-    op = Move;
-    Visit(*it);
-    op = None;
+    bool IsCall = IsCallExpr(*it);
+    if (!IsCall) {
+      op = Move;
+      Visit(*it);
+      op = None;
+    }
   }
 }
 
