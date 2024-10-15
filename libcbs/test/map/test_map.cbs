@@ -44,40 +44,40 @@ void test1() {
 void test2() {
     HashMap<unsigned int, long, SipHasher13> map1 = HashMap<unsigned int, long, SipHasher13>::with_capacity_and_hasher(33, SipHasher13::new_with_keys(9, 10));
     assert(56 == map1.capacity());
-    Option<long> res1 = map1.insert(1, 2);
+    _BSC_UNUSED Option<long> res1 = map1.insert(1, 2);
 
     HashMap<long, int, SipHasher13> map2 = HashMap<long, int, SipHasher13>::with_capacity_and_hasher(15, SipHasher13::new());
     assert(28 == map2.capacity());
-    Option<int> res2 = map2.insert(1, 2);
+    _BSC_UNUSED Option<int> res2 = map2.insert(1, 2);
 
     HashMap<unsigned long, int, SipHasher13> map3 = HashMap<unsigned long, int, SipHasher13>::with_capacity_and_hasher(40, SipHasher13::new());
     assert(56 == map3.capacity());
-    Option<int> res3 = map3.insert(1, 2);
+    _BSC_UNUSED Option<int> res3 = map3.insert(1, 2);
 
     RandomState rs = RandomState::new();
     HashMap<short, long, SipHasher13> map4 = HashMap<short, long, SipHasher13>::with_capacity_and_hasher(12, SipHasher13::new_with_keys(rs.k0, rs.k1));
     assert(14 == map4.capacity());
-    Option<long> res4 = map4.insert(1, 2);
+    _BSC_UNUSED Option<long> res4 = map4.insert(1, 2);
 
     HashMap<unsigned short, long, SipHasher13> map5 = HashMap<unsigned short, long, SipHasher13>::with_capacity_and_hasher(12, SipHasher13::new_with_keys(9, 5));
     assert(14 == map5.capacity());
-    Option<long> res5 = map5.insert(1, 2);
+    _BSC_UNUSED Option<long> res5 = map5.insert(1, 2);
 
     HashMap<char, int, SipHasher13> map6 = HashMap<char, int, SipHasher13>::with_capacity_and_hasher(5, SipHasher13::new_with_keys(2, 10));
     assert(7 == map6.capacity());
-    Option<int> res6 = map6.insert(1, 2);
+    _BSC_UNUSED Option<int> res6 = map6.insert(1, 2);
 
     HashMap<unsigned char, int, SipHasher13> map7 = HashMap<unsigned char, int, SipHasher13>::with_capacity_and_hasher(5, SipHasher13::new());
     assert(7 == map7.capacity());
-    Option<int> res7 = map7.insert(1, 2);
+    _BSC_UNUSED Option<int> res7 = map7.insert(1, 2);
 
     HashMap<long long, long int, SipHasher13> map8 = HashMap<long long, long, SipHasher13>::with_capacity_and_hasher(15, SipHasher13::new());
     assert(28 == map8.capacity());
-    Option<long> res8 = map8.insert(1, 2);
+    _BSC_UNUSED Option<long> res8 = map8.insert(1, 2);
 
     HashMap<unsigned long long, long int, SipHasher13> map9 = HashMap<unsigned long long, long, SipHasher13>::with_capacity_and_hasher(29, SipHasher13::new());
     assert(56 == map9.capacity());
-    Option<long> res9 = map9.insert(1, 2);
+    _BSC_UNUSED Option<long> res9 = map9.insert(1, 2);
 }
 
 void test3() {

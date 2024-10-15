@@ -22,7 +22,7 @@ public:
     ~Option(Option<T> this) {
         if (this.state == Some) {
             T* ptr = (T *)this.val;
-            T tmp = *ptr;
+            _BSC_UNUSED T tmp = *ptr;
             // IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
         }
     }

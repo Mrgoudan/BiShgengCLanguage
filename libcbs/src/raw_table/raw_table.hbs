@@ -69,8 +69,8 @@ public:
                 // if not EMPTY or DELETED, get the corresponding key and value
                 if (*(this.ctrl + index) != EMPTY &&
                     *(this.ctrl + index) != DELETED) {
-                    K key = this.keys[index];
-                    V value = this.values[index];
+                    _BSC_UNUSED K key = this.keys[index];
+                    _BSC_UNUSED V value = this.values[index];
                     // IF(`K` isa owned struct type) AUTO INSERT: ~K(key)
                     // IF(`V` isa owned struct type) AUTO INSERT: ~V(value)
                 }
@@ -129,8 +129,8 @@ safe void RawTable<K, V>::clear(RawTable<K, V>* borrow this) {
             // if not EMPTY or DELETED, get the corresponding key and value
             if (*(this->ctrl + index) != EMPTY &&
                 *(this->ctrl + index) != DELETED) {
-                K key = this->keys[index];
-                V value = this->values[index];
+                _BSC_UNUSED K key = this->keys[index];
+                _BSC_UNUSED V value = this->values[index];
                 // IF(`K` isa owned struct type) AUTO INSERT: ~K(key)
                 // IF(`V` isa owned struct type) AUTO INSERT: ~V(value)
             }
@@ -313,7 +313,7 @@ safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* borrow this, uint64_
             this->growth_left += 1;
             this->items -= 1;
 
-            K key = *(this->keys + index);
+            _BSC_UNUSED K key = *(this->keys + index);
             V value = *(this->values + index);
             // IF(`K` isa owned struct type) AUTO INSERT: ~K(key)
             return Option<V>::Some(value);

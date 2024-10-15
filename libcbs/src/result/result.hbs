@@ -24,11 +24,11 @@ public:
     ~Result(Result<T, E> this) {
         if (this.state == Ok) {
             T* ptr = (T *)this.t;
-            T tmp = *ptr;
+            _BSC_UNUSED T tmp = *ptr;
             // IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
         } else {
             E* ptr = (E *)this.e;
-            E tmp = *ptr;
+            _BSC_UNUSED E tmp = *ptr;
             // IF(`E` isa owned struct type) AUTO INSERT: ~E(tmp)
         }
     }
