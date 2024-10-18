@@ -16,7 +16,7 @@ typedef struct G { int a; } G;
 typedef enum E { Mon=1, Tue, Wed } E;
 typedef union U { int a; } U;
 typedef struct S<int> S_int;
-owned struct A { int a; };
+owned struct A {public: int a; };
 typedef struct B { int *owned a; } B;
 typedef struct C { A a; } C;
 typedef struct D { B b; } D;
@@ -24,10 +24,11 @@ typedef struct D { B b; } D;
 int main() {
     struct S<int> s1;
     struct S<float> s2;
-    struct S<A> s3;
+    struct S<A> s3 = {.a = { .a = 1}};
     s1.foo(); //print "integral"
     s2.foo(); //print "not integral"
     s3.foo(); //print "not integral"
+    A a = s3.a;
     bar<int>();  //print "integral"
     bar<float>(); //print "not integral"
     _Static_assert(is_integral<int>() == true, "fail");

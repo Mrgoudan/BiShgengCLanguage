@@ -161,7 +161,7 @@ void RecordType::initOwnedStatus() const {
       QualType FieldTy = FD->getType();
       bool isOwnedStructType =
           FieldTy.getCanonicalType()->isOwnedStructureType();
-      if (FieldTy.isOwnedQualified() && !isOwnedStructType) {
+      if (FieldTy.isOwnedQualified() || isOwnedStructType) {
         hasOwn = ownedStatus::withOwned;
         return;
       }
