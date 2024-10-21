@@ -243,9 +243,15 @@ bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
   }
 
   if (SrcType->isPointerType() && DestType->isPointerType()) {
-    // different pointer type does allow conversion
+    // different pointer type does not allow conversion, except for conversion
+    // from owned pointer to `void* owned`
     if (SrcType.getCanonicalType() != DestType.getCanonicalType()) {
-      IsSafeBehavior = false;
+      if (SrcType.getCanonicalType().isOwnedQualified() &&
+          DestType.getCanonicalType()->isVoidPointerType() &&
+          DestType.getCanonicalType().isOwnedQualified())
+        IsSafeBehavior = true;
+      else
+        IsSafeBehavior = false;
     }
   } else if (SrcType->isPointerType() || DestType->isPointerType()) {
     // conversion from pointer to non-pointer or non-pointer to pointer is not
