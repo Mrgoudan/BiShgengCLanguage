@@ -25,13 +25,16 @@ public:
   AccessSpecificTypeCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
       TargetTypeList(Options.get("TargetTypes", "TEMP_FAILURE_RETRY")),
-      AvoidCallList(Options.get("AvoidCalls", "TEMP_FAILURE_RETRY")) {
+      AvoidCallList(Options.get("AvoidCalls", "TEMP_FAILURE_RETRY")),
+      AvoidFuncList(Options.get("AvoidFuncs", "TEMP_FAILURE_RETRY")) {
         StringRef(TargetTypeList).split(TargetTypes, ",", -1, false);
         StringRef(AvoidCallList).split(AvoidCalls, ",", -1, false);
+        StringRef(AvoidFuncList).split(AvoidFuncs, ",", -1, false);
       }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) {
     Options.store(Opts, "TargetTypes", TargetTypeList);
     Options.store(Opts, "AvoidCalls", AvoidCallList);
+    Options.store(Opts, "AvoidFuncs", AvoidFuncList);
   }  
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -40,6 +43,8 @@ private:
   SmallVector<StringRef, 5> TargetTypes;
   const StringRef AvoidCallList;
   SmallVector<StringRef, 5> AvoidCalls;
+  const StringRef AvoidFuncList;
+  SmallVector<StringRef, 5> AvoidFuncs;
 };
 
 } // namespace bsc

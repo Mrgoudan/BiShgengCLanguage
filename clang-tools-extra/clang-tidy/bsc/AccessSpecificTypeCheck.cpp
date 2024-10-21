@@ -33,8 +33,18 @@ llvm::SmallVector<const clang::Expr *, 6> AvoidCallMemberList;
 
 void AccessSpecificTypeCheck::registerMatchers(MatchFinder *Finder) {
   for (auto TargetType : TargetTypes) {
-    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS(hasDescendant(memberExpr(hasType(asString(std::string(TargetType)))).bind("NestedStore")))).bind("AvoidStore"), this);
+    // Find store situations, avoid them when `check-load-only` on
+    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS((memberExpr(hasType(asString(std::string(TargetType))))))).bind("AvoidStore"), this);
+    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS(hasDescendant(memberExpr(hasType(asString(std::string(TargetType)))).bind("NestedStore")))), this);
+    // Find specific function calls by function name to avoid.
     Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))), hasAncestor(callExpr(callee(namedDecl(hasAnyName(AvoidCalls)))))).bind("AvoidCall"), this);
+    // Find memberExpr compared with NULL in ifstmt.
+    Finder->addMatcher(ifStmt(hasDescendant(cStyleCastExpr(hasType(asString(std::string("void *"))), 
+                                                           hasDescendant(integerLiteral(equals(0))))),
+                              hasDescendant(memberExpr(hasType(asString(std::string(TargetType)))).bind("AvoidNull"))), this);
+    // Avoid all warnings in specific functions
+    Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))), hasAncestor(functionDecl(hasAnyName(AvoidFuncs)))).bind("AvoidFunc"), this);
+    // Find target type.
     Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType)))).bind("TargetType"), this);
   }
 }
@@ -43,6 +53,8 @@ void AccessSpecificTypeCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *StoreTypeMember = Result.Nodes.getNodeAs<BinaryOperator>("AvoidStore");
   const auto *NestedStoreMember = Result.Nodes.getNodeAs<MemberExpr>("NestedStore");
   const auto *AvoidCallMember = Result.Nodes.getNodeAs<MemberExpr>("AvoidCall");
+  const auto *AvoidNullMember = Result.Nodes.getNodeAs<MemberExpr>("AvoidNull");
+  const auto *AvoidFuncMember = Result.Nodes.getNodeAs<MemberExpr>("AvoidFunc");
   const auto *TargetTypeMember = Result.Nodes.getNodeAs<MemberExpr>("TargetType");
 
   if (StoreTypeMember) {
@@ -56,6 +68,12 @@ void AccessSpecificTypeCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (AvoidCallMember)
     AvoidCallMemberList.push_back(AvoidCallMember);
+
+  if (AvoidNullMember)
+    AvoidCallMemberList.push_back(AvoidNullMember);
+
+  if (AvoidFuncMember)
+    AvoidCallMemberList.push_back(AvoidFuncMember);
   
   if (TargetTypeMember) {
     std::string TypeName = TargetTypeMember->getType().getAsString();
