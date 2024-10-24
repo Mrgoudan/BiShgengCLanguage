@@ -224,6 +224,10 @@ static std::string GetTypePrefix(QualType T, bool isFront,
       // Since ']' is not allowed to appear in identifier,
       // we replace it with 'RB'.
       ExtendedTypeStr.replace(i, 1, "RB");
+    } else if (ExtendedTypeStr[i] == ',') {
+      // Since ',' is not allowed to appear in identifier,
+      // we replace it with 'COMMA'.
+      ExtendedTypeStr.replace(i, 1, "COMMA");
     }
   }
   if (isFront) {

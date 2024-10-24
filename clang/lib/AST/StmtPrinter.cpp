@@ -1191,6 +1191,10 @@ static std::string GetTypePrefix(QualType T, bool isFront,
       // Since ']' is not allowed to appear in identifier,
       // we replace it with 'RB'.
       ExtendedTypeStr.replace(i, 1, "RB");
+    } else if (ExtendedTypeStr[i] == ',') {
+      // Since ',' is not allowed to appear in identifier,
+      // we replace it with 'COMMA'.
+      ExtendedTypeStr.replace(i, 1, "COMMA");
     }
   }
   if (isFront) {
@@ -1742,8 +1746,21 @@ void StmtPrinter::VisitCallExpr(CallExpr *Call) {
         Res.Val.getKind() == APValue::ValueKind::Int)
       OS << Res.Val.getInt();
   } else {
+    if (Policy.RewriteBSC && Call->getDirectCallee() &&
+        Call->getDirectCallee()->isTemplateDecl() &&
+        Call->getDirectCallee()->isFunctionTemplateSpecialization()) {
+      FunctionDecl *FD = Call->getDirectCallee();
+      std::string FunctionNameStr = FD->getDeclName().getAsString();
+      for (unsigned i = 0; i < FD->getTemplateSpecializationArgs()->size();
+           i++) {
+        std::string QT = RewriteBSCTemplateArgument(
+            FD->getTemplateSpecializationArgs()->get(i), Policy);
+        FunctionNameStr += QT;
+      }
+      OS << FunctionNameStr;
+    } else
 #endif
-    PrintExpr(Call->getCallee());
+      PrintExpr(Call->getCallee());
     OS << "(";
     PrintCallArgs(Call);
     OS << ")";
