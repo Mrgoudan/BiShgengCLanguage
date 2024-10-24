@@ -12388,8 +12388,8 @@ public:
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);
-  bool IsSafeConversion(QualType DestType, ExprResult &SrcExpr);
-  bool IsSafeConstantValueConversion(QualType DestType, ExprResult &SrcExpr);
+  bool IsSafeConversion(QualType DestType, Expr *Expr);
+  bool IsSafeConstantValueConversion(QualType DestType, Expr *SrcExpr);
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   bool IsSafeFunctionPointerType(QualType Type);
   bool IsUnsafeType(QualType Type);

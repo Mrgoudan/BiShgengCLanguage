@@ -2871,7 +2871,7 @@ void CastOperation::CheckCStyleCast() {
 
   #if ENABLE_BSC
   if (Self.getLangOpts().BSC) {
-    if (!Self.IsSafeConversion(DestType, SrcExpr)) {
+    if (!Self.IsSafeConversion(DestType, SrcExpr.get())) {
       SrcExpr = ExprError();
       return;
     }

@@ -154,6 +154,10 @@ void baseTypeCastConver() {
     num = SUN;          // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}     
     a = num;            // expected-error{{conversion from type 'enum E' to 'int' is forbidden in the safe zone}}
     a = ZERO;
+    enum F f1 = a > 0 ? SUN : MON;   // ok
+    enum F f2 = a == 0 ? SUN : MON;  // ok
+    enum F f3 = a > 0 ? SUN : ZERO;  // expected-error{{conversion from type 'enum E' to 'enum F' is forbidden in the safe zone}}
+    enum F f4 = a > 0 ? ZERO : SUN;  // expected-error{{conversion from type 'enum E' to 'enum F' is forbidden in the safe zone}}
   }
   // double <-> float
   safe {

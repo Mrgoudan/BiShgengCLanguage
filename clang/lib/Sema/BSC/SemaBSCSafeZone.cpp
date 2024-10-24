@@ -106,13 +106,12 @@ bool Sema::IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
   return false;
 }
 
-bool Sema::IsSafeConstantValueConversion(QualType DestType,
-                                         ExprResult &SrcExpr) {
-  QualType SrcType = SrcExpr.get()->getType();
+bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *Expr) {
+  QualType SrcType = Expr->getType();
   if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context)) {
-    QualType IntTy = SrcExpr.get()->getType().getUnqualifiedType();
+    QualType IntTy = Expr->getType().getUnqualifiedType();
     Expr::EvalResult EVResult;
-    bool CstInt = SrcExpr.get()->EvaluateAsInt(EVResult, Context);
+    bool CstInt = Expr->EvaluateAsInt(EVResult, Context);
     bool IntSigned = IntTy->hasSignedIntegerRepresentation();
     bool OtherIntSigned = DestType->hasSignedIntegerRepresentation();
 
@@ -143,10 +142,10 @@ bool Sema::IsSafeConstantValueConversion(QualType DestType,
     }
   }
   if (DestType->isRealFloatingType()) {
-    if (SrcType->isRealFloatingType() && !SrcExpr.get()->isValueDependent()) {
+    if (SrcType->isRealFloatingType() && !Expr->isValueDependent()) {
       // lose of the precision conversion is not allowed
       llvm::APFloat Result(0.0);
-      bool CstFloat = SrcExpr.get()->EvaluateAsFloat(Result, Context);
+      bool CstFloat = Expr->EvaluateAsFloat(Result, Context);
       if (CstFloat) {
         bool Truncated = true;
         Result.convert(Context.getFloatTypeSemantics(DestType),
@@ -222,7 +221,7 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   return true;
 }
 
-bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
+bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
   // check function pointer Type in 'IsSafeFunctionPointerTypeCast'
   if (DestType->isFunctionPointerType()) {
     return true;
@@ -233,16 +232,21 @@ bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
   }
 
   bool IsSafeBehavior = true;
-  QualType SrcType = SrcExpr.get()->getType();
-  if (IsTraitExpr(SrcExpr.get())) {
+  QualType SrcType = Expr->getType();
+  if (IsTraitExpr(Expr)) {
     SrcType = CompleteTraitType(SrcType);
   }
   // conversion from non trait pointer type to trait pointer type is allowed
   if (DestType->isTraitPointerType() && !SrcType->isTraitPointerType()) {
     return true;
   }
-
-  if (SrcType->isPointerType() && DestType->isPointerType()) {
+  if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(Expr)) {
+    if (IsSafeConversion(DestType, Exp->getTrueExpr())) {
+      return IsSafeConversion(DestType, Exp->getFalseExpr());
+    } else {
+      return false;
+    }
+  } else if (SrcType->isPointerType() && DestType->isPointerType()) {
     // different pointer type does not allow conversion, except for conversion
     // from owned pointer to `void* owned`
     if (SrcType.getCanonicalType() != DestType.getCanonicalType()) {
@@ -273,7 +277,7 @@ bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
     }
     // conversion const value is allowed, if the destination type can embrace it
     if (!DestType->isEnumeralType() && !SrcType->isEnumeralType() &&
-        IsSafeConstantValueConversion(DestType, SrcExpr)) {
+        IsSafeConstantValueConversion(DestType, Expr)) {
       IsSafeBehavior = true;
     }
 
@@ -283,7 +287,7 @@ bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
       if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
         IsSafeBehavior = true;
         // conversion enum value type to enum variable type is allowed
-      } else if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SrcExpr.get())) {
+      } else if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Expr)) {
         if (EnumConstantDecl *ECD =
                 dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
           EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
@@ -297,8 +301,7 @@ bool Sema::IsSafeConversion(QualType DestType, ExprResult &SrcExpr) {
   }
 
   if (!IsSafeBehavior) {
-    Diag(SrcExpr.get()->getExprLoc(), diag::err_unsafe_cast)
-        << SrcType << DestType;
+    Diag(Expr->getExprLoc(), diag::err_unsafe_cast) << SrcType << DestType;
   }
   return IsSafeBehavior;
 }

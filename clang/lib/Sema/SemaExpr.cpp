@@ -10390,7 +10390,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
 
   #if ENABLE_BSC
   if (getLangOpts().BSC) {
-    if (!IsSafeConversion(LHSType, RHS)) {
+    if (!IsSafeConversion(LHSType, RHS.get())) {
       return IncompatibleBSCSafeZone;
     }
     if (RHS.get()->getType().getCanonicalType().isOwnedQualified() || LHSType.getCanonicalType().isOwnedQualified()) {
