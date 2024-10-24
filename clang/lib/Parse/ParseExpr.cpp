@@ -396,7 +396,11 @@ ExprResult
 Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
   prec::Level NextTokPrec = getBinOpPrecedence(Tok.getKind(),
                                                GreaterThanIsOperator,
-                                               getLangOpts().CPlusPlus11);
+                                               getLangOpts().CPlusPlus11
+                                             #if ENABLE_BSC
+                                               || getLangOpts().BSC
+                                             #endif
+                                              );
   SourceLocation ColonLoc;
 
   auto SavedType = PreferredType;
