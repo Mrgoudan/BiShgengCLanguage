@@ -20,6 +20,9 @@ void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
 
 safe void bsc_unwrap_failed(void);
 
+safe void bsc_refcell_mut_borrow_failed(void);
+safe void bsc_refcell_immut_borrow_failed(void);
+
 safe void safe_free(void * owned p);
 
 safe T *owned safe_malloc<T>(T t) {

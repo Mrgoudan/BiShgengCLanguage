@@ -23,6 +23,8 @@ target_include_directories(stdcbs
     option
     raw_table
     result
+    rc
+    cell
 )
 
 # TODO: make it work
@@ -48,5 +50,7 @@ install(FILES
     option/option.hbs
     raw_table/raw_table.hbs
     result/result.hbs
+    rc/rc.hbs
+    cell/cell.hbs
     DESTINATION include/libcbs
 )

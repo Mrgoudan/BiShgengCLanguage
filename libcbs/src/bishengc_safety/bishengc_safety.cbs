@@ -49,6 +49,20 @@ safe void bsc_unwrap_failed(void) {
     }
 }
 
+safe void bsc_refcell_mut_borrow_failed(void) {
+    unsafe {
+        fprintf(stderr, "Error: Failed to mut borrow because has been borrowed\n");
+        bsc_stack_dump_and_exit();
+    }
+}
+
+safe void bsc_refcell_immut_borrow_failed(void) {
+    unsafe {
+        fprintf(stderr, "Error: Failed to immut borrow because has been mut borrowed\n");
+        bsc_stack_dump_and_exit();
+    }
+}
+
 safe void safe_free(void * owned p) {
 	unsafe {
 		free((void *)p);
