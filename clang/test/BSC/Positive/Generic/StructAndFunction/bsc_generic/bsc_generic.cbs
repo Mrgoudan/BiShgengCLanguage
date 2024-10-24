@@ -3,6 +3,8 @@
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 #include <stdio.h>
@@ -15,6 +17,11 @@ struct S<T>{
 T max<T>(T a, T b) {
   return a > b ? a : b;
 }
+
+// CHECK-L: #line 17 "{{.*}}.cbs"
+// CHECK-L-NEXT: static int max_int(int a, int b) {
+// CHECK-L-NEXT:   return a > b ? a : b;
+// CHECK-L-NEXT: }
 
 int main() {
   struct S<int> s1 = {.a = 42}; // ClassTemplateSpecializationDecl

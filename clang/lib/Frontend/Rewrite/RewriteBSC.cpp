@@ -41,6 +41,8 @@ private:
   const char *MainFileStart, *MainFileEnd;
   std::string InFileName;
   std::unique_ptr<raw_ostream> OutFile;
+  // control whether to insert bsc code line info
+  bool WithLine;
   clang::PrintingPolicy Policy;
 
   unsigned RewriteFailedDiag;
@@ -55,7 +57,7 @@ private:
 
 public:
   RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
-             DiagnosticsEngine &D, const LangOptions &LOpts);
+             DiagnosticsEngine &D, const LangOptions &LOpts, bool insertLine);
   ~RewriteBSC() override {}
 
   void Initialize(ASTContext &C) override;
@@ -65,6 +67,7 @@ public:
 private:
   void FindDeclsWithoutBSCFeature();
   const std::string GetRewrittenString();
+  void printBSCLineInfo(Decl *D, llvm::raw_string_ostream &Buf);
   /// Get the begin source location of the first decl and the end source
   /// location of the last decl.
   void GetSourceLocationsOfFirstDeclAndLastDecl();
@@ -108,8 +111,8 @@ private:
 } // namespace
 
 RewriteBSC::RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
-                       DiagnosticsEngine &D, const LangOptions &LOpts)
-    : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(std::move(OS)),
+                       DiagnosticsEngine &D, const LangOptions &LOpts, bool InsertLine)
+    : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(std::move(OS)), WithLine(InsertLine),
       Policy(LangOpts) {
   RewriteFailedDiag = Diags.getCustomDiagID(
       DiagnosticsEngine::Warning,
@@ -120,8 +123,8 @@ RewriteBSC::RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
 std::unique_ptr<ASTConsumer>
 clang::CreateBSCRewriter(const std::string &InFile,
                          std::unique_ptr<raw_ostream> OS,
-                         DiagnosticsEngine &Diags, const LangOptions &LOpts) {
-  return std::make_unique<RewriteBSC>(InFile, std::move(OS), Diags, LOpts);
+                         DiagnosticsEngine &Diags, const LangOptions &LOpts, bool InsertLine) {
+  return std::make_unique<RewriteBSC>(InFile, std::move(OS), Diags, LOpts, InsertLine);
 }
 
 void RewriteBSC::Initialize(ASTContext &context) {
@@ -627,6 +630,13 @@ void RewriteBSC::FindDeclsWithoutBSCFeature() {
     }
   }
 }
+
+void RewriteBSC::printBSCLineInfo(Decl *D, llvm::raw_string_ostream &Buf) {
+  if (!WithLine) return;
+  unsigned LineNo = SM->getSpellingLineNumber(D->getBeginLoc()); // get bsc code line
+  Buf << "#line " << LineNo << " \"" << SM->getBufferName(D->getBeginLoc()) << "\"\n"; // insert bsc code line
+}
+
 const std::string RewriteBSC::GetRewrittenString() {
   std::string SStr;
   llvm::raw_string_ostream Buf(SStr);
@@ -951,7 +961,8 @@ const std::string RewriteBSC::GetRewrittenString() {
             !HasTemplateSpec)
           break;
 
-        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end()) {
+        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end()) {  // not found, but mean it is a BSCMethodDecl
+          printBSCLineInfo(FD, Buf);
           FD->print(Buf, Policy);
         } else {
           const char *startBuf = SM->getCharacterData(FD->getBeginLoc());
@@ -1021,6 +1032,7 @@ const std::string RewriteBSC::GetRewrittenString() {
           if (isa<BSCMethodDecl>(Func)) {
             FunctionDecl *FD = cast<FunctionDecl>(Func);
             if (FD->doesThisDeclarationHaveABody()) {
+              printBSCLineInfo(FD, Buf);
               FD->print(Buf, Policy);
               Buf << "\n";
             }
@@ -1029,6 +1041,7 @@ const std::string RewriteBSC::GetRewrittenString() {
             FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(Func);
             for (auto *DD : FTD->specializations()) {
               if (DD->doesThisDeclarationHaveABody()) {
+                printBSCLineInfo(DD, Buf);
                 DD->print(Buf, Policy);
                 Buf << "\n";
               }
@@ -1051,6 +1064,7 @@ const std::string RewriteBSC::GetRewrittenString() {
            SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc()))) &&
           FD->isTemplateInstantiation()) {
         if (FD->doesThisDeclarationHaveABody()) {
+          printBSCLineInfo(FD, Buf);
           FD->print(Buf, Policy);
           Buf << "\n";
         }
@@ -1063,6 +1077,7 @@ const std::string RewriteBSC::GetRewrittenString() {
       if (FTD->isThisDeclarationADefinition()) {
         for (auto *DD : FTD->specializations()) {
           if (DD->doesThisDeclarationHaveABody()) {
+            printBSCLineInfo(DD, Buf);
             DD->print(Buf, Policy);
             Buf << "\n";
           }
@@ -1082,6 +1097,7 @@ const std::string RewriteBSC::GetRewrittenString() {
           if (isa<FunctionDecl>(DDD)) {
             FunctionDecl *FDDD = cast<FunctionDecl>(DDD);
             if (FDDD->doesThisDeclarationHaveABody()) {
+              printBSCLineInfo(DDD, Buf);
               DDD->print(Buf, Policy);
               Buf << "\n";
             }

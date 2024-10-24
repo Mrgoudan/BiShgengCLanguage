@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 struct S<T> {
@@ -15,16 +17,19 @@ struct MyStruct<T> {
     struct S<T> s;
 };
 
+// CHECK-L: #line 21 "{{.*}}.cbs"
 T struct MyStruct<T>::foo(struct MyStruct<T> *this, T a) {
     this->res = a;
     return this->res;
 }
 
+// CHECK-L: #line 27 "{{.*}}.cbs"
 T f1<T>(T a) {
     struct MyStruct<T> s = {.res = a};
     return struct MyStruct<T>::foo(&s, a);
 }
 
+// CHECK-L: #line 33 "{{.*}}.cbs"
 T f2<T>(T a) {
     struct MyStruct<T> s = {.res = a};
     return s.foo(a);

@@ -3,6 +3,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 struct Foo {
@@ -13,6 +15,10 @@ int struct Foo::getA(struct Foo* this) {
   return this->a;
 }
 
+// CHECK-L: #line 14 "{{.*}}.cbs"
+// CHECK-L-NEXT: int struct_Foo_getA(struct Foo *this) {
+// CHECK-L-NEXT:   return this->a;
+// CHECK-L-NEXT: }
 
 int main() {
   struct Foo foo = {.a = 1};

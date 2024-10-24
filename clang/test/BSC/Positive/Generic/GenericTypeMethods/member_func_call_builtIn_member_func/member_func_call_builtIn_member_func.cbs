@@ -4,12 +4,15 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 struct MyStruct<T> {
   T res;
 };
 
+// CHECK-L: #line 16 "{{.*}}.cbs"
 void int::increase(int* this) {
     *this = *this +1;
 }

@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 #include <stdio.h>
@@ -51,10 +53,12 @@ impl trait TR for struct Leah;
 void greet(trait TR* t) {
   t->sayHi();
 }
+// CHECK-L: #line 53 "{{.*}}.cbs"
 // CHECK: void greet(struct __Trait_TR t) {
 // CHECK-NEXT: t.vtable->sayHi(t.data);
 // CHECK-NEXT: }
 
+// CHECK-L: #line 62 "{{.*}}.cbs"
 int main() {
   int x = 42;
   greet(&x);

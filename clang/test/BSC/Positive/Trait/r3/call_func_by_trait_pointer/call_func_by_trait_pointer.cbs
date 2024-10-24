@@ -4,18 +4,22 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 trait F {
   int foo(This* this);
 };
 
+// CHECK-L: #line 16 "{{.*}}.cbs"
 int int::foo(int* this) {
   return 0;
 }
 
 impl trait F for int;
 
+// CHECK-L: #line 23 "{{.*}}.cbs"
 int main() {
   int a = 1;
   trait F* f = &a;

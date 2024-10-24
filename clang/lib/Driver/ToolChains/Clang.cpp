@@ -757,8 +757,11 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   if (Args.hasArg(options::OPT_rewrite_objc))
     CmdArgs.push_back(types::getTypeName(types::TY_PP_ObjCXX));
   #if ENABLE_BSC
-  else if (Args.hasArg(options::OPT_rewrite_bsc))
+  else if (Args.hasArg(options::OPT_rewrite_bsc)) {
     CmdArgs.push_back(types::getTypeName(types::TY_PP_BSC));
+    if (Args.hasArg(options::OPT_rewrite_bsc_line))
+      CmdArgs.push_back("-line");
+  }
   #endif
   else {
     // Map the driver type to the frontend type. This is mostly an identity

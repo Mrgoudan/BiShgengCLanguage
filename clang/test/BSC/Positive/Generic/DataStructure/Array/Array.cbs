@@ -3,6 +3,8 @@
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 #include<stdio.h>
@@ -19,12 +21,14 @@ struct Array<T> {
     int capacity;
 };
 
+// CHECK-L: #line 25 "{{.*}}.cbs"
 void struct Array<T>::init(struct Array<T> *this, int capacity) { // warning: template argument uses local type 'struct Strudent'
     this->data = malloc(sizeof(T) * capacity);
     this->size = 0;
     this->capacity = capacity;
 }
 
+// CHECK-L: #line 32 "{{.*}}.cbs"
 void struct Array<T>::destroy(struct Array<T> *this) {
     if (this)
         free(this->data);
@@ -34,10 +38,12 @@ int struct Array<T>::isEmpty(struct Array<T> *this) {
     return this->size == 0;
 }
 
+// CHECK-L: #line 42 "{{.*}}.cbs"
 int struct Array<T>::isFull(struct Array<T> *this) {
     return this->size == this->capacity;
 }
 
+// CHECK-L: #line 47 "{{.*}}.cbs"
 void struct Array<T>::append(struct Array<T> *this, T value) {
     if (this->isFull()) {
         printf("the array is full!\n");
@@ -46,7 +52,7 @@ void struct Array<T>::append(struct Array<T> *this, T value) {
     this->data[this->size++] = value;
 }
 
-
+// CHECK-L: #line 56 "{{.*}}.cbs"
 void struct Array<T>::set(struct Array<T> *this, int index, T value) {
     if (index < 0 || index >= this->size) {
         printf("index out of range!\n");
@@ -55,6 +61,7 @@ void struct Array<T>::set(struct Array<T> *this, int index, T value) {
     this->data[index] = value;
 }
 
+// CHECK-L: #line 65 "{{.*}}.cbs"
 T struct Array<T>::get(struct Array<T> *this, int index) {
     if (index < 0 || index >= this->size) {
         printf("index out of range!\n");
@@ -63,6 +70,7 @@ T struct Array<T>::get(struct Array<T> *this, int index) {
     return this->data[index];
 }
 
+// CHECK-L: #line 74 "{{.*}}.cbs"
 void struct Array<T>::quickSort(struct Array<T> *this, int left, int right, _Bool (*compare)(T, T)) {
     if (left >= right) 
         return;
@@ -83,6 +91,7 @@ void struct Array<T>::quickSort(struct Array<T> *this, int left, int right, _Boo
     this->quickSort(i + 1, right, compare);
 }
 
+// CHECK-L: #line 95 "{{.*}}.cbs"
 int struct Array<T>::binarySearch(struct Array<T> *this, T target, _Bool (*compare)(T, T), _Bool (*equal)(T, T)) {
     int left = 0, right = this->size - 1;
     while (left <= right) {

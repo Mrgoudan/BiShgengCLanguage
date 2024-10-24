@@ -3,6 +3,8 @@
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 struct S<T> {};
@@ -14,13 +16,17 @@ typedef MyU<T> = U<T>;
 typedef MyU_int = U<int>;
 
 void S<T>::foo1(This* this) {}
+
 void S<T>::foo2(S<T>* this) {}
+
 S<T> S<T>::foo3(This* this, S<T> a) {
     return a;
 }
 
 void U<T>::foo1(This* this) {}
+
 void U<T>::foo2(U<T>* this) {}
+
 U<T> U<T>::foo3(This* this, U<T> a) {
     return a;
 }
@@ -28,6 +34,7 @@ U<T> U<T>::foo3(This* this, U<T> a) {
 S<T> bar1<T>(S<T> a) {
     return a;
 }
+
 S<int> bar2(S<int> a) {
     return a;
 }
@@ -35,6 +42,7 @@ S<int> bar2(S<int> a) {
 U<T> bar3<T>(U<T> a) {
     return a;
 }
+
 U<int> bar4(U<int> a) {
     return a;
 }
@@ -59,6 +67,30 @@ U<int> struct P::foo5(This* this) {
   return this->b;
 }
 impl trait F for struct P;
+
+// CHECK-L: #line 38 "{{.*}}.cbs"
+// CHECK-L-NEXT: struct S_int bar2(struct S_int a) {
+// CHECK-L-NEXT:   return a;
+// CHECK-L-NEXT: }
+
+// CHECK-L: #line 46 "{{.*}}.cbs"
+// CHECK-L-NEXT: union U_int bar4(union U_int a) {
+// CHECK-L-NEXT:   return a;
+// CHECK-L-NEXT: }
+
+// CHECK-L: #line 63 "{{.*}}.cbs"
+// CHECK-L-NEXT: struct S_int struct_P_foo4(struct P *this) {
+// CHECK-L-NEXT:   return this->a;
+// CHECK-L-NEXT: }
+
+// CHECK-L: #line 66 "{{.*}}.cbs"
+// CHECK-L-NEXT: U_int struct_P_foo5(struct P *this) {
+// CHECK-L-NEXT:   return this->b;
+// CHECK-L-NEXT: }
+
+// CHECK-L: #line 18 "{{.*}}.cbs"
+// CHECK-L-NEXT: static void struct_S_int_foo1(struct S_int *this) {
+// CHECK-L-NEXT: }
 
 int main() {
     S<int> s1;

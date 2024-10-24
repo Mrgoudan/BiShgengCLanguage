@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 #include <stdlib.h>
@@ -23,6 +25,21 @@ safe Vec<T> Vec<T>::new(void) {
 		return v;
 	}
 }
+// CHECK-L: #line 22 "{{.*}}.cbs"
+// CHECK-L-NEXT: static  struct Vec_int struct_Vec_int_new(void) {
+// CHECK-L-NEXT:   {
+// CHECK-L-NEXT:     struct Vec_int v = {.ptr = ((void *)0), .len = 0};
+// CHECK-L-NEXT:     _Bool v_is_moved = 0;
+// CHECK-L-NEXT:     return v;
+// CHECK-L-NEXT:   }
+// CHECK-L-NEXT: }
+
+// CHECK-L: #line 17 "{{.*}}.cbs"
+// CHECK-L-NEXT: static void struct_Vec_int_D( struct Vec_int this) {
+// CHECK-L-NEXT:   _Bool this_is_moved = 0;
+// CHECK-L-NEXT:   if (!this.ptr) 
+// CHECK-L-NEXT:     free(this.ptr);
+// CHECK-L-NEXT: }
 
 int main() {
     Vec<int> v = Vec<int>::new();

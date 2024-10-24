@@ -506,6 +506,11 @@ public:
 
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
+  
+  #if ENABLE_BSC
+  /// Determine whether to insert the line marker directives.
+  bool InsertLineDirectives = false;
+  #endif
 
 public:
   FrontendOptions()

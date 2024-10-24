@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 trait F {
@@ -30,6 +32,7 @@ union S_3{
   int x;
 };
 
+// CHECK-L: #line 36 "{{.*}}.cbs"
 int struct S_1::foo(struct S_1* this, int a) {
   return this->x + a;
 }
@@ -37,6 +40,7 @@ int struct S_1::foo(struct S_1* this, int a) {
 impl trait F for struct S_1;
 // CHECK: struct __Trait_F_Vtable __struct_S_1_trait_F = {.foo = (int (*)(void *, int))struct_S_1_foo};
 
+// CHECK-L: #line 44 "{{.*}}.cbs"
 int enum S_2::foo(enum S_2* this, int a) {
   return *this + a;
 }
@@ -44,6 +48,7 @@ int enum S_2::foo(enum S_2* this, int a) {
 impl trait F for enum S_2;
 // CHECK: struct __Trait_F_Vtable __enum_S_2_trait_F = {.foo = (int (*)(void *, int))enum_S_2_foo};
 
+// CHECK-L: #line 52 "{{.*}}.cbs"
 int union S_3::foo(union S_3* this, int a) {
   return this->x + a;
 }
@@ -51,6 +56,7 @@ int union S_3::foo(union S_3* this, int a) {
 impl trait F for union S_3;
 // CHECK: struct __Trait_F_Vtable __union_S_3_trait_F = {.foo = (int (*)(void *, int))union_S_3_foo};
 
+// CHECK-L: #line 60 "{{.*}}.cbs"
 int int::foo(int* this,int a) {
   return *this + a;
 }
@@ -58,6 +64,7 @@ int int::foo(int* this,int a) {
 impl trait F for int;
 // CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *, int))int_foo};
 
+// CHECK-L: #line 68 "{{.*}}.cbs"
 int main() {
   struct S_1 s_1 = { .x = 1 };
   trait F* i = &s_1; 

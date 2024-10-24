@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK --check-prefix=CHECK-L
 // expected-no-diagnostics
 #include <stdio.h>
 
@@ -11,6 +13,7 @@ trait TR {
   void f(This* this);
 };
 
+// CHECK-L: #line 17 "{{.*}}.cbs"
 void int::f(int* this) {
   printf("int::f\n");
 }
@@ -19,6 +22,7 @@ impl trait TR for int;
 
 impl trait TR for int; // OK, and useless.
 
+// CHECK-L: #line 26 "{{.*}}.cbs"
 int main() {
   int x = 1;
   trait TR* t = &x;

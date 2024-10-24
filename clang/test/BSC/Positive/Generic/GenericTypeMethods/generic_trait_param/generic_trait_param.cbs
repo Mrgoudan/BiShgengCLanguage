@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
 trait Future<T> {};
@@ -11,6 +13,7 @@ trait Future<T> {};
 struct A<T> {
 };
 
+// CHECK-L: #line 17 "{{.*}}.cbs"
 void struct A<T>::foo(struct A<T> *this, trait Future<T> *future) {
 }
 

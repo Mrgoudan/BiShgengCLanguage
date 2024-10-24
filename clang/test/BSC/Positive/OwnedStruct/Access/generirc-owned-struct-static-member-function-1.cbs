@@ -4,6 +4,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 
 owned struct A<T> {
 public:
@@ -13,6 +15,7 @@ public:
     }
 };
 
+// CHECK-L: #line 13 "{{.*}}.cbs"
 int main() {
     char y = 's';
     A<char> aaa = {y};

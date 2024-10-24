@@ -2610,6 +2610,12 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
+  
+  #if ENABLE_BSC
+  if (Opts.InsertLineDirectives) {
+    GenerateArg(Args, OPT_rewrite_bsc_line, SA);
+  }
+  #endif
 
   if (Opts.AuxTargetCPU)
     GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
@@ -4461,6 +4467,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
                                      MissingArgCount, IncludedFlagsBitmask);
   LangOptions &LangOpts = *Res.getLangOpts();
+
+  #if ENABLE_BSC
+  Res.getFrontendOpts().InsertLineDirectives = Args.hasArg(OPT_rewrite_bsc_line);
+  #endif
 
   // Check for missing argument error.
   if (MissingArgCount)
