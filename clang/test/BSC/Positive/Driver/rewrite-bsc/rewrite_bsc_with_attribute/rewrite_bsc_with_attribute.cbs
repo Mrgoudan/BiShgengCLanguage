@@ -1,0 +1,41 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+
+safe int* owned hack_malloc(void) {
+  int x = 1;
+  unsafe {
+    int* owned p = (int* owned)&x;
+    return p;
+  }
+}
+
+__attribute__((visibility("default"))) void test() {
+  int* p = (int *)hack_malloc();
+  int a = 1;
+}
+
+int main() {
+  test();
+  return 0;
+}
+
+// CHECK:      int * hack_malloc(void) {
+// CHECK-NEXT:     int x = 1;
+// CHECK-NEXT:     {
+// CHECK-NEXT:         int * p = (int *)&x;
+// CHECK-NEXT:         return p;
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT:  __attribute__((visibility("default"))) void test(void) {
+// CHECK-NEXT:     int *p = (int *)hack_malloc();
+// CHECK-NEXT:     int a = 1;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {
+// CHECK-NEXT:     test();
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }
+

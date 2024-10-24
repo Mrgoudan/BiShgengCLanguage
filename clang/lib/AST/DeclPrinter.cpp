@@ -745,6 +745,13 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       printTemplateParameters(D->getTemplateParameterList(I));
   }
 
+  #if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    prettyPrintAttributes(D);
+    Out << " ";
+  }
+  #endif
+
   CXXConstructorDecl *CDecl = dyn_cast<CXXConstructorDecl>(D);
   CXXConversionDecl *ConversionDecl = dyn_cast<CXXConversionDecl>(D);
   CXXDeductionGuideDecl *GuideDecl = dyn_cast<CXXDeductionGuideDecl>(D);
@@ -981,7 +988,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Ty.print(Out, Policy, Proto);
   }
 
-  prettyPrintAttributes(D);
+  #if ENABLE_BSC
+  if (!Policy.RewriteBSC)
+  #endif
+    prettyPrintAttributes(D);
 
   if (D->isPure())
     Out << " = 0";
