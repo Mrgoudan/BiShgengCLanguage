@@ -7,3 +7,11 @@ add_libcbs_test(
   SRCS
     test_list.cbs
 )
+
+add_libcbs_test(
+  list_list
+  SUITE
+    libcbs-list-tests
+  SRCS
+    list_list.cbs
+)

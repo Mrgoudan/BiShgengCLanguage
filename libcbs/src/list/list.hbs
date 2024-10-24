@@ -116,9 +116,6 @@ safe T LinkedList<T>::pop_front(LinkedList<T> * borrow this){
             this->head->prev = NULL;
         }
         this->len--;
-        {
-            _BSC_UNUSED T tempEle = popNode->element;  // node will be destructed
-        }
         free((void *)popNode);
         popNode = NULL;
         return popVal;
@@ -140,9 +137,6 @@ safe T LinkedList<T>::pop_back(LinkedList<T> * borrow this){
             this->tail->next = NULL;
         }
         this->len--;
-        {
-            _BSC_UNUSED T tempEle = popNode->element;  // node will be destructed
-        }
         free((void *)popNode);
         popNode = NULL;
         return popVal;
