@@ -2267,6 +2267,7 @@ public:
   bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
   bool isOwnedStructureType() const;
   bool isOwnedTemplateSpecializationType() const;
+  bool isMoveSemanticType() const;
   #endif
   bool isClassType() const;
   bool isStructureType() const;

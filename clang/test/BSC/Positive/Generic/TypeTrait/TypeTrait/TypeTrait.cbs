@@ -16,12 +16,18 @@ typedef struct G { int a; } G;
 typedef enum E { Mon=1, Tue, Wed } E;
 typedef union U { int a; } U;
 typedef struct S<int> S_int;
+owned struct A { int a; };
+typedef struct B { int *owned a; } B;
+typedef struct C { A a; } C;
+typedef struct D { B b; } D;
 
 int main() {
     struct S<int> s1;
     struct S<float> s2;
+    struct S<A> s3;
     s1.foo(); //print "integral"
     s2.foo(); //print "not integral"
+    s3.foo(); //print "not integral"
     bar<int>();  //print "integral"
     bar<float>(); //print "not integral"
     _Static_assert(is_integral<int>() == true, "fail");
@@ -39,6 +45,14 @@ int main() {
     _Static_assert(is_const<int>() == false, "fail");
     _Static_assert(is_volatile<volatile int>() == true, "fail");
     _Static_assert(is_volatile<int>() == false, "fail");
+    _Static_assert(is_move_semantic<int *owned>() == true, "fail");
+    _Static_assert(is_move_semantic<A>() == true, "fail");
+    _Static_assert(is_move_semantic<struct B>() == true, "fail");
+    _Static_assert(is_move_semantic<B>() == true, "fail");
+    _Static_assert(is_move_semantic<D>() == true, "fail");
+    _Static_assert(is_move_semantic<A*>() == false, "fail");
+    _Static_assert(is_move_semantic<struct S<A>>() == true, "fail");
+    _Static_assert(is_move_semantic<struct S<int>>() == false, "fail");
     _Static_assert(is_array<int[]>() == true, "fail");
     _Static_assert(is_array<int>() == false, "fail");
     _Static_assert(is_function<int ()>() == true, "fail");

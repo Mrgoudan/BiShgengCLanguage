@@ -115,6 +115,39 @@ bool Type::isOwnedTemplateSpecializationType() const {
   return false;
 }
 
+// Return true when a type is move semantic type,
+// including owned pointer(int *owned, int **owned, ...),
+// owned struct and struct which has owned fields.
+// For example:
+// @code
+//     owned struct S1 { };
+//     struct S2 { int* owned p; };
+//     struct S3 { S1 s; };
+//     struct S4 { struct S2 s; };
+// @endcode
+// These types are not move semantic:
+// @code
+//     struct S5 { S1* s};
+//     struct S6 { int *owned * p};
+// @endcode
+bool Type::isMoveSemanticType() const {
+  // Owned pointer or owned struct is owned qualified.
+  if (CanonicalType.isOwnedQualified())  
+    return true;
+  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
+    if (RecordDecl *RD = RecTy->getDecl()) {
+      for (FieldDecl *FD : RD->fields()) {
+        QualType FQT = FD->getType().getCanonicalType();
+        if (FQT.isOwnedQualified())  
+          return true;
+        else if (isa<RecordType>(FQT))
+          return FQT->isMoveSemanticType();
+      }
+    }
+  }
+  return false;
+}
+
 void RecordType::initOwnedStatus() const {
   if (hasOwn != ownedStatus::unInitOwned)
     return;

@@ -61,6 +61,10 @@ constexpr bool is_volatile<T>() {
     return __is_volatile(T);
 }
 
+constexpr bool is_move_semantic<T>() {
+    return __is_move_semantic(T);
+}
+
 constexpr bool is_void<T>() {
     return __is_void(T);
 }
