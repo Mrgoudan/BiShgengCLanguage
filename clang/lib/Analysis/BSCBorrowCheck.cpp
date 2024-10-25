@@ -288,7 +288,13 @@ void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
   case UO_AddrConst:
   case UO_AddrConstDeref:
     return;
-  case UO_AddrMut:
+  case UO_AddrMut: {
+    if (IsVisitingCallExpr && Status == NotInit) {
+      Op = Write;
+      break;
+    } else
+      return;
+  }
   case UO_AddrMutDeref: {
     if (IsVisitingCallExpr) {
       Op = Write;
@@ -406,6 +412,7 @@ void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
     if (BO->getLHS()->getType().isBorrowQualified()) {
       return;
     }
+    Status = Init;
     Op = Write;
     Visit(BO->getLHS());
 
@@ -417,6 +424,7 @@ void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
     }
     Visit(BO->getRHS());
     Op = TempOp;
+    Status = NotInit;
   }
 }
 
@@ -426,7 +434,7 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       if (VD->getType().isBorrowQualified()) {
-        return;
+        continue;
       }
       Expr *Init = VD->getInit();
       if (Init) {
@@ -902,7 +910,7 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
               NLLRange.Begin, NLLRange.End, NLLRange.Kind));
       }
     }
-  }
+  }  
 }
 
 // Core rule of borrow:
