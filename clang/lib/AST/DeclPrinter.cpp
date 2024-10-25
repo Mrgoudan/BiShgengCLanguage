@@ -120,7 +120,12 @@ namespace {
                                 const TemplateParameterList *Params);
     void printTemplateArguments(llvm::ArrayRef<TemplateArgumentLoc> Args,
                                 const TemplateParameterList *Params);
-    void prettyPrintAttributes(Decl *D);
+    void prettyPrintAttributes(Decl *D
+#if ENABLE_BSC
+                               ,
+                               bool AddSpace = false
+#endif
+    );
     void prettyPrintPragmas(Decl *D);
     void printDeclType(QualType T, StringRef DeclName, bool Pack = false);
   };
@@ -305,11 +310,19 @@ raw_ostream& DeclPrinter::Indent(unsigned Indentation) {
   return Out;
 }
 
-void DeclPrinter::prettyPrintAttributes(Decl *D) {
+void DeclPrinter::prettyPrintAttributes(Decl *D
+#if ENABLE_BSC
+                                        ,
+                                        bool AddSpace
+#endif
+) {
   if (Policy.PolishForDeclaration)
     return;
 
   if (D->hasAttrs()) {
+#if ENABLE_BSC
+    bool AddedAttrs = false;
+#endif
     AttrVec &Attrs = D->getAttrs();
     for (auto *A : Attrs) {
       if (A->isInherited() || A->isImplicit())
@@ -321,9 +334,16 @@ void DeclPrinter::prettyPrintAttributes(Decl *D) {
         break;
       default:
         A->printPretty(Out, Policy);
+#if ENABLE_BSC
+        AddedAttrs = true;
+#endif
         break;
       }
     }
+#if ENABLE_BSC
+    if (AddSpace && AddedAttrs)
+      Out << " ";
+#endif
   }
 }
 
@@ -612,6 +632,11 @@ void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
     if (D->isModulePrivate())
       Out << "__module_private__ ";
   }
+#if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    prettyPrintAttributes(D, true);
+  }
+#endif
   QualType Ty = D->getTypeSourceInfo()->getType();
 #if ENABLE_BSC
   // Handling anonymous struct/union/enum defined through typedef for rewriting
@@ -633,7 +658,10 @@ void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
   }
 #endif
   Ty.print(Out, Policy, D->getName(), Indentation);
-  prettyPrintAttributes(D);
+#if ENABLE_BSC
+  if (!Policy.RewriteBSC)
+#endif
+    prettyPrintAttributes(D);
 }
 
 void DeclPrinter::VisitTypeAliasDecl(TypeAliasDecl *D) {
@@ -751,8 +779,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
 
   #if ENABLE_BSC
   if (Policy.RewriteBSC) {
-    prettyPrintAttributes(D);
-    Out << " ";
+    prettyPrintAttributes(D, true);
   }
   #endif
 
@@ -1061,6 +1088,12 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
+#if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    prettyPrintAttributes(D, true);
+  }
+#endif
+
   // FIXME: add printing of pragma attributes if required.
   if (!Policy.SuppressSpecifiers && D->isMutable())
     Out << "mutable ";
@@ -1084,7 +1117,10 @@ void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
       Out << " = ";
     Init->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
   }
-  prettyPrintAttributes(D);
+#if ENABLE_BSC
+  if (!Policy.RewriteBSC)
+#endif
+    prettyPrintAttributes(D);
 }
 
 void DeclPrinter::VisitLabelDecl(LabelDecl *D) {
@@ -1093,6 +1129,12 @@ void DeclPrinter::VisitLabelDecl(LabelDecl *D) {
 
 void DeclPrinter::VisitVarDecl(VarDecl *D) {
   prettyPrintPragmas(D);
+
+#if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    prettyPrintAttributes(D, true);
+  }
+#endif
 
   QualType T = D->getTypeSourceInfo()
     ? D->getTypeSourceInfo()->getType()
@@ -1178,7 +1220,10 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
         Out << ")";
     }
   }
-  prettyPrintAttributes(D);
+#if ENABLE_BSC
+  if (!Policy.RewriteBSC)
+#endif
+    prettyPrintAttributes(D);
 }
 
 void DeclPrinter::VisitParmVarDecl(ParmVarDecl *D) {

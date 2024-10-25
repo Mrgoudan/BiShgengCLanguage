@@ -11,17 +11,38 @@ safe int* owned hack_malloc(void) {
   }
 }
 
-__attribute__((visibility("default"))) void test() {
+__attribute__((visibility("default"))) void test1() {
   int* p = (int *)hack_malloc();
   int a = 1;
 }
+owned struct T {
+  __attribute__((unused)) int * a;
+};
+
+typedef __attribute__((unused)) int unusedInt;
+
+void test2(){
+  safe {
+    __attribute__((unused)) int a = 1;
+  }
+  __attribute__((unused)) int a = 1;
+}
 
 int main() {
-  test();
+  test1();
+  test2();
   return 0;
 }
 
-// CHECK:      int * hack_malloc(void) {
+// CHECK:      struct T {
+// CHECK-NEXT:     __attribute__((unused)) int *a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef __attribute__((unused)) int unusedInt;
+// CHECK-EMPTY:
+// CHECK-NEXT: void struct_T_D(  struct T this);
+// CHECK-EMPTY:
+// CHECK-NEXT: int * hack_malloc(void) {
 // CHECK-NEXT:     int x = 1;
 // CHECK-NEXT:     {
 // CHECK-NEXT:         int * p = (int *)&x;
@@ -29,13 +50,23 @@ int main() {
 // CHECK-NEXT:     }
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT:  __attribute__((visibility("default"))) void test(void) {
+// CHECK-NEXT:  __attribute__((visibility("default"))) void test1(void) {
 // CHECK-NEXT:     int *p = (int *)hack_malloc();
 // CHECK-NEXT:     int a = 1;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: int main() {
-// CHECK-NEXT:     test();
-// CHECK-NEXT:     return 0;
+// CHECK-NEXT: void test2(void) {
+// CHECK-NEXT:    {
+// CHECK-NEXT:         __attribute__((unused)) int a = 1;
+// CHECK-NEXT:    }
+// CHECK-NEXT:     __attribute__((unused)) int a = 1;
 // CHECK-NEXT: }
-
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {
+// CHECK-NEXT:    test1();
+// CHECK-NEXT:    test2();
+// CHECK-NEXT:    return 0;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: void struct_T_D(  struct T this) {
+// CHECK-NEXT: }
