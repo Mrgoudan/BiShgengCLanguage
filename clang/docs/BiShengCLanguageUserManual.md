@@ -853,6 +853,7 @@ constexpr bool is_signed<T>();
 constexpr bool is_unsigned<T>();
 constexpr bool is_const<T>();
 constexpr bool is_volatile<T>();
+constexpr bool is_move_semantic<T>();
 constexpr size_t rank<T>();
 constexpr size_t extent<T, size_t N>();
 //判断类型的关系
@@ -861,6 +862,19 @@ constexpr bool is_convertible<From, To>();
 ```
 针对其中一些作出说明和举例：
 ```c
+constexpr bool is_move_semantic<T>(); //判断类型 T 是否是 move 语义的类型
+// 我们认为具有 move 语义的类型包括：
+//   1. owned指针类型
+//   2. owned struct类型
+//   3. 含有 move 语义字段的结构体类型
+is_move_semantic<int *owned>() == true;
+owned struct S {};
+is_move_semantic<S>() == true;
+struct S1 { int a; };
+struct S2 { int *owned p; };
+is_move_semantic<struct S1>() == false;
+is_move_semantic<struct S2>() == true;
+
 constexpr size_t rank<T>(); //可用于计算数组的维数，如
 rank<int>() == 0;
 rank<int[5]>() == 1;
@@ -3197,10 +3211,11 @@ impl trait TR for int *borrow;//error
 void int *borrow::f() {} //error
 ```
 
-8. 不允许把借用类型用于泛型实参。
+8. union 的成员不允许是借用类型。
 ```C
-struct MyStruct<int * borrow> s; //error，借用指针不允许作为泛型实参
-my_func<int * borrow>(p); //error，借用指针不允许作为泛型实参
+union MyUnion {
+    int *borrow p;//error，借用指针不允许作为泛型实参
+};
 ```
 
 9. 借用指针变量不支持索引运算。
