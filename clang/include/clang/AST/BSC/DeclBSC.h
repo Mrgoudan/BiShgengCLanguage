@@ -79,6 +79,8 @@ private:
 
 class TraitDecl : public TagDecl {
   RecordDecl *TraitR = nullptr;
+  RecordDecl *OwnedTraitR = nullptr;
+  RecordDecl *BorrowTraitR = nullptr;
   RecordDecl *Vtable = nullptr;
   std::map<QualType, VarDecl *, QualTypeOrdering> TypeImpled;
 
@@ -138,9 +140,17 @@ public:
 
   void setTrait(RecordDecl *RD) { TraitR = RD; }
 
+  void setOwnedTrait(RecordDecl *RD) { OwnedTraitR = RD; }
+
+  void setBorrowTrait(RecordDecl *RD) { BorrowTraitR = RD; }
+
   void setVtable(RecordDecl *RD) { Vtable = RD; }
 
   RecordDecl *getTrait() { return TraitR; }
+
+  RecordDecl *getOwnedTrait() { return OwnedTraitR; }
+
+  RecordDecl *getBorrowTrait() { return BorrowTraitR; }
 
   RecordDecl *getVtable() { return Vtable; }
 

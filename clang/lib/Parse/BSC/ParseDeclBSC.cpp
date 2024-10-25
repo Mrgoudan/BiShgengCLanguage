@@ -495,6 +495,10 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     RecordDecl *TraitVtableRD = Actions.ActOnDesugarVtableRecord(TD);
     RecordDecl *TraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD);
     TD->setTrait(TraitRD);
+    RecordDecl *OwnedTraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD, true, false);
+    TD->setOwnedTrait(OwnedTraitRD);
+    RecordDecl *BorrowTraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD, false, true);
+    TD->setBorrowTrait(BorrowTraitRD);
     TD->setVtable(TraitVtableRD);
   }
 }

@@ -127,11 +127,17 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
 }
 
 RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
-                                          RecordDecl *TraitVtableRD) {
+                                          RecordDecl *TraitVtableRD,
+                                          bool addOwned,
+                                          bool addBorrow) {
   RecordDecl *TraitRD = nullptr;
   SourceLocation NameLoc = TD->getLocation();
   SourceLocation StartLoc = TD->getBeginLoc();
   std::string TraitName = "__Trait_" + TD->getNameAsString();
+  if (addOwned)
+    TraitName += "_Owned";
+  if (addBorrow)
+    TraitName += "_Borrow";
   TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate();
   TemplateParameterList *TParams = nullptr;
   bool DelayTypeCreation = false;
@@ -172,6 +178,10 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
   std::string DataName = "data";
   std::string VtableName = "vtable";
   QualType DataPT = Context.getPointerType(Context.VoidTy);
+  if (addOwned)
+    DataPT.addOwned();
+  if (addBorrow)
+    DataPT.addBorrow();
   QualType RecordTy = Context.getRecordType(TraitVtableRD);
   ClassTemplateDecl *CTD = TraitVtableRD->getDescribedClassTemplate();
   if (CTD)
@@ -281,6 +291,10 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
   LookupVar->setIsUsed();
 
   QualType VoidPT = Context.getPointerType(Context.VoidTy);
+  if (ProtoArgType->hasOwnedFields() && UO->getType().isOwnedQualified())
+    VoidPT.addOwned();
+  else if (ProtoArgType->hasBorrowFields() && UO->getType().isBorrowQualified())
+    VoidPT.addBorrow();
   QualType VtablePT = QualType();
   RecordDecl *RD = ProtoArgType->getAsRecordDecl();
   for (auto Field : RD->fields()) {
@@ -588,7 +602,13 @@ VarDecl *Sema::DesugarImplTrait(ImplTraitDecl *ITD, Declarator &TypeDeclarator,
 
 QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
                                          SourceLocation Loc) {
-  RecordDecl *RD = TD->getTrait();
+  RecordDecl *RD = nullptr;
+  if (T.isOwnedQualified())
+    RD = TD->getOwnedTrait();
+  else if (T.isBorrowQualified())
+    RD = TD->getBorrowTrait();
+  else
+    RD = TD->getTrait();
   if (!RD) {
     Diag(Loc, diag::err_trait_is_undefined) << Context.getTagDeclType(TD);
     return T;
@@ -648,7 +668,13 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   if (QT->isPointerType()) {
     TD = TryDesugarTrait(QT);
     if (TD) {
-      RecordDecl *LookupTrait = TD->getTrait();
+      RecordDecl *LookupTrait = nullptr;
+      if (QT.isOwnedQualified())
+        LookupTrait = TD->getOwnedTrait();
+      else if (QT.isBorrowQualified())
+        LookupTrait = TD->getBorrowTrait();
+      else
+        LookupTrait = TD->getTrait();
       if (!LookupTrait)
         return nullptr;
       if (LookupTrait->getDescribedClassTemplate()) {
@@ -698,7 +724,13 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   while (InnerTy->isPointerType())
     InnerTy = InnerTy->getPointeeType();
 
-  QualType TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);
+  QualType TraitTy;
+  if (VD->getType().isOwnedQualified())
+    TraitTy = QualType(TD->getOwnedTrait()->getTypeForDecl(), 0);
+  else if (VD->getType().isBorrowQualified())
+    TraitTy = QualType(TD->getBorrowTrait()->getTypeForDecl(), 0);
+  else
+    TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);;
   if (dyn_cast<InjectedClassNameType>(TraitTy)) {
     TraitTy = CompleteRecordType(TD->getTrait(), NewVD->getTypeSourceInfo());
   }
@@ -751,6 +783,10 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
     Exprs = {UO, TraitVtable};
   } else {
     QualType VoidPT = Context.getPointerType(Context.VoidTy);
+    if (VD->getType().isOwnedQualified())
+      VoidPT.addOwned();
+    if (VD->getType().isBorrowQualified())
+      VoidPT.addBorrow();
     ImplicitCastExpr *TraitData =
         ImplicitCastExpr::Create(Context, VoidPT,
                                  /* CastKind=*/CK_BitCast,

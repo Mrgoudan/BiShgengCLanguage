@@ -18,7 +18,13 @@ typedef trait F {
 // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <line:[[@LINE-9]]:9, col:15> col:15 struct __Trait_F definition
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 referenced data 'void *'
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 referenced vtable 'struct __Trait_F_Vtable *
-// CHECK-NEXT: TypedefDecl 0x{{[^ ]*}} <col:1, line:[[@LINE-10]]:2> col:2 referenced G 'trait F':'trait F'
+// CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <col:9, col:15> col:15 struct __Trait_F_Owned definition
+// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 data 'void *owned'
+// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 vtable 'struct __Trait_F_Vtable *'
+// CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <col:9, col:15> col:15 struct __Trait_F_Borrow definition
+// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 data 'void *borrow'
+// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 vtable 'struct __Trait_F_Vtable *'
+// CHECK-NEXT: TypedefDecl 0x{{[^ ]*}} <col:1, line:[[@LINE-16]]:2> col:2 referenced G 'trait F':'trait F'
 // CHECK-NEXT: ElaboratedType 0x{{[^ ]*}} 'trait F' sugar
 // CHECK-NEXT: TraitType 0x{{[^ ]*}} 'trait F'
 // CHECK-NEXT: Trait 0x{{[^ ]*}} 'F'

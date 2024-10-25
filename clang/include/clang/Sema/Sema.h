@@ -7656,7 +7656,7 @@ public:
   NamedDecl *ActOnTraitMemberDeclarator(Scope *S, Declarator &D);
   void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
   RecordDecl *ActOnDesugarVtableRecord(TraitDecl *TD);
-  RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD);
+  RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD, bool addOwned = false, bool addBorrow = false);
   bool IsTraitExpr(Expr *Expr);
   ExprResult ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
                                     BinaryOperatorKind Opc, Expr *LHSExpr,

@@ -48,15 +48,6 @@ bool Sema::CheckOwnedDecl(SourceLocation ErrLoc, QualType T) {
     Diag(ErrLoc, diag::err_owned_decl) << T;
     return false;
   }
-  // owned trait check
-  QualType BaseType = T;
-  while (!BaseType.isNull() && BaseType->isPointerType()) {
-    BaseType = BaseType->getPointeeType();
-  }
-  if (!BaseType.isNull() && BaseType.getCanonicalType()->isTraitType()) {
-    Diag(ErrLoc, diag::err_owned_decl) << T;
-    return false;
-  }
   return true;
 }
 
@@ -113,16 +104,21 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
   bool IsPointer = LHSPtrType && RHSPtrType;
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
+  bool IsTraitImplType = (LHSCanType->isTraitType() || RHSCanType->isTraitType());
 
   // owned to owned cases:
   // int* owned  <->  int* owned   // legal
   // int* owned  <->  float* owned // illegal
   // const int** owned  <->  int** owned  // legal
+  // trait T* owned <- [type : trait T] * owned // legal
   // unOwned to unOwned cases:
   // owned int* owned *  <->  owned int**  // illegal
   // owned int* const *  <->  owned int**  // legal
   if (LHSCanType.isOwnedQualified() == RHSCanType.isOwnedQualified()) {
     if (IsSameType) {
+      return true;
+    }
+    if (IsTraitImplType) {
       return true;
     }
     if (!IsPointer) {
@@ -132,6 +128,17 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
       if (LHSPtrType->isVoidPointerType() || RHSPtrType->isVoidPointerType())
         return true;
       return CheckOwnedQualTypeAssignment(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType(), RLoc);
+    }
+  }
+
+  // trait T* owned <-> trait T* owned // legal
+  if (LHSCanType.isOwnedQualified() || RHSCanType.isOwnedQualified()) {
+    TraitDecl *TD = TryDesugarTrait(LHSType);
+    if (TD) {
+      QualType QT = DesugarTraitToStructTrait(TD, LHSCanType, RLoc);
+      if (QT.getCanonicalType() == RHSCanType) {
+        return true;
+      }
     }
   }
 
@@ -334,6 +341,13 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
         ImplType.removeLocalOwned();
         if (TD->getTypeImpledVarDecl(ImplType))
           return true;
+      }
+      // trait T* borrow <-> trait T* borrow // legal
+      if (TD) {
+        QualType QT = DesugarTraitToStructTrait(TD, LHSCanType, RHSExpr->getExprLoc());
+        if (QT.getCanonicalType() == RHSCanType) {
+          return true;
+        }
       }
     }
     if (LHSCanType->isVoidPointerType()) {
