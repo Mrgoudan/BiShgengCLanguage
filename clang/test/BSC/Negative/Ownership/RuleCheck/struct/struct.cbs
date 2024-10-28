@@ -68,6 +68,13 @@ void func12(struct A * owned a) {
 } // expected-error {{memory leak of value: `p`}}
   // expected-error@-1 {{field memory leak of value: `p`, p.a1.b1, p.a1.b2, p.a1.b3, p.a1.b3.c1, p.a1.b3.c2, p.a2, p.a2.b1, p.a2.b2, p.a2.b3... are leak}}
 
+void func13(struct B* owned bp) {
+  struct B b = *bp;
+  struct B* owned bo = bp; // expected-error {{use of all moved value: `bp`}}
+} // expected-error {{memory leak of value: `b`}}
+  // expected-error@-1 {{memory leak of value: `bo`}}
+  // expected-error@-2 {{field memory leak of value: `bo`, bo.b1, bo.b2, bo.b3, bo.b3.c1, bo.b3.c2 are leak}}
+
 void func14(struct B b) {
   int *p1 = (int *)b.b1;
   int *p2 = (int *)b.b2;

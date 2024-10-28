@@ -820,6 +820,9 @@ Ownership::OwnershipStatus::checkOPSUse(const VarDecl *VD,
     } else if (is(VD, Ownership::Status::PartialMoved)) {
       diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfPartiallyMoved,
                                VD->getNameAsString(), collectMovedFields(VD)));
+    } else if (is(VD, Ownership::Status::AllMoved)) {
+      diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfAllMoved,
+                               VD->getNameAsString(), collectMovedFields(VD)));
     }
   }
   if (!isGetAddr) {
