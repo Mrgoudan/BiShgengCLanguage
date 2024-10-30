@@ -1,3 +1,5 @@
+// RUN: %clang -fsyntax-only %s
+// expected-no-diagnostics
 
 #include "scheduler.hbs"
 #include <unistd.h>
@@ -6,6 +8,8 @@ struct Scheduler S;
 atomic_int g_taskCount;
 struct ThreadContext *g_mainThread;
 __thread struct ThreadContext *g_curCtx;
+
+extern NOISE g_noise;
 
 struct Scheduler *getScheduler() {
     if (!S.isInit) {
@@ -115,23 +119,31 @@ static int findQueue() {
 void *schedule(void *arg) {
     struct ThreadContext *ctx = (struct ThreadContext *)arg;
     g_curCtx = ctx;
+    clock_t start, end;
 
     while (true) {
+        start = read_tsc();
         struct Task *task = (struct Task *)getReadyTask();
         ctx->runningTask = task;
         if (!task && !S.isInit) {
             break;
         }
+        end = read_tsc();
+        g_noise.getTaskCost += end - start;
+        g_noise.getTaskCount++;
         struct PollResult<struct Void> s = task->future->poll();
         ctx->runningTask = NULL;
+
         if (s.isPending) {
             atomic_store(&task->state, PARKED);
             int index = findQueue();
+            if (index == 0) {
                 S.globalQueue->push(task);
             } else {
                 S.threads[index]->localQueue.push(task);
             }
         } else {
+            start = read_tsc();
             atomic_store(&task->state, COMPLETED);
             atomic_fetch_sub(&g_taskCount, 1);
             task->future->free();
@@ -139,6 +151,9 @@ void *schedule(void *arg) {
                 free(task);
                 task = NULL;
             }
+            end = read_tsc();
+            g_noise.freeCost += end - start;
+            g_noise.freeCount++;
         }
         if (!S.isInit) {
             break;
@@ -203,6 +218,8 @@ void struct Scheduler::run() {
 }
 
 struct Task *struct Scheduler::spawn(trait Future<struct Void> *future) {
+    clock_t start, end;
+    start = read_tsc();
     if (!S.isInit) {
         fprintf(stderr, "Error: please initialize the scheduler before spawn.\n");
         exit(EXIT_FAILURE);
@@ -214,6 +231,9 @@ struct Task *struct Scheduler::spawn(trait Future<struct Void> *future) {
     }
     t->future = future;
     t->state = READY;
+    end = read_tsc();
+    g_noise.createTaskCost = end - start;
+    g_noise.createTaskCount++;
 
     int index = findQueue();
     if (index == 0) {
@@ -246,3 +266,4 @@ void struct Scheduler::destroy() {
         S.threads = NULL;
     }
 }
+

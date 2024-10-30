@@ -468,7 +468,7 @@ public:
   bool VisitStaticAssertDecl(StaticAssertDecl *D) {
     return Visit(D->getAssertExpr());
   }
-  
+
   bool VisitTypeAliasDecl(TypeAliasDecl *D) {
     return true;
   }
