@@ -169,13 +169,13 @@ void RewriteBSC::RewriteInclude() {
         while (*BufPtr == ' ' || *BufPtr == '\t')
           if (++BufPtr == MainBufEnd)
             return;
-        if (*BufPtr == '"') {
+        if (*BufPtr == '"' || *BufPtr == '<') {
           if (++BufPtr == MainBufEnd)
             return;
           std::string Buf = "";
           SourceLocation StartLoc =
               LocStart.getLocWithOffset(BufPtr - MainBufStart);
-          while (*BufPtr != '"') {
+          while (*BufPtr != '"' && *BufPtr != '>') {
             Buf += *BufPtr;
             if (++BufPtr == MainBufEnd)
               return;
