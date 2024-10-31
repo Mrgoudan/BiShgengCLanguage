@@ -148,6 +148,9 @@ static string concatFields(const VarDecl *VD,
       break;
     }
   }
+  if (count == 0) {
+    contactedFields += "*" + VD->getNameAsString();
+  }
   if (count < fields.size()) {
     contactedFields += "...";
   }
@@ -919,7 +922,7 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldUse(
         set(VD, Ownership::Status::PartialMoved);
       }
     }
-    if (OPSOwnedOwnedFields[VD].empty()) {
+    if (OPSOwnedOwnedFields[VD].empty()  && !VD->getType()->getPointeeType()->isOwnedStructureType()) {
       if (!is(VD, Ownership::Status::Moved)) {
         resetAll(VD);
         set(VD, Ownership::Status::AllMoved);
@@ -1516,6 +1519,11 @@ Ownership::OwnershipStatus::checkCastOPS(const VarDecl *VD,
     diags.push_back(
         DiagInfo(Loc, DiagKind::InvalidCastUninit, VD->getNameAsString()));
   }
+  if (is(VD, PartialMoved)) {
+    diags.push_back(DiagInfo(Loc, DiagKind::InvalidCastFieldOwned,
+                             VD->getNameAsString(),
+                             concatFields(VD, OPSOwnedOwnedFields[VD])));
+  }
   if (!OPSOwnedOwnedFields[VD].empty() && diags.empty()) {
     diags.push_back(DiagInfo(Loc, DiagKind::InvalidCastFieldOwned,
                              VD->getNameAsString(),
@@ -1591,7 +1599,7 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkCastField(
         set(VD, Ownership::Status::PartialMoved);
       }
     }
-    if (OPSOwnedOwnedFields[VD].empty()) {
+    if (OPSOwnedOwnedFields[VD].empty() && !VD->getType()->getPointeeType()->isOwnedStructureType()) {
       if (!is(VD, Ownership::Status::Moved)) {
         resetAll(VD);
         set(VD, Ownership::Status::AllMoved);

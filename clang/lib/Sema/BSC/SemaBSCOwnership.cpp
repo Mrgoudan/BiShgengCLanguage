@@ -129,7 +129,7 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
       return false;
     } else {
       // owned struct S* <-> void* //legal
-      if (LHSPtrType->isVoidPointerType() || RHSPtrType->isVoidPointerType())
+      if (!LHSCanType.isOwnedQualified() && (LHSPtrType->isVoidPointerType() || RHSPtrType->isVoidPointerType()))
         return true;
       return CheckOwnedQualTypeAssignment(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType(), RLoc);
     }
