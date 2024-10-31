@@ -135,6 +135,7 @@ private:
       BorrowTargetInfo OldTarget,
       BorrowTargetInfo NewTarget);
   bool HasRawPointer(Expr *E);
+  bool IsRawPointer(QualType QT);
 };
 
 class BorrowRuleChecker : public StmtVisitor<BorrowRuleChecker> {
@@ -910,7 +911,7 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
               NLLRange.Begin, NLLRange.End, NLLRange.Kind));
       }
     }
-  }  
+  }
 }
 
 // Core rule of borrow:
@@ -1309,7 +1310,8 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
             UpdateTargetOfFieldsOfBorrowStruct(BorrowTargetInfo(VD), Targets[0]);
         }
       } else if (VQT->hasBorrowFields()) {
-        while (VQT->isPointerType())
+        // If RawPointerType, not get canonical type.
+        while (VQT->isPointerType() && !IsRawPointer(VQT))
           VQT = VQT->getPointeeType().getCanonicalType();
         if (auto RT = dyn_cast<RecordType>(VQT))
           if (RecordDecl *RD = RT->getDecl())
@@ -1336,6 +1338,11 @@ void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
       VisitFieldInitForBorrowFieldTargets(FD, VD, FieldInit);
     }
   } else if (auto ICE = dyn_cast<ImplicitCastExpr>(InitE)) {
+    // for ImplicitCastExpr, get last Expr. Example: struct S s = **p;
+    while(auto *UO = dyn_cast<UnaryOperator>(ICE->getSubExpr())) {
+      if (auto NICE = dyn_cast<ImplicitCastExpr>(UO->getSubExpr()))
+        ICE = NICE;
+    }
     // Init by another struct
     llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
     FindBorrowFieldsOfStruct(RD, BorrowFieldsOfStruct);
@@ -1354,6 +1361,7 @@ void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
         if (VarDecl *IVD = dyn_cast<VarDecl>(DRE->getDecl())) {
           Target.TargetVD = IVD;
           Target.TargetFieldPath = FieldPath.first;
+          Target.TargetIsRawPointerOrItsField = HasRawPointer(DRE);
         }
       } else if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
         // For example:
@@ -1366,6 +1374,7 @@ void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
         VisitMEForFieldPath(ME, TargetWithFieldPath);
         Target.TargetVD = TargetWithFieldPath.first;
         Target.TargetFieldPath = TargetWithFieldPath.second + FieldPath.first;
+        Target.TargetIsRawPointerOrItsField = HasRawPointer(ME);
       }
       Targets.push_back(Target);
       UpdateNLLWhenTargetFound(BorrowTargetInfo(BorrowWithFieldPath.first,
@@ -1557,6 +1566,10 @@ bool NLLCalculator::HasRawPointer(Expr *E) {
     return HasRawPointer(ICE->getSubExpr());    
 
   return false;
+}
+
+bool NLLCalculator::IsRawPointer(QualType QT) {
+  return (QT->isPointerType() && !QT.isOwnedQualified() && !QT.isBorrowQualified());
 }
 
 void NLLCalculator::VisitMEForFieldPath(
