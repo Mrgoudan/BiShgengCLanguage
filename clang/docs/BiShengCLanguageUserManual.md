@@ -1673,7 +1673,7 @@ if (t1 == t3) {} // warning: 如果trait类型不同会报warning
 
 #### 类型转换
 
-泛型 trati 类型转换只能在实现了对应泛型 trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。
+泛型 trait 类型转换只能在实现了对应泛型 trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。
 
 **规则：**
 
@@ -2339,6 +2339,41 @@ ownership-qualifier:
     }
     ```
 
+11. `owned`可以修饰 trait 类型，即`trait T* owned`，也表示该变量拥有其内部存储的数据的所有权。
+该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持`trait T* owned`与`trait T*`之间的类型转换。
+
+    ```c
+    trait T {
+        safe void release(This* owned this);
+    };
+
+    struct IPv4 {
+        char* buf1;
+    };
+
+    struct IPv6 {
+        char* buf1;
+        char* buf2;
+    };
+
+    safe void struct IPv4::release(struct IPv4* owned this) {
+        free(this->buf1);
+        safe_free((void* owned)this);
+    }
+
+    safe void struct IPv6::release(struct IPv6* owned this) {
+        free(this->buf1);
+        free(this->buf2);
+        safe_free((void* owned)this);
+    }
+
+    impl trait T for IPv4;
+    impl trait T for IPv6;
+
+    void cleanup(trait T* owned t) {
+        t->release();
+    }
+    ```
 
 #### 3. 所有权状态转移规则
 
