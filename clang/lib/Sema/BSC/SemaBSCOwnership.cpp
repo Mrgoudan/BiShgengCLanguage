@@ -59,6 +59,10 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
   bool IsPointer = LHSPtrType && RHSPtrType;
 
+  if (RHSCanType->isDependentType()) {
+    return true;
+  }
+
   // legal cases:
   // 'int owned'    <->  'int owned'                      // same type same owned
   // 'int'          <->  'owned int'                      // same type diff owned
