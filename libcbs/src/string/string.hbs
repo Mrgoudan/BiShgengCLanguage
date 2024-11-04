@@ -31,7 +31,6 @@ safe size_t String::length(const String* borrow this);
 safe String String::new(void);
 safe void String::push(String* borrow this, char value);
 safe void String::set(String* borrow this, size_t index, char value);
-safe void String::set_len(String* borrow this, size_t len);
 safe void String::shrink_to_fit(String* borrow this);
 safe String String::slice(const String* borrow this, size_t start, size_t length);
 safe String String::with_capacity(size_t cap);

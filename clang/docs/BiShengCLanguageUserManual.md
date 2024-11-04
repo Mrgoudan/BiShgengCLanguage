@@ -3997,7 +3997,6 @@ String new_s = world.slice(1, 4);
 |`safe String String::new(void)`|创建一个空的字符串|String s = String::new();|
 |`safe void String::push(String* borrow this, char value)`|向字符串的尾部插入一个值为value的元素|s.push('h');|
 |`safe void String::set(String* borrow this, size_t index, char value)`|将字符串中下标为index的元素置为value(**要做边界检查**)|s.set(3, '5');|
-|`safe void String::set_len(String* borrow this, size_t len)`|将字符串的长度设置为len|s.set_len(10);|
 |`safe void String::shrink_to_fit(String* borrow this)`|调整字符串占用的内存空间,将容量缩减到字符串的长度|s.shrink_to_fit();|
 |`safe String String::slice(const String* borrow this, size_t start, size_t length);`|字符串切片|String new_string = s.slice(0, 5);|
 |`safe String String::with_capacity(size_t cap)`|创建一个容量为cap的空字符串|String s = String::with_capacity(20);|

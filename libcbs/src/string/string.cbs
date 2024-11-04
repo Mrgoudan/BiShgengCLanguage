@@ -91,11 +91,6 @@ safe void String::set(String* borrow this, size_t index, char value) {
     return;
 }
 
-safe void String::set_len(String* borrow this, size_t len) {
-    this->vec.len = len;
-    return;
-}
-
 safe void String::shrink_to_fit(String* borrow this) {
     this->vec.shrink_to_fit();
 }
