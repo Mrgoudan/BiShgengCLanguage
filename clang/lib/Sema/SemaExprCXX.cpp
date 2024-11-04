@@ -4766,6 +4766,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   #if ENABLE_BSC
   case UTT_IsStruct:
   case UTT_IsMoveSemantic:
+  case UTT_IsOwnedPointer:
+  case UTT_IsOwnedStruct:
   #endif
     // Fall-through
 
@@ -4915,6 +4917,10 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isStructureType();
   case UTT_IsMoveSemantic:
     return T->isMoveSemanticType();
+  case UTT_IsOwnedPointer:
+    return T->isPointerType() && T.getCanonicalType().isOwnedQualified();
+  case UTT_IsOwnedStruct:
+    return T->isOwnedStructureType();
   #endif
   case UTT_IsClass:
     return T->isClassType() || T->isStructureType() || T->isInterfaceType();

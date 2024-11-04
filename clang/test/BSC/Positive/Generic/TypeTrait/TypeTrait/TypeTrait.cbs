@@ -20,7 +20,7 @@ owned struct A {public: int a; };
 typedef struct B { int *owned a; } B;
 typedef struct C { A a; } C;
 typedef struct D { B b; } D;
-
+typedef int *owned OwnedInt;
 int main() {
     struct S<int> s1;
     struct S<float> s2;
@@ -54,6 +54,12 @@ int main() {
     _Static_assert(is_move_semantic<A*>() == false, "fail");
     _Static_assert(is_move_semantic<struct S<A>>() == true, "fail");
     _Static_assert(is_move_semantic<struct S<int>>() == false, "fail");
+    _Static_assert(is_owned_pointer<int *owned>() == true, "fail");
+    _Static_assert(is_owned_pointer<OwnedInt>() == true, "fail");
+    _Static_assert(is_owned_pointer<int *owned *>() == false, "fail");
+    _Static_assert(is_owned_pointer<A>() == false, "fail");
+    _Static_assert(is_owned_struct<B>() == false, "fail");
+    _Static_assert(is_owned_struct<A>() == true, "fail");
     _Static_assert(is_array<int[]>() == true, "fail");
     _Static_assert(is_array<int>() == false, "fail");
     _Static_assert(is_function<int ()>() == true, "fail");

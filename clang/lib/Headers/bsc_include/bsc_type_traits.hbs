@@ -65,6 +65,14 @@ constexpr bool is_move_semantic<T>() {
     return __is_move_semantic(T);
 }
 
+constexpr bool is_owned_pointer<T>() {
+    return __is_owned_pointer(T);
+}
+
+constexpr bool is_owned_struct<T>() {
+    return __is_owned_struct(T);
+}
+
 constexpr bool is_void<T>() {
     return __is_void(T);
 }
