@@ -8,8 +8,8 @@ void test() {
     owned int arr1[10]; // expected-error {{type of array cannot qualified by 'owned}}
     SA arr2[3];         // expected-error {{type of array cannot qualified by 'owned'(even indirectly), 'SA' (aka 'struct A') contains 'owned' type}}
     struct A arr[4];    // expected-error {{type of array cannot qualified by 'owned'(even indirectly), 'struct A' contains 'owned' type}}
-    owned int* arr3[2]; // expected-error {{type of array cannot qualified by 'owned'(even indirectly), 'owned int *' contains 'owned' type}}
-    SA* arr4[3];        // expected-error {{type of array cannot qualified by 'owned'(even indirectly), 'SA *' (aka 'struct A *') contains 'owned' type}}
+    owned int* arr3[2];
+    SA* arr4[3];
     return;
 }
 

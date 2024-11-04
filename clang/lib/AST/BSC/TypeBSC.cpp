@@ -18,6 +18,10 @@
 
 using namespace clang;
 
+// hasOwnedFields is used to determine whether a type has a field
+// that is directly or indirectly qualified by owned.
+// If you want to determine whether a type is a move semantic type,
+// use isMoveSemanticType instead.
 bool PointerType::hasOwnedFields() const {
   QualType R = getPointeeType();
   if (R.isOwnedQualified()) {
@@ -29,6 +33,10 @@ bool PointerType::hasOwnedFields() const {
   return false;
 }
 
+// hasOwnedFields is used to determine whether a type has a field
+// that is directly or indirectly qualified by owned.
+// If you want to determine whether a type is a move semantic type,
+// use isMoveSemanticType instead.
 bool Type::hasOwnedFields() const {
   if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
     return RecTy->hasOwnedFields();
@@ -156,9 +164,8 @@ void RecordType::initOwnedStatus() const {
   while (RecordTypeList.size() > NextToCheckIndex) {
     for (FieldDecl *FD :
          RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
-      QualType FieldTy = FD->getType();
-      bool isOwnedStructType =
-          FieldTy.getCanonicalType()->isOwnedStructureType();
+      QualType FieldTy = FD->getType().getCanonicalType();
+      bool isOwnedStructType = FieldTy->isOwnedStructureType();
       if (FieldTy.isOwnedQualified() || isOwnedStructType) {
         hasOwn = ownedStatus::withOwned;
         return;
@@ -188,6 +195,10 @@ void RecordType::initOwnedStatus() const {
   return;
 }
 
+// hasOwnedFields is used to determine whether a type has a field
+// that is directly or indirectly qualified by owned.
+// If you want to determine whether a type is a move semantic type,
+// use isMoveSemanticType instead.
 bool RecordType::hasOwnedFields() const {
   if (hasOwn == ownedStatus::unInitOwned)
     initOwnedStatus();

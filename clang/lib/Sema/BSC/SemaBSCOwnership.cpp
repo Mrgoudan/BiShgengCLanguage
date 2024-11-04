@@ -36,7 +36,7 @@ void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, Stri
   } else if (T.getCanonicalType().isOwnedQualified() && T.getTypePtr()->getAs<TypedefType>()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
         << ownedTypedef << "owned" << Env << T;
-  } else if (T.getCanonicalType().getTypePtr()->hasOwnedFields()) {
+  } else if (T.getCanonicalType().getTypePtr()->isMoveSemanticType()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
         << ownedFields << "owned" << Env << T;
   }
@@ -216,7 +216,7 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
 bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
   if (!dyn_cast<CallExpr>(E)) return false;
   QualType RetType = E->getType().getCanonicalType();
-  if (RetType.isOwnedQualified() || (RetType->isRecordType() && RetType->hasOwnedFields())) {
+  if (RetType.isOwnedQualified() || RetType->isMoveSemanticType()) {
     std::string ExprString;
     llvm::raw_string_ostream ExprStream(ExprString);
     E->printPretty(ExprStream, nullptr, clang::PrintingPolicy(getLangOpts()));

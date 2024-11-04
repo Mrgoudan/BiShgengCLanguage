@@ -36,10 +36,9 @@ void test4(int** p0, owned int* p1, int* p3) {
 }
 
 // illegal cases
-void test5(float owned f1, float* owned f2, owned float* f3){
+void test5(float owned f1, float* owned f2){
     int owned a1 = (int owned)f1;   //expected-error {{incompatible owned types, cannot cast 'owned float' to 'owned int'}}
     int* owned a2 = (int* owned)f2; //expected-error {{incompatible owned types, cannot cast 'float *owned' to 'int *owned'}}
-    owned int* a3 = (owned int*)f3; //expected-error {{incompatible owned types, cannot cast 'owned float *' to 'owned int *'}}
     void* owned a4 = (void* owned)0;   //expected-error {{incompatible owned types, cannot cast 'int' to 'void *owned'}}
 }
 

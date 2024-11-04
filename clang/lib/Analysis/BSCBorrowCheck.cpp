@@ -433,7 +433,7 @@ void BorrowRuleChecker::VisitBinaryOperator(BinaryOperator *BO) {
     Visit(BO->getLHS());
 
     if (BO->getRHS()->getType().getCanonicalType().isOwnedQualified() ||
-        BO->getRHS()->getType().getCanonicalType()->hasOwnedFields()) {
+        BO->getRHS()->getType().getCanonicalType()->isMoveSemanticType()) {
       Op = Write;
     } else {
       Op = Read;
@@ -455,7 +455,7 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
       Expr *Init = VD->getInit();
       if (Init) {
         if (Init->getType().getCanonicalType().isOwnedQualified() ||
-            Init->getType().getCanonicalType()->hasOwnedFields()) {
+            Init->getType().getCanonicalType()->isMoveSemanticType()) {
           Op = Write;
         } else {
           Op = Read;

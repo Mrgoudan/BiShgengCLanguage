@@ -71,9 +71,8 @@ static bool IsTrackedType(QualType type) {
     return true;
 
   // case 3
-  // FIXME: hasOwnedFields() maybe implemented incorrect, to be confirmed later
   if ((type->isRecordType() && type.getTypePtr()->isOwnedStructureType()) ||
-      (type->isRecordType() && type->hasOwnedFields()))
+      (type->isRecordType() && type->isMoveSemanticType()))
     return true;
 
   return false;

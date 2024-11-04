@@ -19,13 +19,13 @@ void test1(int a) {
 }
 
 //owned callexpr
-owned int func2(owned int a) { return a; }
+int* owned func2(int* owned a) { return a; }
 
-void test2(owned int a) {
-    owned int res1 = func2(a);
-    owned int res2 = func2(func2(a));
-    func2(a);   // expected-error {{memory leak because temporary variable 'func2(a)' is owned or indirect owned type, please fix it}}
-    func2(func2(a));    // expected-error {{memory leak because temporary variable 'func2(func2(a))' is owned or indirect owned type, please fix it}}
+void test2(int* owned a, int* owned b) {
+    int* owned res1 = func2(a);
+    int* owned res2 = func2(func2(b));
+    func2(res1);   // expected-error {{memory leak because temporary variable 'func2(res1)' is owned or indirect owned type, please fix it}}
+    func2(func2(res2));    // expected-error {{memory leak because temporary variable 'func2(func2(res2))' is owned or indirect owned type, please fix it}}
     return;
 
 }

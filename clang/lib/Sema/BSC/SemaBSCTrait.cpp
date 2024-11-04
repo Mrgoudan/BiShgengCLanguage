@@ -290,7 +290,8 @@ Expr *Sema::ConvertParmTraitToStructTrait(Expr *UO, QualType ProtoArgType,
   LookupVar->setIsUsed();
 
   QualType VoidPT = Context.getPointerType(Context.VoidTy);
-  if (ProtoArgType->hasOwnedFields() && UO->getType().isOwnedQualified())
+  if ((ProtoArgType.isOwnedQualified() || ProtoArgType->isMoveSemanticType()) &&
+      UO->getType().isOwnedQualified())
     VoidPT.addOwned();
   else if (ProtoArgType->hasBorrowFields() && UO->getType().isBorrowQualified())
     VoidPT.addBorrow();
