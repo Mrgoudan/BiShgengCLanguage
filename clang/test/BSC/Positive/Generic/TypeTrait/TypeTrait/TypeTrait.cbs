@@ -129,153 +129,163 @@ int main() {
     return 0;
 }
 
-// CHECK: _Bool __attribute__((weak)) is_integral_int(void);
+// CHECK: static _Bool is_integral_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_integral_float(void);
+// CHECK: static _Bool is_integral_float(void);
 
-// CHECK: _Bool __attribute__((weak)) is_floating_point_float(void);
+// CHECK: static _Bool is_integral_struct_A(void);
 
-// CHECK: _Bool __attribute__((weak)) is_floating_point_int(void);
+// CHECK: _Bool is_floating_point_float(void);
 
-// CHECK: _Bool __attribute__((weak)) is_signed_int(void);
+// CHECK: _Bool is_floating_point_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_signed_unsigned_int(void);
+// CHECK: _Bool is_signed_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_unsigned_unsigned_int(void);
+// CHECK: _Bool is_signed_unsigned_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_unsigned_int(void);
+// CHECK: _Bool is_unsigned_unsigned_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_pointer_int_P(void);
+// CHECK: _Bool is_unsigned_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_pointer_int(void);
+// CHECK: _Bool is_pointer_int_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_function_int_LPvoidRP(void);
+// CHECK: _Bool is_pointer_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_function_int(void);
+// CHECK: _Bool is_function_int_LPvoidRP(void);
 
-// CHECK: _Bool __attribute__((weak)) is_array_intLBRB(void);
+// CHECK: _Bool is_function_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_array_int(void);
+// CHECK: _Bool is_array_intLBRB(void);
 
-// CHECK: _Bool __attribute__((weak)) is_struct_struct_G(void);
+// CHECK: _Bool is_array_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_struct_struct_S_int(void);
+// CHECK: _Bool is_struct_struct_G(void);
 
-// CHECK: _Bool __attribute__((weak)) is_struct_int(void);
+// CHECK: _Bool is_struct_struct_S_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_union_union_U(void);
+// CHECK: _Bool is_struct_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_union_int(void);
+// CHECK: _Bool is_union_union_U(void);
 
-// CHECK: _Bool __attribute__((weak)) is_enum_enum_E(void);
+// CHECK: _Bool is_union_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_enum_int(void);
+// CHECK: _Bool is_enum_enum_E(void);
 
-// CHECK: _Bool __attribute__((weak)) is_const_const_int(void);
+// CHECK: _Bool is_enum_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_const_int(void);
+// CHECK: _Bool is_const_const_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_volatile_volatile_int(void);
+// CHECK: _Bool is_const_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_volatile_int(void);
+// CHECK: _Bool is_volatile_volatile_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_void_void(void);
+// CHECK: _Bool is_volatile_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_void_int(void);
+// CHECK: _Bool is_void_void(void);
 
-// CHECK: _Bool __attribute__((weak)) is_same_int_int(void);
+// CHECK: _Bool is_void_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_same_int_float(void);
+// CHECK: _Bool is_same_int_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_same_struct_G_struct_G(void);
+// CHECK: _Bool is_same_int_float(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_float(void);
+// CHECK: _Bool is_same_struct_G_struct_G(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_int_LPvoidRP(void);
+// CHECK: _Bool is_convertible_int_float(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_struct_G_struct_G(void);
+// CHECK: _Bool is_convertible_int_int_LPvoidRP(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_struct_G_struct_S_int(void);
+// CHECK: _Bool is_convertible_struct_G_struct_G(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_const_int(void);
+// CHECK: _Bool is_convertible_struct_G_struct_S_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_unsigned_int(void);
+// CHECK: _Bool is_convertible_int_const_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_void(void);
+// CHECK: _Bool is_convertible_int_unsigned_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_int_P(void);
+// CHECK: _Bool is_convertible_int_void(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_P_void_P(void);
+// CHECK: _Bool is_convertible_int_int_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_P_float_P(void);
+// CHECK: _Bool is_convertible_int_P_void_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_void_P_int_P(void);
+// CHECK: _Bool is_convertible_int_P_float_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_P_intLBRB(void);
+// CHECK: _Bool is_convertible_void_P_int_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_intLBRB_int_P(void);
+// CHECK: _Bool is_convertible_int_P_intLBRB(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_LPPRPLPvoidRP_int_LPvoidRP(void);
+// CHECK: _Bool is_convertible_intLBRB_int_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_LPvoidRP_int_LPPRPLPvoidRP(void);
+// CHECK: _Bool is_convertible_int_LPPRPLPvoidRP_int_LPvoidRP(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_Pconst_int_P(void);
+// CHECK: _Bool is_convertible_int_LPvoidRP_int_LPPRPLPvoidRP(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_P_int(void);
+// CHECK: _Bool is_convertible_int_Pconst_int_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_P_char_P(void);
+// CHECK: _Bool is_convertible_int_P_int(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_char(void);
+// CHECK: _Bool is_convertible_int_P_char_P(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_PLBRB_int_PP(void);
+// CHECK: _Bool is_convertible_int_char(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_PLBRB_char_PP(void);
+// CHECK: _Bool is_convertible_int_PLBRB_int_PP(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_PP_int_PLBRB(void);
+// CHECK: _Bool is_convertible_int_PLBRB_char_PP(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_LPPRPLBRB_intLBRB(void);
+// CHECK: _Bool is_convertible_int_PP_int_PLBRB(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_intLBRB_int_LPPRPLBRB(void);
+// CHECK: _Bool is_convertible_int_LPPRPLBRB_intLBRB(void);
 
-// CHECK: _Bool __attribute__((weak)) is_convertible_int_P_int_LPPRPLBRB(void);
+// CHECK: _Bool is_convertible_intLBRB_int_LPPRPLBRB(void);
 
-// CHECK: unsigned long __attribute__((weak)) rank_int(void);
+// CHECK: _Bool is_convertible_int_P_int_LPPRPLBRB(void);
 
-// CHECK: unsigned long __attribute__((weak)) rank_intLBRB(void);
+// CHECK: size_t rank_int(void);
 
-// CHECK: unsigned long __attribute__((weak)) rank_intLB3RB(void);
+// CHECK: size_t rank_intLBRB(void);
 
-// CHECK: unsigned long __attribute__((weak)) rank_intLB3RBLB4RB(void);
+// CHECK: size_t rank_intLB3RB(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_int_0(void);
+// CHECK: size_t rank_intLB3RBLB4RB(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_int_1(void);
+// CHECK: size_t extent_int_0(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLBRB_0(void);
+// CHECK: size_t extent_int_1(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RB_0(void);
+// CHECK: size_t extent_intLBRB_0(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RB_1(void);
+// CHECK: size_t extent_intLB3RB_0(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RBLB4RB_0(void);
+// CHECK: size_t extent_intLB3RB_1(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RBLB4RB_1(void);
+// CHECK: size_t extent_intLB3RBLB4RB_0(void);
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RBLB4RB_2(void);
+// CHECK: size_t extent_intLB3RBLB4RB_1(void);
 
-// CHECK: void __attribute__((weak)) struct_S_int_foo(struct S_int *this);
+// CHECK: size_t extent_intLB3RBLB4RB_2(void);
 
-// CHECK: void __attribute__((weak)) struct_S_float_foo(struct S_float *this);
+// CHECK: void struct_S_int_foo(struct S_int *this);
 
-// CHECK: void __attribute__((weak)) bar_int(void);
+// CHECK: void struct_S_float_foo(struct S_float *this);
 
-// CHECK: void __attribute__((weak)) bar_float(void);
+// CHECK: static void struct_S_struct_A_foo(struct S_struct_A *this);
 
-// CHECK: int main(void) {
+// CHECK: void bar_int(void);
+
+// CHECK: void bar_float(void);
+
+// CHECK: void struct_A_D( struct A this);
+
+// CHECK:      int main(void) {
 // CHECK-NEXT:    struct S_int s1;
 // CHECK-NEXT:    struct S_float s2;
+// CHECK-NEXT:    struct S_struct_A s3 = {.a = {.a = 1}};
 // CHECK-NEXT:    struct_S_int_foo(&s1);
 // CHECK-NEXT:    struct_S_float_foo(&s2);
+// CHECK-NEXT:    struct_S_struct_A_foo(&s3);
+// CHECK-NEXT:    struct A a = s3.a;
+// CHECK-NEXT:    _Bool a_is_moved = 0;
 // CHECK-NEXT:    bar_int();
 // CHECK-NEXT:    bar_float();
 // CHECK-NEXT:    _Static_assert(1 == 1, "fail");
@@ -294,6 +304,20 @@ int main() {
 // CHECK-NEXT:    _Static_assert(1 == 1, "fail");
 // CHECK-NEXT:    _Static_assert(0 == 0, "fail");
 // CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(0 == 0, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(0 == 0, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(0 == 0, "fail");
+// CHECK-NEXT:    _Static_assert(0 == 0, "fail");
+// CHECK-NEXT:    _Static_assert(0 == 0, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
+// CHECK-NEXT:    _Static_assert(1 == 1, "fail");
 // CHECK-NEXT:    _Static_assert(0 == 0, "fail");
 // CHECK-NEXT:    _Static_assert(1 == 1, "fail");
 // CHECK-NEXT:    _Static_assert(0 == 0, "fail");
@@ -359,278 +383,280 @@ int main() {
 // CHECK-NEXT:    _Static_assert(3 == 3, "fail");
 // CHECK-NEXT:    _Static_assert(4 == 4, "fail");
 // CHECK-NEXT:    _Static_assert(0 == 0, "fail");
+// CHECK-NEXT:    if (!a_is_moved)
+// CHECK-NEXT:        struct_A_D(a);
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT:}
 
-// CHECK: _Bool __attribute_((_weak)) is_integral_int(void) {
+// CHECK: static _Bool is_integral_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_integral_float(void) {
+// CHECK: static _Bool is_integral_float(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_floating_point_float(void) {
+// CHECK: static _Bool is_floating_point_float(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_floating_point_int(void) {
+// CHECK: static _Bool is_floating_point_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_signed_int(void) {
+// CHECK: static _Bool is_signed_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_signed_unsigned_int(void) {
+// CHECK: static _Bool is_signed_unsigned_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_unsigned_unsigned_int(void) {
+// CHECK: static _Bool is_unsigned_unsigned_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_unsigned_int(void) {
+// CHECK: static _Bool is_unsigned_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_pointer_int_P(void) {
+// CHECK: static _Bool is_pointer_int_P(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_pointer_int(void) {
+// CHECK: static _Bool is_pointer_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_function_int_LPvoidRP(void) {
+// CHECK: static _Bool is_function_int_LPvoidRP(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_function_int(void) {
+// CHECK: static _Bool is_function_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_array_intLBRB(void) {
+// CHECK: static _Bool is_array_intLBRB(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_array_int(void) {
+// CHECK: static _Bool is_array_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_struct_struct_G(void) {
+// CHECK: static _Bool is_struct_struct_G(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_struct_struct_S_int(void) {
+// CHECK: static _Bool is_struct_struct_S_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_struct_int(void) {
+// CHECK: static _Bool is_struct_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_union_union_U(void) {
+// CHECK: static _Bool is_union_union_U(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_union_int(void) {
+// CHECK: static _Bool is_union_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_enum_enum_E(void) {
+// CHECK: static _Bool is_enum_enum_E(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_enum_int(void) {
+// CHECK: static _Bool is_enum_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_const_const_int(void) {
+// CHECK: static _Bool is_const_const_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_const_int(void) {
+// CHECK: static _Bool is_const_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_volatile_volatile_int(void) {
+// CHECK: static _Bool is_volatile_volatile_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_volatile_int(void) {
+// CHECK: static _Bool is_volatile_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_void_void(void) {
+// CHECK: static _Bool is_void_void(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_void_int(void) {
+// CHECK: static _Bool is_void_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_same_int_int(void) {
+// CHECK: static _Bool is_same_int_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_same_int_float(void) {
+// CHECK: static _Bool is_same_int_float(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_same_struct_G_struct_G(void) {
+// CHECK: static _Bool is_same_struct_G_struct_G(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_float(void) {
+// CHECK: static _Bool is_convertible_int_float(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_int_LPvoidRP(void) {
+// CHECK: static _Bool is_convertible_int_int_LPvoidRP(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_struct_G_struct_G(void) {
+// CHECK: static _Bool is_convertible_struct_G_struct_G(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_struct_G_struct_S_int(void) {
+// CHECK: static _Bool is_convertible_struct_G_struct_S_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_const_int(void) {
+// CHECK: static _Bool is_convertible_int_const_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_unsigned_int(void) {
+// CHECK: static _Bool is_convertible_int_unsigned_int(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_void(void) {
+// CHECK: static _Bool is_convertible_int_void(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_int_P(void) {
+// CHECK: static _Bool is_convertible_int_int_P(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_P_void_P(void) {
+// CHECK: static _Bool is_convertible_int_P_void_P(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_P_float_P(void) {
+// CHECK: static _Bool is_convertible_int_P_float_P(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_void_P_int_P(void) {
+// CHECK: static _Bool is_convertible_void_P_int_P(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_P_intLBRB(void) {
+// CHECK: static _Bool is_convertible_int_P_intLBRB(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_intLBRB_int_P(void) {
+// CHECK: static _Bool is_convertible_intLBRB_int_P(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_LPPRPLPvoidRP_int_LPvoidRP(void) {
+// CHECK: static _Bool is_convertible_int_LPPRPLPvoidRP_int_LPvoidRP(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_LPvoidRP_int_LPPRPLPvoidRP(void) {
+// CHECK: static _Bool is_convertible_int_LPvoidRP_int_LPPRPLPvoidRP(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_Pconst_int_P(void) {
+// CHECK: static _Bool is_convertible_int_Pconst_int_P(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_P_int(void) {
+// CHECK: static _Bool is_convertible_int_P_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_P_char_P(void) {
+// CHECK: static _Bool is_convertible_int_P_char_P(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_char(void) {
+// CHECK: static _Bool is_convertible_int_char(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_PLBRB_int_PP(void) {
+// CHECK: static _Bool is_convertible_int_PLBRB_int_PP(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_PLBRB_char_PP(void) {
+// CHECK: static _Bool is_convertible_int_PLBRB_char_PP(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_PP_int_PLBRB(void) {
+// CHECK: static _Bool is_convertible_int_PP_int_PLBRB(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_LPPRPLBRB_intLBRB(void) {
+// CHECK: static _Bool is_convertible_int_LPPRPLBRB_intLBRB(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_intLBRB_int_LPPRPLBRB(void) {
+// CHECK: static _Bool is_convertible_intLBRB_int_LPPRPLBRB(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool __attribute_((_weak)) is_convertible_int_P_int_LPPRPLBRB(void) {
+// CHECK: static _Bool is_convertible_int_P_int_LPPRPLBRB(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) rank_int(void) {
+// CHECK: size_t rank_int(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) rank_intLBRB(void) {
+// CHECK: size_t rank_intLBRB(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) rank_intLB3RB(void) {
+// CHECK: size_t rank_intLB3RB(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) rank_intLB3RBLB4RB(void) {
+// CHECK: size_t rank_intLB3RBLB4RB(void) {
 // CHECK-NEXT:    return 2;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_int_0(void) {
+// CHECK: size_t extent_int_0(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_int_1(void) {
+// CHECK: size_t extent_int_1(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLBRB_0(void) {
+// CHECK: size_t extent_intLBRB_0(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RB_0(void) {
+// CHECK: size_t extent_intLB3RB_0(void) {
 // CHECK-NEXT:    return 3;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RB_1(void) {
+// CHECK: size_t extent_intLB3RB_1(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RBLB4RB_0(void) {
+// CHECK: size_t extent_intLB3RBLB4RB_0(void) {
 // CHECK-NEXT:    return 3;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RBLB4RB_1(void) {
+// CHECK: size_t extent_intLB3RBLB4RB_1(void) {
 // CHECK-NEXT:    return 4;
 // CHECK-NEXT: }
 
-// CHECK: unsigned long __attribute__((weak)) extent_intLB3RBLB4RB_2(void) {
+// CHECK: size_t extent_intLB3RBLB4RB_2(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: void __attribute__((weak)) struct_S_int_foo(struct S_int *this) {
+// CHECK: void struct_S_int_foo(struct S_int *this) {
 // CHECK-NEXT:    if (1) {
 // CHECK-NEXT:        printf("integral\n");
 // CHECK-NEXT:    } else {
@@ -638,7 +664,7 @@ int main() {
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 
-// CHECK: void __attribute__((weak)) struct_S_float_foo(struct S_float *this) {
+// CHECK: void struct_S_float_foo(struct S_float *this) {
 // CHECK-NEXT:    if (0) {
 // CHECK-NEXT:        printf("integral\n");
 // CHECK-NEXT:    } else {
@@ -646,7 +672,15 @@ int main() {
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 
-// CHECK: void __attribute__((weak)) bar_int(void) {
+// CHECK: static void struct_S_struct_A_foo(struct S_struct_A *this) {
+// CHECK-NEXT:     if (0) {
+// CHECK-NEXT:         printf("integral\n");
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:         printf("not integral\n");
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+
+// CHECK: void bar_int(void) {
 // CHECK-NEXT:    if (1) {
 // CHECK-NEXT:        printf("integral\n");
 // CHECK-NEXT:    } else {
@@ -654,10 +688,13 @@ int main() {
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
 
-// CHECK: void __attribute__((weak)) bar_float(void) {
+// CHECK: void bar_float(void) {
 // CHECK-NEXT:    if (0) {
 // CHECK-NEXT:        printf("integral\n");
 // CHECK-NEXT:    } else {
 // CHECK-NEXT:        printf("not integral\n");
 // CHECK-NEXT:    }
 // CHECK-NEXT:}
+
+// CHECK: void struct_A_D( struct A this) {
+// CHECK-NEXT: }

@@ -36,15 +36,15 @@ int main(void) {
   return 0;
 }
 
-// CHECK: void safe_free(struct File * p) {
-// CHECK-NEXT: int x = 2;
+// CHECK:      void safe_free(FileID * p) {
+// CHECK-NEXT:   int x = 2;
 // CHECK-NEXT:   if (x > 1) {
 // CHECK-NEXT:     {
-// CHECK-NEXT:       free((struct File *)p);
+// CHECK-NEXT:       free((FileID *)p);
 // CHECK-NEXT:     }
 // CHECK-NEXT:   } else {
 // CHECK-NEXT:     {
-// CHECK-NEXT:       free((struct File *)p);
+// CHECK-NEXT:       free((FileID *)p);
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

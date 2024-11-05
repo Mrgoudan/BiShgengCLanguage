@@ -34,30 +34,32 @@ int main() {
   return res1 - res2;
 }
 
-// CHECK: struct MyStruct_int {
-// CHECK-NEXT:      int res;
-// CHECK-NEXT:    };
-
-// CHECK: union MyUnion_int {
-// CHECK-NEXT:        int res;
-// CHECK-NEXT:    };
-
-// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
-// CHECK-NEXT:        this->res = this->res + a;
-// CHECK-NEXT:        return this->res;
-// CHECK-NEXT:    }
-
-
-// CHECK: int __attribute__((weak)) union_MyUnion_int_foo(union MyUnion_int *this, int a) {
-// CHECK-NEXT:        this->res = this->res + a;
-// CHECK-NEXT:        return this->res;
-// CHECK-NEXT:    }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:        struct MyStruct_int s = {.res = 1};
-// CHECK-NEXT:        union MyUnion_int u = {.res = 5};
-// CHECK-NEXT:        int res1 = struct_MyStruct_int_foo(&s, 10);
-// CHECK-NEXT:        int res2 = union_MyUnion_int_foo(&u, 6);
-// CHECK-NEXT:        return res1 - res2;
-// CHECK-NEXT:    }
+// CHECK:      struct MyStruct_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: union MyUnion_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_foo(struct MyStruct_int *this, int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: static int union_MyUnion_int_foo(union MyUnion_int *this, int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct MyStruct_int s = {.res = 1};
+// CHECK-NEXT:   union MyUnion_int u = {.res = 5};
+// CHECK-NEXT:   int res1 = struct_MyStruct_int_foo(&s, 10);
+// CHECK-NEXT:   int res2 = union_MyUnion_int_foo(&u, 6);
+// CHECK-NEXT:   return res1 - res2;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
+// CHECK-NEXT:   this->res = this->res + a;
+// CHECK-NEXT:   return this->res;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int union_MyUnion_int_foo(union MyUnion_int *this, int a) {
+// CHECK-NEXT:   this->res = this->res + a;
+// CHECK-NEXT:   return this->res;
+// CHECK-NEXT: }

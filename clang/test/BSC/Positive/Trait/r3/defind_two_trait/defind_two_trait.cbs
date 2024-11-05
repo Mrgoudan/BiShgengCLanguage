@@ -44,47 +44,70 @@ int main() {
   return 0;
 }
 
-// CHECK: struct __Trait_F_Vtable {
-// CHECK-NEXT:     int (*foo)(void *);
+// CHECK:      #include <stdio.h>
+// CHECK:      #include <stdlib.h>
+
+// CHECK:      struct __Trait_F_Vtable {
+// CHECK-NEXT:   int (*foo)(void *);
 // CHECK-NEXT: };
 
-// CHECK: // CHECK-NEXT: struct __Trait_F {
-// CHECK-NEXT: // CHECK-NEXT:     void *data;
+// CHECK:      struct __Trait_F {
+// CHECK-NEXT:     void *data;
 // CHECK-NEXT:     struct __Trait_F_Vtable *vtable;
 // CHECK-NEXT: };
 
-// CHECK: struct __Trait_T_Vtable {
-// CHECK-NEXT:     int (*too)(void *);
+// CHECK:      struct __Trait_F_Owned {
+// CHECK-NEXT:     void * data;
+// CHECK-NEXT:     struct __Trait_F_Vtable *vtable;
 // CHECK-NEXT: };
 
-// CHECK: struct __Trait_T {
-// CHECK-NEXT:     void *data;
+// CHECK:      struct __Trait_F_Borrow {
+// CHECK-NEXT:     void * data;
+// CHECK-NEXT:     struct __Trait_F_Vtable *vtable;
+// CHECK-NEXT: };
+
+// CHECK:      struct __Trait_T_Vtable {
+// CHECK-NEXT:   int (*too)(void *);
+// CHECK-NEXT: };
+
+// CHECK:      struct __Trait_T {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_T_Vtable *vtable;
+// CHECK-NEXT: };
+
+// CHECK:      struct __Trait_T_Owned {
+// CHECK-NEXT:     void * data;
 // CHECK-NEXT:     struct __Trait_T_Vtable *vtable;
 // CHECK-NEXT: };
 
-// CHECK: int int_foo(int *this) {
-// CHECK-NEXT:     return 0;
+// CHECK:      struct __Trait_T_Borrow {
+// CHECK-NEXT:     void * data;
+// CHECK-NEXT:     struct __Trait_T_Vtable *vtable;
+// CHECK-NEXT: };
+
+// CHECK:      int int_foo(int *this) {
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 
-// CHECK: int int_too(int *this) {
-// CHECK-NEXT:     return *this * 10;
+// CHECK:      int int_too(int *this) {
+// CHECK-NEXT:   return *this * 10;
 // CHECK-NEXT: }
 
-// CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *))int_foo};
+// CHECK:      struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *))int_foo};
 
-// CHECK: struct __Trait_T_Vtable __int_trait_T = {.too = (int (*)(void *))int_too};
+// CHECK:      struct __Trait_T_Vtable __int_trait_T = {.too = (int (*)(void *))int_too};
 
-// CHECK: struct __Trait_F get(struct __Trait_T t) {
-// CHECK-NEXT:     int *c = malloc(sizeof(int));
-// CHECK-NEXT:     *c = 3;
-// CHECK-NEXT:     return (struct __Trait_F){.data = c, .vtable = &__int_trait_F};
+// CHECK:      struct __Trait_F get(struct __Trait_T t) {
+// CHECK-NEXT:   int *c = malloc(sizeof(int));
+// CHECK-NEXT:   *c = 3;
+// CHECK-NEXT:   return (struct __Trait_F){.data = c, .vtable = &__int_trait_F};
 // CHECK-NEXT: }
 
-// CHECK: int main(void) {
-// CHECK-NEXT:     int a = 3;
-// CHECK-NEXT:     struct __Trait_T t = {&a, &__int_trait_T};
-// CHECK-NEXT:     int b = t.vtable->too(t.data);
-// CHECK-NEXT:     struct __Trait_F f = get((struct __Trait_T){.data = &b, .vtable = &__int_trait_T});
-// CHECK-NEXT:     int c = f.vtable->foo(f.data);
-// CHECK-NEXT:     return 0;
+// CHECK:      int main(void) {
+// CHECK-NEXT:   int a = 3;
+// CHECK-NEXT:   struct __Trait_T t = {&a, &__int_trait_T};
+// CHECK-NEXT:   int b = t.vtable->too(t.data);
+// CHECK-NEXT:   struct __Trait_F f = get((struct __Trait_T){.data = &b, .vtable = &__int_trait_T});
+// CHECK-NEXT:   int c = f.vtable->foo(f.data);
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

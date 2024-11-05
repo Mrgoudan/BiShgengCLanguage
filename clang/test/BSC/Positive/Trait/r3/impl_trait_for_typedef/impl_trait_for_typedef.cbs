@@ -27,30 +27,40 @@ int main() {
   return 0;
 }
 
-// CHECK: struct __Trait_F_Vtable {
-// CHECK-NEXT: int (*foo)(void *, int);
+// CHECK:      struct __Trait_F_Vtable {
+// CHECK-NEXT:   int (*foo)(void *, int);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_F {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_F_Vtable *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_F_Vtable *vtable;
 // CHECK-NEXT: };
-
-// CHECK: struct S {
-// CHECK-NEXT: int x;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Owned {
+// CHECK-NEXT:   void * data;
+// CHECK-NEXT:   struct __Trait_F_Vtable *vtable;
 // CHECK-NEXT: };
-
-// CHECK: typedef struct S MyS;
-
-// CHECK: nt struct_S_foo(struct S *this, int a) {
-// CHECK-NEXT: return this->x + a;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Borrow {
+// CHECK-NEXT:   void * data;
+// CHECK-NEXT:   struct __Trait_F_Vtable *vtable;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S{
+// CHECK-NEXT:   int x;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef struct S MyS;
+// CHECK-EMPTY:
+// CHECK-NEXT: int struct_S_foo(struct S *this, int a) {
+// CHECK-NEXT:   return this->x + a;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_F_Vtable __struct_S_trait_F = {.foo = (int (*)(void *, int))struct_S_foo};
-
-// CHECK: int main(void) {
-// CHECK-NEXT: struct S s;
-// CHECK-NEXT: int a = struct_S_foo(&s, 1);
-// CHECK-NEXT: struct __Trait_F f = {&s, &__struct_S_trait_F};
-// CHECK-NEXT: return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Vtable __struct_S_trait_F = {.foo = (int (*)(void *, int))struct_S_foo};
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct S s;
+// CHECK-NEXT:   int a = struct_S_foo(&s, 1);
+// CHECK-NEXT:   struct __Trait_F f = {&s, &__struct_S_trait_F};
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

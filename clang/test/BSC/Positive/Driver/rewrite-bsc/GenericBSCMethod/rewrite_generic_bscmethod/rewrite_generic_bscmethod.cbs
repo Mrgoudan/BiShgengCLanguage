@@ -25,22 +25,23 @@ int main() {
   return res - 2;  
 }
 
-// CHECK: struct MyStruct_int {
-// CHECK-NEXT:      int res;
-// CHECK-NEXT:   };
-
-// CHECK: void int_increase(int *this) {
-// CHECK-NEXT:       *this = *this + 1;
-// CHECK-NEXT:   }
-
-// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(void) {
-// CHECK-NEXT:       int x = 1;
-// CHECK-NEXT:       int_increase(&x);
-// CHECK-NEXT:       return x;
-// CHECK-NEXT:   }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:       int res = struct_MyStruct_int_foo();
-// CHECK-NEXT:       return res - 2;
-// CHECK-NEXT:   }
+// CHECK:      struct MyStruct_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_foo(void);
+// CHECK-EMPTY:
+// CHECK-NEXT: void int_increase(int *this) {
+// CHECK-NEXT:   *this = *this + 1;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int res = struct_MyStruct_int_foo();
+// CHECK-NEXT:   return res - 2;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_foo(void) {
+// CHECK-NEXT:   int x = 1;
+// CHECK-NEXT:   int_increase(&x);
+// CHECK-NEXT:   return x;
+// CHECK-NEXT: }

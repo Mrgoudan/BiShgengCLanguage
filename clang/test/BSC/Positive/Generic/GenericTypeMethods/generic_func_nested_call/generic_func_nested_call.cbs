@@ -41,35 +41,38 @@ int main() {
     return res1 - res2;
 }
 
-// CHECK: struct S_int {
-// CHECK-NEXT:      int res;
-// CHECK-NEXT:    };
-
-// CHECK: struct MyStruct_int {
-// CHECK-NEXT:        int res;
-// CHECK-NEXT:        struct S_int s;
-// CHECK-NEXT:    };
-
-// CHECK: int __attribute__((weak)) struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
-// CHECK-NEXT:        this->res = a;
-// CHECK-NEXT:        return this->res;
-// CHECK-NEXT:    }
-
-
-// CHECK: int __attribute__((weak)) f1_int(int a) {
-// CHECK-NEXT:        struct MyStruct_int s = {.res = a};
-// CHECK-NEXT:        return struct_MyStruct_int_foo(&s, a);
-// CHECK-NEXT:    }
-
-
-// CHECK: int __attribute__((weak)) f2_int(int a) {
-// CHECK-NEXT:        struct MyStruct_int s = {.res = a};
-// CHECK-NEXT:        return struct_MyStruct_int_foo(&s, a);
-// CHECK-NEXT:    }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:        int res1 = f1_int(2);
-// CHECK-NEXT:        int res2 = f2_int(2);
-// CHECK-NEXT:        return res1 - res2;
-// CHECK-NEXT:    }
+// CHECK:      struct S_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct MyStruct_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT:   struct S_int s;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_foo(struct MyStruct_int *this, int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: static int f1_int(int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: static int f2_int(int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int res1 = f1_int(2);
+// CHECK-NEXT:   int res2 = f2_int(2);
+// CHECK-NEXT:   return res1 - res2;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_foo(struct MyStruct_int *this, int a) {
+// CHECK-NEXT:   this->res = a;
+// CHECK-NEXT:   return this->res;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int f1_int(int a) {
+// CHECK-NEXT:   struct MyStruct_int s = {.res = a};
+// CHECK-NEXT:   return struct_MyStruct_int_foo(&s, a);
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int f2_int(int a) {
+// CHECK-NEXT:   struct MyStruct_int s = {.res = a};
+// CHECK-NEXT:   return struct_MyStruct_int_foo(&s, a);
+// CHECK-NEXT: }

@@ -27,26 +27,27 @@ int main() {
   return res - 42;  
 }
 
-// CHECK: struct MyStruct1_int {
-// CHECK-NEXT:       int res;
-// CHECK-NEXT:   };
-
-// CHECK: struct MyStruct2_int {
-// CHECK-NEXT:       int res;
-// CHECK-NEXT:   };
-
-// CHECK: int __attribute__((weak)) struct_MyStruct1_int_foo(void) {
-// CHECK-NEXT:       return 42;
-// CHECK-NEXT:   }
-
-
-// CHECK: int __attribute__((weak)) struct_MyStruct2_int_foo(void) {
-// CHECK-NEXT:       return struct_MyStruct1_int_foo();
-// CHECK-NEXT:   }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:       int res = struct_MyStruct2_int_foo();
-// CHECK-NEXT:       return res - 42;
-// CHECK-NEXT:   }
-
+// CHECK:      struct MyStruct1_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct MyStruct2_int {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct1_int_foo(void);
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct2_int_foo(void);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int res = struct_MyStruct2_int_foo();
+// CHECK-NEXT:   return res - 42;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct1_int_foo(void) {
+// CHECK-NEXT:   return 42;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct2_int_foo(void) {
+// CHECK-NEXT:   return struct_MyStruct1_int_foo();
+// CHECK-NEXT: }

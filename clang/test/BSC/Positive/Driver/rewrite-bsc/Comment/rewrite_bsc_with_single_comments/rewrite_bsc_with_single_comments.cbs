@@ -3,21 +3,22 @@
 // RUN: %clang %t-rw.c -I %S -o %t-rw.output
 // RUN: %t-rw.output
 
-#include "rewrite_bsc_with_macro.h"
+// #include <stdio.h>
+//    Line2
+      //Line3
 
 
-VOID f() {}
+//end// #include <stdlib.h>
+
+#include <memory.h>    //           //  2asd 
 
 int main() {
-    return 0;
+  return 0;
 }
 
-// CHECK:      void f(void) {
-// CHECK-NEXT: }
+// CHECK:      #include <memory.h>
+// CHECK-EMPTY:
 // CHECK-EMPTY:
 // CHECK-NEXT: int main() {
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
-
-// CHECK-NOT:  VOID f() {}
-// CHECK-EMPTY:

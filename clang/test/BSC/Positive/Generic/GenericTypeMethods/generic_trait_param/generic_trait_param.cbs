@@ -25,25 +25,25 @@ int main() {
   return 0;
 }
 
-// CHECK: struct __Trait_Future_Vtable_void_P;
-
-// CHECK: struct __Trait_Future_void_P {
+// CHECK:      struct __Trait_Future_Vtable_void_P;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_void_P {
 // CHECK-NEXT:     void *data;
 // CHECK-NEXT:     struct __Trait_Future_Vtable_void_P *vtable;
 // CHECK-NEXT: };
-
-// CHECK: struct A_void_P {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct A_void_P {
 // CHECK-NEXT: };
-
-// CHECK: void __attribute__((weak)) struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future);
-
-// CHECK: int main(void) {
-// CHECK-NEXT:     struct A_void_P s;
-// CHECK-NEXT:     struct __Trait_Future_void_P future;
-// CHECK-NEXT:     struct_A_void_P_foo(&s, future);
-// CHECK-NEXT:     struct_A_void_P_foo(&s, future);
-// CHECK-NEXT:     return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct A_void_P s;
+// CHECK-NEXT:   struct __Trait_Future_void_P future;
+// CHECK-NEXT:   struct_A_void_P_foo(&s, future);
+// CHECK-NEXT:   struct_A_void_P_foo(&s, future);
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
-
-// CHECK: void __attribute__((weak)) struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future) {
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future) {
 // CHECK-NEXT: }

@@ -21,25 +21,28 @@ int main() {
   return 0;
 }
 
-// CHECK: struct S_int {
-// CHECK-NEXT:       int t;
-// CHECK-NEXT:   };
-
-// CHECK: struct S_double {
-// CHECK-NEXT:       double t;
-// CHECK-NEXT:   };
-
-// CHECK: void __attribute__((weak)) struct_S_int_f(struct S_int *this) {
-// CHECK-NEXT:   }
-
-// CHECK: void __attribute__((weak)) struct_S_double_f(struct S_double *this) {
-// CHECK-NEXT:   }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:       struct S_int s1;
-// CHECK-NEXT:       struct_S_int_f(&s1);
-// CHECK-NEXT:       struct S_double s2;
-// CHECK-NEXT:       struct_S_double_f(&s2);
-// CHECK-NEXT:       return 0;
-// CHECK-NEXT:   }
+// CHECK:      struct S_int {
+// CHECK-NEXT:   int t;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S_double {
+// CHECK-NEXT:   double t;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_S_int_f(struct S_int *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_S_double_f(struct S_double *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct S_int s1;
+// CHECK-NEXT:   struct_S_int_f(&s1);
+// CHECK-NEXT:   struct S_double s2;
+// CHECK-NEXT:   struct_S_double_f(&s2);
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_S_int_f(struct S_int *this) {
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_S_double_f(struct S_double *this) {
+// CHECK-NEXT: }

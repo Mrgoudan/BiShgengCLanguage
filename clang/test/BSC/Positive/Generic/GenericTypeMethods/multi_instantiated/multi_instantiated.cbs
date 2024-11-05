@@ -38,36 +38,38 @@ int main() {
   return res1 + res2 - res3;  
 }
 
-// CHECK: struct MyStruct_int {
-// CHECK-NEXT:      int isPending;
-// CHECK-NEXT:       int res;
-// CHECK-NEXT:   };
-
-// CHECK: struct MyStruct_int foo(struct MyStruct_int *a) {
-// CHECK-NEXT:       return *a;
-// CHECK-NEXT:   }
-
-// CHECK: int __attribute__((weak)) struct_MyStruct_int_bar(struct MyStruct_int *this, int a) {
-// CHECK-NEXT:       return a;
-// CHECK-NEXT:   }
-
-
-// CHECK: int f(void) {
-// CHECK-NEXT:       struct MyStruct_int p;
-// CHECK-NEXT:       int res1 = struct_MyStruct_int_bar(&p, 10);
-// CHECK-NEXT:       int res2 = struct_MyStruct_int_bar(&p, 12);
-// CHECK-NEXT:       return res1 + res2;
-// CHECK-NEXT:   }
-
-// CHECK: int __attribute__((weak)) struct_MyStruct_int_poll(struct MyStruct_int *this, int a) {
-// CHECK-NEXT:       return a;
-// CHECK-NEXT:   }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:       struct MyStruct_int p;
-// CHECK-NEXT:       int res1 = struct_MyStruct_int_poll(&p, 10);
-// CHECK-NEXT:       int res2 = struct_MyStruct_int_poll(&p, 12);
-// CHECK-NEXT:       int res3 = f();
-// CHECK-NEXT:       return res1 + res2 - res3;
-// CHECK-NEXT:   }
+// CHECK:      struct MyStruct_int {
+// CHECK-NEXT:   int isPending;
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_bar(struct MyStruct_int *this, int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_poll(struct MyStruct_int *this, int a);
+// CHECK-EMPTY:
+// CHECK-NEXT: struct MyStruct_int foo(struct MyStruct_int *a) {
+// CHECK-NEXT:   return *a;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int f(void) {
+// CHECK-NEXT:   struct MyStruct_int p;
+// CHECK-NEXT:   int res1 = struct_MyStruct_int_bar(&p, 10);
+// CHECK-NEXT:   int res2 = struct_MyStruct_int_bar(&p, 12);
+// CHECK-NEXT:   return res1 + res2;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct MyStruct_int p;
+// CHECK-NEXT:   int res1 = struct_MyStruct_int_poll(&p, 10);
+// CHECK-NEXT:   int res2 = struct_MyStruct_int_poll(&p, 12);
+// CHECK-NEXT:   int res3 = f();
+// CHECK-NEXT:   return res1 + res2 - res3;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_bar(struct MyStruct_int *this, int a) {
+// CHECK-NEXT:   return a;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static int struct_MyStruct_int_poll(struct MyStruct_int *this, int a) {
+// CHECK-NEXT:   return a;
+// CHECK-NEXT: }

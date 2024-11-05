@@ -59,55 +59,64 @@ int main() {
 // CHECK: struct __Trait_F_Vtable {
 // CHECK-NEXT: int (*foo)(void *);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_F {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F {
 // CHECK-NEXT: void *data;
 // CHECK-NEXT: struct __Trait_F_Vtable *vtable;
 // CHECK-NEXT: };
-
-// CHECK: int int_foo(int *this) {
-// CHECK-NEXT: return 2;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Owned {
+// CHECK-NEXT:     void * data;
+// CHECK-NEXT:     struct __Trait_F_Vtable *vtable;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Borrow {
+// CHECK-NEXT:     void * data;
+// CHECK-NEXT:     struct __Trait_F_Vtable *vtable;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_foo(int *this) {
+// CHECK-NEXT:   return 2;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *))int_foo};
-
-
-// CHECK: int traitPtrEqualTraitPtr(void) {
-// CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_F f = {&a, &__int_trait_F};
-// CHECK-NEXT: struct __Trait_F e = {&a, &__int_trait_F};
-// CHECK-NEXT: if (f.data != e.data || f.vtable != e.vtable) {
-// CHECK-NEXT: return 1;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(void *))int_foo};
+// CHECK-EMPTY:
+// CHECK-NEXT: int traitPtrEqualTraitPtr(void) {
+// CHECK-NEXT:   int a = 1;
+// CHECK-NEXT:   struct __Trait_F f = {&a, &__int_trait_F};
+// CHECK-NEXT:   struct __Trait_F e = {&a, &__int_trait_F};
+// CHECK-NEXT:   if (f.data != e.data || f.vtable != e.vtable) {
+// CHECK-NEXT:     return 1;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (f.data == e.data && f.vtable == e.vtable) {
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (e.data != f.data || e.vtable != f.vtable) {
+// CHECK-NEXT:     return 1;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return 1;
 // CHECK-NEXT: }
-// CHECK-NEXT: if (f.data == e.data && f.vtable == e.vtable) {
-// CHECK-NEXT: return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: int traitPtrNotEqualTraitPtr(void) {
+// CHECK-NEXT:     int a = 1;
+// CHECK-NEXT:     int b = 1;
+// CHECK-NEXT:     struct __Trait_F f = {&a, &__int_trait_F};
+// CHECK-NEXT:     struct __Trait_F e = {&b, &__int_trait_F};
+// CHECK-NEXT:     if (f.data == e.data && f.vtable == e.vtable) {
+// CHECK-NEXT:         return 1;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     if (f.data != e.data || f.vtable != e.vtable) {
+// CHECK-NEXT:         return 0;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     if (e.data != f.data || e.vtable != f.vtable) {
+// CHECK-NEXT:         return 0;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     return 1;
 // CHECK-NEXT: }
-// CHECK-NEXT: if (e.data != f.data || e.vtable != f.vtable) {
-// CHECK-NEXT: return 1;
-// CHECK-NEXT: }
-// CHECK-NEXT: return 1;
-// CHECK-NEXT: }
-
-// CHECK: int traitPtrNotEqualTraitPtr(void) {
-// CHECK-NEXT: int a = 1;
-// CHECK-NEXT: int b = 1;
-// CHECK-NEXT: struct __Trait_F f = {&a, &__int_trait_F};
-// CHECK-NEXT: struct __Trait_F e = {&b, &__int_trait_F};
-// CHECK-NEXT: if (f.data == e.data && f.vtable == e.vtable) {
-// CHECK-NEXT: return 1;
-// CHECK-NEXT: }
-// CHECK-NEXT: if (f.data != e.data || f.vtable != e.vtable) {
-// CHECK-NEXT: return 0;
-// CHECK-NEXT: }
-// CHECK-NEXT: if (e.data != f.data || e.vtable != f.vtable) {
-// CHECK-NEXT: return 0;
-// CHECK-NEXT: }
-// CHECK-NEXT: return 1;
-// CHECK-NEXT: }
-
-// CHECK: int main(void) {
-// CHECK-NEXT: if (traitPtrEqualTraitPtr() || traitPtrNotEqualTraitPtr()) {
-// CHECK-NEXT: return 1;
-// CHECK-NEXT: }
-// CHECK-NEXT: return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {
+// CHECK-NEXT:   if (traitPtrEqualTraitPtr() || traitPtrNotEqualTraitPtr()) {
+// CHECK-NEXT:     return 1;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

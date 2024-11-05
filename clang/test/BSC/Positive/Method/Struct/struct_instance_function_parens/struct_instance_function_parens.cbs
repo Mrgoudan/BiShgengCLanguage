@@ -18,18 +18,18 @@ void destroyQueue(queue** q) {
 }
 int main() {return 0;}
 
-// CHECK: typedef struct _queue {
-// CHECK-NEXT: }queue;
-
-// CHECK: queue *queue_reverse(queue *this) {
-// CHECK-NEXT:  return this;
+// CHECK:      struct _queue {
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef struct _queue queue;
+// CHECK-EMPTY:
+// CHECK-NEXT: queue *queue_reverse(queue *this) {
+// CHECK-NEXT:   return this;
 // CHECK-NEXT: }
-
-// CHECK: void destroyQueue(queue **q) {
-// CHECK-NEXT:  queue_reverse((*q));
-// CHECK-NEXT:     queue_reverse(&(**q));
+// CHECK-EMPTY:
+// CHECK-NEXT: void destroyQueue(queue **q) {
+// CHECK-NEXT:   queue_reverse((*q));
+// CHECK-NEXT:   queue_reverse(&(**q));
 // CHECK-NEXT: }
-
-// CHECK: int main(void) {
-// CHECK-NEXT:	return 0;
-// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {return 0;}

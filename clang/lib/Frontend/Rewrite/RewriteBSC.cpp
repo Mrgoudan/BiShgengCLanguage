@@ -12,21 +12,74 @@
 
 #if ENABLE_BSC
 
-#include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/BSC/WalkerBSC.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/ASTConsumers.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
 #include <set>
+#include <unordered_set>
 
 using namespace clang;
+
+static unsigned ReturnArgIndexInDeclList(ClassTemplateSpecializationDecl *CTSD,
+                                         const std::vector<Decl *> &DeclList) {
+  const TemplateArgumentList &TAL = CTSD->getTemplateInstantiationArgs();
+  unsigned InsertIndex = 0;
+  for (Decl *D : DeclList) {
+    for (unsigned int i = 0; i < TAL.size(); ++i) {
+      TemplateArgument TA = TAL.get(i);
+      if (TA.getKind() == TemplateArgument::Type &&
+          (TA.getAsType()->getAsCXXRecordDecl() == (D) ||
+           TA.getAsType()->getAsRecordDecl() == (D))) {
+        return InsertIndex + 1;
+      }
+    }
+    InsertIndex++;
+  }
+  return 0;
+}
+
+/// EndsWith - Check if a string ends with a given suffix.
+static bool EndsWith(const std::string &str, const std::string &suffix) {
+  if (str.length() >= suffix.length()) {
+    return 0 ==
+           str.compare(str.length() - suffix.length(), suffix.length(), suffix);
+  }
+  return false;
+}
+
+/// getInnerType - Get the inner type of a pointer type.
+static QualType getInnerType(QualType QT) {
+  QT = QT.IgnoreParens();
+  while (QT->isPointerType())
+    QT = QT->getPointeeType();
+  return QT;
+}
+
+/// HasTemplateSpecType - Determine whether the QualType contains instantiated
+/// generic type.
+static bool
+HasTemplateSpecType(QualType &QT,
+                    std::unordered_set<Decl *> &HasTemplateSpecSet) {
+  if (QT->getAs<TemplateSpecializationType>()) {
+    return true;
+  } else if (const RecordType *RT = QT->getAs<RecordType>()) {
+    return HasTemplateSpecSet.count(RT->getDecl());
+  }
+  return false;
+}
+
+/// IsInStandardHeaderFile - Check whether a SourceLocation is in standard
+/// header file.
+static bool IsInStandardHeaderFile(const SourceManager *SM,
+                                   const SourceLocation &Loc) {
+  bool isInMainFile = SM->isWrittenInMainFile(SM->getSpellingLoc(Loc)) ||
+                      SM->isWrittenInMainFile(SM->getExpansionLoc(Loc));
+  bool isInHBSFile = SM->isWrittenInHBSFile(SM->getSpellingLoc(Loc)) ||
+                     SM->isWrittenInHBSFile(SM->getExpansionLoc(Loc));
+  return !isInMainFile && !isInHBSFile;
+}
 
 namespace {
 class RewriteBSC : public ASTConsumer {
@@ -60,23 +113,33 @@ private:
 
   llvm::SmallPtrSet<Decl *, 16> DeclsWithoutBSCFeature;
 
-  SourceLocation BeginLocOfFirstDecl;
-  SourceLocation EndLocOfLastDecl;
+  // avoid repeatedly include of header files.
+  std::set<std::string> IncludedHeaders;
 
   /// Save rewritten decls to aviod rewritting one decl twice.
   std::vector<Decl *> RewrittenDecls;
 
-  void FindDeclsWithoutBSCFeature();
-  const std::string GetRewrittenString();
-  void printBSCLineInfo(Decl *D, llvm::raw_string_ostream &Buf);
-  /// Get the begin source location of the first decl and the end source
-  /// location of the last decl.
-  void GetSourceLocationsOfFirstDeclAndLastDecl();
+  // Save all rewritten texts.
+  std::string SStr;
+  llvm::raw_string_ostream Buf;
 
-  /// Rewrite include directive form `#include "xxx.hbs"` to `#include "xxx.h"`.
-  void RewriteInclude();
-  void RewriteMacroDefinition();
-  void RewriteDecls(DeclContext *DC);
+  void CollectIncludes();
+  void CollectIncludesInFile(FileID FID);
+  void FindDeclsWithoutBSCFeature();
+  void PrintDebugLineInfo(Decl *D);
+  std::set<FileID> RetrieveFileIDsFromIncludeStack(const Decl *D);
+  void RewriteMacroDirectives();
+  void RewriteDecls();
+  void RewriteNonGenericType(std::vector<Decl *> &DeclList,
+                             std::unordered_set<Decl *> &HasTemplateSpecSet);
+  void
+  RewriteInstantGenericType(std::vector<Decl *> &DeclList,
+                            std::unordered_set<Decl *> &HasTemplateSpecSet);
+  void
+  RewriteInstantFunctionDecl(std::vector<Decl *> &DeclList,
+                             std::set<Decl *> &RewritedFunctionDeclarationSet);
+  void RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList);
+  void RewriteInstantFunctionDef(std::vector<Decl *> &DeclList);
 
   void InsertText(SourceLocation Loc, StringRef Str, bool InsertAfter = true) {
     // If insertion succeeded or warning disabled return with no warning.
@@ -102,6 +165,14 @@ private:
     Diags.Report(Context->getFullLoc(Start), RewriteFailedDiag);
   }
 
+  void RemoveText(SourceLocation Start, unsigned Length) {
+    // Remove the specified text region.
+    if (!Rewrite.RemoveText(Start, Length))
+      return;
+
+    Diags.Report(Context->getFullLoc(Start), RewriteFailedDiag);
+  }
+
   void RemoveText(SourceLocation Start, SourceRange range) {
     // Remove the specified text region.
     if (!Rewrite.RemoveText(range))
@@ -116,7 +187,7 @@ RewriteBSC::RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
                        DiagnosticsEngine &D, const LangOptions &LOpts,
                        Preprocessor &pp, bool InsertLine)
     : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(std::move(OS)),
-      PP(pp), WithLine(InsertLine), Policy(LangOpts) {
+      PP(pp), WithLine(InsertLine), Policy(LangOpts), Buf(SStr) {
   RewriteFailedDiag = Diags.getCustomDiagID(
       DiagnosticsEngine::Warning,
       "rewriting sub-expression within a macro (may not be correct)");
@@ -146,47 +217,123 @@ void RewriteBSC::Initialize(ASTContext &context) {
   Rewrite.setSourceMgr(Context->getSourceManager(), Context->getLangOpts());
 }
 
-void RewriteBSC::RewriteInclude() {
-  SourceLocation LocStart = SM->getLocForStartOfFile(MainFileID);
-  StringRef MainBuf = SM->getBufferData(MainFileID);
-  const char *MainBufStart = MainBuf.begin();
-  const char *MainBufEnd = MainBuf.end();
-  size_t IncludeLen = strlen("include");
-  auto EndsWith = [](const std::string &str, const std::string &suffix) {
-    if (str.length() >= suffix.length()) {
-      return 0 == str.compare(str.length() - suffix.length(), suffix.length(),
-                              suffix);
+void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
+  // We only rewrite translation unit without any error.
+  if (Diags.hasErrorOccurred())
+    return;
+
+  // First, clear the original main file contents for rewrite.
+  RemoveText(SM->getLocForStartOfFile(MainFileID), MainFileEnd - MainFileStart);
+
+  // Second, collect all include directives.
+  CollectIncludes();
+
+  // Third, rewrite all macro directives.
+  RewriteMacroDirectives();
+
+  // Fourth, find decls without bsc features and rewrite all decls int the
+  // translation unit.
+  FindDeclsWithoutBSCFeature();
+  RewriteDecls();
+
+  // Finally, insert rewritten file contents into the target C file.
+  InsertText(SM->getLocForStartOfFile(MainFileID), Buf.str());
+
+  // Write the written string to OutFile.
+  if (const RewriteBuffer *RewriteBuf =
+          Rewrite.getRewriteBufferFor(MainFileID)) {
+    *OutFile << std::string(RewriteBuf->begin(), RewriteBuf->end());
+  } else {
+    *OutFile << std::string(MainFileStart, MainFileEnd);
+  }
+
+  OutFile->flush();
+}
+
+/// CollectIncludes - Collect all include macro directives in hbs and cbs files.
+void RewriteBSC::CollectIncludes() {
+  // Collect include directives written in cbs file.
+  CollectIncludesInFile(MainFileID);
+
+  std::set<FileID> ProcessedFiles = {MainFileID};
+  // Collect include directives written in hbs files which are included by cbs
+  // file directly or indirectly.
+  for (const Decl *D : TUDecl->decls()) {
+    std::set<FileID> FIDs = RetrieveFileIDsFromIncludeStack(D);
+    for (FileID FID : FIDs) {
+      if (ProcessedFiles.find(FID) == ProcessedFiles.end()) {
+        CollectIncludesInFile(FID);
+        ProcessedFiles.insert(FID);
+      }
     }
-    return false;
-  };
-  // Loop over the whole file, looking for includes.
-  for (const char *BufPtr = MainBufStart; BufPtr < MainBufEnd; ++BufPtr) {
-    if (*BufPtr == '#') {
-      if (++BufPtr == MainBufEnd)
+  }
+
+  // Insert all the include directives into the output stream.
+  for (auto IH : IncludedHeaders) {
+    Buf << "#include " << IH << "\n";
+  }
+  Buf << "\n";
+}
+
+/// CollectIncludesInFile - Given a file id, traverse the file text and collect
+/// include macro directives.
+/// We don't collect include macro directive which includes .hbs file.
+void RewriteBSC::CollectIncludesInFile(FileID FID) {
+  if (FID.isInvalid())
+    return;
+
+  StringRef FileContents = SM->getBufferData(FID);
+  size_t IncludeLen = strlen("include");
+  bool InBlockComment = false;
+  bool InSingleComment = false;
+  // Loop over the whole file, looking for all includes.
+  for (const char *it = FileContents.begin(), *ei = FileContents.end();
+       it != ei; ++it) {
+    if (*it == '\n') {
+      InSingleComment = false;
+    }
+    if (*it == '/' && it + 1 != ei && *(it + 1) == '/') {
+      InSingleComment = true;
+    }
+    if (*it == '/' && it + 1 != ei && *(it + 1) == '*') {
+      InBlockComment = true;
+    }
+    if (*it == '*' && it + 1 != ei && *(it + 1) == '/') {
+      InBlockComment = false;
+    }
+    if (*it == '#' && !InSingleComment && !InBlockComment) {
+      if (++it == ei)
         return;
-      while (*BufPtr == ' ' || *BufPtr == '\t')
-        if (++BufPtr == MainBufEnd)
+      // Skip spaces and tabs.
+      while (*it == ' ' || *it == '\t') {
+        if (++it == ei)
           return;
-      if (!strncmp(BufPtr, "include", IncludeLen)) {
-        BufPtr += IncludeLen;
-        if (++BufPtr == MainBufEnd)
+      }
+      if (!strncmp(it, "include", IncludeLen)) {
+        it += IncludeLen;
+        if (it == ei)
           return;
-        while (*BufPtr == ' ' || *BufPtr == '\t')
-          if (++BufPtr == MainBufEnd)
+        // Skip spaces and tabs.
+        while (*it == ' ' || *it == '\t') {
+          if (++it == ei)
             return;
-        if (*BufPtr == '"' || *BufPtr == '<') {
-          if (++BufPtr == MainBufEnd)
+        }
+        // Match '"' or '<'.
+        if (*it == '"' || *it == '<') {
+          std::string Header;
+          Header += *it;
+          if (++it == ei)
             return;
-          std::string Buf = "";
-          SourceLocation StartLoc =
-              LocStart.getLocWithOffset(BufPtr - MainBufStart);
-          while (*BufPtr != '"' && *BufPtr != '>') {
-            Buf += *BufPtr;
-            if (++BufPtr == MainBufEnd)
+          while (*it != '"' && *it != '>') {
+            Header += *it;
+            if (++it == ei)
               return;
           }
-          if (EndsWith(Buf, "hbs")) {
-            ReplaceText(StartLoc.getLocWithOffset(Buf.length() - 3), 3, "h");
+          Header += *it;
+          // If the included file is a hbs file, we just ignore it.
+          // Otherwise, we reserve it.
+          if (!EndsWith(Header, ".hbs\"") && !EndsWith(Header, ".hbs>")) {
+            IncludedHeaders.insert(Header);
           }
         }
       }
@@ -194,150 +341,26 @@ void RewriteBSC::RewriteInclude() {
   }
 }
 
-typedef std::pair<const IdentifierInfo *, MacroInfo *> id_macro_pair;
-void RewriteBSC::RewriteMacroDefinition() {
-  std::string SStr;
-  llvm::raw_string_ostream Buf(SStr);
-  llvm::SetVector<id_macro_pair> MacrosSet;
-  SourceLocation SL;
-
-  for (Preprocessor::macro_iterator I = PP.macro_begin(false),
-                                    E = PP.macro_end(false);
-       I != E; ++I) {
-    auto *MD = I->second.getLatest();
-
-    if (MD && MD->isDefined()) {
-      MacroInfo *MI = MD->getMacroInfo();
-      SourceLocation MacroLoc = MI->getDefinitionLoc();
-      if (SM->isWrittenInMainFile(MacroLoc) &&
-          !MacrosSet.count(id_macro_pair(I->first, MI)) &&
-          SM->isBeforeInTranslationUnit(BeginLocOfFirstDecl, MacroLoc) &&
-          SM->isBeforeInTranslationUnit(MacroLoc, EndLocOfLastDecl)) {
-        MacrosSet.insert(id_macro_pair(I->first, MI));
-        const char *startBuf = SM->getCharacterData(MI->getDefinitionLoc());
-        const char *endBuf = SM->getCharacterData(MI->getDefinitionEndLoc());
-        unsigned len = MI->isFunctionLike() ? 1 : MI->getDefinitionLength(*SM);
-        if (MD->getKind() == MacroDirective::MD_Define)
-          Buf << "#define ";
-        else if (MD->getKind() == MacroDirective::MD_Undefine)
-          Buf << "#undef ";
-        Buf << std::string(startBuf, endBuf - startBuf + len);
-        Buf << "\n";
-      }
-    }
-  }
-  InsertText(BeginLocOfFirstDecl, Buf.str());
-}
-
-void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
-  if (Diags.hasErrorOccurred())
-    return;
-
-  RewriteInclude(); // Rewrite include directives.
-  GetSourceLocationsOfFirstDeclAndLastDecl();
-  RewriteMacroDefinition();
-  RewriteDecls(C.getTranslationUnitDecl()); // Rewrite all decls.
-
-  if (const RewriteBuffer *RewriteBuf =
-          Rewrite.getRewriteBufferFor(MainFileID)) {
-    *OutFile << std::string(RewriteBuf->begin(), RewriteBuf->end());
-  } else {
-    // No change.
-    *OutFile << std::string(MainFileStart, MainFileEnd);
-  }
-  OutFile->flush();
-}
-
-void RewriteBSC::RewriteDecls(DeclContext *DC) {
-  // Step 1: Find decls without bsc features.
-  FindDeclsWithoutBSCFeature();
-  // Step 2: Get rewritten string
-  // For decls that have bsc features, we use pretty printer.
-  // For decls that do not have bsc features, we use the original decl string.
-  const std::string &Str = GetRewrittenString();
-
-  // Step 3: Replace buffered string with original decl string.
-  const char *startBuf = SM->getCharacterData(BeginLocOfFirstDecl);
-  const char *endBuf = SM->getCharacterData(EndLocOfLastDecl);
-  ReplaceText(BeginLocOfFirstDecl, endBuf - startBuf + 1, Str);
-}
-
-void RewriteBSC::GetSourceLocationsOfFirstDeclAndLastDecl() {
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    if (IsBSCDesugared(*D, Context)) {
-      continue;
-    }
-
-    CharSourceRange CSRange = SM->getExpansionRange((*D)->getSourceRange());
-    SourceRange Range = CSRange.getAsRange();
-    SourceLocation StartLoc = Range.getBegin();
-    SourceLocation EndLoc = Range.getEnd();
-    if (isa<ClassTemplateDecl>(*D) || isa<RecordDecl>(*D) ||
-        isa<EnumDecl>(*D) || isa<VarDecl>(*D) ||
-        (isa<FunctionDecl>(*D) &&
-         !cast<FunctionDecl>(*D)->isThisDeclarationADefinition())) {
-      // For several decls, the range doesn`t include the end semi ';' of the
-      // struct, so we need to shift end loc to right for 1.
-      // Note: here we make an assumption that there is no space between
-      // semicolon and decls.
-      EndLoc = EndLoc.getLocWithOffset(1);
-    }
-
-    if (SM->isWrittenInMainFile(StartLoc)) {
-      if (BeginLocOfFirstDecl.isInvalid()) {
-        BeginLocOfFirstDecl = StartLoc;
-      } else if (SM->isBeforeInTranslationUnit(StartLoc, BeginLocOfFirstDecl)) {
-        BeginLocOfFirstDecl = StartLoc;
-      }
-    }
-
-    if (SM->isWrittenInMainFile(EndLoc)) {
-      if (EndLocOfLastDecl.isInvalid()) {
-        EndLocOfLastDecl = EndLoc;
-      } else if (SM->isBeforeInTranslationUnit(EndLocOfLastDecl, EndLoc)) {
-        EndLocOfLastDecl = EndLoc;
-      }
-    }
-  }
-}
-
-static QualType getInnerType(QualType QT) {
-  QT = QT.IgnoreParens();
-  while (QT->isPointerType())
-    QT = QT->getPointeeType();
-  return QT;
-}
-
-// Determine whether the QualType contains instantiated generic type.
-static bool HasTemplateSpecType(QualType QT,
-                                std::set<Decl *> HasTemplateSpecSet) {
-  if (QT->getAs<TemplateSpecializationType>()) {
-    return true;
-  } else if (const RecordType *RT = QT->getAs<RecordType>()) {
-    return HasTemplateSpecSet.count(RT->getDecl());
-  }
-  return false;
-}
-
 void RewriteBSC::FindDeclsWithoutBSCFeature() {
   BSCFeatureFinder finder = BSCFeatureFinder(*Context);
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    switch ((*D)->getKind()) {
-    case Decl::Var:
+  for (Decl *D : TUDecl->decls()) {
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
+    }
+    switch (D->getKind()) {
+    case Decl::Enum:
+    case Decl::Function:
     case Decl::Record:
-    case Decl::Function: {
-      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
-          !SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
-        break;
-      }
-      if (!finder.Visit(*D)) {
-        DeclsWithoutBSCFeature.insert(*D);
-        if (RecordDecl *RD = dyn_cast<RecordDecl>(*D)) {
+    case Decl::Var: {
+      if (!finder.Visit(D)) {
+        DeclsWithoutBSCFeature.insert(D);
+        if (RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
           if (TypedefNameDecl *TND = RD->getTypedefNameForAnonDecl()) {
+            DeclsWithoutBSCFeature.insert(TND);
+          }
+        }
+        if (EnumDecl *ED = dyn_cast<EnumDecl>(D)) {
+          if (TypedefNameDecl *TND = ED->getTypedefNameForAnonDecl()) {
             DeclsWithoutBSCFeature.insert(TND);
           }
         }
@@ -350,206 +373,115 @@ void RewriteBSC::FindDeclsWithoutBSCFeature() {
   }
 }
 
-void RewriteBSC::printBSCLineInfo(Decl *D, llvm::raw_string_ostream &Buf) {
-  if (!WithLine) return;
-  unsigned LineNo = SM->getSpellingLineNumber(D->getBeginLoc()); // get bsc code line
-  Buf << "#line " << LineNo << " \"" << SM->getBufferName(D->getBeginLoc()) << "\"\n"; // insert bsc code line
+/// PrintDebugLineInfo - Print debug line info for each declaration.
+/// The debug info is composed of a `#line` macro directive, which contains
+/// the original line number and file name of the start of the declaration.
+void RewriteBSC::PrintDebugLineInfo(Decl *D) {
+  if (!WithLine)
+    return;
+  // Get the original line number of the declaration.
+  unsigned LineNo = SM->getSpellingLineNumber(D->getBeginLoc());
+  // Insert `#line` macro directive into Buf.
+  Buf << "#line " << LineNo << " \"" << SM->getBufferName(D->getBeginLoc())
+      << "\"\n";
 }
 
-bool argumentTypeDeclInDeclList(ClassTemplateSpecializationDecl *DD,
-                                const std::vector<Decl *> DeclList) {
-  auto &DDA = DD->getTemplateInstantiationArgs();
-  auto Ite = DeclList.begin();
-  while (Ite != DeclList.end()) {
-    for (unsigned int i = 0; i < DDA.size(); i++) {
-      if (DDA.get(i).getKind() == TemplateArgument::Type &&
-          (DDA.get(i).getAsType()->getAsCXXRecordDecl() == (*Ite) ||
-           DDA.get(i).getAsType()->getAsRecordDecl() == (*Ite))) {
-        return true;
+/// RetrieveFileIDsFromIncludeStack - For a given declaration, it has a include
+/// stack. Because we want to collect include macro directives in hbs files,
+/// we search the stack for hbs files, record them and return.
+std::set<FileID> RewriteBSC::RetrieveFileIDsFromIncludeStack(const Decl *D) {
+  // Get the FileID of D.
+  FileID CurFileID = SM->getFileID(SM->getSpellingLoc(D->getLocation()));
+  FileID PrevFileID = CurFileID;
+  std::set<FileID> FIDs;
+
+  if (CurFileID.isInvalid())
+    return FIDs;
+
+  while (true) {
+    const FileEntry *CurFileEntry = SM->getFileEntryForID(CurFileID);
+    if (!CurFileEntry)
+      break;
+    // Because hbs file can only be included by hbs file, c file and cbs file.
+    if (CurFileEntry->getName().endswith(".cbs") ||
+        CurFileEntry->getName().endswith(".c"))
+      break;
+    if (CurFileEntry->getName().endswith(".hbs")) {
+      FIDs.insert(CurFileID);
+    }
+
+    SourceLocation IncludeLoc = SM->getIncludeLoc(CurFileID);
+    if (IncludeLoc.isInvalid())
+      break;
+
+    PrevFileID = CurFileID;
+    CurFileID = SM->getFileID(IncludeLoc);
+  }
+
+  return FIDs;
+}
+
+/// RewriteMacroDirectives - This is called for rewriting all macro directives
+/// in the translation unit. We skip macro directives which is in the header
+/// files with the suffix .h. Currently we only handle the \#define and \#undef
+/// directives, and we only keep the latest definition. For other macro
+/// directives such as \#if, \#ifndef, \#else, \#elif, \#endif, \#pragma,
+/// \#error and \#line, we may support them in future version.
+/// Note: We need to preserve macro directives as much as possible for
+/// readability.
+void RewriteBSC::RewriteMacroDirectives() {
+  using id_macro_pair = std::pair<const IdentifierInfo *, MacroInfo *>;
+  llvm::SetVector<id_macro_pair> MacrosSet;
+
+  for (Preprocessor::macro_iterator I = PP.macro_begin(false),
+                                    E = PP.macro_end(false);
+       I != E; ++I) {
+    MacroDirective *MD = I->second.getLatest();
+
+    if (MD && MD->isDefined()) {
+      MacroInfo *MI = MD->getMacroInfo();
+      SourceLocation MacroLoc = MI->getDefinitionLoc();
+      if (!IsInStandardHeaderFile(SM, MacroLoc) &&
+          !MI->isUsedForHeaderGuard() &&
+          !MacrosSet.count(id_macro_pair(I->first, MI))) {
+        MacrosSet.insert(id_macro_pair(I->first, MI));
+        const char *startBuf = SM->getCharacterData(MacroLoc);
+        const char *endBuf = SM->getCharacterData(MI->getDefinitionEndLoc());
+        if (!MI->tokens_empty()) {
+          unsigned LenOfLastTok = MI->tokens().back().getLength();
+          if (MD->getKind() == MacroDirective::MD_Define) {
+            Buf << "#define ";
+          } else {
+            Buf << "#undef ";
+          }
+          Buf << std::string(startBuf, endBuf - startBuf + LenOfLastTok)
+              << "\n";
+        }
       }
     }
-    Ite++;
   }
-  return false;
+  Buf << "\n";
 }
 
-const std::string RewriteBSC::GetRewrittenString() {
-  std::string SStr;
-  llvm::raw_string_ostream Buf(SStr);
-
+/// RewriteDecls - This is called for rewriting all decls in the translation
+/// unit. We skip declarations of spelling location in the header file with the
+/// suffix .h. For other declarations, we seperate them into declarations with
+/// bsc features and declarations without bsc features.
+/// For declarations with bsc features, we use the original decl string.
+/// For declarations without bsc features, we use pretty printer.
+void RewriteBSC::RewriteDecls() {
   std::vector<Decl *> DeclList;
-  std::set<Decl *> HasTemplateSpecSet;
+  std::unordered_set<Decl *> HasTemplateSpecSet;
   // avoid repeatedly rewrite of Template Functions.
   std::set<Decl *> RewritedFunctionDeclarationSet;
-  auto EndsWith = [](const std::string &str, const std::string &suffix) {
-    if (str.length() >= suffix.length()) {
-      return 0 == str.compare(str.length() - suffix.length(), suffix.length(),
-                              suffix);
-    }
-    return false;
-  };
-  bool IsHBSFile = EndsWith(InFileName, "hbs");
 
-  // Step 1: Sort all struct/union/enum/typedef decls.
-  // Step 1.1: Put non-generic struct / union / enum / typedef decls into
+  // Step 1: Collect all non-generic struct/union/enum/typedef decls into
   // DeclList.
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    switch ((*D)->getKind()) {
-    case Decl::Record: {
-      RecordDecl *RD = cast<RecordDecl>(*D);
-      RecordDecl::field_iterator Field, FieldEnd;
-      bool HasTemplateSpec = false;
-      for (Field = RD->field_begin(), FieldEnd = RD->field_end();
-           Field != FieldEnd; ++Field) {
-        QualType FieldTy = getInnerType(Field->getType());
-        if (HasTemplateSpecType(FieldTy, HasTemplateSpecSet)) {
-          HasTemplateSpec = true;
-          HasTemplateSpecSet.insert(*D);
-          break;
-        }
-      }
-      // In the header file, skip the RecordDecl containing instantiated type.
-      // and move them to the .c file
-      if (IsHBSFile && HasTemplateSpec)
-        break;
-      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(RD->getBeginLoc())) &&
-          !SM->isWrittenInMainFile(SM->getSpellingLoc(RD->getEndLoc())) &&
-          !HasTemplateSpec)
-        break;
-      DeclList.push_back(*D);
-      break;
-    }
-    case Decl::Enum: {
-      if (SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
-          SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
-        DeclList.push_back(*D);
-        DeclsWithoutBSCFeature.insert(*D);
-        if (TypedefNameDecl *TND =
-                cast<EnumDecl>(*D)->getTypedefNameForAnonDecl()) {
-          DeclsWithoutBSCFeature.insert(TND);
-        }
-      }
-      break;
-    }
-    case Decl::TypeAlias:
-    case Decl::Typedef: {
-      TypedefNameDecl *TD = cast<TypedefNameDecl>(*D);
-      bool HasTemplateSpec = false;
-      if (const RecordType *RT = TD->getUnderlyingType()->getAs<RecordType>()) {
-        RecordDecl *RD = RT->getDecl();
-        HasTemplateSpec = HasTemplateSpecSet.count(RD);
-      } else if (const PointerType *PT = TD->getUnderlyingType()
-                                             .IgnoreParens()
-                                             ->getAs<PointerType>()) {
-        if (const FunctionType *FT =
-                PT->getPointeeType().IgnoreParens()->getAs<FunctionType>()) {
-          QualType ReturnTy = getInnerType(FT->getReturnType());
-          if (HasTemplateSpecType(ReturnTy, HasTemplateSpecSet))
-            HasTemplateSpec = true;
-          else if (auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
-            for (unsigned i = 0; i < FPT->getNumParams(); i++) {
-              QualType ParamTy = getInnerType(FPT->getParamType(i));
-              if (HasTemplateSpecType(ParamTy, HasTemplateSpecSet)) {
-                HasTemplateSpec = true;
-                break;
-              }
-            }
-          }
-        }
-      } else if (TD->getUnderlyingType().getCanonicalType()->isTraitType())
-        break;
-      // In the header file, skip the TypedefDecl containing instantiated type.
-      // and move them to the .c file
-      if (IsHBSFile && HasTemplateSpec)
-        break;
-      if (!SM->isWrittenInMainFile(SM->getSpellingLoc(TD->getBeginLoc())) &&
-          !SM->isWrittenInMainFile(SM->getSpellingLoc(TD->getEndLoc())) &&
-          !HasTemplateSpec)
-        break;
-      DeclList.push_back(*D);
-    }
-    default:
-      break;
-    }
-  }
+  RewriteNonGenericType(DeclList, HasTemplateSpecSet);
 
-  // Step 1.2: Insert instantiated stuct / union decls into DeclList.
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    // In the header file, skip instantiated stuct / union decls.
-    if (IsHBSFile) {
-      break;
-    }
-    switch ((*D)->getKind()) {
-    case Decl::ClassTemplate: {
-      ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
-      if (auto RD = dyn_cast<RecordDecl>(CT->getTemplatedDecl())) {
-        if (!RD->isCompleteDefinition()) {
-          break;
-        }
-      }
-      for (auto *DD : CT->specializations()) {
-        SourceLocation SL = DD->getPointOfInstantiation();
-        std::vector<Decl *>::iterator It = DeclList.begin();
-        bool Inserted = false;
-        while (It != DeclList.end()) {
-          if (!SL.isInvalid()) {
-            // Insert to vector if current Decl dependent me
-            if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(*It)) {
-              auto &TDA = TD->getTemplateInstantiationArgs();
+  // Step 2: Insert instantiated stuct/union decls into DeclList.
+  RewriteInstantGenericType(DeclList, HasTemplateSpecSet);
 
-              for (unsigned int i = 0; i < TDA.size(); i++) {
-                if (TDA.get(i).getKind() == TemplateArgument::Type &&
-                    TDA.get(i).getAsType()->getAsCXXRecordDecl() == DD) {
-                  It = DeclList.insert(It, DD);
-                  Inserted = true;
-                  break;
-                }
-              }
-              if (Inserted) {
-                break;
-              }
-            }
-            // Push it to back if a template argument type decl is in DeclList
-            if (!SM->isWrittenInMainFile(SL) &&
-                argumentTypeDeclInDeclList(DD, DeclList)) {
-              break;
-            }
-
-            if (SM->isBeforeInTranslationUnit(SL, (*It)->getBeginLoc())) {
-              It = DeclList.insert(It, DD);
-              Inserted = true;
-              break;
-            } else if (SM->isBeforeInTranslationUnit((*It)->getBeginLoc(),
-                                                     SL) &&
-                       SM->isBeforeInTranslationUnit(SL, (*It)->getEndLoc())) {
-              It = DeclList.insert(It, DD);
-              Inserted = true;
-              break;
-            } else if (!SM->isBeforeInTranslationUnit((*It)->getBeginLoc(),
-                                                      SL) &&
-                       !SM->isBeforeInTranslationUnit(SL,
-                                                      (*It)->getBeginLoc())) {
-              It = DeclList.insert(It, DD);
-              Inserted = true;
-              break;
-            }
-          }
-          It++;
-        }
-        if (Inserted == false) {
-          DeclList.push_back(DD);
-        }
-      }
-      break;
-    }
-    default:
-      break;
-    }
-  }
   // For struct Void which is desugared, we have to handle it specially.
   Decl *VoidStruct = nullptr;
   for (Decl *D : DeclList) {
@@ -577,13 +509,16 @@ const std::string RewriteBSC::GetRewrittenString() {
     if (D == VoidStruct) {
       continue;
     }
+    // For decls with bsc feature, we use pretty printer.
+    // For decls without bsc feature, we use original string text.
     if (DeclsWithoutBSCFeature.find(D) == DeclsWithoutBSCFeature.end()) {
       D->print(Buf, Policy);
       Buf << ";\n\n";
     } else {
       if (auto *TD = dyn_cast<TagDecl>(D)) {
-        if (TD->getTypedefNameForAnonDecl()) {
-        } else {
+        // For an anonymous tagdecl with typedef, don't print the tagdecl,
+        // because the corresponding typedef will print it.
+        if (!TD->getTypedefNameForAnonDecl()) {
           const char *startBuf = SM->getCharacterData(D->getBeginLoc());
           const char *endBuf = SM->getCharacterData(D->getEndLoc());
           Buf << std::string(startBuf, endBuf - startBuf + 1);
@@ -607,23 +542,152 @@ const std::string RewriteBSC::GetRewrittenString() {
     }
   }
 
-  // Step 2: Collect all instatiation function declarations.
+  // Step 3: Collect all instatiation function declarations.
   Policy.FunctionDeclaraionOnly = true;
+  RewriteInstantFunctionDecl(DeclList, RewritedFunctionDeclarationSet);
 
+  // Step 4: Collect non-generic function definitions and var decls.
+  Policy.FunctionDeclaraionOnly = false;
+  RewriteNonGenericFuncAndVar(DeclList);
+
+  // Step 5: Collect all instatiation function definition.
+  RewriteInstantFunctionDef(DeclList);
+}
+
+void RewriteBSC::RewriteNonGenericType(
+    std::vector<Decl *> &DeclList,
+    std::unordered_set<Decl *> &HasTemplateSpecSet) {
+  for (Decl *D : TUDecl->decls()) {
+    // Skip declarations in header files with suffix .h.
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
+    }
+    switch (D->getKind()) {
+    case Decl::Enum: {
+      DeclList.push_back(D);
+      break;
+    }
+    case Decl::Record: {
+      // If the RecordDecl has template specialization type, add it to the set.
+      RecordDecl *RD = cast<RecordDecl>(D);
+      for (FieldDecl *Field : RD->fields()) {
+        QualType FieldTy = getInnerType(Field->getType());
+        if (HasTemplateSpecType(FieldTy, HasTemplateSpecSet)) {
+          HasTemplateSpecSet.insert(D);
+          break;
+        }
+      }
+      DeclList.push_back(D);
+      break;
+    }
+    case Decl::TypeAlias:
+    case Decl::Typedef: {
+      TypedefNameDecl *TND = cast<TypedefNameDecl>(D);
+      // For typedef of trait type, we don't need it.
+      if (!TND->getUnderlyingType().getCanonicalType()->isTraitType())
+        DeclList.push_back(D);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}
+
+void RewriteBSC::RewriteInstantGenericType(
+    std::vector<Decl *> &DeclList,
+    std::unordered_set<Decl *> &HasTemplateSpecSet) {
   for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
                                   DEnd = TUDecl->decls_end();
        D != DEnd; ++D) {
-    // In the header file, skip all instatiation function declarations.
-    if (IsHBSFile) {
+    switch ((*D)->getKind()) {
+    case Decl::ClassTemplate: {
+      ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(*D);
+      // Skip incomplete generic struct decl.
+      if (RecordDecl *RD = dyn_cast<RecordDecl>(CTD->getTemplatedDecl())) {
+        if (!RD->isCompleteDefinition()) {
+          break;
+        }
+      }
+      // Insert each specialization into correct place.
+      for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations()) {
+        SourceLocation SL = CTSD->getPointOfInstantiation();
+        bool Inserted = false;
+        std::vector<Decl *>::iterator It = DeclList.begin();
+        while (It != DeclList.end()) {
+          if (SL.isInvalid())
+            break;
+          // Insert specialization to vector if current Decl relies on it.
+          if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(*It)) {
+            auto &TAL = TD->getTemplateInstantiationArgs();
+            for (unsigned int i = 0; i < TAL.size(); i++) {
+              if (TAL.get(i).getKind() == TemplateArgument::Type &&
+                  TAL.get(i).getAsType()->getAsCXXRecordDecl() == CTSD) {
+                It = DeclList.insert(It, CTSD);
+                Inserted = true;
+                break;
+              }
+            }
+            if (Inserted) {
+              break;
+            }
+          }
+          // Push it to back if a template argument type decl is in DeclList
+          if (!SM->isWrittenInMainFile(SL)) {
+            unsigned InsertIndex = ReturnArgIndexInDeclList(CTSD, DeclList);
+            if (InsertIndex) {
+              DeclList.insert(DeclList.begin() + InsertIndex, CTSD);
+              Inserted = true;
+              break;
+            }
+          }
+
+          if (SM->isBeforeInTranslationUnit(SL, (*It)->getBeginLoc())) {
+            It = DeclList.insert(It, CTSD);
+            Inserted = true;
+            break;
+          }
+          if (SM->isBeforeInTranslationUnit((*It)->getBeginLoc(), SL) &&
+              SM->isBeforeInTranslationUnit(SL, (*It)->getEndLoc())) {
+            It = DeclList.insert(It, CTSD);
+            Inserted = true;
+            break;
+          }
+          if (!SM->isBeforeInTranslationUnit((*It)->getBeginLoc(), SL) &&
+              !SM->isBeforeInTranslationUnit(SL, (*It)->getBeginLoc())) {
+            It = DeclList.insert(It, CTSD);
+            Inserted = true;
+            break;
+          }
+          It++;
+        }
+        if (Inserted == false) {
+          DeclList.push_back(CTSD);
+        }
+      }
       break;
     }
-    switch ((*D)->getKind()) {
+    default:
+      break;
+    }
+  }
+}
+
+void RewriteBSC::RewriteInstantFunctionDecl(
+    std::vector<Decl *> &DeclList,
+    std::set<Decl *> &RewritedFunctionDeclarationSet) {
+  for (Decl *D : TUDecl->decls()) {
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
+    }
+    switch (D->getKind()) {
     case Decl::Record: {
-      RecordDecl *RD = cast<RecordDecl>(*D);
+      RecordDecl *RD = cast<RecordDecl>(D);
+      // For an owned struct type, print all member function decls.
       if (RD->isOwnedDecl()) {
-        for (auto Func : RD->decls()) {
-          if (isa<BSCMethodDecl>(Func)) { //
-            Func->print(Buf, Policy);
+        for (Decl *decl : RD->decls()) {
+          if (isa<BSCMethodDecl>(decl)) {
+            decl->print(Buf, Policy);
             Buf << ";\n\n";
           }
         }
@@ -632,40 +696,45 @@ const std::string RewriteBSC::GetRewrittenString() {
     }
     case Decl::BSCMethod:
     case Decl::Function: {
-      FunctionDecl *FD = cast<FunctionDecl>(*D);
-      if (FD->getParent() && isa<RecordDecl>(FD->getParent()) &&
+      FunctionDecl *FD = cast<FunctionDecl>(D);
+      // Don't print the declaration of a function of a generic class.
+      // It will be printed when manipulating ClassTemplateDecl.
+      if (isa_and_nonnull<RecordDecl>(FD->getParent()) &&
           cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
         break;
       }
       if (FD->isAsyncSpecified())
         break;
-      if ((SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) ||
-           SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc()))) &&
-          FD->isTemplateInstantiation()) {
+      if (FD->isTemplateInstantiation()) {
         FD->print(Buf, Policy);
         Buf << ";\n\n";
       }
-
       break;
     }
     case Decl::FunctionTemplate: {
-      FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(*D);
-      for (auto *DD : FTD->specializations()) {
-        auto IT = RewritedFunctionDeclarationSet.find(DD);
-        if (IT == RewritedFunctionDeclarationSet.end()) {
-          RewritedFunctionDeclarationSet.insert(DD);
-          DD->print(Buf, Policy);
+      FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(D);
+      for (FunctionDecl *FD : FTD->specializations()) {
+        if (RewritedFunctionDeclarationSet.find(FD) ==
+            RewritedFunctionDeclarationSet.end()) {
+          RewritedFunctionDeclarationSet.insert(FD);
+          FD->print(Buf, Policy);
           Buf << ";\n\n";
         }
       }
       break;
     }
     case Decl::ClassTemplate: {
-      ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
-      for (auto *DD : CT->specializations()) {
-        for (auto *DDD : DD->decls()) {
-          if (isa<FunctionDecl>(DDD) && DDD->hasBody()) {
-            DDD->print(Buf, Policy);
+      ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(D);
+      // Skip incomplete generic struct decl.
+      if (RecordDecl *RD = dyn_cast<RecordDecl>(CTD->getTemplatedDecl())) {
+        if (!RD->isCompleteDefinition()) {
+          break;
+        }
+      }
+      for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations()) {
+        for (Decl *decl : CTSD->decls()) {
+          if (isa<FunctionDecl>(decl) && decl->hasBody()) {
+            decl->print(Buf, Policy);
             Buf << ";\n\n";
           }
         }
@@ -677,62 +746,42 @@ const std::string RewriteBSC::GetRewrittenString() {
     }
     }
   }
+}
 
-  Policy.FunctionDeclaraionOnly = false;
-
-  // Step 3: Collect non-generic function definitions and var decls.
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    switch ((*D)->getKind()) {
+void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
+  for (Decl *D : TUDecl->decls()) {
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
+    }
+    switch (D->getKind()) {
     case Decl::BSCMethod:
     case Decl::Function: {
-      FunctionDecl *FD = cast<FunctionDecl>(*D);
-      if (FD->getParent() && isa<RecordDecl>(FD->getParent()) &&
+      FunctionDecl *FD = cast<FunctionDecl>(D);
+      // Don't print the declaration of a function of a generic class.
+      // It will be printed when manipulating ClassTemplateDecl.
+      if (isa_and_nonnull<RecordDecl>(FD->getParent()) &&
           cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
         break;
       }
       if (FD->isAsyncSpecified())
         break;
       if (!FD->isTemplateInstantiation()) {
-        // Check if there is a generic instantiation in the function declaration
-        bool HasTemplateSpec = false;
-        const FunctionType *FT = FD->getType()->getAs<FunctionType>();
-        QualType ReturnTy = getInnerType(FT->getReturnType());
-        if (HasTemplateSpecType(ReturnTy, HasTemplateSpecSet))
-          HasTemplateSpec = true;
-        else if (auto *FPT = dyn_cast<FunctionProtoType>(FT)) {
-          for (unsigned i = 0; i < FPT->getNumParams(); i++) {
-            QualType ParamTy = getInnerType(FPT->getParamType(i));
-            if (HasTemplateSpecType(ParamTy, HasTemplateSpecSet)) {
-              HasTemplateSpec = true;
-              break;
-            }
-          }
-        }
-        // In the header file, skip the FunctionDecl / BSCMethodDecl containing
-        // instantiated type. and move them to the .c file
-        if (IsHBSFile && HasTemplateSpec)
-          break;
         if (!SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) &&
             !SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc())) &&
-            !HasTemplateSpec &&
             FD->getStorageClass() == StorageClass::SC_Extern)
-          break;
-        if (!SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getBeginLoc())) &&
-            !SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getEndLoc())) &&
-            !HasTemplateSpec)
           break;
 
         // If it is BscMethod or macro expansion function, output the code
         // according to AST; Otherwise, simply retrieve the source code
         if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end() ||
             FD->getBeginLoc().isMacroID()) {
-          printBSCLineInfo(FD, Buf);
+          PrintDebugLineInfo(FD);
           FD->print(Buf, Policy);
         } else {
           const char *startBuf = SM->getCharacterData(FD->getBeginLoc());
           const char *endBuf = SM->getCharacterData(FD->getEndLoc());
+          if (startBuf == endBuf)
+            break;
           Buf << std::string(startBuf, endBuf - startBuf + 1);
           if (FD->isThisDeclarationADefinition()) {
             Buf << "\n";
@@ -748,66 +797,46 @@ const std::string RewriteBSC::GetRewrittenString() {
       break;
     }
     case Decl::Var: {
-      VarDecl *VD = cast<VarDecl>(*D);
-      QualType VarTy = getInnerType(VD->getType());
-      bool HasTemplateSpec = false;
-      if (HasTemplateSpecType(VarTy, HasTemplateSpecSet))
-        HasTemplateSpec = true;
-      // In the header file, skip the VarDecl containing instantiated type.
-      // and move them to the .c file
-      if (IsHBSFile && HasTemplateSpec)
-        break;
-      if (!SM->isWrittenInMainFile(SM->getExpansionLoc(VD->getBeginLoc())) &&
-          !SM->isWrittenInMainFile(SM->getExpansionLoc(VD->getEndLoc())) &&
-          !HasTemplateSpec)
-        break;
       D->print(Buf, Policy);
       Buf << ";\n\n";
-
       break;
     }
     case Decl::FileScopeAsm: {
-      if (SM->isWrittenInMainFile(SM->getSpellingLoc(D->getBeginLoc())) ||
-          SM->isWrittenInMainFile(SM->getSpellingLoc(D->getEndLoc()))) {
-        const char *startBuf = SM->getCharacterData(D->getBeginLoc());
-        const char *endBuf = SM->getCharacterData(D->getEndLoc());
-        Buf << std::string(startBuf, endBuf - startBuf + 1);
-        Buf << ";\n\n";
-      }
-
+      const char *startBuf = SM->getCharacterData(D->getBeginLoc());
+      const char *endBuf = SM->getCharacterData(D->getEndLoc());
+      Buf << std::string(startBuf, endBuf - startBuf + 1);
+      Buf << ";\n\n";
       break;
     }
     default:
       break;
     }
   }
+}
 
-  // Step 4: Collect all instatiation function definition.
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    // In the header file, skip all instatiation function definition.
-    if (IsHBSFile) {
-      break;
+void RewriteBSC::RewriteInstantFunctionDef(std::vector<Decl *> &DeclList) {
+  for (Decl *D : TUDecl->decls()) {
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
     }
-    switch ((*D)->getKind()) {
+    switch (D->getKind()) {
     case Decl::Record: {
-      RecordDecl *RD = cast<RecordDecl>(*D);
+      RecordDecl *RD = cast<RecordDecl>(D);
       if (RD->isOwnedDecl()) {
-        for (auto Func : RD->decls()) {
-          if (isa<BSCMethodDecl>(Func)) {
-            FunctionDecl *FD = cast<FunctionDecl>(Func);
+        for (Decl *decl : RD->decls()) {
+          if (isa<BSCMethodDecl>(decl)) {
+            FunctionDecl *FD = cast<FunctionDecl>(decl);
             if (FD->doesThisDeclarationHaveABody()) {
-              printBSCLineInfo(FD, Buf);
+              PrintDebugLineInfo(FD);
               FD->print(Buf, Policy);
               Buf << "\n";
             }
           }
-          if (isa<FunctionTemplateDecl>(Func)) {
-            FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(Func);
+          if (isa<FunctionTemplateDecl>(decl)) {
+            FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(decl);
             for (auto *DD : FTD->specializations()) {
               if (DD->doesThisDeclarationHaveABody()) {
-                printBSCLineInfo(DD, Buf);
+                PrintDebugLineInfo(DD);
                 DD->print(Buf, Policy);
                 Buf << "\n";
               }
@@ -819,32 +848,31 @@ const std::string RewriteBSC::GetRewrittenString() {
     }
     case Decl::BSCMethod:
     case Decl::Function: {
-      FunctionDecl *FD = cast<FunctionDecl>(*D);
-      if (FD->getParent() && isa<RecordDecl>(FD->getParent()) &&
+      FunctionDecl *FD = cast<FunctionDecl>(D);
+      // Don't print the declaration of a function of a generic class.
+      // It will be printed when manipulating ClassTemplateDecl.
+      if (isa_and_nonnull<RecordDecl>(FD->getParent()) &&
           cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
         break;
       }
       if (FD->isAsyncSpecified())
         break;
-      if ((SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) ||
-           SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc()))) &&
-          FD->isTemplateInstantiation()) {
+      if (FD->isTemplateInstantiation()) {
         if (FD->doesThisDeclarationHaveABody()) {
-          printBSCLineInfo(FD, Buf);
+          PrintDebugLineInfo(FD);
           FD->print(Buf, Policy);
           Buf << "\n";
         }
       }
       break;
     }
-
     case Decl::FunctionTemplate: {
-      FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(*D);
+      FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(D);
       if (FTD->isThisDeclarationADefinition()) {
-        for (auto *DD : FTD->specializations()) {
-          if (DD->doesThisDeclarationHaveABody()) {
-            printBSCLineInfo(DD, Buf);
-            DD->print(Buf, Policy);
+        for (FunctionDecl *FD : FTD->specializations()) {
+          if (FD->doesThisDeclarationHaveABody()) {
+            PrintDebugLineInfo(FD);
+            FD->print(Buf, Policy);
             Buf << "\n";
           }
         }
@@ -852,19 +880,20 @@ const std::string RewriteBSC::GetRewrittenString() {
       break;
     }
     case Decl::ClassTemplate: {
-      ClassTemplateDecl *CT = cast<ClassTemplateDecl>(*D);
-      if (auto RD = dyn_cast<RecordDecl>(CT->getTemplatedDecl())) {
+      ClassTemplateDecl *CT = cast<ClassTemplateDecl>(D);
+      // Skip incomplete generic struct decl.
+      if (RecordDecl *RD = dyn_cast<RecordDecl>(CT->getTemplatedDecl())) {
         if (!RD->isCompleteDefinition()) {
           break;
         }
       }
-      for (auto *DD : CT->specializations()) {
-        for (auto *DDD : DD->decls()) {
-          if (isa<FunctionDecl>(DDD)) {
-            FunctionDecl *FDDD = cast<FunctionDecl>(DDD);
-            if (FDDD->doesThisDeclarationHaveABody()) {
-              printBSCLineInfo(DDD, Buf);
-              DDD->print(Buf, Policy);
+      for (ClassTemplateSpecializationDecl *CTSD : CT->specializations()) {
+        for (Decl *decl : CTSD->decls()) {
+          if (isa<FunctionDecl>(decl)) {
+            FunctionDecl *FD = cast<FunctionDecl>(decl);
+            if (FD->doesThisDeclarationHaveABody()) {
+              PrintDebugLineInfo(decl);
+              decl->print(Buf, Policy);
               Buf << "\n";
             }
           }
@@ -876,7 +905,6 @@ const std::string RewriteBSC::GetRewrittenString() {
       break;
     }
   }
-  return Buf.str();
 }
 
 #endif

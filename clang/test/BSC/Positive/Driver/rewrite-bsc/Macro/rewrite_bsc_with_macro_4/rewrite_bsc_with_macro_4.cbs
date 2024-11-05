@@ -1,4 +1,5 @@
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -I %S -o %t-rw.output
 // RUN: %t-rw.output
 #include "rewrite_bsc_with_macro_4.h"
@@ -9,3 +10,13 @@ int main() {
   ase_mmem_close_BBB();
 }
 
+// CHECK:      #include "rewrite_bsc_with_macro_4.h"
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: void ase_mmem_close_BBB(void) {
+// CHECK-NEXT:   int a = 1;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {
+// CHECK-NEXT:   ase_mmem_close_BBB();
+// CHECK-NEXT: }

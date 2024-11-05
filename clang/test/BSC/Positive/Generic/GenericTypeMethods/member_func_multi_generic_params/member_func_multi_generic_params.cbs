@@ -30,28 +30,30 @@ int main() {
   return 0;  
 }
 
-// CHECK: struct MyStruct_int_int_float {
-// CHECK-NEXT:      int res;
-// CHECK-NEXT:   };
-
-// CHECK: union MyUnion_float_int_char {
-// CHECK-NEXT:       float res;
-// CHECK-NEXT:   };
-
-// CHECK: struct MyStruct_int_int_float __attribute__((weak)) struct_MyStruct_int_int_float_foo(struct MyStruct_int_int_float *this) {
-// CHECK-NEXT:       return *this;
-// CHECK-NEXT:   }
-
-
-// CHECK: union MyUnion_float_int_char __attribute__((weak)) union_MyUnion_float_int_char_foo(union MyUnion_float_int_char *this) {
-// CHECK-NEXT:       return *this;
-// CHECK-NEXT:   }
-
-
-// CHECK: int main(void) {
-// CHECK-NEXT:       struct MyStruct_int_int_float s = {.res = 1};
-// CHECK-NEXT:       union MyUnion_float_int_char u = {.res = 5.};
-// CHECK-NEXT:       struct_MyStruct_int_int_float_foo(&s);
-// CHECK-NEXT:       union_MyUnion_float_int_char_foo(&u);
-// CHECK-NEXT:       return 0;
-// CHECK-NEXT:   }
+// CHECK:      struct MyStruct_int_int_float {
+// CHECK-NEXT:   int res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: union MyUnion_float_int_char {
+// CHECK-NEXT:   float res;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static struct MyStruct_int_int_float struct_MyStruct_int_int_float_foo(struct MyStruct_int_int_float *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: static union MyUnion_float_int_char union_MyUnion_float_int_char_foo(union MyUnion_float_int_char *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct MyStruct_int_int_float s = {.res = 1};
+// CHECK-NEXT:   union MyUnion_float_int_char u = {.res = 5.};
+// CHECK-NEXT:   struct_MyStruct_int_int_float_foo(&s);
+// CHECK-NEXT:   union_MyUnion_float_int_char_foo(&u);
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static struct MyStruct_int_int_float struct_MyStruct_int_int_float_foo(struct MyStruct_int_int_float *this) {
+// CHECK-NEXT:   return *this;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static union MyUnion_float_int_char union_MyUnion_float_int_char_foo(union MyUnion_float_int_char *this) {
+// CHECK-NEXT:   return *this;
+// CHECK-NEXT: }

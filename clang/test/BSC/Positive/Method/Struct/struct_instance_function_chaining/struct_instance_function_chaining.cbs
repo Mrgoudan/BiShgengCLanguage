@@ -26,23 +26,24 @@ int main() {
     return 0;
 }
 
-// CHECK: struct queue {
+// CHECK:      struct queue {
 // CHECK-NEXT: };
-
-// CHECK: void struct_queue_isEmpty(struct queue *this) {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Scheduler {
+// CHECK-NEXT:   struct queue* que;
+// CHECK-EMPTY:
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: void struct_queue_isEmpty(struct queue *this) {
 // CHECK-NEXT: }
-
-// CHECK: struct Scheduler {
-// CHECK-NEXT:     struct queue *que;
-// CHECK: };
-
-// CHECK: void struct_Scheduler_run(struct Scheduler *this) {
-// CHECK-NEXT:       struct_queue_isEmpty(this->que);
-// CHECK-NEXT:       struct_queue_isEmpty(&(*this->que));
+// CHECK-EMPTY:
+// CHECK-NEXT: void struct_Scheduler_run(struct Scheduler *this) {
+// CHECK-NEXT:   struct_queue_isEmpty(this->que);
+// CHECK-NEXT:   struct_queue_isEmpty(&(*this->que));
 // CHECK-NEXT: }
-
-// CHECK: int main(void) {
-// CHECK-NEXT:     struct Scheduler s;
-// CHECK-NEXT:     struct_Scheduler_run(&s);
-// CHECK-NEXT:     return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct Scheduler s;
+// CHECK-NEXT:   struct_Scheduler_run(&s);
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

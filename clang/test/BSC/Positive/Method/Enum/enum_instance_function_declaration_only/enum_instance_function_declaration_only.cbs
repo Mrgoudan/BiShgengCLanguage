@@ -17,14 +17,14 @@ int main() {
   return 0;
 }
 
-// CHECK: enum E {
-// CHECK-NEXT:     X3,
-// CHECK-NEXT:     X4
+// CHECK:      enum E {
+// CHECK-NEXT:   X3,
+// CHECK-NEXT:   X4
 // CHECK-NEXT: };
-
-// CHECK: int enum_E_getA(enum E *this);
-
-// CHECK: int main(void) {
+// CHECK-EMPTY:
+// CHECK-NEXT: int enum_E_getA(enum E *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {
 // CHECK-NEXT:   enum E foo = X3;
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

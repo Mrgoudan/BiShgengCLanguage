@@ -38,19 +38,53 @@ void Person<T, int N>::foo(This *this) {
   atomic_bar<5>(a, b);
 }
 
-// CHECK: static void struct_Person_int_10_foo( struct Person_int_10 *this) {
-// CHECK-NEXT:    atomic_uint a;
-// CHECK-NEXT:    atomic_int b;
-// CHECK-NEXT:    atomic_flag lock;
-// CHECK-NEXT:    atomic_fetch_add(&a, 2);
-// CHECK-NEXT:    atomic_fetch_add_explicit(&b, 10, 4);
-// CHECK-NEXT:    atomic_flag_test_and_set_explicit(&lock, 4);
-// CHECK-NEXT:    atomic_flag_clear(&lock);
-// CHECK-NEXT:    __c11_atomic_foo(a, b);
-// CHECK-NEXT:    atomic_bar_5(a, b);
-// CHECK-NEXT:}
-
 int main() {
   Person<int, 10> per = {"teddy", 3};
   per.foo();
 }
+
+// CHECK:      #include <stdatomic.h>
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Person_int_10 {
+// CHECK-NEXT:   char name[50];
+// CHECK-NEXT:   int age;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_Person_int_10_foo( struct Person_int_10 *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_Person_int_10_D( struct Person_int_10 this);
+// CHECK-EMPTY:
+// CHECK-NEXT: static void atomic_bar_5(atomic_uint a, atomic_int b);
+// CHECK-EMPTY:
+// CHECK-NEXT: void __c11_atomic_foo(atomic_uint a, atomic_int b) {
+// CHECK-NEXT:   return;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   struct Person_int_10 per = {"teddy", 3};
+// CHECK-NEXT:   _Bool per_is_moved = 0;
+// CHECK-NEXT:   struct_Person_int_10_foo(&per);
+// CHECK-NEXT:   if (!per_is_moved)
+// CHECK-NEXT:     struct_Person_int_10_D(per);
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_Person_int_10_foo( struct Person_int_10 *this) {
+// CHECK-NEXT:   atomic_uint a;
+// CHECK-NEXT:   atomic_int b;
+// CHECK-NEXT:   atomic_flag lock;
+// CHECK-NEXT:   atomic_fetch_add(&a, 2);
+// CHECK-NEXT:   atomic_fetch_add_explicit(&b, 10, 4);
+// CHECK-NEXT:   atomic_flag_test_and_set_explicit(&lock, 4);
+// CHECK-NEXT:   atomic_flag_clear(&lock);
+// CHECK-NEXT:   __c11_atomic_foo(a, b);
+// CHECK-NEXT:   atomic_bar_5(a, b);
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static void struct_Person_int_10_D( struct Person_int_10 this) {
+// CHECK-NEXT:   _Bool this_is_moved = 0;
+// CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: static void atomic_bar_5(atomic_uint a, atomic_int b) {
+// CHECK-NEXT:   return;
+// CHECK-NEXT: }

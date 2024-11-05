@@ -10,6 +10,8 @@ static int int::increase() {
 
 int main() { return 0; }
 
-// CHECK: static int int_increase() {
-// CHECK-NEXT:     return 0;
+// CHECK:      static int int_increase(void) {
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() { return 0; }

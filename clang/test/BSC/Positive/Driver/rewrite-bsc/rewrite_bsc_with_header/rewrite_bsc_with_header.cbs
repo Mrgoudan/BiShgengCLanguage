@@ -23,7 +23,13 @@ int main() {
   return 0;
 }  
 
-// CHECK: #include "rewrite_bsc_header.h"
+// CHECK:      struct Foo {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: int struct_Foo_getA(struct Foo *this);
+// CHECK-EMPTY:
+// CHECK-NEXT: void int_increase(int *this);
 // CHECK-EMPTY:
 // CHECK-NEXT: int struct_Foo_getA(struct Foo *this) {
 // CHECK-NEXT:   return this->a;
