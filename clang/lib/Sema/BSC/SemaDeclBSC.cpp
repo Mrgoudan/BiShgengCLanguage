@@ -104,4 +104,44 @@ bool Sema::HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
   }
   return false;
 }
+
+bool Sema::CheckOperatorDeclNeedAddToContext(Declarator &D) {
+  for (ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
+    if (AL.getKind() == ParsedAttr::AT_Operator) {
+      return AL.getOperatorTypeBuffer().AddToContext;
+    }
+  }
+  return true;
+}
+
+bool Sema::CheckOperatorFunReturnTypeIsLegal(FunctionDecl *FnDecl) {
+  OverloadedOperatorKind Op = FnDecl->getOverloadedOperator();
+  DefaultedComparisonKind DCK = DefaultedComparisonKind::None;
+  switch (Op) {
+  case OO_Less:
+  case OO_Greater:
+  case OO_LessEqual:
+  case OO_GreaterEqual:
+    DCK = DefaultedComparisonKind::Relational;
+    break;
+  case OO_EqualEqual:
+    DCK = DefaultedComparisonKind::Equal;
+    break;
+  case OO_ExclaimEqual:
+    DCK = DefaultedComparisonKind::Equal;
+    break;
+
+  default:
+    break;
+  }
+  if (DCK != DefaultedComparisonKind::None &&
+      !FnDecl->getReturnType()->isBooleanType()) {
+    Diag(FnDecl->getLocation(),
+         diag::err_defaulted_comparison_return_type_not_bool)
+        << (int)DCK << FnDecl->getDeclaredReturnType() << Context.BoolTy
+        << FnDecl->getReturnTypeSourceRange();
+    return false;
+  }
+  return true;
+}
 #endif

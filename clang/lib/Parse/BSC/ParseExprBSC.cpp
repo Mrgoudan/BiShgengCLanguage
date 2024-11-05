@@ -128,4 +128,32 @@ bool Parser::IsBSCStaticMemberFunctionCall() {
   }
   return false;
 }
+
+bool Parser::IsSupportedOverloadType(OverloadedOperatorKind Op) {
+  switch (Op) {
+  case OO_Plus:
+  case OO_Minus:
+  case OO_Star:
+  case OO_Slash:
+  case OO_Percent:
+  case OO_Caret:
+  case OO_Amp:
+  case OO_Pipe:
+  case OO_Tilde:
+  case OO_LessLess:
+  case OO_GreaterGreater:
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+  case OO_EqualEqual:
+  case OO_ExclaimEqual:
+  case OO_Arrow:
+  case OO_Subscript:
+    return true;
+  default:
+    return false;
+  }
+}
+
 #endif // ENABLE_BSC

@@ -1947,6 +1947,21 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
   return isBitIntType();
 }
 
+#if ENABLE_BSC
+// Consistent with C++ rules in operator overload.
+bool Type::isIntegralTypeInBSC(const ASTContext &Ctx) const {
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
+    return BT->getKind() >= BuiltinType::Bool &&
+           BT->getKind() <= BuiltinType::Int128;
+
+  if (!Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().BSC)
+    if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
+      return ET->getDecl()->isComplete();
+
+  return isBitIntType();
+}
+#endif
+
 bool Type::isIntegralOrUnscopedEnumerationType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&

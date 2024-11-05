@@ -176,11 +176,19 @@ void DeclarationName::print(raw_ostream &OS,
   case DeclarationName::CXXOperatorName: {
     const char *OpName = getOperatorSpelling(getCXXOverloadedOperator());
     assert(OpName && "not an overloaded operator");
-
-    OS << "operator";
-    if (OpName[0] >= 'a' && OpName[0] <= 'z')
-      OS << ' ';
-    OS << OpName;
+#if ENABLE_BSC
+    if (const IdentifierInfo *II = getCXXOperatorIdNameIdentInBSC()) {
+      StringRef Name = II->getName();
+      OS << Name;
+    } else {
+#endif
+      OS << "operator";
+      if (OpName[0] >= 'a' && OpName[0] <= 'z')
+        OS << ' ';
+      OS << OpName;
+#if ENABLE_BSC
+    }
+#endif
     return;
   }
 

@@ -2207,7 +2207,9 @@ public:
   bool isChar32Type() const;
   bool isAnyCharacterType() const;
   bool isIntegralType(const ASTContext &Ctx) const;
-
+#if ENABLE_BSC
+  bool isIntegralTypeInBSC(const ASTContext &Ctx) const;
+#endif
   /// Determine whether this type is an integral or enumeration type.
   bool isIntegralOrEnumerationType() const;
 

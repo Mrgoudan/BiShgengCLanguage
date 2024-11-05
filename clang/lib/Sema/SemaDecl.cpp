@@ -1558,6 +1558,11 @@ static bool AllowOverloadingOfFunction(const LookupResult &Previous,
   if (Context.getLangOpts().CPlusPlus || New->hasAttr<OverloadableAttr>())
     return true;
 
+#if ENABLE_BSC
+  if (Context.getLangOpts().BSC && New->isOverloadedOperator())
+    return true;
+#endif
+
   // Multiversion function declarations are not overloads in the
   // usual sense of that term, but lookup will report that an
   // overload set was found if more than one multiversion function
@@ -1597,12 +1602,12 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
   if (getLangOpts().CPlusPlus && D->isOutOfLine() && !S->getFnParent())
     return;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // BSCMethodDecls shouldn't be pushed into scope in BSC.
   if (getLangOpts().BSC && isa<BSCMethodDecl>(D)) {
     return;
   }
-  #endif
+#endif
 
   // Template instantiations should also not be pushed into scope.
   if (isa<FunctionDecl>(D) &&
@@ -4120,6 +4125,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
         return true;
       }
+      if (New->hasAttr<OperatorAttr>() != Old->hasAttr<OperatorAttr>()) {
+        Diag(New->getLocation(), diag::err_conflicting_types) << New;
+        Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
+        return true;
+      }
     }
   #endif
     // C99 6.7.5.3p15: ...If one type has a parameter type list and the other
@@ -5912,8 +5922,14 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
   case UnqualifiedIdKind::IK_OperatorFunctionId:
     NameInfo.setName(Context.DeclarationNames.getCXXOperatorName(
                                            Name.OperatorFunctionId.Operator));
+#if ENABLE_BSC
+    if (getLangOpts().BSC)
+      NameInfo.getName().setCXXOperatorIdNameIdentInBSC(
+          Name.OperatorFunctionId.Identifier);
+#endif
     NameInfo.setCXXOperatorNameRange(SourceRange(
         Name.OperatorFunctionId.SymbolLocations[0], Name.EndLocation));
+
     return NameInfo;
 
   case UnqualifiedIdKind::IK_LiteralOperatorId:
@@ -6505,7 +6521,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   if (!New)
     return nullptr;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Context.getLangOpts().BSC) {
     QualType T = TInfo->getType();
     if (TryDesugarTrait(T))
@@ -6521,8 +6537,12 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)
-    PushOnScopeChains(New, S);
-
+    PushOnScopeChains(New, S
+#if ENABLE_BSC
+                      ,
+                      CheckOperatorDeclNeedAddToContext(D)
+#endif
+    );
   if (isInOpenMPDeclareTargetContext())
     checkDeclIsAllowedInOpenMPTarget(nullptr, New);
 
@@ -10333,6 +10353,21 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         CheckBSCDestructorDeclarator(NewFD);
       }
     }
+    BSCMethodDecl *BSCMD = dyn_cast<BSCMethodDecl>(NewFD);
+    if (NewFD->getAttr<OperatorAttr>() && (BSCMD || DC->isTrait())) {
+      Diag(NewFD->getLocation(), diag::err_unsupport_overload_fun);
+      NewFD->setInvalidDecl();
+    }
+    if (NewFD->isOverloadedOperator() &&
+        !CheckOperatorFunReturnTypeIsLegal(NewFD)) {
+      NewFD->setInvalidDecl();
+    }
+    NamedDecl *PrincipalDecl =
+        (FunctionTemplate ? cast<NamedDecl>(FunctionTemplate) : NewFD);
+    if (NewFD->isOverloadedOperator() && !DC->isRecord() &&
+        PrincipalDecl->isInIdentifierNamespace(Decl::IDNS_Ordinary)) {
+      PrincipalDecl->setNonMemberOperator();
+    }
   }
 #endif
 
@@ -11826,7 +11861,11 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       }
     }
   } else if (!getLangOpts().CPlusPlus && MayNeedOverloadableChecks &&
-             !NewFD->getAttr<OverloadableAttr>()) {
+             !NewFD->getAttr<OverloadableAttr>()
+#if ENABLE_BSC
+             && !NewFD->getAttr<OperatorAttr>()
+#endif
+  ) {
     assert((Previous.empty() ||
             llvm::any_of(Previous,
                          [](const NamedDecl *ND) {
@@ -11864,6 +11903,11 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     // check BSC constexpr function
     if (NewFD->isConstexprSpecified())
       CheckBSCConstexprFunction(NewFD);
+    if (NewFD->isOverloadedOperator() &&
+        CheckOverloadedOperatorDeclaration(NewFD)) {
+      NewFD->setInvalidDecl();
+      return Redeclaration;
+    }
   }
   #endif
 
@@ -15058,6 +15102,24 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
     ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
         ParentScope, D, TemplateParameterLists, Bases);
+
+#if ENABLE_BSC
+  if (getLangOpts().BSC &&
+      D.getDeclSpec().getAttributes().hasAttribute(ParsedAttr::AT_Operator)) {
+    for (ParsedAttr &AL : D.getMutableDeclSpec().getAttributes()) {
+      if (AL.getKind() == ParsedAttr::AT_Operator) {
+        SourceLocation SymbolLocations[3] = {AL.getScopeLoc(), AL.getScopeLoc(),
+                                             AL.getScopeLoc()};
+        HandleDeclarator(ParentScope, D, TemplateParameterLists);
+        D.getName().setOperatorFunctionId(
+            D.getName().StartLocation, AL.getOperatorTypeBuffer().Kind,
+            SymbolLocations, D.getName().Identifier);
+        AL.getOperatorTypeBuffer().AddToContext = true;
+        break;
+      }
+    }
+  }
+#endif
 
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
   Decl *DP = HandleDeclarator(ParentScope, D, TemplateParameterLists);

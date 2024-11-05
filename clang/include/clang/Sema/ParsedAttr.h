@@ -205,6 +205,20 @@ struct PropertyData {
       : GetterId(getterId), SetterId(setterId) {}
 };
 
+#if ENABLE_BSC
+struct OperatorType {
+  OverloadedOperatorKind Kind;
+
+  // when AddToContext is fasle, analyze according to ordinary functions,
+  // in order to avoid having the same name with ordinary functions.
+  // when AddToContext is true, analyze according to operator overload
+  // functions, and add to AST node.
+  bool AddToContext;
+
+  OperatorType(OverloadedOperatorKind kind) : Kind(kind), AddToContext(false) {}
+};
+#endif
+
 } // namespace
 
 /// Wraps an identifier and optional source location for the identifier.
@@ -234,7 +248,12 @@ class ParsedAttr final
     : public AttributeCommonInfo,
       private llvm::TrailingObjects<
           ParsedAttr, ArgsUnion, detail::AvailabilityData,
-          detail::TypeTagForDatatypeData, ParsedType, detail::PropertyData> {
+          detail::TypeTagForDatatypeData, ParsedType, detail::PropertyData
+#if ENABLE_BSC
+          ,
+          detail::OperatorType
+#endif
+          > {
   friend TrailingObjects;
 
   size_t numTrailingObjects(OverloadToken<ArgsUnion>) const { return NumArgs; }
@@ -250,6 +269,9 @@ class ParsedAttr final
   }
   size_t numTrailingObjects(OverloadToken<detail::PropertyData>) const {
     return IsProperty;
+  }
+  size_t numTrailingObjects(OverloadToken<detail::OperatorType>) const {
+    return HasOperatorType;
   }
 
 private:
@@ -290,6 +312,11 @@ private:
 
   /// True if the attribute is specified using '#pragma clang attribute'.
   mutable unsigned IsPragmaClangAttribute : 1;
+
+#if ENABLE_BSC
+  /// True if this has a operator type
+  bool HasOperatorType = 0;
+#endif
 
   /// The location of the 'unavailable' keyword in an
   /// availability attribute.
@@ -368,6 +395,22 @@ private:
     Args[1] = Parm2;
     Args[2] = Parm3;
   }
+
+#if ENABLE_BSC
+  /// Constructor for bsc operator attributes.
+  ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
+             IdentifierInfo *scopeName, SourceLocation scopeLoc,
+             OverloadedOperatorKind kind, Syntax syntaxUsed)
+      : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc,
+                            syntaxUsed),
+        NumArgs(0), Invalid(false), UsedAsTypeAttr(false),
+        IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
+        HasParsedType(false), HasProcessingCache(false),
+        IsPragmaClangAttribute(false), HasOperatorType(true),
+        Info(ParsedAttrInfo::get(*this)) {
+    new (&getOperatorTypeBuffer()) detail::OperatorType(kind);
+  }
+#endif
 
   /// Constructor for type_tag_for_datatype attribute.
   ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
@@ -589,6 +632,15 @@ public:
     return getPropertyDataBuffer().SetterId;
   }
 
+#if ENABLE_BSC
+  detail::OperatorType &getOperatorTypeBuffer() {
+    return *getTrailingObjects<detail::OperatorType>();
+  }
+  const detail::OperatorType &getOperatorTypeBuffer() const {
+    assert(HasOperatorType);
+    return *getTrailingObjects<detail::OperatorType>();
+  }
+#endif
   /// Set the macro identifier info object that this parsed attribute was
   /// declared in if it was declared in a macro. Also set the expansion location
   /// of the macro.
@@ -730,15 +782,51 @@ public:
     AvailabilityAllocSize =
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(1, 1, 0, 0, 0),
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(1, 1, 0, 0, 0
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+                                       ),
     TypeTagForDatatypeAllocSize =
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(1, 0, 1, 0, 0),
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(1, 0, 1, 0, 0
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+                                       ),
     PropertyAllocSize =
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(0, 0, 0, 0, 1),
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(0, 0, 0, 0, 1
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+                                       ),
+#if ENABLE_BSC
+    OperatorAllocSize = ParsedAttr::totalSizeToAlloc<
+        ArgsUnion, detail::AvailabilityData, detail::TypeTagForDatatypeData,
+        ParsedType, detail::PropertyData, detail::OperatorType>(0, 0, 0, 0, 0,
+                                                                1),
+#endif
   };
 
 private:
@@ -833,13 +921,32 @@ public:
     size_t temp =
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(numArgs, 0, 0, 0, 0);
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(numArgs, 0, 0, 0, 0
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+        );
     (void)temp;
     void *memory = allocate(
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(numArgs, 0, 0, 0,
-                                                           0));
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(numArgs, 0, 0, 0, 0
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+                                       ));
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        args, numArgs, syntax, ellipsisLoc));
   }
@@ -865,10 +972,30 @@ public:
     void *memory = allocate(
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(3, 0, 0, 0, 0));
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(3, 0, 0, 0, 0
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+                                       ));
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        Param1, Param2, Param3, syntax));
   }
+
+#if ENABLE_BSC
+  ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     OverloadedOperatorKind kind, ParsedAttr::Syntax syntax) {
+    void *memory = allocate(AttributeFactory::OperatorAllocSize);
+    return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
+                                       kind, syntax));
+  }
+#endif
 
   ParsedAttr *
   createTypeTagForDatatype(IdentifierInfo *attrName, SourceRange attrRange,
@@ -890,7 +1017,17 @@ public:
     void *memory = allocate(
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(0, 0, 0, 1, 0));
+                                     detail::PropertyData
+#if ENABLE_BSC
+                                     ,
+                                     detail::OperatorType
+#endif
+                                     >(0, 0, 0, 1, 0
+#if ENABLE_BSC
+                                       ,
+                                       0
+#endif
+                                       ));
     return add(new (memory) ParsedAttr(attrName, attrRange, scopeName, scopeLoc,
                                        typeArg, syntaxUsed));
   }
@@ -1077,6 +1214,17 @@ public:
     addAtEnd(attr);
     return attr;
   }
+
+#if ENABLE_BSC
+  ParsedAttr *addNew(IdentifierInfo *attrName, SourceRange attrRange,
+                     IdentifierInfo *scopeName, SourceLocation scopeLoc,
+                     OverloadedOperatorKind kind, ParsedAttr::Syntax syntax) {
+    ParsedAttr *attr =
+        pool.create(attrName, attrRange, scopeName, scopeLoc, kind, syntax);
+    addAtEnd(attr);
+    return attr;
+  }
+#endif
 
   /// Add type_tag_for_datatype attribute.
   ParsedAttr *

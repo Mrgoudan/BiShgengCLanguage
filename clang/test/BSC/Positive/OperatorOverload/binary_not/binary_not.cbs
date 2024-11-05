@@ -1,0 +1,38 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+
+// custom type
+struct E
+{
+    int a;
+};
+
+__attribute__((operator ~))
+int opratorAnd1(struct E f1){
+    return ~f1.a;
+}
+
+int genericAnd1<T>(T a) {
+    return ~a;
+}
+
+int test1(){
+    struct E f1 = {1};
+    if ((~f1) != -2) {
+        return -1;
+    }
+    if (genericAnd1(f1) != -2) {
+        return -1;
+    }
+    return 0;
+}
+
+int main(){
+    if (test1()) {
+        return -1;
+    }
+
+    return 0;
+}

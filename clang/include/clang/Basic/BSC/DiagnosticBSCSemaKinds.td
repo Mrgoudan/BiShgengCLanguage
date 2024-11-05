@@ -186,3 +186,6 @@ def err_read_after_be_mut_borrow : Error<
 def note_previous_borrow : Note<"previous borrow is here">;
 def err_use_expired_borrow_var : Error<
   "Can not use '%0' because expired">;
+
+// BSC operator overload errors.
+def err_unsupport_overload_fun : Error<"function unsupport overload">;

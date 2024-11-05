@@ -46,7 +46,6 @@ struct MyStruct<T1, T2> struct MyStruct<T1, T2>::foo(struct MyStruct<T1, T2> *th
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:85, line:[[@LINE-3]]:1>
 // CHECK-NEXT: ReturnStmt 0x{{[^ ]*}} <line:[[@LINE-5]]:3, col:11>
 // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:10, col:11> '<dependent type>' prefix '*' cannot overflow
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:11> 'struct MyStruct<T1, T2> *' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:11> 'struct MyStruct<T1, T2> *' lvalue ParmVar 0x{{[^ ]*}} 'this' 'struct MyStruct<T1, T2> *'
 
 int main() {

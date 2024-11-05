@@ -137,12 +137,14 @@ void Parser::ParseAttributes(unsigned WhichAttrKinds, ParsedAttributes &Attrs,
 ///          attrib-name '(' identifier ')'
 ///          attrib-name '(' identifier ',' nonempty-expr-list ')'
 ///          attrib-name '(' argument-expression-list [C99 6.5.2] ')'
-///
+///          operators
 /// [GNU]  attrib-name:
 ///          identifier
 ///          typespec
 ///          typequal
 ///          storageclass
+/// [BSC]  operators
+///          'operator' operator
 ///
 /// Whether an attribute takes an 'identifier' is determined by the
 /// attrib-name. GCC's behavior here is not worth imitating:
@@ -194,9 +196,22 @@ void Parser::ParseGNUAttributes(ParsedAttributes &Attrs,
         Actions.CodeCompleteAttribute(AttributeCommonInfo::Syntax::AS_GNU);
         break;
       }
+
       IdentifierInfo *AttrName = Tok.getIdentifierInfo();
       if (!AttrName)
         break;
+
+#ifdef ENABLE_BSC
+      if (Tok.is(tok::kw_operator)) {
+        UnqualifiedId Name;
+        if (!ParseUnqualifiedIdOperator(D->getCXXScopeSpec(), false, nullptr,
+                                        Name))
+          Attrs.addNew(AttrName, Name.getBeginLoc(), nullptr,
+                       Name.getBeginLoc(), Name.OperatorFunctionId.Operator,
+                       ParsedAttr::AS_GNU);
+        continue;
+      }
+#endif
 
       SourceLocation AttrNameLoc = ConsumeToken();
 

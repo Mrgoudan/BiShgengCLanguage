@@ -354,10 +354,11 @@ KEYWORD(friend                      , KEYCXX)
 KEYWORD(mutable                     , KEYCXX)
 KEYWORD(namespace                   , KEYCXX)
 KEYWORD(new                         , KEYCXX)
-KEYWORD(operator                    , KEYCXX)
 #if ENABLE_BSC
+KEYWORD(operator                    , KEYCXX|KEYBSC)
 KEYWORD(private                     , KEYCXX|KEYBSC)
 #else
+KEYWORD(operator                    , KEYCXX)
 KEYWORD(private                     , KEYCXX)
 #endif
 KEYWORD(protected                   , KEYCXX)

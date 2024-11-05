@@ -1,0 +1,91 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+// custom type + ordinary type
+struct E
+{
+    int a;
+};
+
+__attribute__((operator *))
+int opratorAnd1(struct E f1, int b){
+    return f1.a * b;
+}
+
+int genericAnd1<T>(T a, int b) {
+    return a * b;
+}
+
+int test1(){
+    struct E f1 = {8};
+    if ((f1 * 2) != 16) {
+        return -1;
+    }
+    if (genericAnd1(f1, 2) != 16) {
+        return -1;
+    }
+    return 0;
+}
+
+// custom type + custom type
+struct F
+{
+    int a;
+};
+
+__attribute__((operator *))
+int opratorAnd2(struct F f1, struct F f2){
+    return f1.a * f2.a;
+}
+
+int genericAnd2<T>(T a, T b) {
+    return a * b;
+}
+
+int test2(){
+    struct F f1 = {8};
+    struct F f2 = {2};
+    if ((f1 * f2) != 16) {
+        return -1;
+    }
+    if (genericAnd2(f1, f2) != 16) {
+        return -1;
+    }
+    return 0;
+}
+
+// custom type a + custom type b
+__attribute__((operator *))
+int opratorAnd3(struct E f1, struct F f2){
+    return f1.a * f2.a;
+}
+
+int genericAnd3<T, P>(T a, P b) {
+    return a * b;
+}
+
+int test3(){
+    struct E f1 = {8};
+    struct F f2 = {2};
+    if ((f1 * f2) != 16) {
+        return -1;
+    }
+    if (genericAnd3(f1, f2) != 16) {
+        return -1;
+    }
+    return 0;
+}
+
+int main(){
+    if (test1()) {
+        return -1;
+    }
+    if (test2()) {
+        return -1;
+    }
+    if (test3()) {
+        return -1;
+    }
+    return 0;
+}

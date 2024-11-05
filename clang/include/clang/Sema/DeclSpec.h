@@ -1105,6 +1105,10 @@ public:
     /// up to three. Any remaining source locations in this array will be
     /// set to an invalid value for operators with fewer than three tokens.
     SourceLocation SymbolLocations[3];
+#if ENABLE_BSC
+    // For bsc operator overload, to display the operator function name.
+    IdentifierInfo *Identifier;
+#endif
   };
 
   /// Anonymous union that holds extra data associated with the
@@ -1189,7 +1193,12 @@ public:
   /// in the operator.
   void setOperatorFunctionId(SourceLocation OperatorLoc,
                              OverloadedOperatorKind Op,
-                             SourceLocation SymbolLocations[3]);
+                             SourceLocation SymbolLocations[3]
+#if ENABLE_BSC
+                             ,
+                             const IdentifierInfo *Id = nullptr
+#endif
+  );
 
   /// Specify that this unqualified-id was parsed as a
   /// conversion-function-id.

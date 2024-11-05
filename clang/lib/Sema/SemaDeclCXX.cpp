@@ -16035,7 +16035,11 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   }
 
   // Some operators must be non-static member functions.
-  if (MustBeMemberOperator && !isa<CXXMethodDecl>(FnDecl)) {
+  if (MustBeMemberOperator &&
+#if ENABLE_BSC
+      !getLangOpts().BSC &&
+#endif
+      !isa<CXXMethodDecl>(FnDecl)) {
     return Diag(FnDecl->getLocation(),
                 diag::err_operator_overload_must_be_member)
       << FnDecl->getDeclName();

@@ -77,8 +77,15 @@ def ReturnsByteCountIndex : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let TemplateDependent = 1;
 }
+
 def FunctionLikeMacro : InheritableAttr {
   let Spellings = [GNU<"function_like_macro">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [Undocumented];
+}
+
+def Operator : InheritableAttr {
+  let Spellings = [GNU<"operator">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
 }

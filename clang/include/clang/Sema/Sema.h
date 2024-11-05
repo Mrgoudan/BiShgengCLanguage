@@ -12423,6 +12423,8 @@ public:
                                            const Expr *InputExpr,
                                            UnaryOperatorKind &Opc,
                                            SourceLocation OpLoc);
+  bool CheckOperatorDeclNeedAddToContext(Declarator &D);
+  bool CheckOperatorFunReturnTypeIsLegal(FunctionDecl *FnDecl);
 #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

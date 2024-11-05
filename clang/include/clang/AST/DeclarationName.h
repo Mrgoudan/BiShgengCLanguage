@@ -103,6 +103,9 @@ class alignas(IdentifierInfoAlignment) CXXOperatorIdName {
 
   /// The kind of this operator.
   OverloadedOperatorKind Kind = OO_None;
+#if ENABLE_BSC
+  IdentifierInfo *ID = nullptr;
+#endif
 
   /// Extra information associated with this operator name that
   /// can be used by the front end. All bits are really needed
@@ -475,6 +478,15 @@ public:
     }
     return OO_None;
   }
+
+#if ENABLE_BSC
+  void setCXXOperatorIdNameIdentInBSC(IdentifierInfo *Id) const {
+    castAsCXXOperatorIdName()->ID = Id;
+  }
+  IdentifierInfo *getCXXOperatorIdNameIdentInBSC() const {
+    return castAsCXXOperatorIdName()->ID;
+  }
+#endif
 
   /// If this name is the name of a literal operator,
   /// retrieve the identifier associated with it.

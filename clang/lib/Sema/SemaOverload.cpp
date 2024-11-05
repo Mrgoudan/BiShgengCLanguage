@@ -341,7 +341,13 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
   //    the original value when converted back to the original type, or
   case ICK_Floating_Integral:
   FloatingIntegralConversion:
-    if (FromType->isRealFloatingType() && ToType->isIntegralType(Ctx)) {
+    if (FromType->isRealFloatingType() &&
+#if ENABLE_BSC
+        ToType->isIntegralTypeInBSC(Ctx)
+#else
+        ToType->isIntegralType(Ctx)
+#endif
+    ) {
       return NK_Type_Narrowing;
     } else if (FromType->isIntegralOrUnscopedEnumerationType() &&
                ToType->isRealFloatingType()) {
@@ -1434,7 +1440,11 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  if (!S.getLangOpts().CPlusPlus) {
+  if (!S.getLangOpts().CPlusPlus
+#if ENABLE_BSC
+      && !S.getLangOpts().BSC
+#endif
+  ) {
     ICS.setBad(BadConversionSequence::no_conversion, From, ToType);
     return ICS;
   }
@@ -1854,7 +1864,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.Second = ICK_Boolean_Conversion;
     FromType = S.Context.BoolTy;
   } else if (FromType->isIntegralOrUnscopedEnumerationType() &&
-             ToType->isIntegralType(S.Context)) {
+#if ENABLE_BSC
+             ToType->isIntegralTypeInBSC(S.Context)
+#else
+             ToType->isIntegralType(S.Context)
+#endif
+  ) {
     // Integral conversions (C++ 4.7).
     SCS.Second = ICK_Integral_Conversion;
     FromType = ToType.getUnqualifiedType();
@@ -1891,7 +1906,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.Second = ICK_Floating_Conversion;
     FromType = ToType.getUnqualifiedType();
   } else if ((FromType->isRealFloatingType() &&
-              ToType->isIntegralType(S.Context)) ||
+#if ENABLE_BSC
+              ToType->isIntegralTypeInBSC(S.Context)
+#else
+              ToType->isIntegralType(S.Context)
+#endif
+                  ) ||
              (FromType->isIntegralOrUnscopedEnumerationType() &&
               ToType->isRealFloatingType())) {
     // Conversions between bfloat and int are not permitted.
@@ -1925,9 +1945,8 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Compatible conversions (Clang extension for C function overloading)
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType.getUnqualifiedType();
-  } else if (IsTransparentUnionStandardConversion(S, From, ToType,
-                                             InOverloadResolution,
-                                             SCS, CStyle)) {
+  } else if (IsTransparentUnionStandardConversion(
+                 S, From, ToType, InOverloadResolution, SCS, CStyle)) {
     SCS.Second = ICK_TransparentUnionConversion;
     FromType = ToType;
   } else if (tryAtomicConversion(S, From, ToType, InOverloadResolution, SCS,
@@ -2198,9 +2217,14 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   if (From) {
     if (FieldDecl *MemberDecl = From->getSourceBitField()) {
       Optional<llvm::APSInt> BitWidth;
-      if (FromType->isIntegralType(Context) &&
-          (BitWidth =
-               MemberDecl->getBitWidth()->getIntegerConstantExpr(Context))) {
+      if (
+#if ENABLE_BSC
+          FromType->isIntegralTypeInBSC(Context)
+#else
+          FromType->isIntegralType(Context)
+#endif
+          && (BitWidth =
+                  MemberDecl->getBitWidth()->getIntegerConstantExpr(Context))) {
         llvm::APSInt ToSize(BitWidth->getBitWidth(), BitWidth->isUnsigned());
         ToSize = Context.getTypeSize(ToType);
 
@@ -14026,7 +14050,10 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         if (E.isInvalid() || E.isUsable())
           return E;
       }
-
+      #if ENABLE_BSC
+      if (getLangOpts().BSC && Opc >= BO_Assign && Opc <= BO_OrAssign)
+          break;
+      #endif
       // For class as left operand for assignment or compound assignment
       // operator do not fall through to handling in built-in, but report that
       // no overloaded assignment operator found

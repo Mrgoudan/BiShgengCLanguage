@@ -45,10 +45,30 @@ size_t ParsedAttr::allocated_size() const {
   else if (HasParsedType)
     return totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                             detail::TypeTagForDatatypeData, ParsedType,
-                            detail::PropertyData>(0, 0, 0, 1, 0);
+                            detail::PropertyData
+#if ENABLE_BSC
+                            ,
+                            detail::OperatorType
+#endif
+                            >(0, 0, 0, 1, 0
+#if ENABLE_BSC
+                              ,
+                              0
+#endif
+    );
   return totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                           detail::TypeTagForDatatypeData, ParsedType,
-                          detail::PropertyData>(NumArgs, 0, 0, 0, 0);
+                          detail::PropertyData
+#if ENABLE_BSC
+                          ,
+                          detail::OperatorType
+#endif
+                          >(NumArgs, 0, 0, 0, 0
+#if ENABLE_BSC
+                            ,
+                            0
+#endif
+  );
 }
 
 AttributeFactory::AttributeFactory() {

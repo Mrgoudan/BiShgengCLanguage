@@ -24,3 +24,6 @@ def err_generic_typealias_not_within_function : Error<"BSC generic typealias can
 
 // BSC ownership warnings and errors.
 def err_borrow_not_init : Error<"variable declarations of borrow qualified must be initialized">;
+
+// BSC operator overload errors.
+def err_unsupport_overload_type : Error<"unsupported operator type">;

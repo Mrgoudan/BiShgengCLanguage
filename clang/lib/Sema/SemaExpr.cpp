@@ -16179,11 +16179,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
     // overloaded op.
     if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent())
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
-  #if ENABLE_BSC
-  }
 
-  if (getLangOpts().CPlusPlus) {
-  #endif
     // Otherwise, build an overloaded op if either expression has an
     // overloadable type.
     if (LHSExpr->getType()->isOverloadableType() ||
@@ -16562,7 +16558,15 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
     Input = Result.get();
   }
 
-  if (getLangOpts().CPlusPlus && Input->getType()->isOverloadableType() &&
+  if (
+#if ENABLE_BSC
+      (
+#endif
+          getLangOpts().CPlusPlus
+#if ENABLE_BSC
+          || getLangOpts().BSC)
+#endif
+      && Input->getType()->isOverloadableType() &&
       UnaryOperator::getOverloadedOperator(Opc) != OO_None &&
       !(Opc == UO_AddrOf && isQualifiedMemberAccess(Input))) {
     // Find all of the overloaded operators visible from this point.
@@ -16573,7 +16577,7 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
 
     return CreateOverloadedUnaryOp(OpLoc, Opc, Functions, Input);
   }
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (getLangOpts().BSC && Input->getType().getCanonicalType()->isPointerType()
       && Input->getType().getCanonicalType().isOwnedQualified()) {
     DiagnoseOwnedPointerUnaryOp(*this, Opc, OpLoc, Input);

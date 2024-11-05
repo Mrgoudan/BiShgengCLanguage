@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+struct F
+{
+    int a;
+};
+
+__attribute__((operator +))
+int int::intMember(int *this, struct F f2){      // expected-error {{cannot combine with previous 'int' declaration specifier}}
+    return *this + f2.a;                         // expected-error@-1 {{expected identifier or '('}}
+}
+
+__attribute__((operator -))
+int struct F::structMember(struct F *this, struct F f2){    // expected-error {{cannot combine with previous 'int' declaration specifier}}
+    return this->a - f2.a;                                   // expected-error@-1 {{expected identifier or '('}}
+}
+
+owned struct G {
+    public:
+    int a;
+    __attribute__((operator +))
+    int ownedMember(G *this, struct F f) {    // expected-error {{function unsupport overload}}
+        return this->a + f.a;
+    }
+    __attribute__((operator +))
+    ~G(G this) {}                             // expected-error {{function unsupport overload}}
+};
+
+trait H {
+  __attribute__((operator +))
+  int foo(This* this);                      // expected-error {{function unsupport overload}}
+};
+
+void int::foo(int* this) {
+}
+
+int main(){}

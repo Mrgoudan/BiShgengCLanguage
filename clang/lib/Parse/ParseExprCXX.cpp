@@ -2923,6 +2923,9 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
   // Determine what kind of operator name we have.
   unsigned SymbolIdx = 0;
   SourceLocation SymbolLocations[3];
+#if ENABLE_BSC
+  SourceLocation OpLoc = Tok.getLocation();
+#endif
   OverloadedOperatorKind Op = OO_None;
   switch (Tok.getKind()) {
     case tok::kw_new:
@@ -2996,7 +2999,13 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
     default:
       break;
   }
+#if ENABLE_BSC
+  if (getLangOpts().BSC && !IsSupportedOverloadType(Op)) {
+    Diag(OpLoc, diag::err_unsupport_overload_type);
+    return true;
+  }
 
+#endif
   if (Op != OO_None) {
     // We have parsed an operator-function-id.
     Result.setOperatorFunctionId(KeywordLoc, Op, SymbolLocations);

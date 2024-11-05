@@ -1486,12 +1486,20 @@ bool DeclSpec::isMissingDeclaratorOk() {
 
 void UnqualifiedId::setOperatorFunctionId(SourceLocation OperatorLoc,
                                           OverloadedOperatorKind Op,
-                                          SourceLocation SymbolLocations[3]) {
+                                          SourceLocation SymbolLocations[3]
+#if ENABLE_BSC
+                                          ,
+                                          const IdentifierInfo *Id
+#endif
+) {
   Kind = UnqualifiedIdKind::IK_OperatorFunctionId;
   StartLocation = OperatorLoc;
   EndLocation = OperatorLoc;
   new (&OperatorFunctionId) struct OFI;
   OperatorFunctionId.Operator = Op;
+#if ENABLE_BSC
+  OperatorFunctionId.Identifier = const_cast<IdentifierInfo *>(Id);
+#endif
   for (unsigned I = 0; I != 3; ++I) {
     OperatorFunctionId.SymbolLocations[I] = SymbolLocations[I];
 

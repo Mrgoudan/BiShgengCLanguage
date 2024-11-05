@@ -2476,7 +2476,8 @@ private:
   bool ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS);
   void ParseConditionalSpecifier(DeclSpec &DS);
   bool HandleBSCUnknownTypeName(DeclSpec &DS, Token Tok);
-  #endif
+  bool IsSupportedOverloadType(OverloadedOperatorKind Op);
+#endif
   bool DiagnoseMissingSemiAfterTagDefinition(
       DeclSpec &DS, AccessSpecifier AS, DeclSpecContext DSContext,
       LateParsedAttrList *LateAttrs = nullptr);

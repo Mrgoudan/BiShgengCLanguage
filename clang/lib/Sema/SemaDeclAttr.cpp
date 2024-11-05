@@ -8687,6 +8687,10 @@ static void handleReturnsCountIndexFuncPtr(Sema &S, Decl *D, const ParsedAttr &A
 static void handleFunctionLikeMacro(Sema &S, Decl *D, const ParsedAttr &Attrs) {
   D->addAttr(::new (S.Context) FunctionLikeMacroAttr(S.Context, Attrs));
 }
+
+static void handleOperatorAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
+  D->addAttr(::new (S.Context) OperatorAttr(S.Context, Attrs));
+}
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -9553,10 +9557,15 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     else
       handleReturnsCountIndexAttr(S, D, AL, true);
     break;
+
   case ParsedAttr::AT_FunctionLikeMacro:
     handleFunctionLikeMacro(S, D, AL);
     break;
-  #endif
+
+  case ParsedAttr::AT_Operator:
+    handleOperatorAttr(S, D, AL);
+    break;
+#endif
   }
 }
 
