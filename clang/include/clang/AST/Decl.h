@@ -1719,9 +1719,9 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool IsThisParam = false;
-  #endif
+#endif
 
   void setObjCMethodScopeInfo(unsigned parameterIndex) {
     ParmVarDeclBits.IsObjCMethodParam = true;
@@ -2033,10 +2033,11 @@ protected:
                TypeSourceInfo *TInfo, StorageClass S, bool UsesFPIntrin,
                bool isInlineSpecified, ConstexprSpecKind ConstexprKind,
                Expr *TrailingRequiresClause = nullptr
-               #if ENABLE_BSC
-               , bool isAsyncSpecified = false
-               #endif
-               );
+#if ENABLE_BSC
+               ,
+               bool isAsyncSpecified = false
+#endif
+  );
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2073,19 +2074,21 @@ public:
          bool isInlineSpecified = false, bool hasWrittenPrototype = true,
          ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified,
          Expr *TrailingRequiresClause = nullptr
-         #if ENABLE_BSC
-         , bool isAsyncSpecified = false
-         #endif
-         ) {
+#if ENABLE_BSC
+         ,
+         bool isAsyncSpecified = false
+#endif
+  ) {
     DeclarationNameInfo NameInfo(N, NLoc);
     return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 UsesFPIntrin, isInlineSpecified,
                                 hasWrittenPrototype, ConstexprKind,
                                 TrailingRequiresClause
-                                #if ENABLE_BSC
-                                , isAsyncSpecified
-                                #endif
-                                );
+#if ENABLE_BSC
+                                ,
+                                isAsyncSpecified
+#endif
+    );
   }
 
   static FunctionDecl *
@@ -2094,10 +2097,11 @@ public:
          StorageClass SC, bool UsesFPIntrin, bool isInlineSpecified,
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
          Expr *TrailingRequiresClause
-         #if ENABLE_BSC
-         , bool isAsyncSpecified = false
-         #endif
-         );
+#if ENABLE_BSC
+         ,
+         bool isAsyncSpecified = false
+#endif
+  );
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2146,7 +2150,7 @@ public:
     return hasBody(Definition);
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   void setSafeSpecifier(SafeScopeSpecifier SafeSpec) {
     FunctionDeclBits.SafeSpecifier = SafeSpec;
   }
@@ -2154,7 +2158,7 @@ public:
   SafeScopeSpecifier getSafeSpecifier() const {
     return (SafeScopeSpecifier) FunctionDeclBits.SafeSpecifier;
   }
-  #endif
+#endif
 
   /// Returns whether the function has a trivial body that does not require any
   /// specific codegen.
@@ -2595,10 +2599,10 @@ public:
   /// parameters have default arguments (in C++) or contain "this" parameter (in
   /// BSC).
   unsigned getMinRequiredArguments(
-                                  #if ENABLE_BSC
-                                  bool HasBSCScopeSpec = false
-                                  #endif
-                                  ) const;
+#if ENABLE_BSC
+      bool HasBSCScopeSpec = false
+#endif
+  ) const;
 
   /// Determine whether this function has a single parameter, or multiple
   /// parameters where all but the first have default arguments.
@@ -2666,7 +2670,7 @@ public:
     FunctionDeclBits.SClass = SClass;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// Determine whether the "async" keyword was specified for this
   /// function.
   bool isAsyncSpecified() const { return FunctionDeclBits.IsAsyncSpecified; }
@@ -3637,9 +3641,9 @@ public:
   bool isClass()  const { return getTagKind() == TTK_Class; }
   bool isUnion()  const { return getTagKind() == TTK_Union; }
   bool isEnum()   const { return getTagKind() == TTK_Enum; }
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool isTrait() const { return getTagKind() == TTK_Trait; }
-  #endif
+#endif
 
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?
@@ -4013,7 +4017,7 @@ public:
     APK_CanNeverPassInRegs
   };
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// The template or declaration that this declaration
   /// describes or was instantiated from, respectively.
   ///
@@ -4025,7 +4029,7 @@ public:
   /// instantiated or specialized.
   llvm::PointerUnion<ClassTemplateDecl *, MemberSpecializationInfo *>
       TemplateOrInstantiation;
-  #endif
+#endif
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -4036,10 +4040,11 @@ public:
   static RecordDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                             SourceLocation StartLoc, SourceLocation IdLoc,
                             IdentifierInfo *Id, RecordDecl *PrevDecl = nullptr
-                            #if ENABLE_BSC
-                            , bool DelayTypeCreation = false
-                            #endif
-                            );
+#if ENABLE_BSC
+                            ,
+                            bool DelayTypeCreation = false
+#endif
+  );
   static RecordDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
 
   RecordDecl *getPreviousDecl() {
@@ -4065,12 +4070,12 @@ public:
     RecordDeclBits.HasFlexibleArrayMember = V;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   void setDesugaredTraitDecl(TraitDecl *TD) { DesugaredTD = TD; }
 
   TraitDecl *getDesugaredTraitDecl() { return DesugaredTD; }
   BSCMethodDecl *getBSCDestructor() const;
-  #endif
+#endif
 
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
@@ -4157,7 +4162,7 @@ public:
     RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion = V;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// The declaration for X<int>::A is a (non-templated) CXXRecordDecl
   /// whose parent is the class template specialization X<int>. For
   /// this declaration, getInstantiatedFromMemberClass() will return
@@ -4224,7 +4229,7 @@ public:
 
   bool isOwnedDecl() const { return RecordDeclBits.IsOwned; }
   void setOwnedDecl(bool value) { RecordDeclBits.IsOwned = value; }
-  #endif
+#endif
 
   /// Determine whether this class can be passed in registers. In C++ mode,
   /// it must have at least one trivial, non-deleted copy or move constructor.
@@ -4343,9 +4348,9 @@ private:
   /// Deserialize just the fields.
   void LoadFieldsFromExternalStorage() const;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   TraitDecl *DesugaredTD = nullptr;
-  #endif
+#endif
 };
 
 class FileScopeAsmDecl : public Decl {

@@ -22,13 +22,13 @@ namespace bsc {
 class ExplicitCastCheck : public ClangTidyCheck {
 public:
   ExplicitCastCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),       
-      TargetStructList(Options.get("TargetStructs", "TEMP_FAILURE_RETRY")) {
-        StringRef(TargetStructList).split(TargetStructs, ",", -1, false);
-      }
+      : ClangTidyCheck(Name, Context),
+        TargetStructList(Options.get("TargetStructs", "TEMP_FAILURE_RETRY")) {
+    StringRef(TargetStructList).split(TargetStructs, ",", -1, false);
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) {
     Options.store(Opts, "TargetStructs", TargetStructList);
-  }  
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 private:

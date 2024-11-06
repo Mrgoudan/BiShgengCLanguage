@@ -44,13 +44,13 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
     return ParseExplicitInstantiation(Context, SourceLocation(), ConsumeToken(),
                                       DeclEnd, AccessAttrs, AS);
   }
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // Parse BSC template declaration
   // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
   if (isBSCTemplateDecl(Tok)) {
     return ParseBSCGenericDeclaration(Context, DeclEnd, AccessAttrs, AS);
   }
-  #endif
+#endif
   return ParseTemplateDeclarationOrSpecialization(Context, DeclEnd, AccessAttrs,
                                                   AS);
 }
@@ -141,16 +141,12 @@ Decl *Parser::ParseBSCGenericDeclaration(DeclaratorContext Context,
   } else {
     LastParamListWasEmpty = true;
   }
+  // make sure parameters input is same as C++, for both func and struct
+  ParamLists.push_back(Actions.ActOnTemplateParameterList(
+      CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
+      TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
 
-  ParamLists.push_back(
-      Actions.ActOnTemplateParameterList( // make sure parameters input is same
-                                          // as C++, for both func and struct
-          CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
-          TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
-
-  return ParseSingleDeclarationAfterTemplate( // make sure parameters input is
-                                              // same as C++, for both func and
-                                              // struct
+  return ParseSingleDeclarationAfterTemplate(
       Context,
       ParsedTemplateInfo(&ParamLists, isSpecialization, LastParamListWasEmpty),
       ParsingTemplateParams, DeclEnd, AccessAttrs, AS);
@@ -330,9 +326,9 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   MaybeParseCXX11Attributes(prefixAttrs);
 
   if (Tok.is(tok::kw_using)
-    #if ENABLE_BSC
-    || (getLangOpts().BSC && Tok.is(tok::kw_typedef))
-    #endif
+#if ENABLE_BSC
+      || (getLangOpts().BSC && Tok.is(tok::kw_typedef))
+#endif
   ) {
     auto usingDeclPtr = ParseUsingDirectiveOrDeclaration(Context, TemplateInfo, DeclEnd,
                                                          prefixAttrs);
@@ -640,7 +636,6 @@ bool Parser::ParseBSCTemplateParameters(
         ParseBSCTemplateParameterList(Depth, TemplateParams);
   }
   PeekTok = PP.LookAhead(BSCGenericLookAhead);
-
   if (PeekTok.getKind() == tok::greater) {
     BSCGenericLookAhead++;
     IsParsingBSCGenericParameters = false;
@@ -705,9 +700,6 @@ bool Parser::ParseBSCTemplateParameterList(
     const unsigned Depth, SmallVectorImpl<NamedDecl *> &TemplateParams) {
   Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
   while (1) {
-
-    // if (NamedDecl *TmpParam
-    //       = ParseTemplateParameter(Depth, TemplateParams.size())) {
     if (NamedDecl *TmpParam = ParseBSCTypeParameter(
             Depth, TemplateParams.size())) {
       TemplateParams.push_back(TmpParam);
@@ -716,20 +708,15 @@ bool Parser::ParseBSCTemplateParameterList(
       // a comma or closing brace.
       for (; PeekTok.isNot(tok::semi); BSCGenericLookAhead++) {
         PeekTok = PP.LookAhead(BSCGenericLookAhead);
-        if (PeekTok.isOneOf(tok::comma,
-                            tok::greater,
-                            tok::semi))
+        if (PeekTok.isOneOf(tok::comma, tok::greater, tok::semi))
           break;
       }
     }
     PeekTok = PP.LookAhead(BSCGenericLookAhead);
-
     // Did we find a comma or the end of the template parameter list?
     if (PeekTok.is(tok::comma)) {
-      // ConsumeToken();
       BSCGenericLookAhead++;
       PeekTok = PP.LookAhead(BSCGenericLookAhead);
-      // } else if (PeekTok.isOneOf(tok::greater, tok::greatergreater)) {
     } else if (PeekTok.is(tok::greater)) {
       // Don't consume this... that's done by template parser.
       break;
@@ -1095,7 +1082,6 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
   bool IsNextCommaOrGreater =
                   PP.LookAhead(BSCGenericLookAhead + 1).isOneOf(tok::comma,
                                                                 tok::greater);
-
   if (PeekTok.isNot(tok::identifier) && IsNextCommaOrGreater) {
     Diag(PeekTok.getLocation(), diag::err_expected_template_parameter) << PeekTok.getName();
     return nullptr;
@@ -1161,7 +1147,7 @@ NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
 
   NamedDecl *NewDecl = Actions.ActOnTypeParameter(
       getCurScope(), TypenameKeyword, EllipsisLoc, KeyLoc, ParamName, NameLoc,
-      Depth, Position, EqualLoc, DefaultArg, /*HasTypeConstraint*/false);
+      Depth, Position, EqualLoc, DefaultArg, /*HasTypeConstraint=*/false);
   return NewDecl;
 }
 #endif
@@ -1469,13 +1455,13 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
       Hint2 = FixItHint::CreateInsertion(Next.getLocation(), " ");
 
     unsigned DiagId = diag::err_two_right_angle_brackets_need_space;
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if ((getLangOpts().CPlusPlus11 || getLangOpts().BSC) &&
-          (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
-    #else
+        (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
+#else
     if (getLangOpts().CPlusPlus11 &&
-          (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
-    #endif
+        (Tok.is(tok::greatergreater) || Tok.is(tok::greatergreatergreater)))
+#endif
       DiagId = diag::warn_cxx98_compat_two_right_angle_brackets;
     else if (Tok.is(tok::greaterequal))
       DiagId = diag::err_right_angle_bracket_equal_needs_space;
@@ -1631,12 +1617,12 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
                                      UnqualifiedId &TemplateName,
                                      bool AllowTypeAnnotation,
                                      bool TypeConstraint) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "Can only annotate template-ids in C++ and BSC");
-  #else
+#else
   assert(getLangOpts().CPlusPlus && "Can only annotate template-ids in C++");
-  #endif
+#endif
   assert((Tok.is(tok::less) || TypeConstraint) &&
          "Parser isn't at the beginning of a template-id");
   assert(!(TypeConstraint && AllowTypeAnnotation) && "type-constraint can't be "
@@ -1877,9 +1863,9 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
   //              bar<struct G<int>::foo()>();
   // the argument must not be a TypeName
   if (
-    #if ENABLE_BSC
+#if ENABLE_BSC
     !(getLangOpts().BSC && IsBSCStaticMemberFunctionCallInTemplateArgumentList()) &&
-    #endif
+#endif
     isCXXTypeId(TypeIdAsTemplateArgument)) {
     TypeResult TypeArg = ParseTypeName(
         /*Range=*/nullptr, DeclaratorContext::TemplateArg);
@@ -1935,7 +1921,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
   };
 
   do {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (getLangOpts().BSC && !Tok.isOneOf(tok::kw_struct,
                                           tok::kw_enum,
                                           tok::kw_union)) {
@@ -1954,7 +1940,7 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
         for (int i = 0; i <= ShouldConsumeCnt; i++) ConsumeToken();
       }
     }
-    #endif
+#endif
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
     ParsedTemplateArgument Arg = ParseTemplateArgument();
     SourceLocation EllipsisLoc;

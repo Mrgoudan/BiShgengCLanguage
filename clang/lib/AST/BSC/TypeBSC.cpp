@@ -103,7 +103,6 @@ bool Type::isOwnedStructureType() const {
 }
 
 bool Type::isOwnedTemplateSpecializationType() const {
-
   if (const auto *RT = getAs<TemplateSpecializationType>()) {
     if (RT->getTemplateName().getAsTemplateDecl() &&
         RT->getTemplateName().getAsTemplateDecl()->getTemplatedDecl()) {
@@ -117,8 +116,7 @@ bool Type::isOwnedTemplateSpecializationType() const {
 
 // Return true when a type is move semantic type,
 // including owned pointer(int *owned, int **owned, ...),
-// owned struct and struct which has owned fields.
-// For example:
+// owned struct and struct which has owned fields, for example:
 // @code
 //     owned struct S1 { };
 //     struct S2 { int* owned p; };
@@ -132,13 +130,13 @@ bool Type::isOwnedTemplateSpecializationType() const {
 // @endcode
 bool Type::isMoveSemanticType() const {
   // Owned pointer or owned struct is owned qualified.
-  if (CanonicalType.isOwnedQualified())  
+  if (CanonicalType.isOwnedQualified())
     return true;
   if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
     if (RecordDecl *RD = RecTy->getDecl()) {
       for (FieldDecl *FD : RD->fields()) {
         QualType FQT = FD->getType().getCanonicalType();
-        if (FQT.isOwnedQualified())  
+        if (FQT.isOwnedQualified())
           return true;
         else if (isa<RecordType>(FQT))
           return FQT->isMoveSemanticType();
@@ -255,16 +253,21 @@ bool Type::isBSCFutureType() const {
   return false;
 }
 
-ConditionalType::ConditionalType(llvm::Optional<bool> CondRes, Expr* CondE, QualType T1, QualType T2, QualType can)
-    : Type(Conditional, can, 
+ConditionalType::ConditionalType(llvm::Optional<bool> CondRes, Expr *CondE,
+                                 QualType T1, QualType T2, QualType can)
+    : Type(Conditional, can,
            toTypeDependence(CondE->getDependence()) |
-           (CondE->isInstantiationDependent() ? TypeDependence::Dependent : TypeDependence::None) |
-           (CondE->getType()->getDependence() & TypeDependence::VariablyModified) |
-           T1->getDependence() |
-           T2->getDependence()),
-      CondResult(CondRes), CondExpr(CondE), Type1(T1), Type2(T2), UnderlyingType(can) {}
+               (CondE->isInstantiationDependent() ? TypeDependence::Dependent
+                                                  : TypeDependence::None) |
+               (CondE->getType()->getDependence() &
+                TypeDependence::VariablyModified) |
+               T1->getDependence() | T2->getDependence()),
+      CondResult(CondRes), CondExpr(CondE), Type1(T1), Type2(T2),
+      UnderlyingType(can) {}
 
-bool ConditionalType::isSugared() const { return !CondExpr->isInstantiationDependent(); }
+bool ConditionalType::isSugared() const {
+  return !CondExpr->isInstantiationDependent();
+}
 
 QualType ConditionalType::desugar() const {
   if (isSugared())

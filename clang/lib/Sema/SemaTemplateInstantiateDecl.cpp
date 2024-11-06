@@ -1839,12 +1839,12 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (CXXMethodDecl *DMethod = dyn_cast<CXXMethodDecl>(D->getTemplatedDecl()))
     Instantiated = cast_or_null<FunctionDecl>(VisitCXXMethodDecl(DMethod,
                                                                  InstParams));
-  #if ENABLE_BSC
+#if ENABLE_BSC
   else if (BSCMethodDecl *DMethod =
                dyn_cast<BSCMethodDecl>(D->getTemplatedDecl()))
     Instantiated =
         cast_or_null<FunctionDecl>(VisitBSCMethodDecl(DMethod, InstParams));
-  #endif
+#endif
   else
     Instantiated = cast_or_null<FunctionDecl>(VisitFunctionDecl(
                                                           D->getTemplatedDecl(),
@@ -3667,21 +3667,21 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 Decl *TemplateDeclInstantiator::VisitRecordDecl(RecordDecl *D) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (SemaRef.getLangOpts().BSC) {
     if (D->isCompleteDefinition() && D->isLocalClass()) {
       SemaRef.Diag(D->getLocation(), diag::err_invalid_struct_definition);
     }
     return RecordDecl::Create(SemaRef.Context, D->getTagKind(), Owner,
-                                   D->getBeginLoc(), D->getLocation(),
-                                   D->getIdentifier(), /*prevDecl=*/nullptr,
-                                   /*prevDecl=*/false);
+                              D->getBeginLoc(), D->getLocation(),
+                              D->getIdentifier(), /*prevDecl=*/nullptr,
+                              /*prevDecl=*/false);
   } else {
     llvm_unreachable("There are only CXXRecordDecls in C++");
   }
-  #else
+#else
   llvm_unreachable("There are only CXXRecordDecls in C++");
-  #endif
+#endif
 }
 
 Decl *
@@ -5862,11 +5862,11 @@ static bool isInstantiationOf(CXXRecordDecl *Pattern,
 #endif
 
   do {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     Instance = dyn_cast<RecordDecl>(Instance->getCanonicalDecl());
-    #else
+#else
     Instance = Instance->getCanonicalDecl();
-    #endif
+#endif
     if (Pattern == Instance) return true;
     Instance = Instance->getInstantiatedFromMemberClass();
   } while (Instance);

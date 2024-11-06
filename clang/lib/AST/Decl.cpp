@@ -948,14 +948,11 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
   // a template template argument that way. If we do, we need to
   // consider its linkage.
   if (!(isa<CXXMethodDecl>(D) ||
-        #if ENABLE_BSC
+#if ENABLE_BSC
         isa<BSCMethodDecl>(D) ||
-        #endif
-        isa<VarDecl>(D) ||
-        isa<FieldDecl>(D) ||
-        isa<IndirectFieldDecl>(D) ||
-        isa<TagDecl>(D) ||
-        isa<TemplateDecl>(D)))
+#endif
+        isa<VarDecl>(D) || isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D) ||
+        isa<TagDecl>(D) || isa<TemplateDecl>(D)))
     return LinkageInfo::none();
 
   LinkageInfo LV;
@@ -1177,17 +1174,17 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   // If this is a member class of a specialization of a class template
   // and the corresponding decl has explicit visibility, use that.
   if (
-    #if ENABLE_BSC
-    const auto *RD = dyn_cast<RecordDecl>(ND)
-    #else
-    const auto *RD = dyn_cast<CXXRecordDecl>(ND)
-    #endif
-    ) {
-    #if ENABLE_BSC
+#if ENABLE_BSC
+      const auto *RD = dyn_cast<RecordDecl>(ND)
+#else
+      const auto *RD = dyn_cast<CXXRecordDecl>(ND)
+#endif
+  ) {
+#if ENABLE_BSC
     RecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
-    #else
+#else
     CXXRecordDecl *InstantiatedFrom = RD->getInstantiatedFromMemberClass();
-    #endif
+#endif
     if (InstantiatedFrom)
       return getVisibilityOf(InstantiatedFrom, kind);
   }
@@ -1198,11 +1195,11 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   if (const auto *spec = dyn_cast<ClassTemplateSpecializationDecl>(ND)) {
     // Walk all the template decl till this point to see if there are
     // explicit visibility attributes.
-    #if ENABLE_BSC
+#if ENABLE_BSC
     const auto *TD = spec->getSpecializedTemplate()->getBSCTemplatedDecl();
-    #else
+#else
     const auto *TD = spec->getSpecializedTemplate()->getTemplatedDecl();
-    #endif
+#endif
     while (TD != nullptr) {
       auto Vis = getVisibilityOf(TD, kind);
       if (Vis != None)
@@ -1728,13 +1725,13 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
-    #if ENABLE_BSC
+#if ENABLE_BSC
     } else if (const auto *ID = dyn_cast<TraitDecl>(DC)) {
       if (!ID->getIdentifier())
         OS << "(anonymous " << ID->getKindName() << ')';
       else
         OS << *ID;
-    #endif
+#endif
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
@@ -2166,12 +2163,12 @@ static bool isDeclExternC(const T &D) {
   // language linkage or no language linkage.
   const DeclContext *DC = D.getDeclContext();
   if (DC->isRecord()) {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     assert(D.getASTContext().getLangOpts().CPlusPlus ||
-            D.getASTContext().getLangOpts().BSC);
-    #else
+           D.getASTContext().getLangOpts().BSC);
+#else
     assert(D.getASTContext().getLangOpts().CPlusPlus);
-    #endif
+#endif
     return false;
   }
 
@@ -2406,10 +2403,10 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   // OpenCL permits const integral variables to be used in constant
   // expressions, like in C++98.
   if (!Lang.CPlusPlus && !Lang.OpenCL
-      #if ENABLE_BSC
+#if ENABLE_BSC
       && !Lang.BSC
-      #endif
-      )
+#endif
+  )
     return false;
 
   // Function parameters are never usable in constant expressions.
@@ -2578,12 +2575,13 @@ bool VarDecl::checkForConstantInitialization(
   // std::is_constant_evaluated()).
   assert(!Eval->WasEvaluated &&
          "already evaluated var value before checking for constant init");
-  #if ENABLE_BSC
-  assert((getASTContext().getLangOpts().CPlusPlus || getASTContext().getLangOpts().BSC)
-         && "only meaningful in C++ and BSC");
-  #else
+#if ENABLE_BSC
+  assert((getASTContext().getLangOpts().CPlusPlus ||
+          getASTContext().getLangOpts().BSC) &&
+         "only meaningful in C++ and BSC");
+#else
   assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
-  #endif
+#endif
   assert(!cast<Expr>(Eval->Value)->isValueDependent());
 
   // Evaluate the initializer to check whether it's a constant expression.
@@ -2980,9 +2978,10 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
                            Expr *TrailingRequiresClause
-                           #if ENABLE_BSC
-                           , bool isAsyncSpecified
-                           #endif
+#if ENABLE_BSC
+                           ,
+                           bool isAsyncSpecified
+#endif
                            )
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
@@ -2992,9 +2991,9 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.SClass = S;
   FunctionDeclBits.IsInline = isInlineSpecified;
   FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   FunctionDeclBits.IsAsyncSpecified = isAsyncSpecified;
-  #endif
+#endif
   FunctionDeclBits.IsVirtualAsWritten = false;
   FunctionDeclBits.IsPure = false;
   FunctionDeclBits.HasInheritedPrototype = false;
@@ -3350,10 +3349,10 @@ bool FunctionDecl::isGlobal() const {
   if (const auto *Method = dyn_cast<CXXMethodDecl>(this))
     return Method->isStatic();
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (const auto *Method = dyn_cast<BSCMethodDecl>(this))
     return Method->isStatic();
-  #endif
+#endif
 
   if (getCanonicalDecl()->getStorageClass() == SC_Static)
     return false;
@@ -3523,11 +3522,11 @@ void FunctionDecl::setParams(ASTContext &C,
 /// arguments (in C++) or are parameter packs (C++11) or contain "this"
 /// parameter (in BSC).
 unsigned FunctionDecl::getMinRequiredArguments(
-                                              #if ENABLE_BSC
-                                              bool HasBSCScopeSpec
-                                              #endif
-                                              ) const {
-  #if ENABLE_BSC
+#if ENABLE_BSC
+    bool HasBSCScopeSpec
+#endif
+) const {
+#if ENABLE_BSC
   if (getASTContext().getLangOpts().BSC && !HasBSCScopeSpec) {
     int num = getNumParams();
     if (num > 0 && parameters()[0] && parameters()[0]->IsThisParam) {
@@ -3535,7 +3534,7 @@ unsigned FunctionDecl::getMinRequiredArguments(
     }
     return num;
   }
-  #endif
+#endif
 
   if (!getASTContext().getLangOpts().CPlusPlus)
     return getNumParams();
@@ -4724,17 +4723,18 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                IdentifierInfo *Id, RecordDecl *PrevDecl
-                               #if ENABLE_BSC
-                               , bool DelayTypeCreation
-                               #endif
-                               ) {
+#if ENABLE_BSC
+                               ,
+                               bool DelayTypeCreation
+#endif
+) {
   RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
                                          StartLoc, IdLoc, Id, PrevDecl);
   R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (!DelayTypeCreation)
-  #endif
+#endif
     C.getTypeDeclType(R, PrevDecl);
   return R;
 }
@@ -5173,18 +5173,19 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                      bool isInlineSpecified, bool hasWrittenPrototype,
                      ConstexprSpecKind ConstexprKind,
                      Expr *TrailingRequiresClause
-                     #if ENABLE_BSC
-                     , bool isAsyncSpecified
-                     #endif
-                     ) {
-  FunctionDecl *New = new (C, DC)
-      FunctionDecl(Function, C, DC, StartLoc, NameInfo, T, TInfo, SC,
-                   UsesFPIntrin, isInlineSpecified, ConstexprKind,
-                   TrailingRequiresClause
-                   #if ENABLE_BSC
-                   , isAsyncSpecified
-                   #endif
-                   );
+#if ENABLE_BSC
+                     ,
+                     bool isAsyncSpecified
+#endif
+) {
+  FunctionDecl *New = new (C, DC) FunctionDecl(
+      Function, C, DC, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
+      isInlineSpecified, ConstexprKind, TrailingRequiresClause
+#if ENABLE_BSC
+      ,
+      isAsyncSpecified
+#endif
+  );
   New->setHasWrittenPrototype(hasWrittenPrototype);
   return New;
 }

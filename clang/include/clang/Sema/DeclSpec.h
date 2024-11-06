@@ -324,11 +324,11 @@ public:
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
   static const TST TST_atomic = clang::TST_atomic;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   static const TST TST_trait = clang::TST_trait;
   static const TST TST_This = clang::TST_This;
   static const TST TST_conditionalType = clang::TST_conditionalType;
-  #endif
+#endif
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -340,17 +340,17 @@ public:
     TQ_const       = 1,
     TQ_restrict    = 2,
     TQ_volatile    = 4,
-    #if ENABLE_BSC
+#if ENABLE_BSC
     TQ_owned       = 8,
     TQ_borrow      = 16,
     TQ_unaligned   = 32,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
     TQ_atomic      = 64
-    #else
+#else
     TQ_unaligned   = 8,
     TQ_atomic      = 16
-    #endif
+#endif
   };
 
   /// ParsedSpecifiers - Flags to query which specifiers were applied.  This is
@@ -384,21 +384,21 @@ private:
   unsigned ConstrainedAuto : 1;
 
   // type-qualifiers
-  #if ENABLE_BSC
+#if ENABLE_BSC
   unsigned TypeQualifiers : 7; // Bitwise OR of TQ.
-  #else
+#else
   unsigned TypeQualifiers : 5;
-  #endif
+#endif
 
   // function-specifier
   unsigned FS_inline_specified : 1;
   unsigned FS_forceinline_specified: 1;
   unsigned FS_virtual_specified : 1;
   unsigned FS_noreturn_specified : 1;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   unsigned FS_async_specified : 1;
   unsigned FS_safe_zone_specified : 2;
-  #endif
+#endif
 
   // friend-specifier
   unsigned Friend_specified : 1;
@@ -413,21 +413,21 @@ private:
     TemplateIdAnnotation *TemplateIdRep;
   };
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   llvm::Optional<bool> ConditionalCondResult;
   ParsedType ConditionalType1;
   ParsedType ConditionalType2;
   Expr *ConditionalCondExpr;
-  #endif
+#endif
 
   /// ExplicitSpecifier - Store information about explicit spicifer.
   ExplicitSpecifier FS_explicit_specifier;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   SafeScopeSpecifier FS_safe_specified;
 
   SourceLocation FS_safe_loc;
-  #endif
+#endif
 
   // attributes.
   ParsedAttributes Attrs;
@@ -483,10 +483,10 @@ public:
   static bool isDeclRep(TST T) {
     return (T == TST_enum || T == TST_struct || T == TST_interface ||
             T == TST_union || T == TST_class
-            #if ENABLE_BSC
+#if ENABLE_BSC
             || T == TST_trait
-            #endif
-            );
+#endif
+    );
   }
 
   DeclSpec(AttributeFactory &attrFactory)
@@ -502,14 +502,14 @@ public:
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
         FS_noreturn_specified(false),
-        #if ENABLE_BSC
+#if ENABLE_BSC
         FS_async_specified(false), FS_safe_zone_specified(SZ_None),
-        #endif
+#endif
         Friend_specified(false), ConstexprSpecifier(static_cast<unsigned>(
                                      ConstexprSpecKind::Unspecified)),
-        #if ENABLE_BSC
+#if ENABLE_BSC
         FS_explicit_specifier(), FS_safe_specified(SS_None), FS_safe_loc(),
-        #endif
+#endif
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
@@ -643,10 +643,10 @@ public:
   void ClearTypeQualifiers() {
     TypeQualifiers = 0;
     TQ_constLoc = SourceLocation();
-    #if ENABLE_BSC
+#if ENABLE_BSC
     TQ_ownedLoc = SourceLocation();
     TQ_borrowLoc = SourceLocation();
-    #endif
+#endif
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
     TQ_atomicLoc = SourceLocation();
@@ -662,7 +662,7 @@ public:
     return FS_inline_specified ? FS_inlineLoc : FS_forceinlineLoc;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool isAsyncSpecified() const { return FS_async_specified; }
   SourceLocation getAsyncSpecLoc() const { return FS_asyncLoc; }
 
@@ -670,7 +670,7 @@ public:
     return (SafeZoneSpecifier)FS_safe_zone_specified;
   }
   SourceLocation getSafeZoneSpecifierLoc() const { return FS_safe_zone_loc; }
-  #endif
+#endif
 
   ExplicitSpecifier getExplicitSpecifier() const {
     return FS_explicit_specifier;
@@ -689,7 +689,7 @@ public:
                : SourceRange(FS_explicitLoc);
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   SafeScopeSpecifier getSafeSpecifier() const {
     return FS_safe_specified;
   }
@@ -697,7 +697,7 @@ public:
   SourceLocation getSafeSpecifierLoc() const {
     return FS_safe_loc;
   }
-  #endif
+#endif
 
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
@@ -707,14 +707,14 @@ public:
     FS_inlineLoc = SourceLocation();
     FS_forceinline_specified = false;
     FS_forceinlineLoc = SourceLocation();
-    #if ENABLE_BSC
+#if ENABLE_BSC
     FS_async_specified = false;
     FS_asyncLoc = SourceLocation();
     FS_safe_specified = SS_None;
     FS_safe_loc = SourceLocation();
     FS_safe_zone_specified = SZ_None;
     FS_safe_zone_loc = SourceLocation();
-    #endif
+#endif
     FS_virtual_specified = false;
     FS_virtualLoc = SourceLocation();
     FS_explicit_specifier = ExplicitSpecifier();
@@ -824,13 +824,12 @@ public:
   bool SetBitIntType(SourceLocation KWLoc, Expr *BitWidth,
                      const char *&PrevSpec, unsigned &DiagID,
                      const PrintingPolicy &Policy);
-  #if ENABLE_BSC
-  bool SetConditionalType(SourceLocation KWLoc,
-                          const char *&PrevSpec, unsigned &DiagID,
-                          llvm::Optional<bool> CondResult,
+#if ENABLE_BSC
+  bool SetConditionalType(SourceLocation KWLoc, const char *&PrevSpec,
+                          unsigned &DiagID, llvm::Optional<bool> CondResult,
                           Expr *CondExpr, ParsedType Ty1, ParsedType Ty2,
                           const PrintingPolicy &Policy);
-  #endif
+#endif
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
                       unsigned &DiagID);
   bool SetTypeSpecError();
@@ -856,13 +855,13 @@ public:
                              unsigned &DiagID);
   bool setFunctionSpecForceInline(SourceLocation Loc, const char *&PrevSpec,
                                   unsigned &DiagID);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
                             unsigned &DiagID);
   bool setFunctionSafeZoneSpecifier(SourceLocation Loc, const char *&PrevSpec,
                                     unsigned &DiagID,
                                     SafeZoneSpecifier SafeSpec);
-  #endif
+#endif
   bool setFunctionSpecVirtual(SourceLocation Loc, const char *&PrevSpec,
                               unsigned &DiagID);
   bool setFunctionSpecExplicit(SourceLocation Loc, const char *&PrevSpec,
@@ -870,10 +869,10 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool setFunctionSafeSpecifier(SourceLocation Loc, const char *&PrevSpec,
                                 unsigned &DiagID, SafeScopeSpecifier SafeSpec);
-  #endif
+#endif
 
   bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                      unsigned &DiagID);
@@ -1338,22 +1337,22 @@ struct DeclaratorChunk {
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/owned/unaligned/atomic.
-    #if ENABLE_BSC
+#if ENABLE_BSC
     unsigned TypeQuals : 7;
-    #else
+#else
     unsigned TypeQuals : 5;
-    #endif
+#endif
 
     /// The location of the const-qualifier, if any.
     SourceLocation ConstQualLoc;
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     /// The location of the owned-qualifier, if any.
     SourceLocation OwnedQualLoc;
 
     /// The location of the borrow-qualifier, if any.
     SourceLocation BorrowQualLoc;
-    #endif
+#endif
 
     /// The location of the volatile-qualifier, if any.
     SourceLocation VolatileQualLoc;
@@ -1383,11 +1382,11 @@ struct DeclaratorChunk {
   struct ArrayTypeInfo {
     /// The type qualifiers for the array:
     /// const/volatile/restrict/owned/__unaligned/_Atomic.
-    #if ENABLE_BSC
+#if ENABLE_BSC
     unsigned TypeQuals : 7;
-    #else
+#else
     unsigned TypeQuals : 5;
-    #endif
+#endif
 
     /// True if this dimension included the 'static' keyword.
     unsigned hasStatic : 1;
@@ -1675,11 +1674,11 @@ struct DeclaratorChunk {
   struct BlockPointerTypeInfo {
     /// For now, sema will catch these as invalid.
     /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
-    #if ENABLE_BSC
+#if ENABLE_BSC
     unsigned TypeQuals : 7;
-    #else
+#else
     unsigned TypeQuals : 5;
-    #endif
+#endif
 
     void destroy() {
     }
@@ -1687,11 +1686,11 @@ struct DeclaratorChunk {
 
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
-    #if ENABLE_BSC
+#if ENABLE_BSC
     unsigned TypeQuals : 7;
-    #else
+#else
     unsigned TypeQuals : 5;
-    #endif
+#endif
     /// Location of the '*' token.
     SourceLocation StarLoc;
     // CXXScopeSpec has a constructor, so it can't be a direct member.
@@ -1976,9 +1975,9 @@ class Declarator {
 private:
   const DeclSpec &DS;
   CXXScopeSpec SS;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   BSCScopeSpec BSS;
-  #endif
+#endif
 
   UnqualifiedId Name;
   SourceRange Range;
@@ -2047,9 +2046,9 @@ private:
   /// parameters (if any).
   TemplateParameterList *InventedTemplateParameterList;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool IsTraitMember = false;
-  #endif
+#endif
 
 #ifndef _MSC_VER
   union {
@@ -2101,10 +2100,11 @@ public:
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
         DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr), InventedTemplateParameterList(nullptr)
-        #if ENABLE_BSC
-        , IsTraitMember(false)
-        #endif
-        {
+#if ENABLE_BSC
+        ,
+        IsTraitMember(false)
+#endif
+  {
     assert(llvm::all_of(DeclarationAttrs,
                         [](const ParsedAttr &AL) {
                           return AL.isStandardAttributeSyntax();
@@ -2135,12 +2135,12 @@ public:
   const CXXScopeSpec &getCXXScopeSpec() const { return SS; }
   CXXScopeSpec &getCXXScopeSpec() { return SS; }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// getBSCScopeSpec - Return the BSCMethod declaration-specifier that this
   /// declarator was declared with.
   const BSCScopeSpec &getBSCScopeSpec() const { return BSS; }
   BSCScopeSpec &getBSCScopeSpec() { return BSS; }
-  #endif
+#endif
 
   /// Retrieve the name specified by this declarator.
   UnqualifiedId &getName() { return Name; }
@@ -2204,9 +2204,9 @@ public:
     ObjCWeakProperty = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
-    #if ENABLE_BSC
+#if ENABLE_BSC
     IsTraitMember = false;
-    #endif
+#endif
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2422,11 +2422,11 @@ public:
     Name.setIdentifier(Id, IdLoc);
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool getIsTraitMember() const { return IsTraitMember; }
 
   void setIsTraitMember(bool i) { IsTraitMember = i; }
-  #endif
+#endif
 
   /// Set the decomposition bindings for this declarator.
   void
@@ -2490,12 +2490,12 @@ public:
     DeclTypeInfo.erase(DeclTypeInfo.begin());
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   void DropTypeObject(unsigned i) {
     assert(i < DeclTypeInfo.size() && "Invalid type chunk");
     DeclTypeInfo.erase(DeclTypeInfo.begin() + i);
   }
-  #endif
+#endif
 
   /// Return the innermost (closest to the declarator) chunk of this
   /// declarator that is not a parens chunk, or null if there are no

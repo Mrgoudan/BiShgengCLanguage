@@ -263,7 +263,7 @@ option is recognized.
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> NoClangDiagnostic("no-clang-diagnostic", cl::desc(R"(
-Disabled default clang diagnostic information. 
+Disabled default clang diagnostic information.
 Only run checkers specified by users.
 )"),
                                 cl::init(false), cl::cat(ClangTidyCategory));
@@ -622,7 +622,6 @@ int clangTidyMain(int argc, const char **argv) {
   const bool DisableFixes = FoundErrors && !FixErrors;
 
   unsigned WErrorCount = 0;
-
 
   bool IsNoClangDiagnostic = false;
   if (NoClangDiagnostic)

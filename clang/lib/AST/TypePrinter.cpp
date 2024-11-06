@@ -86,32 +86,34 @@ namespace {
   class DefaultTemplateArgsPolicyRAII {
     PrintingPolicy &Policy;
     bool Old;
-    #if ENABLE_BSC
+#if ENABLE_BSC
     bool SuppressTagKeyword;
-    #endif
+#endif
 
   public:
     explicit DefaultTemplateArgsPolicyRAII(PrintingPolicy &Policy)
         : Policy(Policy), Old(Policy.SuppressDefaultTemplateArgs)
-          #if ENABLE_BSC
-          , SuppressTagKeyword(Policy.SuppressTagKeyword)
-          #endif
-          {
+#if ENABLE_BSC
+          ,
+          SuppressTagKeyword(Policy.SuppressTagKeyword)
+#endif
+    {
       Policy.SuppressDefaultTemplateArgs = false;
-      #if ENABLE_BSC
-      if (Policy.RewriteBSC) { // FIXME: quite hack
+#if ENABLE_BSC
+      // FIXME: quite hack
+      if (Policy.RewriteBSC) {
         Policy.SuppressTagKeyword = false;
       }
-      #endif
+#endif
     }
 
     ~DefaultTemplateArgsPolicyRAII() {
       Policy.SuppressDefaultTemplateArgs = Old;
-      #if ENABLE_BSC
+#if ENABLE_BSC
       if (Policy.RewriteBSC) {
         Policy.SuppressTagKeyword = SuppressTagKeyword;
       }
-      #endif
+#endif
     }
   };
 
@@ -175,28 +177,29 @@ namespace {
 
 static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
                                bool HasRestrictKeyword
-                               #if ENABLE_BSC
-                               , bool IsRewriteBSC
-                               #endif
+#if ENABLE_BSC
+                               ,
+                               bool IsRewriteBSC
+#endif
                                ) {
   bool appendSpace = false;
   if (TypeQuals & Qualifiers::Const) {
     OS << "const";
     appendSpace = true;
   }
-  #if ENABLE_BSC
-  if (TypeQuals & Qualifiers::Owned && !IsRewriteBSC) {
+#if ENABLE_BSC
+  if ((TypeQuals & Qualifiers::Owned) && !IsRewriteBSC) {
     if (appendSpace) OS << ' ';
     OS << "owned";
     appendSpace = true;
   }
-  if (TypeQuals & Qualifiers::Borrow && !IsRewriteBSC) {
+  if ((TypeQuals & Qualifiers::Borrow) && !IsRewriteBSC) {
     if (appendSpace)
       OS << ' ';
     OS << "borrow";
     appendSpace = true;
   }
-  #endif
+#endif
   if (TypeQuals & Qualifiers::Volatile) {
     if (appendSpace) OS << ' ';
     OS << "volatile";
@@ -272,19 +275,19 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::UnaryTransform:
     case Type::Record:
     case Type::Enum:
-    #if ENABLE_BSC
+#if ENABLE_BSC
     case Type::Trait:
     case Type::Conditional:
-    #endif
+#endif
     case Type::Elaborated:
     case Type::TemplateTypeParm:
     case Type::SubstTemplateTypeParmPack:
     case Type::DeducedTemplateSpecialization:
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
-    #if ENABLE_BSC
+#if ENABLE_BSC
     case Type::InjectedTraitName:
-    #endif
+#endif
     case Type::DependentName:
     case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
@@ -574,10 +577,11 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
   if (T->getIndexTypeQualifiers().hasQualifiers()) {
     AppendTypeQualList(OS, T->getIndexTypeCVRQualifiers(),
                        Policy.Restrict
-                       #if ENABLE_BSC
-                       , Policy.RewriteBSC
-                       #endif
-                       );
+#if ENABLE_BSC
+                       ,
+                       Policy.RewriteBSC
+#endif
+    );
     OS << ' ';
   }
 
@@ -611,10 +615,11 @@ void TypePrinter::printVariableArrayAfter(const VariableArrayType *T,
   OS << '[';
   if (T->getIndexTypeQualifiers().hasQualifiers()) {
     AppendTypeQualList(OS, T->getIndexTypeCVRQualifiers(), Policy.Restrict
-                       #if ENABLE_BSC
-                       , Policy.RewriteBSC
-                       #endif
-                       );
+#if ENABLE_BSC
+                       ,
+                       Policy.RewriteBSC
+#endif
+    );
     OS << ' ';
   }
 
@@ -1516,7 +1521,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   // arguments.
   if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
     ArrayRef<TemplateArgument> Args;
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (Policy.RewriteBSC) {
       Args = Spec->getTemplateArgs().asArray();
       std::string BSCRecordNameStr;
@@ -1526,7 +1531,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
       }
       OS << BSCRecordNameStr;
     } else {
-    #endif
+#endif
     TypeSourceInfo *TAW = Spec->getTypeAsWritten();
     if (!Policy.PrintCanonicalTypes && TAW) {
       const TemplateSpecializationType *TST =
@@ -1540,9 +1545,9 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     printTemplateArgumentList(
         OS, Args, Policy,
         Spec->getSpecializedTemplate()->getTemplateParameters());
-    #if ENABLE_BSC
+#if ENABLE_BSC
     }
-    #endif
+#endif
   }
 
   spaceBeforePlaceHolder(OS);
@@ -2259,15 +2264,15 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
   if (!IsPack) {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (Policy.RewriteBSC) {
       OS << '_';
     } else {
-    #endif
+#endif
       OS << '<';
-    #if ENABLE_BSC
+#if ENABLE_BSC
     }
-    #endif
+#endif
   }
 
   bool NeedSpace = false;
@@ -2284,14 +2289,14 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
               /*IsPack*/ true, ParmIndex);
     } else {
       if (!FirstArg) {
-        #if ENABLE_BSC
+#if ENABLE_BSC
         if (!Policy.RewriteBSC)
-        #endif
+#endif
           OS << Comma;
-        #if ENABLE_BSC
+#if ENABLE_BSC
         else
           OS << '_';
-        #endif
+#endif
       }
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
@@ -2308,7 +2313,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
 
     std::string NewArgString = ArgString.str();
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (Policy.RewriteBSC) {
       for (int i = NewArgString.length() - 1; i >= 0; i--) {
         if (NewArgString[i] == ' ') {
@@ -2327,7 +2332,7 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
         }
       }
     }
-    #endif
+#endif
 
     OS << NewArgString;
 
@@ -2344,15 +2349,15 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
   }
 
   if (!IsPack) {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (!Policy.RewriteBSC) {
-    #endif
+#endif
       if (NeedSpace)
         OS << ' ';
       OS << '>';
-    #if ENABLE_BSC
+#if ENABLE_BSC
     }
-    #endif
+#endif
   }
 }
 
@@ -2459,10 +2464,11 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
   unsigned quals = getCVRQualifiers();
   if (quals) {
     AppendTypeQualList(OS, quals, Policy.Restrict
-                       #if ENABLE_BSC
-                       , Policy.RewriteBSC
-                       #endif
-                       );
+#if ENABLE_BSC
+                       ,
+                       Policy.RewriteBSC
+#endif
+    );
     addSpace = true;
   }
   if (hasUnaligned()) {

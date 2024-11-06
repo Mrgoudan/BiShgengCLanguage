@@ -648,11 +648,11 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     HandlePragmaUnused();
     return false;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::annot_pragma_safe:
     HandlePragmaSafe();
     return false;
-  #endif
+#endif
 
   case tok::kw_export:
     switch (NextToken().getKind()) {
@@ -1061,7 +1061,7 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
 
   default:
   dont_know:
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (getLangOpts().BSC &&
         ShouldParseImplTraitDecl(Actions, Tok, NextToken()))
       return ParseImplTraitDeclaration();
@@ -1075,7 +1075,7 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs, EmptyDeclSpecAttrs);
       break;
     }
-    #endif
+#endif
 
     if (Tok.isEditorPlaceholder()) {
       ConsumeToken();
@@ -1175,10 +1175,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
         return 4;
       case DeclSpec::TST_interface:
         return 9;
-      #if ENABLE_BSC
+#if ENABLE_BSC
       case DeclSpec::TST_trait:
         return 5;
-      #endif
+#endif
       default:
         llvm_unreachable("we only expect to get the length of the class/struct/union/enum");
       }
@@ -1775,10 +1775,10 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
   //      foo<int, int>(1, 2); // Call ParseOptionalCXXScopeSpecifier
   //    }
   if ((getLangOpts().CPlusPlus
-      #if ENABLE_BSC
-      || getLangOpts().BSC
-      #endif
-      ) &&
+#if ENABLE_BSC
+       || getLangOpts().BSC
+#endif
+       ) &&
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      EnteringContext))
@@ -1995,10 +1995,10 @@ bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
 /// Note that this routine emits an error if you call it with ::new or ::delete
 /// as the current tokens, so only call it in contexts where these are invalid.
 bool Parser::TryAnnotateTypeOrScopeToken(
-                                #if ENABLE_BSC
-                                QualType ExtendedTy
-                                #endif
-                                ) {
+#if ENABLE_BSC
+    QualType ExtendedTy
+#endif
+) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -2105,20 +2105,22 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   // @Code
   //    foo<int, int>(1,2);
   if (getLangOpts().CPlusPlus
-      #if ENABLE_BSC
-      || (getLangOpts().BSC && Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::less))
-      #endif
-      )
+#if ENABLE_BSC
+      || (getLangOpts().BSC && Tok.is(tok::identifier) &&
+          PP.LookAhead(0).is(tok::less))
+#endif
+  )
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                        /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))
       return true;
 
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation
-                                                   #if ENABLE_BSC
-                                                   , ExtendedTy
-                                                   #endif
-                                                   );
+#if ENABLE_BSC
+                                                   ,
+                                                   ExtendedTy
+#endif
+  );
 }
 
 /// Try to annotate a type or scope token, having already parsed an
@@ -2126,10 +2128,11 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 /// specifier was extracted from an existing tok::annot_cxxscope annotation.
 bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
                                                        bool IsNewScope
-                                                       #if ENABLE_BSC
-                                                       , QualType ExtendedTy
-                                                       #endif
-                                                       ) {
+#if ENABLE_BSC
+                                                       ,
+                                                       QualType ExtendedTy
+#endif
+) {
   if (Tok.is(tok::identifier)) {
     // Determine whether the identifier is a type name.
     if (ParsedType Ty = Actions.getTypeName(
@@ -2138,10 +2141,11 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
             /*IsCtorOrDtorName=*/false,
             /*NonTrivialTypeSourceInfo*/ true,
             /*IsClassTemplateDeductionContext*/ true
-            #if ENABLE_BSC
-            , /*CorrectedII*/ nullptr,
+#if ENABLE_BSC
+            ,
+            /*CorrectedII*/ nullptr,
             /*ExtendedTy*/ ExtendedTy
-            #endif
+#endif
             )) {
       SourceLocation BeginLoc = Tok.getLocation();
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
@@ -2248,14 +2252,14 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
 /// Note that this routine emits an error if you call it with ::new or ::delete
 /// as the current tokens, so only call it in contexts where these are invalid.
 bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "Call sites of this function should be guarded by checking for C++ "
          "and BSC");
-  #else
+#else
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
-  #endif
+#endif
   assert(MightBeCXXScopeToken() && "Cannot be a type or scope token!");
 
   CXXScopeSpec SS;

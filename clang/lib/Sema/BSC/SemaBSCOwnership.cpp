@@ -280,14 +280,15 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   if (IsPointer) {
     if (LHSCanType->isVoidPointerType()) {
       return true;
-    } else if(RHSCanType->isVoidPointerType() && !IsInSafeZone()) {
+    } else if (RHSCanType->isVoidPointerType() && !IsInSafeZone()) {
       return true;
     } else if (Context.hasSameType(LHSRawType, RHSRawType)) {
       return true;
     } else if (TryDesugarTrait(RHSType)) {
       return true;
     } else {
-      return CheckBorrowQualTypeCStyleCast(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType());
+      return CheckBorrowQualTypeCStyleCast(LHSPtrType->getPointeeType(),
+                                           RHSPtrType->getPointeeType());
     }
   }
   return false;
@@ -308,7 +309,6 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, Sou
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
   bool IsPointer = LHSPtrType && RHSPtrType;
-
 
   if (LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified()) {
     if (TraitDecl *TD = TryDesugarTrait(LHSCanType)) {
@@ -364,7 +364,8 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
     Res = CheckBorrowQualTypeAssignment(LHSType, RHSCanType, ExprLoc);
   }
   if (!Res) {
-    Diag(ExprLoc, diag::err_borrow_qualcheck_incompatible) << CompleteTraitType(RHSExpr->getType()) << CompleteTraitType(LHSType);
+    Diag(ExprLoc, diag::err_borrow_qualcheck_incompatible)
+        << CompleteTraitType(RHSExpr->getType()) << CompleteTraitType(LHSType);
   }
   return Res;
 }
@@ -372,7 +373,6 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
 bool Sema::CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
-
   if (LHSCanType.isBorrowQualified() || RHSCanType.isBorrowQualified()) {
     if (RHSCanType != LHSCanType) {
       return false;

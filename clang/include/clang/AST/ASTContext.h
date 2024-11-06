@@ -1637,7 +1637,7 @@ public:
 
   #if ENABLE_BSC
   QualType getTraitType(const TraitDecl *Decl) const;
-  QualType getConditionalType(llvm::Optional<bool> CondResult, Expr *CondExpr, 
+  QualType getConditionalType(llvm::Optional<bool> CondResult, Expr *CondExpr,
                               QualType CondType1, QualType CondType2) const;
   #endif
 

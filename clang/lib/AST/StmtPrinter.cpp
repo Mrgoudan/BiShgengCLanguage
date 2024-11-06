@@ -259,7 +259,7 @@ void StmtPrinter::VisitNullStmt(NullStmt *Node) {
 }
 
 void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Policy.RewriteBSC) {
     if (Node->isSingleDecl()) {
       if (auto *VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
@@ -277,7 +277,7 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
       }
     }
   }
-  #endif
+#endif
   Indent();
   PrintRawDeclStmt(Node);
   OS << ";" << NL;
@@ -1224,7 +1224,7 @@ RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
 #endif
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Policy.RewriteBSC) {
     if (VarDecl *VD = dyn_cast<VarDecl>(Node->getDecl())) {
       APValue *Res = VD->getEvaluatedValue();
@@ -1238,7 +1238,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
         auto *RD = dyn_cast<RecordDecl>(Node->getFoundDecl()->getDeclContext());
         std::string ExtendedTypeStr = GetTypePrefix(
             RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
-        OS << ExtendedTypeStr + "D";
+        OS << (ExtendedTypeStr + "D");
         return;
       }
     }
@@ -1286,7 +1286,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       }
     }
   }
-  #endif
+#endif
   if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
@@ -1454,12 +1454,12 @@ void StmtPrinter::VisitIntegerLiteral(IntegerLiteral *Node) {
   }
 
   // Emit suffixes.  Integer literals are always a builtin integer type.
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Policy.RewriteBSC) {
     rewriteBSCIntegerLiteralSuffix(Node, OS);
     return;
   }
-  #endif
+#endif
   switch (Node->getType()->castAs<BuiltinType>()->getKind()) {
   default: llvm_unreachable("Unexpected type for integer literal!");
   case BuiltinType::Char_S:
@@ -1549,19 +1549,21 @@ void StmtPrinter::VisitParenExpr(ParenExpr *Node) {
 
 void StmtPrinter::VisitUnaryOperator(UnaryOperator *Node) {
   if (!Node->isPostfix()) {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (Policy.RewriteBSC) {
-      if (Node->getOpcode() == UO_AddrConst || Node->getOpcode() == UO_AddrMut) {
+      if (Node->getOpcode() == UO_AddrConst ||
+          Node->getOpcode() == UO_AddrMut) {
         OS << UnaryOperator::getOpcodeStr(UO_AddrOf);
-      } else if (Node->getOpcode() == UO_AddrConstDeref || Node->getOpcode() == UO_AddrMutDeref) {
+      } else if (Node->getOpcode() == UO_AddrConstDeref ||
+                 Node->getOpcode() == UO_AddrMutDeref) {
         OS << UnaryOperator::getOpcodeStr(UO_AddrOf);
         OS << UnaryOperator::getOpcodeStr(UO_Deref);
       } else {
         OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
       }
     } else
-    #endif
-    OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
+#endif
+      OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
 
 
     // Print a space if this is an "identifier operator" like __real, or if
@@ -1776,7 +1778,7 @@ static bool isImplicitThis(const Expr *E) {
 }
 
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
     std::string ExtendedTypeStr =
         GetTypePrefix(BD->getExtendedType(), false, Policy);
@@ -1786,8 +1788,8 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
         GetTypePrefix(Node->getBase()->getType(), false, Policy);
     OS << ExtendedTypeStr;
   } else
-  #endif
-  if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
+#endif
+      if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {
     PrintExpr(Node->getBase());
 
     auto *ParentMember = dyn_cast<MemberExpr>(Node->getBase());
@@ -2265,17 +2267,17 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
 }
 
 void StmtPrinter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *Node) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Policy.RewriteBSC) {
     OS << (Node->getValue()
                ? "1"
                : "0"); // FIXME: a little bit weird. why enter here.
   } else {
-  #endif
+#endif
     OS << (Node->getValue() ? "true" : "false");
-  #if ENABLE_BSC
+#if ENABLE_BSC
   }
-  #endif
+#endif
 }
 
 void StmtPrinter::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *Node) {

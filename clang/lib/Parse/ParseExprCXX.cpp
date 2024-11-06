@@ -198,14 +198,14 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
     IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
          "Call sites of this function should be guarded by checking for C++ "
          "or BSC");
-  #else
+#else
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
-  #endif
+#endif
 
   if (Tok.is(tok::annot_cxxscope)) {
     assert(!LastII && "want last identifier but have already annotated scope");
@@ -435,9 +435,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     //   type-name '::'
     //   namespace-name '::'
     //   nested-name-specifier identifier '::'
-    #if !ENABLE_BSC
+#if !ENABLE_BSC
     Token Next = NextToken();
-    #else
+#else
     // Skip param list "<T>" in template function or typealias declaration:
     // "T max<T> (T a, T b) {...}"
     // "typedef S_T<T> = struct S<T>;"
@@ -455,9 +455,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       Actions.LookupName(LookupPreviousFunction, getCurScope());
 
       if (getCurScope()->getDepth() <= 1 && (LookupPreviousFunction.empty() || InUsingDeclaration)) {
-        ParsingBSCTemplateFunctionOrTypealias = IsBSCTemplateDeclaration(getLangOpts().BSC,
-                                                              Tok.is(tok::identifier),
-                                                              PP);
+        ParsingBSCTemplateFunctionOrTypealias = IsBSCTemplateDeclaration(
+            getLangOpts().BSC, Tok.is(tok::identifier), PP);
 
         if (ParsingBSCTemplateFunctionOrTypealias) {
           // Determine if '>' is followed by '{' or '('
@@ -489,7 +488,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     } else {
       Next = NextToken();
     }
-    #endif
+#endif
 
     Sema::NestedNameSpecInfo IdInfo(&II, Tok.getLocation(), Next.getLocation(),
                                     ObjectType);
@@ -3191,7 +3190,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     SourceLocation IdLoc = ConsumeToken();
 
     if (!getLangOpts().CPlusPlus) {
-      #if ENABLE_BSC
+#if ENABLE_BSC
       // We add this judge to parse BSC syntax, without
       // affecting the original logic of C.
       // @Code:k
@@ -3212,7 +3211,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
         }
         assert(Tok.isOneOf(tok::l_paren, tok::equal) && "expected 'l_paren' or 'equal' token");
       }
-      #endif
+#endif
 
       // If we're not in C++, only identifiers matter. Record the
       // identifier and return.

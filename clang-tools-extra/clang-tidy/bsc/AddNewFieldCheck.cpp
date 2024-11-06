@@ -17,7 +17,11 @@ namespace bsc {
 
 void AddNewFieldCheck::registerMatchers(MatchFinder *Finder) {
   for (auto TargetStruct : TargetStructs) {
-    Finder->addMatcher(recordDecl(has(fieldDecl(hasType(asString(std::string(TargetStruct)))).bind("x"))).bind("y"),this);
+    Finder->addMatcher(
+        recordDecl(has(fieldDecl(hasType(asString(std::string(TargetStruct))))
+                           .bind("x")))
+            .bind("y"),
+        this);
   }
 }
 
@@ -26,7 +30,7 @@ void AddNewFieldCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (auto* DeclField : MatchedDecl1->fields()) {
     bool IsAlreadyExsit = false;
-    std::string Identifier= std::string(DeclField->getName());
+    std::string Identifier = std::string(DeclField->getName());
     std::string Expected_Name = "__" + Identifier + "_DBID";
 
     for (auto TargetStruct : TargetStructs) {

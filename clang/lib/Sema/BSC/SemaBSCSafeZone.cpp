@@ -435,11 +435,11 @@ SafeZoneSpecifier Sema::getInstantiationSafeZoneSpecifier() {
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   if (getCurFunction()) {
     if (getCurFunction()->InsCompoundSafeZone.size() == 0) {
-      if (CurrentInstantiationScope) 
+      if (CurrentInstantiationScope)
         SafeZoneSpec = CurrentInstantiationScope->getScopeSafeZoneSpecifier();
     } else {
       SafeZoneSpec =
-        getCurInsCompoundSafeZone().getInsCompoundSafeZoneSpecifier();
+          getCurInsCompoundSafeZone().getInsCompoundSafeZoneSpecifier();
     }
   }
   return SafeZoneSpec;

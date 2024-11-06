@@ -1951,9 +1951,9 @@ class ComplexTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
 struct ConditionalTypeLocInfo {
   SourceLocation ConditionalLoc;
   SourceLocation RParenLoc;
-  TypeSourceInfo* ConditionalTInfo1;
-  TypeSourceInfo* ConditionalTInfo2;
-  TypeSourceInfo* UnderlyingTInfo;
+  TypeSourceInfo *ConditionalTInfo1;
+  TypeSourceInfo *ConditionalTInfo2;
+  TypeSourceInfo *UnderlyingTInfo;
 };
 
 class ConditionalTypeLoc
@@ -1982,23 +1982,23 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
 
-  Expr* getCondExpr() const {
+  Expr *getCondExpr() const {
     return this->getTypePtr()->getCondExpr();
   }
 
-  llvm::Optional<bool> getCondResult() const { 
-    return this->getTypePtr()->getCondResult(); 
+  llvm::Optional<bool> getCondResult() const {
+    return this->getTypePtr()->getCondResult();
   }
-  
+
   QualType getConditionalType1() const {
     return this->getTypePtr()->getConditionalType1();
   }
 
-  TypeSourceInfo* getConditionalTInfo1() const {
+  TypeSourceInfo *getConditionalTInfo1() const {
     return this->getLocalData()->ConditionalTInfo1;
   }
-  
-  void setConditionalTInfo1(TypeSourceInfo* TI) const {
+
+  void setConditionalTInfo1(TypeSourceInfo *TI) const {
     this->getLocalData()->ConditionalTInfo1 = TI;
   }
 
@@ -2006,11 +2006,11 @@ public:
     return this->getTypePtr()->getConditionalType2();
   }
 
-  TypeSourceInfo* getConditionalTInfo2() const {
+  TypeSourceInfo *getConditionalTInfo2() const {
     return this->getLocalData()->ConditionalTInfo2;
   }
 
-  void setConditionalTInfo2(TypeSourceInfo* TI) const {
+  void setConditionalTInfo2(TypeSourceInfo *TI) const {
     this->getLocalData()->ConditionalTInfo2 = TI;
   }
 
@@ -2018,11 +2018,11 @@ public:
     return this->getTypePtr()->getUnderlyingType();
   }
 
-  TypeSourceInfo* getUnderlyingTInfo() const {
+  TypeSourceInfo *getUnderlyingTInfo() const {
     return this->getLocalData()->UnderlyingTInfo;
   }
 
-  void setUnderlyingTInfo(TypeSourceInfo* TI) const {
+  void setUnderlyingTInfo(TypeSourceInfo *TI) const {
     this->getLocalData()->UnderlyingTInfo = TI;
   }
 };

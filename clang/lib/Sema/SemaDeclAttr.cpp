@@ -1582,7 +1582,6 @@ template <typename AttrInfo>
 static bool checkFunctionTypeIndex(
     Sema &S, const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
     const Expr *IdxExpr, ParamIdx &Idx, const FunctionProtoType *Proto) {
-
   unsigned NumParams = Proto->getNumParams();
 
   Optional<llvm::APSInt> IdxInt;
@@ -1622,10 +1621,8 @@ static void handleNonNullFuncPtrParams(Sema &S, Decl *D, const ParsedAttr &AL, Q
       return;
 
     // Is the function type argument a pointer type
-    if (!attrNonNullArgCheck(
-            S, Proto->getParamType(Idx.getASTIndex()), AL,
-            Ex->getSourceRange(),
-            SourceRange()))
+    if (!attrNonNullArgCheck(S, Proto->getParamType(Idx.getASTIndex()), AL,
+                             Ex->getSourceRange(), SourceRange()))
       continue;
 
     NonNullArgs.push_back(Idx);
@@ -8432,10 +8429,8 @@ static SmallVector<ParamIdx, 8> handleFuncPtrParams(Sema &S, Decl *D, const Pars
       continue;
 
     // Is the function type argument a pointer type
-    if (!attrNonNullArgCheck(
-            S, Proto->getParamType(Idx.getASTIndex()), AL,
-            Ex->getSourceRange(),
-            SourceRange()))
+    if (!attrNonNullArgCheck(S, Proto->getParamType(Idx.getASTIndex()), AL,
+                             Ex->getSourceRange(), SourceRange()))
       continue;
 
     Args.push_back(Idx);
@@ -8511,7 +8506,6 @@ static void handleCountAttrFunc(Sema &S, Decl *D, const ParsedAttr &AL, bool isB
     D->addAttr(::new (S.Context) ByteCountAttr(S.Context, AL, LenExpr, Start, Size));
   else
     D->addAttr(::new (S.Context) CountAttr(S.Context, AL, LenExpr, Start, Size));
-  
 }
 
 // `returns_count` attribute
@@ -8550,7 +8544,9 @@ static void handleReturnsCountFuncPtr(Sema &S, Decl *D, const ParsedAttr &AL, bo
 }
 
 // `count_index` attribute
-static void handleCountIndexFuncPtrParams(Sema &S, Decl *D, const ParsedAttr &AL, QualType Ty, const ParamIdx &LenIdx, bool isByte) {
+static void handleCountIndexFuncPtrParams(Sema &S, Decl *D,
+                                          const ParsedAttr &AL, QualType Ty,
+                                          const ParamIdx &LenIdx, bool isByte) {
   SmallVector<ParamIdx, 8> CountIndexArgs = handleFuncPtrParams(S, D, AL, Ty);
   unsigned Size = CountIndexArgs.size();
   if (Size == 0) {
@@ -9023,19 +9019,19 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NonNull:
     if (auto *PVD = dyn_cast<ParmVarDecl>(D))
       handleNonNullAttrParameter(S, PVD, AL);
-    #if ENABLE_BSC
+#if ENABLE_BSC
     else if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)
       handleNonNullAttrVarAndField(S, D, AL);
-    #endif
+#endif
     else
       handleNonNullAttr(S, D, AL);
     break;
   case ParsedAttr::AT_ReturnsNonNull:
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)
       handleReturnsNonNullFuncPtr(S, D, AL);
     else
-    #endif
+#endif
       handleReturnsNonNullAttr(S, D, AL);
     break;
   case ParsedAttr::AT_NoEscape:
@@ -9500,7 +9496,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
     break;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // EnhanceC attribute
   case ParsedAttr::AT_Count:
     if ((dyn_cast<VarDecl>(D) != nullptr) || dyn_cast<FieldDecl>(D) != nullptr)

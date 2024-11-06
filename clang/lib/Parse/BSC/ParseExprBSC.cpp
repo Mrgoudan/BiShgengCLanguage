@@ -28,9 +28,10 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
     SourceLocation CCLoc = NextToken().getLocation();
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
                                         TemplateId->NumArgs);
-    Actions.ActOnCXXNestedNameSpecifier(getCurScope(), SS, TemplateId->TemplateKWLoc,
-        TemplateId->Template, TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
-        TemplateArgsPtr, TemplateId->RAngleLoc, CCLoc, /*EnteringContext*/false);
+    Actions.ActOnCXXNestedNameSpecifier(
+        getCurScope(), SS, TemplateId->TemplateKWLoc, TemplateId->Template,
+        TemplateId->TemplateNameLoc, TemplateId->LAngleLoc, TemplateArgsPtr,
+        TemplateId->RAngleLoc, CCLoc, /*EnteringContext*/ false);
   }
   ParsingDeclSpec DS(*this);
   ParseBSCScopeSpecifiers(DS);
@@ -61,10 +62,11 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
   return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
                              isTypeCast, isVectorLiteral, NotPrimaryExpression,
                              T, HasBSCScopeSpec, DS.getBeginLoc()
-                             #if ENABLE_BSC
-                             , SS
-                             #endif
-                             );
+#if ENABLE_BSC
+                             ,
+                             SS
+#endif
+  );
 }
 
 bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
@@ -108,13 +110,12 @@ bool Parser::IsBSCStaticMemberFunctionCall() {
       TemplateName.setIdentifier(&II, Tok.getLocation());
       CXXScopeSpec SS;
       bool MemberOfUnknownSpecialization;
-      if (TemplateNameKind TNK = Actions.isTemplateName(getCurScope(), SS,
-                                                        /*hasTemplateKeyword=*/false,
-                                                        TemplateName,
-                                                        /*ObjectType*/nullptr,
-                                                        /*EnteringContext*/false,
-                                                        Template,
-                                                        MemberOfUnknownSpecialization)) {
+      if (TemplateNameKind TNK =
+              Actions.isTemplateName(getCurScope(), SS,
+                                     /*hasTemplateKeyword=*/false, TemplateName,
+                                     /*ObjectType=*/nullptr,
+                                     /*EnteringContext=*/false, Template,
+                                     MemberOfUnknownSpecialization)) {
         if (TNK == TNK_Type_template) {
           ConsumeToken();
           if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),

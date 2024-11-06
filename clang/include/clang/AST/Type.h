@@ -7304,9 +7304,9 @@ inline bool Type::hasTraitType() const {
   return isa<TraitType>(T);
 }
 
-//BSCCalculatedTypeInCompileTime includes bool,char(also includes signed char,unsigned char),
-//and int(can be specified by short/signed/unsigned/long/long long).
-//Enum is not included.
+// BSCCalculatedTypeInCompileTime includes bool,char(also includes signed char,unsigned char),
+// and int(can be specified by short/signed/unsigned/long/long long).
+// Enum is not included.
 inline bool Type::isBSCCalculatedTypeInCompileTime() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&

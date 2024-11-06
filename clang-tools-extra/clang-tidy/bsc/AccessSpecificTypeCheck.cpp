@@ -34,18 +34,44 @@ llvm::SmallVector<const clang::Expr *, 6> AvoidCallMemberList;
 void AccessSpecificTypeCheck::registerMatchers(MatchFinder *Finder) {
   for (auto TargetType : TargetTypes) {
     // Find store situations, avoid them when `check-load-only` on
-    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS((memberExpr(hasType(asString(std::string(TargetType))))))).bind("AvoidStore"), this);
-    Finder->addMatcher(binaryOperator(hasOperatorName("="), hasLHS(hasDescendant(memberExpr(hasType(asString(std::string(TargetType)))).bind("NestedStore")))), this);
+    Finder->addMatcher(
+        binaryOperator(
+            hasOperatorName("="),
+            hasLHS((memberExpr(hasType(asString(std::string(TargetType)))))))
+            .bind("AvoidStore"),
+        this);
+    Finder->addMatcher(
+        binaryOperator(
+            hasOperatorName("="),
+            hasLHS(hasDescendant(
+                memberExpr(hasType(asString(std::string(TargetType))))
+                    .bind("NestedStore")))),
+        this);
     // Find specific function calls by function name to avoid.
-    Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))), hasAncestor(callExpr(callee(namedDecl(hasAnyName(AvoidCalls)))))).bind("AvoidCall"), this);
+    Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))),
+                                  hasAncestor(callExpr(callee(
+                                      namedDecl(hasAnyName(AvoidCalls))))))
+                           .bind("AvoidCall"),
+                       this);
     // Find memberExpr compared with NULL in ifstmt.
-    Finder->addMatcher(ifStmt(hasDescendant(cStyleCastExpr(hasType(asString(std::string("void *"))), 
-                                                           hasDescendant(integerLiteral(equals(0))))),
-                              hasDescendant(memberExpr(hasType(asString(std::string(TargetType)))).bind("AvoidNull"))), this);
+    Finder->addMatcher(
+        ifStmt(
+            hasDescendant(
+                cStyleCastExpr(hasType(asString(std::string("void *"))),
+                               hasDescendant(integerLiteral(equals(0))))),
+            hasDescendant(memberExpr(hasType(asString(std::string(TargetType))))
+                              .bind("AvoidNull"))),
+        this);
     // Avoid all warnings in specific functions
-    Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))), hasAncestor(functionDecl(hasAnyName(AvoidFuncs)))).bind("AvoidFunc"), this);
+    Finder->addMatcher(
+        memberExpr(hasType(asString(std::string(TargetType))),
+                   hasAncestor(functionDecl(hasAnyName(AvoidFuncs))))
+            .bind("AvoidFunc"),
+        this);
     // Find target type.
-    Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType)))).bind("TargetType"), this);
+    Finder->addMatcher(memberExpr(hasType(asString(std::string(TargetType))))
+                           .bind("TargetType"),
+                       this);
   }
 }
 

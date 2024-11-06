@@ -1257,20 +1257,21 @@ getImageAccess(const ParsedAttributesView &Attrs) {
 /// \returns The type described by the declaration specifiers.  This function
 /// never returns null.
 static QualType ConvertDeclSpecToType(TypeProcessingState &state
-                                      #if ENABLE_BSC
-                                      , DeclSpec &PDS
-                                      #endif
-                                      ) {
+#if ENABLE_BSC
+                                      ,
+                                      DeclSpec &PDS
+#endif
+) {
   // FIXME: Should move the logic from DeclSpec::Finish to here for validity
   // checking.
 
   Sema &S = state.getSema();
   Declarator &declarator = state.getDeclarator();
-  #if ENABLE_BSC
+#if ENABLE_BSC
   DeclSpec &DS = PDS;
-  #else
+#else
   DeclSpec &DS = declarator.getMutableDeclSpec();
-  #endif
+#endif
   SourceLocation DeclLoc = declarator.getIdentifierLoc();
   if (DeclLoc.isInvalid())
     DeclLoc = DS.getBeginLoc();
@@ -1325,11 +1326,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state
            "Unknown TSS value");
     Result = Context.Char32Ty;
     break;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case DeclSpec::TST_This:
     Result = Context.ThisTy;
     break;
-  #endif
+#endif
   case DeclSpec::TST_unspecified:
     // If this is a missing declspec in a block literal return context, then it
     // is inferred from the return statements inside the block.
@@ -1570,9 +1571,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state
     break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case DeclSpec::TST_trait:
-  #endif
+#endif
   case DeclSpec::TST_union:
   case DeclSpec::TST_struct:
   case DeclSpec::TST_interface: {
@@ -1625,7 +1626,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(Result);
     break;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case DeclSpec::TST_conditionalType: {
     llvm::Optional<bool> CondResult = DS.getConditionalCondResult();
     Expr *CondExpr = DS.getConditionalCondExpr();
@@ -1634,7 +1635,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state
     Result = Context.getConditionalType(CondResult, CondExpr, CondType1, CondType2);
     break;
   }
-  #endif
+#endif
   case DeclSpec::TST_typeofExpr: {
     Expr *E = DS.getRepAsExpr();
     assert(E && "Didn't get an expression for typeof?");
@@ -1930,7 +1931,7 @@ QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
   const Type *BasedType = T.getCanonicalType().getTypePtr();
   // Extended type of a BSC member function cannot be an instantiated type.
   if (AddToContextMap)
-    if (auto * RT = BasedType->getAs<RecordType>())
+    if (auto *RT = BasedType->getAs<RecordType>())
       if (isa<ClassTemplateSpecializationDecl>(RT->getDecl())) {
         Diag(Loc, diag::err_extended_type_not_instantiated_type);
         return T;
@@ -1997,13 +1998,13 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     Qs.removeConst();
     Qs.removeVolatile();
   }
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (getLangOpts().BSC && Qs.hasBorrow()) {
     if (!T->isPointerType())
       Diag(DS ? DS->getBorrowSpecLoc() : Loc,
            diag::err_typecheck_invalid_borrow_not_pointer) << T;
   }
-  #endif
+#endif
 
   // Enforce C99 6.7.3p2: "Types other than pointer types derived from
   // object or incomplete types shall not be restrict-qualified."
@@ -2041,12 +2042,12 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     }
   }
 
-  #if ENABLE_BSC
-  if (getLangOpts().BSC && Qs.hasOwned()
-      && !CheckOwnedDecl(DS ? DS->getOwnedSpecLoc() : Loc, T)) {
+#if ENABLE_BSC
+  if (getLangOpts().BSC && Qs.hasOwned() &&
+      !CheckOwnedDecl(DS ? DS->getOwnedSpecLoc() : Loc, T)) {
     return QualType();
   }
-  #endif
+#endif
 
   return Context.getQualifiedType(T, Qs);
 }
@@ -3491,11 +3492,11 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
   case UnqualifiedIdKind::IK_Identifier:
   case UnqualifiedIdKind::IK_LiteralOperatorId:
   case UnqualifiedIdKind::IK_TemplateId:
-    #if ENABLE_BSC
+#if ENABLE_BSC
     T = ConvertDeclSpecToType(state, D.getMutableDeclSpec());
-    #else
+#else
     T = ConvertDeclSpecToType(state);
-    #endif
+#endif
 
     if (!D.isInvalidType() && D.getDeclSpec().isTypeSpecOwned()) {
       OwnedTagDecl = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
@@ -3610,9 +3611,9 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       } else {
         switch (cast<TagDecl>(SemaRef.CurContext)->getTagKind()) {
         case TTK_Enum: llvm_unreachable("unhandled tag kind");
-        #if ENABLE_BSC
+#if ENABLE_BSC
         case TTK_Trait:
-        #endif
+#endif
         case TTK_Struct: Error = Cxx ? 1 : 2; /* Struct member */ break;
         case TTK_Union:  Error = Cxx ? 3 : 4; /* Union member */ break;
         case TTK_Class:  Error = 5; /* Class member */ break;
@@ -5103,11 +5104,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         D.setInvalidType(true);
       }
 
-      #if ENABLE_BSC
+#if ENABLE_BSC
       // BSC rules: ele of array cannot be qualified by owned or owned-like
       if (LangOpts.BSC)
         S.CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "array");
-      #endif
+#endif
 
       // C99 6.7.5.2p1: The optional type qualifiers and the keyword static
       // shall appear only in a declaration of a function parameter with an
@@ -5162,7 +5163,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       break;
     }
     case DeclaratorChunk::Function: {
-      #if ENABLE_BSC
+#if ENABLE_BSC
       if (LangOpts.BSC) {
         if (TraitDecl *TD = S.TryDesugarTrait(T)) {
           T = S.DesugarTraitToStructTrait(TD, T, D.getBeginLoc());
@@ -5172,7 +5173,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           D.DropTypeObject(chunkIndex + 1);
         }
       }
-      #endif
+#endif
       // If the function declarator has a prototype (i.e. it is not () and
       // does not have a K&R-style identifier list), then the arguments are part
       // of the type, otherwise the argument list is ().
@@ -5343,10 +5344,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           // function definition.  Apparently ok on declarations and
           // in C++ though (!)
           S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
-        #if ENABLE_BSC
+#if ENABLE_BSC
         } else if (S.getLangOpts().BSC && T.isOwnedQualified()) {
           // owned type is allowed to return
-        #endif
+#endif
         } else
           diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
 
@@ -5449,9 +5450,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // have an identifier list. See OpenCL 3.0 6.11/g for more details.
       //
       if (!FTI.NumParams && !FTI.isVariadic &&
-          #if ENABLE_BSC
+#if ENABLE_BSC
           !LangOpts.BSC &&
-          #endif
+#endif
           !LangOpts.requiresStrictPrototypes() && !LangOpts.OpenCL) {
         // Simple void foo(), where the incoming T is the result type.
         T = Context.getFunctionNoProtoType(T, EI);
@@ -5658,11 +5659,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           EPI.TypeQuals.addAddressSpace(AS);
         }
 
-        #if ENABLE_BSC
+#if ENABLE_BSC
         if (S.getLangOpts().BSC) {
           S.CheckBorrowFunctionType(T, ParamTys, DeclType.Loc);
         }
-        #endif
+#endif
         T = Context.getFunctionType(T, ParamTys, EPI);
       }
       break;
@@ -6227,21 +6228,21 @@ namespace {
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       TL.setUnderlyingTInfo(TInfo);
     }
-    #if ENABLE_BSC
+#if ENABLE_BSC
     void VisitConditionalTypeLoc(ConditionalTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_conditionalType);
       TL.setConditionalLoc(DS.getTypeSpecTypeLoc());
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
-      
+
       TypeSourceInfo *ConditionalTInfo1 = nullptr;
       TypeSourceInfo *ConditionalTInfo2 = nullptr;
       Sema::GetTypeFromParser(DS.getConditionalType1(), &ConditionalTInfo1);
-      Sema::GetTypeFromParser(DS.getConditionalType2(), &ConditionalTInfo2);      
-      
+      Sema::GetTypeFromParser(DS.getConditionalType2(), &ConditionalTInfo2);
+
       TL.setConditionalTInfo1(ConditionalTInfo1);
       TL.setConditionalTInfo2(ConditionalTInfo2);
     }
-    #endif
+#endif
     void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
       TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
@@ -8838,11 +8839,11 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   } else if (auto *RD = dyn_cast<RecordDecl>(D)) {
-  #else
+#else
   } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
-  #endif
+#endif
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -9070,7 +9071,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   // If we have a class template specialization or a class member of a
   // class template specialization, or an array with known size of such,
   // try to instantiate it.
-  #if ENABLE_BSC
+#if ENABLE_BSC
   RecordDecl *RD = nullptr;
   if (getLangOpts().BSC) {
     RD = dyn_cast_or_null<RecordDecl>(Tag);
@@ -9078,9 +9079,9 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
     RD = dyn_cast_or_null<CXXRecordDecl>(Tag);
   }
   if (RD) {
-  #else
+#else
   if (auto *RD = dyn_cast_or_null<CXXRecordDecl>(Tag)) {
-  #endif
+#endif
     bool Instantiated = false;
     bool Diagnosed = false;
     if (RD->isDependentContext()) {
@@ -9098,19 +9099,19 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
         Instantiated = true;
       }
     } else {
-      #if ENABLE_BSC
+#if ENABLE_BSC
       RecordDecl *Pattern =
           (static_cast<RecordDecl *>(RD))->getInstantiatedFromMemberClass();
-      #else
+#else
       CXXRecordDecl *Pattern = RD->getInstantiatedFromMemberClass();
-      #endif
+#endif
       if (!RD->isBeingDefined() && Pattern) {
-        #if ENABLE_BSC
+#if ENABLE_BSC
         MemberSpecializationInfo *MSI =
             (static_cast<CXXRecordDecl *>(RD))->getMemberSpecializationInfo();
-        #else
+#else
         MemberSpecializationInfo *MSI = RD->getMemberSpecializationInfo();
-        #endif
+#endif
         assert(MSI && "Missing member specialization information?");
         // This record was instantiated from a class within a template.
         if (MSI->getTemplateSpecializationKind() !=
@@ -9118,11 +9119,11 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
           runWithSufficientStackSpace(Loc, [&] {
             Diagnosed = InstantiateClass(
                 Loc,
-                #if ENABLE_BSC
+#if ENABLE_BSC
                 (static_cast<CXXRecordDecl *>(RD)),
-                #else
+#else
                 RD,
-                #endif
+#endif
                 Pattern,
                 getTemplateInstantiationArgs(RD), TSK_ImplicitInstantiation,
                 /*Complain=*/Diagnoser);

@@ -406,10 +406,10 @@ namespace clang {
     ExpectedType VisitInjectedClassNameType(const InjectedClassNameType *T);
     // FIXME: DependentDecltypeType
     ExpectedType VisitRecordType(const RecordType *T);
-    #if ENABLE_BSC
+#if ENABLE_BSC
     ExpectedType VisitTraitType(const TraitType *T);
     ExpectedType VisitConditionalType(const ConditionalType *T);
-    #endif
+#endif
     ExpectedType VisitEnumType(const EnumType *T);
     ExpectedType VisitAttributedType(const AttributedType *T);
     ExpectedType VisitTemplateTypeParmType(const TemplateTypeParmType *T);
@@ -534,9 +534,9 @@ namespace clang {
     ExpectedDecl VisitRecordDecl(RecordDecl *D);
     ExpectedDecl VisitEnumConstantDecl(EnumConstantDecl *D);
     ExpectedDecl VisitFunctionDecl(FunctionDecl *D);
-    #if ENABLE_BSC
+#if ENABLE_BSC
     ExpectedDecl VisitBSCMethodDecl(BSCMethodDecl *D);
-    #endif
+#endif
     ExpectedDecl VisitCXXMethodDecl(CXXMethodDecl *D);
     ExpectedDecl VisitCXXConstructorDecl(CXXConstructorDecl *D);
     ExpectedDecl VisitCXXDestructorDecl(CXXDestructorDecl *D);
@@ -1400,16 +1400,16 @@ ExpectedType ASTNodeImporter::VisitConditionalType(const ConditionalType *T) {
 
   ExpectedType ToConditionalType1OrErr = import(T->getConditionalType1());
   if (!ToConditionalType1OrErr)
-    return ToConditionalType1OrErr.takeError();  
-  
+    return ToConditionalType1OrErr.takeError();
+
   ExpectedType ToConditionalType2OrErr = import(T->getConditionalType2());
   if (!ToConditionalType2OrErr)
-    return ToConditionalType2OrErr.takeError();  
-  
+    return ToConditionalType2OrErr.takeError();
+
   llvm::Optional<bool> CondResult = T->getCondResult();
-  return Importer.getToContext().getConditionalType(CondResult, *ToCondExprOrErr,
-                                                    *ToConditionalType1OrErr,
-                                                    *ToConditionalType2OrErr);
+  return Importer.getToContext().getConditionalType(
+      CondResult, *ToCondExprOrErr, *ToConditionalType1OrErr,
+      *ToConditionalType2OrErr);
 }
 #endif
 
@@ -1491,11 +1491,11 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   Expected<RecordDecl *> ToDeclOrErr = import(T->getDecl());
-  #else
+#else
   Expected<CXXRecordDecl *> ToDeclOrErr = import(T->getDecl());
-  #endif
+#endif
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
@@ -1507,11 +1507,11 @@ ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
   // See comments in InjectedClassNameType definition for details
   // return Importer.getToContext().getInjectedClassNameType(D, InjType);
   enum {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     TypeAlignmentInBits = 6,
-    #else
+#else
     TypeAlignmentInBits = 4,
-    #endif
+#endif
     TypeAlignment = 1 << TypeAlignmentInBits
   };
 
@@ -3035,20 +3035,20 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
                    DCXX->getMemberSpecializationInfo()) {
         TemplateSpecializationKind SK =
             MemberInfo->getTemplateSpecializationKind();
-        #if ENABLE_BSC
+#if ENABLE_BSC
         RecordDecl *FromInst = DCXX->getInstantiatedFromMemberClass();
-        #else
+#else
         CXXRecordDecl *FromInst = DCXX->getInstantiatedFromMemberClass();
-        #endif
+#endif
 
         if (
-            #if ENABLE_BSC
+#if ENABLE_BSC
             Expected<RecordDecl *> ToInstOrErr = import(FromInst)
-            #else
+#else
             Expected<CXXRecordDecl *> ToInstOrErr = import(FromInst)
-            #endif
-            )
-          D2CXX->setInstantiationOfMemberClass(*ToInstOrErr, SK);
+#endif
+        )
+        D2CXX->setInstantiationOfMemberClass(*ToInstOrErr, SK);
         else
           return ToInstOrErr.takeError();
 
@@ -3622,16 +3622,16 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     cast<CXXDeductionGuideDecl>(ToFunction)
         ->setIsCopyDeductionCandidate(Guide->isCopyDeductionCandidate());
   } else {
-    if (GetImportedOrCreateDecl(ToFunction, D, Importer.getToContext(), DC,
-                                ToInnerLocStart, NameInfo, T, TInfo,
-                                D->getStorageClass(), D->UsesFPIntrin(),
-                                D->isInlineSpecified(),
-                                D->hasWrittenPrototype(), D->getConstexprKind(),
-                                TrailingRequiresClause
-                                #if ENABLE_BSC
-                                , D->isAsyncSpecified()
-                                #endif
-                                ))
+    if (GetImportedOrCreateDecl(
+            ToFunction, D, Importer.getToContext(), DC, ToInnerLocStart,
+            NameInfo, T, TInfo, D->getStorageClass(), D->UsesFPIntrin(),
+            D->isInlineSpecified(), D->hasWrittenPrototype(),
+            D->getConstexprKind(), TrailingRequiresClause
+#if ENABLE_BSC
+            ,
+            D->isAsyncSpecified()
+#endif
+                ))
       return ToFunction;
   }
 
@@ -6438,22 +6438,22 @@ ExpectedStmt ASTNodeImporter::VisitCompoundStmt(CompoundStmt *S) {
   if (!ToRBracLocOrErr)
     return ToRBracLocOrErr.takeError();
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   ExpectedSLoc ToSafeSpecifierLocOrErr = import(S->getSafeSpecifierLoc());
   if (!ToSafeSpecifierLocOrErr)
     return ToSafeSpecifierLocOrErr.takeError();
-  #endif
+#endif
 
   FPOptionsOverride FPO =
       S->hasStoredFPFeatures() ? S->getStoredFPFeatures() : FPOptionsOverride();
 
-  return CompoundStmt::Create(
-      Importer.getToContext(), ToStmts, FPO,
-      *ToLBracLocOrErr, *ToRBracLocOrErr
-      #if ENABLE_BSC
-      , S->getSafeSpecifier(), *ToSafeSpecifierLocOrErr
-      #endif
-      );
+  return CompoundStmt::Create(Importer.getToContext(), ToStmts, FPO,
+                              *ToLBracLocOrErr, *ToRBracLocOrErr
+#if ENABLE_BSC
+                              ,
+                              S->getSafeSpecifier(), *ToSafeSpecifierLocOrErr
+#endif
+  );
 }
 
 ExpectedStmt ASTNodeImporter::VisitCaseStmt(CaseStmt *S) {

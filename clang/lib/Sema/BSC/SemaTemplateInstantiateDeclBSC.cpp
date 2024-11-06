@@ -44,7 +44,6 @@ Decl *TemplateDeclInstantiator::VisitTraitTemplateSpecializationDecl(
 /// Adjust the given function type for an instantiation of the
 /// given declaration, to cope with modifications to the function's type that
 /// aren't reflected in the type-source information.
-///
 /// \param D The declaration we're instantiating.
 /// \param TInfo The already-instantiated type.
 static QualType adjustFunctionTypeForInstantiation(ASTContext &Context,

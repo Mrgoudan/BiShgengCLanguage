@@ -44,9 +44,8 @@ static RecordDecl *buildAsyncDataRecord(ASTContext &C, StringRef Name,
                                         SourceLocation StartLoc,
                                         SourceLocation EndLoc,
                                         RecordDecl::TagKind TK) {
-  RecordDecl *NewDecl;
-  NewDecl = RecordDecl::Create(C, TK, C.getTranslationUnitDecl(), StartLoc,
-                               EndLoc, &C.Idents.get(Name));
+  RecordDecl *NewDecl = RecordDecl::Create(
+      C, TK, C.getTranslationUnitDecl(), StartLoc, EndLoc, &C.Idents.get(Name));
   return NewDecl;
 }
 
@@ -75,10 +74,10 @@ buildAsyncBSCMethodDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                         SourceLocation NLoc, SourceLocation EndLoc,
                         DeclarationName N, QualType T, TypeSourceInfo *TInfo,
                         StorageClass SC, QualType ET) {
-  BSCMethodDecl *NewDecl =
-      BSCMethodDecl::Create( // TODO: inline should be passed.
-          C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false,
-          false, ConstexprSpecKind::Unspecified, EndLoc);
+  // TODO: inline should be passed.
+  BSCMethodDecl *NewDecl = BSCMethodDecl::Create(
+      C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false, false,
+      ConstexprSpecKind::Unspecified, EndLoc);
   if (auto RD = dyn_cast_or_null<RecordDecl>(DC)) {
     C.BSCDeclContextMap[RD->getTypeForDecl()] = DC;
     NewDecl->setHasThisParam(true); // bug
@@ -129,8 +128,7 @@ static bool implementedFutureType(Sema &S, QualType Ty) {
   return true;
 }
 
-// Generating free future obj logic:
-//
+// Logic for generating the procedure to free a future object:
 // @code
 // if (FutureObj != 0) {
 //    FreeFuncExpr(FutureObj);
@@ -145,7 +143,7 @@ buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr, Expr *FreeFuncExpr,
                                              S.Context.IntTy, SourceLocation());
   // generating condition
   Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_NE,
-                            /* LHSExpr=*/PtrExpr, /* RHSExpr=*/IntegerExpr)
+                            /*LHSExpr=*/PtrExpr, /*RHSExpr=*/IntegerExpr)
                    .get();
   Sema::ConditionResult IfCond = S.ActOnCondition(
       nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
@@ -180,7 +178,7 @@ buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr, Expr *FreeFuncExpr,
   }
   Expr *NullptrAssign =
       S.BuildBinOp(nullptr, SourceLocation(), BO_Assign,
-                   /* LHSExpr=*/PtrExpr, /* RHSExpr=*/RAssignExpr)
+                   /*LHSExpr=*/PtrExpr, /*RHSExpr=*/RAssignExpr)
           .get();
 
   SmallVector<Stmt *, 2> BodyStmts = {FreeFuncCall, NullptrAssign};
@@ -188,8 +186,8 @@ buildIfStmtForFreeFutureObj(Sema &S, Expr *PtrExpr, Expr *FreeFuncExpr,
                                     SourceLocation(), SourceLocation());
 
   Stmt *If = S.BuildIfStmt(Loc, IfStatementKind::Ordinary,
-                           /* LPL=*/Loc, /* Init=*/nullptr, IfCond,
-                           /* RPL=*/Loc, Body, Loc, nullptr)
+                           /*LPL=*/Loc, /*Init=*/nullptr, IfCond,
+                           /*RPL=*/Loc, Body, Loc, nullptr)
                  .get();
   return If;
 }
@@ -204,59 +202,59 @@ class LocalVarFinder : public StmtVisitor<LocalVarFinder> {
   std::vector<std::pair<DeclarationName, QualType>> LocalVarList;
   std::map<std::string, int> IdentifierNumber;
 
- public:
-   LocalVarFinder(ASTContext &Context) : Context(Context) {}
+public:
+  LocalVarFinder(ASTContext &Context) : Context(Context) {}
 
-   void VisitStmt(Stmt *S) {
-     for (auto *C : S->children()) {
-       if (C) {
-         if (auto DeclS = dyn_cast_or_null<DeclStmt>(C)) {
-           for (const auto &DI : DeclS->decls()) {
-             if (auto VD = dyn_cast_or_null<VarDecl>(DI)) {
-               if (VD->isExternallyVisible() || VD->isConstexpr() ||
-                   VD->isStaticLocal())
-                 continue;
+  void VisitStmt(Stmt *S) {
+    for (auto *C : S->children()) {
+      if (C) {
+        if (auto DeclS = dyn_cast_or_null<DeclStmt>(C)) {
+          for (const auto &DI : DeclS->decls()) {
+            if (auto VD = dyn_cast_or_null<VarDecl>(DI)) {
+              if (VD->isExternallyVisible() || VD->isConstexpr() ||
+                  VD->isStaticLocal())
+                continue;
 
-               QualType QT = VD->getType();
-               if (QT->hasTraitType())
-                 continue;
+              QualType QT = VD->getType();
+              if (QT->hasTraitType())
+                continue;
 
-               Expr *Init = VD->getInit();
-               // Do not need to transform constant variable with compile-time
-               // constant initializier.
-               const Expr *Culprit;
-               if (QT.isConstQualified() && Init && !Init->isValueDependent() &&
-                   Init->isConstantInitializer(Context, false, &Culprit))
-                 continue;
+              Expr *Init = VD->getInit();
+              // Do not need to transform constant variable with compile-time
+              // constant initializier.
+              const Expr *Culprit;
+              if (QT.isConstQualified() && Init && !Init->isValueDependent() &&
+                  Init->isConstantInitializer(Context, false, &Culprit))
+                continue;
 
-               std::string VDName = VD->getName().str();
-               // May have several local variables which has same name, eg.
-               // @code
-               // async void f() {
-               //    int c = 1;
-               //    {
-               //       int c = 2;
-               //  }
-               //   }
-               // @endcode
-               std::map<std::string, int>::iterator I =
-                   IdentifierNumber.find(VDName);
-               int VDNameNum = I != IdentifierNumber.end() ? I->second : 0;
-               IdentifierNumber[VDName] = VDNameNum + 1;
-               if (VDNameNum > 0) {
-                 VDName = VDName + "_" + std::to_string(VDNameNum);
-                 VD->setDeclName(&(Context.Idents).get(VDName));
-               }
+              std::string VDName = VD->getName().str();
+              // May have several local variables which has same name, eg.
+              // @code
+              // async void f() {
+              //    int c = 1;
+              //    {
+              //       int c = 2;
+              //  }
+              //   }
+              // @endcode
+              std::map<std::string, int>::iterator I =
+                  IdentifierNumber.find(VDName);
+              int VDNameNum = I != IdentifierNumber.end() ? I->second : 0;
+              IdentifierNumber[VDName] = VDNameNum + 1;
+              if (VDNameNum > 0) {
+                VDName = VDName + "_" + std::to_string(VDNameNum);
+                VD->setDeclName(&(Context.Idents).get(VDName));
+              }
 
-               LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
-                   VD->getDeclName(), VD->getType()));
-             }
-           }
-         }
-         Visit(C);
-       }
-     }
-   }
+              LocalVarList.push_back(std::make_pair<DeclarationName, QualType>(
+                  VD->getDeclName(), VD->getType()));
+            }
+          }
+        }
+        Visit(C);
+      }
+    }
+  }
   std::vector<std::pair<DeclarationName, QualType>> GetLocalVarList() const {
     return LocalVarList;
   }
@@ -307,7 +305,7 @@ class IllegalAEFinder : public StmtVisitor<IllegalAEFinder> {
   Sema &SemaRef;
   bool IsIllegal;
 
- public:
+public:
   IllegalAEFinder(Sema &SemaRef) : SemaRef(SemaRef) { IsIllegal = false; }
 
   bool CheckCondHasAwaitExpr(Stmt *S) {
@@ -793,7 +791,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
                    CallocRef, S.Context.getPointerType(CallocRef->getType()),
                    CK_FunctionToPointerDecay)
                   .get();
-  // sizeof(struct __Futurex)
+  // bsc: sizeof(struct __Futurex)
   Expr *SizeOfExpr =
       S.CreateUnaryExprOrTypeTraitExpr(
            S.Context.getTrivialTypeSourceInfo(S.Context.getRecordType(RD)),
@@ -803,7 +801,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   Args.push_back(One);
   Args.push_back(SizeOfExpr);
 
-  // calloc(1, sizeof(struct __Futurex))
+  // bsc: calloc(1, sizeof(struct __Futurex))
   Expr *CE = S.BuildCallExpr(nullptr, CallocRef, SourceLocation(), Args,
                              SourceLocation())
                  .get();
@@ -814,18 +812,18 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   VD->setInit(CE);
   Expr *DataRef = S.BuildDeclRefExpr(VD, VD->getType(), VK_LValue, NLoc);
 
-  // if (data == 0)
+  // bsc: if (data == 0)
   llvm::APInt ZeroResultVal(S.Context.getTargetInfo().getIntWidth(), 0);
-  Expr *Zero = IntegerLiteral::Create(S.Context, ZeroResultVal,
-                                             S.Context.IntTy, SourceLocation());
+  Expr *Zero = IntegerLiteral::Create(S.Context, ZeroResultVal, S.Context.IntTy,
+                                      SourceLocation());
   Expr *Comp = S.BuildBinOp(nullptr, SourceLocation(), BO_EQ,
-                            /* LHSExpr=*/DataRef, /* RHSExpr=*/Zero)
+                            /*LHSExpr=*/DataRef, /*RHSExpr=*/Zero)
                    .get();
 
   Sema::ConditionResult IfCond = S.ActOnCondition(
       nullptr, SourceLocation(), Comp, Sema::ConditionKind::Boolean);
 
-  // exit(1);
+  // bsc: exit(1);
   std::string ExitName = "exit";
 
   DeclContext::lookup_result ExitDecls =
@@ -856,8 +854,8 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
 
   SmallVector<Expr *, 1> ExitArgs = {One};
   Expr *ExitCE = S.BuildCallExpr(nullptr, ExitRef, SourceLocation(), ExitArgs,
-                             SourceLocation())
-                 .get();
+                                 SourceLocation())
+                     .get();
   // Current code: if (data == 0) exit(1);
   // TODO: before exit(1) function, hope there is printf("calloc failed\n")
   // function to prompt for calloc failure. and it need to import header file
@@ -866,8 +864,8 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   Stmt *Body = CompoundStmt::Create(S.Context, BodyStmts, FPOptionsOverride(),
                                     SourceLocation(), SourceLocation());
   Stmt *If = S.BuildIfStmt(SourceLocation(), IfStatementKind::Ordinary,
-                           /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
-                           /* RPL=*/SourceLocation(), /* Body=*/Body,
+                           /*LPL=*/SourceLocation(), /*Init=*/nullptr, IfCond,
+                           /*RPL=*/SourceLocation(), /*Body=*/Body,
                            SourceLocation(), nullptr)
                  .get();
   Stmts.push_back(If);
@@ -966,8 +964,9 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   return NewFD;
 }
 
-static FunctionDecl *buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *FD,
-                                                 RecordDecl *FatPointerRD) {
+static FunctionDecl *
+buildFutureInitFunctionDeclaration(Sema &S, FunctionDecl *FD,
+                                   RecordDecl *FatPointerRD) {
   SourceLocation SLoc = FD->getBeginLoc();
   SourceLocation NLoc = FD->getNameInfo().getLoc();
   SourceLocation ELoc = FD->getEndLoc();
@@ -1181,12 +1180,11 @@ static IfStmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
     Expr *IsCompletedFDRef = S.BuildDeclRefExpr(
         IsCompletedFD, IsCompletedFD->getType(), VK_LValue, BLoc);
     IsCompletedFDRef->HasBSCScopeSpec = true;
-    IsCompletedFDRef =
-        S.ImpCastExprToType(
-             IsCompletedFDRef,
-             S.Context.getPointerType(IsCompletedFDRef->getType()),
-             CK_FunctionToPointerDecay)
-            .get();
+    IsCompletedFDRef = S.ImpCastExprToType(IsCompletedFDRef,
+                                           S.Context.getPointerType(
+                                               IsCompletedFDRef->getType()),
+                                           CK_FunctionToPointerDecay)
+                           .get();
 
     if (PollResultRD) {
       Expr *PollResultVarRef = S.BuildDeclRefExpr(
@@ -1233,10 +1231,10 @@ static IfStmt *processAwaitExprStatus(Sema &S, int AwaitCount, RecordDecl *RD,
   Stmt *Else =
       CompoundStmt::Create(S.Context, ElseStmts, FPOptionsOverride(), BLoc, BLoc);
   IfStmt *If = IfStmt::Create(S.Context, BLoc, IfStatementKind::Ordinary,
-                              /* Init=*/nullptr,
-                              /* Var=*/nullptr, IfCond,
-                              /* LPL=*/BLoc,
-                              /* RPL=*/BLoc, Body, BLoc, Else);
+                              /*Init=*/nullptr,
+                              /*Var=*/nullptr, IfCond,
+                              /*LPL=*/BLoc,
+                              /*RPL=*/BLoc, Body, BLoc, Else);
   return If;
 }
 
@@ -1274,7 +1272,7 @@ class TransformToReturnVoid : public TreeTransform<TransformToReturnVoid> {
   typedef TreeTransform<TransformToReturnVoid> BaseTransform;
   QualType ReturnTy = QualType();
 
- public:
+public:
   TransformToReturnVoid(Sema &SemaRef) : BaseTransform(SemaRef) {}
 
   // make sure redo semantic analysis
@@ -1391,7 +1389,7 @@ class TransformToAP : public TreeTransform<TransformToAP> {
   std::map<std::string, VarDecl *> ArrayPointerMap;
   std::map<std::string, VarDecl *> ArrayAssignedPointerMap;
 
- public:
+public:
   TransformToAP(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD,
                 BSCMethodDecl *FD)
       : BaseTransform(SemaRef), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {
@@ -1762,7 +1760,7 @@ class TransformToHasSingleState
   typedef TreeTransform<TransformToHasSingleState> BaseTransform;
   TransformToAP DT;
 
- public:
+public:
   TransformToHasSingleState(Sema &SemaRef, TransformToAP DT)
       : BaseTransform(SemaRef), DT(DT) {}
 
@@ -1935,8 +1933,7 @@ class TransformARToCS : public TreeTransform<TransformARToCS> {
   BSCMethodDecl *FD;
   std::map<std::string, int> IdentifierNumber;
 
-
- public:
+public:
   TransformARToCS(Sema &SemaRef, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
       : BaseTransform(SemaRef), PDRE(PDRE), FutureRD(FutureRD), FD(FD) {}
 
@@ -2064,17 +2061,12 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
   std::vector<Stmt *> AwaitStmts;
   BSCMethodDecl *FD;
 
-
-
- public:
-  TransformAEToCS(Sema &SemaRef,
-                  std::vector<LabelDecl *> &LabelDecls, ParmVarDecl *PVD, Expr *PDRE, RecordDecl *FutureRD, BSCMethodDecl *FD)
-      : BaseTransform(SemaRef),
-        LabelDecls(LabelDecls),
-        PVD(PVD),
-        PDRE(PDRE),
-        FutureRD(FutureRD),
-        FD(FD) {
+public:
+  TransformAEToCS(Sema &SemaRef, std::vector<LabelDecl *> &LabelDecls,
+                  ParmVarDecl *PVD, Expr *PDRE, RecordDecl *FutureRD,
+                  BSCMethodDecl *FD)
+      : BaseTransform(SemaRef), LabelDecls(LabelDecls), PVD(PVD), PDRE(PDRE),
+        FutureRD(FutureRD), FD(FD) {
     AwaitIndex = 1;
   }
 
@@ -2123,15 +2115,15 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
         FDRef->HasBSCScopeSpec = true;
         FDRef = SemaRef
                     .ImpCastExprToType(FDRef,
-                                        SemaRef.Context.getPointerType(
-                                            FutureInitFunc->getType()),
-                                        CK_FunctionToPointerDecay)
+                                       SemaRef.Context.getPointerType(
+                                           FutureInitFunc->getType()),
+                                       CK_FunctionToPointerDecay)
                     .get();
         FDRef->HasBSCScopeSpec = true;
 
         RHSExpr = SemaRef
                       .BuildCallExpr(nullptr, FDRef, SourceLocation(), CallArgs,
-                                    SourceLocation())
+                                     SourceLocation())
                       .get();
       }
     }
@@ -2229,7 +2221,7 @@ class TransformAEToCS : public TreeTransform<TransformAEToCS> {
       assert(args.size() == 1);
       // Make sure these three generic types are fully instantiated.
       (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
-                                             "PollResult");
+                              "PollResult");
       (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
                               "__Trait_Future_Vtable");
       (void)lookupGenericType(SemaRef, FD->getBeginLoc(), args[0].getAsType(),
@@ -2580,7 +2572,6 @@ static BSCMethodDecl *buildPollFunction(Sema &S, RecordDecl *RD,
       TransformToReturnVoid(S).TransformFunctionDecl(FD);
   S.PopDeclContext();
   S.PopFunctionScopeInfo();
-
 
   std::string FName = "poll";
 

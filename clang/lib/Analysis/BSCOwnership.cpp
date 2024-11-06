@@ -72,7 +72,8 @@ static bool IsTrackedType(QualType type) {
 
   // case 3
   // FIXME: hasOwnedFields() maybe implemented incorrect, to be confirmed later
-  if ((type->isRecordType() && type.getTypePtr()->isOwnedStructureType()) || (type->isRecordType() && type->hasOwnedFields()))
+  if ((type->isRecordType() && type.getTypePtr()->isOwnedStructureType()) ||
+      (type->isRecordType() && type->hasOwnedFields()))
     return true;
 
   return false;
@@ -277,7 +278,6 @@ bool Ownership::OwnershipStatus::is(const VarDecl *VD, Status S) const {
     auto it = OPSStatus.find(VD);
     llvm::BitVector status = it->second;
     unsigned bitIndex = getIndex(S);
-
     if (status.test(bitIndex)) {
       status.reset(bitIndex);
       return !status.any();
@@ -289,7 +289,6 @@ bool Ownership::OwnershipStatus::is(const VarDecl *VD, Status S) const {
     auto it = SStatus.find(VD);
     llvm::BitVector status = it->second;
     unsigned bitIndex = getIndex(S);
-
     if (status.test(bitIndex)) {
       status.reset(bitIndex);
       return !status.any();
@@ -301,7 +300,6 @@ bool Ownership::OwnershipStatus::is(const VarDecl *VD, Status S) const {
     auto it = BOPStatus.find(VD);
     llvm::BitVector status = it->second;
     unsigned bitIndex = getIndex(S);
-
     if (status.test(bitIndex)) {
       status.reset(bitIndex);
       return !status.any();
@@ -317,7 +315,6 @@ bool Ownership::OwnershipStatus::has(const VarDecl *VD, Status S) const {
     auto it = OPSStatus.find(VD);
     llvm::BitVector status = it->second;
     unsigned bitIndex = getIndex(S);
-
     if (status.test(bitIndex)) {
       status.reset(bitIndex);
       return status.any();
@@ -329,7 +326,6 @@ bool Ownership::OwnershipStatus::has(const VarDecl *VD, Status S) const {
     auto it = SStatus.find(VD);
     llvm::BitVector status = it->second;
     unsigned bitIndex = getIndex(S);
-
     if (status.test(bitIndex)) {
       status.reset(bitIndex);
       return status.any();
@@ -341,7 +337,6 @@ bool Ownership::OwnershipStatus::has(const VarDecl *VD, Status S) const {
     auto it = BOPStatus.find(VD);
     llvm::BitVector status = it->second;
     unsigned bitIndex = getIndex(S);
-
     if (status.test(bitIndex)) {
       status.reset(bitIndex);
       return status.any();
@@ -797,11 +792,8 @@ string Ownership::OwnershipStatus::collectMovedFields(const VarDecl *VD) {
   return movedFields;
 }
 
-SmallVector<DiagInfo, 3>
-Ownership::OwnershipStatus::checkOPSUse(const VarDecl *VD,
-                                        const SourceLocation &Loc,
-                                        bool isGetAddr,
-                                        bool isStar) {
+SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkOPSUse(
+    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isStar) {
   SmallVector<DiagInfo, 3> diags;
 
   // when use ops, we must ensure the variable is owned
@@ -1102,21 +1094,19 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldAssign(
   return diags;
 }
 
-SmallVector<DiagInfo, 3>
-Ownership::OwnershipStatus::checkSUse(const VarDecl *VD,
-                                      const SourceLocation &Loc,
-                                      bool isGetAddr) {
+SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkSUse(
+    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr) {
   SmallVector<DiagInfo, 3> diags;
 
   // owned struct special manipulation
   if (VD->getType().getTypePtr()->isOwnedStructureType()) {
     if (!is(VD, Owned)) {
       if (is(VD, Uninitialized) || has(VD, Uninitialized)) {
-        diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfUninit,
-                               VD->getNameAsString()));
+        diags.push_back(
+            DiagInfo(Loc, DiagKind::InvalidUseOfUninit, VD->getNameAsString()));
       } else if (is(VD, Moved) || has(VD, Moved)) {
-        diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfMoved,
-                               VD->getNameAsString()));
+        diags.push_back(
+            DiagInfo(Loc, DiagKind::InvalidUseOfMoved, VD->getNameAsString()));
       }
     }
     if (!isGetAddr) {
@@ -1141,11 +1131,11 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkSFieldUse(
   // owned struct special manipulation
   if (VD->getType().getTypePtr()->isOwnedStructureType()) {
     if (is(VD, Uninitialized)) {
-      diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfUninit,
-                             VD->getNameAsString()));
+      diags.push_back(
+          DiagInfo(Loc, DiagKind::InvalidUseOfUninit, VD->getNameAsString()));
     } else if (is(VD, Moved)) {
-      diags.push_back(DiagInfo(Loc, DiagKind::InvalidUseOfMoved,
-                             VD->getNameAsString()));
+      diags.push_back(
+          DiagInfo(Loc, DiagKind::InvalidUseOfMoved, VD->getNameAsString()));
     }
   }
 
@@ -1511,8 +1501,7 @@ SmallVector<DiagInfo, 3> Ownership::OwnershipStatus::checkBOPFieldAssign(
   return diags;
 }
 
-// if cast a `struct S * owned` variable to `void * owned`,
-// we must ensure:
+// if cast a `struct S * owned` variable to `void * owned`, we must ensure:
 // 1. it is not moved or uninit
 // 2. its owned fields are all moved
 SmallVector<DiagInfo, 3>
@@ -1540,8 +1529,7 @@ Ownership::OwnershipStatus::checkCastOPS(const VarDecl *VD,
   return diags;
 }
 
-// if cast a `int * owned` variable to `void * owned`,
-// we must ensure:
+// if cast a `int * owned` variable to `void * owned`, we must ensure:
 // 1. it is not moved
 // 2. its owned fields are all moved
 SmallVector<DiagInfo, 3>
@@ -2145,7 +2133,6 @@ Ownership::OwnershipStatus
 OwnershipImpl::runOnBlock(const CFGBlock *block,
                           Ownership::OwnershipStatus status,
                           OwnershipDiagReporter &reporter) {
-
   MaybeSetNull(block, status);
 
   TransferFunctions TF(*this, status, block, reporter);
@@ -2177,7 +2164,6 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
 void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
                                  AnalysisDeclContext &ac,
                                  OwnershipDiagReporter &reporter) {
-
   // The analysis currently has scalability issues for very large CFGs.
   // Bail out if it looks too large.
   if (cfg.getNumBlockIDs() > 300000)

@@ -51,7 +51,6 @@ Sema::ActOnBSCMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
   DeclarationName Name = NameInfo.getName();
   SourceLocation Loc = NameInfo.getLoc();
-
   // For anonymous bitfields, the location should point to the type.
   if (Loc.isInvalid())
     Loc = D.getBeginLoc();
@@ -66,7 +65,6 @@ Sema::ActOnBSCMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   bool isInstField = ((DS.getStorageClassSpec() == DeclSpec::SCS_unspecified ||
                        DS.getStorageClassSpec() == DeclSpec::SCS_mutable) &&
                       !isFunc);
-
   if (DS.hasConstexprSpecifier() && isInstField) {
     SemaDiagnosticBuilder B =
         Diag(DS.getConstexprSpecLoc(), diag::err_invalid_constexpr_member);
@@ -150,7 +148,6 @@ Sema::ActOnBSCMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
                          ICIS_NoInit, AS);
     if (!Member)
       return nullptr;
-
   } else {
     Member = HandleDeclarator(S, D, TemplateParameterLists);
     if (!Member)

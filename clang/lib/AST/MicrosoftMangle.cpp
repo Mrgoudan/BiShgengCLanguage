@@ -2409,9 +2409,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
   case BuiltinType::Dependent:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case BuiltinType::This:
-  #endif
+#endif
     llvm_unreachable("placeholder types shouldn't get to name mangling");
 
   case BuiltinType::ObjCId:
@@ -2839,11 +2839,11 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
     case TTK_Enum:
       Out << "W4";
       break;
-    #if ENABLE_BSC
+#if ENABLE_BSC
     case TTK_Trait:
       break;
-    #endif
-  }
+#endif
+    }
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
                                          SourceRange) {
@@ -3293,10 +3293,9 @@ void MicrosoftCXXNameMangler::mangleType(const TypeOfType *T, Qualifiers,
 void MicrosoftCXXNameMangler::mangleType(const ConditionalType *T, Qualifiers,
                                          SourceRange Range) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-    "cannot mangle this conditional(type) yet");
-  Diags.Report(Range.getBegin(), DiagID)
-    << Range;
+  unsigned DiagID = Diags.getCustomDiagID(
+      DiagnosticsEngine::Error, "cannot mangle this conditional(type) yet");
+  Diags.Report(Range.getBegin(), DiagID) << Range;
 }
 #endif
 

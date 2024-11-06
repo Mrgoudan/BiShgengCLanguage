@@ -15,9 +15,9 @@
 
 namespace clang {
   class ASTContext;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   class BSCMethodDecl;
-  #endif
+#endif
   class CXXMethodDecl;
   class CXXRecordDecl;
   class Decl;

@@ -208,9 +208,9 @@ namespace {
 // Retrieve the set of identifier namespaces that correspond to a
 // specific kind of name lookup.
 static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
-                               #if ENABLE_BSC
-                               bool BSC, 
-                               #endif
+#if ENABLE_BSC
+                               bool BSC,
+#endif
                                bool Redeclaration) {
   unsigned IDNS = 0;
   switch (NameKind) {
@@ -269,11 +269,11 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
 
   case Sema::LookupMemberName:
     IDNS = Decl::IDNS_Member;
-    if (CPlusPlus 
-        #if ENABLE_BSC
+    if (CPlusPlus
+#if ENABLE_BSC
         || BSC
-        #endif
-        )
+#endif
+    )
       IDNS |= Decl::IDNS_Tag | Decl::IDNS_Ordinary;
     break;
 
@@ -315,9 +315,9 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
 
 void LookupResult::configure() {
   IDNS = getIDNS(LookupKind, getSema().getLangOpts().CPlusPlus,
-                 #if ENABLE_BSC
+#if ENABLE_BSC
                  getSema().getLangOpts().BSC,
-                 #endif
+#endif
                  isForRedeclaration());
 
   // If we're looking for one of the allocation or deallocation
@@ -1554,13 +1554,13 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
     // the module containing the pattern.
     if (FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
       Entity = Pattern;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   } else if (RecordDecl *RD = dyn_cast<RecordDecl>(Entity)) {
     if (RecordDecl *Pattern = RD->getTemplateInstantiationPattern())
-  #else
+#else
   } else if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Entity)) {
     if (CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
-  #endif
+#endif
       Entity = Pattern;
   } else if (EnumDecl *ED = dyn_cast<EnumDecl>(Entity)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
@@ -2730,10 +2730,11 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 /// @returns True if any decls were found (but possibly ambiguous)
 bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
                             bool AllowBuiltinCreation, bool EnteringContext
-                            #if ENABLE_BSC
-                            , QualType T
-                            #endif
-                            ) {
+#if ENABLE_BSC
+                            ,
+                            QualType T
+#endif
+) {
   if (SS && SS->isInvalid()) {
     // When the scope specifier is invalid, don't even look for
     // anything.
@@ -2763,7 +2764,7 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
     return false;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (!T.isNull() && getLangOpts().BSC) {
     DeclContext *DC =
         getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
@@ -2772,7 +2773,7 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
     else
       return false;
   }
-  #endif
+#endif
 
   // Perform unqualified name lookup starting in the given scope.
   return LookupName(R, S, AllowBuiltinCreation);
@@ -3150,10 +3151,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::Builtin:
       break;
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     case Type::Trait:
       break;
-    #endif
+#endif
     //     -- If T is a class type (including unions), its associated
     //        classes are: the class itself; the class of which it is
     //        a member, if any; and its direct and indirect base classes.
@@ -3161,11 +3162,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        namespaces of its associated classes.
     case Type::Record: {
       // Try to avoid cast to avoid segfault.
-      #if ENABLE_BSC
+#if ENABLE_BSC
       if (Result.S.getLangOpts().BSC) {
         break;
       }
-      #endif
+#endif
       CXXRecordDecl *Class =
           cast<CXXRecordDecl>(cast<RecordType>(T)->getDecl());
       addAssociatedClassesAndNamespaces(Result, Class);
@@ -4185,9 +4186,9 @@ private:
       return;
     }
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (!Result.getSema().getLangOpts().BSC)
-    #endif
+#endif
       if (CXXRecordDecl *Class = dyn_cast<CXXRecordDecl>(Ctx))
         Result.getSema().ForceDeclarationOfImplicitMembers(Class);
 
@@ -4499,10 +4500,11 @@ static void LookupPotentialTypoResult(Sema &SemaRef, LookupResult &Res,
                                       DeclContext *MemberContext,
                                       bool EnteringContext,
                                       bool isObjCIvarLookup, bool FindHidden
-                                      #if ENABLE_BSC
-                                      , QualType ET = QualType()
-                                      #endif
-                                      );
+#if ENABLE_BSC
+                                      ,
+                                      QualType ET = QualType()
+#endif
+);
 
 /// Check whether the declarations found for a typo correction are
 /// visible. Set the correction's RequiresImport flag to true if none of the
@@ -4764,27 +4766,28 @@ bool TypoCorrectionConsumer::resolveCorrection(TypoCorrection &Candidate) {
   IdentifierInfo *Name = Candidate.getCorrectionAsIdentifierInfo();
   DeclContext *TempMemberContext = MemberContext;
   CXXScopeSpec *TempSS = SS.get();
-  #if ENABLE_BSC
+#if ENABLE_BSC
   QualType ET = ExtendedType;
-  #endif
+#endif
 retry_lookup:
   LookupPotentialTypoResult(
       SemaRef, Result, Name, S, TempSS, TempMemberContext, EnteringContext,
       CorrectionValidator->IsObjCIvarLookup,
       Name == Typo && !Candidate.WillReplaceSpecifier()
-      #if ENABLE_BSC
-      , ET
-      #endif
-      );
+#if ENABLE_BSC
+      ,
+      ET
+#endif
+  );
   switch (Result.getResultKind()) {
   case LookupResult::NotFound:
   case LookupResult::NotFoundInCurrentInstantiation:
   case LookupResult::FoundUnresolvedValue:
     if (TempSS) {
       // Immediately retry the lookup without the given CXXScopeSpec
-      #if ENABLE_BSC
+#if ENABLE_BSC
       ET = QualType();
-      #endif
+#endif
       TempSS = nullptr;
       Candidate.WillReplaceSpecifier(true);
       goto retry_lookup;
@@ -5018,10 +5021,11 @@ static void LookupPotentialTypoResult(
     Sema &SemaRef, LookupResult &Res, IdentifierInfo *Name, Scope *S,
     CXXScopeSpec *SS, DeclContext *MemberContext, bool EnteringContext,
     bool isObjCIvarLookup, bool FindHidden
-    #if ENABLE_BSC
-    , QualType ET
-    #endif
-    ) {
+#if ENABLE_BSC
+    ,
+    QualType ET
+#endif
+) {
   Res.suppressDiagnostics();
   Res.clear();
   Res.setLookupName(Name);
@@ -5050,10 +5054,11 @@ static void LookupPotentialTypoResult(
 
   SemaRef.LookupParsedName(Res, S, SS, /*AllowBuiltinCreation=*/false,
                            EnteringContext
-                           #if ENABLE_BSC
-                           , ET
-                           #endif
-                           );
+#if ENABLE_BSC
+                           ,
+                           ET
+#endif
+  );
 
   // Fake ivar lookup; this should really be part of
   // LookupParsedName.
@@ -5228,10 +5233,11 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
     Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT, bool ErrorRecovery
-    #if ENABLE_BSC
-    , QualType ET
-    #endif
-    ) {
+#if ENABLE_BSC
+    ,
+    QualType ET
+#endif
+) {
 
   if (Diags.hasFatalErrorOccurred() || !getLangOpts().SpellChecking ||
       DisableTypoCorrection)
@@ -5299,10 +5305,11 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
   auto Consumer = std::make_unique<TypoCorrectionConsumer>(
       *this, TypoName, LookupKind, S, SS, std::move(ClonedCCC), MemberContext,
       EnteringContext
-      #if ENABLE_BSC
-      , ET
-      #endif
-      );
+#if ENABLE_BSC
+      ,
+      ET
+#endif
+  );
 
   // Perform name lookup to find visible, similarly-named entities.
   bool IsUnqualifiedLookup = false;
@@ -5356,10 +5363,10 @@ std::unique_ptr<TypoCorrectionConsumer> Sema::makeTypoCorrectionConsumer(
   AddKeywordsToConsumer(*this, *Consumer, S,
                         *Consumer->getCorrectionValidator(),
                         ((SS && SS->isNotEmpty())
-                        #if ENABLE_BSC
-                        || !ET.isNull()
-                        #endif
-                        ));
+#if ENABLE_BSC
+                         || !ET.isNull()
+#endif
+                             ));
 
   // Build the NestedNameSpecifiers for the KnownNamespaces, if we're going
   // to search those namespaces.
@@ -5551,17 +5558,19 @@ TypoExpr *Sema::CorrectTypoDelayed(
     TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT
-    #if ENABLE_BSC
-    , QualType ET
-    #endif
-    ) {
+#if ENABLE_BSC
+    ,
+    QualType ET
+#endif
+) {
   auto Consumer = makeTypoCorrectionConsumer(TypoName, LookupKind, S, SS, CCC,
                                              MemberContext, EnteringContext,
                                              OPT, Mode == CTK_ErrorRecovery
-                                             #if ENABLE_BSC
-                                             , ET
-                                             #endif
-                                             );
+#if ENABLE_BSC
+                                             ,
+                                             ET
+#endif
+  );
 
   // Give the external sema source a chance to correct the typo.
   TypoCorrection ExternalTypo;

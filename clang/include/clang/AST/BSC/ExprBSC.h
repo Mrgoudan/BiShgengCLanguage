@@ -23,9 +23,6 @@ namespace clang {
   class ASTContext;
 
 class AwaitExpr final : public Expr {
-protected:
-  Stmt *SubExpr;
-
 public:
   explicit AwaitExpr(SourceLocation AwaitLoc, Expr *Se, QualType Ty)
       : Expr(AwaitExprClass, Ty, VK_PRValue, OK_Ordinary), AwaitLoc(AwaitLoc) {
@@ -49,6 +46,9 @@ public:
   const_child_range children() const {
     return const_child_range(&SubExpr, &SubExpr + 1);
   }
+
+protected:
+  Stmt *SubExpr;
 
 private:
   SourceLocation AwaitLoc;

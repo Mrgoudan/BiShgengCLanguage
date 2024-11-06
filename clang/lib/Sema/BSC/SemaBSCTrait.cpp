@@ -28,7 +28,6 @@ using namespace sema;
 // trait I {
 //   int g(This *this);
 // };
-//
 // We generate two structs in ast:
 // |--RecordDecl  struct Trait_I_Vtable
 //  `---FieldDecl  g 'int (*)(void *this)'
@@ -617,7 +616,7 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
   QualType InnerTy = T;
   while (InnerTy->isPointerType())
     InnerTy = InnerTy->getPointeeType();
-  while(isa<TemplateSpecializationType>(InnerTy) || isa<TypedefType>(InnerTy)) {
+  while (isa<TemplateSpecializationType>(InnerTy) || isa<TypedefType>(InnerTy)) {
     if (const TemplateSpecializationType *TT = dyn_cast<TemplateSpecializationType>(InnerTy)) {
       if (TT->isTypeAlias())
         InnerTy = TT->getAliasedType();
@@ -820,7 +819,7 @@ NamedDecl *Sema::ActOnTraitMemberDeclarator(Scope *S, Declarator &D) {
   return Member;
 }
 
-// Desugar following code:
+// Desugars complex type declarations in the following code example:
 // @code
 // struct S<T> { trait F* a; };
 // struct S<int> s = { &x };
@@ -828,7 +827,6 @@ NamedDecl *Sema::ActOnTraitMemberDeclarator(Scope *S, Declarator &D) {
 void Sema::ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *expr,
                                          QualType ElemType, unsigned &Index,
                                          DesignatedInitExpr **DIE) {
-
   if (Index < IList->getDesugaredIndex()) {
     return;
   }
@@ -898,7 +896,6 @@ void Sema::ActOnDesugarTraitExprInStruct(InitListExpr *IList, Expr *expr,
         Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue, OK_Ordinary,
         UO->getBeginLoc(), false, FPOptionsOverride());
     Exprs = {UO, UOVtable};
-
   } else {
     Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
         << CompleteTraitType(ElemType)->getPointeeType() << T;
@@ -976,7 +973,7 @@ bool Sema::IsDesugaredFromTraitType(QualType T) {
   return false;
 }
 
-// Desugar following code:
+// Desugars complex type declarations in the following code example:
 // @code
 // trait F* f = &b;
 // f = NULL;
@@ -1005,7 +1002,7 @@ ExprResult Sema::ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
   return BuildBinOp(S, TokLoc, BO_Comma, Exprs[0], Exprs[1]);
 }
 
-// Handling trait pointers cast operation:
+// Handling the cast operation for trait pointers, ensuring proper type casting:
 // @code
 // trait F* f = &b;
 // void *p = (void *)f;

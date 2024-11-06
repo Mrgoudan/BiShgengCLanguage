@@ -15,7 +15,7 @@ namespace clang {
 namespace tidy {
 namespace bsc {
 
-/// This check is to give warning when access target 
+/// This check is to give warning when access target
 /// types, which are writing in config file.
 ///
 /// For the user-facing documentation see:
@@ -24,18 +24,18 @@ class AccessSpecificTypeCheck : public ClangTidyCheck {
 public:
   AccessSpecificTypeCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-      TargetTypeList(Options.get("TargetTypes", "TEMP_FAILURE_RETRY")),
-      AvoidCallList(Options.get("AvoidCalls", "TEMP_FAILURE_RETRY")),
-      AvoidFuncList(Options.get("AvoidFuncs", "TEMP_FAILURE_RETRY")) {
-        StringRef(TargetTypeList).split(TargetTypes, ",", -1, false);
-        StringRef(AvoidCallList).split(AvoidCalls, ",", -1, false);
-        StringRef(AvoidFuncList).split(AvoidFuncs, ",", -1, false);
-      }
+        TargetTypeList(Options.get("TargetTypes", "TEMP_FAILURE_RETRY")),
+        AvoidCallList(Options.get("AvoidCalls", "TEMP_FAILURE_RETRY")),
+        AvoidFuncList(Options.get("AvoidFuncs", "TEMP_FAILURE_RETRY")) {
+    StringRef(TargetTypeList).split(TargetTypes, ",", -1, false);
+    StringRef(AvoidCallList).split(AvoidCalls, ",", -1, false);
+    StringRef(AvoidFuncList).split(AvoidFuncs, ",", -1, false);
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) {
     Options.store(Opts, "TargetTypes", TargetTypeList);
     Options.store(Opts, "AvoidCalls", AvoidCallList);
     Options.store(Opts, "AvoidFuncs", AvoidFuncList);
-  }  
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 private:

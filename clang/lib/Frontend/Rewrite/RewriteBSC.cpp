@@ -30,6 +30,15 @@ using namespace clang;
 
 namespace {
 class RewriteBSC : public ASTConsumer {
+public:
+  RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
+             DiagnosticsEngine &D, const LangOptions &LOpts, bool insertLine);
+  ~RewriteBSC() override {}
+
+  void Initialize(ASTContext &C) override;
+
+  void HandleTranslationUnit(ASTContext &C) override;
+
 private:
   Rewriter Rewrite;
   DiagnosticsEngine &Diags;
@@ -55,16 +64,6 @@ private:
   /// Save rewritten decls to aviod rewritting one decl twice.
   std::vector<Decl *> RewrittenDecls;
 
-public:
-  RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
-             DiagnosticsEngine &D, const LangOptions &LOpts, bool insertLine);
-  ~RewriteBSC() override {}
-
-  void Initialize(ASTContext &C) override;
-
-  void HandleTranslationUnit(ASTContext &C) override;
-
-private:
   void FindDeclsWithoutBSCFeature();
   const std::string GetRewrittenString();
   void printBSCLineInfo(Decl *D, llvm::raw_string_ostream &Buf);
@@ -208,7 +207,6 @@ void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
 }
 
 void RewriteBSC::RewriteDecls(DeclContext *DC) {
-
   GetSourceLocationsOfFirstDeclAndLastDecl();
   // Step 1: Find decls without bsc features.
   FindDeclsWithoutBSCFeature();
@@ -300,24 +298,6 @@ namespace {
 class BSCFeatureFinder : public StmtVisitor<BSCFeatureFinder, bool>,
                          public DeclVisitor<BSCFeatureFinder, bool>,
                          public TypeVisitor<BSCFeatureFinder, bool> {
-protected:
-  ASTContext &Context;
-
-private:
-  bool IsDesugaredFromTraitType(QualType T) {
-    while (T->isPointerType())
-      T = T->getPointeeType();
-    if (RecordDecl *RD = T->getAsRecordDecl()) {
-      if (auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T)) {
-        TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
-        RD = dyn_cast_or_null<RecordDecl>(TempT->getTemplatedDecl());
-      }
-      if (RD && RD->getDesugaredTraitDecl())
-        return true;
-    }
-    return false;
-  }
-
 public:
   using TypeVisitor<BSCFeatureFinder, bool>::Visit;
   using DeclVisitor<BSCFeatureFinder, bool>::Visit;
@@ -599,6 +579,24 @@ public:
     }
     return false;
   }
+
+protected:
+  ASTContext &Context;
+
+private:
+  bool IsDesugaredFromTraitType(QualType T) {
+    while (T->isPointerType())
+      T = T->getPointeeType();
+    if (RecordDecl *RD = T->getAsRecordDecl()) {
+      if (auto *TST = dyn_cast_or_null<TemplateSpecializationType>(T)) {
+        TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
+        RD = dyn_cast_or_null<RecordDecl>(TempT->getTemplatedDecl());
+      }
+      if (RD && RD->getDesugaredTraitDecl())
+        return true;
+    }
+    return false;
+  }
 };
 } // namespace
 
@@ -824,7 +822,6 @@ const std::string RewriteBSC::GetRewrittenString() {
     } else {
       if (auto *TD = dyn_cast<TagDecl>(D)) {
         if (TD->getTypedefNameForAnonDecl()) {
-
         } else {
           const char *startBuf = SM->getCharacterData(D->getBeginLoc());
           const char *endBuf = SM->getCharacterData(D->getEndLoc());

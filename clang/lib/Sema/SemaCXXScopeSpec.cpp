@@ -38,12 +38,12 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
 
     return nullptr;
   } else if (isa<InjectedClassNameType>(Ty))
-    #if ENABLE_BSC
+#if ENABLE_BSC
     return dyn_cast_or_null<CXXRecordDecl>(
         cast<InjectedClassNameType>(Ty)->getDecl());
-    #else
+#else
     return cast<InjectedClassNameType>(Ty)->getDecl();
-    #endif
+#endif
   else
     return nullptr;
 }
@@ -182,11 +182,12 @@ bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
 ///
 /// \param NNS a dependent nested name specifier.
 CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier *NNS) {
-  #if ENABLE_BSC
-  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) && "Only callable in C++ and BSC");
-  #else
+#if ENABLE_BSC
+  assert((getLangOpts().CPlusPlus || getLangOpts().BSC) &&
+         "Only callable in C++ and BSC");
+#else
   assert(getLangOpts().CPlusPlus && "Only callable in C++");
-  #endif
+#endif
   assert(NNS->isDependent() && "Only dependent nested-name-specifier allowed");
 
   if (!NNS->getAsType())
@@ -228,23 +229,23 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 
   SourceLocation loc = SS.getLastQualifierNameLoc();
   if (loc.isInvalid()) {
-    #if ENABLE_BSC
-    if (!LangOpts.BSC) 
-    #endif
+#if ENABLE_BSC
+    if (!LangOpts.BSC)
+#endif
       loc = SS.getRange().getBegin();
-    #if ENABLE_BSC
-    else  
+#if ENABLE_BSC
+    else
       loc = tag->getBeginLoc(); // FIXME: not same as SS.getRange().getBegin()
-    #endif
+#endif
   }
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
-    #if ENABLE_BSC
+#if ENABLE_BSC
     // For BSC, SS.getRange() is invalid
     if (!LangOpts.BSC)
-    #endif
+#endif
       SS.SetInvalid(SS.getRange());
     return true;
   }
@@ -977,13 +978,13 @@ bool Sema::ActOnCXXNestedNameSpecifier(
       resolveAssumedTemplateNameAsType(S, Template, TemplateNameLoc))
     return true;
 
-  #if ENABLE_BSC
-  // For the case of "struct MyStruct11<T>: foo()", if the name of 
-  // the struct is incorrect, correct it in a timely manner to 
+#if ENABLE_BSC
+  // For the case of "struct MyStruct11<T>: foo()", if the name of
+  // the struct is incorrect, correct it in a timely manner to
   // prevent duplicate errors from being reported.
   if (getLangOpts().BSC)
     OpaqueTemplate = TemplateTy::make(Template);
-  #endif
+#endif
 
   TemplateDecl *TD = Template.getAsTemplateDecl();
   if (Template.getAsOverloadedTemplate() || DTN ||

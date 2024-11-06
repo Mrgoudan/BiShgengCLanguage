@@ -175,9 +175,9 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
   case tok::kw_class:
   case tok::kw_struct:
   case tok::kw_union:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::kw_trait:
-  #endif
+#endif
   case tok::kw___interface:
   case tok::kw_enum:
     // elaborated-type-specifier:
@@ -1018,10 +1018,10 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
   if (Tok.is(tok::ellipsis))
     ConsumeToken();
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Tok.isOneOf(tok::kw_borrow, tok::kw_owned))
     ConsumeToken();
-  #endif
+#endif
 
   if ((Tok.isOneOf(tok::identifier, tok::kw_operator) ||
        (Tok.is(tok::annot_cxxscope) && (NextToken().is(tok::identifier) ||
@@ -1143,14 +1143,14 @@ bool Parser::isBSCTemplateDecl(Token tok) {
   Token NextTok;
   Token LookAheadTok;
 
-  for(; !IsBSCTemplateBlackList(LookAheadKind); LookAheadOffset++) {
+  for (; !IsBSCTemplateBlackList(LookAheadKind); LookAheadOffset++) {
     LookAheadTok = PP.LookAhead(LookAheadOffset);
     LookAheadKind = PP.LookAhead(LookAheadOffset).getKind();
     if (IsBSCTemplateBlackList(LookAheadKind)) {
       break;
     }
     NextTok = PP.LookAhead(LookAheadOffset + 1);
-    if(LookAheadOffset != 0) {
+    if (LookAheadOffset != 0) {
       PreTok = PP.LookAhead(LookAheadOffset - 1);
     } else {
       PreTok = Tok;
@@ -1211,7 +1211,7 @@ bool Parser::isBSCTemplateDecl(Token tok) {
                                                tok::equal)) {
         FoundGreater = true;
         // These two typealias usecases are not allowed:
-        //   "typedef struct S<T> {} S_T;"   
+        //   "typedef struct S<T> {} S_T;"
         //   "typedef struct S<T> S_T;"
         if (Tok.is(tok::kw_typedef) && NextTok.isNot(tok::equal))
           return false;
@@ -1506,9 +1506,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw__Thread_local:
     // function-specifier
   case tok::kw_inline:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::kw_async:
-  #endif
+#endif
   case tok::kw_virtual:
   case tok::kw_explicit:
 
@@ -1531,18 +1531,18 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_class:
   case tok::kw_struct:
   case tok::kw_union:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::kw_trait:
-  #endif
+#endif
   case tok::kw___interface:
     // enum-specifier
   case tok::kw_enum:
     // cv-qualifier
   case tok::kw_const:
   case tok::kw_volatile:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::kw_owned:
-  #endif
+#endif
     return TPResult::True;
 
     // OpenCL address space qualifiers
@@ -1772,9 +1772,9 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_bool:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::kw__Bool:
-  #endif
+#endif
   case tok::kw_short:
   case tok::kw_int:
   case tok::kw_long:
@@ -1878,9 +1878,9 @@ bool Parser::isCXXDeclarationSpecifierAType() {
     // elaborated-type-specifier
   case tok::kw_class:
   case tok::kw_struct:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case tok::kw_trait:
-  #endif
+#endif
   case tok::kw_union:
   case tok::kw___interface:
   case tok::kw_enum:

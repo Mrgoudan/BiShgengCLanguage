@@ -803,9 +803,9 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // Control Block.
   BLOCK(CONTROL_BLOCK);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   RECORD(OPT_STRING);
-  #endif
+#endif
   RECORD(METADATA);
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
@@ -954,9 +954,9 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_UNRESOLVED_USING);
   RECORD(TYPE_INJECTED_CLASS_NAME);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   RECORD(TYPE_INJECTED_TRAIT_NAME);
-  #endif
+#endif
   RECORD(TYPE_OBJC_OBJECT);
   RECORD(TYPE_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_TEMPLATE_SPECIALIZATION);
@@ -1223,7 +1223,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Stream.EnterSubblock(CONTROL_BLOCK_ID, 5);
   RecordData Record;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // add lto opt string
   std::string OptString = PP.getPreprocessorOpts().OptString;
   if (!OptString.empty()) {
@@ -1236,7 +1236,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     Stream.EmitRecordWithBlob(AbbrevCode, Record, OptString);
     Record.clear();
   }
-  #endif
+#endif
   // Metadata
   auto MetadataAbbrev = std::make_shared<BitCodeAbbrev>();
   MetadataAbbrev->Add(BitCodeAbbrevOp(METADATA));
@@ -4746,19 +4746,17 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
   for (const auto *D : TU->noload_decls()) {
     if (!D->isFromASTFile()) {
-      #if ENABLE_BSC
+#if ENABLE_BSC
       if (getLangOpts().BSC) {
-        if (isa<ImplTraitDecl>(D) 
-            || isa<TraitDecl>(D)
-            || isa<TraitTemplateDecl>(D)
-            || isa<TypeAliasDecl>(D)
-            || isa<TypeAliasTemplateDecl>(D))
-            continue;
+        if (isa<ImplTraitDecl>(D) || isa<TraitDecl>(D) ||
+            isa<TraitTemplateDecl>(D) || isa<TypeAliasDecl>(D) ||
+            isa<TypeAliasTemplateDecl>(D))
+          continue;
         if (auto * TDD = dyn_cast_or_null<TypedefDecl>(D)) 
           if (TDD->getUnderlyingType().getCanonicalType().getTypePtr()->isTraitType())
             continue;
       }
-      #endif
+#endif
       NewGlobalKindDeclPairs.push_back(D->getKind());
       NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
     }

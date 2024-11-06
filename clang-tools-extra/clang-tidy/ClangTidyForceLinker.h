@@ -38,7 +38,7 @@ static int LLVM_ATTRIBUTE_UNUSED BoostModuleAnchorDestination =
 // This anchor is used to force the linker to link the BoostModule.
 extern volatile int BscModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED BscModuleAnchorDestination =
-    BscModuleAnchorSource;    
+    BscModuleAnchorSource;
 
 // This anchor is used to force the linker to link the BugproneModule.
 extern volatile int BugproneModuleAnchorSource;

@@ -230,9 +230,9 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   const bool IsTemplated =
       (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate);
 
-  if (ParseOptionalBSCGenericSpecifier(
-          Spec, /*ObjectType=*/nullptr,
-          /*ObjectHadErrors=*/false, EnteringContext, IsTemplated)) {
+  if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
+                                       /*ObjectHadErrors=*/false,
+                                       EnteringContext, IsTemplated)) {
     DS.SetTypeSpecError();
     HasValidSpec = false;
   }
@@ -503,9 +503,9 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   }
 }
 
-/// ParseImplTraitDeclaration - Parse ImplTraitDecl, for example:
-/// "impl trait T for int;"
-/// or "impl trait Future<T> for int;"
+/// Parse an implementation trait declaration, for example:
+/// - "impl trait T for int;"
+/// - "impl trait Future<T> for int;"
 Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   ConsumeToken(); // Eat the "impl"
   SourceLocation TraitLoc = Tok.getLocation();
@@ -523,13 +523,13 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
       // TypedefNameDecl include TypedefDecl and TypeAliasDecl, for example:
       //   `typedef trait F G;` or `typedef trait F<int> G;` or `typedef G = trait F ;` or `typedef G = trait F<int>;`
       //   `impl G for int;`
-      if (auto * TDD = dyn_cast<TypedefNameDecl>(IIDecl))
+      if (auto *TDD = dyn_cast<TypedefNameDecl>(IIDecl))
         QT = TDD->getUnderlyingType().getCanonicalType();
       // TypeAliasTemplateDecl for example:
       //   `typedef G<T> = trait F<T>;`
       //   `impl G<int> for int;`
-      else if (auto * TATD = dyn_cast<TypeAliasTemplateDecl>(IIDecl)) {
-        TypeAliasDecl * TAD = TATD->getTemplatedDecl();
+      else if (auto *TATD = dyn_cast<TypeAliasTemplateDecl>(IIDecl)) {
+        TypeAliasDecl *TAD = TATD->getTemplatedDecl();
         QT = TAD->getUnderlyingType().getCanonicalType();
       }
       if (auto TT = dyn_cast<TraitType>(QT))
@@ -707,7 +707,6 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
     Name = Tok.getIdentifierInfo();
   } else if (Tok.is(tok::annot_template_id)) {
     TemplateId = takeTemplateIdAnnotation(Tok);
-
     if (TemplateId->Kind == TNK_Undeclared_template) {
       // Try to resolve the template name to a type template. May update Kind.
       Actions.ActOnUndeclaredTypeTemplateName(
@@ -752,7 +751,7 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
       const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
       // A semicolon was missing after this declaration. Diagnose and recover.
       ExpectAndConsume(tok::semi, diag::err_expected_after,
-                      DeclSpec::getSpecifierName(TagType, PPol));
+                       DeclSpec::getSpecifierName(TagType, PPol));
       PP.EnterToken(Tok, /*IsReinject*/ true);
       Tok.setKind(tok::semi);
     }
@@ -765,7 +764,7 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
       Diag(AttrRange.getBegin(), diag::err_attributes_not_allowed)
           << AttrRange
           << FixItHint::CreateInsertionFromRange(
-                AttrFixitLoc, CharSourceRange(AttrRange, true))
+                 AttrFixitLoc, CharSourceRange(AttrRange, true))
           << FixItHint::CreateRemoval(AttrRange);
       attrs.takeAllFrom(Attributes);
     }
@@ -825,7 +824,7 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
     if (IsDependent) {
       assert(TUK == Sema::TUK_Reference);
       TypeResult = Actions.ActOnDependentTag(getCurScope(), TagType, TUK, SS,
-                                            Name, StartLoc, NameLoc);
+                                             Name, StartLoc, NameLoc);
     }
   }
 
@@ -905,7 +904,6 @@ NamedDecl *Parser::ParseBSCInlineMethodDef(
         (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
          TemplateInfo.Kind != ParsedTemplateInfo::ExplicitSpecialization)) &&
        !Actions.IsInsideALocalClassWithinATemplateFunction())) {
-
     CachedTokens Toks;
     LexTemplateFunctionForLateParsing(Toks);
 
@@ -1100,8 +1098,7 @@ void Parser::ParseBSCMemberSpecification(SourceLocation RecordLoc,
   // by default. Members of a class defined with the keywords struct or union
   // are public by default.
   // HLSL: In HLSL members of a class are public by default.
-  AccessSpecifier CurAS;
-  CurAS = AS_private;
+  AccessSpecifier CurAS = AS_private;
   ParsedAttributes AccessAttrs(AttrFactory);
 
   if (TagDecl) {
@@ -1143,10 +1140,7 @@ void Parser::ParseBSCMemberSpecification(SourceLocation RecordLoc,
     ParseLexedAttributes(getCurrentClass());
     ParseLexedMethodDeclarations(getCurrentClass());
 
-    // // We've finished with all pending member declarations.
-    // Actions.ActOnFinishCXXMemberDecls();
-
-    // ParseLexedMemberInitializers(getCurrentClass());
+    // We've finished with all pending member declarations.
     ParseLexedMethodDefs(getCurrentClass());
     PrevTokLocation = SavedPrevTokLocation;
 
@@ -1169,7 +1163,6 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
                                        const ParsedTemplateInfo &TemplateInfo,
                                        ParsingDeclRAIIObject *TemplateDiags) {
   if (Tok.is(tok::at)) { // TODO why not @def
-
     Diag(Tok, diag::err_at_in_class);
 
     ConsumeToken();
@@ -1416,7 +1409,6 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
 
     ThisDecl = Actions.ActOnBSCMemberDeclarator(
         getCurScope(), AS, DeclaratorInfo, TemplateParams, BitfieldSize.get());
-
     if (VarTemplateDecl *VT =
             ThisDecl ? dyn_cast<VarTemplateDecl>(ThisDecl) : nullptr)
       // Re-direct this decl to refer to the templated decl so that we can
@@ -1557,8 +1549,7 @@ bool Parser::ParseBSCMemberDeclaratorBeforeInitializer(
   return false;
 }
 
-// The extended type of a BSC member function cannot be a generic typealias,
-// for example:
+// The extended type of a BSC member function cannot be a generic typealias, for example:
 //     typedef MyS<T> = struct S<T>;
 //     void MyS<T>::foo(This* this);
 bool Parser::ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS) {
@@ -1580,7 +1571,7 @@ bool Parser::ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS) {
   return false;
 }
 
-/// [BSC]   conditional-specifier:
+/// The BSC conditional specifier allows:
 ///           __conditional ( constant expression, type-name, type-name )
 void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
   assert(Tok.is(tok::kw___conditional) && "Not a conditional specifier");
@@ -1607,7 +1598,7 @@ void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
   }
   CondResult = Cond.getKnownValue();
   ConsumeToken(); // Consume comma
-  
+
   // Parse the next two types.
   TypeResult Ty1 = ParseTypeName();
   if (ExpectAndConsume(tok::comma)) {
@@ -1627,7 +1618,7 @@ void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
   ParsedType PT2 = Ty2.get();
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID, 
+  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID,
                             CondResult, CondExpr.get(), PT1, PT2,
                             Actions.getASTContext().getPrintingPolicy()))
     Diag(KWLoc, DiagID) << PrevSpec;
@@ -1659,12 +1650,10 @@ bool DeclSpec::SetConditionalType(SourceLocation KWLoc,
 }
 
 /// [BSC] HandleBSCUnknownTypeName - This method is called when we have an non-typename
-/// identifier in a declspec (which normally terminates the decl spec).  
+/// identifier in a declspec (which normally terminates the decl spec).
 /// In this case, the declspec is malformed. For example:
-/// 
 ///      typedef long long int LLInt;
 ///      struct Array<LLint B> {};
-///
 bool Parser::HandleBSCUnknownTypeName(DeclSpec &DS, Token Tok) {
   SourceLocation Loc = Tok.getLocation();
   // This is almost certainly an invalid type name. Let Sema emit a diagnostic

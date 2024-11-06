@@ -413,7 +413,6 @@ void BorrowRuleChecker::VisitMemberExpr(MemberExpr *ME) {
 
   bool borrowFlag = false;
   auto memberField = getMemberField(ME, borrowFlag);
-
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
     HandleDRE(DRE, memberField.second, borrowFlag);
   }
@@ -930,7 +929,7 @@ void BorrowRuleChecker::BuildBorrowTargetMap() {
   }
 }
 
-// Core rule of borrow:
+// Core rule of borrow in ownership semantics:
 //   the lifetime of borrow variable is shorter than its target variable.
 void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
   for (const auto &BorrowAndTarget : BorrowTargetMap) {
@@ -938,17 +937,16 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
     for (const auto &Borrow : BorrowAndTarget.second) {
       // We don't track lifetime of raw pointer,
       // so if a borrow pointer targets to a raw pointer or its field,
-      // we skip checking. 
+      // we skip checking.
       if (!Borrow.TargetIsRawPointerOrItsField) {
         if (Borrow.BorrowVD == TargetVD) {
-          // If a struct has a borrow field which borrows another field,
-          // for example:
+          // If a struct has a borrow field which borrows another field, for example:
           // @code
           //     struct S s = { .m = 0, .p = &const s.m };
           // @endcode
           // Here report error, because s.p has the same lifetime with its target s.p.
-          BorrowCheckDiagInfo DI(Borrow.BorrowVD->getNameAsString(),
-                                 LiveLonger, Borrow.BorrowVD->getLocation());
+          BorrowCheckDiagInfo DI(Borrow.BorrowVD->getNameAsString(), LiveLonger,
+                                 Borrow.BorrowVD->getLocation());
           reporter.addDiagInfo(DI);
           continue;
         }
@@ -960,7 +958,8 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
             unsigned TargetEnd = NLLOfTarget.End;
             if (BorrowBegin <= TargetBegin || BorrowEnd >= TargetEnd) {
               BorrowCheckDiagInfo DI(Borrow.BorrowVD->getNameAsString(),
-                                    LiveLonger, Borrow.BorrowVD->getLocation());
+                                     LiveLonger,
+                                     Borrow.BorrowVD->getLocation());
               reporter.addDiagInfo(DI);
             }
           }
@@ -970,8 +969,7 @@ void BorrowRuleChecker::CheckBorrowNLLShorterThanTarget() {
   }
 }
 
-// Function cannot return a borrow of local variables.
-// For example:
+// Function cannot return a borrow of local variables. for example:
 // @code
 //   int global = 5;
 //   const int* borrow test(const int* borrow p) {
@@ -1046,8 +1044,7 @@ FindBorrowFieldsOfStruct(RecordDecl *RD,
 }
 
 void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
-  // A borrow variable is reassigned, we would handle it like DeclStmt.
-  // For example:
+  // A borrow variable is reassigned, we would handle it like DeclStmt, for example:
   // @code
   //   int* borrow p = &mut local1;
   //   p = &mut local2;    // We handle it like `int* borrow p = &mut local2;`
@@ -1060,7 +1057,7 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
       VisitInitForTargets(BO->getRHS(), Targets);
       if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
         if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-          // p = &mut local;
+          // bsc: p = &mut local;
           UpdateNLLWhenTargetFound(BorrowTargetInfo(VD), Targets);
           for (BorrowTargetInfo Target : Targets)
             NLLForAllVars[VD].push_back(NonLexicalLifetimeRange(
@@ -1073,7 +1070,7 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
           }
         }
       } else if (MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS())) {
-        // s.a.b = &mut local;
+        // bsc: s.a.b = &mut local;
         std::pair<VarDecl *, std::string> BorrowWithFieldPath;
         VisitMEForFieldPath(ME, BorrowWithFieldPath);
         UpdateNLLWhenTargetFound(BorrowTargetInfo(BorrowWithFieldPath.first,
@@ -1098,10 +1095,10 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
         if (RecordDecl *RD = RT->getDecl()) {
           if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
             if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-            // s = s1;
+            // bsc: s = s1;
               VisitInitForBorrowFieldTargets(VD, "", RD, BO->getRHS());
           } else if (MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS())) {
-            // s.a = a1;
+            // bsc: s.a = a1;
             std::pair<VarDecl *, std::string> BorrowWithFieldPath;
             VisitMEForFieldPath(ME, BorrowWithFieldPath);
             VisitInitForBorrowFieldTargets(BorrowWithFieldPath.first,
@@ -1303,7 +1300,7 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
         // For example:
         // @code
         //   S* borrow p = &mut s;  // We should update the target of q from `p.a` to `s.a`
-        //   int *borrow q = &mut p->a; 
+        //   int *borrow q = &mut p->a;
         // @endcode
         // TODO: Also should handle the borrow pointers borrow from function call
         // @code
@@ -1368,7 +1365,7 @@ void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
         }
       } else if (auto ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
         // For example:
-        // @code        
+        // @code
         //     struct S s = s1.a;
         //     s = s1.a;
         //     s.a = s1.a;
@@ -1553,16 +1550,16 @@ void NLLCalculator::VisitCallExprForBorrowFieldTargets(
 //     int * borrow p2 = &mut *b.c.d;  // target of p2 is `a.b.c`, `b.c.d` is raw pointer type
 //     int * borrow p3 = &mut b.e->f;  // target of p2 is `b.e->f`, `b.e` is raw pointer type
 // @endcode
-// p1, p2, p3 all have a target which is raw pointer or is the field of a raw pointer.  
+// p1, p2, p3 all have a target which is raw pointer or is the field of a raw pointer.
 bool NLLCalculator::HasRawPointer(Expr *E) {
   QualType QT = E->getType();
   if (QT->isPointerType() && !QT.isOwnedQualified() && !QT.isBorrowQualified())
     return true;
 
   if (auto ME = dyn_cast<MemberExpr>(E))
-    return HasRawPointer(ME->getBase());    
+    return HasRawPointer(ME->getBase());
   else if (auto ICE = dyn_cast<ImplicitCastExpr>(E))
-    return HasRawPointer(ICE->getSubExpr());    
+    return HasRawPointer(ICE->getSubExpr());
 
   return false;
 }
@@ -1664,7 +1661,6 @@ void NLLCalculator::VisitInitForTargets(
 
 void NLLCalculator::VisitScopeBegin(VarDecl *VD) {
   QualType QT = VD->getType().getCanonicalType();
-
   if (!QT.isBorrowQualified()) {
     // For no-borrow local variable, its NLL is continous, and ScopeBegin marks
     // the begin of its NLL.
@@ -1681,17 +1677,16 @@ void NLLCalculator::VisitScopeEnd(VarDecl *VD) {
 }
 
 // When we find the target of a borrow,
-// we should update previous target in NLLForAllVars.
-// For such example:
+// we should update previous target in NLLForAllVars, for such example:
 // @code
-//   int * borrow p1 = use_and_return(&mut local1, &mut local2); // #1   
-//   //  p3:[3, 3]->local1, [3, 3]->local2 
+//   int * borrow p1 = use_and_return(&mut local1, &mut local2); // #1
+//   //  p3:[3, 3]->local1, [3, 3]->local2
 //   //  p2:[2, 2]->local1, [2, 2]->local2
-//   //  p1:[1, 1]->local1, [1, 1]->local2 
-//   int * borrow p2 = p1; // #2   
+//   //  p1:[1, 1]->local1, [1, 1]->local2
+//   int * borrow p2 = p1; // #2
 //   //  p3:[3, 3]->p1
 //   //  p2:[2, 2]->p1
-//   int * borrow p3 = p2; // #3  
+//   int * borrow p3 = p2; // #3
 //   //  p3:[3, 3]->p2
 // @endcode
 // Because we traverse path in reverse order, we handle in order #3->#2->#1.
@@ -1734,15 +1729,13 @@ void NLLCalculator::UpdateNLLWhenTargetFound(
   }
 }
 
-// Update targets for borrow pointers whose target is field of another borrow pointer.
-// For example:
-// @code 
+// Update targets for borrow pointers whose target is field of another borrow pointer, for example:
+// @code
 //   struct S *borrow p = &mut s;
 //   int *borrow q = &mut p->b;
 // @endcode
-// when we find p targeting to s, we should update the target of q from p.b to s.b.
-// Another example:
-// @code 
+// when we find p targeting to s, we should update the target of q from p.b to s.b, another example:
+// @code
 //   g.s = &mut g1.s1;
 //   int *borrow q = &mut g.s->b;
 // @endcode
@@ -1846,7 +1839,7 @@ void NLLCalculator::HandleNLLAfterTraversing(
 //    BB4(Entry)
 //       |
 //      BB3
-//     /   \ 
+//     /   \
 //   BB2   BB1
 //     \   /
 //     BB0(Exit)
@@ -1896,7 +1889,6 @@ NonLexicalLifetime BorrowCheckImpl::CalculateNLLForPath(
   for (auto revBlockIt = Path.rbegin(); revBlockIt != Path.rend();
        revBlockIt++) {
     const CFGBlock *block = *revBlockIt;
- 
     if (const Stmt *TS = block->getTerminatorStmt())
       Calculator.Visit(const_cast<Stmt *>(TS));
 

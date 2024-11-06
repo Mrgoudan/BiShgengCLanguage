@@ -111,7 +111,7 @@ enum FixBehaviour {
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS, 
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                   bool IsNoClangDiagnostic);
 
 /// Serializes replacements into YAML and writes them to the specified

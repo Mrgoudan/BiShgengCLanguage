@@ -19,7 +19,10 @@ namespace bsc {
 void ExplicitCastCheck::registerMatchers(MatchFinder *Finder) {
   for (auto TargetStruct : TargetStructs) {
     // Targets cast to others.
-    Finder->addMatcher(cStyleCastExpr(hasSourceExpression(hasType(asString(std::string(TargetStruct))))).bind("x"), this);
+    Finder->addMatcher(cStyleCastExpr(hasSourceExpression(hasType(
+                                          asString(std::string(TargetStruct)))))
+                           .bind("x"),
+                       this);
     // Others cast to targets.
     Finder->addMatcher(cStyleCastExpr(hasType(asString(std::string(TargetStruct)))).bind("y"), this);
   }

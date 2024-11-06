@@ -37,8 +37,10 @@ struct BorrowTargetInfo {
 
   BorrowTargetInfo() {}
   BorrowTargetInfo(VarDecl *targetVD, bool targetIsRawPointerOrItsField = false)
-      : TargetVD(targetVD), TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField) {}
-  BorrowTargetInfo(VarDecl *targetVD, std::string targetFieldPath, bool targetIsRawPointerOrItsField = false)
+      : TargetVD(targetVD),
+        TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField) {}
+  BorrowTargetInfo(VarDecl *targetVD, std::string targetFieldPath,
+                   bool targetIsRawPointerOrItsField = false)
       : TargetVD(targetVD), TargetFieldPath(targetFieldPath),
         TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField) {}
 
@@ -77,7 +79,8 @@ struct NonLexicalLifetimeRange {
   // These constructors are for borrow variables, which have binding targets.
   NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
                           VarDecl *targetVD)
-      : Begin(begin), End(end), Kind(kind), Target(BorrowTargetInfo(targetVD)) {}
+      : Begin(begin), End(end), Kind(kind), Target(BorrowTargetInfo(targetVD)) {
+  }
   NonLexicalLifetimeRange(unsigned begin, unsigned end, BorrowKind kind,
                           BorrowTargetInfo target)
       : Begin(begin), End(end), Kind(kind), Target(target) {}
@@ -102,7 +105,7 @@ using NonLexicalLifetimeOfVar = llvm::SmallVector<NonLexicalLifetimeRange>;
 
 // NonLexicalLifetime: NLL for all variables in a cfg path.
 // map<var, lifetime>:
-//     var: 
+//     var:
 //         obj_var, owned_var, borrow_var
 //     lifetime:
 //         obj_lifetime: range
@@ -122,11 +125,12 @@ struct BorrowInfo {
 
   BorrowInfo() {}
   BorrowInfo(std::string targetFieldPath, bool targetIsRawPointerOrItsField,
-             VarDecl *borrowVD, std::string borrowFieldPath,
-             unsigned begin, unsigned end, BorrowKind kind)
-      : TargetFieldPath(targetFieldPath), TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField),
-        BorrowVD(borrowVD), BorrowFieldPath(borrowFieldPath),
-        Begin(begin), End(end), Kind(kind) {}
+             VarDecl *borrowVD, std::string borrowFieldPath, unsigned begin,
+             unsigned end, BorrowKind kind)
+      : TargetFieldPath(targetFieldPath),
+        TargetIsRawPointerOrItsField(targetIsRawPointerOrItsField),
+        BorrowVD(borrowVD), BorrowFieldPath(borrowFieldPath), Begin(begin),
+        End(end), Kind(kind) {}
   bool operator==(const BorrowInfo &other) {
     return TargetFieldPath == other.TargetFieldPath &&
            TargetIsRawPointerOrItsField == other.TargetIsRawPointerOrItsField &&
@@ -188,11 +192,13 @@ private:
     // Sort the diag info by their SourceLocations. While not strictly
     // guaranteed to produce them in line/column order, this will provide
     // a stable ordering.
-    std::sort(DIV.begin(), DIV.end(), [this](const BorrowCheckDiagInfo &a, const BorrowCheckDiagInfo &b){
-      return S.getSourceManager().isBeforeInTranslationUnit(a.Loc, b.Loc);
-    });
+    std::sort(
+        DIV.begin(), DIV.end(),
+        [this](const BorrowCheckDiagInfo &a, const BorrowCheckDiagInfo &b) {
+          return S.getSourceManager().isBeforeInTranslationUnit(a.Loc, b.Loc);
+        });
 
-    for (const BorrowCheckDiagInfo & DI: DIV) {
+    for (const BorrowCheckDiagInfo &DI : DIV) {
       switch (DI.Kind) {
         case LiveLonger:
           S.Diag(DI.Loc, diag::err_borrow_live_longer_than_target_var) << DI.Name;

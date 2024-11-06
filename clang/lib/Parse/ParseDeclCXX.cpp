@@ -472,11 +472,11 @@ Decl *Parser::ParseExportDeclaration() {
 Parser::DeclGroupPtrTy Parser::ParseUsingDirectiveOrDeclaration(
     DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
     SourceLocation &DeclEnd, ParsedAttributes &Attrs) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (getLangOpts().BSC)
     assert(Tok.is(tok::kw_typedef) && "Not typedef token");
   else
-  #endif
+#endif
   assert(Tok.is(tok::kw_using) && "Not using token");
   ObjCDeclContextSwitch ObjCDC(*this);
 
@@ -733,13 +733,14 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     return nullptr;
   
   // BSC generic typealias can not be declared within a function.
-  #if ENABLE_BSC
-  if (getLangOpts().BSC && TemplateInfo.Kind == ParsedTemplateInfo::Template && Context == DeclaratorContext::Block) {
+#if ENABLE_BSC
+  if (getLangOpts().BSC && TemplateInfo.Kind == ParsedTemplateInfo::Template &&
+      Context == DeclaratorContext::Block) {
     Diag(UsingLoc, diag::err_generic_typealias_not_within_function);
     SkipUntil(tok::semi);
     return nullptr;
   }
-  #endif
+#endif
 
   UsingDeclarator D;
   bool InvalidDeclarator = ParseUsingDeclarator(Context, D);
@@ -852,9 +853,9 @@ Decl *Parser::ParseAliasDeclarationAfterDeclarator(
   }
 
   Diag(Tok.getLocation(), getLangOpts().CPlusPlus11
-                          #if ENABLE_BSC
-                          || getLangOpts().BSC
-                          #endif
+#if ENABLE_BSC
+                                  || getLangOpts().BSC
+#endif
                               ? diag::warn_cxx98_compat_alias_declaration
                               : diag::ext_alias_declaration);
 
@@ -1629,7 +1630,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       SS = Spec;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // Generic struct 'struct S<int> s1' should enter here.
   if (getLangOpts().BSC) {
     ColonProtectionRAIIObject X(*this);
@@ -1651,7 +1652,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     if (HasValidSpec)
       SS = Spec;
   }
-  #endif
+#endif
 
   TemplateParameterLists *TemplateParams = TemplateInfo.TemplateParams;
 
@@ -1689,28 +1690,28 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   IdentifierInfo *Name = nullptr;
   SourceLocation NameLoc;
   TemplateIdAnnotation *TemplateId = nullptr;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool isParsingBSCTemplateStruct =
       getLangOpts().BSC && Tok.is(tok::identifier) && NextToken().is(tok::less);
-  #endif
+#endif
   if (Tok.is(tok::identifier)) {
     Name = Tok.getIdentifierInfo();
     NameLoc = ConsumeToken();
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     // BSC Sturct Template Declaration may have "<T>" syntax.
     //      This param list must been parsed, skip it.
     if (isParsingBSCTemplateStruct) {
       while (Tok.getKind() != tok::greater) {
         ConsumeToken();
       }
-      if(Tok.is(tok::greater)) {
+      if (Tok.is(tok::greater)) {
         ConsumeToken();
       } else {
         Diag(Tok.getLocation(), diag::err_expected_comma_greater);
       }
     }
-    #endif
+#endif
 
     if (Tok.is(tok::less) && getLangOpts().CPlusPlus) {
       // The name was supposed to refer to a template, but didn't.
@@ -1854,7 +1855,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
              (Tok.is(tok::semi) ||
               (Tok.isAtStartOfLine() && !isValidAfterTypeSpecifier(false)))) {
     TUK = DS.isFriendSpecified() ? Sema::TUK_Friend : Sema::TUK_Declaration;
-    /* Distinguish `struct S;` with `impl trait T for struct S;`*/
+    /* Distinguish `struct S;` with `impl trait T for struct S;` */
     if (Tok.is(tok::semi) && DS.getImplTrait()) {
       TUK = Sema::TUK_Reference;
     }
@@ -2048,7 +2049,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
     // Declaration or definition of a class type
 #if ENABLE_BSC
-    if (getLangOpts().BSC && DS.getTypeQualifiers() & DeclSpec::TQ_owned) {
+    if (getLangOpts().BSC && (DS.getTypeQualifiers() & DeclSpec::TQ_owned)) {
       StartLoc = DS.getOwnedSpecLoc();
     }
 #endif
@@ -2126,7 +2127,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           return;
         }
       }
- 
     }
 #endif
     else {

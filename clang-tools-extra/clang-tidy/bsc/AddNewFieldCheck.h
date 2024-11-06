@@ -23,14 +23,15 @@ class AddNewFieldCheck : public ClangTidyCheck {
 public:
   AddNewFieldCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-      TargetStructList(Options.get("TargetStructs", "TEMP_FAILURE_RETRY")) {
-        StringRef(TargetStructList).split(TargetStructs, ",", -1, false);
-      }
+        TargetStructList(Options.get("TargetStructs", "TEMP_FAILURE_RETRY")) {
+    StringRef(TargetStructList).split(TargetStructs, ",", -1, false);
+  }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) {
     Options.store(Opts, "TargetStructs", TargetStructList);
-  }    
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
 private:
   const StringRef TargetStructList;
   SmallVector<StringRef, 5> TargetStructs;

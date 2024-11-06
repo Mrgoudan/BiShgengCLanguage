@@ -122,7 +122,7 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
     if (!FieldParent)
       return Field->getCanonicalDecl();
     #if !ENABLE_BSC
-    // FIXME: Temporary handling for clang-tidy. Fix this if the 
+    // FIXME: Temporary handling for clang-tidy. Fix this if the
     // problem of BSC has been solved.
     FieldParent = FieldParent->getTemplateInstantiationPattern();
     #endif

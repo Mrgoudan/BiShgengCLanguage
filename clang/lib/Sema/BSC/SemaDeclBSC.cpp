@@ -21,17 +21,17 @@ using namespace sema;
 
 void Sema::CheckBSCConstexprFunction(FunctionDecl* FD) {
   assert(getLangOpts().BSC && FD->isConstexprSpecified());
-  // BSC constexpr function can not be async. 
+  // BSC constexpr function can not be async.
   if (FD->isAsyncSpecified()) {
     Diag(FD->getBeginLoc(), diag::err_async_func_unsupported)
         << "constexpr";
   }
-  // BSC constexpr function can not be variadic. 
+  // BSC constexpr function can not be variadic.
   if (FD->isVariadic()) {
     Diag(FD->getBeginLoc(), diag::err_constexpr_func_unsupported)
         << "variadic";
   }
-  // The return type and parameter type of BSC constexpr function should be compile_time_calculated type. 
+  // The return type and parameter type of BSC constexpr function should be compile_time_calculated type.
   QualType RT = FD->getReturnType();
   if (!RT->isDependentType() && !RT->isBSCCalculatedTypeInCompileTime()) {
     Diag(FD->getBeginLoc(), diag::err_constexpr_func_unsupported_type) << RT;
@@ -41,14 +41,14 @@ void Sema::CheckBSCConstexprFunction(FunctionDecl* FD) {
     if (!PT->isDependentType() && !PT->isBSCCalculatedTypeInCompileTime()) {
       Diag(PVD->getLocation(), diag::err_constexpr_func_unsupported_type) << PT;
     }
-  } 
+  }
 }
 
-// The type of BSC constexpr variable should be compile_time_calculated type. 
+// The type of BSC constexpr variable should be compile_time_calculated type.
 void Sema::CheckBSCConstexprVarType(VarDecl* VD) {
   assert(getLangOpts().BSC);
   QualType T = VD->getType();
-  if (T->isDependentType()) 
+  if (T->isDependentType())
     return;
   if (VD->isConstexpr() && !T->isBSCCalculatedTypeInCompileTime()) {
     Diag(VD->getLocation(), diag::err_constexpr_var_unsupported_type) << T;

@@ -80,33 +80,33 @@ void ASTStmtWriter::VisitNullStmt(NullStmt *S) {
 
 void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   VisitStmt(S);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Writer.getLangOpts().BSC) {
     unsigned NumStmts = S->size();
     for (auto *CS : S->body())
-      if (auto* DS = dyn_cast_or_null<DeclStmt>(CS))
+      if (auto *DS = dyn_cast_or_null<DeclStmt>(CS))
         if (DS->isSingleDecl() && isa<TypeAliasDecl>(DS->getSingleDecl()))
           NumStmts--;
     Record.push_back(NumStmts);
   } else
-  #endif
+#endif
   Record.push_back(S->size());
   Record.push_back(S->hasStoredFPFeatures());
-  #if ENABLE_BSC
+#if ENABLE_BSC
   Record.push_back(S->getSafeSpecifier());
-  #endif
+#endif
   for (auto *CS : S->body())
-  #if ENABLE_BSC
+#if ENABLE_BSC
   {
     if (Writer.getLangOpts().BSC)
       if (auto* DS = dyn_cast_or_null<DeclStmt>(CS))
         if (DS->isSingleDecl() && isa<TypeAliasDecl>(DS->getSingleDecl()))
           continue;
-  #endif    
+#endif
     Record.AddStmt(CS);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   }
-  #endif    
+#endif
   if (S->hasStoredFPFeatures())
     Record.push_back(S->getStoredFPFeatures().getAsOpaqueInt());
   Record.AddSourceLocation(S->getLBracLoc());
@@ -757,11 +757,11 @@ void ASTStmtWriter::VisitUnaryOperator(UnaryOperator *E) {
   // size of the UnaryOperator.
   Record.push_back(HasFPFeatures);
   Record.AddStmt(E->getSubExpr());
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (E->getOpcode() == UO_AddrMut || E->getOpcode() == UO_AddrConst)
     Record.push_back(UO_AddrOf);
   else
-  #endif
+#endif
     Record.push_back(E->getOpcode()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getOperatorLoc());
   Record.push_back(E->canOverflow());
@@ -903,9 +903,9 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
   Code = serialization::EXPR_CALL;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   Record.push_back(E->getPreferInlineScopeSpecifier());
-  #endif
+#endif
 }
 
 void ASTStmtWriter::VisitRecoveryExpr(RecoveryExpr *E) {
@@ -2763,12 +2763,12 @@ void ASTWriter::WriteSubStmt(Stmt *S) {
   ParentStmtInserterRAII ParentStmtInserter(S, ParentStmts);
 #endif
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (auto UO = dyn_cast<UnaryOperator>(S)) {
     if (UO->getOpcode() == UO_AddrMutDeref || UO->getOpcode() == UO_AddrConstDeref)
       S = UO->getSubExpr();
   }
-  #endif
+#endif
   Writer.Visit(S);
 
   uint64_t Offset = Writer.Emit();

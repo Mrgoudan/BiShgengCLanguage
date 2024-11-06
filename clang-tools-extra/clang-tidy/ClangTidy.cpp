@@ -585,7 +585,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
                   ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS, 
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                   bool IsNoClangDiagnostic) {
   ErrorReporter Reporter(Context, Fix, std::move(BaseFS));
   llvm::vfs::FileSystem &FileSystem =

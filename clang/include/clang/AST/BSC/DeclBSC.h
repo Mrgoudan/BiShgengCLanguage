@@ -31,19 +31,6 @@ class IdentifierInfo;
 class UsingDecl;
 
 class BSCMethodDecl : public FunctionDecl {
-protected:
-  BSCMethodDecl(Kind DK, ASTContext &C, DeclContext *RD,
-                SourceLocation StartLoc, const DeclarationNameInfo &NameInfo,
-                QualType T, TypeSourceInfo *TInfo, StorageClass SC,
-                bool UsesFPIntrin, bool isInline,
-                ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr, bool isAsync = false)
-      : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
-                     isInline, ConstexprKind, TrailingRequiresClause, isAsync) {
-    if (EndLocation.isValid())
-      setRangeEnd(EndLocation);
-  }
-
 public:
   static BSCMethodDecl *
   Create(ASTContext &C, DeclContext *RD, SourceLocation StartLoc,
@@ -69,6 +56,19 @@ public:
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == BSCMethod; }
+
+protected:
+  BSCMethodDecl(Kind DK, ASTContext &C, DeclContext *RD,
+                SourceLocation StartLoc, const DeclarationNameInfo &NameInfo,
+                QualType T, TypeSourceInfo *TInfo, StorageClass SC,
+                bool UsesFPIntrin, bool isInline,
+                ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
+                Expr *TrailingRequiresClause = nullptr, bool isAsync = false)
+      : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
+                     isInline, ConstexprKind, TrailingRequiresClause, isAsync) {
+    if (EndLocation.isValid())
+      setRangeEnd(EndLocation);
+  }
 
 private:
   QualType ExtendedType;
@@ -112,12 +112,6 @@ public:
   llvm::PointerUnion<TraitTemplateDecl *, MemberSpecializationInfo *>
       TemplateOrInstantiation;
 
-protected:
-  TraitDecl(Kind DK, const ASTContext &C, DeclContext *DC,
-            SourceLocation StartLoc, SourceLocation IdLoc, IdentifierInfo *Id,
-            TraitDecl *PrevDecl);
-
-public:
   static TraitDecl *Create(const ASTContext &C, DeclContext *DC,
                            SourceLocation StartLoc, SourceLocation IdLoc,
                            IdentifierInfo *Id, TraitDecl *PrevDecl = nullptr,
@@ -198,30 +192,17 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstTrait && K <= lastTrait; }
+
+protected:
+  TraitDecl(Kind DK, const ASTContext &C, DeclContext *DC,
+            SourceLocation StartLoc, SourceLocation IdLoc, IdentifierInfo *Id,
+            TraitDecl *PrevDecl);
 };
 
 class ImplTraitDecl : public DeclaratorDecl,
                       public Redeclarable<ImplTraitDecl> {
-protected:
-  ImplTraitDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-                SourceLocation IdLoc, IdentifierInfo *Id, QualType T,
-                TypeSourceInfo *TInfo, StorageClass SC);
-
-  using redeclarable_base = Redeclarable<ImplTraitDecl>;
-
-  ImplTraitDecl *getNextRedeclarationImpl() override {
-    return getNextRedeclaration();
-  }
-
-  ImplTraitDecl *getPreviousDeclImpl() override { return getPreviousDecl(); }
-
-  ImplTraitDecl *getMostRecentDeclImpl() override {
-    return getMostRecentDecl();
-  }
-
-  TraitDecl *TD;
-
 public:
+  using redeclarable_base = Redeclarable<ImplTraitDecl>;
   using redeclarable_base::getMostRecentDecl;
   using redeclarable_base::getPreviousDecl;
 
@@ -247,49 +228,27 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
   static bool classofKind(Kind K) { return K == ImplTrait; }
+
+protected:
+  ImplTraitDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                SourceLocation IdLoc, IdentifierInfo *Id, QualType T,
+                TypeSourceInfo *TInfo, StorageClass SC);
+
+  ImplTraitDecl *getNextRedeclarationImpl() override {
+    return getNextRedeclaration();
+  }
+
+  ImplTraitDecl *getPreviousDeclImpl() override { return getPreviousDecl(); }
+
+  ImplTraitDecl *getMostRecentDeclImpl() override {
+    return getMostRecentDecl();
+  }
+
+  TraitDecl *TD;
 };
 
 /// Declaration of a trait template.
 class TraitTemplateDecl : public RedeclarableTemplateDecl {
-protected:
-  // Data that is common to all of the declarations of a given
-  // trait template.
-  struct Common : CommonBase {
-    // The trait template specializations for this trait
-    // template, including explicit specializations and instantiations.
-    llvm::FoldingSetVector<TraitTemplateSpecializationDecl> Specializations;
-
-    /// The trait template partial specializations for this trait
-    /// template.
-    llvm::FoldingSetVector<TraitTemplateSpecializationDecl>
-        PartialSpecializations;
-
-    // The injected-class-name type for this class template.
-    QualType InjectedTraitNameType;
-
-    Common() = default;
-  };
-
-  /// Retrieve the set of specializations of this class template.
-  llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
-  getSpecializations() const;
-
-  /// Retrieve the set of partial specializations of this trait
-  /// template.
-  llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
-  getPartialSpecializations() const;
-
-  CommonBase *newCommon(ASTContext &C) const override;
-
-  Common *getCommonPtr() const {
-    return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
-  }
-
-  TraitTemplateDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
-                    DeclarationName Name, TemplateParameterList *Params,
-                    NamedDecl *Decl)
-      : RedeclarableTemplateDecl(TraitTemplate, C, DC, L, Name, Params, Decl) {}
-
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -354,6 +313,45 @@ public:
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TraitTemplate; }
+
+protected:
+  // Data that is common to all of the declarations of a given
+  // trait template.
+  struct Common : CommonBase {
+    // The trait template specializations for this trait
+    // template, including explicit specializations and instantiations.
+    llvm::FoldingSetVector<TraitTemplateSpecializationDecl> Specializations;
+
+    /// The trait template partial specializations for this trait
+    /// template.
+    llvm::FoldingSetVector<TraitTemplateSpecializationDecl>
+        PartialSpecializations;
+
+    // The injected-class-name type for this class template.
+    QualType InjectedTraitNameType;
+
+    Common() = default;
+  };
+
+  /// Retrieve the set of specializations of this class template.
+  llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
+  getSpecializations() const;
+
+  /// Retrieve the set of partial specializations of this trait
+  /// template.
+  llvm::FoldingSetVector<TraitTemplateSpecializationDecl> &
+  getPartialSpecializations() const;
+
+  CommonBase *newCommon(ASTContext &C) const override;
+
+  Common *getCommonPtr() const {
+    return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
+  }
+
+  TraitTemplateDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
+                    DeclarationName Name, TemplateParameterList *Params,
+                    NamedDecl *Decl)
+      : RedeclarableTemplateDecl(TraitTemplate, C, DC, L, Name, Params, Decl) {}
 };
 
 /// Represents a trait template specialization, which refers to
@@ -400,16 +398,6 @@ class TraitTemplateSpecializationDecl : public TraitDecl,
   /// The kind of specialization this declaration refers to.
   /// Really a value of type TemplateSpecializationKind.
   unsigned SpecializationKind : 3;
-
-protected:
-  TraitTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
-                                  DeclContext *DC, SourceLocation StartLoc,
-                                  SourceLocation IdLoc,
-                                  TraitTemplateDecl *SpecializedTemplate,
-                                  ArrayRef<TemplateArgument> Args,
-                                  TraitTemplateSpecializationDecl *PrevDecl);
-
-  explicit TraitTemplateSpecializationDecl(ASTContext &C, Kind DK);
 
 public:
   friend class ASTDeclReader;
@@ -486,6 +474,16 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
   static bool classofKind(Kind K) { return K == TraitTemplateSpecialization; }
+
+protected:
+  TraitTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
+                                  DeclContext *DC, SourceLocation StartLoc,
+                                  SourceLocation IdLoc,
+                                  TraitTemplateDecl *SpecializedTemplate,
+                                  ArrayRef<TemplateArgument> Args,
+                                  TraitTemplateSpecializationDecl *PrevDecl);
+
+  explicit TraitTemplateSpecializationDecl(ASTContext &C, Kind DK);
 };
 
 } // namespace clang

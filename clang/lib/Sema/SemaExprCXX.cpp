@@ -4763,12 +4763,12 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsScalar:
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case UTT_IsStruct:
   case UTT_IsMoveSemantic:
   case UTT_IsOwnedPointer:
   case UTT_IsOwnedStruct:
-  #endif
+#endif
     // Fall-through
 
     // These traits are modeled on type predicates in C++0x [meta.unary.prop]
@@ -4912,7 +4912,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isEnumeralType();
   case UTT_IsUnion:
     return T->isUnionType();
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case UTT_IsStruct:
     return T->isStructureType();
   case UTT_IsMoveSemantic:
@@ -4921,7 +4921,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isPointerType() && T.getCanonicalType().isOwnedQualified();
   case UTT_IsOwnedStruct:
     return T->isOwnedStructureType();
-  #endif
+#endif
   case UTT_IsClass:
     return T->isClassType() || T->isStructureType() || T->isInterfaceType();
   case UTT_IsFunction:
@@ -5457,9 +5457,9 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                 SourceLocation RParenLoc) {
   QualType ResultType = Context.getLogicalOperationType();
   
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Context.getLangOpts().BSC) ResultType = Context.BoolTy;
-  #endif
+#endif
 
   if (Kind <= UTT_Last && !CheckUnaryTypeTraitTypeCompleteness(
                                *this, Kind, KWLoc, Args[0]->getType()))
@@ -5616,17 +5616,17 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
     Expr *FromPtr = &From;
     InitializationKind Kind(InitializationKind::CreateCopy(KeyLoc,
                                                            SourceLocation()));
-    #if ENABLE_BSC
+#if ENABLE_BSC
     if (Self.getLangOpts().BSC) {
-      ImplicitConversionSequence ICS = Self.TryImplicitConversion(FromPtr, RhsT,
-                                                          /*SuppressUserConversions*/true,
-                                                          Sema::AllowedExplicit::None,
-                                                          /*InOverloadResolution*/ false,
-                                                          /*CStyle=*/Kind.isCStyleOrFunctionalCast(),
-                                                          /*allowObjCWritebackConversion=*/false);
+      ImplicitConversionSequence ICS = Self.TryImplicitConversion(
+          FromPtr, RhsT,
+          /*SuppressUserConversions*/ true, Sema::AllowedExplicit::None,
+          /*InOverloadResolution*/ false,
+          /*CStyle=*/Kind.isCStyleOrFunctionalCast(),
+          /*allowObjCWritebackConversion=*/false);
       return ICS.isStandard();
     }
-    #endif
+#endif
 
     // Perform the initialization in an unevaluated context within a SFINAE
     // trap at translation unit scope.

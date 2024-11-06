@@ -328,10 +328,10 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   switch (getTypePtr()->getKind()) {
   case BuiltinType::Void:
     return TST_void;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case BuiltinType::This:
     return TST_This;
-  #endif
+#endif
   case BuiltinType::Bool:
     return TST_bool;
   case BuiltinType::Char_U:
@@ -525,13 +525,13 @@ void TypeOfTypeLoc::initializeLocal(ASTContext &Context,
 
 #if ENABLE_BSC
 void ConditionalTypeLoc::initializeLocal(ASTContext &Context,
-                                       SourceLocation Loc) {
+                                         SourceLocation Loc) {
   setConditionalLoc(Loc);
   setRParenLoc(Loc);
-  this->getLocalData()->ConditionalTInfo1 = Context.getTrivialTypeSourceInfo(
-      getConditionalType1(), Loc);
-  this->getLocalData()->ConditionalTInfo2 = Context.getTrivialTypeSourceInfo(
-      getConditionalType2(), Loc); 
+  this->getLocalData()->ConditionalTInfo1 =
+      Context.getTrivialTypeSourceInfo(getConditionalType1(), Loc);
+  this->getLocalData()->ConditionalTInfo2 =
+      Context.getTrivialTypeSourceInfo(getConditionalType2(), Loc);
 }
 #endif
 

@@ -58,9 +58,9 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   clang::ASTContext &ast = lldb_ast->getASTContext();
 
   const bool isInlineSpecified = false;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   const bool isAsyncSpecified = false;
-  #endif
+#endif
   const bool hasWrittenPrototype = true;
   const bool isConstexprSpecified = false;
 
@@ -86,10 +86,11 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
       hasWrittenPrototype,
       isConstexprSpecified ? ConstexprSpecKind::Constexpr
                            : ConstexprSpecKind::Unspecified
-      #if ENABLE_BSC
-      , isAsyncSpecified
-      #endif
-      );
+#if ENABLE_BSC
+      ,
+      isAsyncSpecified
+#endif
+  );
 
   // We have to do more than just synthesize the FunctionDecl.  We have to
   // synthesize ParmVarDecls for all of the FunctionDecl's arguments.  To do

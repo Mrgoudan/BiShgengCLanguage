@@ -154,9 +154,9 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned NumStmts = Record.readInt();
   unsigned HasFPFeatures = Record.readInt();
   assert(S->hasStoredFPFeatures() == HasFPFeatures);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   S->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
-  #endif
+#endif
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
   S->setStmts(Stmts);
@@ -1021,9 +1021,9 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   if (HasFPFeatures)
     E->setStoredFPFeatures(
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
-  #if ENABLE_BSC
+#if ENABLE_BSC
   E->setPreferInlineScopeSpecifier(static_cast<PreferInlineScopeSpecifier>(Record.readInt()));
-  #endif
+#endif
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
@@ -4022,11 +4022,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) DependentCoawaitExpr(Empty);
       break;
 
-    #if ENABLE_BSC
+#if ENABLE_BSC
     case EXPR_BSC_AWAIT:
       S = new (Context) AwaitExpr(Empty);
       break;
-    #endif
+#endif
 
     case EXPR_CONCEPT_SPECIALIZATION: {
       unsigned numTemplateArgs = Record[ASTStmtReader::NumExprFields];

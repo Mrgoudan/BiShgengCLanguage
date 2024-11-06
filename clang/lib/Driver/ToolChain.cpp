@@ -803,7 +803,7 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 #if ENABLE_BSC
 void ToolChain::AddClangBSCSystemIncludeArgs(const ArgList &DriverArgs,
-                                          ArgStringList &CC1Args) const {
+                                             ArgStringList &CC1Args) const {
   // Each toolchain should provide the appropriate include flags.
 }
 #endif

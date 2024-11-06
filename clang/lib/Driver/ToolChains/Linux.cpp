@@ -568,7 +568,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
 
 #if ENABLE_BSC
 void Linux::AddClangBSCSystemIncludeArgs(const ArgList &DriverArgs,
-                                      ArgStringList &CC1Args) const {
+                                         ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   SmallString<128> ResourceDirBSCInclude(D.ResourceDir);
   SmallString<128> ResourceDirBSCInclude2c(D.ResourceDir);

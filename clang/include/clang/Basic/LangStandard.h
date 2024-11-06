@@ -64,9 +64,10 @@ enum LangFeatures {
   HexFloat = (1 << 13),
   OpenCL = (1 << 14),
   HLSL = (1 << 15)
-  #if ENABLE_BSC
-  , BSC = (1 << 16)
-  #endif
+#if ENABLE_BSC
+      ,
+  BSC = (1 << 16)
+#endif
 };
 
 /// LangStandard - Information about the properties of a particular language

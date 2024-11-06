@@ -2048,7 +2048,7 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
     // that derive from other specializations of the template.
     if (WantChildren) {
       if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD)) {
-          // FIXME: Temporary handling for clang-tidy. Fix this if the 
+          // FIXME: Temporary handling for clang-tidy. Fix this if the
           // problem of BSC has been solved.
           #if !ENABLE_BSC
           CXXRD = CTSD->getTemplateInstantiationPattern();

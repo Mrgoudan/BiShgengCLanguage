@@ -18,10 +18,10 @@ static BSCMethodDecl *buildBSCMethodDecl(ASTContext &C, DeclContext *DC,
                                          SourceLocation NLoc, DeclarationName N,
                                          QualType T, TypeSourceInfo *TInfo,
                                          StorageClass SC, QualType ET) {
-  BSCMethodDecl *NewDecl =
-      BSCMethodDecl::Create( // TODO: inline should be passed.
-          C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false,
-          false, ConstexprSpecKind::Unspecified, NLoc);
+  // TODO: inline should be passed.
+  BSCMethodDecl *NewDecl = BSCMethodDecl::Create(
+      C, DC, StartLoc, DeclarationNameInfo(N, NLoc), T, TInfo, SC, false, false,
+      ConstexprSpecKind::Unspecified, NLoc);
   return NewDecl;
 }
 
@@ -287,8 +287,8 @@ public:
     Stmt *If = SemaRef
                    .BuildIfStmt(
                        SourceLocation(), IfStatementKind::Ordinary,
-                       /* LPL=*/SourceLocation(), /* Init=*/nullptr, IfCond,
-                       /* RPL=*/SourceLocation(), CE, SourceLocation(), nullptr)
+                       /*LPL=*/SourceLocation(), /*Init=*/nullptr, IfCond,
+                       /*RPL=*/SourceLocation(), CE, SourceLocation(), nullptr)
                    .get();
     return If;
   }
@@ -488,7 +488,7 @@ public:
   }
 
   bool TraverseDoStmt(DoStmt *DS) {
-    if (DS->getBody()){
+    if (DS->getBody()) {
       RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(DS->getBody());
       if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getBody())) {
         DS->setBody(ReplaceCompoundMap[NewCompound]);
@@ -499,7 +499,7 @@ public:
     return false;
   }
   bool TraverseForStmt(ForStmt *FS) {
-    if (FS->getBody()){
+    if (FS->getBody()) {
       RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(FS->getBody());
       if (auto NewCompound = dyn_cast<CompoundStmt>(FS->getBody())) {
         FS->setBody(ReplaceCompoundMap[NewCompound]);
@@ -519,7 +519,7 @@ public:
   }
 
   bool TraverseSwitchStmt(SwitchStmt *SS) {
-    if (SS->getBody()){
+    if (SS->getBody()) {
       RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(SS->getBody());
       if (auto NewCompound = dyn_cast<CompoundStmt>(SS->getBody())) {
         SS->setBody(ReplaceCompoundMap[NewCompound]);
