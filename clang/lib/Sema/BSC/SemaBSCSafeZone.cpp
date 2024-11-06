@@ -400,6 +400,8 @@ void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList) {
   bool IsInitToZero = false;
   if (IList->getNumInits() == 1) {
     Expr *Init = IList->getInit(0);
+    if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Init))
+      Init = ICE->getSubExpr();
     if (const auto *IL = dyn_cast<IntegerLiteral>(Init)) {
       IsInitToZero = IL->getValue().isZero();
     }

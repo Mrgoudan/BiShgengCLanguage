@@ -34,6 +34,11 @@ void IncomInitList() {
     int a;
   };
 
+  struct S {
+    unsigned int x1;
+    int x2;
+  };
+
   safe {
     struct F a = {};             // ok
     struct F b = {0};            // ok
@@ -48,6 +53,8 @@ void IncomInitList() {
                                 // expected-error@-1 {{incomplete initialization is forbidden in the safe zone}}
     struct G k = {{10, "tom", 80}, 10};
     struct G l = {.f.age = 10, .f.name = "tom", .f.high = 90, 10};
+    struct S m = {};
+    struct S n = {0};
   }
 
   safe {
