@@ -3790,7 +3790,177 @@ int A::f(A* this) {
 ### 创建 `owned struct`实例
 `owned struct` 允许使用 `struct initializer` 语法创建实例，也允许单独对每个成员变量初始化（如果成员变量是 `public`, 此时与 `struct` 一样单独跟踪每个成员的初始化状态，但是需要在安全区状态下保证在发生 `move`、传参、析构和返回等场景下该变量一定已经完整初始化, 非安全区不做保证。同时为了方便 `owned struct` 类型在使用的时候不携带 `owned struct` 关键字。
 
+## 运算符重载
 
+### 概述
+
+通过给函数增加 operator 属性来定义一个函数，并告诉编译器，对于符合函数入参规则的该运算符需调用此函数来行使运算符功能。这个函数也叫做运算符的重载函数。
+
+### 代码示例
+
+```c++
+#include <assert.h>
+struct square
+{
+    int width;
+    int height;
+};
+
+// 运算符‘+’号重载函数
+__attribute__((operator +))
+struct square squareAdd(struct square s1, struct square s2){
+    struct square s = {s1.width + s2.width, s1.height + s2.height};
+    return s;
+}
+
+// 普通函数
+struct square square_add(struct square s1, struct square s2){
+    struct square s = {s1.width + s2.width, s1.height + s2.height};
+    return s;
+}
+
+int main(){
+    struct square s1 = {100, 50};
+    struct square s2 = {60, 110};
+    // 在之前我们必须主动调用函数来完成结构体运算操作。
+    struct square s3 = square_add(s1, s2);
+    assert(s3.width == 160);
+    assert(s3.height == 160);
+	// 将函数加上重载标记后，现在我们可以直接对该结构体进行运算操作。
+    struct square s4 = s1 + s2;
+    assert(s4.width == 160);
+    assert(s4.height == 160);
+    return 0;
+}
+```
+
+### 语法规则
+
+1、在普通函数基础上，通过 `__attribute__((operator Op))` 属性标记该函数为运算符重载函数。
+
+```c
+__attribute__((operator OP)) function-declaration
+```
+
+代码示例：
+
+```c
+// 定义了一个“+”号运算符重载函数 
+__attribute__((operator +))
+struct square squareAdd(struct square s1, struct square s2){
+    struct square s = {s1.width + s2.width, s1.height + s2.height};
+    return s;
+}
+```
+
+2、运算符重载函数只能是全局函数，不允许标记成员函数、`trait`声明的函数为重载函数。
+
+3、运算符重载函数至少有一个参数是用户自定义类型，如结构体、枚举。
+
+代码示例：
+
+```c
+// error: 不允许定义无用户自定义类型运算符重载函数。
+__attribute__((operator +))
+int squareAdd(int a, int b){
+	return a + b;
+}
+```
+
+4、运算符重载函数名不能与普通函数名冲突。对同一个运算符定义多个重载函数时，如果函数名不同并且参数类型不完全一致，允许同时存在。
+
+```c
+__attribute__((operator +))
+struct square squareAdd(struct square s1, struct square s2){
+    /* code */
+}
+// 支持对同一个运算符多次重载
+__attribute__((operator +))
+struct oblong oblongAdd(struct oblong s1, struct oblong s2){
+    /* code */
+}
+```
+
+5、支持的重载运算符列表。
+
+| 类别           | 运算符                                                       |
+| -------------- | ------------------------------------------------------------ |
+| 双目算术运算符 | + (加)，-(减)，*(乘)，/(除)，% (取模)                        |
+| 关系运算符     | ==(等于)，!= (不等于)，< (小于)，> (大于)，<=(小于等于)，>=(大于等于) |
+| 位运算符       | \| (按位或)，& (按位与)，~(按位取反)，^(按位异或),，<< (左移)，>>(右移) |
+| 单目运算符     | \+ (正)，-(负)，*(解引用)                                      |
+
+```c
+#include <stdio.h>
+
+struct Point {
+    int * x;
+};
+// 定义了一个解引用运算符重载函数 
+__attribute__((operator *))
+int star(struct Point p) {
+    return *(p.x);
+}
+
+int main() {
+    int num = 100;
+    struct Point p = {&num};
+    int val = *p;
+    printf("val is %d\n", val);
+}
+```
+注：当前不支持 `->`和 `[]` 的运算符重载功能，将在后续版本中支持。
+
+6、关系运算符重载函数的返回值必须为 `_Bool` 类型。
+
+7、运算符重载函数可以是泛型函数。
+
+```c
+#include <stdio.h>
+
+struct Point<T>
+{
+    T x;
+    T y;
+};
+
+__attribute__((operator +))
+struct Point<T> Add<T>(struct Point<T> lhs, struct Point<T> rhs){
+  T x1 = lhs.x + rhs.x;
+  T y1 = lhs.y + rhs.y; 
+  struct Point<T> p = {.x = x1, .y = y1};
+  return p;
+}
+
+__attribute__((operator *))
+struct Point<T> Mul<T>(struct Point<T> lhs, struct Point<T> rhs){
+  T x1 = lhs.x * rhs.x; 
+  T y1 = lhs.y * rhs.y; 
+  struct Point<T> p = {.x = x1, .y = y1};
+  return p;
+}
+
+void test1() {
+  struct Point<int> p1 = {.x = 1, .y = 2};
+  struct Point<int> p2 = {.x = 3, .y = 4};
+  struct Point<int> p3 = p1 + p2; // {.x = 4, .y = 6}
+  printf("p3.x: %d, p3.y :%d\n", p3.x, p3.y);  
+}
+
+void test2() {
+  struct Point<int> p1 = {.x = 1, .y = 2};
+  struct Point<int> p2 = {.x = 3, .y = 4};
+  struct Point<int> p3 = p1 * p2; // {.x = 3, .y = 8}
+  printf("p3.x: %d, p3.y :%d\n", p3.x, p3.y);  
+}
+
+int main() {
+  test1();
+  test2();
+}
+```
+
+注：运算符重载当前未支持源源变换、将在后续版本中支持。
 
 ## 标准库
 
