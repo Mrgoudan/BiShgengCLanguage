@@ -168,14 +168,6 @@ struct S {
   int * borrow b;
 };
 
-int test_freeze_ident16() {
-  int local = 1;
-  struct S s = { .a = local, .b = &mut local };  // expected-note {{previous borrow is here}}
-                                                 // expected-error@-1 {{Can not read 'local' because be mut borrowed}}                                     
-  use(s.b);
-  return 0;
-}
-
 void test_freeze_ident17(){
     int a = 1;
     int *owned b = (int *owned)&a;

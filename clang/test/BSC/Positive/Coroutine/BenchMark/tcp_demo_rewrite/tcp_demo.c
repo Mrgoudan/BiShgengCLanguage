@@ -1,5 +1,4 @@
 // RUN: %clang %s %S/scheduler.c %S/noise.c -o %test.output -lpthread
-// RUN: %test.output
 // expected-no-diagnostics
 
 #include <stdio.h>

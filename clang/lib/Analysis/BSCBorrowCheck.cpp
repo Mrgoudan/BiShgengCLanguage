@@ -41,6 +41,29 @@ static bool IsPrefix(const string &currentField, const string &borrowedField) {
   return compareFlag && (borrowedField[currentField.length()] == '.');
 }
 
+// This function is used to replace Type::hasBorrowFields(),
+// which has similar effect but will return true when a type has
+// borrow field indirectly,
+// for example, it return true for `struct S *`(struct S has direct borrow fields).
+// This function return true only when the type is struct
+// and has borrow fields directly.
+// For example,
+// it return false for `struct S *`, return true for `struct S`.
+static bool IsStructAndHasBorrowFields(QualType QT) {
+  if (const auto *RecTy = dyn_cast<RecordType>(QT.getCanonicalType())) {
+    if (RecordDecl *RD = RecTy->getDecl()) {
+      for (FieldDecl *FD : RD->fields()) {
+        QualType FQT = FD->getType().getCanonicalType();
+        if (FQT.isBorrowQualified())  
+          return true;
+        else if (isa<RecordType>(FQT))
+          return IsStructAndHasBorrowFields(FQT);
+      }
+    }
+  }
+  return false;
+}
+
 class BorrowCheckImpl {
 public:
   ASTContext &Ctx;
@@ -135,7 +158,6 @@ private:
       BorrowTargetInfo OldTarget,
       BorrowTargetInfo NewTarget);
   bool HasRawPointer(Expr *E);
-  bool IsRawPointer(QualType QT);
 };
 
 class BorrowRuleChecker : public StmtVisitor<BorrowRuleChecker> {
@@ -239,7 +261,7 @@ VarDecl *
 BorrowRuleChecker::FindTargetFromActiveBorrowTargetMap(const VarDecl *VD,
                                                        string borrowFieldName) {
   if (VD->getType().isBorrowQualified() ||
-      VD->getType().getCanonicalType()->hasBorrowFields()) {
+      IsStructAndHasBorrowFields(VD->getType())) {
     for (const auto &v : ActiveBorrowTargetMap) {
       auto it = v.second.rbegin();
       while (it != v.second.rend()) {
@@ -289,15 +311,9 @@ void BorrowRuleChecker::VisitUnaryOperator(UnaryOperator *UO) {
   case UO_AddrConst:
   case UO_AddrConstDeref:
     return;
-  case UO_AddrMut: {
-    if (IsVisitingCallExpr && Status == NotInit) {
-      Op = Write;
-      break;
-    } else
-      return;
-  }
+  case UO_AddrMut:
   case UO_AddrMutDeref: {
-    if (IsVisitingCallExpr) {
+    if (IsVisitingCallExpr && Status == NotInit) {
       Op = Write;
       break;
     } else
@@ -434,7 +450,7 @@ void BorrowRuleChecker::VisitDeclStmt(DeclStmt *DS) {
   Status = Init;
   for (auto *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->getType().isBorrowQualified()) {
+      if (VD->getType().isBorrowQualified() || IsStructAndHasBorrowFields(VD->getType())) {
         continue;
       }
       Expr *Init = VD->getInit();
@@ -477,7 +493,7 @@ void BorrowRuleChecker::HandleDRE(const DeclRefExpr *DRE,
 BorrowInfo BorrowRuleChecker::GetBorrowInfo(const VarDecl *VD,
                                             string fieldName) {
   // FIXME this condition is not suitable
-  if (VD->getType().isBorrowQualified() || VD->getType()->hasBorrowFields()) {
+  if (VD->getType().isBorrowQualified() || IsStructAndHasBorrowFields(VD->getType())) {
     for (const auto &v : ActiveBorrowTargetMap) {
       auto it = v.second.rbegin();
       while (it != v.second.rend()) {
@@ -723,7 +739,7 @@ void BorrowRuleChecker::CheckNonBorrowVar(const VarDecl *VD,
     CheckNonBorrowVarRead(VD, Loc);
   }
   QualType QT = VD->getType().getCanonicalType();
-  if (Status == NotInit && QT->isRecordType() && QT->hasBorrowFields()) {
+  if (Status == NotInit && IsStructAndHasBorrowFields(QT)) {
     llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
     FindBorrowFieldsOfStruct(QT->getAsRecordDecl(), BorrowFieldsOfStruct);
     for (auto &Field : BorrowFieldsOfStruct) {
@@ -774,7 +790,7 @@ void BorrowRuleChecker::CheckNonBorrowField(const VarDecl *VD,
     CheckNonBorrowFieldRead(VD, Loc, fieldName);
   }
   QualType QT = VD->getType().getCanonicalType();
-  if (Status == NotInit && QT->isRecordType() && QT->hasBorrowFields()) {
+  if (Status == NotInit && IsStructAndHasBorrowFields(QT)) {
     llvm::SmallVector<std::pair<std::string, BorrowKind>> BorrowFieldsOfStruct;
     FindBorrowFieldsOfStruct(QT->getAsRecordDecl(), BorrowFieldsOfStruct);
     for (auto &Field : BorrowFieldsOfStruct) {
@@ -1001,9 +1017,7 @@ static void FindBorrowFieldsOfStructDFS(
     BorrowKind BK = FQT.isConstBorrow() ? BorrowKind::Immut : BorrowKind::Mut;
     FP = FP + "." + CurrFD->getNameAsString();
     BorrowFieldsOfStruct.push_back(std::pair<std::string, BorrowKind>(FP, BK));
-  } else if (FQT->hasBorrowFields()) {
-    while (FQT->isPointerType())
-      FQT = FQT->getPointeeType().getCanonicalType();
+  } else if (IsStructAndHasBorrowFields(FQT)) {
     if (auto RT = dyn_cast<RecordType>(FQT)) {
       if (RecordDecl *RD = RT->getDecl()) {
         FP = FP + "." + CurrFD->getNameAsString();
@@ -1025,7 +1039,7 @@ FindBorrowFieldsOfStruct(RecordDecl *RD,
       std::string FP = "." + FD->getNameAsString();
       BorrowFieldsOfStruct.push_back(
           std::pair<std::string, BorrowKind>(FP, BK));
-    } else if (FQT->hasBorrowFields()) {
+    } else if (IsStructAndHasBorrowFields(FQT)) {
       FindBorrowFieldsOfStructDFS(FD, "", BorrowFieldsOfStruct);
     }
   }
@@ -1079,9 +1093,7 @@ void NLLCalculator::VisitBinaryOperator(BinaryOperator *BO) {
       Visit(BO->getRHS());
       CurrOpIsBorrowUse = false;
       return;
-    } else if (QT->hasBorrowFields()) {
-      while (QT->isPointerType())
-        QT = QT->getPointeeType().getCanonicalType();
+    } else if (IsStructAndHasBorrowFields(QT)) {
       if (auto RT = dyn_cast<RecordType>(QT)) {
         if (RecordDecl *RD = RT->getDecl()) {
           if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BO->getLHS())) {
@@ -1122,9 +1134,7 @@ void NLLCalculator::VisitDeclRefExpr(DeclRefExpr *DRE) {
       QualType VQT = VD->getType().getCanonicalType();
       if (VQT.isBorrowQualified() && !FoundVars.count(VD))
         FoundVars[VD] = CurElemID;
-      else if (VQT->hasBorrowFields()) {
-        while (VQT->isPointerType())
-          VQT = VQT->getPointeeType().getCanonicalType();
+      else if (IsStructAndHasBorrowFields(VQT)) {
         if (auto RT = dyn_cast<RecordType>(VQT)) {
           llvm::SmallVector<std::pair<std::string, BorrowKind>>
               BorrowFieldsOfStruct;
@@ -1173,9 +1183,7 @@ void NLLCalculator::VisitReturnStmt(ReturnStmt *RS) {
     for (BorrowTargetInfo Target : Targets)
       NLLForAllVars[ReturnVD].push_back(
           NonLexicalLifetimeRange(CurElemID, CurElemID, BK, Target));
-  } else if (ReturnQT->hasBorrowFields()) {
-    while (ReturnQT->isPointerType())
-      ReturnQT = ReturnQT->getPointeeType().getCanonicalType();
+  } else if (IsStructAndHasBorrowFields(ReturnQT)) {
     if (auto RT = dyn_cast<RecordType>(ReturnQT))
       if (RecordDecl *RD = RT->getDecl())
         VisitInitForBorrowFieldTargets(ReturnVD, "", RD, RV);
@@ -1191,11 +1199,9 @@ void NLLCalculator::VisitMemberExpr(MemberExpr *ME) {
       VisitMEForFieldPath(ME, BorrowWithFieldPath);
       if (!FoundBorrowFields.count(BorrowWithFieldPath))
         FoundBorrowFields[BorrowWithFieldPath] = CurElemID;
-    } else if (MQT->hasBorrowFields()) {
+    } else if (IsStructAndHasBorrowFields(MQT)) {
       // Use borrow pointer indirectly, such as `s.a`, a is a struct type and
       // has borrow fields.
-      while (MQT->isPointerType())
-        MQT = MQT->getPointeeType().getCanonicalType();
       std::pair<VarDecl *, std::string> BorrowWithFieldPath;
       VisitMEForFieldPath(ME, BorrowWithFieldPath);
       if (auto RT = dyn_cast<RecordType>(MQT)) {
@@ -1309,10 +1315,7 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
           if (!(isa<CallExpr>(VD->getInit()) || isa<ConditionalOperator>(VD->getInit())))
             UpdateTargetOfFieldsOfBorrowStruct(BorrowTargetInfo(VD), Targets[0]);
         }
-      } else if (VQT->hasBorrowFields()) {
-        // If RawPointerType, not get canonical type.
-        while (VQT->isPointerType() && !IsRawPointer(VQT))
-          VQT = VQT->getPointeeType().getCanonicalType();
+      } else if (IsStructAndHasBorrowFields(VQT)) {
         if (auto RT = dyn_cast<RecordType>(VQT))
           if (RecordDecl *RD = RT->getDecl())
             VisitInitForBorrowFieldTargets(VD, "", RD, VD->getInit());
@@ -1433,9 +1436,7 @@ void NLLCalculator::VisitFieldInitForBorrowFieldTargets(FieldDecl *FD,
                                       : CurElemID,
                                   BK, Target, BorrowWithFieldPath.second));
     FoundBorrowFields.erase(BorrowWithFieldPath);
-  } else if (FQT->hasBorrowFields()) {
-    while (FQT->isPointerType())
-      FQT = FQT->getPointeeType().getCanonicalType();
+  } else if (IsStructAndHasBorrowFields(FQT)) {
     if (auto RT = dyn_cast<RecordType>(FQT)) {
       RecordDecl *RD = RT->getDecl();
       if (auto ICE = dyn_cast<ImplicitCastExpr>(InitE)) {
@@ -1513,9 +1514,7 @@ void NLLCalculator::VisitCallExprForBorrowFieldTargets(
       QualType ArgQT = ArgExpr->getType().getCanonicalType();
       if (ArgQT.isBorrowQualified())
         VisitInitForTargets(ArgExpr, Targets);
-      else if (ArgQT->hasBorrowFields()) {
-        while (ArgQT->isPointerType())
-          ArgQT = ArgQT->getPointeeType().getCanonicalType();
+      else if (IsStructAndHasBorrowFields(ArgQT)) {
         if (auto ArgRT = dyn_cast<RecordType>(ArgQT)) {
           if (RecordDecl *ArgRD = ArgRT->getDecl()) {
             if (auto ICE = dyn_cast<ImplicitCastExpr>(ArgExpr)) {
@@ -1568,10 +1567,6 @@ bool NLLCalculator::HasRawPointer(Expr *E) {
   return false;
 }
 
-bool NLLCalculator::IsRawPointer(QualType QT) {
-  return (QT->isPointerType() && !QT.isOwnedQualified() && !QT.isBorrowQualified());
-}
-
 void NLLCalculator::VisitMEForFieldPath(
     Expr *E, std::pair<VarDecl *, std::string> &VDAndFP) {
   if (auto ME = dyn_cast<MemberExpr>(E)) {
@@ -1601,9 +1596,7 @@ void NLLCalculator::VisitInitForTargets(
   if (auto *DRE = dyn_cast<DeclRefExpr>(InitE)) {
     if (VarDecl *IVD = dyn_cast<VarDecl>(DRE->getDecl())) {
       QualType VQT = IVD->getType().getCanonicalType();
-      if (VQT->hasBorrowFields()) {
-        while (VQT->isPointerType())
-          VQT = VQT->getPointeeType().getCanonicalType();
+      if (IsStructAndHasBorrowFields(VQT)) {
         if (auto RT = dyn_cast<RecordType>(VQT)) {
           llvm::SmallVector<std::pair<std::string, BorrowKind>>
               BorrowFieldsOfStruct;
@@ -1622,9 +1615,7 @@ void NLLCalculator::VisitInitForTargets(
     std::pair<VarDecl *, std::string> TargetWithFieldPath;
     VisitMEForFieldPath(ME, TargetWithFieldPath);
     QualType MQT = ME->getType().getCanonicalType();
-    if (MQT->hasBorrowFields()) {
-      while (MQT->isPointerType())
-        MQT = MQT->getPointeeType().getCanonicalType();
+    if (IsStructAndHasBorrowFields(MQT)) {
       if (auto RT = dyn_cast<RecordType>(MQT)) {
         llvm::SmallVector<std::pair<std::string, BorrowKind>>
             BorrowFieldsOfStruct;
@@ -1663,7 +1654,7 @@ void NLLCalculator::VisitInitForTargets(
     // local1 and local2. we add local1 and local2 to Targets.
     for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it)
       if (Expr *ArgExpr = dyn_cast<Expr>(*it))
-        if (ArgExpr->getType().isBorrowQualified() || ArgExpr->getType()->hasBorrowFields())
+        if (ArgExpr->getType().isBorrowQualified() || IsStructAndHasBorrowFields(ArgExpr->getType()))
           VisitInitForTargets(ArgExpr, Targets);
   } else if (auto CO = dyn_cast<ConditionalOperator>(InitE)) {
     VisitInitForTargets(CO->getLHS(), Targets);
@@ -1960,7 +1951,7 @@ void BorrowCheckImpl::BuildParamTarget(
       ParamTarget[std::tuple<ParmVarDecl *, std::string, BorrowKind>(
           PVD, "", BK)] = BorrowTargetInfo(VD);
       HasVirtualTarget = true;
-    } else if (PQT->hasBorrowFields()) {
+    } else if (IsStructAndHasBorrowFields(PQT)) {
       if (auto RT = dyn_cast<RecordType>(PQT)) {
         RecordDecl *RD = RT->getDecl();
         llvm::SmallVector<std::pair<std::string, BorrowKind>>
