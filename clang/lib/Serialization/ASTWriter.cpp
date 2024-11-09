@@ -4752,7 +4752,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
             isa<TraitTemplateDecl>(D) || isa<TypeAliasDecl>(D) ||
             isa<TypeAliasTemplateDecl>(D))
           continue;
-        if (auto * TDD = dyn_cast_or_null<TypedefDecl>(D)) 
+        if (auto *TDD = dyn_cast_or_null<TypedefDecl>(D))
           if (TDD->getUnderlyingType().getCanonicalType().getTypePtr()->isTraitType())
             continue;
       }

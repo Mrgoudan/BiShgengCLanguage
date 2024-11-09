@@ -1571,7 +1571,7 @@ bool Parser::ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS) {
   return false;
 }
 
-/// The BSC conditional specifier allows:
+/// The BSC conditional specifier allows for conditional type based on a constant expression, as follows:
 ///           __conditional ( constant expression, type-name, type-name )
 void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
   assert(Tok.is(tok::kw___conditional) && "Not a conditional specifier");

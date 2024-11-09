@@ -348,8 +348,8 @@ public:
     if (QT->getAs<TemplateSpecializationType>()) {
       return true;
     }
-    if (auto * TT = QT->getAs<TypedefType>()) {
-      if (auto * TD = TT->getDecl())
+    if (auto *TT = QT->getAs<TypedefType>()) {
+      if (auto *TD = TT->getDecl())
         if (isa<TypeAliasDecl>(TD) || isa<TypeAliasTemplateDecl>(TD))
           return true;
     }
@@ -957,8 +957,8 @@ const std::string RewriteBSC::GetRewrittenString() {
             !SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc())) &&
             !HasTemplateSpec)
           break;
-
-        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end()) {  // not found, but mean it is a BSCMethodDecl
+        // not found, but double negative mean it is a BSCMethodDecl.
+        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end()) {
           printBSCLineInfo(FD, Buf);
           FD->print(Buf, Policy);
         } else {

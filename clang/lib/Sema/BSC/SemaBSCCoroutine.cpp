@@ -426,7 +426,6 @@ public:
     }
 
     bool CHasIllegalAwait = hasAwaitExpr(S);
-
     if (CHasIllegalAwait && !IsIllegal)
       IsIllegal = CHasIllegalAwait;
 
@@ -526,7 +525,6 @@ static QualType lookupGenericType(Sema &S, SourceLocation SLoc, QualType T,
       TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, SLoc)));
   QualType PollResultRecord =
       S.CheckTemplateIdType(TemplateName(CTD), SourceLocation(), Args);
-
   if (PollResultRecord.isNull()) return QualType();
   if (S.RequireCompleteType(SLoc, PollResultRecord,
                             diag::err_coroutine_type_missing_specialization))
@@ -2351,7 +2349,6 @@ public:
     return AwaitResultRef;
   }
 
-
   Decl *TransformDefinition(SourceLocation Loc, Decl *D) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       Expr *Init = const_cast<Expr *>(VD->getInit());
@@ -2966,6 +2963,5 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
 
   return Decls;
 }
-
 
 #endif // ENABLE_BSC

@@ -109,15 +109,17 @@ void AccessSpecificTypeCheck::check(const MatchFinder::MatchResult &Result) {
     auto AvoidCallResult = std::find(AvoidCallMemberList.begin(), AvoidCallMemberList.end(), TargetTypeMember);
 
     if (CheckLoadOnly) {
-      if (AvoidStoreResult == AoivdStoreMemberList.end()
-          && AvoidCallResult == AvoidCallMemberList.end()) {
-            diag(SL, "Found access to a field with target type : " + TypeName, DiagnosticIDs::Warning);
-          } 
+      if (AvoidStoreResult == AoivdStoreMemberList.end() &&
+          AvoidCallResult == AvoidCallMemberList.end()) {
+        diag(SL, "Found access to a field with target type : " + TypeName,
+             DiagnosticIDs::Warning);
+      }
     } else {
       if (AvoidCallResult == AvoidCallMemberList.end())
-        diag(SL, "Found access to a field with target type : " + TypeName, DiagnosticIDs::Warning);
+        diag(SL, "Found access to a field with target type : " + TypeName,
+             DiagnosticIDs::Warning);
     }
-  } 
+  }
 }
 
 } // namespace bsc

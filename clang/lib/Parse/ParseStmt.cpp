@@ -1408,7 +1408,6 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr
 
     if (R.isUsable())
       Stmts.push_back(R.get());
-
   }
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using

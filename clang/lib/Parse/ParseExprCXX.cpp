@@ -108,7 +108,6 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 static bool IsBSCTemplateDeclaration(bool IsBSC,
                                      bool IsIdentifier,
                                      Preprocessor &PP) {
-
   bool IsCase_1 = (PP.LookAhead(1).is(tok::kw_int) &&
                    PP.LookAhead(2).is(tok::identifier));
 
@@ -814,7 +813,6 @@ bool Parser::ParseOptionalBSCGenericSpecifier(
     // nested-name-specifier:
     //   type-name '<'
     if (Next.is(tok::less)) {
-
       TemplateTy Template;
       UnqualifiedId TemplateName;
       TemplateName.setIdentifier(&II, Tok.getLocation());

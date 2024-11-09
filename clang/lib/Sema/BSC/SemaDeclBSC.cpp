@@ -80,7 +80,7 @@ bool HasDiffBorrorOrOwnedQualifiers(QualType LHSType, QualType RHSType) {
 }
 
 bool Sema::HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
-                                                            QualType RHS) {
+                                                        QualType RHS) {
   const FunctionProtoType *LSHFuncType = LHS->getAs<FunctionProtoType>();
   const FunctionProtoType *RSHFuncType = RHS->getAs<FunctionProtoType>();
   if (!LSHFuncType || !RSHFuncType) {

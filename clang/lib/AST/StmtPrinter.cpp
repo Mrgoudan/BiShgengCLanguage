@@ -1565,7 +1565,6 @@ void StmtPrinter::VisitUnaryOperator(UnaryOperator *Node) {
 #endif
       OS << UnaryOperator::getOpcodeStr(Node->getOpcode());
 
-
     // Print a space if this is an "identifier operator" like __real, or if
     // it might be concatenated incorrectly like '+'.
     switch (Node->getOpcode()) {

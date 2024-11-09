@@ -453,7 +453,7 @@ public:
   }
 
   bool TraverseWhileStmt(WhileStmt *WS) {
-    if (WS->getBody()){
+    if (WS->getBody()) {
       RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(WS->getBody());
       if (auto NewCompound =
               ReplaceCompoundMap[dyn_cast<CompoundStmt>(WS->getBody())]) {

@@ -54,7 +54,7 @@ static bool IsStructAndHasBorrowFields(QualType QT) {
     if (RecordDecl *RD = RecTy->getDecl()) {
       for (FieldDecl *FD : RD->fields()) {
         QualType FQT = FD->getType().getCanonicalType();
-        if (FQT.isBorrowQualified())  
+        if (FQT.isBorrowQualified())
           return true;
         else if (isa<RecordType>(FQT))
           return IsStructAndHasBorrowFields(FQT);
@@ -1339,7 +1339,7 @@ void NLLCalculator::VisitInitForBorrowFieldTargets(VarDecl *VD, std::string FP,
     }
   } else if (auto ICE = dyn_cast<ImplicitCastExpr>(InitE)) {
     // for ImplicitCastExpr, get last Expr. Example: struct S s = **p;
-    while(auto *UO = dyn_cast<UnaryOperator>(ICE->getSubExpr())) {
+    while (auto *UO = dyn_cast<UnaryOperator>(ICE->getSubExpr())) {
       if (auto NICE = dyn_cast<ImplicitCastExpr>(UO->getSubExpr()))
         ICE = NICE;
     }
