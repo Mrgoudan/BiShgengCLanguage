@@ -4503,7 +4503,9 @@ static void TryListInitialization(Sema &S,
                               DestType->isOwnedTemplateSpecializationType())) {
     // Check explicit constructor for owned struct has private field.
     RecordDecl *RD = DestType->getAsRecordDecl();
-    auto FD = S.getCurFunctionDecl()->getFirstDecl();
+    FunctionDecl *FD = nullptr;
+    if (S.getCurFunctionDecl())
+      FD = S.getCurFunctionDecl()->getFirstDecl();
     bool IsInitedInMemberFunc = false;
     if (FD && isa<RecordDecl>(FD->getLexicalDeclContext())) {
       IsInitedInMemberFunc =
