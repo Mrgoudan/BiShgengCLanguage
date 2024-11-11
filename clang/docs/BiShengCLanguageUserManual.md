@@ -417,6 +417,7 @@ int main() {
 
 1. 声明时，区别于普通结构体声明，我们需要在**结构体名**的后面之间，添加一对尖括号 '<>' ，并在尖括号中写明泛型结构体的**泛型形参**。
 2. 实例化时，泛型结构体仅支持显式指定类型，即：显示指定类型时，区别于普通的结构体的构造，同样需要在被构造的**结构体名**后面添加一对尖括号 '<>' ，且中间无空格；然后在尖括号中传入**泛型实参**，此处的实参可以是 builtin 类型，也可以是用户已经定义过的结构体。
+3. 在使用泛型结构体类型时，如声明泛型结构体类型的变量、声明泛型结构体类型的成员、声明参数、声明返回值、扩展成员函数时，可以省略 struct。即在使用形如`struct S<T>`的类型时，可以简写为`S<T>`，但在声明该类型时不允许省略。
 
 下面是一些用法示例：
 
@@ -452,6 +453,48 @@ int main() {
 }
 ```
 
+#### 泛型成员函数
+
+在支持定义泛型 struct 和泛型 union 类型的基础上，还可以为它们扩展普通成员函数。
+
+如下是一个用法示例，该示例包含了声明泛型成员函数、定义泛型成员函数及实例化调用泛型成员函数：
+
+```c
+struct MyStruct<T> {
+    T res;
+};
+
+union MyUnion<T> {
+    T res;
+};
+
+T struct MyStruct<T>::foo(struct MyStruct<T>* this, T a); // 声明泛型成员函数
+T struct MyUnion<T>::foo(struct MyStruct<T>* this, T a);
+
+T struct MyStruct<T>::foo(struct MyStruct<T>* this, T a) { // 定义泛型成员函数
+    this->res = this->res + a;
+    return this->res;
+}
+
+T struct MyUnion<T>::foo(struct MyStruct<T>* this, T a) {
+    this->res = this->res + a;
+    return this->res;
+}
+
+int main() {
+    struct MyStruct<int> s = { .res = 1 };
+    struct MyUnion<int> u = { .res = 5 };
+    int res1 = s.foo(2); // 调用泛型成员函数
+    int res2 = u.foo(6);
+    return 0;
+}
+```
+
+关于泛型成员函数，还有以下几点需要注意：
+
+1. 泛型成员函数可以是静态函数，即第一个参数可以不为`this`；
+2. 不允许泛型成员函数的重载，这与成员函数的规则相同；
+3. 泛型成员函数的返回类型可以是泛型 struct 或泛型 union类型。
 
 
 #### 常量泛型
