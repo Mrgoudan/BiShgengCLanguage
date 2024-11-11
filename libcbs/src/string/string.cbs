@@ -96,9 +96,16 @@ safe void String::shrink_to_fit(String* borrow this) {
 }
 
 safe String String::slice(const String* borrow this, size_t start, size_t length) {
-    String string = String::with_capacity(length);
-    for (size_t i = start; i < length; i += 1) {
-        char c = this->at(i);
+    unsafe {
+        if (start >= this->length()) {
+            bsc_out_of_bound_handler(this->length(), start);
+        }
+    }
+    size_t len = this->length() - start;
+    len = len >= length ? length : len;
+    String string = String::with_capacity(len);
+    for (size_t i = 0; i < len; i += 1) {
+        char c = this->at(start + i);
         string.push(c);
     }
     string.push('\0');
