@@ -1845,7 +1845,13 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
 
   if (B == E)
     return;
-
+  #if ENABLE_BSC
+  if (BuildOpts.AddAllScopes && ScopePos == LocalScope::const_iterator())
+    return;
+  int dist = B.distance(E);
+  if (BuildOpts.AddAllScopes && dist <= 0)
+    return;
+  #endif
   // We need to append the destructors in reverse order, but any one of them
   // may be a no-return destructor which changes the CFG. As a result, buffer
   // this sequence up and replay them in reverse order when appending onto the
