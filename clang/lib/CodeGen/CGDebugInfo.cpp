@@ -1269,6 +1269,12 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   return DBuilder.createPointerType(EltTy, Size);
 }
 
+#if ENABLE_BSC
+llvm::DIType *CGDebugInfo::CreateType(const ConditionalType *Ty, llvm::DIFile *Unit) {
+  return getOrCreateType(Ty->getUnderlyingType(), Unit);
+}
+#endif
+
 llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
                                       llvm::DIFile *Unit) {
   assert(Ty->isTypeAlias());
@@ -3443,12 +3449,12 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 #include "clang/AST/TypeNodes.inc"
     llvm_unreachable("Dependent types cannot show up in debug information");
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case Type::Trait:
     llvm_unreachable("Trait types cannot show up in debug information");
   case Type::Conditional:
-    llvm_unreachable("Conditional types cannot show up in debug information");
-  #endif
+    return CreateType(cast<ConditionalType>(Ty), Unit);
+#endif
   case Type::ExtVector:
   case Type::Vector:
     return CreateType(cast<VectorType>(Ty), Unit);

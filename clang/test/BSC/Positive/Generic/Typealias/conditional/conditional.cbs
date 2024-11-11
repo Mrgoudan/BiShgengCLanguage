@@ -1,4 +1,4 @@
-// RUN: %clang %s -o %t.output
+// RUN: %clang -g %s -o %t.output
 // RUN: %t.output
 // RUN: %clang -rewrite-bsc %S/../../../../../../lib/Headers/bsc_include/bsc_conditional.hbs -o %T/bsc_conditional.h
 // RUN: %clang -rewrite-bsc %S/../../../../../../lib/Headers/bsc_include/bsc_type_traits.hbs -o %T/bsc_type_traits.h
