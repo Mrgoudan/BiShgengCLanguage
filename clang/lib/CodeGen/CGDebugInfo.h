@@ -182,10 +182,10 @@ class CGDebugInfo {
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
                                     llvm::DIFile *Fg);
-#if ENABLE_BSC
   llvm::DIType *CreateType(const TypedefType *Ty, llvm::DIFile *Fg);
+#if ENABLE_BSC
+  llvm::DIType *CreateType(const ConditionalType *Ty, llvm::DIFile *Fg);
 #endif
-  llvm::DIType *CreateType(const ConditionalType *Ty,llvm::DIFile *Fg);
   llvm::DIType *CreateType(const TemplateSpecializationType *Ty,
                            llvm::DIFile *Fg);
   llvm::DIType *CreateType(const ObjCObjectPointerType *Ty, llvm::DIFile *F);
