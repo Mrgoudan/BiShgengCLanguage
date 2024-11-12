@@ -6,5 +6,5 @@
 
 #include "queue.hbs"
 
-// CHECK: define dso_local void @_ZN_ZTS5queueisEmpty
+// CHECK: define dso_local void @struct_queue_isEmpty
 void struct queue::isEmpty(struct queue* this) {}

@@ -134,6 +134,12 @@ public:
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
   virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream&);
 
+#if ENABLE_BSC
+  void mangleBSCType(QualType T, raw_ostream &Out);
+  std::string getBSCTypeName(QualType QT, const PrintingPolicy &Policy);
+  std::string RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
+                                         const PrintingPolicy &Policy);
+#endif
   void mangleGlobalBlock(const BlockDecl *BD,
                          const NamedDecl *ID,
                          raw_ostream &Out);

@@ -14,6 +14,7 @@
 #include "clang/AST/Attr.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
+#include "clang/AST/BSC/MangleBSC.h"
 #endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -110,7 +111,7 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
 
   #if ENABLE_BSC
   const auto *MD = dyn_cast<BSCMethodDecl>(D);
-  if (MD && !MD->getExtendedType().isNull())
+  if (MD && (!MD->getExtendedType().isNull() || MD->isDestructor()))
     return true;
   #endif
 
@@ -204,18 +205,14 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
     return;
   }
 
-  #if ENABLE_BSC
-  const auto *MD = dyn_cast<BSCMethodDecl>(D);
-  if (MD && !MD->getExtendedType().isNull()) {
-    Out << "_ZN";
-    mangleTypeName(MD->getExtendedType(), Out);
-    if (MD->isDestructor())
-      Out << D->getDeclName().getAsString();
-    else
-      Out << D->getIdentifier()->getName();
-    return;
+#if ENABLE_BSC
+  if (ASTContext.getLangOpts().BSC) {
+    MangleBSCContext *BSCContext = new MangleBSCContext(ASTContext);
+    // If the decl cannot mangled by current BSC mangler, continue using the original mangler.
+    if (BSCContext->mangleBSCName(D, Out))
+      return;
   }
-  #endif
+#endif
 
   bool MCXX = shouldMangleCXXName(D);
   const TargetInfo &TI = Context.getTargetInfo();

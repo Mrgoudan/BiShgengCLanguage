@@ -1387,33 +1387,19 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
   if (ShouldMangle)
     MC.mangleName(GD.getWithDecl(ND), Out);
   else {
-#if ENABLE_BSC
-    const auto *MD = dyn_cast<BSCMethodDecl>(ND);
-    if (MD && MD->isDestructor()) {
-      const NamedDecl *ND = cast<NamedDecl>(MD);
-      Out << ND->getDeclName();
-    } else {
-#endif
-      IdentifierInfo *II = ND->getIdentifier();
-      assert(II && "Attempt to mangle unnamed decl.");
-      const auto *FD = dyn_cast<FunctionDecl>(ND);
+    IdentifierInfo *II = ND->getIdentifier();
+    assert(II && "Attempt to mangle unnamed decl.");
+    const auto *FD = dyn_cast<FunctionDecl>(ND);
 
-      if (FD && FD->getType()->castAs<FunctionType>()->getCallConv() ==
-                    CC_X86RegCall) {
-        Out << "__regcall3__" << II->getName();
-      } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
-                 GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
-        Out << "__device_stub__" << II->getName();
-#if ENABLE_BSC
-      } else if (MD && !MD->getExtendedType().isNull()) {
-        Out << "_ZN";
-        MC.mangleTypeName(MD->getExtendedType(),
-                          Out); // TODO: change mangle rule
-        Out << II->getName();
-#endif
-      } else {
-        Out << II->getName();
-      }
+    if (FD &&
+        FD->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
+      Out << "__regcall3__" << II->getName();
+    } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
+               GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      Out << "__device_stub__" << II->getName();
+
+    } else {
+      Out << II->getName();
     }
   }
 
