@@ -293,6 +293,11 @@ const char* int::to_string(const int* this){
 - 成员函数允许赋值给函数指针。
 - 禁止对 cv-qualified type (被类型修饰符修饰的类型，如 const int 等) 添加成员函数
 - 禁止对 “函数类型” "数组类型" "指针类型" 添加成员函数
+- `this`指针允许被const/volatile等修饰符修饰
+- 不允许给 incomplete type 扩展成员函数，incomplete type 即为那些声明了但未完整定义的类型
+- 不允许给`void`类型扩展成员函数
+- 如果两个头文件中对同一个类型扩展了同名的成员函数，那么在一个编译单元中包含这两个头文件，会导致编译错误
+- 当前暂时禁止通过整数字面量、浮点数字面量、复合类型字面量直接调用成员函数
 
 ------
 
@@ -810,8 +815,11 @@ constexpr int b = foo(a);
 constexpr int b = 1 == 1.0;
 ```
 
+5. 函数指针可以使用 constexpr 修饰，且函数指针也可以指向 constexpr 函数
+6. constexpr 可以修饰指针变量，但其只能指向全局变量或静态变量
+
 ##### constexpr 修饰函数
-1. constexpr 可以修饰一个函数声明或者定义
+1. constexpr 可以修饰一个函数声明或者定义，但必须保证声明和定义中同时有 constexpr 修饰或都没有 constexpr 修饰，否则会导致编译错误
 ```c
 constexpr int foo();
 constexpr int foo() {
@@ -843,7 +851,7 @@ int a = 10;
 constexpr int b = foo(a);//error，foo 函数处于“常量计算“上下文中
 int c = foo(a);//ok，foo 函数处于非“常量计算“上下文中
 ```
-6. constexpr 可以修饰成员函数
+6. constexpr 可以修饰成员函数，包括普通成员函数和静态成员函数
 ```c
 //普通成员函数，参数 This* this 不属于编译时计算类型
 constexpr int int::foo1(This* this) { //error
@@ -3308,7 +3316,11 @@ union MyUnion {
 sizeof(T* borrow) == sizeof(T*)
 _Alignof(T* borrow) == _Alignof(T*)
 
-13. 如果一个借用指针变量指向的是函数，那么可以通过这个借用指针变量来调用函数。
+13. 允许对借用类型使用一元的`&`、`!`及二元的`&&`、`||`运算符。
+
+14. 不允许对借用类型使用一元的`-`、`~`、`&const`、`&mut`、`[]`、`++`、`--`运算符，也不允许对借用类型使用二元的`*`、`/`、`%`、`&`、`|`、`<<`、`>>`、`+`、`-`运算符。
+
+15. 如果一个借用指针变量指向的是函数，那么可以通过这个借用指针变量来调用函数。
 ```C
 int f() {}
 void test() {
@@ -3317,6 +3329,7 @@ void test() {
 }
 ```
 
+16.  不允许对函数做可变借用，只能做只读借用。
 
 
 ### 安全区
@@ -3775,6 +3788,8 @@ owned struct S {
 
 #### 成员函数
 `owned struct` 的成员函数分为实例成员函数和静态成员函数(不允许 `static` 修饰)。实例成员函数需要显式参数 `this`, 假设当前 `owned struct` 类型是 `C`, `this` 的类型可以是 `C*`、`const C*`、`C* borrow`、`const C * borrow`、`C * owned`。静态成员函数是没有 `this`。成员函数的访问与 `struct` 扩展成员函数访问一样(详见成员函数章节)。
+
+注：当前不支持 owned struct 内部定义泛型函数。
 
 ```c
 owned struct Person{
