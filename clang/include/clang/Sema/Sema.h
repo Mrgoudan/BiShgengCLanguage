@@ -12375,6 +12375,7 @@ public:
   AssignConvertType CheckTransparentUnionArgumentConstraints(QualType ArgType,
                                                              ExprResult &RHS);
 
+  // BiShengC safety feature related APIs
   #if ENABLE_BSC
   bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType);
   bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
@@ -12425,6 +12426,7 @@ public:
                                            SourceLocation OpLoc);
   bool CheckOperatorDeclNeedAddToContext(Declarator &D);
   bool CheckOperatorFunReturnTypeIsLegal(FunctionDecl *FnDecl);
+  bool FindSafeFeatures(const FunctionDecl* FnDecl);
 #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

@@ -15,6 +15,7 @@
 
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/AST/BSC/WalkerBSC.h"
 
 using namespace clang;
 using namespace sema;
@@ -143,5 +144,15 @@ bool Sema::CheckOperatorFunReturnTypeIsLegal(FunctionDecl *FnDecl) {
     return false;
   }
   return true;
+}
+
+// Return true if any memory safe features are found in a FunctionDecl.
+bool Sema::FindSafeFeatures(const FunctionDecl* FnDecl) {
+  if (!FnDecl) return false;
+  BSCFeatureFinder finder = BSCFeatureFinder(Context);
+  if (finder.Visit(const_cast<FunctionDecl*>(FnDecl))) {
+    return true;
+  }
+  return false;
 }
 #endif
