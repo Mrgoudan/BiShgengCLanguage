@@ -118,7 +118,8 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
   // unOwned to unOwned cases:
   // owned int* owned *  <->  owned int**  // illegal
   // owned int* const *  <->  owned int**  // legal
-  if (LHSCanType.isOwnedQualified() == RHSCanType.isOwnedQualified()) {
+  if (LHSCanType.isOwnedQualified() == RHSCanType.isOwnedQualified() ||
+      (LHSCanType->isTraitType() && RHSCanType->isOwnedStructureType())) {
     if (IsSameType) {
       return true;
     }
