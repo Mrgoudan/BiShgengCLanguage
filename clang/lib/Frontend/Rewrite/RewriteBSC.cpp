@@ -635,6 +635,23 @@ void RewriteBSC::printBSCLineInfo(Decl *D, llvm::raw_string_ostream &Buf) {
   Buf << "#line " << LineNo << " \"" << SM->getBufferName(D->getBeginLoc()) << "\"\n"; // insert bsc code line
 }
 
+bool argumentTypeDeclInDeclList(ClassTemplateSpecializationDecl *DD,
+                                const std::vector<Decl *> DeclList) {
+  auto &DDA = DD->getTemplateInstantiationArgs();
+  auto Ite = DeclList.begin();
+  while (Ite != DeclList.end()) {
+    for (unsigned int i = 0; i < DDA.size(); i++) {
+      if (DDA.get(i).getKind() == TemplateArgument::Type &&
+          (DDA.get(i).getAsType()->getAsCXXRecordDecl() == (*Ite) ||
+           DDA.get(i).getAsType()->getAsRecordDecl() == (*Ite))) {
+        return true;
+      }
+    }
+    Ite++;
+  }
+  return false;
+}
+
 const std::string RewriteBSC::GetRewrittenString() {
   std::string SStr;
   llvm::raw_string_ostream Buf(SStr);
@@ -758,6 +775,28 @@ const std::string RewriteBSC::GetRewrittenString() {
         bool Inserted = false;
         while (It != DeclList.end()) {
           if (!SL.isInvalid()) {
+            // Insert to vector if current Decl dependent me
+            if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(*It)) {
+              auto &TDA = TD->getTemplateInstantiationArgs();
+
+              for (unsigned int i = 0; i < TDA.size(); i++) {
+                if (TDA.get(i).getKind() == TemplateArgument::Type &&
+                    TDA.get(i).getAsType()->getAsCXXRecordDecl() == DD) {
+                  It = DeclList.insert(It, DD);
+                  Inserted = true;
+                  break;
+                }
+              }
+              if (Inserted) {
+                break;
+              }
+            }
+            // Push it to back if a template argument type decl is in DeclList
+            if (!SM->isWrittenInMainFile(SL) &&
+                argumentTypeDeclInDeclList(DD, DeclList)) {
+              break;
+            }
+
             if (SM->isBeforeInTranslationUnit(SL, (*It)->getBeginLoc())) {
               It = DeclList.insert(It, DD);
               Inserted = true;

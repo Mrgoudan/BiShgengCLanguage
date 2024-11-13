@@ -1,0 +1,36 @@
+// RUN: %clang -rewrite-bsc %S/rewrite_bsc_generic_struct_with_header.hbs -o %T/rewrite_bsc_generic_struct_with_header.h
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "rewrite_bsc_generic_struct_with_header.hbs"
+
+struct S {
+    int a;
+};
+
+int main() {
+    LinkedList<struct S> list = LinkedList<struct S>::new();
+    struct S s = {1};
+    list.push_back(s);
+    return 0;
+}
+
+// CHECK: #include "rewrite_bsc_generic_struct_with_header.h"
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S {
+// CHECK-NEXT:     int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct _BSC_ListNode_struct_S {
+// CHECK-NEXT:     struct _BSC_ListNode_struct_S *next;
+// CHECK-NEXT:     struct _BSC_ListNode_struct_S *prev;
+// CHECK-NEXT:     struct S element;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct LinkedList_struct_S {
+// CHECK-NEXT:     struct _BSC_ListNode_struct_S *head;
+// CHECK-NEXT:     struct _BSC_ListNode_struct_S *tail;
+// CHECK-NEXT:     unsigned long len;
+// CHECK-NEXT: };

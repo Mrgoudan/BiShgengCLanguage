@@ -26,9 +26,6 @@ int main() {
 // CHECK-NEXT:struct S_int_char {
 // CHECK-NEXT:};
 // CHECK-EMPTY:
-// CHECK-NEXT:struct G_struct_S_int_char {
-// CHECK-NEXT:};
-// CHECK-EMPTY:
 // CHECK-NEXT:struct G_int {
 // CHECK-NEXT:};
 // CHECK-EMPTY:
@@ -43,6 +40,9 @@ int main() {
 // CHECK-NEXT:typedef int (*myFunc)(struct B *);
 // CHECK-EMPTY:
 // CHECK-NEXT:typedef struct A MyStruct;
+// CHECK-EMPTY:
+// CHECK-NEXT:struct G_struct_S_int_char {
+// CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT:static struct S_int_char *newS_int_char(int a);
 // CHECK-EMPTY:
