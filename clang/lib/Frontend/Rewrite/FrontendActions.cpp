@@ -185,7 +185,8 @@ RewriteBSCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
           CI.createDefaultOutputFile(false, InFile, "c")) {
     bool InsertLine = CI.getFrontendOpts().InsertLineDirectives;
     return CreateBSCRewriter(std::string(InFile), std::move(OS),
-                             CI.getDiagnostics(), CI.getLangOpts(), InsertLine);
+                             CI.getDiagnostics(), CI.getLangOpts(),
+                             CI.getPreprocessor(), InsertLine);
   }
   return nullptr;
 }

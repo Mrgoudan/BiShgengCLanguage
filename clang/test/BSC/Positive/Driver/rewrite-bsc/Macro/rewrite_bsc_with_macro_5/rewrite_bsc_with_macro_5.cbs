@@ -1,0 +1,88 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+#ifndef NEW_CDF_DATAFRAME_TYPE_HBS
+#define NEW_CDF_DATAFRAME_TYPE_HBS
+
+int a = 1;
+
+#define MINUS -
+#define ONE 1
+#define HALF 0.5
+#define NEGIVE -100
+#define SQUARE(x) ((x) * (x))
+
+#define ASE_POOL_DEF(var_, name_) \
+  void ase_mmem_close_##name_() \
+  { \
+     int a = 2; \
+  } \
+
+
+ASE_POOL_DEF(AAA, BBB);
+
+int int::foo(int* this) {
+  int b = ONE;
+  int result = ONE * SQUARE(2.5);
+  ase_mmem_close_BBB();
+  return 0;
+}
+
+int b = SQUARE(HALF);
+int c = ONE NEGIVE;
+int d = ONE MINUS ONE;
+
+
+int main() {
+  a = ONE;
+  int b = SQUARE(b.foo());
+  int e = (ONE * SQUARE(2.5) + b.foo()) * 2;
+  return 0;
+}
+
+#endif //NEW_CDF_DATAFRAME_TYPE_HBS
+
+
+// CHECK: #ifndef NEW_CDF_DATAFRAME_TYPE_HBS
+// CHECK-NEXT: #define NEW_CDF_DATAFRAME_TYPE_HBS
+
+// CHECK: #define MINUS -
+// CHECK: #define ONE 1
+// CHECK: #define HALF 0.5
+// CHECK: #define NEGIVE -100
+
+// CHECK: #define SQUARE(x) ((x) * (x))
+// CHECK-NEXT: #define ASE_POOL_DEF(var_, name_) \
+// CHECK-NEXT:   void ase_mmem_close_##name_() \
+// CHECK-NEXT:   { \
+// CHECK-NEXT:      int a = 2; \
+// CHECK-NEXT:   }
+
+// CHECK: int a = 1;
+
+// CHECK: void ase_mmem_close_BBB(void) {
+// CHECK-NEXT:     int a = 2;
+// CHECK-NEXT: }
+
+// CHECK: int int_foo(int *this) {
+// CHECK-NEXT:     int b = 1;
+// CHECK-NEXT:     int result = 1 * ((2.5) * (2.5));
+// CHECK-NEXT:     ase_mmem_close_BBB();
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }
+
+// CHECK: int b = ((0.5) * (0.5));
+
+// CHECK: int c = 1 - 100;
+
+// CHECK: int d = 1 - 1;
+
+// CHECK: int main(void) {
+// CHECK-NEXT:     a = 1;
+// CHECK-NEXT:     int b = ((int_foo(&b)) * (int_foo(&b)));
+// CHECK-NEXT:     int e = (1 * ((2.5) * (2.5)) + int_foo(&b)) * 2;
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }
+
+// CHECK: #endif //NEW_CDF_DATAFRAME_TYPE_HBS

@@ -17,6 +17,8 @@
 #include "clang/AST/BSC/WalkerBSC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/ASTConsumers.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,7 +32,8 @@ namespace {
 class RewriteBSC : public ASTConsumer {
 public:
   RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
-             DiagnosticsEngine &D, const LangOptions &LOpts, bool insertLine);
+             DiagnosticsEngine &D, const LangOptions &LOpts, Preprocessor &pp,
+             bool insertLine);
   ~RewriteBSC() override {}
 
   void Initialize(ASTContext &C) override;
@@ -47,6 +50,7 @@ private:
   FileID MainFileID;
   const char *MainFileStart, *MainFileEnd;
   std::string InFileName;
+  Preprocessor &PP;
   std::unique_ptr<raw_ostream> OutFile;
   // control whether to insert bsc code line info
   bool WithLine;
@@ -71,6 +75,7 @@ private:
 
   /// Rewrite include directive form `#include "xxx.hbs"` to `#include "xxx.h"`.
   void RewriteInclude();
+  void RewriteMacroDefinition();
   void RewriteDecls(DeclContext *DC);
 
   void InsertText(SourceLocation Loc, StringRef Str, bool InsertAfter = true) {
@@ -108,9 +113,10 @@ private:
 } // namespace
 
 RewriteBSC::RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
-                       DiagnosticsEngine &D, const LangOptions &LOpts, bool InsertLine)
-    : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(std::move(OS)), WithLine(InsertLine),
-      Policy(LangOpts) {
+                       DiagnosticsEngine &D, const LangOptions &LOpts,
+                       Preprocessor &pp, bool InsertLine)
+    : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(std::move(OS)),
+      PP(pp), WithLine(InsertLine), Policy(LangOpts) {
   RewriteFailedDiag = Diags.getCustomDiagID(
       DiagnosticsEngine::Warning,
       "rewriting sub-expression within a macro (may not be correct)");
@@ -120,8 +126,10 @@ RewriteBSC::RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
 std::unique_ptr<ASTConsumer>
 clang::CreateBSCRewriter(const std::string &InFile,
                          std::unique_ptr<raw_ostream> OS,
-                         DiagnosticsEngine &Diags, const LangOptions &LOpts, bool InsertLine) {
-  return std::make_unique<RewriteBSC>(InFile, std::move(OS), Diags, LOpts, InsertLine);
+                         DiagnosticsEngine &Diags, const LangOptions &LOpts,
+                         Preprocessor &PP, bool InsertLine) {
+  return std::make_unique<RewriteBSC>(InFile, std::move(OS), Diags, LOpts, PP,
+                                      InsertLine);
 }
 
 void RewriteBSC::Initialize(ASTContext &context) {
@@ -186,12 +194,48 @@ void RewriteBSC::RewriteInclude() {
   }
 }
 
+typedef std::pair<const IdentifierInfo *, MacroInfo *> id_macro_pair;
+void RewriteBSC::RewriteMacroDefinition() {
+  std::string SStr;
+  llvm::raw_string_ostream Buf(SStr);
+  llvm::SetVector<id_macro_pair> MacrosSet;
+  SourceLocation SL;
+
+  for (Preprocessor::macro_iterator I = PP.macro_begin(false),
+                                    E = PP.macro_end(false);
+       I != E; ++I) {
+    auto *MD = I->second.getLatest();
+
+    if (MD && MD->isDefined()) {
+      MacroInfo *MI = MD->getMacroInfo();
+      SourceLocation MacroLoc = MI->getDefinitionLoc();
+      if (SM->isWrittenInMainFile(MacroLoc) &&
+          !MacrosSet.count(id_macro_pair(I->first, MI)) &&
+          SM->isBeforeInTranslationUnit(BeginLocOfFirstDecl, MacroLoc) &&
+          SM->isBeforeInTranslationUnit(MacroLoc, EndLocOfLastDecl)) {
+        MacrosSet.insert(id_macro_pair(I->first, MI));
+        const char *startBuf = SM->getCharacterData(MI->getDefinitionLoc());
+        const char *endBuf = SM->getCharacterData(MI->getDefinitionEndLoc());
+        unsigned len = MI->isFunctionLike() ? 1 : MI->getDefinitionLength(*SM);
+        if (MD->getKind() == MacroDirective::MD_Define)
+          Buf << "#define ";
+        else if (MD->getKind() == MacroDirective::MD_Undefine)
+          Buf << "#undef ";
+        Buf << std::string(startBuf, endBuf - startBuf + len);
+        Buf << "\n";
+      }
+    }
+  }
+  InsertText(BeginLocOfFirstDecl, Buf.str());
+}
+
 void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
   if (Diags.hasErrorOccurred())
     return;
 
   RewriteInclude(); // Rewrite include directives.
-
+  GetSourceLocationsOfFirstDeclAndLastDecl();
+  RewriteMacroDefinition();
   RewriteDecls(C.getTranslationUnitDecl()); // Rewrite all decls.
 
   if (const RewriteBuffer *RewriteBuf =
@@ -205,7 +249,6 @@ void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
 }
 
 void RewriteBSC::RewriteDecls(DeclContext *DC) {
-  GetSourceLocationsOfFirstDeclAndLastDecl();
   // Step 1: Find decls without bsc features.
   FindDeclsWithoutBSCFeature();
   // Step 2: Get rewritten string
@@ -672,10 +715,18 @@ const std::string RewriteBSC::GetRewrittenString() {
           break;
         if (!SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) &&
             !SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc())) &&
+            !HasTemplateSpec &&
+            FD->getStorageClass() == StorageClass::SC_Extern)
+          break;
+        if (!SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getBeginLoc())) &&
+            !SM->isWrittenInMainFile(SM->getExpansionLoc(FD->getEndLoc())) &&
             !HasTemplateSpec)
           break;
-        // not found, but double negative mean it is a BSCMethodDecl.
-        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end()) {
+
+        // If it is BscMethod or macro expansion function, output the code
+        // according to AST; Otherwise, simply retrieve the source code
+        if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end() ||
+            FD->getBeginLoc().isMacroID()) {
           printBSCLineInfo(FD, Buf);
           FD->print(Buf, Policy);
         } else {

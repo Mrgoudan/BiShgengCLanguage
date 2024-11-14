@@ -1,0 +1,11 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+#include "rewrite_bsc_with_macro_4.h"
+
+ASE_POOL_DEF(AAA, BBB);
+
+int main() {
+  ase_mmem_close_BBB();
+}
+
