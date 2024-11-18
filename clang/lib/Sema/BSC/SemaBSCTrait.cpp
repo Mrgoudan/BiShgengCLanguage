@@ -337,11 +337,22 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
                                    QualType OriginTraitTy) {
   CXXScopeSpec SS;
   NamedDecl *Def = nullptr;
-  Sema::BoundTypeDiagnoser<> Diagnoser(
-      diag::err_typecheck_decl_incomplete_type);
 
-  if (ImplQT->isIncompleteType(&Def))
+  if (ImplQT.getCanonicalType()->isRecordType()) {
+    const RecordDecl *RD =
+        ImplQT.getCanonicalType()->castAs<RecordType>()->getDecl();
+    if (isa<ClassTemplateSpecializationDecl>(RD)) {
+      S.Diag(TypeLoc, diag::err_impl_trait_for_instantiated_type);
+      return true;
+    }
+  }
+
+  if (ImplQT->isIncompleteType(&Def)) {
+    Sema::BoundTypeDiagnoser<> Diagnoser(
+        diag::err_typecheck_decl_incomplete_type);
     Diagnoser.diagnose(S, TypeLoc, ImplQT);
+    return true;
+  }
 
   IdentifierInfo *FunctionID = nullptr;
   RecordDecl *VT = TD->getVtable();

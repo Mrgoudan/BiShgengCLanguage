@@ -82,6 +82,8 @@ def warn_type_has_not_impl_trait : Warning<
   "expected a pointer type which has implemented %0, found %1">,
   InGroup<BSCTraitMissing>;
 def err_trait_is_undefined : Error<"%0 must be defined before it can be used">;
+def err_impl_trait_for_instantiated_type : Error<
+  "cannot impl trait for an instantiated type">;
 
 // BSC generic warnings and errors.
 def err_invalid_struct_definition : Error <
