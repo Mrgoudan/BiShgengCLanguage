@@ -1584,6 +1584,8 @@ void NLLCalculator::VisitMEForFieldPath(
     VisitMEForFieldPath(ASE->getBase(), VDAndFP);
   } else if (auto CCE = dyn_cast<CStyleCastExpr>(E)) {
     VisitMEForFieldPath(CCE->getSubExpr(), VDAndFP);
+  } else if (auto CE = dyn_cast<CallExpr>(E)) {
+    VisitMEForFieldPath(CE->getArg(0), VDAndFP);
   }
 }
 
