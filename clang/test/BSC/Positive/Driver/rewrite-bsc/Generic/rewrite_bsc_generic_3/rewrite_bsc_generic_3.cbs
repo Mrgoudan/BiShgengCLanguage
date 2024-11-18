@@ -2,12 +2,16 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK_MANGLE
+
 
 struct Block {
   char* color;
   int blood;
 };
 
+// CHECK_MANGLE-DAG: define {{.*}} @bar_int_int
+// CHECK_MANGLE-DAG: define {{.*}} @bar_double_float
 struct Block bar<T1, T2>(T1 a, T2 b) {
   struct Block grass = {"green", 1};
   struct Block obsidian = {.color="black", .blood=100};

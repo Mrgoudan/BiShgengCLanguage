@@ -2,11 +2,16 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK_MANGLE
 
+
+// CHECK_MANGLE: define {{.*}} @int_increase
 int int::increase(int* this) {
   return *this += 1;
 }
 
+// CHECK_MANGLE: define {{.*}} @max_int_int
+// CHECK_MANGLE: define {{.*}} @max_float_float
 T1 max<T1, T2>(T1 a, T2 b) {
   int x = 1;
   int::increase(&x);

@@ -20,61 +20,71 @@ using namespace clang;
 bool MangleBSCContext::mangleBSCName(const NamedDecl *ND, raw_ostream &Out) {
   const auto *BMD = dyn_cast<BSCMethodDecl>(ND);
   const auto *BFD = dyn_cast<FunctionDecl>(ND);
-  clang::PrintingPolicy SubPolicy(Context.getLangOpts());
-  SubPolicy.RewriteBSC = true;
+  if (!ManglePolicy.RewriteBSC) {
+    ManglePolicy.adjustForRewritingBSC();
+  }
   std::string MethodStr;
-  if (BMD && !BMD->getExtendedType().isNull()) {
-    MethodStr = getBSCMethodMangleName(BMD, SubPolicy);
-  } else if (BFD->isTemplateInstantiation()) {
-    MethodStr = getBSCFunctionMangleName(BFD, SubPolicy);
-  } else if (BMD && BMD->isDestructor()) {
-    MethodStr = getBSCDesturctorMangleName(BFD, SubPolicy);
-  } else{
+
+  if (BMD) {
+    // Handle the BSC method, including the name of the type template.
+    MethodStr = getBSCMethodMangleName(BMD);
+    if (BMD->isTemplateInstantiation()) {
+      if (const TemplateArgumentList *TArgs =
+              BFD->getTemplateSpecializationArgs()) {
+        ArrayRef<TemplateArgument> Args = TArgs->asArray();
+        std::string TemplateArgsName =
+            getBSCTemplateArgsName(Args, ManglePolicy);
+        MethodStr += TemplateArgsName;
+      }
+    }
+  } else if (BFD && BFD->isTemplateInstantiation()) {
+    // Handle the functiondecl with template args.
+    MethodStr = getBSCFunctionMangleName(BFD);
+  } else {
+    // Without the BSC mangling, handle it separately at the point of call-in.
     return false;
   }
-  llvm::outs() << "MethodStr is " << MethodStr << " \n";
   Out << MethodStr;
   return true;
 }
 
 std::string
-MangleBSCContext::getBSCMethodMangleName(const BSCMethodDecl *BMD,
-                                         clang::PrintingPolicy SubPolicy) {
-  QualType T = BMD->getExtendedType();
-  std::string TypeStr = getBSCTypeName(T, SubPolicy);
-  if (BMD->isDestructor())
-    TypeStr += "_D";
-  else
-    TypeStr = TypeStr + "_" + BMD->getNameAsString();
+MangleBSCContext::getBSCMethodMangleName(const BSCMethodDecl *BMD) {
+  std::string TypeStr;
+  // For destructors, especially the automatically generated destructors, there
+  // is no ExtendedType, and handle separately.
+  if (BMD->isDestructor()) {
+    TypeStr = getBSCDesturctorMangleName(BMD);
+  } else {
+    QualType T = BMD->getExtendedType();
+    TypeStr = getBSCTypeName(T, ManglePolicy)+ "_" + BMD->getNameAsString();
+  }
   return TypeStr;
 }
 
 std::string
-MangleBSCContext::getBSCDesturctorMangleName(const FunctionDecl *BFD,
-                                             clang::PrintingPolicy SubPolicy) {
+MangleBSCContext::getBSCDesturctorMangleName(const BSCMethodDecl *BMD) {
   QualType BDT =
-      Context.getTypeDeclType(dyn_cast<RecordDecl>(BFD->getParent()));
-  std::string TypeStr = getBSCTypeName(BDT, SubPolicy);
+      Context.getTypeDeclType(dyn_cast<RecordDecl>(BMD->getParent()));
+  std::string TypeStr = getBSCTypeName(BDT, ManglePolicy);
   TypeStr += "_D";
   return TypeStr;
 }
 
 std::string
-MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD,
-                                           clang::PrintingPolicy SubPolicy) {
+MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD) {
   std::string FunctionName = BFD->getNameAsString();
   if (const TemplateArgumentList *TArgs =
           BFD->getTemplateSpecializationArgs()) {
-    for (size_t i = 0; i < TArgs->size(); i++) {
-      std::string ArgType = getBSCTemplateArgName(TArgs->get(i), SubPolicy);
-      FunctionName = FunctionName + "_" + ArgType;
-    }
+    ArrayRef<TemplateArgument> Args = TArgs->asArray();
+    std::string TemplateArgsName = getBSCTemplateArgsName(Args, ManglePolicy);
+    FunctionName += TemplateArgsName;
   }
   return FunctionName;
 }
 
 std::string MangleBSCContext::getBSCTypeName(QualType QT,
-                                             const PrintingPolicy &Policy) {
+                                             PrintingPolicy &Policy) {
   std::string ExtendedTypeStr;
   llvm::raw_string_ostream OS(ExtendedTypeStr);
   QT.print(OS, Policy);
@@ -116,8 +126,18 @@ std::string MangleBSCContext::getBSCTypeName(QualType QT,
   return ExtendedTypeStr;
 }
 
-std::string MangleBSCContext::getBSCTemplateArgName(
-    const TemplateArgument &TemplateArg, const PrintingPolicy &Policy) {
+std::string
+MangleBSCContext::getBSCTemplateArgsName(ArrayRef<TemplateArgument> Args,
+                                         PrintingPolicy &Policy) {
+  std::string ArgsName = "";
+  for (size_t i = 0; i < Args.size(); i++) {
+    ArgsName = ArgsName + "_" + getBSCArgName(Args[i], Policy);
+  }
+  return ArgsName;
+}
+
+std::string MangleBSCContext::getBSCArgName(const TemplateArgument &TemplateArg,
+                                            PrintingPolicy &Policy) {
   std::string ArgName;
   if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
     ArgName = getBSCTypeName(TemplateArg.getAsType(), Policy);
@@ -125,9 +145,9 @@ std::string MangleBSCContext::getBSCTemplateArgName(
            clang::TemplateArgument::ArgKind::Integral) {
     llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
     if (TemplateInt.isNegative())
-      ArgName = "_n" + std::to_string(-TemplateInt.getExtValue());
+      ArgName = "n" + std::to_string(-TemplateInt.getExtValue());
     else
-      ArgName = "_" + std::to_string(TemplateInt.getExtValue());
+      ArgName = std::to_string(TemplateInt.getExtValue());
   }
   return ArgName;
 }

@@ -15,6 +15,7 @@
 #include "clang/AST/Attr.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
+#include "clang/AST/BSC/MangleBSC.h"
 #endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -1155,74 +1156,6 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
   PrintExpr(Node->getSubExpr());
 }
 
-#if ENABLE_BSC
-// To prefix the type by jointing '_' between types and function name.
-// Arg 'isFront' determines weather to prefix '_' at the front of type or not.
-static std::string GetTypePrefix(QualType T, bool isFront,
-                                 const PrintingPolicy &PP) {
-  std::string ExtendedTypeStr;
-  llvm::raw_string_ostream OS(ExtendedTypeStr);
-  T.print(OS, PP);
-  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
-    if (ExtendedTypeStr[i] == ' ') {
-      if (i == 0) {
-        ExtendedTypeStr.replace(i, 1, "");
-        continue;
-      }
-      ExtendedTypeStr.replace(i, 1, "_");
-    } else if (ExtendedTypeStr[i] == '*') {
-      // Since '*' is not allowed to appear in identifier,
-      // we replace it with 'P'.
-      // FIXME: it may conflict with user defined type Char_P.
-      ExtendedTypeStr.replace(i, 1, "P");
-    } else if (ExtendedTypeStr[i] == '(') {
-      // Since '(' is not allowed to appear in identifier,
-      // we replace it with 'LP'.
-      ExtendedTypeStr.replace(i, 1, "LP");
-    } else if (ExtendedTypeStr[i] == ')') {
-      // Since ')' is not allowed to appear in identifier,
-      // we replace it with 'RP'.
-      ExtendedTypeStr.replace(i, 1, "RP");
-    } else if (ExtendedTypeStr[i] == '[') {
-      // Since '[' is not allowed to appear in identifier,
-      // we replace it with 'LB'.
-      ExtendedTypeStr.replace(i, 1, "LB");
-    } else if (ExtendedTypeStr[i] == ']') {
-      // Since ']' is not allowed to appear in identifier,
-      // we replace it with 'RB'.
-      ExtendedTypeStr.replace(i, 1, "RB");
-    } else if (ExtendedTypeStr[i] == ',') {
-      // Since ',' is not allowed to appear in identifier,
-      // we replace it with 'COMMA'.
-      ExtendedTypeStr.replace(i, 1, "COMMA");
-    }
-  }
-  if (isFront) {
-    ExtendedTypeStr = "_" + ExtendedTypeStr;
-  } else {
-    ExtendedTypeStr += "_";
-  }
-  return ExtendedTypeStr;
-}
-
-static std::string
-RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
-                           const PrintingPolicy &Policy) {
-  std::string QT;
-  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
-    QT = GetTypePrefix(TemplateArg.getAsType(), /*isFront=*/true, Policy);
-  else if (TemplateArg.getKind() ==
-           clang::TemplateArgument::ArgKind::Integral) {
-    llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
-    if (TemplateInt.isNegative())
-      QT = "_n" + std::to_string(-TemplateInt.getExtValue());
-    else
-      QT = "_" + std::to_string(TemplateInt.getExtValue());
-  }
-  return QT;
-}
-#endif
-
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
 #if ENABLE_BSC
   if (Policy.RewriteBSC) {
@@ -1236,9 +1169,9 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
       if (BD->isDestructor()) {
         auto *RD = dyn_cast<RecordDecl>(Node->getFoundDecl()->getDeclContext());
-        std::string ExtendedTypeStr = GetTypePrefix(
-            RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
-        OS << (ExtendedTypeStr + "D");
+        std::string ExtendedTypeStr = MangleBSCContext::getBSCTypeName(
+            RD->getTypeForDecl()->getCanonicalTypeInternal(), Policy);
+        OS << ExtendedTypeStr << "_D";
         return;
       }
     }
@@ -1246,13 +1179,12 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
       if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getDecl())) {
         std::string FunctionNameStr;
         std::string ExtendedTypeStr =
-            GetTypePrefix(BD->getExtendedType(), false, Policy);
-        FunctionNameStr = ExtendedTypeStr + Node->getNameInfo().getAsString();
-        for (unsigned i = 0; i < BD->getTemplateSpecializationArgs()->size();
-             i++) {
-          std::string QT = RewriteBSCTemplateArgument(
-              BD->getTemplateSpecializationArgs()->get(i), Policy);
-          FunctionNameStr += QT;
+            MangleBSCContext::getBSCTypeName(BD->getExtendedType(), Policy);
+        FunctionNameStr = ExtendedTypeStr + "_" + Node->getNameInfo().getAsString();
+        if (const TemplateArgumentList *TArgs = BD->getTemplateSpecializationArgs()) {
+          std::string TemplateArgsName =
+              MangleBSCContext::getBSCTemplateArgsName(TArgs->asArray(), Policy);
+          FunctionNameStr += TemplateArgsName;
         }
         OS << FunctionNameStr;
         return;
@@ -1261,27 +1193,24 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     if (Node->getFoundDecl()->isTemplateDecl()) {
       auto *FD = dyn_cast<FunctionDecl>(Node->getDecl());
       std::string FunctionNameStr = FD->getDeclName().getAsString();
-      for (unsigned i = 0; i < FD->getTemplateSpecializationArgs()->size();
-           i++) {
-        std::string QT = RewriteBSCTemplateArgument(
-            FD->getTemplateSpecializationArgs()->get(i), Policy);
-        FunctionNameStr += QT;
+      if (const TemplateArgumentList *TArgs = FD->getTemplateSpecializationArgs()) {
+        std::string TemplateArgsName =
+            MangleBSCContext::getBSCTemplateArgsName(TArgs->asArray(), Policy);
+        FunctionNameStr += TemplateArgsName;
       }
       OS << FunctionNameStr;
       return;
     }
     if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
       std::string ExtendedTypeStr =
-          GetTypePrefix(BD->getExtendedType(), false, Policy);
-      OS << ExtendedTypeStr + Node->getNameInfo().getAsString();
+          MangleBSCContext::getBSCTypeName(BD->getExtendedType(), Policy);
+      OS << ExtendedTypeStr << "_" << Node->getNameInfo().getAsString();
       return;
     }
     if (auto *VD = dyn_cast<VarDecl>(Node->getFoundDecl())) {
       if (auto *RD = dyn_cast<RecordDecl>(VD->getDeclContext())) {
-        std::string Prefix = GetTypePrefix(
-            RD->getTypeForDecl()->getCanonicalTypeInternal(), false, Policy);
-
-        OS << Prefix + Node->getNameInfo().getAsString();
+        std::string Prefix = MangleBSCContext::getBSCTypeName(RD->getTypeForDecl()->getCanonicalTypeInternal(), Policy);
+        OS << Prefix << "_" << Node->getNameInfo().getAsString();
         return;
       }
     }
@@ -1752,11 +1681,10 @@ void StmtPrinter::VisitCallExpr(CallExpr *Call) {
         Call->getDirectCallee()->isFunctionTemplateSpecialization()) {
       FunctionDecl *FD = Call->getDirectCallee();
       std::string FunctionNameStr = FD->getDeclName().getAsString();
-      for (unsigned i = 0; i < FD->getTemplateSpecializationArgs()->size();
-           i++) {
-        std::string QT = RewriteBSCTemplateArgument(
-            FD->getTemplateSpecializationArgs()->get(i), Policy);
-        FunctionNameStr += QT;
+      if (const TemplateArgumentList *TArgs = FD->getTemplateSpecializationArgs()) {
+        std::string TemplateArgsName =
+            MangleBSCContext::getBSCTemplateArgsName(TArgs->asArray(), Policy);
+        FunctionNameStr += TemplateArgsName;
       }
       OS << FunctionNameStr;
     } else
@@ -1779,13 +1707,11 @@ static bool isImplicitThis(const Expr *E) {
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
 #if ENABLE_BSC
   if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getMemberDecl())) {
-    std::string ExtendedTypeStr =
-        GetTypePrefix(BD->getExtendedType(), false, Policy);
-    OS << ExtendedTypeStr;
+    std::string ExtendedTypeStr = MangleBSCContext::getBSCTypeName(BD->getExtendedType(), Policy);
+    OS << ExtendedTypeStr << "_";
   } else if (Policy.RewriteBSC && isa<VarDecl>(Node->getMemberDecl())) {
-    std::string ExtendedTypeStr =
-        GetTypePrefix(Node->getBase()->getType(), false, Policy);
-    OS << ExtendedTypeStr;
+    std::string ExtendedTypeStr = MangleBSCContext::getBSCTypeName(Node->getBase()->getType(), Policy);
+    OS << ExtendedTypeStr<< "_";
   } else
 #endif
       if (!Policy.SuppressImplicitBase || !isImplicitThis(Node->getBase())) {

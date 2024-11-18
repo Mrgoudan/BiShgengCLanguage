@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK_MANGLE
+
 #ifndef NEW_CDF_DATAFRAME_TYPE_HBS
 #define NEW_CDF_DATAFRAME_TYPE_HBS
 
@@ -13,6 +15,7 @@ int a = 1;
 #define NEGIVE -100
 #define SQUARE(x) ((x) * (x))
 
+// CHECK_MANGLE: define {{.*}} @ase_mmem_close_BBB
 #define ASE_POOL_DEF(var_, name_) \
   void ase_mmem_close_##name_() \
   { \

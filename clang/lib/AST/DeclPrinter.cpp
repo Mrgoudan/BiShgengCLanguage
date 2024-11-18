@@ -22,6 +22,9 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/Module.h"
 #include "llvm/Support/raw_ostream.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/MangleBSC.h"
+#endif
 using namespace clang;
 
 namespace {
@@ -192,74 +195,6 @@ static QualType getDeclType(Decl* D) {
     return VD->getType();
   return QualType();
 }
-
-#if ENABLE_BSC
-// To prefix the type by jointing '_' between types and function name.
-// Arg 'isFront' determines weather to prefix '_' at the front of type or not.
-static std::string GetTypePrefix(QualType T, bool isFront,
-                                 const PrintingPolicy &PP) {
-  std::string ExtendedTypeStr;
-  llvm::raw_string_ostream OS(ExtendedTypeStr);
-  T.print(OS, PP);
-  for (int i = ExtendedTypeStr.length() - 1; i >= 0; i--) {
-    if (ExtendedTypeStr[i] == ' ') {
-      if (i == 0) {
-        ExtendedTypeStr.replace(i, 1, "");
-        continue;
-      }
-      ExtendedTypeStr.replace(i, 1, "_");
-    } else if (ExtendedTypeStr[i] == '*') {
-      // Since '*' is not allowed to appear in identifier,
-      // we replace it with 'P'.
-      // FIXME: it may conflict with user defined type Char_P.
-      ExtendedTypeStr.replace(i, 1, "P");
-    } else if (ExtendedTypeStr[i] == '(') {
-      // Since '(' is not allowed to appear in identifier,
-      // we replace it with 'LP'.
-      ExtendedTypeStr.replace(i, 1, "LP");
-    } else if (ExtendedTypeStr[i] == ')') {
-      // Since ')' is not allowed to appear in identifier,
-      // we replace it with 'RP'.
-      ExtendedTypeStr.replace(i, 1, "RP");
-    } else if (ExtendedTypeStr[i] == '[') {
-      // Since '[' is not allowed to appear in identifier,
-      // we replace it with 'LB'.
-      ExtendedTypeStr.replace(i, 1, "LB");
-    } else if (ExtendedTypeStr[i] == ']') {
-      // Since ']' is not allowed to appear in identifier,
-      // we replace it with 'RB'.
-      ExtendedTypeStr.replace(i, 1, "RB");
-    } else if (ExtendedTypeStr[i] == ',') {
-      // Since ',' is not allowed to appear in identifier,
-      // we replace it with 'COMMA'.
-      ExtendedTypeStr.replace(i, 1, "COMMA");
-    }
-  }
-  if (isFront) {
-    ExtendedTypeStr = "_" + ExtendedTypeStr;
-  } else {
-    ExtendedTypeStr += "_";
-  }
-  return ExtendedTypeStr;
-}
-
-static std::string
-RewriteBSCTemplateArgument(const TemplateArgument &TemplateArg,
-                           const PrintingPolicy &Policy) {
-  std::string QT;
-  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
-    QT = GetTypePrefix(TemplateArg.getAsType(), /*isFront=*/true, Policy);
-  else if (TemplateArg.getKind() ==
-           clang::TemplateArgument::ArgKind::Integral) {
-    llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
-    if (TemplateInt.isNegative())
-      QT = "_n" + std::to_string(-TemplateInt.getExtValue());
-    else
-      QT = "_" + std::to_string(TemplateInt.getExtValue());
-  }
-  return QT;
-}
-#endif
 
 void Decl::printGroup(Decl** Begin, unsigned NumDecls,
                       raw_ostream &Out, const PrintingPolicy &Policy,
@@ -854,42 +789,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       // For instantiated functions which have same template arg type
       // in different source files, linker will report multi definition error.
       // Hence, we add weak attribute to solve this.
-      if (const BSCMethodDecl *BMD = dyn_cast<BSCMethodDecl>(D)) {
-        std::string FunctionNameStr;
-        if (BMD->isDestructor()) {
-          FunctionNameStr = GetTypePrefix(
-              Context.getTypeDeclType(dyn_cast<RecordDecl>(D->getParent())),
-              false, SubPolicy);
-          FunctionNameStr += "D";
-        } else {
-          FunctionNameStr =
-              GetTypePrefix(BMD->getExtendedType(), false, SubPolicy);
-          FunctionNameStr += D->getDeclName().getAsString();
-          // Handle generic member for BSC owned struct.
-          if (BMD->isTemplateInstantiation()) {
-            if (const TemplateArgumentList *TArgs =
-                    D->getTemplateSpecializationArgs()) {
-              for (size_t i = 0; i < TArgs->size(); i++) {
-                std::string QT =
-                    RewriteBSCTemplateArgument(TArgs->get(i), SubPolicy);
-                FunctionNameStr += QT;
-              }
-            }
-          }
-        }
-        OS << FunctionNameStr;
-      } else if (D->isTemplateInstantiation()) {
-        std::string FunctionNameStr = D->getDeclName().getAsString();
-        if (const TemplateArgumentList *TArgs =
-                D->getTemplateSpecializationArgs()) {
-          for (size_t i = 0; i < TArgs->size(); i++) {
-            std::string QT =
-                RewriteBSCTemplateArgument(TArgs->get(i), SubPolicy);
-            FunctionNameStr += QT;
-          }
-        }
-        OS << FunctionNameStr;
-      } else {
+      MangleBSCContext MBC = MangleBSCContext(Context, Policy);
+      if (!MBC.mangleBSCName(D, OS)) {
         D->getNameInfo().printName(OS, Policy);
       }
     }
@@ -1173,15 +1074,13 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
 #if ENABLE_BSC
   auto *RD = dyn_cast<RecordDecl>(D->getDeclContext());
   if (RD && RD->isOwnedDecl()) {
-    std::string Prefix =
-        GetTypePrefix(RD->getTypeForDecl()->getCanonicalTypeInternal(), false,
-                      Policy) +
-        std::string(D->getName());
-
+    std::string VarTypeName = MangleBSCContext::getBSCTypeName(
+        RD->getTypeForDecl()->getCanonicalTypeInternal(), Policy);
+    std::string VarName = VarTypeName + "_" + D->getNameAsString();
     printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
                       D->getIdentifier())
                          ? D->getIdentifier()->deuglifiedName()
-                         : StringRef(Prefix.c_str()));
+                         : StringRef(VarName.c_str()));
   } else {
 #endif
     printDeclType(T, (isa<ParmVarDecl>(D) && Policy.CleanUglifiedParameters &&
@@ -1310,12 +1209,9 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
       ArrayRef<TemplateArgument> Args = S->getTemplateArgs().asArray();
 #if ENABLE_BSC
       if (Policy.RewriteBSC) {
-        std::string BSCRecordNameStr = S->getDeclName().getAsString();
-        for (size_t i = 0; i < Args.size(); i++) {
-          std::string QT = RewriteBSCTemplateArgument(Args[i], Policy);
-          BSCRecordNameStr += QT;
-        }
-        Out << ' ' + BSCRecordNameStr;
+        std::string BSCRecordNameStr = S->getNameAsString();
+        BSCRecordNameStr += MangleBSCContext::getBSCTemplateArgsName(Args, Policy);
+        Out << ' ' << BSCRecordNameStr;
       } else {
 #endif
         if (!Policy.PrintCanonicalTypes)

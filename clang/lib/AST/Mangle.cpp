@@ -207,9 +207,10 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
 
 #if ENABLE_BSC
   if (ASTContext.getLangOpts().BSC) {
-    MangleBSCContext *BSCContext = new MangleBSCContext(ASTContext);
+    clang::PrintingPolicy ManglePolicy(Context.getLangOpts());
+    MangleBSCContext MBC = MangleBSCContext(ASTContext, ManglePolicy);
     // If the decl cannot mangled by current BSC mangler, continue using the original mangler.
-    if (BSCContext->mangleBSCName(D, Out))
+    if (MBC.mangleBSCName(D, Out))
       return;
   }
 #endif

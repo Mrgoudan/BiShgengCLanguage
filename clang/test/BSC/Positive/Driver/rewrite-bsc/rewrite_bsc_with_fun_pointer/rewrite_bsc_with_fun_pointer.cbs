@@ -2,7 +2,9 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -I %S -o %t-rw.output
 // RUN: %t-rw.output
+// RUN: %clang -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK_MANGLE
 
+// CHECK_MANGLE: define {{.*}} @safe_swap_int_LPPRPLPintCOMMA_intRP
 safe void safe_swap<T>(T* borrow l, T* borrow r) {
 }
 
@@ -13,16 +15,6 @@ int add(int a, int b) {
 int sub(int a, int b) {
     return a - b;
 }
-
-int main() {
-    int (*pAdd)(int, int);
-    int (*pSub)(int, int);
-    pAdd = &add;
-    pSub = &sub;
-    safe_swap(&mut pAdd, &mut pSub);
-    return 0;
-}
-
 
 // CHECK: static void safe_swap_int_LPPRPLPintCOMMA_intRP(int (** l)(int, int), int (** r)(int, int));
 // CHECK-EMPTY:
@@ -45,3 +37,12 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:  static void safe_swap_int_LPPRPLPintCOMMA_intRP(int (** l)(int, int), int (** r)(int, int)) {
 // CHECK-NEXT: }
+
+int main() {
+    int (*pAdd)(int, int);
+    int (*pSub)(int, int);
+    pAdd = &add;
+    pSub = &sub;
+    safe_swap(&mut pAdd, &mut pSub);
+    return 0;
+}

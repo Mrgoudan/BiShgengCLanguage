@@ -27,22 +27,23 @@ namespace clang {
 class MangleBSCContext {
 public:
   const ASTContext &Context;
+  PrintingPolicy ManglePolicy;
 
-  explicit MangleBSCContext(const ASTContext &Context): Context(Context) {};
+  explicit MangleBSCContext(const ASTContext &Context, PrintingPolicy Policy)
+      : Context(Context), ManglePolicy(Policy){};
 
   bool mangleBSCName(const NamedDecl *ND, raw_ostream &Out);
 
-  std::string getBSCMethodMangleName(const BSCMethodDecl *BMD,
-                                     clang::PrintingPolicy SubPolicy);
-  std::string getBSCDesturctorMangleName(const FunctionDecl *BFD,
-                                         clang::PrintingPolicy SubPolicy);
-  std::string getBSCFunctionMangleName(const FunctionDecl *BFD,
-                                       clang::PrintingPolicy SubPolicy);
+  static std::string getBSCTypeName(QualType QT, PrintingPolicy &Policy);
+  static std::string getBSCTemplateArgsName(ArrayRef<TemplateArgument> Args,
+                                            PrintingPolicy &Policy);
 
 private:
-  std::string getBSCTypeName(QualType QT, const PrintingPolicy &Policy);
-  std::string getBSCTemplateArgName(const TemplateArgument &TemplateArg,
-                                    const PrintingPolicy &Policy);
+  std::string getBSCMethodMangleName(const BSCMethodDecl *BMD);
+  std::string getBSCDesturctorMangleName(const BSCMethodDecl *BMD);
+  std::string getBSCFunctionMangleName(const FunctionDecl *BFD);
+  static std::string getBSCArgName(const TemplateArgument &TemplateArg,
+                            PrintingPolicy &Policy);
 };
 } // namespace clang
 #endif
