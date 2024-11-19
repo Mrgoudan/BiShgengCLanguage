@@ -1283,7 +1283,14 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
   SuppressAccessChecks diagsFromTag(*this, IsTemplateSpecOrInst);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DeclSpecContext::DSC_class,
-                             &CommonLateParsedAttrs); //
+                             &CommonLateParsedAttrs);
+
+  // Issue diagnostic and remove `typedef` if present.
+  if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef &&
+      DS.getStorageClassSpecLoc().isValid()) {
+    Diag(DS.getStorageClassSpecLoc(),diag::err_typename_invalid_storageclass);
+    DS.ClearStorageClassSpecs();
+  }
 
   if (IsTemplateSpecOrInst)
     diagsFromTag.done();
