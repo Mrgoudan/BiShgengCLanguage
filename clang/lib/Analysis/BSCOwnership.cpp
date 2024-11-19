@@ -2243,6 +2243,8 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
       reporter.addDiags(diags);
     }
   }
+
+  delete OS;
 }
 
 #endif // ENABLE_BSC
