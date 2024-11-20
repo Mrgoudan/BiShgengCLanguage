@@ -10355,7 +10355,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
     BSCMethodDecl *BSCMD = dyn_cast<BSCMethodDecl>(NewFD);
     if (NewFD->getAttr<OperatorAttr>() && (BSCMD || DC->isTrait())) {
-      Diag(NewFD->getLocation(), diag::err_unsupport_overload_fun);
+      // Avoid displaying errors multiple times
+      if (!NewFD->isOverloadedOperator()) {
+        Diag(NewFD->getLocation(), diag::err_unsupport_overload_fun);
+      }
       NewFD->setInvalidDecl();
     }
     if (NewFD->isOverloadedOperator() &&
@@ -15102,7 +15105,6 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
     ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
         ParentScope, D, TemplateParameterLists, Bases);
-
 #if ENABLE_BSC
   if (getLangOpts().BSC &&
       D.getDeclSpec().getAttributes().hasAttribute(ParsedAttr::AT_Operator)) {

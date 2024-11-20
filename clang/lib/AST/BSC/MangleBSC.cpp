@@ -40,6 +40,9 @@ bool MangleBSCContext::mangleBSCName(const NamedDecl *ND, raw_ostream &Out) {
   } else if (BFD && BFD->isTemplateInstantiation()) {
     // Handle the functiondecl with template args.
     MethodStr = getBSCFunctionMangleName(BFD);
+  } else if (BFD && BFD->isOverloadedOperator()) {
+    IdentifierInfo *II = BFD->getDeclName().getCXXOperatorIdNameIdentInBSC();
+    MethodStr = II->getName().str();
   } else {
     // Without the BSC mangling, handle it separately at the point of call-in.
     return false;

@@ -34,4 +34,23 @@ trait H {
 void int::foo(int* this) {
 }
 
-int main(){}
+owned struct S {
+public:
+    int a;
+};
+
+__attribute__((operator +))
+S S::add_struct(S *this, S s) {            // expected-error {{function unsupport overload}}
+    S add_result = {this->a + s.a};
+    return add_result;
+}
+
+int main() {
+    S s1 = {1};
+    S s2 = {2};
+    S s3 = s1 + s2;                        // expected-error {{invalid operands to binary expression ('owned struct S' and 'owned struct S'}}
+    if (s3.a == 3) {
+        return 0;
+    }
+    return 1;
+}

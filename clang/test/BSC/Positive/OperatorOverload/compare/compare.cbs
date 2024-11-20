@@ -39,23 +39,23 @@ _Bool opratorAnd2(struct F f1, struct F f2){
     return f1.a < f2.a;
 }
 __attribute__((operator <=))
-_Bool opratorAnd2(struct F f1, struct F f2){
+_Bool opratorAnd3(struct F f1, struct F f2){
     return f1.a <= f2.a;
 }
 __attribute__((operator >))
-_Bool opratorAnd2(struct F f1, struct F f2){
+_Bool opratorAnd4(struct F f1, struct F f2){
     return f1.a > f2.a;
 }
 __attribute__((operator >=))
-_Bool opratorAnd2(struct F f1, struct F f2){
+_Bool opratorAnd5(struct F f1, struct F f2){
     return f1.a >= f2.a;
 }
 __attribute__((operator ==))
-_Bool opratorAnd2(struct F f1, struct F f2){
+_Bool opratorAnd6(struct F f1, struct F f2){
     return f1.a == f2.a;
 }
 __attribute__((operator !=))
-_Bool opratorAnd2(struct F f1, struct F f2){
+_Bool opratorAnd7(struct F f1, struct F f2){
     return f1.a != f2.a;
 }
 _Bool genericAnd2<T>(T a, T b) {
@@ -91,11 +91,11 @@ int test2(){
 
 // custom type a + custom type b
 __attribute__((operator <))
-_Bool opratorAnd3(struct E f1, struct F f2){
+_Bool opratorAnd8(struct E f1, struct F f2){
     return f1.a < f2.a;
 }
 
-_Bool genericAnd3<T, P>(T a, P b) {
+_Bool genericAnd8<T, P>(T a, P b) {
     return a < b;
 }
 
@@ -105,10 +105,23 @@ int test3(){
     if ((f1 < f2) != 1) {
         return -1;
     }
-    if (genericAnd3(f1, f2) != 1) {
+    if (genericAnd8(f1, f2) != 1) {
         return -1;
     }
     return 0;
+}
+
+typedef enum ase_status {
+  ASE_OK = 0,
+  ASE_ERROR = -1,
+}ASE_STATUS;
+
+int test4() {
+  enum ase_status ret = 0;
+  if (ret != ASE_OK) {
+    return -1;
+  }
+  return 0;
 }
 
 int main(){
@@ -119,6 +132,9 @@ int main(){
         return -1;
     }
     if (test3()) {
+        return -1;
+    }
+    if (test4()) {
         return -1;
     }
     return 0;

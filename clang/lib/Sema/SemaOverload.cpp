@@ -1940,8 +1940,11 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                 InOverloadResolution)) {
     SCS.Second = SecondICK;
     FromType = ToType.getUnqualifiedType();
-  } else if (!S.getLangOpts().CPlusPlus &&
-             S.Context.typesAreCompatible(ToType, FromType)) {
+  } else if (!S.getLangOpts().CPlusPlus
+#if ENABLE_BSC
+             && !S.getLangOpts().BSC
+#endif
+             && S.Context.typesAreCompatible(ToType, FromType)) {
     // Compatible conversions (Clang extension for C function overloading)
     SCS.Second = ICK_Compatible_Conversion;
     FromType = ToType.getUnqualifiedType();
@@ -7786,6 +7789,10 @@ void Sema::AddMemberOperatorCandidates(OverloadedOperatorKind Op,
                                        ArrayRef<Expr *> Args,
                                        OverloadCandidateSet &CandidateSet,
                                        OverloadCandidateParamOrder PO) {
+#if ENABLE_BSC
+  if (getLangOpts().BSC)
+    return;
+#endif
   DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
 
   // C++ [over.match.oper]p3:
