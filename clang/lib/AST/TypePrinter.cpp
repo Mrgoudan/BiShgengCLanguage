@@ -221,8 +221,27 @@ void TypePrinter::spaceBeforePlaceHolder(raw_ostream &OS) {
     OS << ' ';
 }
 
+static bool isTypedefType(QualType QT) {
+  if (dyn_cast<TypedefType>(QT)) {
+    return true;
+  }
+  if (const auto *PT = dyn_cast<PointerType>(QT)) {
+    return isTypedefType(PT->getPointeeType());
+  }
+  if (const auto *AT = dyn_cast<ArrayType>(QT)) {
+    return isTypedefType(AT->getElementType());
+  }
+  return false;
+}
+
 static SplitQualType splitAccordingToPolicy(QualType QT,
                                             const PrintingPolicy &Policy) {
+#if ENABLE_BSC
+  // for original or pointee or array typedef type in BSCMethodDecl, we just print the original TypedefType name
+  if (Policy.RewriteBSC && isTypedefType(QT)) {
+    return QT.split();
+  }
+#endif
   if (Policy.PrintCanonicalTypes)
     QT = QT.getCanonicalType();
   return QT.split();
@@ -1291,7 +1310,6 @@ void TypePrinter::printDeducedTemplateSpecializationAfter(
 
 void TypePrinter::printAtomicBefore(const AtomicType *T, raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-
   OS << "_Atomic(";
   print(T->getValueType(), OS, StringRef());
   OS << ')';

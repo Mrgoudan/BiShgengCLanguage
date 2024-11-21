@@ -110,9 +110,9 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT:static long long foo3_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:static int foo4_int_5(void);
+// CHECK-NEXT:static MyInt foo4_int_5(void);
 // CHECK-EMPTY:
-// CHECK-NEXT:static int foo4_int_n5(void);
+// CHECK-NEXT:static MyInt foo4_int_n5(void);
 // CHECK-EMPTY:
 // CHECK-NEXT:static int foo5_5(void);
 // CHECK-EMPTY:
@@ -192,11 +192,11 @@ int main() {
 // CHECK-NEXT:    return 5LL;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:static int foo4_int_5(void) {
+// CHECK-NEXT:static MyInt foo4_int_5(void) {
 // CHECK-NEXT:    return 5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:
-// CHECK-NEXT:static int foo4_int_n5(void) {
+// CHECK-NEXT:static MyInt foo4_int_n5(void) {
 // CHECK-NEXT:    return -5;
 // CHECK-NEXT:}
 // CHECK-EMPTY:

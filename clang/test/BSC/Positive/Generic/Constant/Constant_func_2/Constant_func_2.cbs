@@ -33,15 +33,15 @@ LLint foo_3<LLint B>(int a) {
 // CHECK-L-NEXT: }
 
 // CHECK-L: #line 18 "{{.*}}.cbs"
-// CHECK-L-NEXT: static unsigned long long foo_2_5_int_6(int a) {
+// CHECK-L-NEXT: static ULLint foo_2_5_int_6(int a) {
 // CHECK-L-NEXT:    int data[5];
-// CHECK-L-NEXT:    unsigned long long c = 6LL;
+// CHECK-L-NEXT:    ULLint c = 6LL;
 // CHECK-L-NEXT:    return a;
 // CHECK-L-NEXT: }
 
 // CHECK-L: #line 24 "{{.*}}.cbs"
-// CHECK-L-NEXT: static long long foo_3_5(int a) {
-// CHECK-L-NEXT:    long long b = 1;
+// CHECK-L-NEXT: static LLint foo_3_5(int a) {
+// CHECK-L-NEXT:    LLint b = 1;
 // CHECK-L-NEXT:    return a > 5LL ? a : 5LL;
 // CHECK-L-NEXT: }
 

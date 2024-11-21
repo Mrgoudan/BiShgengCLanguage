@@ -1288,7 +1288,7 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
   // Issue diagnostic and remove `typedef` if present.
   if (DS.getStorageClassSpec() == DeclSpec::SCS_typedef &&
       DS.getStorageClassSpecLoc().isValid()) {
-    Diag(DS.getStorageClassSpecLoc(),diag::err_typename_invalid_storageclass);
+    Diag(DS.getStorageClassSpecLoc(), diag::err_typename_invalid_storageclass);
     DS.ClearStorageClassSpecs();
   }
 

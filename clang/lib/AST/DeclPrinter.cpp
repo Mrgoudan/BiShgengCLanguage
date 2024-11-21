@@ -600,6 +600,16 @@ void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
 }
 
 void DeclPrinter::VisitTypeAliasDecl(TypeAliasDecl *D) {
+#if ENABLE_BSC
+  if (Policy.RewriteBSC && Context.getLangOpts().BSC) {
+    Out << "typedef ";
+    prettyPrintAttributes(D, true);
+    QualType Ty = D->getTypeSourceInfo()->getType();
+    Out << Ty.getAsString(Policy);
+    Out << " " << *D;
+    return;
+  }
+#endif
   Out << "using " << *D;
   prettyPrintAttributes(D);
   Out << " = " << D->getTypeSourceInfo()->getType().getAsString(Policy);

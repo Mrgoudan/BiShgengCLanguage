@@ -43,26 +43,26 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT: typedef enum E F;
 // CHECK-EMPTY:
-// CHECK-NEXT: int enum_E_getA(enum E *this) {
+// CHECK-NEXT: int F_getA(enum E *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: int enum_E_getB(enum E *this) {
+// CHECK-NEXT: int F_getB(F *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: int enum_E_getC(enum E *this) {
+// CHECK-NEXT: int enum_E_getC(F *this) {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {
 // CHECK-NEXT:   enum E foo = X3;
-// CHECK-NEXT:   enum_E_getA(&foo);
-// CHECK-NEXT:   enum_E_getB(&foo);
+// CHECK-NEXT:   F_getA(&foo);
+// CHECK-NEXT:   F_getB(&foo);
 // CHECK-NEXT:   enum_E_getC(&foo);
-// CHECK-NEXT:   enum E f = foo;
-// CHECK-NEXT:   enum_E_getB(&f);
-// CHECK-NEXT:   enum_E_getA(&f);
+// CHECK-NEXT:   F f = foo;
+// CHECK-NEXT:   F_getB(&f);
+// CHECK-NEXT:   F_getA(&f);
 // CHECK-NEXT:   enum_E_getC(&f);
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

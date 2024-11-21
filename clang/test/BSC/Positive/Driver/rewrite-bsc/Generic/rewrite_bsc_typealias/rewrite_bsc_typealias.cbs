@@ -56,12 +56,12 @@ int main() {
 }
 
 // CHECK: struct G {
-// CHECK-NEXT:     long a;
+// CHECK-NEXT:     MyLongInt a;
 // CHECK-NEXT:     int b;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct S_int {
-// CHECK-NEXT:     long a;
+// CHECK-NEXT:     MyLongInt a;
 // CHECK-NEXT:     int b;
 // CHECK-NEXT:     int c;
 // CHECK-NEXT: };
@@ -71,16 +71,18 @@ int main() {
 // CHECK-NEXT: static void foo4_int(void);
 // CHECK-EMPTY:
 // CHECK-NEXT: void foo1(void) {
-// CHECK-NEXT:     long a;
+// CHECK-NEXT:     MyLongInt a;
 // CHECK-NEXT:     int b;
-// CHECK-NEXT:     long c;
+// CHECK-NEXT:     typedef long MyLongInt1;
+// CHECK-NEXT:     MyLongInt1 c;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: void foo3(void) {
+// CHECK-NEXT:     typedef long MyLongInt1;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {
-// CHECK-NEXT:     long a = 5;
+// CHECK-NEXT:     MyLongInt a = 5;
 // CHECK-NEXT:     int b = 5;
 // CHECK-NEXT:     struct G g;
 // CHECK-NEXT:     struct S_int s;
@@ -92,12 +94,16 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: static void foo2_int(void) {
-// CHECK-NEXT:     long a;
+// CHECK-NEXT:     MyLongInt a;
 // CHECK-NEXT:     int b;
 // CHECK-NEXT:     int c;
-// CHECK-NEXT:     long d;
-// CHECK-NEXT:     int e;
+// CHECK-NEXT:     typedef long MyLongInt1;
+// CHECK-NEXT:     typedef int MyType1;
+// CHECK-NEXT:     MyLongInt1 d;
+// CHECK-NEXT:     MyType1 e;
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: static void foo4_int(void) {
+// CHECK-NEXT:     typedef long MyLongInt1;
+// CHECK-NEXT:     typedef int MyType1;
 // CHECK-NEXT: }

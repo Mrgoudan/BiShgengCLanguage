@@ -50,8 +50,8 @@ private:
   FileID MainFileID;
   const char *MainFileStart, *MainFileEnd;
   std::string InFileName;
-  Preprocessor &PP;
   std::unique_ptr<raw_ostream> OutFile;
+  Preprocessor &PP;
   // control whether to insert bsc code line info
   bool WithLine;
   clang::PrintingPolicy Policy;
@@ -433,8 +433,9 @@ const std::string RewriteBSC::GetRewrittenString() {
       }
       break;
     }
+    case Decl::TypeAlias:
     case Decl::Typedef: {
-      TypedefDecl *TD = cast<TypedefDecl>(*D);
+      TypedefNameDecl *TD = cast<TypedefNameDecl>(*D);
       bool HasTemplateSpec = false;
       if (const RecordType *RT = TD->getUnderlyingType()->getAs<RecordType>()) {
         RecordDecl *RD = RT->getDecl();

@@ -266,15 +266,13 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
       if (auto *VD = dyn_cast<VarDecl>(Node->getSingleDecl())) {
         if (VD->getType()->hasTraitType())
           return;
-      } else if (isa<TypeAliasDecl>(Node->getSingleDecl()))
-        return;
+      }
     } else {
       for (auto N : Node->getDeclGroup()) {
         if (auto *VD = dyn_cast<VarDecl>(N)) {
           if (VD->getType()->hasTraitType())
             return;
-        } else if (isa<TypeAliasDecl>(N))
-          return;
+        }
       }
     }
   }
@@ -1961,6 +1959,71 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
   PrintExpr(Node->getSyntacticForm());
 }
 
+#if ENABLE_BSC
+static const DeclRefExpr *getAtomicFlagExpr(const Expr *PtrExpr) {
+  // Iteratively search for the last layer of DeclRefExpr
+  while (PtrExpr) {
+    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(PtrExpr)) {
+      PtrExpr = UO->getSubExpr();
+    } else if(const ParenExpr *PE = dyn_cast<ParenExpr>(PtrExpr)) {
+      PtrExpr = PE->getSubExpr();
+    } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(PtrExpr)) {
+      PtrExpr = ME->getBase();
+    } else if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(PtrExpr)) {
+      return DRE;
+    } else {
+      break;
+    }
+  }
+  return nullptr;
+}
+
+static bool isAtomicFlagExpr(const Expr *PtrExpr) {
+  const DeclRefExpr *DeclRef = getAtomicFlagExpr(PtrExpr);
+  // and check whether there is an atomic flag.
+  if (DeclRef) {
+    const VarDecl *VD = dyn_cast<VarDecl>(DeclRef->getDecl());
+    if (VD->getType().getAsString() == "atomic_flag") {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool isExplicitExpr(const Expr *OrderExpr) {
+  // Check whether the memory order is ATOMIC_SEQ_CST
+  // to judege whether it is explicit expr or not
+  if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(OrderExpr)) {
+    unsigned BitWidth = IL->getValue().getBitWidth();
+    if (IL->getValue() != llvm::APInt(BitWidth, __ATOMIC_SEQ_CST)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static std::string getAtomicFunctionName(AtomicExpr *Node, const char *Name) {
+  std::string NameStr = Name;
+  if (NameStr.length() >= 6 && NameStr.substr(0, 6) == "__c11_") {
+    NameStr = NameStr.substr(6);
+  }
+  if (!NameStr.empty() && NameStr.back() == '(') {
+    NameStr.pop_back();
+  }
+  if (isAtomicFlagExpr(Node->getPtr())) {
+    if (Node->getOp() == AtomicExpr::AO__c11_atomic_exchange) {
+      NameStr = "atomic_flag_test_and_set";
+    } else if (Node->getOp() == AtomicExpr::AO__c11_atomic_store) {
+      NameStr = "atomic_flag_clear";
+    }
+  }
+  if (isExplicitExpr(Node->getOrder())) {
+    NameStr += "_explicit";
+  }
+  return NameStr;
+}
+#endif
+
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
@@ -1971,7 +2034,29 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
     break;
 #include "clang/Basic/Builtins.def"
   }
+#if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    std::string NameStr = getAtomicFunctionName(Node, Name);
+    OS << NameStr << "(";
+    if (isAtomicFlagExpr(Node->getPtr())) {
+      auto *UO = dyn_cast<UnaryOperator>(Node->getPtr());
+      auto *ME = dyn_cast<MemberExpr>(UO->getSubExpr());
+      auto *PE = dyn_cast<ParenExpr>(ME->getBase());
+      auto *UO2 = dyn_cast<UnaryOperator>(PE->getSubExpr());
+      PrintExpr(UO2);
+      if (isExplicitExpr(Node->getOrder())) {
+        OS << ", ";
+        PrintExpr(Node->getOrder());
+      }
+      OS << ")";
+      return;
+    }
+  } else {
+#endif
   OS << Name;
+#if ENABLE_BSC
+  }
+#endif
 
   // AtomicExpr stores its subexpressions in a permuted order.
   PrintExpr(Node->getPtr());
@@ -1987,6 +2072,16 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
     OS << ", ";
     PrintExpr(Node->getVal2());
   }
+#if ENABLE_BSC
+  if (Policy.RewriteBSC) {
+    if (isExplicitExpr(Node->getOrder())) {
+        OS << ", ";
+        PrintExpr(Node->getOrder());
+    }
+    OS << ")";
+    return;
+  }
+#endif
   if (Node->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
       Node->getOp() == AtomicExpr::AO__atomic_compare_exchange_n) {
     OS << ", ";
