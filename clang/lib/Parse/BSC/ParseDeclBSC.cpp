@@ -542,9 +542,9 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
         TraitII = Trait->getIdentifier();
     }
   }
-  DeclContext::lookup_result Decls =
-      Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
-  for (DeclContext::lookup_result::iterator I = Decls.begin(), E = Decls.end();
+  DeclContext::lookup_result Decls = Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
+  for (DeclContext::lookup_result::iterator I = Decls.begin(),
+                                            E = Decls.end();
        I != E; ++I) {
     if (isa<TraitDecl>(*I)) {
       Trait = dyn_cast<TraitDecl>(*I);
@@ -1625,8 +1625,8 @@ void Parser::ParseConditionalSpecifier(DeclSpec &DS) {
   ParsedType PT2 = Ty2.get();
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID, CondResult, CondExpr.get(),
-                            PT1, PT2,
+  if (DS.SetConditionalType(KWLoc, PrevSpec, DiagID,
+                            CondResult, CondExpr.get(), PT1, PT2,
                             Actions.getASTContext().getPrintingPolicy()))
     Diag(KWLoc, DiagID) << PrevSpec;
 }

@@ -276,6 +276,7 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
     )
       IDNS |= Decl::IDNS_Tag | Decl::IDNS_Ordinary;
     break;
+
   case Sema::LookupNestedNameSpecifierName:
     IDNS = Decl::IDNS_Type | Decl::IDNS_Namespace;
     break;
@@ -2447,7 +2448,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     return false;
 
   // Make sure that the declaration context is complete.
-  assert((!isa<TagDecl>(LookupCtx) || LookupCtx->isDependentContext() ||
+  assert((!isa<TagDecl>(LookupCtx) ||
+          LookupCtx->isDependentContext() ||
           cast<TagDecl>(LookupCtx)->isCompleteDefinition() ||
           allowIncompleteCtx || cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
          "Declaration context must already be complete!");
