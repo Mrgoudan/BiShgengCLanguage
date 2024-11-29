@@ -14673,6 +14673,22 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
   }
 }
 
+static bool CheckThisParamQualifiers(QualType thisParamT) {
+  if (!thisParamT->isPointerType()) {
+    // not allow  This owned/borrow
+    // borrow not pointer is alredy checked in the Sema::BuildQualifiedType
+    if (thisParamT.isOwnedQualified()) {
+      bool IsOwnedStruct = thisParamT->isOwnedStructureType() ||
+                           thisParamT->isOwnedTemplateSpecializationType();
+      // only owned struct ok
+      if (!(IsOwnedStruct && thisParamT.getQualifiers().hasOnlyOwned())) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
@@ -14731,17 +14747,33 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
   }
   bool IsThisParam = false;
   const Type* TypePtr = ExtendedType.getTypePtrOrNull();
+
   if (TypePtr)
     TypePtr = TypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
   // if TypePtr is nullptr, it is not a BSCMethod
   if (TypePtr && DeclarationName(II).getAsString() == "this" && !isDestructor) {
     if (ParamSize == 0) {
+      // check memberfunction type whether has cvr-qualifiers
+      // cvr-qualified type is not allowed to define member functions
+      Qualifiers ETQ = ExtendedType.getQualifiers();
+      if (ETQ.hasCVRQualifiers() &&
+          !((TypePtr->isOwnedStructureType() || TypePtr->isOwnedTemplateSpecializationType()) &&
+            ETQ.hasOnlyOwned())) {
+        Diag(D.getBeginLoc(), diag::err_cvrqualified_member_type_unsupported)
+            << ExtendedType.getAsString();
+        D.setInvalidType(true);
+      }
+      if (!CheckThisParamQualifiers(parmDeclType)) {
+        Diag(D.getBeginLoc(), diag::err_cvrqualified_this_type_unsupported)
+            << parmDeclType.getAsString();
+        D.setInvalidType(true);
+      }
       auto ThisTypePtr = parmDeclType.getTypePtrOrNull();
       if (ThisTypePtr) {
-        ThisTypePtr = ThisTypePtr->getPointeeType().getTypePtrOrNull();
-        if (ThisTypePtr)
-          ThisTypePtr =
-              ThisTypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
+        if (ThisTypePtr->isPointerType()) {
+          ThisTypePtr = ThisTypePtr->getPointeeType().getTypePtrOrNull();
+        }
+        ThisTypePtr = ThisTypePtr->getCanonicalTypeUnqualified().getTypePtrOrNull();
       }
       if (DS.getTypeSpecType() != clang::TST_This && TypePtr != ThisTypePtr) {
         Diag(D.getBeginLoc(), diag::err_this_type_unsupported)
@@ -14779,28 +14811,30 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
     }
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (getLangOpts().BSC)
     if (TraitDecl *TD = TryDesugarTrait(parmDeclType))
       parmDeclType = DesugarTraitToStructTrait(TD, parmDeclType, D.getBeginLoc());
-  #endif
+#endif
 
   // Temporarily put parameter variables in the translation unit, not
   // the enclosing context.  This prevents them from accidentally
   // looking like class members in C++.
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // Use This* as BSCMethod parameter,
   // For example   void struct S::f(This* this);
   if (getLangOpts().BSC && TypePtr && DS.getTypeSpecType() == clang::TST_This) {
     Qualifiers ThisQual = parmDeclType->getPointeeType().getLocalQualifiers();
     Qualifiers ThisPointerQual = parmDeclType.getLocalQualifiers();
-    parmDeclType = Context.getQualifiedType(ExtendedType, ThisQual);
-    // for Destructor, skip set pointer;
+    QualType desugarThisType = Context.getQualifiedType(ExtendedType, ThisQual);
+    // for Destructor or not pointer This parm, skip set pointer;
     // For example    ~S(This this);
-    if (!isDestructor) {
+    if (!isDestructor && parmDeclType->isPointerType()) {
       parmDeclType = Context.getQualifiedType(
-        Context.getPointerType(parmDeclType), ThisPointerQual);
+        Context.getPointerType(desugarThisType), ThisPointerQual);
+    } else {
+      parmDeclType = Context.getQualifiedType(desugarThisType, ThisPointerQual); // FIXME: check This Qualifiers
     }
     TInfo = Context.CreateTypeSourceInfo(parmDeclType);
     // if EntendedType is a generic type,
@@ -14830,7 +14864,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
       }
     }
   }
-  #endif
+#endif
   ParmVarDecl *New =
       CheckParameter(Context.getTranslationUnitDecl(), D.getBeginLoc(),
                      D.getIdentifierLoc(), II, parmDeclType, TInfo, SC);

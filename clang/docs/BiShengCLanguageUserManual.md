@@ -209,17 +209,21 @@ void foo1() {
   // do nothing
 };
 
-void int::foo2(int* this) { // 实例成员函数，第一个入参是 this
+void int::foo2(int* this) { // 实例成员函数，第一个入参是 This 指针，指向当前int类型的实例
   // do something
 }
 
-void int::foo2() { // 静态成员函数
+void int::foo3(int this) { // 实例成员函数，第一个入参是 This 实例，不是 This 指针
+  // do something
+}
+
+void int::foo4() { // 静态成员函数
   // do something
 }
 
 ```
 
-其中，type-name 可以是基础类型如 `int`, `float` 等，也可以是用户自定义的结构体等，符合 C 语言对类型的定义规则。下面是更多的用法示例：
+其中，type-name 可以是基础类型如 `int`, `float` 等，也可以是用户自定义的结构体等，符合 C 语言对类型的定义规则，此外可以使用`This` 来简化表示当前类型。下面是更多的用法示例：
 
 ```c
 // case 1
@@ -233,24 +237,30 @@ void int::print(int* this){ // 定义
 struct S1{};
 // 错误使用 S，在 C 语言里 struct S 才是一个类型
 void S1::print(struct S1* this); // error: must use 'struct' tag to refer to type 'S'
+void struct S1::print(struct S1* this); // Ok，修正后的声明
 
 // case 3
 typedef struct {
 }S2;
 void S2::print(S2* this); // Ok, S2 是 typedef 后的 struct S2
+
+// case 4
+void S2::print(This this); // Ok, This 表示当前类型 struct S2
+void S2::print(This* this); // Ok, This* 表示指向当前类型 struct S2 的指针
+
 ```
 
 采用这样的语法设计有一个好处，那就是我们很方便就可以给已有类型增加成员函数而不用侵入式修改源码。
 
 ### 关于 `this`
 
-在上面的成员函数的例子中，参数列表中的第一个参数如果为 `this`(如果有 `this`，它也只能是第一个参数)，它表示指向该成员函数对应类型实例的指针，它是一个“实例成员函数”。如果成员函数参数列表中，没有 `this` 存在，则表示这是一个“静态成员函数”。
+在上面的成员函数的例子中，参数列表中的第一个参数如果为 `this`(如果有 `this`，它也只能是第一个参数)，它表示该成员函数对应类型实例(This this)、或指向该实例的指针(This* this)，它是一个“实例成员函数”。如果成员函数参数列表中，没有 `this` 存在，则表示这是一个“静态成员函数”。
 ```c
 typedef struct {/*...*/} M;
 void M::f(M* this, int i) {} // 实例成员函数
 
 typedef struct {/*...*/} N;
-void N::f() {} // 静态成原函数
+void N::f() {} // 静态成员函数
 
 int main() {
     M x;
@@ -677,7 +687,7 @@ typedef MyS_T_int<T> = struct V<T, int>;
 
 int main() {
     Int64 a = 5;  //等价于int a = 5;
-    MyS s;        //等价于struct S<int> s = 5;
+    MyS s;        //等价于struct S<int> s;
     int b = 2;
     MyPointerType<int> c = &b;  //等价于int* c = &b;
     Array_3<int> d = {1,2,3};   //等价于int d[3] = {1,2,3};
@@ -2841,7 +2851,7 @@ void test(int a, int *owned b, int *c, struct S d) {
     int *borrow p8 = &const g;    //p8的被借用对象是g
 
     // 被借用对象是函数入参
-    int *borrow p9 = &mut a;      //p9的被借用对象是g
+    int *borrow p9 = &mut a;      //p9的被借用对象是a
     int *borrow p10 = &mut *b;    //p10的被借用对象是b
     int *borrow p11 = &mut *c;    //p11的被借用对象是c
     int *borrow p12 = &mut d.a;   //p12的被借用对象是d.a
@@ -2889,7 +2899,7 @@ void test() {
 在2.1中我们提到过，对于借用，我们有这样的生命周期约束：**借用变量的生命周期，不能比被借用对象的生命周期长**。
 举例来说：
 ```C
-//本例中，p的生命周期为[3,4]，被借用对象local的生命周期为[1,4]，满足生命周期约束
+//本例中，p的生命周期为[2,4]，被借用对象local的生命周期为[1,4]，满足生命周期约束
 void test1() {
     int local = 5;               //#1
     int *borrow p = &mut local;  //#2
@@ -2937,7 +2947,7 @@ void test4() {
     use(p);                     //#10
 }
 
-//本例中，p的生命周期为[3,4]，被借用对象x的生命周期为[1,3]，不满足生命周期约束，error
+//本例中，p的生命周期为[2,4]，被借用对象x的生命周期为[1,3]，不满足生命周期约束，error
 void test5() {
     int *owned x = safe_malloc<int>(5); //#1
     int *borrow p = &mut *x;           //#2

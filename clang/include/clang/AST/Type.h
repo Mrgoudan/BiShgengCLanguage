@@ -1030,6 +1030,7 @@ public:
     return withFastQualifiers(Qualifiers::Borrow);
   }
   bool isConstBorrow() const;
+  bool isConstPointee() const;
   QualType addConstBorrow(const ASTContext &Context);
   QualType removeConstForBorrow(const ASTContext &Context);
   bool hasBorrow() const;

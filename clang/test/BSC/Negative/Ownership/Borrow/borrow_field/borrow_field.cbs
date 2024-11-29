@@ -59,7 +59,7 @@ void test() {
   foo(p1->p); // expected-error {{memory leak because temporary variable 'foo(p1->p)' is owned or indirect owned type, please fix it}}
               // expected-error@-1 {{borrow type does not allow move ownership}}
   p2->f1(); // legal
-  p2->f2(); // expected-error {{incompatible borrow types, cannot cast 'const struct S *borrow' to 'struct S *borrow'}}
+  p2->f2(); // expected-error {{incompatible conversion from const type 'const struct S *borrow' to non-const type 'struct S *borrow' in member function call}}
   p1->f1(); // legal
   p1->f2(); // legal
 }

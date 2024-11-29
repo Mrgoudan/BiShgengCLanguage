@@ -54,7 +54,7 @@ int main() {
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:3, col:7> 'int (*)(enum E *)' <FunctionToPointerDecay>
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:7> 'int (enum E *)' lvalue .getA 0x{{[^ ]*}}
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'F':'enum E' lvalue Var 0x{{[^ ]*}} 'foo' 'F':'enum E'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:3> 'F *' prefix '&' cannot overflow
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:3> 'enum E *' prefix '&' cannot overflow
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'F':'enum E' lvalue Var 0x{{[^ ]*}} 'foo' 'F':'enum E'
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-20]]:3, col:20>
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:19> col:7 x 'int' cinit

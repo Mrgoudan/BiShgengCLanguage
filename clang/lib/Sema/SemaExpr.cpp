@@ -6370,6 +6370,71 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
   return false;
 }
 
+#if ENABLE_BSC
+void Sema::CheckMemberThisCallAccess(Expr *ActualArgExpr, QualType formalType) {
+  SourceLocation SL = ActualArgExpr->getBeginLoc();
+  QualType actualType = ActualArgExpr->getType(); // the type of actual param, as type of foo
+  if (actualType->isPointerType() && !formalType->isPointerType()) {
+    Diag(SL, diag::err_incompatible_pointer_cast) << actualType.getAsString() << formalType.getAsString();
+    return;
+  }
+  if ((!actualType.isOwnedQualified() && formalType.isOwnedQualified()) ||
+      (!actualType->isPointerType() && formalType->isPointerType() && formalType.isOwnedQualified())) {
+    Diag(SL, diag::err_incompatible_owned_cast) << actualType.getAsString() << formalType.getAsString();
+    return;
+  }
+  // pointer qualifiers have already been implicitly cast to non-qualified type, for example:
+  // ImplicitCastExpr 0xXX <col:XX> 'int *' <LValueToRValue>
+  // |       `-DeclRefExpr 0xXX <col:XX> 'int *const volatile' lvalue Var 0xXX 'p'
+  if (!actualType->isPointerType() && !formalType->isPointerType()) {
+    if (actualType.isConstQualified() && !formalType.isConstQualified()) {
+      Diag(SL, diag::err_incompatible_const_cast) << actualType.getAsString() << formalType.getAsString();
+      return;
+    }
+  }
+  if (!actualType->isPointerType() && formalType->isPointerType()) {
+    if (actualType.isConstQualified() && !formalType->getPointeeType().isConstQualified()) {
+      Diag(SL, diag::err_incompatible_const_cast) << actualType.getAsString() << formalType.getAsString();
+      return;
+    }
+  }
+  if (actualType->isPointerType() && formalType->isPointerType()) {
+    if (actualType->getPointeeType().isConstQualified() && !formalType->getPointeeType().isConstQualified()) {
+      Diag(SL, diag::err_incompatible_const_cast) << actualType.getAsString() << formalType.getAsString();
+      return;
+    }
+  }
+}
+
+bool Sema::CheckNeedCastQualifiedType(QualType actualType, QualType formalType) {
+  if (actualType->isPointerType() && formalType->isPointerType()) {
+    if (actualType.getCVRQualifiers() != formalType.getCVRQualifiers()) {
+      return true;
+    }
+    actualType = actualType->getPointeeType();
+    formalType = formalType->getPointeeType();
+  }
+  if (actualType.getCVRQualifiers() != formalType.getCVRQualifiers()) {
+      return true;
+  }
+  return false;
+}
+
+bool Sema::CheckNeedReborrowPointerType(QualType actualType, QualType formalType) {
+  if (!actualType->isPointerType() || !formalType->isPointerType()){
+    return false;
+  }
+  if (actualType.isOwnedQualified() && !formalType.isOwnedQualified()) {
+    return true;
+  }
+  if (!(actualType.isOwnedQualified() || actualType.isBorrowQualified()) &&
+      formalType.isBorrowQualified()) {
+    return true;
+  }
+  return false;
+}
+#endif
+
 bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
                                   const FunctionProtoType *Proto,
                                   unsigned FirstParam, ArrayRef<Expr *> Args,
@@ -6384,7 +6449,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
   bool Invalid = false;
   size_t ArgIx = 0;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // If the BSCMethod contains `this` parameter, the function is an instance
   // member function, It does not need to explicitly pass parameters when
   // calling, So we need to build an ast for `this` parameter.
@@ -6400,41 +6465,53 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       if (!Member)
         return true;
 
-      Expr *ImplicitArg = Member->getBase(); // parameter for foo->getA
+      Expr *ImplicitArg = Member->getBase(); // parameter for foo->getA, include actual param type
       if (!ImplicitArg)
         return true;
 
       const FunctionProtoType *FPT =
           dyn_cast<FunctionProtoType>(Member->getType());
-      QualType thisQPT = FPT->getParamType(0);
+      QualType thisQPT = FPT->getParamType(0); // the type of formal parameter, as type of this
+      CheckMemberThisCallAccess(ImplicitArg, thisQPT);
+      bool isNeedReborrow = CheckNeedReborrowPointerType(ImplicitArg->getType(), thisQPT);
       if (!Member->isArrow()) { // foo.getA
-        // When the first parameter `this` of member function is borrow qualified,
-        // add `&mut` or `&const` when desugaring.
-        UnaryOperator::Opcode UO =
-          thisQPT.isBorrowQualified() ? (thisQPT.isConstBorrow() ? UO_AddrConst : UO_AddrMut) : UO_AddrOf;
-        ImplicitArg = UnaryOperator::Create(
-          this->Context, ImplicitArg, UO,
-          this->Context.getPointerType(ImplicitArg->getType()), VK_PRValue,
-          OK_Ordinary, SourceLocation(), false,
-          this->CurFPFeatureOverrides());
+        if (thisQPT->isPointerType()) {
+          // When the first parameter `this` of member function is pointer,
+          // add `&mut` or `&const` when desugaring.
+          UnaryOperator::Opcode UO =
+            thisQPT.isBorrowQualified() ? (thisQPT.isConstBorrow() ? UO_AddrConst : UO_AddrMut) : UO_AddrOf;
+          ImplicitArg = UnaryOperator::Create(
+              this->Context, ImplicitArg, UO, FPT->getParamType(0), VK_PRValue,
+              OK_Ordinary, SourceLocation(), false,
+              this->CurFPFeatureOverrides());
+        } else {
+          ImplicitArg = ImplicitCastExpr::Create(
+            this->Context, ImplicitArg->getType(), CK_NoOp, ImplicitArg,
+            nullptr, VK_PRValue, this->CurFPFeatureOverrides());
+        }
       }
-
-      auto typeQual = thisQPT.getTypePtr()->getPointeeType().getCVRQualifiers();
-      if (typeQual & Qualifiers::Const || typeQual & Qualifiers::Volatile || thisQPT.isBorrowQualified()) {
-        ImplicitCastExpr *Implict = ImplicitCastExpr::Create(
+      if (isNeedReborrow) {
+        UnaryOperator::Opcode UO = thisQPT->getPointeeType().isConstQualified()
+                                       ? UO_AddrConstDeref : UO_AddrMutDeref;
+        ImplicitArg = UnaryOperator::Create(
+            this->Context, ImplicitArg, UO, FPT->getParamType(0), VK_PRValue,
+            OK_Ordinary, SourceLocation(), false,
+            this->CurFPFeatureOverrides());
+      }
+      bool isNeedCast = CheckNeedCastQualifiedType(ImplicitArg->getType(), thisQPT);
+      if (isNeedCast) {
+        ImplicitArg = ImplicitCastExpr::Create(
             this->Context, FPT->getParamType(0), CK_NoOp, ImplicitArg, nullptr,
             VK_PRValue, FPOptionsOverride());
-        AllArgs.push_back(Implict);
-      } else {
-        AllArgs.push_back(ImplicitArg);
-      }
+      } 
+      AllArgs.push_back(ImplicitArg);
       // Set desugar flag true after push_back the arg.
       Callee->IsDesugaredBSCMethodCall = true;
       FirstParam = FirstParam + 1;
     }
   }
-  #endif
-
+#endif
+  
   // Continue to check argument types (even if we have too few/many args).
   for (unsigned i = FirstParam; i < NumParams; i++) {
     QualType ProtoArgType = Proto->getParamType(i);
@@ -6443,7 +6520,7 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     ParmVarDecl *Param = FDecl ? FDecl->getParamDecl(i) : nullptr;
     if (ArgIx < Args.size()) {
       Arg = Args[ArgIx++];
-      #if ENABLE_BSC
+#if ENABLE_BSC
       if (getLangOpts().BSC && TryDesugarTrait(ProtoArgType) &&
           !TryDesugarTrait(Arg->IgnoreParenCasts()->getType())) {
         Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(

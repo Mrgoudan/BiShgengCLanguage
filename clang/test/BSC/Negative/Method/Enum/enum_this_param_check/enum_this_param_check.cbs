@@ -5,5 +5,5 @@ enum E {
     X4
 };
 
-int enum E::getA(enum E this); // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'enum E*', but found 'enum E'}}
+int enum E::getA(int this); // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'This' or 'enum E*' or 'enum E', but found 'int'}}
 

@@ -14,9 +14,14 @@ int enum E::getA(enum E* this) {
   return X4;
 }
 
+int enum E::getB(enum E this) {
+  return X4;
+}
+
 int main() {
   enum E foo = X3; 
   foo.getA();
+  foo.getB();
   return 0;
 }
 
@@ -24,8 +29,13 @@ int main() {
 // CHECK-NEXT:   return X4;
 // CHECK-NEXT: }
 
+// CHECK: int enum_E_getB(enum E this) {
+// CHECK-NEXT:   return X4;
+// CHECK-NEXT: }
+
 // CHECK: int main(void) {
 // CHECK:   enum E foo = X3;
 // CHECK-NEXT:   enum_E_getA(&foo);
+// CHECK-NEXT:   enum_E_getB(foo);
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

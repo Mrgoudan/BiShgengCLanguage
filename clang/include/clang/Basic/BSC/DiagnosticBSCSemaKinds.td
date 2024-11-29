@@ -2,8 +2,18 @@
 def note_no_this_parameter : Note<"found the following member function %0 which doesn't have a 'this' parameter">;
 def err_no_instance_member : Error<
   "no instance member named %0 in %1; did you mean to use '::' instead of '%select{.|->}2'?">;
+def err_cvrqualified_member_type_unsupported : Error<
+  "type of member function is wrong, CVR qualified type is unsupported, but found '%0'">;
+def err_cvrqualified_this_type_unsupported : Error<
+  "owned type requires a pointer, '%0' is invalid">;
 def err_this_type_unsupported : Error<
-  "type of parameter 'this' is wrong, expected 'This*' or '%0*', but found '%1'">;
+  "type of parameter 'this' is wrong, expected 'This*' or 'This' or '%0*' or '%0', but found '%1'">;
+def err_incompatible_pointer_cast : Error< 
+  "incompatible conversion from pointer type '%0' to non-pointer type '%1' in member function call">;
+def err_incompatible_const_cast : Error< 
+  "incompatible conversion from const type '%0' to non-const type '%1' in member function call">;
+def err_incompatible_owned_cast : Error< 
+  "incompatible conversion from non owned type '%0' to owned type '%1' in member function call">;
 
 // BSC attributes warnings and errors.
 def warn_attribute_no_pointers : Warning<

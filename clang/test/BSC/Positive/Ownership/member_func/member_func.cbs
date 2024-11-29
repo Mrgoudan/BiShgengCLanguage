@@ -41,28 +41,22 @@ int main() {
     struct S s1;
     s1.foo1();
     s1.foo2();
-    s1.foo3();
     struct S s2;
     s2.foo4();
     s2.foo5();
-    s2.foo6();
 
     struct G<int> g1;
     g1.foo1();
     g1.foo2();
-    g1.foo3();
     struct G<int> g2;
     g2.foo4();
     g2.foo5();
-    g2.foo6();
 
     int a1 = 5;
     a1.foo1();
     a1.foo2();
-    a1.foo3();
     int a2 = 5;
     a2.foo4();
     a2.foo5();
-    a2.foo6();
     return 0;
 }

@@ -1029,18 +1029,6 @@ MemberExpr *Sema::BuildMemberExpr(
     const TemplateArgumentListInfo *TemplateArgs) {
   assert((!IsArrow || Base->isPRValue()) &&
          "-> base must be a pointer prvalue");
-  #if ENABLE_BSC
-  if (getLangOpts().BSC && IsArrow && Base->getType().isConstBorrow()) {
-    const auto *BMD = dyn_cast_or_null<BSCMethodDecl>(Member);
-    const auto *FPT = dyn_cast_or_null<FunctionProtoType>(Ty);
-    if (BMD && FPT) {
-      if (BMD->getHasThisParam() && FPT->getNumParams() > 0 &&
-          !FPT->getParamType(0).isConstBorrow())
-        Diag(OpLoc, diag::err_borrow_qualcheck_incompatible)
-             << Base->getType() << FPT->getParamType(0);
-    }
-  }
-  #endif
   MemberExpr *E =
       MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS, TemplateKWLoc,
                          Member, FoundDecl, MemberNameInfo, TemplateArgs, Ty,

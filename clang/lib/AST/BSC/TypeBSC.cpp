@@ -304,6 +304,16 @@ bool QualType::isConstBorrow() const {
   return false;
 }
 
+bool QualType::isConstPointee() const {
+  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
+  while (QT->isPointerType()) {
+      QT = QT->getPointeeType();
+  }
+  if (QT.isLocalConstQualified())
+      return true;
+  return false;
+}
+
 QualType QualType::addConstBorrow(const ASTContext &Context) {
   SmallVector<unsigned, 4> Qualifiers;
   int PointerNum = 0;
