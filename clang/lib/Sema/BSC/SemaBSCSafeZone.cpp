@@ -231,6 +231,13 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
     return true;
   }
 
+  // Init a owned or borrow pointer by nullptr is allowed in the safe zone
+  if ((DestType.isOwnedQualified() && DestType->isPointerType()) ||
+      DestType.isBorrowQualified()) {
+    if (isa<CXXNullPtrLiteralExpr>(Expr))
+      return true;
+  }
+
   bool IsSafeBehavior = true;
   QualType SrcType = Expr->getType();
   if (IsTraitExpr(Expr)) {

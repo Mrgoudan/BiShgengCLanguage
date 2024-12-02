@@ -498,6 +498,7 @@ private:
   #if ENABLE_BSC
   unsigned NumOwnershipErrors;
   unsigned NumBorrowCheckErrors;
+  unsigned NumNullabilityCheckErrors;
   #endif
 
   /// A function pointer that converts an opaque diagnostic
@@ -871,6 +872,10 @@ public:
   void increaseBorrowCheckErrors() {
     NumBorrowCheckErrors++;
   }
+  unsigned getNumNullabilityCheckErrors() const {
+    return NumNullabilityCheckErrors;
+  }
+  void increaseNullabilityCheckErrors() { NumNullabilityCheckErrors++; }
   #endif
 
   /// Return an ID for a diagnostic with the specified format string and

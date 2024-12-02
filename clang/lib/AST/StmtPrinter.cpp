@@ -2301,7 +2301,12 @@ void StmtPrinter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *Node) {
 }
 
 void StmtPrinter::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *Node) {
-  OS << "nullptr";
+#if ENABLE_BSC
+  if (Policy.RewriteBSC)
+    OS << "0";
+  else
+#endif
+    OS << "nullptr";
 }
 
 void StmtPrinter::VisitCXXThisExpr(CXXThisExpr *Node) {

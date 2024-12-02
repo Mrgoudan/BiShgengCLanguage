@@ -191,3 +191,15 @@ def err_use_expired_borrow_var : Error<
 
 // BSC operator overload errors.
 def err_unsupport_overload_fun : Error<"function unsupport overload">;
+
+// BSC Pointer Nullability Check errors.
+def err_nullable_pointer_dereference : Error<
+  "nullable pointer cannot be dereferenced">;
+def err_pass_nullable_argument : Error<
+  "cannot pass nullable pointer argument">;
+def err_return_nullable : Error<
+  "cannot return nullable pointer type">;
+def err_nullable_pointer_access_member : Error<
+  "cannot access member througn nullable pointer">;
+def err_nonnull_assigned_by_nullable : Error<
+  "nonnull pointer cannot be assigned by nullable pointer">;

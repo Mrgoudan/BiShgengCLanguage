@@ -142,6 +142,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
   #if ENABLE_BSC
   NumOwnershipErrors = 0;
   NumBorrowCheckErrors = 0;
+  NumNullabilityCheckErrors = 0;
   #endif
   TrapNumErrorsOccurred = 0;
   TrapNumUnrecoverableErrorsOccurred = 0;

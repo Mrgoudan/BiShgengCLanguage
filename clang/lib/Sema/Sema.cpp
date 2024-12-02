@@ -2213,19 +2213,23 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
 
   #if ENABLE_BSC
   bool DisableOwnershipCheck = getLangOpts().DisableOwnershipCheck;
+  bool DisableNullabilityCheck = getLangOpts().DisableNullabilityCheck;
   // If D does not use memory safety features like "owned, borrow, &mut, &const",
   // we do not do borrow checking.
   bool useSafeFeature = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
-  if (!DisableOwnershipCheck && useSafeFeature) {
+  if (!(DisableNullabilityCheck && DisableOwnershipCheck) && useSafeFeature) {
     if (!isBSCCoroutine &&
         (getDiagnostics().getNumErrors() ==
-         getDiagnostics().getNumOwnershipErrors() + getDiagnostics().getNumBorrowCheckErrors()) &&
+         getDiagnostics().getNumOwnershipErrors() +
+             getDiagnostics().getNumBorrowCheckErrors() +
+             getDiagnostics().getNumNullabilityCheckErrors()) &&
         D)
       if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D)) {
         auto md = dyn_cast_or_null<BSCMethodDecl>(D);
         // Don't check ownership rules of destructor parameters
         if (!md || !md->isDestructor())
-          CheckBSCOwnership(D);
+          BSCDataflowAnalysis(D, DisableOwnershipCheck,
+                              DisableNullabilityCheck);
       }
   }
 #endif

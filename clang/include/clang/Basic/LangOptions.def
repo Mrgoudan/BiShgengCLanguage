@@ -261,6 +261,7 @@ LANGOPT(HLSL, 1, 0, "HLSL")
 #if ENABLE_BSC
 LANGOPT(BSC, 1, 0, "BSC")
 LANGOPT(DisableOwnershipCheck, 1, 0, "disable ownership check")
+LANGOPT(DisableNullabilityCheck, 1, 0, "disable nullability check")
 #endif
 ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, "HLSL Version")
 

@@ -12385,7 +12385,8 @@ public:
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
-  void CheckBSCOwnership(const Decl *D);
+  void BSCDataflowAnalysis(const Decl *D, bool DisableOwnershipCheck = false,
+                           bool DisableNullabilityCheck = false);
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);

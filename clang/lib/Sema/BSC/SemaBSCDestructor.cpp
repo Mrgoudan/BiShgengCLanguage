@@ -743,7 +743,7 @@ void Sema::DesugarDestructor(RecordDecl *RD) {
     return;
   std::stack<FieldDecl *> Fields = CollectInstanceFieldWithDestructor(RD);
   HandleBSCDestructorBody(RD, Destructor, Fields);
-  CheckBSCOwnership(Destructor);
+  BSCDataflowAnalysis(Destructor);
 }
 
 void Sema::CheckBSCDestructorDeclarator(FunctionDecl *NewFD) {

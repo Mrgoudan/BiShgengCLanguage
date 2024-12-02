@@ -13,9 +13,13 @@
 
 #if ENABLE_BSC
 
+#include "clang/AST/BSC/WalkerBSC.h"
+#include "clang/Analysis/Analyses/BSCBorrowCheck.h"
+#include "clang/Analysis/Analyses/BSCNullabilityCheck.h"
+#include "clang/Analysis/Analyses/BSCOwnership.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
-#include "clang/AST/BSC/WalkerBSC.h"
 
 using namespace clang;
 using namespace sema;
@@ -154,5 +158,45 @@ bool Sema::FindSafeFeatures(const FunctionDecl* FnDecl) {
     return true;
   }
   return false;
+}
+
+void Sema::BSCDataflowAnalysis(const Decl *D, bool DisableOwnershipCheck,
+                               bool DisableNullabilityCheck) {
+  AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
+
+  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
+  AC.getCFGBuildOptions().AddEHEdges = false;
+  AC.getCFGBuildOptions().AddInitializers = true;
+  AC.getCFGBuildOptions().AddImplicitDtors = true;
+  AC.getCFGBuildOptions().AddTemporaryDtors = true;
+  AC.getCFGBuildOptions().AddScopes = true;
+  AC.getCFGBuildOptions().AddAllScopes = true;
+  AC.getCFGBuildOptions().setAllAlwaysAdd();
+
+  if (AC.getCFG()) {
+    const FunctionDecl *FD = cast<FunctionDecl>(D);
+    unsigned NumNullabilityCheckErrorsInCurrFD = 0;
+    if (!DisableNullabilityCheck && FD->getSafeZoneSpecifier() == SZ_Safe) {
+      NullabilityCheckDiagReporter NullabilityCheckReporter(*this);
+      runNullabilityCheck(*FD, *AC.getCFG(), AC, NullabilityCheckReporter,
+                          Context);
+      NullabilityCheckReporter.flushDiagnostics();
+      NumNullabilityCheckErrorsInCurrFD =
+          NullabilityCheckReporter.getNumErrors();
+    }
+    // Run ownership analysis when there is no nullability errors in current
+    // function.
+    if (!DisableOwnershipCheck && !NumNullabilityCheckErrorsInCurrFD) {
+      OwnershipDiagReporter OwnershipReporter(*this);
+      runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter);
+      OwnershipReporter.flushDiagnostics();
+      // Run borrow check when there is no other ownership errors in current
+      // function.
+      if (!OwnershipReporter.getNumErrors()) {
+        BorrowCheckDiagReporter BorrowCheckReporter(*this);
+        runBorrowCheck(*FD, *AC.getCFG(), BorrowCheckReporter, Context);
+      }
+    }
+  }
 }
 #endif

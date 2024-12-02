@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangAnalysis
   AnalysisDeclContext.cpp
   BodyFarm.cpp
+  BSCNullabilityCheck.cpp
   BSCOwnership.cpp
   BSCBorrowCheck.cpp
   CalledOnceCheck.cpp

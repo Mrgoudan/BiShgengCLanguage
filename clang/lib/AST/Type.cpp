@@ -3222,8 +3222,16 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   //
   // See also C99 6.3.2.1p2.
   if (!Context.getLangOpts().CPlusPlus ||
-      (!getTypePtr()->isDependentType() && !getTypePtr()->isRecordType()))
+      (!getTypePtr()->isDependentType() && !getTypePtr()->isRecordType())) {
+#if ENABLE_BSC
+    if (Context.getLangOpts().BSC)
+      if (const AttributedType *AT =
+              dyn_cast<AttributedType>(this->getTypePtr()))
+        return Context.getAttributedType(
+            AT->getAttrKind(), getUnqualifiedType(), getUnqualifiedType());
+#endif
     return getUnqualifiedType();
+  }
 
   return *this;
 }

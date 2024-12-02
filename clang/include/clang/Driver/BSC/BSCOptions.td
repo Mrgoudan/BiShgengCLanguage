@@ -6,3 +6,5 @@ def rewrite_bsc_line : Flag<["-"], "line">, Flags<[CC1Option]>,
   HelpText<"Insert line info when rewrite BSC">;
 def disable_ownership_check : Flag<["-"], "disable-ownership-check">, Flags<[CC1Option]>,
   HelpText<"Disable ownership check">, MarshallingInfoFlag<LangOpts<"DisableOwnershipCheck">>;
+def disable_nullability_check : Flag<["-"], "disable-nullability-check">, Flags<[CC1Option]>,
+  HelpText<"Disable Nullability Check">, MarshallingInfoFlag<LangOpts<"DisableNullabilityCheck">>;

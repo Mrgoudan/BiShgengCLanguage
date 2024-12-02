@@ -13356,6 +13356,11 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     }
   }
 
+#if ENABLE_BSC
+  if (getLangOpts().BSC && LHSType->isPointerType() && RHSType->isNullPtrType())
+    return computeResultTy();
+#endif
+
   return InvalidOperands(Loc, LHS, RHS);
 }
 

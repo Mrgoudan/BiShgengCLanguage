@@ -401,12 +401,13 @@ CXX11_KEYWORD(char16_t              , KEYNOMS18)
 CXX11_KEYWORD(char32_t              , KEYNOMS18)
 #if ENABLE_BSC
 CXX11_KEYWORD(constexpr             , KEYBSC)
+CXX11_KEYWORD(nullptr               , KEYBSC)
 #else
 CXX11_KEYWORD(constexpr             , 0)
+CXX11_KEYWORD(nullptr               , 0)
 #endif
 CXX11_KEYWORD(decltype              , 0)
 CXX11_KEYWORD(noexcept              , 0)
-CXX11_KEYWORD(nullptr               , 0)
 CXX11_KEYWORD(static_assert         , KEYMSCOMPAT)
 CXX11_KEYWORD(thread_local          , 0)
 

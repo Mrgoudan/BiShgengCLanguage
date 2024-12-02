@@ -1309,7 +1309,9 @@ void NLLCalculator::VisitDeclStmt(DeclStmt *DS) {
         // @endcode
         if (isa<RecordType>(VQT->getPointeeType())) {
           // If InitExpr is not CallExpr Or ConditionalOperator, this borrow pointer must have only one target.
-          if (!(isa<CallExpr>(VD->getInit()) || isa<ConditionalOperator>(VD->getInit())))
+          if (!(isa<CallExpr>(VD->getInit()) ||
+                isa<ConditionalOperator>(VD->getInit())) &&
+              Targets.size() == 1)
             UpdateTargetOfFieldsOfBorrowStruct(BorrowTargetInfo(VD), Targets[0]);
         }
       } else if (IsStructAndHasBorrowFields(VQT)) {

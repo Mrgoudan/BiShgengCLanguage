@@ -266,6 +266,12 @@ public:
     Entity.Kind = EK_Parameter;
     Entity.Type =
       Context.getVariableArrayDecayedType(Type.getUnqualifiedType());
+#if ENABLE_BSC
+    if (Context.getLangOpts().BSC)
+      if (const AttributedType *AT = Type->getAs<AttributedType>())
+        Entity.Type = Context.getAttributedType(AT->getAttrKind(), Entity.Type,
+                                                Entity.Type);
+#endif
     Entity.Parent = nullptr;
     Entity.Parameter = {Parm, Consumed};
     return Entity;

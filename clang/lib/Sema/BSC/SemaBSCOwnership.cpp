@@ -14,9 +14,6 @@
 #if ENABLE_BSC
 
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/BSCOwnership.h"
-#include "clang/Analysis/Analyses/BSCBorrowCheck.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
@@ -163,6 +160,11 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
     IsLiteral = true;
   }
   SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+  // Owned pointer can be inited by nullptr.
+  if (LHSCanType.isOwnedQualified() && LHSCanType->isPointerType() &&
+      isa<CXXNullPtrLiteralExpr>(RHSExpr))
+    return true;
+
   bool Res = true;
 
   // unOwned to owned initialize cases:
@@ -225,30 +227,6 @@ bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
     return true;
   }
   return false;
-}
-
-void Sema::CheckBSCOwnership(const Decl *D) {
-  AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
-
-  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
-  AC.getCFGBuildOptions().AddEHEdges = false;
-  AC.getCFGBuildOptions().AddInitializers = true;
-  AC.getCFGBuildOptions().AddImplicitDtors = true;
-  AC.getCFGBuildOptions().AddTemporaryDtors = true;
-  AC.getCFGBuildOptions().AddScopes = true;
-  AC.getCFGBuildOptions().AddAllScopes = true;
-  AC.getCFGBuildOptions().setAllAlwaysAdd();
-
-  OwnershipDiagReporter Reporter(*this);
-  if (AC.getCFG()) {
-    runOwnershipAnalysis(*cast<FunctionDecl>(D), *AC.getCFG(), AC, Reporter);
-    Reporter.flushDiagnostics();
-    // Run borrow check when there is no other ownership errors in current function.
-    if (!Reporter.getNumErrors()) {
-      BorrowCheckDiagReporter BorrowCheckReporter(*this);
-      runBorrowCheck(*cast<FunctionDecl>(D), *AC.getCFG(), BorrowCheckReporter, Context);
-    }
-  }
 }
 
 void Sema::CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL) {
@@ -355,6 +333,11 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
         }
       }
     }
+
+    // Borrow pointer can be inited by nullptr.
+    if (LHSCanType.isBorrowQualified() && isa<CXXNullPtrLiteralExpr>(RHSExpr))
+      return true;
+
     if (LHSCanType->isVoidPointerType()) {
       if (LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified())
         return true;

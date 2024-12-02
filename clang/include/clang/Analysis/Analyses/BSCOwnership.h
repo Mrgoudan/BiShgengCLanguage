@@ -31,7 +31,7 @@ class CFG;
 class CFGBlock;
 class Stmt;
 class DeclRefExpr;
-class DiagInfo;
+class OwnershipDiagInfo;
 class SourceManager;
 
 class Ownership : public ManagedAnalysis {
@@ -81,57 +81,51 @@ public:
     void setToOwned(const VarDecl *VD);
     void setToMoved(const Expr *E);
 
-    llvm::SmallVector<DiagInfo, 3> checkOPSUse(const VarDecl *VD,
-                                               const SourceLocation &Loc,
-                                               bool isGetAddr,
-                                               bool isStar = false);
-    llvm::SmallVector<DiagInfo, 3> checkOPSFieldUse(const VarDecl *VD,
-                                                    const SourceLocation &Loc,
-                                                    std::string fullFieldName,
-                                                    bool isGetAddr);
-    llvm::SmallVector<DiagInfo, 3> checkOPSAssign(const VarDecl *VD,
-                                                  const SourceLocation &Loc);
-    llvm::SmallVector<DiagInfo, 3> checkOPSAssignStar(const VarDecl *VD,
-                                                  const SourceLocation &Loc);
-    llvm::SmallVector<DiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkOPSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr,
+                bool isStar = false);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkOPSFieldUse(const VarDecl *VD, const SourceLocation &Loc,
+                     std::string fullFieldName, bool isGetAddr);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkOPSAssign(const VarDecl *VD, const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkOPSAssignStar(const VarDecl *VD, const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
     checkOPSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
                         std::string fullFieldName);
 
-    llvm::SmallVector<DiagInfo, 3> checkSUse(const VarDecl *VD,
-                                             const SourceLocation &Loc,
-                                             bool isGetAddr);
-    llvm::SmallVector<DiagInfo, 3> checkSFieldUse(const VarDecl *VD,
-                                                  const SourceLocation &Loc,
-                                                  std::string fullFieldName,
-                                                  bool isGetAddr);
-    llvm::SmallVector<DiagInfo, 3> checkSAssign(const VarDecl *VD,
-                                                const SourceLocation &Loc);
-    llvm::SmallVector<DiagInfo, 3> checkSFieldAssign(const VarDecl *VD,
-                                                     const SourceLocation &Loc,
-                                                     std::string fullFieldName);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkSFieldUse(const VarDecl *VD, const SourceLocation &Loc,
+                   std::string fullFieldName, bool isGetAddr);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkSAssign(const VarDecl *VD, const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
+                      std::string fullFieldName);
 
-    llvm::SmallVector<DiagInfo, 3> checkBOPUse(const VarDecl *VD,
-                                               const SourceLocation &Loc,
-                                               bool isGetAddr);
-    llvm::SmallVector<DiagInfo, 3> checkBOPFieldUse(const VarDecl *VD,
-                                                    const SourceLocation &Loc,
-                                                    std::string fullFieldName,
-                                                    bool isGetAddr);
-    llvm::SmallVector<DiagInfo, 3> checkBOPAssign(const VarDecl *VD,
-                                                  const SourceLocation &Loc);
-    llvm::SmallVector<DiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkBOPUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkBOPFieldUse(const VarDecl *VD, const SourceLocation &Loc,
+                     std::string fullFieldName, bool isGetAddr);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkBOPAssign(const VarDecl *VD, const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
     checkBOPFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
                         std::string fullFieldName);
 
-    llvm::SmallVector<DiagInfo, 3> checkCastOPS(const VarDecl *VD,
-                                                const SourceLocation &Loc);
-    llvm::SmallVector<DiagInfo, 3> checkCastBOP(const VarDecl *VD,
-                                                const SourceLocation &Loc);
-    llvm::SmallVector<DiagInfo, 3> checkCastField(const VarDecl *VD,
-                                                  const SourceLocation &Loc,
-                                                  std::string fullFieldName);
-    llvm::SmallVector<DiagInfo, 3> checkMemoryLeak(const VarDecl *VD,
-                                                   const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkCastOPS(const VarDecl *VD, const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkCastBOP(const VarDecl *VD, const SourceLocation &Loc);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkCastField(const VarDecl *VD, const SourceLocation &Loc,
+                   std::string fullFieldName);
+    llvm::SmallVector<OwnershipDiagInfo, 3>
+    checkMemoryLeak(const VarDecl *VD, const SourceLocation &Loc);
 
     OwnershipStatus()
         : OPSStatus(0), OPSAllOwnedFields(0), OPSOwnedOwnedFields(0),
@@ -165,7 +159,7 @@ public:
   };
 };
 
-enum DiagKind {
+enum OwnershipDiagKind {
   InvalidUseOfMoved,
   InvalidUseOfPartiallyMoved,
   InvalidUseOfAllMoved,
@@ -187,28 +181,30 @@ enum DiagKind {
   MemoryLeak,
 };
 
-class DiagInfo {
+class OwnershipDiagInfo {
 public:
   SourceLocation Loc;
-  DiagKind Kind;
+  OwnershipDiagKind Kind;
   std::string Name;
   std::string Fields;
   SourceLocation Location;
 
-  DiagInfo(SourceLocation Loc, DiagKind Kind, std::string Name)
+  OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
+                    std::string Name)
       : Loc(Loc), Kind(Kind), Name(Name), Fields(""),
         Location(SourceLocation()) {}
 
-  DiagInfo(SourceLocation Loc, DiagKind Kind, std::string Name,
-           std::string fields)
+  OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
+                    std::string Name, std::string fields)
       : Loc(Loc), Kind(Kind), Name(Name), Fields(fields),
         Location(SourceLocation()) {}
 
-  DiagInfo(SourceLocation Loc, DiagKind Kind, std::string Name,
-           std::string fields, SourceLocation location)
+  OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
+                    std::string Name, std::string fields,
+                    SourceLocation location)
       : Loc(Loc), Kind(Kind), Name(Name), Fields(fields), Location(location) {}
 
-  bool operator==(const DiagInfo &other) const {
+  bool operator==(const OwnershipDiagInfo &other) const {
     return Loc == other.Loc && Kind == other.Kind && Name == other.Name &&
            Fields == other.Fields && Location == other.Location;
   }
@@ -216,18 +212,18 @@ public:
 
 class OwnershipDiagReporter {
   Sema &S;
-  std::vector<DiagInfo> DIV;
+  std::vector<OwnershipDiagInfo> DIV;
 
 public:
   OwnershipDiagReporter(Sema &S) : S(S) {}
 
-  void addDiags(llvm::SmallVector<DiagInfo, 3> &diags) {
+  void addDiags(llvm::SmallVector<OwnershipDiagInfo, 3> &diags) {
     for (auto it = diags.begin(), ei = diags.end(); it != ei; ++it) {
       addDiagInfo(*it);
     }
   }
 
-  void addDiagInfo(DiagInfo &DI) {
+  void addDiagInfo(OwnershipDiagInfo &DI) {
     for (auto it = DIV.begin(), ei = DIV.end(); it != ei; ++it) {
       if (DI == *it)
         return;
@@ -239,12 +235,13 @@ public:
     // Sort the diag info by SourceLocation. While not strictly
     // guaranteed to produce them in line/column order, this will provide
     // a stable ordering.
-    std::sort(
-        DIV.begin(), DIV.end(), [this](const DiagInfo &a, const DiagInfo &b) {
-          return S.getSourceManager().isBeforeInTranslationUnit(a.Loc, b.Loc);
-        });
+    std::sort(DIV.begin(), DIV.end(),
+              [this](const OwnershipDiagInfo &a, const OwnershipDiagInfo &b) {
+                return S.getSourceManager().isBeforeInTranslationUnit(a.Loc,
+                                                                      b.Loc);
+              });
 
-    for (const DiagInfo &DI : DIV) {
+    for (const OwnershipDiagInfo &DI : DIV) {
       switch (DI.Kind) {
       case InvalidUseOfMoved:
         S.Diag(DI.Loc, diag::err_ownership_use_moved) << DI.Name;
