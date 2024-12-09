@@ -27,11 +27,11 @@ int main() {
   return a - 2;
 }
 
-// CHECK:      struct S{
+// CHECK:      typedef struct S MyS;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S{
 // CHECK-NEXT:   int x;
 // CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef struct S MyS;
 // CHECK-EMPTY:
 // CHECK-NEXT: struct __Trait_F_Vtable_int {
 // CHECK-NEXT:   int (*foo)(void *, int);

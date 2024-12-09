@@ -25,24 +25,24 @@ int main() {
   return 0;
 }
 
-// CHECK: struct __Trait_F_Vtable_int {
-// CHECK-NEXT: int (*f)(void *);
+// CHECK:      struct __Trait_F_Vtable_int {
+// CHECK-NEXT:   int (*f)(void *);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_F_int {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_F_Vtable_int *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_int {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_F_Vtable_int *vtable;
 // CHECK-NEXT: };
-
-// CHECK: int int_f(int *this) {
-// CHECK-NEXT: return 1;
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_f(int *this) {
+// CHECK-NEXT:   return 1;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_F_Vtable_int __int_trait_F = {.f = (int (*)(void *))int_f};
-
-// CHECK: int main(void) {
-// CHECK-NEXT: int x = 1;
-// CHECK-NEXT: struct __Trait_F_int t = {&x, &__int_trait_F};
-// CHECK-NEXT: t.vtable->f(t.data);
-// CHECK-NEXT: return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Vtable_int __int_trait_F = {.f = (int (*)(void *))int_f};
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int x = 1;
+// CHECK-NEXT:   struct __Trait_F_int t = {&x, &__int_trait_F};
+// CHECK-NEXT:   t.vtable->f(t.data);
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }

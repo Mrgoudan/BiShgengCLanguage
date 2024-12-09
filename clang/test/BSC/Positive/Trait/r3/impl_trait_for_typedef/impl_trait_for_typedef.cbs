@@ -27,7 +27,9 @@ int main() {
   return 0;
 }
 
-// CHECK:      struct __Trait_F_Vtable {
+// CHECK:      typedef struct S MyS;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Vtable {
 // CHECK-NEXT:   int (*foo)(void *, int);
 // CHECK-NEXT: };
 // CHECK-EMPTY:
@@ -49,8 +51,6 @@ int main() {
 // CHECK-NEXT: struct S{
 // CHECK-NEXT:   int x;
 // CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef struct S MyS;
 // CHECK-EMPTY:
 // CHECK-NEXT: int struct_S_foo(struct S *this, int a) {
 // CHECK-NEXT:   return this->x + a;

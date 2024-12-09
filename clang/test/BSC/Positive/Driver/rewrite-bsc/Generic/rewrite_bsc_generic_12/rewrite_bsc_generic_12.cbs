@@ -72,31 +72,31 @@ int case6() {
 int main() { return 0; }
 
 
-// CHECK: struct A_int {
-// CHECK-NEXT:     int value;
-// CHECK-NEXT: };
+// CHECK:      typedef struct D D;
 // CHECK-EMPTY:
-// CHECK-NEXT: struct B {
-// CHECK-NEXT:     struct A_int a;
+// CHECK-NEXT: typedef struct _TD_E E;
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef struct A_int *(d)(void);
+// CHECK-EMPTY:
+// CHECK-NEXT: struct A_int {
+// CHECK-NEXT:   int value;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct C {
-// CHECK-NEXT:     struct A_int *a;
+// CHECK-NEXT:   struct A_int *a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct D {
-// CHECK-NEXT:     struct A_int *a;
+// CHECK-NEXT:   struct A_int *a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: typedef struct D D;
-// CHECK-EMPTY:
-// CHECK-NEXT: struct E {
-// CHECK-NEXT:     struct A_int *a;
+// CHECK-NEXT: struct _TD_E {
+// CHECK-NEXT:   struct A_int *a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: typedef struct E E;
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef struct A_int *(d)(void);
+// CHECK-NEXT: struct B {
+// CHECK-NEXT:   struct A_int a;
+// CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct A_int a;
 // CHECK-EMPTY:

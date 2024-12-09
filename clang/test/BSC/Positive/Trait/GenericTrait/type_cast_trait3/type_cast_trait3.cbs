@@ -37,34 +37,34 @@ int main() {
   return f->foo();
 }
 
-// CHECK: struct __Trait_F_Vtable_int {
-// CHECK-NEXT: int (*foo)(void *);
+// CHECK:      struct __Trait_F_Vtable_int {
+// CHECK-NEXT:   int (*foo)(void *);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_F_int {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_F_Vtable_int *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_int {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_F_Vtable_int *vtable;
 // CHECK-NEXT: };
-
-// CHECK: int int_foo(int *this) {
-// CHECK-NEXT: return 0;
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_foo(int *this) {
+// CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_F_Vtable_int __int_trait_F = {.foo = (int (*)(void *))int_foo};
-
-// CHECK: void baz(struct __Trait_F_int f) {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Vtable_int __int_trait_F = {.foo = (int (*)(void *))int_foo};
+// CHECK-EMPTY:
+// CHECK-NEXT: void baz(struct __Trait_F_int f) {
 // CHECK-NEXT:     f.vtable->foo(f.data);
 // CHECK-NEXT: }
-
-// CHECK: int main(void) {
-// CHECK-NEXT: int a = 1;
-// CHECK-NEXT: baz((struct __Trait_F_int){.data = &a, .vtable = &__int_trait_F});
-// CHECK-NEXT: baz((struct __Trait_F_int){.data = &a, .vtable = &__int_trait_F});
-// CHECK-NEXT: struct __Trait_F_int tr1 = {&a, &__int_trait_F};
-// CHECK-NEXT: baz(tr1);
-// CHECK-NEXT: struct __Trait_F_int tr2 = {&a, &__int_trait_F};
-// CHECK-NEXT: baz(tr2);
-// CHECK-NEXT: (struct __Trait_F_int){&a, &__int_trait_F}.vtable->foo((struct __Trait_F_int){&a, &__int_trait_F}.data);
-// CHECK-NEXT: struct __Trait_F_int f = {&a, &__int_trait_F};
-// CHECK-NEXT: return f.vtable->foo(f.data);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int a = 1;
+// CHECK-NEXT:   baz((struct __Trait_F_int){.data = &a, .vtable = &__int_trait_F});
+// CHECK-NEXT:   baz((struct __Trait_F_int){.data = &a, .vtable = &__int_trait_F});
+// CHECK-NEXT:   struct __Trait_F_int tr1 = {&a, &__int_trait_F};
+// CHECK-NEXT:   baz(tr1);
+// CHECK-NEXT:   struct __Trait_F_int tr2 = {&a, &__int_trait_F};
+// CHECK-NEXT:   baz(tr2);
+// CHECK-NEXT:   (struct __Trait_F_int){&a, &__int_trait_F}.vtable->foo((struct __Trait_F_int){&a, &__int_trait_F}.data);
+// CHECK-NEXT:   struct __Trait_F_int f = {&a, &__int_trait_F};
+// CHECK-NEXT:   return f.vtable->foo(f.data);
 // CHECK-NEXT: }

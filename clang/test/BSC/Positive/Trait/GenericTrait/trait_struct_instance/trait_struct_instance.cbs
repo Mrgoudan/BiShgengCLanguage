@@ -27,29 +27,29 @@ int main() {
     return b - 10;
 }
 
-// CHECK: struct S {
-// CHECK-NEXT: int c;
+// CHECK:      struct S {
+// CHECK-NEXT:   int c;
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_Future_Vtable_struct_S {
-// CHECK-NEXT: struct S (*poll)(void *, struct S);
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_Vtable_struct_S {
+// CHECK-NEXT:   struct S (*poll)(void *, struct S);
 // CHECK-NEXT: };
- 
-// CHECK: struct __Trait_Future_struct_S {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_Future_Vtable_struct_S *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_struct_S {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_Future_Vtable_struct_S *vtable;
 // CHECK-NEXT: };
-
-// CHECK: struct S int_poll(int *this, struct S a) {
-// CHECK-NEXT: return a;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S int_poll(int *this, struct S a) {
+// CHECK-NEXT:   return a;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_Future_Vtable_struct_S __int_trait_Future = {.poll = (struct S (*)(void *, struct S))int_poll};
-
-// CHECK: int main(void) {
-// CHECK-NEXT: int m = 0;
-// CHECK-NEXT: struct S s = {10};
-// CHECK-NEXT: struct __Trait_Future_struct_S a = {&m, &__int_trait_Future};
-// CHECK-NEXT: int b = a.vtable->poll(a.data, s).c;
-// CHECK-NEXT: return b - 10;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_Vtable_struct_S __int_trait_Future = {.poll = (struct S (*)(void *, struct S))int_poll};
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int m = 0;
+// CHECK-NEXT:   struct S s = {10};
+// CHECK-NEXT:   struct __Trait_Future_struct_S a = {&m, &__int_trait_Future};
+// CHECK-NEXT:   int b = a.vtable->poll(a.data, s).c;
+// CHECK-NEXT:   return b - 10;
 // CHECK-NEXT: }

@@ -23,25 +23,28 @@ int main() {
 }
 
 
-
-// CHECK: struct S_int {
-// CHECK-NEXT:};
+// CHECK:      typedef struct _TD_MyStruct MyStruct;
 // CHECK-EMPTY:
-// CHECK-NEXT:struct MyStruct {
-// CHECK-NEXT:    struct S_int a;
-// CHECK-NEXT:};
+// CHECK-NEXT: typedef union _TD_MyUnion MyUnion;
 // CHECK-EMPTY:
-// CHECK-NEXT:typedef struct MyStruct MyStruct;
+// CHECK-NEXT: enum _TD_MyEnum {
+// CHECK-NEXT:   X1,
+// CHECK-NEXT:   X2
+// CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT:typedef union {
-// CHECK-NEXT:  int a;
-// CHECK-NEXT:}MyUnion;
+// CHECK-NEXT: typedef enum _TD_MyEnum MyEnum;
 // CHECK-EMPTY:
-// CHECK-NEXT:typedef enum {
-// CHECK-NEXT:  X1,
-// CHECK-NEXT:  X2
-// CHECK-NEXT:}MyEnum;
+// CHECK-NEXT: struct S_int {
+// CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT:int main() {
-// CHECK-NEXT:    return 0;
-// CHECK-NEXT:}
+// CHECK-NEXT: union _TD_MyUnion {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct _TD_MyStruct {
+// CHECK-NEXT:     struct S_int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: int main() {
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }

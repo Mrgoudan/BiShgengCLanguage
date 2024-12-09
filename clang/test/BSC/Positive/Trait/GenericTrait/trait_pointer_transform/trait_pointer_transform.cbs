@@ -29,29 +29,29 @@ int main() {
   return 1;
 }
 
-// CHECK: struct __Trait_Future_Vtable_int {
-// CHECK-NEXT: int (*poll)(void *);
+// CHECK:      struct __Trait_Future_Vtable_int {
+// CHECK-NEXT:   int (*poll)(void *);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_Future_int {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_Future_Vtable_int *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_int {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_Future_Vtable_int *vtable;
 // CHECK-NEXT: };
-
-// CHECK: int int_poll(int *this) {
-// CHECK-NEXT: return *this;
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_poll(int *this) {
+// CHECK-NEXT:   return *this;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_Future_Vtable_int __int_trait_Future = {.poll = (int (*)(void *))int_poll};
-
-// CHECK: int main(void) {
-// CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_Future_int f = {&a, &__int_trait_Future};
-// CHECK-NEXT: void *p = (void *)f.data;
-// CHECK-NEXT: int *q = (int *)f.data;
-// CHECK-NEXT: float *r = (float *)f.data;
-// CHECK-NEXT: if (p == f.data && q == f.data && r == f.data) {
-// CHECK-NEXT: return 0;
-// CHECK-NEXT: }
-// CHECK-NEXT: return 1;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_Vtable_int __int_trait_Future = {.poll = (int (*)(void *))int_poll};
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int a = 1;
+// CHECK-NEXT:   struct __Trait_Future_int f = {&a, &__int_trait_Future};
+// CHECK-NEXT:   void *p = (void *)f.data;
+// CHECK-NEXT:   int *q = (int *)f.data;
+// CHECK-NEXT:   float *r = (float *)f.data;
+// CHECK-NEXT:   if (p == f.data && q == f.data && r == f.data) {
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return 1;
 // CHECK-NEXT: }

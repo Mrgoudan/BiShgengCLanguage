@@ -24,14 +24,14 @@ int main() {
     return 0;
 }
 
-// CHECK:      struct S3_struct_S1_P {
-// CHECK-NEXT:   struct S1 *t;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct S1 {
+// CHECK:      struct S1 {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct S2 {
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S3_struct_S1_P {
+// CHECK-NEXT:   struct S1 *t;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct S4_struct_S3_struct_S1_P {

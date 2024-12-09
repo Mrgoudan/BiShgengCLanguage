@@ -43,14 +43,14 @@ int main() {
     return 0;
 }
 
-// CHECK: struct R {
+// CHECK:      typedef int * myInt;
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef int * (*PF2)(struct R);
+// CHECK-EMPTY:
+// CHECK-NEXT: struct R {
 // CHECK-NEXT:     int * p1;
 // CHECK-NEXT:     const int * p2;
 // CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef int * myInt;
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef int * (*PF2)(struct R);
 // CHECK-EMPTY:
 // CHECK-NEXT: void int_foo(int * this) {
 // CHECK-NEXT: }

@@ -25,14 +25,12 @@ int main() {
   return 0;
 }
 
-// CHECK:      struct __Trait_Future_Vtable_void_P;
-// CHECK-EMPTY:
-// CHECK-NEXT: struct __Trait_Future_void_P {
-// CHECK-NEXT:     void *data;
-// CHECK-NEXT:     struct __Trait_Future_Vtable_void_P *vtable;
+// CHECK:      struct A_void_P {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct A_void_P {
+// CHECK-NEXT: struct __Trait_Future_void_P {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_Future_Vtable_void_P *vtable;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static void struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future);

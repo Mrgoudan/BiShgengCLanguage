@@ -1,0 +1,131 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+struct Outer {
+  int x;
+  struct Inner {
+    float y;
+    struct Nested {
+        char z;
+    } nested;
+  } inner;
+};
+
+struct U {
+  struct S* s[3];
+  int a;
+};
+
+struct S {
+  int a;
+  int b;
+};
+
+typedef enum {
+  READ,
+  WRITE
+} ENUM;
+
+union UU {
+  float a;
+  struct S s;
+  struct U* u;
+  int b;
+};
+
+typedef struct {
+  struct S s;
+  struct U u;
+  ENUM e;
+} S2;
+
+struct T1 {
+  S2* p;
+  struct S s[3][4][5];
+};
+
+enum E {
+  A,
+  B,
+  C
+};
+
+struct T2 {
+  enum E e;
+  union {
+    struct S s1;
+    S2* s2;
+  };
+  float a;
+  long b;
+};
+
+int main() {
+  return 0;
+}
+
+
+// CHECK:      enum _TD_ENUM {
+// CHECK-NEXT:   READ,
+// CHECK-NEXT:   WRITE
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef enum _TD_ENUM ENUM;
+// CHECK-EMPTY:
+// CHECK-NEXT: typedef struct _TD_S2 S2;
+// CHECK-EMPTY:
+// CHECK-NEXT: enum E {
+// CHECK-NEXT:   A,
+// CHECK-NEXT:   B,
+// CHECK-NEXT:   C
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct U {
+// CHECK-NEXT:   struct S* s[3];
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct T1 {
+// CHECK-NEXT:   S2* p;
+// CHECK-NEXT:   struct S s[3][4][5];
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct _TD_S2 {
+// CHECK-NEXT:   struct S s;
+// CHECK-NEXT:   struct U u;
+// CHECK-NEXT:   ENUM e;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: union UU {
+// CHECK-NEXT:   float a;
+// CHECK-NEXT:   struct S s;
+// CHECK-NEXT:   struct U* u;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct Outer {
+// CHECK-NEXT:   int x;
+// CHECK-NEXT:   struct Inner {
+// CHECK-NEXT:     float y;
+// CHECK-NEXT:     struct Nested {
+// CHECK-NEXT:         char z;
+// CHECK-NEXT:     } nested;
+// CHECK-NEXT:   } inner;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct T2 {
+// CHECK-NEXT:   enum E e;
+// CHECK-NEXT:   union {
+// CHECK-NEXT:     struct S s1;
+// CHECK-NEXT:     S2* s2;
+// CHECK-NEXT:   };
+// CHECK-NEXT:   float a;
+// CHECK-NEXT:   long b;
+// CHECK-NEXT: };

@@ -1,11 +1,7 @@
 // RUN: %clang %s %S/scheduler.cbs %S/noise.cbs -o %test.output -lpthread
-// RUN: %clang -rewrite-bsc %S/../../../../../../lib/Headers/bsc_include/future.hbs -o %T/future.h
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: %clang -rewrite-bsc %S/scheduler.cbs -o %T/scheduler.c
 // RUN: %clang -rewrite-bsc %S/noise.cbs -o %T/noise.c
-// RUN: %clang -rewrite-bsc %S/scheduler.hbs -o %T/scheduler.h
-// RUN: %clang -rewrite-bsc %S/noise.hbs -o %T/noise.h
-// RUN: %clang -rewrite-bsc %S/queue.hbs -o %T/queue.h
 // RUN: %clang %t-rw.c %T/scheduler.c %T/noise.c -o %t-rw.output -lpthread
 // expected-no-diagnostics
 

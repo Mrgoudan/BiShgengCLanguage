@@ -51,33 +51,15 @@ int main() {
 // CHECK-NEXT: #include <sys/epoll.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
-// CHECK-NEXT: struct UserHBSStruct {
-// CHECK-NEXT:   int a;
-// CHECK-NEXT:   int b;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: enum UserHBSEnum {
 // CHECK-NEXT:   UFIRST,
 // CHECK-NEXT:   USECOND,
 // CHECK-NEXT:   UDIGIT_END
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct BSCGenericStruct_int {
-// CHECK-NEXT:   int t;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: typedef struct BSCGenericStruct_int TBSCGSI;
 // CHECK-EMPTY:
-// CHECK-NEXT: struct CBSGenericFieldStruct {
-// CHECK-NEXT:   TBSCGSI a;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: typedef struct CBSGenericFieldStruct CBSGFS;
-// CHECK-EMPTY:
-// CHECK-NEXT: struct CBSStruct {
-// CHECK-NEXT:   int a;
-// CHECK-NEXT:   int b;
-// CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: enum CBSEnum {
 // CHECK-NEXT:   FIRST,
@@ -97,6 +79,24 @@ int main() {
 // CHECK-NEXT:   ANONFIRST,
 // CHECK-NEXT:   ANONSECOND,
 // CHECK-NEXT:   ANONDIGIT_END
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct UserHBSStruct {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct BSCGenericStruct_int {
+// CHECK-NEXT:   int t;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct CBSStruct {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct CBSGenericFieldStruct {
+// CHECK-NEXT:   TBSCGSI a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct BSCGenericStruct_int init_int(int t);

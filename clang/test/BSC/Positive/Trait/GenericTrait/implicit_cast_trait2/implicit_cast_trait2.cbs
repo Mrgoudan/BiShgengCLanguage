@@ -33,29 +33,29 @@ int main() {
     return b->poll(0);
 }
 
-// CHECK: struct __Trait_Future_Vtable_int {
-// CHECK-NEXT: int (*poll)(void *, int);
+// CHECK:      struct __Trait_Future_Vtable_int {
+// CHECK-NEXT:   int (*poll)(void *, int);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_Future_int {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_Future_Vtable_int *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_int {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_Future_Vtable_int *vtable;
 // CHECK-NEXT: };
-
-// CHECK: int int_poll(int *this, int a) {
-// CHECK-NEXT: return a;
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_poll(int *this, int a) {
+// CHECK-NEXT:   return a;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_Future_Vtable_int __int_trait_Future = {.poll = (int (*)(void *, int))int_poll};
- 
-// CHECK: int *get(struct __Trait_Future_int f) {
-// CHECK-NEXT: int *c = malloc(sizeof(int));
-// CHECK-NEXT: *c = 3;
-// CHECK-NEXT: return c;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_Vtable_int __int_trait_Future = {.poll = (int (*)(void *, int))int_poll};
+// CHECK-EMPTY:
+// CHECK-NEXT: int *get(struct __Trait_Future_int f) {
+// CHECK-NEXT:   int *c = malloc(sizeof(int));
+// CHECK-NEXT:   *c = 3;
+// CHECK-NEXT:   return c;
 // CHECK-NEXT: }
-
-// CHECK: int main(void) {
-// CHECK-NEXT: int a = 1;
-// CHECK-NEXT: struct __Trait_Future_int b = {get((struct __Trait_Future_int){.data = &a, .vtable = &__int_trait_Future}), &__int_trait_Future};
-// CHECK-NEXT: return b.vtable->poll(b.data, 0);
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int a = 1;
+// CHECK-NEXT:   struct __Trait_Future_int b = {get((struct __Trait_Future_int){.data = &a, .vtable = &__int_trait_Future}), &__int_trait_Future};
+// CHECK-NEXT:   return b.vtable->poll(b.data, 0);
 // CHECK-NEXT: }

@@ -17,55 +17,19 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/ASTConsumers.h"
+#include <queue>
 #include <set>
 #include <unordered_set>
 
 using namespace clang;
 
-static unsigned ReturnArgIndexInDeclList(ClassTemplateSpecializationDecl *CTSD,
-                                         const std::vector<Decl *> &DeclList) {
-  const TemplateArgumentList &TAL = CTSD->getTemplateInstantiationArgs();
-  unsigned InsertIndex = 0;
-  for (Decl *D : DeclList) {
-    for (unsigned int i = 0; i < TAL.size(); ++i) {
-      TemplateArgument TA = TAL.get(i);
-      if (TA.getKind() == TemplateArgument::Type &&
-          (TA.getAsType()->getAsCXXRecordDecl() == (D) ||
-           TA.getAsType()->getAsRecordDecl() == (D))) {
-        return InsertIndex + 1;
-      }
-    }
-    InsertIndex++;
-  }
-  return 0;
-}
+//------------------------- Common static functions -------------------------//
 
 /// EndsWith - Check if a string ends with a given suffix.
 static bool EndsWith(const std::string &str, const std::string &suffix) {
   if (str.length() >= suffix.length()) {
     return 0 ==
            str.compare(str.length() - suffix.length(), suffix.length(), suffix);
-  }
-  return false;
-}
-
-/// getInnerType - Get the inner type of a pointer type.
-static QualType getInnerType(QualType QT) {
-  QT = QT.IgnoreParens();
-  while (QT->isPointerType())
-    QT = QT->getPointeeType();
-  return QT;
-}
-
-/// HasTemplateSpecType - Determine whether the QualType contains instantiated
-/// generic type.
-static bool
-HasTemplateSpecType(QualType &QT,
-                    std::unordered_set<Decl *> &HasTemplateSpecSet) {
-  if (QT->getAs<TemplateSpecializationType>()) {
-    return true;
-  } else if (const RecordType *RT = QT->getAs<RecordType>()) {
-    return HasTemplateSpecSet.count(RT->getDecl());
   }
   return false;
 }
@@ -82,6 +46,117 @@ static bool IsInStandardHeaderFile(const SourceManager *SM,
 }
 
 namespace {
+
+//----------------- Topological sorting of type definitions -----------------//
+class TypeDependencyGraph {
+public:
+  void addDependency(RecordDecl *type, RecordDecl *dependency) {
+    typeDependencyMap[type].insert(dependency);
+    addNode(type);
+    addNode(dependency);
+  }
+
+  void addNode(RecordDecl *RD) { nodes.insert(RD); }
+
+  std::vector<RecordDecl *> topologicalSort() {
+    std::map<RecordDecl *, int> inDegree;
+    for (RecordDecl *node : nodes) {
+      inDegree[node] = 0;
+    }
+    for (auto &entry : typeDependencyMap) {
+      for (RecordDecl *dependency : entry.second) {
+        inDegree[dependency]++;
+      }
+    }
+
+    std::queue<RecordDecl *> zeroInDegree;
+    for (auto &entry : inDegree) {
+      if (entry.second == 0) {
+        zeroInDegree.push(entry.first);
+      }
+    }
+
+    std::vector<RecordDecl *> sorted;
+    while (!zeroInDegree.empty()) {
+      RecordDecl *current = zeroInDegree.front();
+      zeroInDegree.pop();
+      sorted.push_back(current);
+
+      for (RecordDecl *neighbor : typeDependencyMap[current]) {
+        inDegree[neighbor]--;
+        if (inDegree[neighbor] == 0) {
+          zeroInDegree.push(neighbor);
+        }
+      }
+    }
+
+    assert(sorted.size() == nodes.size() &&
+           "There cannot be circular between types.");
+
+    return sorted;
+  }
+
+private:
+  // @code
+  // struct S { struct T x };
+  // @endcode
+  // For a struct S, which has a field of struct T, the S depends on T, so we
+  // use T as the key and add S to its value.
+  std::map<RecordDecl *, std::unordered_set<RecordDecl *>> typeDependencyMap;
+  std::set<RecordDecl *> nodes;
+};
+
+class TypeDependencyVisitor : public DeclVisitor<TypeDependencyVisitor> {
+public:
+  TypeDependencyVisitor() {}
+
+  void VisitRecordDecl(RecordDecl *RD) {
+    // Skip incomplete definitions and calculated definitions.
+    if (!RD->isThisDeclarationADefinition() || visited.count(RD))
+      return;
+
+    // Traverse all fields to calculate type dependencies.
+    for (FieldDecl *Field : RD->fields()) {
+      QualType FieldType = Field->getType();
+      if (const RecordType *RT = FieldType->getAs<RecordType>()) {
+        RecordDecl *FieldDecl = RT->getDecl();
+        // Recursive for nested type definitions.
+        Visit(FieldDecl);
+        graph.addDependency(FieldDecl, RD);
+      }
+      if (const ArrayType *AT = dyn_cast<ArrayType>(FieldType)) {
+        // Recursive to get innermost element type.
+        QualType ElementType = AT->getElementType();
+        while (const ArrayType *at = dyn_cast<ArrayType>(ElementType)) {
+          ElementType = at->getElementType();
+        }
+        if (const RecordType *RT = ElementType->getAs<RecordType>()) {
+          RecordDecl *FieldDecl = RT->getDecl();
+          // Recursive for nested type definitions.
+          Visit(FieldDecl);
+          graph.addDependency(FieldDecl, RD);
+        }
+      }
+    }
+    graph.addNode(RD);
+    visited.insert(RD);
+  }
+
+  void VisitClassTemplateDecl(ClassTemplateDecl *CTD) {
+    for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations()) {
+      Visit(CTSD);
+    }
+  }
+
+  std::vector<RecordDecl *> Sort() { return graph.topologicalSort(); }
+
+private:
+  TypeDependencyGraph graph;
+  std::set<RecordDecl *> visited;
+};
+
+//------------------------------- RewriteBSC -------------------------------//
+
 class RewriteBSC : public ASTConsumer {
 public:
   RewriteBSC(std::string inFile, std::unique_ptr<raw_ostream> OS,
@@ -130,11 +205,8 @@ private:
   std::set<FileID> RetrieveFileIDsFromIncludeStack(const Decl *D);
   void RewriteMacroDirectives();
   void RewriteDecls();
-  void RewriteNonGenericType(std::vector<Decl *> &DeclList,
-                             std::unordered_set<Decl *> &HasTemplateSpecSet);
-  void
-  RewriteInstantGenericType(std::vector<Decl *> &DeclList,
-                            std::unordered_set<Decl *> &HasTemplateSpecSet);
+  void RewriteTypedefAndEnum(std::vector<Decl *> &DeclList);
+  void RewriteTypeDefinitions(std::vector<Decl *> &DeclList);
   void
   RewriteInstantFunctionDecl(std::vector<Decl *> &DeclList,
                              std::set<Decl *> &RewritedFunctionDeclarationSet);
@@ -354,16 +426,6 @@ void RewriteBSC::FindDeclsWithoutBSCFeature() {
     case Decl::Var: {
       if (!finder.Visit(D)) {
         DeclsWithoutBSCFeature.insert(D);
-        if (RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
-          if (TypedefNameDecl *TND = RD->getTypedefNameForAnonDecl()) {
-            DeclsWithoutBSCFeature.insert(TND);
-          }
-        }
-        if (EnumDecl *ED = dyn_cast<EnumDecl>(D)) {
-          if (TypedefNameDecl *TND = ED->getTypedefNameForAnonDecl()) {
-            DeclsWithoutBSCFeature.insert(TND);
-          }
-        }
       }
       break;
     }
@@ -471,73 +533,37 @@ void RewriteBSC::RewriteMacroDirectives() {
 /// For declarations without bsc features, we use pretty printer.
 void RewriteBSC::RewriteDecls() {
   std::vector<Decl *> DeclList;
-  std::unordered_set<Decl *> HasTemplateSpecSet;
   // avoid repeatedly rewrite of Template Functions.
   std::set<Decl *> RewritedFunctionDeclarationSet;
 
-  // Step 1: Collect all non-generic struct/union/enum/typedef decls into
-  // DeclList.
-  RewriteNonGenericType(DeclList, HasTemplateSpecSet);
+  // Step 1: Collect all enum decls and typedef decls into DeclList.
+  RewriteTypedefAndEnum(DeclList);
 
-  // Step 2: Insert instantiated stuct/union decls into DeclList.
-  RewriteInstantGenericType(DeclList, HasTemplateSpecSet);
+  // Step 2: Rewrite type definitions of user defined types, which is sorted by
+  // type dependencies.
+  RewriteTypeDefinitions(DeclList);
 
-  // For struct Void which is desugared, we have to handle it specially.
-  Decl *VoidStruct = nullptr;
+  // Print all TagDecls and TypedefNamDecls to Buf.
   for (Decl *D : DeclList) {
-    if (isa<RecordDecl>(D)) {
-      RecordDecl *RD = cast<RecordDecl>(D);
-      if (RD->getNameAsString() == "Void") {
-        for (auto DD : Context->BSCDesugaredMap) {
-          for (auto &DesugaredDecl : DD.second) {
-            if (RD == DesugaredDecl) {
-              VoidStruct = RD;
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (VoidStruct) {
-    VoidStruct->print(Buf, Policy);
-    Buf << ";\n\n";
-  }
-
-  for (Decl *D : DeclList) {
-    if (D == VoidStruct) {
-      continue;
-    }
     // For decls with bsc feature, we use pretty printer.
     // For decls without bsc feature, we use original string text.
     if (DeclsWithoutBSCFeature.find(D) == DeclsWithoutBSCFeature.end()) {
       D->print(Buf, Policy);
       Buf << ";\n\n";
     } else {
-      if (auto *TD = dyn_cast<TagDecl>(D)) {
-        // For an anonymous tagdecl with typedef, don't print the tagdecl,
-        // because the corresponding typedef will print it.
+      if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
+        // For an anonymous tagdecl with typedef, use pretty printer. Otherwise,
+        // use original string text.
         if (!TD->getTypedefNameForAnonDecl()) {
           const char *startBuf = SM->getCharacterData(D->getBeginLoc());
           const char *endBuf = SM->getCharacterData(D->getEndLoc());
           Buf << std::string(startBuf, endBuf - startBuf + 1);
-          Buf << ";\n\n";
-        }
-      } else {
-        if (TypedefNameDecl *TND = dyn_cast<TypedefNameDecl>(D)) {
-          const char *startBuf = SM->getCharacterData(D->getBeginLoc());
-          const char *endBuf =
-              SM->getCharacterData(D->getEndLoc().getLocWithOffset(
-                  TND->getIdentifier()->getLength()));
-          Buf << std::string(startBuf, endBuf - startBuf + 1);
-          Buf << "\n\n";
         } else {
-          const char *startBuf = SM->getCharacterData(D->getBeginLoc());
-          const char *endBuf = SM->getCharacterData(D->getEndLoc());
-          Buf << std::string(startBuf, endBuf - startBuf + 1);
-          Buf << ";\n\n";
+          D->print(Buf, Policy);
         }
+        Buf << ";\n\n";
+      } else {
+        llvm_unreachable("Unreachable branch");
       }
     }
   }
@@ -554,9 +580,7 @@ void RewriteBSC::RewriteDecls() {
   RewriteInstantFunctionDef(DeclList);
 }
 
-void RewriteBSC::RewriteNonGenericType(
-    std::vector<Decl *> &DeclList,
-    std::unordered_set<Decl *> &HasTemplateSpecSet) {
+void RewriteBSC::RewriteTypedefAndEnum(std::vector<Decl *> &DeclList) {
   for (Decl *D : TUDecl->decls()) {
     // Skip declarations in header files with suffix .h.
     if (IsInStandardHeaderFile(SM, D->getLocation())) {
@@ -567,25 +591,14 @@ void RewriteBSC::RewriteNonGenericType(
       DeclList.push_back(D);
       break;
     }
-    case Decl::Record: {
-      // If the RecordDecl has template specialization type, add it to the set.
-      RecordDecl *RD = cast<RecordDecl>(D);
-      for (FieldDecl *Field : RD->fields()) {
-        QualType FieldTy = getInnerType(Field->getType());
-        if (HasTemplateSpecType(FieldTy, HasTemplateSpecSet)) {
-          HasTemplateSpecSet.insert(D);
-          break;
-        }
-      }
-      DeclList.push_back(D);
-      break;
-    }
     case Decl::TypeAlias:
     case Decl::Typedef: {
       TypedefNameDecl *TND = cast<TypedefNameDecl>(D);
       // For typedef of trait type, we don't need it.
-      if (!TND->getUnderlyingType().getCanonicalType()->isTraitType())
-        DeclList.push_back(D);
+      QualType UnderlyingType = TND->getUnderlyingType();
+      if (UnderlyingType.getCanonicalType()->isTraitType())
+        break;
+      DeclList.push_back(D);
       break;
     }
     default:
@@ -594,82 +607,31 @@ void RewriteBSC::RewriteNonGenericType(
   }
 }
 
-void RewriteBSC::RewriteInstantGenericType(
-    std::vector<Decl *> &DeclList,
-    std::unordered_set<Decl *> &HasTemplateSpecSet) {
-  for (DeclContext::decl_iterator D = TUDecl->decls_begin(),
-                                  DEnd = TUDecl->decls_end();
-       D != DEnd; ++D) {
-    switch ((*D)->getKind()) {
-    case Decl::ClassTemplate: {
-      ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(*D);
-      // Skip incomplete generic struct decl.
-      if (RecordDecl *RD = dyn_cast<RecordDecl>(CTD->getTemplatedDecl())) {
-        if (!RD->isCompleteDefinition()) {
-          break;
-        }
-      }
-      // Insert each specialization into correct place.
-      for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations()) {
-        SourceLocation SL = CTSD->getPointOfInstantiation();
-        bool Inserted = false;
-        std::vector<Decl *>::iterator It = DeclList.begin();
-        while (It != DeclList.end()) {
-          if (SL.isInvalid())
-            break;
-          // Insert specialization to vector if current Decl relies on it.
-          if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(*It)) {
-            auto &TAL = TD->getTemplateInstantiationArgs();
-            for (unsigned int i = 0; i < TAL.size(); i++) {
-              if (TAL.get(i).getKind() == TemplateArgument::Type &&
-                  TAL.get(i).getAsType()->getAsCXXRecordDecl() == CTSD) {
-                It = DeclList.insert(It, CTSD);
-                Inserted = true;
-                break;
-              }
-            }
-            if (Inserted) {
-              break;
-            }
-          }
-          // Push it to back if a template argument type decl is in DeclList
-          if (!SM->isWrittenInMainFile(SL)) {
-            unsigned InsertIndex = ReturnArgIndexInDeclList(CTSD, DeclList);
-            if (InsertIndex) {
-              DeclList.insert(DeclList.begin() + InsertIndex, CTSD);
-              Inserted = true;
-              break;
-            }
-          }
-
-          if (SM->isBeforeInTranslationUnit(SL, (*It)->getBeginLoc())) {
-            It = DeclList.insert(It, CTSD);
-            Inserted = true;
-            break;
-          }
-          if (SM->isBeforeInTranslationUnit((*It)->getBeginLoc(), SL) &&
-              SM->isBeforeInTranslationUnit(SL, (*It)->getEndLoc())) {
-            It = DeclList.insert(It, CTSD);
-            Inserted = true;
-            break;
-          }
-          if (!SM->isBeforeInTranslationUnit((*It)->getBeginLoc(), SL) &&
-              !SM->isBeforeInTranslationUnit(SL, (*It)->getBeginLoc())) {
-            It = DeclList.insert(It, CTSD);
-            Inserted = true;
-            break;
-          }
-          It++;
-        }
-        if (Inserted == false) {
-          DeclList.push_back(CTSD);
-        }
-      }
+/// RewriteTypeDefinitions - Rewrite type definitions of user defined types.
+/// It is topologically sorted by type dependencies.
+void RewriteBSC::RewriteTypeDefinitions(std::vector<Decl *> &DeclList) {
+  TypeDependencyVisitor TDV = TypeDependencyVisitor();
+  for (Decl *D : TUDecl->decls()) {
+    switch (D->getKind()) {
+    case Decl::ClassTemplate:
+    case Decl::Record:
+      TDV.Visit(D);
       break;
-    }
     default:
       break;
     }
+  }
+
+  std::vector<RecordDecl *> sorted = TDV.Sort();
+  for (RecordDecl *D : sorted) {
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
+    }
+    // Skip nested RecordDecl.
+    if (!isa<TranslationUnitDecl>(D->getLexicalDeclContext())) {
+      continue;
+    }
+    DeclList.push_back(D);
   }
 }
 

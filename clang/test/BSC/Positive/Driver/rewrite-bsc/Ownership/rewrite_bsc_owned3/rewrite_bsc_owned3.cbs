@@ -92,7 +92,7 @@ int main() {
     return 0;
 }
 
-// CHECK: struct A {
+// CHECK:      struct A {
 // CHECK-NEXT:      int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
@@ -102,10 +102,6 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT: struct C {
 // CHECK-NEXT:      int **c;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct D { 
-// CHECK-NEXT:     struct C c;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct E {
@@ -122,6 +118,10 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT: struct H {
 // CHECK-NEXT:     int * *h;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct D { 
+// CHECK-NEXT:     struct C c;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT:  int (a)(void);

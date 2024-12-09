@@ -24,25 +24,25 @@ int main() {
     return a - b;
 }
 
-// CHECK: struct __Trait_Future_Vtable_int {
-// CHECK-NEXT: int (*poll)(void *);
+// CHECK:      struct __Trait_Future_Vtable_int {
+// CHECK-NEXT:   int (*poll)(void *);
 // CHECK-NEXT: };
-
-// CHECK: struct __Trait_Future_int {
-// CHECK-NEXT: void *data;
-// CHECK-NEXT: struct __Trait_Future_Vtable_int *vtable;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_int {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_Future_Vtable_int *vtable;
 // CHECK-NEXT: };
-
-// CHECK: int int_poll(int *this) {
-// CHECK-NEXT: return *this;
+// CHECK-EMPTY:
+// CHECK-NEXT: int int_poll(int *this) {
+// CHECK-NEXT:   return *this;
 // CHECK-NEXT: }
-
-// CHECK: struct __Trait_Future_Vtable_int __int_trait_Future = {.poll = (int (*)(void *))int_poll};
-
-// CHECK: int main(void) {
-// CHECK-NEXT: int m = 0;
-// CHECK-NEXT: struct __Trait_Future_int f = {&m, &__int_trait_Future}, g = {&m, &__int_trait_Future};
-// CHECK-NEXT: int a = f.vtable->poll(f.data);
-// CHECK-NEXT: int b = g.vtable->poll(g.data);
-// CHECK-NEXT: return a - b;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_Future_Vtable_int __int_trait_Future = {.poll = (int (*)(void *))int_poll};
+// CHECK-EMPTY:
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int m = 0;
+// CHECK-NEXT:   struct __Trait_Future_int f = {&m, &__int_trait_Future}, g = {&m, &__int_trait_Future};
+// CHECK-NEXT:   int a = f.vtable->poll(f.data);
+// CHECK-NEXT:   int b = g.vtable->poll(g.data);
+// CHECK-NEXT:   return a - b;
 // CHECK-NEXT: }

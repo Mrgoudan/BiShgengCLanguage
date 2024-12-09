@@ -1,6 +1,5 @@
 // RUN: %clang %s -o %test.output
 // RUN: %test.output
-// RUN: %clang -rewrite-bsc %S/../../../../../../lib/Headers/bsc_include/future.hbs -o %T/future.h
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: FileCheck --input-file=%t-rw.c %s
 // RUN: %clang %t-rw.c -o %t-rw.output
@@ -27,39 +26,36 @@ int main() {
   return 0;
 }
 
-// CHECK:      #include <stdlib.h>
-// CHECK-EMPTY:
-// CHECK-EMPTY:
-// CHECK-NEXT: struct PollResult_int {
-// CHECK-NEXT:   _Bool isPending;
-// CHECK-NEXT:   int res;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct __Trait_Future_Vtable_int {
-// CHECK-NEXT:   struct PollResult_int (*poll)(void *);
-// CHECK-NEXT:   void (*free)(void *);
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct __Trait_Future_int {
-// CHECK-NEXT:   void *data;
-// CHECK-NEXT:   struct __Trait_Future_Vtable_int *vtable;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct _Futureread {
-// CHECK-NEXT:   int a;
-// CHECK-NEXT:   int __future_state;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct _Futuref {
-// CHECK-NEXT:   int n;
-// CHECK-NEXT:   int tmp1;
-// CHECK-NEXT:   int tmp2;
-// CHECK-NEXT:   struct _Futureread *Ft_1;
-// CHECK-NEXT:   struct _Futureread *Ft_2;
-// CHECK-NEXT:   int __future_state;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: static struct PollResult_int struct_PollResult_int_pending(void);
+// CHECK-DAG:  struct __Trait_Future_Vtable_int {
+// CHECK-DAG:    struct PollResult_int (*poll)(void *);
+// CHECK-DAG:    void (*free)(void *);
+// CHECK-DAG:  };
+
+// CHECK-DAG:  struct PollResult_int {
+// CHECK-DAG:    _Bool isPending;
+// CHECK-DAG:    int res;
+// CHECK-DAG:  };
+
+// CHECK-DAG:  struct __Trait_Future_int {
+// CHECK-DAG:    void *data;
+// CHECK-DAG:    struct __Trait_Future_Vtable_int *vtable;
+// CHECK-DAG:  };
+
+// CHECK-DAG:  struct _Futureread {
+// CHECK-DAG:   int a;
+// CHECK-DAG:   int __future_state;
+// CHECK-DAG: };
+
+// CHECK-DAG:  struct _Futuref {
+// CHECK-DAG:    int n;
+// CHECK-DAG:    int tmp1;
+// CHECK-DAG:    int tmp2;
+// CHECK-DAG:    struct _Futureread *Ft_1;
+// CHECK-DAG:    struct _Futureread *Ft_2;
+// CHECK-DAG:    int __future_state;
+// CHECK-DAG:  };
+
+// CHECK:      static struct PollResult_int struct_PollResult_int_pending(void);
 // CHECK-EMPTY:
 // CHECK-NEXT: static _Bool struct_PollResult_int_is_completed(struct PollResult_int *this, int *out);
 // CHECK-EMPTY:

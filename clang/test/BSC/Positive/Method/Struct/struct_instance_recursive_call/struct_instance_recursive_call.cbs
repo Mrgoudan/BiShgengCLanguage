@@ -12,18 +12,18 @@ queue* queue::reverse(queue* this) {
     return this;
 }
 
-// CHECK: struct _queue {
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT:typedef struct _queue queue;
-// CHECK-EMPTY:
-// CHECK-NEXT: queue *queue_reverse(queue *this) {
-// CHECK-NEXT:     queue_reverse(this);
-// CHECK-NEXT:     return this;
-// CHECK-NEXT: }
-
 int main() {
     queue obj;
     obj.reverse();
     return 0;
 }
+
+// CHECK:      typedef struct _queue queue;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct _queue {
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: queue *queue_reverse(queue *this) {
+// CHECK-NEXT:     queue_reverse(this);
+// CHECK-NEXT:     return this;
+// CHECK-NEXT: }

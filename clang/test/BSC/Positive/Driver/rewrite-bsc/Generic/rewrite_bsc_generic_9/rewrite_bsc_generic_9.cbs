@@ -3,7 +3,9 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-struct A<T> {};
+struct A<T> {
+    T t;
+};
 
 struct Void {};
 
@@ -17,17 +19,18 @@ struct C {
 
 int main() {}
 
-// CHECK: struct Void {};
+// CHECK:      struct Void {};
 // CHECK-EMPTY:
 // CHECK-NEXT: struct A_struct_Void {
+// CHECK-NEXT:   struct Void t;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct B_struct_Void {
-// CHECK-NEXT:     struct A_struct_Void a;
+// CHECK-NEXT:   struct A_struct_Void a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct C {
-// CHECK-NEXT:     struct B_struct_Void b;
+// CHECK-NEXT:   struct B_struct_Void b;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: int main() {}

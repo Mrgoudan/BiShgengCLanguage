@@ -34,11 +34,11 @@ int main() {
   return 0;
 }
 
-// CHECK:      struct T {
+// CHECK:      typedef __attribute__((unused)) int unusedInt;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct T {
 // CHECK-NEXT:     __attribute__((unused)) int *a;
 // CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef __attribute__((unused)) int unusedInt;
 // CHECK-EMPTY:
 // CHECK-NEXT: void struct_T_D(  struct T this);
 // CHECK-EMPTY:

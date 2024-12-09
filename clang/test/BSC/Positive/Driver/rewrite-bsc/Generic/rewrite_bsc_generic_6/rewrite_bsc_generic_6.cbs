@@ -30,17 +30,17 @@ int main() {
   return 0;
 }
 
-// CHECK: struct B {};
+// CHECK:      struct B {};
 // CHECK-EMPTY:
 // CHECK-NEXT: struct Foo_int {
-// CHECK-NEXT:      int a;
-// CHECK-NEXT:  };
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct Foo_int max_struct_B(struct B a);
 // CHECK-EMPTY:
 // CHECK-NEXT: int struct_B_increase(struct B *this) {
-// CHECK-NEXT:      return 0;
-// CHECK-NEXT:  }  
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }  
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {
 // CHECK-NEXT:   struct B a1;
@@ -52,9 +52,9 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct Foo_int max_struct_B(struct B a) {
-// CHECK-NEXT:       struct Foo_int f;
-// CHECK-NEXT:       struct B x;
-// CHECK-NEXT:       struct_B_increase(&x);
-// CHECK-NEXT:       int b = struct_B_increase(&x);
-// CHECK-NEXT:       return f;
-// CHECK-NEXT:   }
+// CHECK-NEXT:   struct Foo_int f;
+// CHECK-NEXT:   struct B x;
+// CHECK-NEXT:   struct_B_increase(&x);
+// CHECK-NEXT:   int b = struct_B_increase(&x);
+// CHECK-NEXT:   return f;
+// CHECK-NEXT: }

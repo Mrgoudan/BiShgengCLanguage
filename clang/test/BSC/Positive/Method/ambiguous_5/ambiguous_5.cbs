@@ -18,12 +18,12 @@ int main() {
   return 0;
 }
 
-// CHECK: struct _A {
+// CHECK:      typedef struct _A A;
+// CHECK-EMPTY:
+// CHECK-NEXT: struct _A {
 // CHECK-NEXT: };
-
-// CHECK: typedef struct _A A;
-
-// CHECK: struct _A A_foo(void) {
+// CHECK-EMPTY:
+// CHECK-NEXT: struct _A A_foo(void) {
 // CHECK-NEXT:   A a;
 // CHECK-NEXT:   return a;
 // CHECK-NEXT: }

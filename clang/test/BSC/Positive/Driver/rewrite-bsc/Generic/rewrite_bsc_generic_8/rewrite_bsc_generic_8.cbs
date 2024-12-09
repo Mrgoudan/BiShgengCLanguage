@@ -24,11 +24,7 @@ struct C {
 
 int main() {};
 
-// CHECK: struct PollResult_int {
-// CHECK-NEXT:  };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct A {
-// CHECK-NEXT:      struct PollResult_int a;
+// CHECK:      struct PollResult_int {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct B {
@@ -36,7 +32,11 @@ int main() {};
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct C {
-// CHECK-NEXT:       struct PollResult_int a;
-// CHECK-NEXT:   };
+// CHECK-NEXT:   struct PollResult_int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct A {
+// CHECK-NEXT:   struct PollResult_int a;
+// CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: int main() {}

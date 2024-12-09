@@ -580,14 +580,14 @@ void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
       RecordDecl *RD = RT->getDecl();
       if (!RD->getIdentifier()) {
         if (RD->isStruct())
-          Out << "struct ";
+          Out << "struct _TD_";
         if (RD->isUnion())
-          Out << "union ";
+          Out << "union _TD_";
       }
     } else if (const EnumType *ET = D->getUnderlyingType()->getAs<EnumType>()) {
       EnumDecl *ED = ET->getDecl();
       if (!ED->getIdentifier()) {
-        Out << "enum ";
+        Out << "enum _TD_";
       }
     }
   }
@@ -634,7 +634,7 @@ void DeclPrinter::VisitEnumDecl(EnumDecl *D) {
   // Handling anonymous enum defined through typedef for rewriting
   else if (Context.getLangOpts().BSC) {
     if (TypedefNameDecl *TND = D->getTypedefNameForAnonDecl())
-      Out << ' ' << TND->getName();
+      Out << ' ' << "_TD_" << TND->getName();
   }
 #endif
 
@@ -669,7 +669,7 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
   // Handling anonymous struct/union defined through typedef for rewriting
   else if (Context.getLangOpts().BSC) {
     if (TypedefNameDecl *TND = D->getTypedefNameForAnonDecl())
-      Out << ' ' << TND->getName();
+      Out << ' ' << "_TD_" << TND->getName();
   }
 #endif
 
