@@ -834,10 +834,10 @@ void RewriteBSC::RewriteInstantFunctionDef(std::vector<Decl *> &DeclList) {
           }
           if (isa<FunctionTemplateDecl>(decl)) {
             FunctionTemplateDecl *FTD = cast<FunctionTemplateDecl>(decl);
-            for (auto *DD : FTD->specializations()) {
-              if (DD->doesThisDeclarationHaveABody()) {
-                PrintDebugLineInfo(DD);
-                DD->print(Buf, Policy);
+            for (FunctionDecl *FD : FTD->specializations()) {
+              if (FD->doesThisDeclarationHaveABody()) {
+                PrintDebugLineInfo(FD);
+                FD->print(Buf, Policy);
                 Buf << "\n";
               }
             }
