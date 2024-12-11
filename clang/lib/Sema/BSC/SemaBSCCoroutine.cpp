@@ -2461,14 +2461,19 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
   std::stack<RecordDecl::field_iterator> Futures;
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
        FieldIt != RD->field_end(); ++FieldIt) {
-    auto FieldTy = FieldIt->getType();
-    // Free trait pointer or known pointers
-    if ((FieldTy.getTypePtr()->isBSCFutureType() ||
-         (isa<PointerType>(FieldTy.getTypePtr()) &&
-          implementedFutureType(
-              S, cast<PointerType>(FieldTy.getTypePtr())->getPointeeType()))) &&
-        StartsWith(FieldIt->getDeclName().getAsString(), "Ft_")) {
-      Futures.push(FieldIt);
+    if (StartsWith(FieldIt->getDeclName().getAsString(), "Ft_")) {
+      auto FieldTy = FieldIt->getType();
+      auto maybePtrTy = dyn_cast<PointerType>(FieldTy.getTypePtr());
+      // Free trait pointer or known pointers
+      if (FieldTy.getTypePtr()->isBSCFutureType() ||
+          (maybePtrTy &&
+            implementedFutureType(
+            S, maybePtrTy->getPointeeType())) ||
+          (maybePtrTy &&
+            isa<RecordType>(maybePtrTy->getPointeeType()) &&
+            cast<RecordType>(maybePtrTy->getPointeeType())->getDecl() == RD)) {
+              Futures.push(FieldIt);
+            }
     }
   }
 

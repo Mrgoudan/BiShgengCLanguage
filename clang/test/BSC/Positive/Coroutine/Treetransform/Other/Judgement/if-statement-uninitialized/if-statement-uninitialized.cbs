@@ -31,12 +31,11 @@ int main() {
   return 0;
 }
 
-// CHECK: struct __Trait_Future_int __f(void) {
+// CHECK: struct _Futuref *__f(void) {
 // CHECK-NEXT:     struct _Futuref *data = calloc(1, sizeof(struct _Futuref));
 // CHECK-NEXT:     if (data == 0) {
 // CHECK-NEXT:         exit(1);
 // CHECK-NEXT:     }
 // CHECK-NEXT:     data->__future_state = 0;
-// CHECK-NEXT:     struct __Trait_Future_int fp = {(void *)data, &__Trait_Future_Vtablef};
-// CHECK-NEXT:     return fp;
+// CHECK-NEXT:     return data;
 // CHECK-NEXT: }

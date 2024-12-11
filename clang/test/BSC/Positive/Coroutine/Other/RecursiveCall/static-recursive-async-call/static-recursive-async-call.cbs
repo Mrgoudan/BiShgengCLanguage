@@ -31,6 +31,27 @@ int main() {
 // CHECK-NEXT:      int __future_state;
 // CHECK-NEXT:  };
 
+// CHECK:struct _Futuref *__f(int n) {
+// CHECK-NEXT:      struct _Futuref *data = calloc(1, sizeof(struct _Futuref));
+// CHECK-NEXT:      if (data == 0) {
+// CHECK-NEXT:          exit(1);
+// CHECK-NEXT:      }
+// CHECK-NEXT:      data->n = n;
+// CHECK-NEXT:      data->__future_state = 0;
+// CHECK-NEXT:      return data;
+// CHECK-NEXT:  }
+
+// CHECK: void struct__Futuref_free(struct _Futuref *this) {
+// CHECK-NEXT:      if (this->Ft_1 != 0) {
+// CHECK-NEXT:          struct__Futuref_free((void *)this->Ft_1);
+// CHECK-NEXT:          this->Ft_1 = (struct _Futuref *)(void *)0;
+// CHECK-NEXT:      }
+// CHECK-NEXT:      if (this != 0) {
+// CHECK-NEXT:          free((void *)this);
+// CHECK-NEXT:          this = (struct _Futuref *)(void *)0;
+// CHECK-NEXT:      }
+// CHECK-NEXT:  }
+
 // CHECK:struct PollResult_int struct__Futuref_poll(struct _Futuref *this) {
 // CHECK-NEXT:      switch (this->__future_state) {
 // CHECK-NEXT:        case 0:
@@ -67,26 +88,4 @@ int main() {
 // CHECK-NEXT:      int __RES_RETURN_1 = this->n * this->tmp;
 // CHECK-NEXT:      return struct_PollResult_int_completed(__RES_RETURN_1);
 // CHECK-NEXT:      }
-// CHECK-NEXT:  }
-
-// CHECK: void struct__Futuref_free(struct _Futuref *this) {
-// CHECK-NEXT:      if (this->Ft_1 != 0) {
-// CHECK-NEXT:          struct__Futuref_free((void *)this->Ft_1);
-// CHECK-NEXT:          this->Ft_1 = (struct _Futuref *)(void *)0;
-// CHECK-NEXT:      }
-// CHECK-NEXT:      if (this != 0) {
-// CHECK-NEXT:          free((void *)this);
-// CHECK-NEXT:          this = (struct _Futuref *)(void *)0;
-// CHECK-NEXT:      }
-// CHECK-NEXT:  }
-
-// CHECK:struct __Trait_Future_int __f(int n) {
-// CHECK-NEXT:      struct _Futuref *data = calloc(1, sizeof(struct _Futuref));
-// CHECK-NEXT:      if (data == 0) {
-// CHECK-NEXT:          exit(1);
-// CHECK-NEXT:      }
-// CHECK-NEXT:      data->n = n;
-// CHECK-NEXT:      data->__future_state = 0;
-// CHECK-NEXT:      struct __Trait_Future_int fp = {(void *)data, &__Trait_Future_Vtablef};
-// CHECK-NEXT:      return fp;
 // CHECK-NEXT:  }
