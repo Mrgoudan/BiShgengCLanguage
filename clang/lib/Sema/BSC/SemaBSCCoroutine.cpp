@@ -3024,11 +3024,8 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
 
     RecordDecl *PollResultRD = PollResultType->getAsRecordDecl();
 
-    BSCMethodDecl *PollDecl =
-        buildPollFunctionDeclaration(*this, RD, PollResultRD, FD);
-    BSCMethodDecl *FreeDecl = buildFreeFunctionDeclaration(*this, RD, FD);
-
-    RecordDecl *VtableRD = VtableType->getAsRecordDecl();
+    buildPollFunctionDeclaration(*this, RD, PollResultRD, FD);
+    buildFreeFunctionDeclaration(*this, RD, FD);
 
     VarDecl *VtableDecl = buildVtableInitDecl(
         *this, FD, Context.getRecordType(RD), ReturnTy, false);
@@ -3103,7 +3100,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   if (VtableType.isNull()) {
     return Decls;
   }
-  RecordDecl *VtableRD = VtableType->getAsRecordDecl();
+
   QualType FatPointerType =
       lookupGenericType(*this, FD->getBeginLoc(), ReturnTy, "__Trait_Future");
   if (FatPointerType.isNull()) {
