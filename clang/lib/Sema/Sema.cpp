@@ -2211,13 +2211,13 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
   if (LangOpts.OpenMP)
     popOpenMPFunctionRegion(Scope.get());
 
-  #if ENABLE_BSC
-  bool DisableOwnershipCheck = getLangOpts().DisableOwnershipCheck;
-  bool DisableNullabilityCheck = getLangOpts().DisableNullabilityCheck;
+#if ENABLE_BSC
   // If D does not use memory safety features like "owned, borrow, &mut, &const",
   // we do not do borrow checking.
   bool useSafeFeature = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
-  if (!(DisableNullabilityCheck && DisableOwnershipCheck) && useSafeFeature) {
+  bool EnableOwnershipCheck = useSafeFeature && !(getLangOpts().DisableOwnershipCheck);
+  bool EnableNullabilityCheck = LangOpts.BSC ? (getLangOpts().getNullabilityCheck() != LangOptions::NC_NONE) : false;
+  if (EnableOwnershipCheck || EnableNullabilityCheck) {
     if (!isBSCCoroutine &&
         (getDiagnostics().getNumErrors() ==
          getDiagnostics().getNumOwnershipErrors() +
@@ -2228,8 +2228,8 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
         auto md = dyn_cast_or_null<BSCMethodDecl>(D);
         // Don't check ownership rules of destructor parameters
         if (!md || !md->isDestructor())
-          BSCDataflowAnalysis(D, DisableOwnershipCheck,
-                              DisableNullabilityCheck);
+          BSCDataflowAnalysis(D, EnableOwnershipCheck,
+                              EnableNullabilityCheck);
       }
   }
 #endif

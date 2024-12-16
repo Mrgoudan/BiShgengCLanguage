@@ -12398,8 +12398,8 @@ public:
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
-  void BSCDataflowAnalysis(const Decl *D, bool DisableOwnershipCheck = false,
-                           bool DisableNullabilityCheck = false);
+  void BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck = true,
+                           bool EnableNullabilityCheck = true);
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);
@@ -12441,6 +12441,8 @@ public:
   bool CheckOperatorDeclNeedAddToContext(Declarator &D);
   bool CheckOperatorFunReturnTypeIsLegal(FunctionDecl *FnDecl);
   bool FindSafeFeatures(const FunctionDecl* FnDecl);
+  bool HasSafeZoneInCompoundStmt(const CompoundStmt* CompStmt);
+  bool HasSafeZoneInFunction(const FunctionDecl* FnDecl);
   void CheckMemberThisCallAccess(Expr *ActualArgExpr, QualType formalType);
   bool CheckNeedCastQualifiedType(QualType actualType, QualType formalType);
   bool CheckNeedReborrowPointerType(QualType actualType, QualType formalType);

@@ -160,8 +160,39 @@ bool Sema::FindSafeFeatures(const FunctionDecl* FnDecl) {
   return false;
 }
 
-void Sema::BSCDataflowAnalysis(const Decl *D, bool DisableOwnershipCheck,
-                               bool DisableNullabilityCheck) {
+bool Sema::HasSafeZoneInCompoundStmt(const CompoundStmt* CompStmt) {
+  if (!CompStmt) {
+    return false;
+  }
+  for (const Stmt *child: CompStmt->children()) {
+    if (auto *CompChild = dyn_cast<CompoundStmt>(child)) {
+      if (CompChild->getCompSafeZoneSpecifier() == SZ_Safe) {
+        return true;
+      }
+      if (HasSafeZoneInCompoundStmt(CompChild)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
+  if (!FnDecl || !FnDecl->getBody()) {
+    return false;
+  }
+  if (FnDecl->getSafeZoneSpecifier() == SZ_Safe) {
+    return true;
+  }
+  CompoundStmt *FuncBody = cast<CompoundStmt>(FnDecl->getBody());
+  if (!FuncBody) {
+    return false;
+  }
+  return HasSafeZoneInCompoundStmt(FuncBody);
+}
+
+void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
+                               bool EnableNullabilityCheck) {
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
 
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
@@ -176,7 +207,8 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool DisableOwnershipCheck,
   if (AC.getCFG()) {
     const FunctionDecl *FD = cast<FunctionDecl>(D);
     unsigned NumNullabilityCheckErrorsInCurrFD = 0;
-    if (!DisableNullabilityCheck && FD->getSafeZoneSpecifier() == SZ_Safe) {
+    LangOptions::NullCheckZone CheckZone = getLangOpts().getNullabilityCheck();
+    if (EnableNullabilityCheck && (CheckZone == LangOptions::NC_ALL || HasSafeZoneInFunction(FD))) {
       NullabilityCheckDiagReporter NullabilityCheckReporter(*this);
       runNullabilityCheck(*FD, *AC.getCFG(), AC, NullabilityCheckReporter,
                           Context);
@@ -186,7 +218,7 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool DisableOwnershipCheck,
     }
     // Run ownership analysis when there is no nullability errors in current
     // function.
-    if (!DisableOwnershipCheck && !NumNullabilityCheckErrorsInCurrFD) {
+    if (EnableOwnershipCheck && !NumNullabilityCheckErrorsInCurrFD) {
       OwnershipDiagReporter OwnershipReporter(*this);
       runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter);
       OwnershipReporter.flushDiagnostics();

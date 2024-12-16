@@ -80,6 +80,14 @@ public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
 
+#if ENABLE_BSC
+  enum NullCheckZone { 
+    NC_NONE,
+    NC_SAFE,
+    NC_ALL
+  };
+#endif
+
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
 

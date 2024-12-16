@@ -4820,8 +4820,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_opt_string);
   if (Args.hasArg(options::OPT_disable_ownership_check))
     CmdArgs.push_back("-disable-ownership-check");
-  if (Args.hasArg(options::OPT_disable_nullability_check))
-    CmdArgs.push_back("-disable-nullability-check");
+  if (Args.hasArg(options::OPT_nullability_check)) {
+    Arg *A = Args.getLastArg(options::OPT_nullability_check);
+    StringRef v = A->getValue();
+    if (v.empty())
+      D.Diag(diag::err_drv_missing_argument) << A->getSpelling() << 1;
+    else
+      CmdArgs.push_back(Args.MakeArgString("-nullability-check=" + v));
+  }
+    
 #endif
 
   auto *MemProfArg = Args.getLastArg(options::OPT_fmemory_profile,

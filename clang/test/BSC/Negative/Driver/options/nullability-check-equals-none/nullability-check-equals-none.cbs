@@ -1,4 +1,4 @@
-// RUN: %clang -disable-nullability-check %s -o %t.output
+// RUN: %clang -nullability-check=none %s -o %t.output
 // RUN: %t.output
 
 safe int main(void) {

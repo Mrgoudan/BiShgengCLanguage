@@ -18,6 +18,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "llvm/ADT/DenseMap.h"
+#include "clang/AST/ParentMap.h"
 
 using namespace clang;
 using namespace std;
@@ -77,7 +78,7 @@ public:
   std::pair<StatusVD, StatusFP>
   runOnBlock(const CFGBlock *block, StatusVD statusVD, StatusFP statusFP,
              NullabilityCheckDiagReporter &reporter, ASTContext &ctx,
-             const FunctionDecl &fd);
+             const FunctionDecl &fd, ParentMap &PM);
   void initStatus(const CFG &cfg, ASTContext &ctx);
 
   NullabilityCheckImpl()
@@ -98,20 +99,23 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   NullabilityCheckDiagReporter &Reporter;
   ASTContext &Ctx;
   const FunctionDecl &Fd;
+  ParentMap &PM;
 
 public:
   TransferFunctions(NullabilityCheckImpl &nci, const CFGBlock *block,
                     StatusVD &statusVD, StatusFP &statusFP,
                     NullabilityCheckDiagReporter &reporter, ASTContext &ctx,
-                    const FunctionDecl &fd)
+                    const FunctionDecl &fd, ParentMap &pm)
       : NCI(nci), Block(block), CurrStatusVD(statusVD), CurrStatusFP(statusFP),
-        Reporter(reporter), Ctx(ctx), Fd(fd) {}
+        Reporter(reporter), Ctx(ctx), Fd(fd), PM(pm) {}
 
+  bool IsStmtInSafeZone(Stmt *S);
+  bool ShouldReportNullPtrError(Stmt *S);
   void VisitDeclStmt(DeclStmt *S);
-  void HandleVarDeclInit(VarDecl *VD);
-  void HandlePointerInit(VarDecl *VD);
-  void HandleStructInit(VarDecl *VD);
-  void HandleFieldInit(VarDecl *VD, FieldDecl *FD, Expr *FieldInit);
+  void HandleVarDeclInit(DeclStmt *DS, VarDecl *VD);
+  void HandlePointerInit(DeclStmt *DS, VarDecl *VD);
+  void HandleStructInit(DeclStmt *DS, VarDecl *VD);
+  void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD, Expr *FieldInit);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitMemberExpr(MemberExpr *ME);
@@ -257,29 +261,55 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E) {
   return NullabilityKind::Unspecified;
 }
 
+bool TransferFunctions::IsStmtInSafeZone(Stmt *S) {
+  if (!S)
+    return false;
+  const Stmt *ParentStmt = PM.getParent(S);
+  while (ParentStmt) {
+    if (auto *CS = dyn_cast<CompoundStmt>(ParentStmt)) {
+      SafeZoneSpecifier SafeZoneSpec = CS->getCompSafeZoneSpecifier();
+      if (SafeZoneSpec == SZ_Safe) {
+        return true;
+      } else if (SafeZoneSpec == SZ_Unsafe) {
+        return false;
+      }
+    }
+    ParentStmt = PM.getParent(ParentStmt);
+  }
+  return Fd.getSafeZoneSpecifier() == SZ_Safe;
+}
+
+bool TransferFunctions::ShouldReportNullPtrError(Stmt *S) {
+  LangOptions::NullCheckZone CheckZone = Ctx.getLangOpts().getNullabilityCheck();
+  if (CheckZone == LangOptions::NC_ALL) {
+    return true;
+  }
+  return IsStmtInSafeZone(S);
+}
+
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   for (Decl *D : DS->decls())
     if (VarDecl *VD = dyn_cast<VarDecl>(D))
       if (VD->getInit())
-        HandleVarDeclInit(VD);
+        HandleVarDeclInit(DS, VD);
 }
 
-void TransferFunctions::HandleVarDeclInit(VarDecl *VD) {
+void TransferFunctions::HandleVarDeclInit(DeclStmt *DS, VarDecl *VD) {
   QualType VQT = VD->getType();
   if (VQT->isPointerType())
-    HandlePointerInit(VD);
+    HandlePointerInit(DS, VD);
   else if (VQT->isRecordType())
-    HandleStructInit(VD);
+    HandleStructInit(DS, VD);
 }
 
 // Init a pointer variable
-void TransferFunctions::HandlePointerInit(VarDecl *VD) {
+void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
   NullabilityKind LHSKind = getDefNullability(VD->getType(), Ctx);
   NullabilityKind RHSKind = getExprPathNullability(VD->getInit());
   if (LHSKind == NullabilityKind::NonNull) {
     // NonNull pointer cannot be assigned by expr
     // whose PathNullability is nullable.
-    if (RHSKind == NullabilityKind::Nullable) {
+    if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(DS)) {
       NullabilityCheckDiagInfo DI(VD->getLocation(),
                                   NonnullAssignedByNullable);
       Reporter.addDiagInfo(DI);
@@ -290,7 +320,7 @@ void TransferFunctions::HandlePointerInit(VarDecl *VD) {
 }
 
 // Init a struct variable with pointer fields.
-void TransferFunctions::HandleStructInit(VarDecl *VD) {
+void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD) {
   auto RecTy = dyn_cast<RecordType>(VD->getType().getCanonicalType());
   if (RecordDecl *RD = RecTy->getDecl()) {
     if (auto InitListE = dyn_cast<InitListExpr>(VD->getInit())) {
@@ -298,16 +328,16 @@ void TransferFunctions::HandleStructInit(VarDecl *VD) {
       Expr **Inits = InitListE->getInits();
       for (FieldDecl *FD : RD->fields())
         if (FD->getType()->isPointerType())
-          HandleFieldInit(VD, FD, Inits[FD->getFieldIndex()]);
+          HandleFieldInit(DS, VD, FD, Inits[FD->getFieldIndex()]);
     }
   }
 }
 
-void TransferFunctions::HandleFieldInit(VarDecl *VD, FieldDecl *FD, Expr *FieldInit) {
+void TransferFunctions::HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD, Expr *FieldInit) {
   NullabilityKind LHSKind = getDefNullability(FD->getType(), Ctx);
   NullabilityKind RHSKind = getExprPathNullability(FieldInit);
   if (LHSKind == NullabilityKind::NonNull) {
-    if (RHSKind == NullabilityKind::Nullable) {
+    if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(DS)) {
       NullabilityCheckDiagInfo DI(FieldInit->getBeginLoc(), NonnullAssignedByNullable);
       Reporter.addDiagInfo(DI);
     }
@@ -329,7 +359,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
         if (LHSKind == NullabilityKind::NonNull) {
           // NonNull pointer cannot be assigned by expr
           // whose PathNullability is nullable.
-          if (RHSKind == NullabilityKind::Nullable) {
+          if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(BO)) {
             NullabilityCheckDiagInfo DI(BO->getBeginLoc(),
                                         NonnullAssignedByNullable);
             Reporter.addDiagInfo(DI);
@@ -342,7 +372,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
         if (FieldDecl *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
           NullabilityKind LHSKind = getDefNullability(FD->getType(), Ctx);
           if (LHSKind == NullabilityKind::NonNull) {
-            if (RHSKind == NullabilityKind::Nullable) {
+            if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(BO)) {
               NullabilityCheckDiagInfo DI(ME->getBeginLoc(),
                                           NonnullAssignedByNullable);
               Reporter.addDiagInfo(DI);
@@ -366,7 +396,7 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
       ParmVarDecl *PVD = FD->getParamDecl(i);
       if (getDefNullability(PVD->getType(), Ctx) == NullabilityKind::NonNull) {
         Expr *ArgE = CE->getArg(i);
-        if (getExprPathNullability(ArgE) == NullabilityKind::Nullable) {
+        if (getExprPathNullability(ArgE) == NullabilityKind::Nullable && ShouldReportNullPtrError(CE)) {
           NullabilityCheckDiagInfo DI(ArgE->getBeginLoc(),
                                       PassNullableArgument);
           Reporter.addDiagInfo(DI);
@@ -380,7 +410,7 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
 void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
   UnaryOperator::Opcode Op = UO->getOpcode();
   if (Op == UO_Deref || Op == UO_AddrMutDeref || Op == UO_AddrConstDeref) {
-    if (getExprPathNullability(UO->getSubExpr()) == NullabilityKind::Nullable) {
+    if (getExprPathNullability(UO->getSubExpr()) == NullabilityKind::Nullable && ShouldReportNullPtrError(UO)) {
       NullabilityCheckDiagInfo DI(UO->getBeginLoc(),
                                   NullablePointerDereference);
       Reporter.addDiagInfo(DI);
@@ -391,7 +421,7 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
 // p->a is not allowed when p has nullable PathNullability.
 void TransferFunctions::VisitMemberExpr(MemberExpr *ME) {
   if (ME->isArrow()) {
-    if (getExprPathNullability(ME->getBase()) == NullabilityKind::Nullable) {
+    if (getExprPathNullability(ME->getBase()) == NullabilityKind::Nullable && ShouldReportNullPtrError(ME)) {
       NullabilityCheckDiagInfo DI(ME->getBeginLoc(),
                                   NullablePointerAccessMember);
       Reporter.addDiagInfo(DI);
@@ -406,7 +436,7 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   if (!RV)
     return;
   if (getDefNullability(Fd.getReturnType(), Ctx) == NullabilityKind::NonNull) {
-    if (getExprPathNullability(RV) == NullabilityKind::Nullable) {
+    if (getExprPathNullability(RV) == NullabilityKind::Nullable && ShouldReportNullPtrError(RS)) {
       NullabilityCheckDiagInfo DI(RV->getBeginLoc(), ReturnNullable);
       Reporter.addDiagInfo(DI);
     }
@@ -600,13 +630,12 @@ std::pair<StatusVD, StatusFP>
 NullabilityCheckImpl::runOnBlock(const CFGBlock *block, StatusVD statusVD,
                                  StatusFP statusFP,
                                  NullabilityCheckDiagReporter &reporter,
-                                 ASTContext &ctx, const FunctionDecl &fd) {
-  TransferFunctions TF(*this, block, statusVD, statusFP, reporter, ctx, fd);
+                                 ASTContext &ctx, const FunctionDecl &fd, ParentMap &PM) {
+  TransferFunctions TF(*this, block, statusVD, statusFP, reporter, ctx, fd, PM);
 
   for (CFGBlock::const_iterator it = block->begin(), ei = block->end();
        it != ei; ++it) {
     const CFGElement &elem = *it;
-
     if (elem.getAs<CFGStmt>()) {
       const Stmt *S = elem.castAs<CFGStmt>().getStmt();
       TF.Visit(const_cast<Stmt *>(S));
@@ -679,7 +708,7 @@ void clang::runNullabilityCheck(const FunctionDecl &fd, const CFG &cfg,
     }
 
     std::pair<StatusVD, StatusFP> val =
-        NCI.runOnBlock(block, valVD, valFP, reporter, ctx, fd);
+        NCI.runOnBlock(block, valVD, valFP, reporter, ctx, fd, ac.getParentMap());
     NCI.BlocksEndStatusVD[block] = val.first;
     NCI.BlocksEndStatusFP[block] = val.second;
     if (preValVD == val.first && preValFP == val.second)
