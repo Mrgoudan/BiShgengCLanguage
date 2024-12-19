@@ -2127,6 +2127,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         D->isInlineSpecified(), D->hasWrittenPrototype(), D->getConstexprKind(),
         TrailingRequiresClause);
     Function->setRangeEnd(D->getSourceRange().getEnd());
+#if ENABLE_BSC
+    if (SemaRef.getLangOpts().BSC)
+      Function->setSafeZoneSpecifier(D->getSafeZoneSpecifier());
+#endif
   }
 
   if (D->isInlined())
