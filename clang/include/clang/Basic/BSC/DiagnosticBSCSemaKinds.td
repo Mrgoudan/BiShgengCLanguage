@@ -209,6 +209,8 @@ def err_pass_nullable_argument : Error<
   "cannot pass nullable pointer argument">;
 def err_return_nullable : Error<
   "cannot return nullable pointer type">;
+def err_nullable_cast_nonnull : Error<
+  "cannot cast nullable pointer to nonnull type">;
 def err_nullable_pointer_access_member : Error<
   "cannot access member througn nullable pointer">;
 def err_nonnull_assigned_by_nullable : Error<

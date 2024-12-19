@@ -590,6 +590,10 @@ public:
                                                  SmallVectorImpl<
                                                    PartialDiagnosticAt> &Diags);
 
+#if ENABLE_BSC
+  bool isNullExpr(ASTContext &Ctx) const;
+#endif
+
   /// isConstantInitializer - Returns true if this expression can be emitted to
   /// IR as a constant, and thus can be used as a constant initializer in C.
   /// If this expression is not constant and Culprit is non-null,

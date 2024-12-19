@@ -121,6 +121,7 @@ public:
   void VisitMemberExpr(MemberExpr *ME);
   void VisitCallExpr(CallExpr *CE);
   void VisitReturnStmt(ReturnStmt *RS);
+  void VisitCStyleCastExpr(CStyleCastExpr *CSCE);
   NullabilityKind getExprPathNullability(Expr *E);
   void PassConditionStatusToSuccBlocks(Stmt *Cond);
 };
@@ -180,27 +181,15 @@ static MemberExpr *getMemberExprFromExpr(Expr *E) {
   return nullptr;
 }
 
-// If current expr is equal to 0, return true.
-// Such as : nullptr, 0, (void*)0, ((void*)0), (int*)0,
-//           (int* borrow)(void*)0, (int* owned)(void*)0,
-// also include constant value which equals to 0
-static bool isNullExpr(const Expr *E, ASTContext &Ctx) {
-  if (isa<CXXNullPtrLiteralExpr>(E)) {
-    return true;
-  } else if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(E)) {
-    if (IL->getValue().getZExtValue() == 0)
-      return true;
-  } else if (const CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
-    return isNullExpr(CSCE->getSubExpr(), Ctx);
-  } else if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    return isNullExpr(ICE->getSubExpr(), Ctx);
-  } else if (const ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
-    return isNullExpr(PE->getSubExpr(), Ctx);
-  } else if (Optional<llvm::APSInt> I = E->getIntegerConstantExpr(Ctx)) {
-    if (*I == 0)
-      return true;
+static CallExpr *getCallExprFromExpr(Expr *E) {
+  if (auto CE = dyn_cast<CallExpr>(E)) {
+    return CE;
+  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    return getCallExprFromExpr(ICE->getSubExpr());
+  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
+    return getCallExprFromExpr(PE->getSubExpr());
   }
-  return false;
+  return nullptr;
 }
 
 // We can get PathNullability for these exprs:
@@ -214,10 +203,10 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E) {
   QualType QT = E->getType();
   QualType CanQT = QT.getCanonicalType();
   if (CanQT->isPointerType()) {
-    if (isNullExpr(E, Ctx))
+    if (E->isNullExpr(Ctx))
       return NullabilityKind::Nullable;
-    if (isa<CallExpr>(E))
-      return getDefNullability(QT, Ctx);
+    if (auto CE = getCallExprFromExpr(E))
+      return getDefNullability(CE->getType(), Ctx);
     if (auto CSCE = dyn_cast<CStyleCastExpr>(E))
       return getDefNullability(CSCE->getTypeAsWritten(), Ctx);
     if (auto UO = dyn_cast<UnaryOperator>(E)) {
@@ -429,6 +418,19 @@ void TransferFunctions::VisitMemberExpr(MemberExpr *ME) {
   }
 }
 
+// (int *_Nonnull)p, (int *borrow)p, (int *owned)p is not allowed
+// when p has nullable PathNullability.
+void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
+  if (getDefNullability(CSCE->getTypeAsWritten(), Ctx) == NullabilityKind::NonNull) {
+    if (getExprPathNullability(CSCE->getSubExpr()) == NullabilityKind::Nullable &&
+        ShouldReportNullPtrError(CSCE)) {
+      NullabilityCheckDiagInfo DI(CSCE->getBeginLoc(),
+                                  NullableCastNonnull);
+      Reporter.addDiagInfo(DI);
+    }
+  }
+}
+
 // If function return type is NonNull, cannot return pointer
 // which has nullable PathNullability.
 void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
@@ -462,7 +464,7 @@ void TransferFunctions::PassConditionStatusToSuccBlocks(Stmt *Cond) {
         // Condition expr is BinaryOperator, such as:
         // if (p != nullptr), if (s.p != nullptr), if (p == nullptr), if (s.p !=
         // nullptr), ...
-        if (BO->isEqualityOp() && isNullExpr(BO->getRHS(), Ctx)) {
+        if (BO->isEqualityOp() && BO->getRHS()->isNullExpr(Ctx)) {
           Expr *LHS = BO->getLHS();
           if (VarDecl *VD = getVarDeclFromExpr(LHS)) {
             if (getDefNullability(VD->getType(), Ctx) ==

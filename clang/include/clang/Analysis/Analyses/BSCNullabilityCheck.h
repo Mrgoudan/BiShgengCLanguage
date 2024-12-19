@@ -25,6 +25,7 @@ enum NullabilityCheckDiagKind {
   NonnullAssignedByNullable,
   PassNullableArgument,
   ReturnNullable,
+  NullableCastNonnull,
   NullablePointerDereference,
   NullablePointerAccessMember,
 };
@@ -83,6 +84,9 @@ public:
         break;
       case ReturnNullable:
         S.Diag(DI.Loc, diag::err_return_nullable);
+        break;
+      case NullableCastNonnull:
+        S.Diag(DI.Loc, diag::err_nullable_cast_nonnull);
         break;
       case NullablePointerDereference:
         S.Diag(DI.Loc, diag::err_nullable_pointer_dereference);

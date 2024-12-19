@@ -18,4 +18,26 @@
 
 using namespace clang;
 
+/// If current expr is equal to 0, return true.
+/// Such as : nullptr, 0, (void*)0, ((void*)0), (int*)0,
+///           (int* borrow)(void*)0, (int* owned)(void*)0,
+/// also include constant value which equals to 0.
+bool Expr::isNullExpr(ASTContext &Ctx) const {
+  if (getType()->isNullPtrType()) {
+    return true;
+  } else if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(this)) {
+    if (IL->getValue().getZExtValue() == 0)
+      return true;
+  } else if (const CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(this)) {
+    return CSCE->getSubExpr()->isNullExpr(Ctx);
+  } else if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(this)) {
+    return ICE->getSubExpr()->isNullExpr(Ctx);
+  } else if (const ParenExpr *PE = dyn_cast<ParenExpr>(this)) {
+    return PE->getSubExpr()->isNullExpr(Ctx);
+  } else if (Optional<llvm::APSInt> I = this->getIntegerConstantExpr(Ctx)) {
+    if (*I == 0)
+      return true;
+  }
+  return false;
+}
 #endif // ENABLE_BSC
