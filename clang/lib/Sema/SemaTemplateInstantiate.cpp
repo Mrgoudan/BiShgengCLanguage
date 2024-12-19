@@ -2729,6 +2729,8 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       // class template specialization, we only update pointOfInstantiation at
       // the first time.
       if (Spec->getPointOfInstantiation().isInvalid()) {
+        if (PointOfInstantiation.isInvalid())
+          return true;
 #endif
         Spec->setTemplateSpecializationKind(TSK);
         Spec->setPointOfInstantiation(PointOfInstantiation);

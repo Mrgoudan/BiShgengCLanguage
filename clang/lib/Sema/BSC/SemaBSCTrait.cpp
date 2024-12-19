@@ -1294,11 +1294,18 @@ void Sema::checkBSCFunctionContainsTrait(Decl *D) {
   else if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
     QualType Ty = VD->getType();
     if (Ty->isFunctionPointerType()) {
-      const Type *FPT = Ty->getAs<PointerType>()
+      const Type *FT = Ty->getAs<PointerType>()
                             ->getPointeeType()
                             .getCanonicalType()
                             .getTypePtr();
-      T = FPT->getAs<FunctionProtoType>()->getReturnType().getTypePtr();
+      if (const FunctionProtoType *FPT = 
+                FT->getAs<FunctionProtoType>()) {
+        T = FPT->getReturnType().getTypePtr();
+      } else if (const FunctionNoProtoType *FNPT = 
+                       FT->getAs<FunctionNoProtoType>()) {
+        T = FNPT->getReturnType().getTypePtr();
+      } else 
+        return;
     } else
       return;
   } else
