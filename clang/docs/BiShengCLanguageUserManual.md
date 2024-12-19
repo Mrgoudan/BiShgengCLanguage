@@ -4435,6 +4435,38 @@ safe void example(void) {
 }
 ```
 
+#### `forget`
+
+`forget` 主要用于获取变量的所有权并且“忘记”它，该函数是一个泛型函数，接收一个类型为泛型类型`T`的变量，表示要“忘记”的值：
+1. 如果该变量是 owned 指针，那么该指针指向的内存不会被释放；
+2. 如果该变量是 owned struct 类型，那么不会调用其析构函数。
+
+在一些特殊的场景，用户希望取得变量的所有权而不通过该变量来释放管理的底层资源（如堆内存或文件句柄，这些资源可能已经通过裸指针操作被转移或释放），例如：
+
+```c
+#include "bishengc_safety.hbs"
+#include <string.h>
+owned struct Resource {
+public:
+    char *owned s;
+    ~Resource(This this) {
+        safe_free((void *owned)this.s);
+    }
+};
+
+void get_resource(char* val) {
+    Resource r = { .s = safe_malloc<char>(100) };
+    memcpy(val, (const void *)&r, sizeof(Resource)); // Resource中的资源被转移
+    forget<Resource>(r); //此时 forget 函数会获取 r 的所有权，但是并不会调用 Resource 的析构函数来释放堆内存
+}
+
+int main() {
+    char val[sizeof(Resource)];
+    get_resource(val);
+    return 0;
+}
+```
+
 ### 安全数据结构
 
 #### `Vec`

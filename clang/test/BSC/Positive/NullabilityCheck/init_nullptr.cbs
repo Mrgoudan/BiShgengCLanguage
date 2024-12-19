@@ -6,22 +6,35 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
+safe T *owned safe_malloc<T>(T t) {
+    unsafe {
+        T *addr = (T *)malloc(sizeof(T));
+        if (!addr) {
+            addr = &t;
+            T* forget = &t;
+            *forget = t;
+            exit(EXIT_FAILURE);
+        } else {
+            *addr = t;
+        }
+        return (T *owned)addr;
+	}
+}
+
 safe int get_current_status(void) {
     return 1;
 }
 
 safe int *owned get_nonnull(int a) {
-    unsafe {
-        int *owned p = (int *owned)malloc(sizeof(int));
-        *p = a;
-        return p;
-    }
+    int *owned p = safe_malloc<int>(5);
+    *p = a;
+    return p;
 }
 
 safe int *owned _Nullable get_nullable(int a) {
     if (get_current_status > 0) {
         unsafe {
-            int *owned p = (int *owned)malloc(sizeof(int));
+            int *owned p = safe_malloc<int>(5);
             *p = a;
             return p;
         }

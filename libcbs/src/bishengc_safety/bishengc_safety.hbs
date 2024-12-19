@@ -25,23 +25,34 @@ safe void bsc_refcell_immut_borrow_failed(void);
 
 safe void safe_free(void * owned p);
 
+// Takes ownership and “forgets” about the value without running its destructor.
+safe void forget<T>(T t) {
+    unsafe {
+        T* forget = &t;
+        *forget = t;
+    }
+}
+
 safe T *owned safe_malloc<T>(T t) {
-	unsafe {
-		T *addr = (T *)malloc(sizeof(T));
-		if (!addr) {
-			bsc_bad_alloc_handler(sizeof(T));
-		}
-		*addr = t;
-		return (T *owned)addr;
-	}
+    unsafe {
+        T *addr = (T *)malloc(sizeof(T));
+        if (!addr) {
+            addr = &t;
+            forget<T>(t);
+            bsc_bad_alloc_handler(sizeof(T));
+        } else {
+            *addr = t;
+        }
+        return (T *owned)addr;
+    }
 }
 
 safe void safe_swap<T>(T* borrow left, T* borrow right) {
-	unsafe {
-		T tmp = *(T *)left;
-        *left = *(T *)right;
+    unsafe {
+        T tmp = *(T *_Nonnull)left;
+        *left = *(T *_Nonnull)right;
         *right = tmp;
-	}
+    }
 }
 
 #endif

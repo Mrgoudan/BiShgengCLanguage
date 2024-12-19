@@ -55,8 +55,7 @@ safe Option<T> Option<T>::Some(T t) {
             .val = {0}
         };
         memcpy(o.val, (const void *)&t, sizeof(T));
-        T* forget = &t; // forget value `t` to avoid calling its destructor
-        *forget = t;
+        forget<T>(t); // forget value `t` to avoid calling its destructor
         return o;
     }
 }
@@ -84,10 +83,9 @@ safe T option_unwrap<T>(Option<T> option) {
         bsc_unwrap_failed();
     }
     unsafe {
-        T* ptr = (T *)option.val;
+        T* ptr = (T *_Nonnull)option.val;
         T t = *ptr;
-        Option<T>* forget = &option; // forget value `option` to avoid calling its destructor
-        *forget = option;
+        forget<Option<T>>(option); // forget value `option` to avoid calling its destructor
         return t;
     }
 }

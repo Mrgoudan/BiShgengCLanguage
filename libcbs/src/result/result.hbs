@@ -66,8 +66,7 @@ safe Result<T, E> Result<T, E>::Ok(T t) {
             .e = {0}
         };
         memcpy(r.t, (const void *)&t, sizeof(T));
-        T* forget = &t; // forget value `t` to avoid calling its destructor
-        *forget = t;
+        forget<T>(t);  // forget value `t` to avoid calling its destructor
         return r;
     }
 }
@@ -89,8 +88,7 @@ safe Result<T, E> Result<T, E>::Err(E e) {
             .e = {0}
         };
         memcpy(r.e, (const void *)&e, sizeof(E));
-        E* forget = &e; // forget value `e` to avoid calling its destructor
-        *forget = e;
+        forget<E>(e);  // forget value `e` to avoid calling its destructor
         return r;
     }
 }
@@ -103,10 +101,9 @@ safe T result_unwrap<T, E>(Result<T, E> result) {
         bsc_unwrap_failed();
     }
     unsafe {
-        T* ptr = (T *)result.t;
+        T* ptr = (T *_Nonnull)result.t;
         T t = *ptr;
-        Result<T, E>* forget = &result; // forget value `result` to avoid calling its destructor
-        *forget = result;
+        forget<Result<T, E>>(result); // forget value `result` to avoid calling its destructor
         return t;
     }
 }
@@ -119,10 +116,9 @@ safe E result_unwrap_err<T, E>(Result<T, E> result) {
         bsc_unwrap_failed();
     }
     unsafe {
-        E* ptr = (E *)result.e;
+        E* ptr = (E *_Nonnull)result.e;
         E e = *ptr;
-        Result<T, E>* forget = &result; // forget value `result` to avoid calling its destructor
-        *forget = result;
+        forget<Result<T, E>>(result); // forget value `result` to avoid calling its destructor
         return e;
     }
 }

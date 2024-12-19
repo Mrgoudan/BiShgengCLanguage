@@ -6,11 +6,18 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
-safe T *owned safe_malloc<T>(T a) {
+safe T *owned safe_malloc<T>(T t) {
     unsafe {
-        T *owned p = (T *owned)malloc(sizeof(T));
-        *p = a;
-        return p;
+        T *addr = (T *)malloc(sizeof(T));
+        if (!addr) {
+            addr = &t;
+            T* forget = &t;
+            *forget = t;
+            exit(EXIT_FAILURE);
+        } else {
+            *addr = t;
+        }
+        return (T *owned)addr;
     }
 }
 safe void use<T>(T *borrow p) {}

@@ -19,7 +19,24 @@ void test1() {
     safe_free((void* owned)sp);
 }
 
+owned struct Resource {
+public:
+    int * owned value;
+    ~Resource(This this) {
+        safe_free((void * owned)this.value);
+    }
+};
+
+safe void test2(void) {
+    Resource r = { .value = safe_malloc(1) };
+    forget<Resource>(r);
+
+    int *owned p = safe_malloc(1);
+    forget<int *owned>(p);
+}
+
 int main() {
     test1();
+    test2();
     return 0;
 }
