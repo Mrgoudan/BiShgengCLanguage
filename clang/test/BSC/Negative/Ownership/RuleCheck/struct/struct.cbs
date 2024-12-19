@@ -144,12 +144,11 @@ void func25(struct A a, struct B b) {
 //--------------------------owned-->null-----------------------------
 void func26(struct A *owned a) {
   a = (struct A* owned)(void *owned)NULL; // expected-error {{assign to owned value: `a`}}
-} // expected-error {{memory leak of value: `a`}}
-  // expected-error@-1 {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3... are leak}}
+}
 
 void func27(struct A a) {
   a.a2 = (struct B* owned)(void *owned)NULL; // expected-error {{assign to part of owned value: `a.a2`}}
-} // expected-error {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3... are leak}}
+} // expected-error {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a3.b1, a.a3.b2, a.a3.b3, a.a3.b3.c1... are leak}}
 
 //----------------------------------uninitialized-->owned----------------------------------
 void func28(struct C * owned c) {

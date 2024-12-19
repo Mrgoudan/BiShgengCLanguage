@@ -220,7 +220,7 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
     // function.
     if (EnableOwnershipCheck && !NumNullabilityCheckErrorsInCurrFD) {
       OwnershipDiagReporter OwnershipReporter(*this);
-      runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter);
+      runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter, Context);
       OwnershipReporter.flushDiagnostics();
       // Run borrow check when there is no other ownership errors in current
       // function.

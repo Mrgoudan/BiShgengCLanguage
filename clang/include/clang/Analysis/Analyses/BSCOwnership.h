@@ -62,6 +62,7 @@ public:
     llvm::DenseMap<const VarDecl *, OwnershipSet> SStatus;
     llvm::DenseMap<const VarDecl *, SOwnedField> SAllOwnedFields;
     llvm::DenseMap<const VarDecl *, SOwnedField> SOwnedOwnedFields;
+    llvm::DenseMap<const VarDecl *, SOwnedField> SNullOwnedFields;
 
     // basic owned pointer status, e.g. int * owned p
     using BOPOwnedField = llvm::SmallSet<std::string, 10>;
@@ -79,7 +80,8 @@ public:
     void resetAll(const VarDecl *VD);
     void init(const VarDecl *VD);
     void setToOwned(const VarDecl *VD);
-    void setToMoved(const Expr *E);
+    void setToNull(const VarDecl *VD);
+    void setToNull(const Expr *E);
 
     llvm::SmallVector<OwnershipDiagInfo, 3>
     checkOPSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr,
@@ -138,13 +140,14 @@ public:
                     llvm::DenseMap<const VarDecl *, OwnershipSet> ss,
                     llvm::DenseMap<const VarDecl *, OPSOwnedField> saof,
                     llvm::DenseMap<const VarDecl *, SOwnedField> soof,
+                    llvm::DenseMap<const VarDecl *, OPSOwnedField> snof,
                     llvm::DenseMap<const VarDecl *, OwnershipSet> bops,
                     llvm::DenseMap<const VarDecl *, BOPOwnedField> bopaof,
                     llvm::DenseMap<const VarDecl *, BOPOwnedField> bopoof)
         : OPSStatus(opss), OPSAllOwnedFields(opsaof),
           OPSOwnedOwnedFields(opsoof), SStatus(ss), SAllOwnedFields(saof),
-          SOwnedOwnedFields(soof), BOPStatus(bops), BOPAllOwnedFields(bopaof),
-          BOPOwnedOwnedFields(bopoof) {}
+          SOwnedOwnedFields(soof), SNullOwnedFields(snof), BOPStatus(bops),
+          BOPAllOwnedFields(bopaof), BOPOwnedOwnedFields(bopoof) {}
 
   private:
     void initOPS(const RecordDecl *RD, const VarDecl *VD, Source source,
@@ -319,7 +322,8 @@ public:
 
 void runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
                           AnalysisDeclContext &ac,
-                          OwnershipDiagReporter &reporter);
+                          OwnershipDiagReporter &reporter,
+                          ASTContext &ctx);
 
 } // end namespace clang
 

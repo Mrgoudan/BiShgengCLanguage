@@ -28,6 +28,7 @@ namespace {
 class OwnershipImpl {
 public:
   AnalysisDeclContext &analysisContext;
+  ASTContext &ctx;
   llvm::DenseMap<const CFGBlock *, Ownership::OwnershipStatus>
       blocksBeginStatus;
   llvm::DenseMap<const CFGBlock *, Ownership::OwnershipStatus> blocksEndStatus;
@@ -41,8 +42,8 @@ public:
 
   void MaybeSetNull(const CFGBlock *block, Ownership::OwnershipStatus &status);
 
-  OwnershipImpl(AnalysisDeclContext &ac)
-      : analysisContext(ac), blocksBeginStatus(0), blocksEndStatus(0) {}
+  OwnershipImpl(AnalysisDeclContext &ac, ASTContext &context)
+      : analysisContext(ac), ctx(context), blocksBeginStatus(0), blocksEndStatus(0) {}
 };
 } // namespace
 
@@ -170,8 +171,8 @@ bool Ownership::OwnershipStatus::empty() const {
   return OPSStatus.empty() && OPSAllOwnedFields.empty() &&
          OPSOwnedOwnedFields.empty() && SStatus.empty() &&
          SAllOwnedFields.empty() && SOwnedOwnedFields.empty() &&
-         BOPStatus.empty() && BOPAllOwnedFields.empty() &&
-         BOPOwnedOwnedFields.empty();
+         SNullOwnedFields.empty() && BOPStatus.empty() &&
+         BOPAllOwnedFields.empty() && BOPOwnedOwnedFields.empty();
 }
 
 Ownership::OwnershipStatus
@@ -181,6 +182,7 @@ OwnershipImpl::merge(Ownership::OwnershipStatus statsA,
     return Ownership::OwnershipStatus(
         statsB.OPSStatus, statsB.OPSAllOwnedFields, statsB.OPSOwnedOwnedFields,
         statsB.SStatus, statsB.SAllOwnedFields, statsB.SOwnedOwnedFields,
+        statsB.SNullOwnedFields,
         statsB.BOPStatus, statsB.BOPAllOwnedFields, statsB.BOPOwnedOwnedFields);
 
   for (auto it = statsB.OPSStatus.begin(), ei = statsB.OPSStatus.end();
@@ -223,14 +225,23 @@ OwnershipImpl::merge(Ownership::OwnershipStatus statsA,
             ei = statsB.SAllOwnedFields.end();
        it != ei; ++it) {
     const VarDecl *VD = it->first;
-    llvm::SmallSet<string, 10> value = statsB.SOwnedOwnedFields[VD];
-    if (statsA.SAllOwnedFields.count(VD) && !statsA.SOwnedOwnedFields.empty()) {
-      if (!value.empty()) {
-        for (auto s : value)
+    llvm::SmallSet<string, 10> OwnedValue = statsB.SOwnedOwnedFields[VD];
+    llvm::SmallSet<string, 10> NullValue = statsB.SNullOwnedFields[VD];
+    if (statsA.SAllOwnedFields.count(VD) &&
+        (!statsA.SOwnedOwnedFields.empty() || !statsA.SNullOwnedFields.empty())) {
+      if (!statsA.SOwnedOwnedFields.empty() && !OwnedValue.empty()) {
+        for (auto s : OwnedValue)
           statsA.SOwnedOwnedFields[VD].insert(s);
       }
+      if (!statsA.SNullOwnedFields.empty() && !NullValue.empty()) {
+        for (auto s : NullValue)
+          statsA.SNullOwnedFields[VD].insert(s);
+      }
     } else {
-      statsA.SAllOwnedFields[VD] = value;
+      for (auto s : OwnedValue)
+          statsA.SAllOwnedFields[VD].insert(s);
+      for (auto s : NullValue)
+          statsA.SAllOwnedFields[VD].insert(s);
     }
   }
 
@@ -263,6 +274,7 @@ OwnershipImpl::merge(Ownership::OwnershipStatus statsA,
   return Ownership::OwnershipStatus(
       statsA.OPSStatus, statsA.OPSAllOwnedFields, statsA.OPSOwnedOwnedFields,
       statsA.SStatus, statsA.SAllOwnedFields, statsA.SOwnedOwnedFields,
+      statsA.SNullOwnedFields,
       statsA.BOPStatus, statsA.BOPAllOwnedFields, statsA.BOPOwnedOwnedFields);
 }
 
@@ -270,7 +282,8 @@ bool Ownership::OwnershipStatus::equals(const OwnershipStatus &V) const {
   return OPSStatus == V.OPSStatus && OPSAllOwnedFields == V.OPSAllOwnedFields &&
          OPSOwnedOwnedFields == V.OPSOwnedOwnedFields && SStatus == V.SStatus &&
          SAllOwnedFields == V.SAllOwnedFields &&
-         SOwnedOwnedFields == V.SOwnedOwnedFields && BOPStatus == V.BOPStatus &&
+         SOwnedOwnedFields == V.SOwnedOwnedFields &&
+         SNullOwnedFields == V.SNullOwnedFields && BOPStatus == V.BOPStatus &&
          BOPAllOwnedFields == V.BOPAllOwnedFields &&
          BOPOwnedOwnedFields == V.BOPOwnedOwnedFields;
 }
@@ -352,7 +365,7 @@ bool Ownership::OwnershipStatus::has(const VarDecl *VD, Status S) const {
 bool Ownership::OwnershipStatus::canAssign(const VarDecl *VD) const {
   unsigned uninitIndex = getIndex(Uninitialized);
   unsigned movedIndex = getIndex(Moved);
-
+  unsigned nullIndex = getIndex(Null);
   if (OPSStatus.count(VD)) {
     auto it = OPSStatus.find(VD);
     llvm::BitVector status = it->second;
@@ -362,6 +375,9 @@ bool Ownership::OwnershipStatus::canAssign(const VarDecl *VD) const {
     }
     if (status.test(movedIndex)) {
       status.reset(movedIndex);
+    }
+    if (status.test(nullIndex)) {
+      status.reset(nullIndex);
     }
     return !status.any();
   }
@@ -375,6 +391,9 @@ bool Ownership::OwnershipStatus::canAssign(const VarDecl *VD) const {
     }
     if (status.test(movedIndex)) {
       status.reset(movedIndex);
+    }
+    if (status.test(nullIndex)) {
+      status.reset(nullIndex);
     }
     return !status.any();
   }
@@ -486,6 +505,7 @@ void Ownership::OwnershipStatus::initS(const RecordDecl *RD, const VarDecl *VD,
       if (SAllOwnedFields[VD].empty()) {
         SAllOwnedFields[VD] = {};
         SOwnedOwnedFields[VD] = {};
+        SNullOwnedFields[VD] = {};
       }
     }
   }
@@ -503,6 +523,7 @@ void Ownership::OwnershipStatus::initS(const RecordDecl *RD, const VarDecl *VD,
         if (SAllOwnedFields[VD].empty()) {
           SAllOwnedFields[VD] = {};
           SOwnedOwnedFields[VD] = {};
+          SNullOwnedFields[VD] = {};
         }
         if (!FT->isRecordType() || FT->isOwnedStructureType())
           SAllOwnedFields[VD].insert(fieldName);
@@ -663,19 +684,23 @@ void Ownership::OwnershipStatus::setToOwned(const VarDecl *VD) {
   }
 }
 
-void Ownership::OwnershipStatus::setToMoved(const Expr *E) {
+void Ownership::OwnershipStatus::setToNull(const VarDecl *VD) {
+  if (OPSStatus.count(VD)) {
+    OPSOwnedOwnedFields[VD].clear();
+    resetAll(VD);
+    set(VD, Ownership::Status::Null);
+  }
+  if (BOPStatus.count(VD)) {
+    BOPOwnedOwnedFields[VD].clear();
+    resetAll(VD);
+    set(VD, Ownership::Status::Null);
+  }
+}
+
+void Ownership::OwnershipStatus::setToNull(const Expr *E) {
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
     const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
-    if (OPSStatus.count(VD)) {
-      OPSOwnedOwnedFields[VD].clear();
-      resetAll(VD);
-      set(VD, Moved);
-    }
-    if (BOPStatus.count(VD)) {
-      BOPOwnedOwnedFields[VD].clear();
-      resetAll(VD);
-      set(VD, Moved);
-    }
+    setToNull(VD);
     return;
   }
   if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
@@ -690,27 +715,17 @@ void Ownership::OwnershipStatus::setToMoved(const Expr *E) {
           for (const string &str : allPrefixStrs) {
             OPSOwnedOwnedFields[VD].erase(str);
           }
-          if (OPSAllOwnedFields[VD].size() != OPSOwnedOwnedFields[VD].size()) {
-            if (!is(VD, Moved)) {
-              resetAll(VD);
-              set(VD, PartialMoved);
-            }
-          }
-          if (OPSOwnedOwnedFields[VD].empty()) {
-            if (!is(VD, Moved)) {
-              resetAll(VD);
-              set(VD, AllMoved);
-            }
-          }
         }
       }
       if (SStatus.count(VD)) {
         if (SAllOwnedFields[VD].count(memberField.second)) {
           SOwnedOwnedFields[VD].erase(memberField.second);
+          SNullOwnedFields[VD].insert(memberField.second);
           auto allPrefixStrs =
               findPrefixStrings(SAllOwnedFields[VD], memberField.second + ".");
           for (const string &str : allPrefixStrs) {
             SOwnedOwnedFields[VD].erase(str);
+            SNullOwnedFields[VD].insert(str);
           }
         }
       }
@@ -1133,7 +1148,9 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSUse(
     }
   }
 
-  if (SAllOwnedFields[VD].size() != SOwnedOwnedFields[VD].size() && diags.empty()) {
+  if (SAllOwnedFields[VD].size() - SOwnedOwnedFields[VD].size() - SNullOwnedFields[VD].size() != 0 &&
+      SAllOwnedFields[VD].size()!= SOwnedOwnedFields[VD].size() &&
+      diags.empty()) {
     diags.push_back(OwnershipDiagInfo(Loc, InvalidUseOfPartiallyMoved,
                                       VD->getNameAsString(),
                                       collectMovedFields(VD)));
@@ -1863,6 +1880,10 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     op = Assign;
     Visit(LHS);
     op = None;
+
+    if (RHS->isNullExpr(OS.ctx)) {
+      stat.setToNull(LHS);
+    }
   }
 }
 
@@ -1920,13 +1941,53 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   for (Decl *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (IsTrackedType(VD->getType())) {
+      QualType VQT = VD->getType().getCanonicalType();
+      if (IsTrackedType(VQT)) {
         stat.init(VD);
       }
       if (Expr *Init = VD->getInit()) {
-        // if has init expr, change the status of VD from UNINIT to OWNED
-        stat.setToOwned(VD);
-
+        // if has init expr, change the status of VD from UNINIT to OWNED or NULL
+        if (VQT->isPointerType() && VQT.isOwnedQualified()) {
+          if (Init->isNullExpr(OS.ctx)) {
+            stat.setToNull(VD);
+          } else {
+            stat.setToOwned(VD);
+          }
+        } else if (VQT->isRecordType() && VQT->hasOwnedFields() &&
+                   isa<InitListExpr>(Init)) {
+          stat.setToOwned(VD);
+          if (stat.SStatus.count(VD)) {
+            // If we init owned fields of a struct var with nullptr,
+            // for example `struct S s = { .p = nullptr };`, here
+            // we reset the status of s.p.
+            auto RD = dyn_cast<RecordType>(VQT)->getDecl();
+            auto ILE = dyn_cast<InitListExpr>(Init);
+            Expr **Inits = ILE->getInits();
+            for (const auto &FD : RD->fields()) {
+              Expr *FieldInit = Inits[FD->getFieldIndex()];
+              if (FieldInit->isNullExpr(OS.ctx)) {
+                auto memberField = FD->getNameAsString();
+                if (stat.SAllOwnedFields[VD].count(memberField)) {
+                  stat.SOwnedOwnedFields[VD].erase(memberField);
+                  stat.SNullOwnedFields[VD].insert(memberField);
+                  auto allPrefixStrs =
+                      findPrefixStrings(stat.SAllOwnedFields[VD], memberField + ".");
+                  for (const string &str : allPrefixStrs) {
+                    stat.SOwnedOwnedFields[VD].erase(str);
+                    stat.SNullOwnedFields[VD].insert(str);
+                  }
+                }
+              }
+            }
+            if (stat.SOwnedOwnedFields[VD].size() == 0) {
+              stat.set(VD, Ownership::Status::AllMoved);
+            } else if (stat.SAllOwnedFields[VD].size() != stat.SOwnedOwnedFields[VD].size()) {
+              stat.set(VD, Ownership::Status::PartialMoved);
+            }
+          }
+        } else {
+          stat.setToOwned(VD);
+        }
         // manipulate the init expr if it is not CallExpr
         bool IsCall = IsCallExpr(Init);
         if (!IsCall) {
@@ -2116,36 +2177,6 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
   }
 }
 
-static bool IsNull(const Expr *E) {
-  if (isa<CXXNullPtrLiteralExpr>(E))
-    return true;
-  if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    if (const ParenExpr *PE = dyn_cast<ParenExpr>(ICE->getSubExpr())) {
-      if (const CStyleCastExpr *CSCE =
-              dyn_cast<CStyleCastExpr>(PE->getSubExpr())) {
-        if (CSCE->getCastKind() == CK_NullToPointer) {
-          if (const IntegerLiteral *IL =
-                  dyn_cast<IntegerLiteral>(CSCE->getSubExpr())) {
-            return IL->getValue().getZExtValue() == 0;
-          }
-        }
-      }
-    }
-  }
-  if (const ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
-    if (const CStyleCastExpr *CSCE =
-            dyn_cast<CStyleCastExpr>(PE->getSubExpr())) {
-      if (CSCE->getCastKind() == CK_NullToPointer) {
-        if (const IntegerLiteral *IL =
-                dyn_cast<IntegerLiteral>(CSCE->getSubExpr())) {
-          return IL->getValue().getZExtValue() == 0;
-        }
-      }
-    }
-  }
-  return false;
-}
-
 void OwnershipImpl::MaybeSetNull(const CFGBlock *block,
                                  Ownership::OwnershipStatus &status) {
   if (block->pred_empty())
@@ -2156,14 +2187,14 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block,
   }
   if (const IfStmt *IS = dyn_cast_or_null<IfStmt>(pred->getTerminatorStmt())) {
     if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(IS->getCond())) {
-      if (IsNull(BO->getRHS())) {
+      if (BO->getRHS()->isNullExpr(ctx)) {
         if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(BO->getLHS())) {
           if (BO->getOpcode() == BO_EQ) {
             if (*pred->succ_begin() == block) // block is True branch.
-              status.setToMoved(ICE->getSubExpr());
+              status.setToNull(ICE->getSubExpr());
           } else if (BO->getOpcode() == BO_NE) {
             if (*(pred->succ_begin() + 1) == block) // block is False branch.
-              status.setToMoved(ICE->getSubExpr());
+              status.setToNull(ICE->getSubExpr());
           }
         }
       }
@@ -2205,13 +2236,14 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
 
 void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
                                  AnalysisDeclContext &ac,
-                                 OwnershipDiagReporter &reporter) {
+                                 OwnershipDiagReporter &reporter,
+                                 ASTContext &ctx) {
   // The analysis currently has scalability issues for very large CFGs.
   // Bail out if it looks too large.
   if (cfg.getNumBlockIDs() > 300000)
     return;
 
-  OwnershipImpl *OS = new OwnershipImpl(ac);
+  OwnershipImpl *OS = new OwnershipImpl(ac, ctx);
 
   // Proceed with the worklist.
   ForwardDataflowWorklist worklist(cfg, ac);
