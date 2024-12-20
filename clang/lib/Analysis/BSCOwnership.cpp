@@ -1224,12 +1224,13 @@ Ownership::OwnershipStatus::checkSAssign(const VarDecl *VD,
                                          const SourceLocation &Loc) {
   SmallVector<OwnershipDiagInfo, 3> diags;
 
-  // owned struct special manipulation
+  // special handling is required for owned struct: do not check ownership when reassign, for example:
+  // @code
+  // owned struct S s1 = init();
+  // owned struct S s2 = init();
+  // s2 = s1; // Ok
+  // @endcode
   if (VD->getType().getTypePtr()->isOwnedStructureType()) {
-    if (!is(VD, Moved) && !is(VD, Uninitialized)) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidAssignOfOwned, VD->getNameAsString()));
-    }
     resetAll(VD);
     set(VD, Owned);
   }

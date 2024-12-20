@@ -41,6 +41,8 @@ int main() {
 // CHECK-NEXT:    s1_is_moved = 1;
 // CHECK-NEXT:     struct S s3 = {};
 // CHECK-NEXT:    _Bool s3_is_moved = 0;
+// CHECK-NEXT:    if (!s1_is_moved)
+// CHECK-NEXT:        struct_S_D(s1);
 // CHECK-NEXT:    s1 = s3;
 // CHECK-NEXT:    s1_is_moved = 0;
 // CHECK-NEXT:    s3_is_moved = 1;

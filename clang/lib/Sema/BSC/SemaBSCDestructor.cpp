@@ -355,6 +355,7 @@ public:
     bool HasControlTransferExpr = false;
     for (auto *C : CS->children()) {
       Stmt *S = const_cast<Stmt *>(C);
+      // Add destructor call if-stmt for all defined vardecls before exit current block
       if (isa<ReturnStmt>(S) || isa<BreakStmt>(S) || isa<ContinueStmt>(S)) {
         HasControlTransferExpr = true;
         std::vector<Stmt *> IfStmts = AddIfStmts(S);
@@ -374,9 +375,19 @@ public:
           Statements.push_back(C);
         }
       } else {
+        // add destructor call if-stmt for reassigned decl in BinaryOperator
+        if (isa<BinaryOperator>(S)) {
+          DeclRefFinder Finder = DeclRefFinder(SemaRef);
+          Finder.TraverseStmt(S);
+          for (auto *D : Finder.ReAssignedDecls) {
+            Stmt *IfStmt = AddIfStmt(D);
+            Statements.push_back(IfStmt);
+          }
+        }
         Statements.push_back(C);
       }
       if (isa<DeclStmt>(S)) {
+        // add _Bool xx_is_moved = 0;
         for (auto *D : cast<DeclStmt>(S)->decls()) {
           if (isa<VarDecl>(D)) {
             VarDecl *VD = cast<VarDecl>(D);
@@ -388,6 +399,7 @@ public:
       }
 
       if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
+        // change reassigned_decl_is_moved = 0, and moved_decl_is_moved = 1
         DeclRefFinder Finder = DeclRefFinder(SemaRef);
         Finder.TraverseStmt(S);
         for (auto *D : Finder.ReAssignedDecls) {
@@ -399,6 +411,7 @@ public:
       }
     }
     if (!HasControlTransferExpr) {
+      // If no return/break/continue stmts, create destructor call if-stmt for all defined vardecls before exit
       auto IfStmts = AddIfStmts(CS);
       Statements.insert(Statements.end(), IfStmts.begin(), IfStmts.end());
     }
