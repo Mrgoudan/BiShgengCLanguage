@@ -150,7 +150,9 @@ int test5() {
     struct DataArray<int> dataArray;
     dataArray[0].data = 1;
     dataArray[1].data = 2;
-    if (dataArray[0].data + dataArray[1].data != 3) {
+    int data1 = dataArray[0].data;
+    int data2 = dataArray[1].data;
+    if (data1 + data2 != 3) {
         return -1;
     }
     return 0;
@@ -309,7 +311,9 @@ int main() {
 // CHECK-NEXT:     struct DataArray_int dataArray;
 // CHECK-NEXT:     (*deref5_int(&dataArray, 0)).data = 1;
 // CHECK-NEXT:     (*deref5_int(&dataArray, 1)).data = 2;
-// CHECK-NEXT:     if ((*deref5_int(&dataArray, 0)).data + (*deref5_int(&dataArray, 1)).data != 3) {
+// CHECK-NEXT:     int data1 = (*deref5_int(&dataArray, 0)).data;
+// CHECK-NEXT:     int data2 = (*deref5_int(&dataArray, 1)).data;
+// CHECK-NEXT:     if (data1 + data2 != 3) {
 // CHECK-NEXT:         return -1;
 // CHECK-NEXT:     }
 // CHECK-NEXT:     return 0;

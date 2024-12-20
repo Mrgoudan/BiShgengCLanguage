@@ -2175,6 +2175,8 @@ public:
   bool hasOwnedFields() const;
 
   bool hasBorrowFields() const;
+
+  bool withBorrowFields() const;
   #endif
 
   /// Test for a particular builtin type.
@@ -4951,6 +4953,10 @@ public:
 
   bool hasBorrowFields() const;
 
+  /// Recursively check all fields in the record for borrow-ness. If any field
+  /// is declared borrow, return true. Otherwise, return false.
+  bool withBorrowFields() const;
+
   void initBorrowStatus() const;
   #endif
 
@@ -4989,13 +4995,13 @@ public:
 // If the value of CondExpr is true, then UnderlyingType is Type1, otherwise is Type2.
 class ConditionalType : public Type {
   friend class ASTContext; // ASTContext creates these.
-  
+
   llvm::Optional<bool> CondResult;
   Expr* CondExpr;
   QualType Type1;
   QualType Type2;
   QualType UnderlyingType;
-  
+
   ConditionalType(llvm::Optional<bool> CondRes, Expr* CondE, QualType T1, QualType T2, QualType can);
 
 public:
@@ -5004,7 +5010,7 @@ public:
   QualType getConditionalType1() const { return Type1; }
   QualType getConditionalType2() const { return Type2; }
   QualType getUnderlyingType() const { return UnderlyingType; }
-  
+
   /// Remove a single level of sugar.
   QualType desugar() const;
 

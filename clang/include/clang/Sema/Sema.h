@@ -12409,6 +12409,7 @@ public:
   bool CheckTemporaryVarMemoryLeak(Expr* E);
   void BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck = true,
                            bool EnableNullabilityCheck = true);
+  void BSCBorrowChecker(FunctionDecl *FD);
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);

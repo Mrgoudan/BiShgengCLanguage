@@ -4,37 +4,45 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 // expected-no-diagnostics
+
 #include <stdlib.h>
+
+struct S {
+  int a;
+  int *borrow p1;
+  int *owned p2;
+};
+
 void use_mut(int *borrow p) {}
-T* owned safe_malloc<T>(T value) {
-  T * p = (T *) malloc( sizeof(T) );
+
+T *owned safe_malloc<T>(T value) {
+  T *p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T *owned)p;
 }
 
-void free_owned<T>(T* owned p) {
-  free( (T*)p );
+void free_owned<T>(T *owned p) {
+  free( (T *)p );
 }
 
 void test1() {
   int *a = (int *)malloc(sizeof(int));
-  int *borrow p = &mut * a;
+  int *borrow p = &mut *a;
   use_mut(p);
   free(a);
 }
 
-void test2(int* a) {
-  int *borrow p = &mut * a;
+void test2(int *a) {
+  int *borrow p = &mut *a;
   use_mut(p);
   free(a);
 }
 
 void test3(int *borrow p) {
-  int *borrow p1 = &mut * p;
+  int *borrow p1 = &mut *p;
   use_mut(p1);
 }
 
-struct S { int a; int * borrow p1; int* owned p2; };
 void test4(struct S s) {
   int *borrow p3 = &mut s.a;
   use_mut(p3);

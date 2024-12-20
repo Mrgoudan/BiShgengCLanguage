@@ -8,7 +8,8 @@ safe void test1(void) {
     int a = 10;
     struct S s = { .p = nullptr };
     while (s.p == nullptr) {
-        s.p = get_random_ptr(&mut a);
+        s.p = get_random_ptr(&mut a); // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+                                      // expected-note@-1 {{first mut borrow occurs here}}
     }
     *s.p = 20;
 }
@@ -41,8 +42,10 @@ safe void test4(void) {
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
     while (s1.p == nullptr || s2.p == nullptr) {
-        s1.p = get_random_ptr(&mut a);
-        s2.p = get_random_ptr(&mut b);
+        s1.p = get_random_ptr(&mut a); // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+                                       // expected-note@-1 {{first mut borrow occurs here}}
+        s2.p = get_random_ptr(&mut b); // expected-error {{cannot borrow `b` as mutable more than once at a time}}
+                                       // expected-note@-1 {{first mut borrow occurs here}}
     }
     *s1.p = 20;
     *s2.p = 20;

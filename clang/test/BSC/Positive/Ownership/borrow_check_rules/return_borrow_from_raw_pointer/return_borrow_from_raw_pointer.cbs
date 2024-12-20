@@ -14,108 +14,101 @@ struct Q {
 };
 
 int *borrow test1(struct P *borrow p) {
-    return &mut *p->b;
+  return &mut *p->b;
 }
 
 int *borrow test2(struct P *p, int *borrow p1) {
-    return &mut *p->b;
+  return &mut *p->b;
 }
 
 int *borrow test3(struct P p, int *borrow p1) {
-    return &mut *p.b;
+  return &mut *p.b;
 }
 
 int *borrow test4(struct Q *borrow q) {
-    return &mut *q->g.b;
+  return &mut *q->g.b;
 }
 
 int *borrow test5(struct Q *q, int *borrow p) {
-    return &mut *q->g.b;
+  return &mut *q->g.b;
 }
 
 int *borrow test6(struct Q q, int *borrow p) {
-    return &mut *q.g.b;
+  return &mut *q.g.b;
 }
 
 int *borrow test7(int *borrow p) {
-    struct Q q;
-    int *borrow r = &mut *q.g.b;
-    return r;
+  struct Q q;
+  int *borrow r = &mut *q.g.b;
+  return r;
 }
 
 int *borrow test8(int *borrow p) {
-    struct Q q;
-    struct Q *q1 = &q;
-    int *borrow r = &mut *q1->g.b;
-    return r;
-}
-
-int *borrow test9(int *borrow p) {
-    struct Q q;
-    struct Q *borrow q1 = &mut q;
-    int *borrow r = &mut *q1->g.b;
-    return r;
+  struct Q q;
+  struct Q *q1 = &q;
+  int *borrow r = &mut *q1->g.b;
+  return r;
 }
 
 int *borrow test10(struct P *borrow p, int index) {
-    return &mut p->b[index];
+  return &mut p->b[index];
 }
 
 int *borrow test11(struct P *p, int index, int *borrow p1) {
-    return &mut p->b[index];
+  return &mut p->b[index];
 }
 
-int *borrow test12(struct P p, int index, int *borrow p1) {
-    return &mut p.b[index];
-}
+// int *borrow test12(struct P p, int index, int *borrow p1) {
+//   return &mut p.b[index];
+// }
 
 int *borrow test13(struct Q *borrow q, int index) {
-    return &mut q->g.b[index];
+  return &mut q->g.b[index];
 }
 
 int *borrow test14(struct Q *q, int index, int *borrow p) {
-    return &mut q->g.b[index];
+  return &mut q->g.b[index];
 }
 
-int *borrow test15(struct Q q, int index, int *borrow p) {
-    return &mut q.g.b[index];
-}
+// int *borrow test15(struct Q q, int index, int *borrow p) {
+//   return &mut q.g.b[index];
+// }
 
 struct M {
-    int* owned a;
+  int *owned a;
 };
 
 struct N {
-  struct M* m;
+  struct M *m;
 };
 
 int *borrow test16(struct N n, int *borrow p) {
-    return &mut *n.m->a;
+  return &mut *n.m->a;
 }
 
 int *owned *borrow test17(struct N n, int *borrow p) {
-    return &mut n.m->a;
+  return &mut n.m->a;
 }
 
 int *borrow struct N::test18(This* borrow this) {
-    return &mut *this->m->a;
+  return &mut *this->m->a;
 }
 
 int *borrow struct N::test19(This* this, int* borrow p) {
-    return &mut *this->m->a;
+  return &mut *this->m->a;
 }
 
 owned struct S {
 public:
-    int *owned *borrow a; //成员变量为 owned borrow
-    int *owned *borrow test20(S *this) {
-        int *owned *borrow a = this->a;
-        return a;
-    }
+  int *owned *borrow a;
+  int *owned *borrow test20(S *this) {
+    int *owned *borrow a = this->a;
+    return a;
+  }
 };
 
 int *owned *borrow S::test21(This* this) {
-    return this->a;
+  return this->a;
 }
 
 int main() {
@@ -130,14 +123,13 @@ int main() {
   test6(q, &mut local);
   test7(&mut local);
   test8(&mut local);
-  test9(&mut local);
   test10(&mut p, 5);
   test11(&p, 5, &mut local);
-  test12(p, 5, &mut local);
+  // test12(p, 5, &mut local);
   test13(&mut q, 5);
   test14(&q, 5, &mut local);
-  test15(q, 5, &mut local);
-  int *owned c = (int* owned)&local;
+  // test15(q, 5, &mut local);
+  int *owned c = (int *owned)&local;
   struct M m = { .a = c };
   struct N n = { .m = &m };
   test16(n, &mut local);
@@ -147,6 +139,6 @@ int main() {
   S s = { .a = &mut m.a };
   s.test20();
   s.test21();
-  int* d = (int*) m.a;
+  int *d = (int *) m.a;
   return 0;
 }

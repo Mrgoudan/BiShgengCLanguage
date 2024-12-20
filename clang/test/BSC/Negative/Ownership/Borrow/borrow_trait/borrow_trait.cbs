@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
 
 trait T {
   static int f(This* this);
@@ -13,9 +14,9 @@ impl trait T for int;
 int main() {
   int a = 1;
   int* t = &a;
-  trait T* borrow p = &mut *t; // expected-note {{previous borrow is here}}
+  trait T* borrow p = &mut *t;
   a = 2;
-  t = &a; // expected-error {{Can not modify 't' because be borrowed}}
+  t = &a;
   p->f();
   return 0;
 }

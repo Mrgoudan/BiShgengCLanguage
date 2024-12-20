@@ -4,16 +4,14 @@ void test1(int *p) {}
 
 void test_freeze_arrow_var1() {
     int arr[10] = {0};
-    int * borrow c = &mut arr[1];       // expected-note {{previous borrow is here}}
-                                        // expected-note@-1 {{previous borrow is here}}
-                                        // expected-note@-2 {{previous borrow is here}}
-                                        // expected-note@-3 {{previous borrow is here}}
-                                        // expected-note@-4 {{previous borrow is here}}
-    int a = arr[1];                     // expected-error {{Can not read 'arr' because be mut borrowed}}
-    int b = arr[2];                     // expected-error {{Can not read 'arr' because be mut borrowed}}
-    arr[1] = 2;                         // expected-error {{Can not modify 'arr' because be borrowed}}
-    arr[2] = 2;                         // expected-error {{Can not modify 'arr' because be borrowed}}
-    test1(arr);                         // expected-error {{Can not modify 'arr' because be borrowed}}
+    int * borrow c = &mut arr[1]; // expected-note {{`arr` is borrowed here}}
+                                  // expected-note@-1 {{`arr` is borrowed here}}
+                                  // expected-note@-2 {{`arr` is borrowed here}}
+    int a = arr[1]; // expected-error {{cannot use `arr` because it was mutably borrowed}}
+    int b = arr[2]; // expected-error {{cannot use `arr` because it was mutably borrowed}}
+    arr[1] = 2; // expected-error {{cannot assign to `arr` because it is borrowed}}
+    arr[2] = 2;
+    test1(arr);
     int arr2[10] = {};
     arr2[arr[1]] = 5;
     int m = *c;
@@ -23,22 +21,19 @@ void test2(int p[10][10]) {}
 
 void test_freeze_arrow_var2() {
     int arr[10][10] = {0};
-    int * borrow k = &mut arr[1][1];    // expected-note {{previous borrow is here}}
-                                        // expected-note@-1 {{previous borrow is here}}
-                                        // expected-note@-2 {{previous borrow is here}}
-                                        // expected-note@-3 {{previous borrow is here}}
-                                        // expected-note@-4 {{previous borrow is here}}
-                                        // expected-note@-5 {{previous borrow is here}}
-                                        // expected-note@-6 {{previous borrow is here}}
-                                        // expected-note@-7 {{previous borrow is here}}
-    int a = arr[1][1];                  // expected-error {{Can not read 'arr' because be mut borrowed}}
-    int b = arr[1][2];                  // expected-error {{Can not read 'arr' because be mut borrowed}}
-    int c = arr[2][2];                  // expected-error {{Can not read 'arr' because be mut borrowed}}
-    test1(arr[1]);                      // expected-error {{Can not modify 'arr' because be borrowed}}
-    arr[1][1] = 2;                      // expected-error {{Can not modify 'arr' because be borrowed}}
-    arr[1][2] = 2;                      // expected-error {{Can not modify 'arr' because be borrowed}}
-    arr[2][2] = 2;                      // expected-error {{Can not modify 'arr' because be borrowed}}
-    test2(arr);                         // expected-error {{Can not modify 'arr' because be borrowed}}
+    int * borrow k = &mut arr[1][1]; // expected-note {{`arr` is borrowed here}}
+                                     // expected-note@-1 {{`arr` is borrowed here}}
+                                     // expected-note@-2 {{`arr` is borrowed here}}
+                                     // expected-note@-3 {{`arr` is borrowed here}}
+                                     // expected-note@-4 {{`arr` is borrowed here}}
+    int a = arr[1][1]; // expected-error {{cannot use `arr` because it was mutably borrowed}}
+    int b = arr[1][2]; // expected-error {{cannot use `arr` because it was mutably borrowed}}
+    int c = arr[2][2]; // expected-error {{cannot use `arr` because it was mutably borrowed}}
+    test1(arr[1]); // expected-error {{cannot use `arr` because it was mutably borrowed}}
+    arr[1][1] = 2; // expected-error {{cannot assign to `arr` because it is borrowed}}
+    arr[1][2] = 2;
+    arr[2][2] = 2;
+    test2(arr);
     int m = *k;
 }
 

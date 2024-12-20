@@ -2211,28 +2211,6 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
   if (LangOpts.OpenMP)
     popOpenMPFunctionRegion(Scope.get());
 
-#if ENABLE_BSC
-  // FIXME: Rename EnableOwnershipCheck, maybe EnableBorrowCheck is a better name.
-  bool EnableOwnershipCheck = LangOpts.BSC ? (!(getLangOpts().DisableOwnershipCheck)) : false;
-  // If NullabilityCheck is in Mode: {SafeOnly, All}, we should build CFG.
-  bool EnableNullabilityCheck = LangOpts.BSC ? (getLangOpts().getNullabilityCheck() != LangOptions::NC_NONE) : false;
-  if (EnableOwnershipCheck || EnableNullabilityCheck) {
-    if (!isBSCCoroutine &&
-        (getDiagnostics().getNumErrors() ==
-         getDiagnostics().getNumOwnershipErrors() +
-             getDiagnostics().getNumBorrowCheckErrors() +
-             getDiagnostics().getNumNullabilityCheckErrors()) &&
-        D)
-      if (const auto *const CastReturn = dyn_cast_or_null<FunctionDecl>(D)) {
-        auto md = dyn_cast_or_null<BSCMethodDecl>(D);
-        // Don't check ownership rules of destructor parameters
-        if (!md || !md->isDestructor())
-          BSCDataflowAnalysis(D, EnableOwnershipCheck,
-                              EnableNullabilityCheck);
-      }
-  }
-#endif
-
   // Issue any analysis-based warnings.
   if (WP && D)
     AnalysisWarnings.IssueWarnings(*WP, Scope.get(), D, BlockType);

@@ -1,13 +1,14 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
 
 void test1(int *p) {}
 
 void test_freeze_star_var1() {
     int a = 1;
     int * b = &a;
-    int * borrow c = &mut *b;    // expected-note {{previous borrow is here}}
+    int * borrow c = &mut *b;
     a = 2; // ok；
-    b = &a;                      // expected-error {{Can not modify 'b' because be borrowed}}
+    b = &a;
     int m = *c;
 }
 

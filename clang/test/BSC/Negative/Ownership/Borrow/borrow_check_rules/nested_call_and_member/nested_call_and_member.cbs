@@ -12,28 +12,30 @@ public:
 
 owned struct OptionRefMut {
 public:
-  ListNode* borrow inner;
+  ListNode *borrow inner;
 };
 
-OptionRefMut socket_table_find(int* borrow);
-ListNode* borrow OptionRefMut::unwrap(OptionRefMut* borrow this);
-ListNode* owned AllocSocket();
-void accept(int, struct sockaddr *, int *); 
-void SkAcceptInfoSet(const v5_adpt_socket_t* borrow, v5_adpt_socket_t* borrow);
+OptionRefMut socket_table_find(int *borrow);
+ListNode *borrow OptionRefMut::unwrap(OptionRefMut *borrow this);
+ListNode *owned AllocSocket();
+void accept(int, struct sockaddr *, int *);
+void SkAcceptInfoSet(const v5_adpt_socket_t *borrow, v5_adpt_socket_t *borrow);
 void CloseSocket(v5_adpt_socket_t *); 
-void use(ListNode* borrow);
+void use(ListNode *borrow);
 
-void v5_accept(int fd, void* addr, int* addrLen, int* borrow p) {
+void v5_accept(int fd, void *addr, int *addrLen, int *borrow p) {
   OptionRefMut o = socket_table_find(p);
-  const v5_adpt_socket_t* borrow ls = &const o.unwrap()->inner; // expected-note {{previous borrow is here}}
-  use(o.inner); // expected-error {{There should be at most one mutable borrow targeting to 'p' at the same time}}
-  ListNode* owned t = AllocSocket();
+  const v5_adpt_socket_t *borrow ls = &const o.unwrap()->inner; // expected-note {{`o` is borrowed here}}
+                                                                // expected-note@-1 {{first mut borrow occurs here}}
+  use(o.inner); // expected-error {{cannot use `o.inner` because it was mutably borrowed}}
+                // expected-error@-1 {{cannot borrow `*o.inner` as mutable more than once at a time}}
+  ListNode *owned t = AllocSocket();
   {
-    v5_adpt_socket_t* borrow s = &mut t->inner;
+    v5_adpt_socket_t *borrow s = &mut t->inner;
     accept(fd, (struct sockaddr *)addr, addrLen);
     SkAcceptInfoSet(ls, s); 
   }
-  v5_adpt_socket_t* borrow s = &mut t->inner;
-  ListNode* t1 = (ListNode *)t;
-  CloseSocket((v5_adpt_socket_t*)s);
+  v5_adpt_socket_t *borrow s = &mut t->inner; // expected-note {{`(*t).inner` is borrowed here}}
+  ListNode *t1 = (ListNode *)t; // expected-error {{cannot move out of `t` because it is borrowed}}
+  CloseSocket((v5_adpt_socket_t *)s);
 }

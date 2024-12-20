@@ -176,14 +176,12 @@ int main() {
 // CHECK-DAG:      struct I {
 // CHECK-DAG-NEXT:     int a;
 // CHECK-DAG-NEXT: };
-// CHECK:      struct Rc_int {
-// CHECK-NEXT:     struct RcData_int *ptr;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct RcData_int {
-// CHECK-NEXT:     int data;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
+// CHECK-DAG:      struct Rc_int {
+// CHECK-DAG-NEXT:     struct RcData_int *ptr;
+// CHECK-DAG-NEXT: };
+// CHECK-DAG:      struct RcData_int {
+// CHECK-DAG-NEXT:     int data;
+// CHECK-DAG-NEXT: };
 // CHECK-DAG:      struct F {
 // CHECK-DAG-NEXT:     struct E e;
 // CHECK-DAG-NEXT: };

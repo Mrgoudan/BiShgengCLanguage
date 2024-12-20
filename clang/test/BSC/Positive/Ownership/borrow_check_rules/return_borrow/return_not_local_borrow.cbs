@@ -7,11 +7,11 @@
 
 
 struct S {
-  int* borrow a;
+  int *borrow a;
 };
 
 struct S f(struct S ss) {
-  struct S* ptr = &ss;
+  struct S *ptr = &ss;
   struct S t = *ptr;
   return t;
 }

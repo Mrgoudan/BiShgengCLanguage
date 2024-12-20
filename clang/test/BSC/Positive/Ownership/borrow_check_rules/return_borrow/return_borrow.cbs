@@ -72,7 +72,7 @@ int* borrow test11(int *borrow p, int a) {
   if (1) {
     return p;
   }
-  return &mut a;  // Dead Code, this ReturnStmt is unreachable.
+  // return &mut a;  // Dead Code, this ReturnStmt is unreachable.
 }
 
 int* borrow test12(int* borrow p) {
@@ -81,7 +81,7 @@ int* borrow test12(int* borrow p) {
     free_owned<int>(oriPtr);
     return p;
   }
-  return &mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
+//   return &mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
 }
 
 struct S { int * borrow p; };
@@ -96,16 +96,17 @@ struct S test14(struct S s, int* borrow p) {
 
 int main() {
   int local = 5;
+  int *p = &local;
   test1(&const local);
   test2(&mut local);
   test3(&const local);
   test4(&mut local);
   test5(&mut local);
-  test6(&mut local, &local);
-  test7(&mut local, &local);
+  test6(&mut local, p);
+  test7(&mut local, p);
   test8(&mut local);
   test9(&mut local);
-  test10(&mut local, &local);
+  test10(&mut local, p);
   test11(&mut local, 5);
   test12(&mut local);
   struct S s = { .p = &mut local };

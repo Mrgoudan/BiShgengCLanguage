@@ -19,15 +19,15 @@ void test1() {
     int x1 = 0;
     int x = 0;
     float y = 1.0;
+    const int * borrow p2 = &const x;
+    const int * borrow p4= (const int * borrow)&x;
+    int * borrow p7 = &mut *(&x);
     int * borrow p = &mut x;
     float * borrow p1 = &mut y;
-    const int * borrow p2 = &const x;
     myInt p3 = p;
-    const int * borrow p4= (const int * borrow)&x;
 
     int * owned p5 = (int * owned)&x1;
     const int * borrow b6 = &const *p3;
-    int * borrow p7 = &mut *(&x);
     p7 = &mut *p;
     int * p8 = (int *)p5;
 }
@@ -59,14 +59,14 @@ int main() {
 // CHECK-NEXT:     int x1 = 0;
 // CHECK-NEXT:     int x = 0;
 // CHECK-NEXT:     float y = 1.;
+// CHECK-NEXT:     const int * p2 = &x;
+// CHECK-NEXT:     const int * p4 = (const int *)&x;
+// CHECK-NEXT:     int * p7 = &*(&x);
 // CHECK-NEXT:     int * p = &x;
 // CHECK-NEXT:     float * p1 = &y;
-// CHECK-NEXT:     const int * p2 = &x;
 // CHECK-NEXT:     myInt p3 = p;
-// CHECK-NEXT:     const int * p4 = (const int *)&x;
 // CHECK-NEXT:     int * p5 = (int *)&x1;
 // CHECK-NEXT:     const int * b6 = &*p3;
-// CHECK-NEXT:     int * p7 = &*(&x);
 // CHECK-NEXT:     p7 = &*p;
 // CHECK-NEXT:     int *p8 = (int *)p5;
 // CHECK-NEXT: }

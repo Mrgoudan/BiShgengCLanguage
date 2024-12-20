@@ -43,11 +43,11 @@ void test2() {
 
 void test3() {
   int a = 5;
-  int b = 5;
+  int b = 5, c = 5;
   int *owned oriPtr = safe_malloc<int>(0);
   int *borrow p1 = &mut a;
   int *borrow p2 = &mut b;
-  if (a > 0)
+  if (c > 0)
     p1 = &mut * oriPtr;
   else 
     p2 = &mut * oriPtr;
@@ -66,8 +66,8 @@ void test4() {
     p2 = &mut * oriPtr;
     p1 = &mut * oriPtr;  
   } else {  // Dead Code
-    p1 = &mut * oriPtr; 
     p2 = &mut * oriPtr;  
+    p1 = &mut * oriPtr;
   }
   use_mut(p1);
   // use_mut(p2);
@@ -84,6 +84,7 @@ void test5() {
   use_mut(p2);
   // use_mut(p1);
 }
+
 
 // CHECK-L: #line 11 "{{.*}}.cbs"
 // CHECK-L-NEXT: void use_mut(int * p) {
@@ -116,13 +117,13 @@ void test5() {
 // CHECK-L: #line 44 "{{.*}}.cbs"
 // CHECK-L-NEXT: void test3(void) {
 // CHECK-L-NEXT:   int a = 5;
-// CHECK-L-NEXT:   int b = 5;
+// CHECK-L-NEXT:   int b = 5, c = 5;
 // CHECK-L-NEXT:   int * oriPtr = safe_malloc_int(0);
 // CHECK-L-NEXT:   int * p1 = &a;
 // CHECK-L-NEXT:   int * p2 = &b;
-// CHECK-L-NEXT:   if (a > 0)
+// CHECK-L-NEXT:   if (c > 0)
 // CHECK-L-NEXT:     p1 = &*oriPtr;
-// CHECK-L-NEXT:   else 
+// CHECK-L-NEXT:   else
 // CHECK-L-NEXT:     p2 = &*oriPtr;
 // CHECK-L-NEXT:   use_mut(p1);
 // CHECK-L-NEXT:   use_mut(p2);
@@ -140,8 +141,8 @@ void test5() {
 // CHECK-L-NEXT:     p2 = &*oriPtr;
 // CHECK-L-NEXT:     p1 = &*oriPtr;
 // CHECK-L-NEXT:   } else {
-// CHECK-L-NEXT:     p1 = &*oriPtr;
 // CHECK-L-NEXT:     p2 = &*oriPtr;
+// CHECK-L-NEXT:     p1 = &*oriPtr;
 // CHECK-L-NEXT:   }
 // CHECK-L-NEXT:   use_mut(p1);
 // CHECK-L-NEXT:   free_owned_int(oriPtr);

@@ -199,6 +199,29 @@ def note_previous_borrow : Note<"previous borrow is here">;
 def err_use_expired_borrow_var : Error<
   "Can not use '%0' because expired">;
 
+// New BSC Borrow Checker errors.
+def err_borrow_assign_when_borrowed : Error<
+  "cannot assign to `%0` because it is borrowed">;
+def err_borrow_move_when_borrowed : Error<
+  "cannot move out of `%0` because it is borrowed">;
+def err_borrow_use_when_mut_borrowed : Error<
+  "cannot use `%0` because it was mutably borrowed">;
+def note_borrowed_here : Note<"`%0` is borrowed here">;
+def err_borrow_mut_borrow_more_than_once : Error<
+  "cannot borrow `%0` as mutable more than once at a time">;
+def note_first_mut_borrow_occurs_here : Note<"first mut borrow occurs here">;
+def err_borrow_return_local_borrow : Error<
+  "cannot return reference to local variable `%0`">;
+def err_borrow_not_live_long : Error<
+  "`%0` does not live long enough">;
+def note_dropped_while_borrowed: Note<"`%0` dropped here while still borrowed">;
+def err_borrow_immut_borrow_when_mut_borrowed : Error<
+  "cannot borrow `%0` as immutable because it is also borrowed as mutable">;
+def note_mutable_borrow_occurs_here : Note<"mutable borrow occurs here">;
+def err_borrow_mut_borrow_when_immut_borrowed : Error<
+  "cannot borrow `%0` as mutable because it is also borrowed as immutable">;
+def note_immutable_borrow_occurs_here : Note<"immutable borrow occurs here">;
+
 // BSC operator overload errors.
 def err_unsupport_overload_fun : Error<"function unsupport overload">;
 def err_operator_overload_needs_point : Error<

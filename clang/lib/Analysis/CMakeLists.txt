@@ -9,6 +9,7 @@ add_clang_library(clangAnalysis
   BSCNullabilityCheck.cpp
   BSCOwnership.cpp
   BSCBorrowCheck.cpp
+  BSCBorrowChecker.cpp
   CalledOnceCheck.cpp
   CFG.cpp
   CFGReachabilityAnalysis.cpp

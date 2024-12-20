@@ -66,6 +66,13 @@ bool Type::hasBorrowFields() const {
   return false;
 }
 
+bool Type::withBorrowFields() const {
+  if (const auto *RT = dyn_cast<RecordType>(CanonicalType)) {
+    return RT->withBorrowFields();
+  }
+  return false;
+}
+
 bool FunctionProtoType::hasOwnedRetOrParams() const {
   if (getReturnType().isOwnedQualified()) {
     return true;
@@ -251,6 +258,28 @@ bool RecordType::hasBorrowFields() const {
     initBorrowStatus();
   if (hasBorrow == borrowStatus::withBorrow)
     return true;
+  return false;
+}
+
+bool RecordType::withBorrowFields() const {
+  std::vector<const RecordType*> RecordTypeList;
+  RecordTypeList.push_back(this);
+  unsigned NextToCheckIndex = 0;
+
+  while (RecordTypeList.size() > NextToCheckIndex) {
+    for (FieldDecl *FD :
+         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+      QualType FieldTy = FD->getType();
+      if (FieldTy.isBorrowQualified())
+        return true;
+      FieldTy = FieldTy.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (!llvm::is_contained(RecordTypeList, FieldRecTy))
+          RecordTypeList.push_back(FieldRecTy);
+      }
+    }
+    ++NextToCheckIndex;
+  }
   return false;
 }
 

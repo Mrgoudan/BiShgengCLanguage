@@ -1518,6 +1518,16 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
 
+#if ENABLE_BSC
+  if (BuildOpts.BSCBorrowCk) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+      for (ParmVarDecl *PVD : FD->parameters()) {
+        addLocalScopeForVarDecl(PVD);
+      }
+    }
+  }
+#endif
+
   // Visit the statements and create the CFG.
   CFGBlock *B = addStmt(Statement);
 
@@ -2991,7 +3001,11 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   // statement-expression.
   CFGBlock *LastBlock = Block;
 
+#if ENABLE_BSC
+  if (Init && !BuildOpts.BSCBorrowCk) {
+#else
   if (Init) {
+#endif
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
       // generating destructors for the second time.
@@ -3198,8 +3212,15 @@ CFGBlock *CFGBuilder::VisitReturnStmt(Stmt *S) {
 
   // Visit children
   if (ReturnStmt *RS = dyn_cast<ReturnStmt>(S)) {
+#if ENABLE_BSC
+    if (!BuildOpts.BSCBorrowCk) {
+      if (Expr *O = RS->getRetValue())
+        return Visit(O, AddStmtChoice::AlwaysAdd, /*ExternallyDestructed=*/true);
+    }
+#else
     if (Expr *O = RS->getRetValue())
       return Visit(O, AddStmtChoice::AlwaysAdd, /*ExternallyDestructed=*/true);
+#endif
     return Block;
   }
 
@@ -4883,6 +4904,12 @@ CFGBlock *CFGBuilder::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *C,
 
 CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,
                                             AddStmtChoice asc) {
+#if ENABLE_BSC
+  if (BuildOpts.BSCBorrowCk) {
+    if (!asc.alwaysAdd(*this, E))
+      return Block;
+  }
+#endif
   if (asc.alwaysAdd(*this, E)) {
     autoCreateBlock();
     appendStmt(Block, E);

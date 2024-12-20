@@ -6,38 +6,37 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
+
 owned struct Option<T> {
 public:
-    T * owned inner;
-    ~Option(This this) {
-        free((T*)this.inner);
-    }
+  T *owned inner;
+  ~Option(This this) {
+    free((T *)this.inner);
+  }
 };
 
 owned struct OptionRefMut<T> {
 public:
-    T *borrow p;
+  T *borrow p;
 };
 
 safe OptionRefMut<T> OptionRefMut<T>::Some(T *borrow p) {
-    OptionRefMut<T> rm = { .p = p };
-    return rm;
+  OptionRefMut<T> rm = { .p = p };
+  return rm;
 };
 
-safe OptionRefMut<T> Option<T>::as_mut_1(Option<T>* borrow this)
-{
-    OptionRefMut<T> r = OptionRefMut<T>::Some(&mut *this->inner);
-    return r;
+safe OptionRefMut<T> Option<T>::as_mut_1(Option<T> *borrow this) {
+  OptionRefMut<T> r = OptionRefMut<T>::Some(&mut *this->inner);
+  return r;
 }
 
-safe OptionRefMut<T> Option<T>::as_mut_2(Option<T>* borrow this)
-{
-    return OptionRefMut<T>::Some(&mut *this->inner);
+safe OptionRefMut<T> Option<T>::as_mut_2(Option<T> *borrow this) {
+  return OptionRefMut<T>::Some(&mut *this->inner);
 }
 
 int main() {
-    Option<int> op = { .inner = (int *owned)malloc(sizeof(int)) };
-    OptionRefMut<int> rm1 = op.as_mut_1();
-    OptionRefMut<int> rm2 = op.as_mut_2();
-    return 0;
+  Option<int> op = { .inner = (int *owned)malloc(sizeof(int)) };
+  OptionRefMut<int> rm1 = op.as_mut_1();
+  OptionRefMut<int> rm2 = op.as_mut_2();
+  return 0;
 }
