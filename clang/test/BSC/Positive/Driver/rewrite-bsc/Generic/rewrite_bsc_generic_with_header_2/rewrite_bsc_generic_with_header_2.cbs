@@ -30,6 +30,11 @@ int main() {
 // CHECK-NEXT: #include <stdlib.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+// CHECK-NEXT: struct S_int_char;
+// CHECK-NEXT: struct G_struct_S_int_char;
+// CHECK-NEXT: struct G_int;
+// CHECK-NEXT: struct A;
+// CHECK-NEXT: struct B;
 // CHECK-NEXT: typedef int (*myFunc)(struct B *);
 // CHECK-EMPTY:
 // CHECK-NEXT: typedef struct A MyStruct;

@@ -205,6 +205,7 @@ private:
   std::set<FileID> RetrieveFileIDsFromIncludeStack(const Decl *D);
   void RewriteMacroDirectives();
   void RewriteDecls();
+  void RewriteRecordDeclaration(std::vector<Decl *> &DeclList);
   void RewriteTypedefAndEnum(std::vector<Decl *> &DeclList);
   void RewriteTypeDefinitions(std::vector<Decl *> &DeclList);
   void
@@ -536,10 +537,13 @@ void RewriteBSC::RewriteDecls() {
   // avoid repeatedly rewrite of Template Functions.
   std::set<Decl *> RewritedFunctionDeclarationSet;
 
-  // Step 1: Collect all enum decls and typedef decls into DeclList.
+  // Step 1: Collect all record decls and instatiation struct decls.
+  RewriteRecordDeclaration(DeclList);
+
+  // Step 2: Collect all enum decls and typedef decls into DeclList.
   RewriteTypedefAndEnum(DeclList);
 
-  // Step 2: Rewrite type definitions of user defined types, which is sorted by
+  // Step 3: Rewrite type definitions of user defined types, which is sorted by
   // type dependencies.
   RewriteTypeDefinitions(DeclList);
 
@@ -568,16 +572,67 @@ void RewriteBSC::RewriteDecls() {
     }
   }
 
-  // Step 3: Collect all instatiation function declarations.
-  Policy.FunctionDeclaraionOnly = true;
+  // Step 4: Collect all instatiation function declarations.
+  Policy.FunctionDeclarationOnly = true;
   RewriteInstantFunctionDecl(DeclList, RewritedFunctionDeclarationSet);
 
-  // Step 4: Collect non-generic function definitions and var decls.
-  Policy.FunctionDeclaraionOnly = false;
+  // Step 5: Collect non-generic function definitions and var decls.
+  Policy.FunctionDeclarationOnly = false;
   RewriteNonGenericFuncAndVar(DeclList);
 
-  // Step 5: Collect all instatiation function definition.
+  // Step 6: Collect all instatiation function definition.
   RewriteInstantFunctionDef(DeclList);
+}
+
+void RewriteBSC::RewriteRecordDeclaration(std::vector<Decl *> &DeclList) {
+  for (Decl *D : TUDecl->decls()) {
+    // Skip declarations in header files with suffix .h.
+    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+      continue;
+    }
+    switch (D->getKind()) {
+    case Decl::Record: {
+      RecordDecl *RD = dyn_cast<RecordDecl>(D);
+      // Skip incomplete record decl.
+      if (!RD->isCompleteDefinition())
+        break;
+      // Because we only want to print the declaration of the struct,
+      // we set it to incomplete before printing, and then restore it after
+      // printing.
+      RD->setCompleteDefinition(false);
+      RD->print(Buf, Policy);
+      Buf << ";\n";
+      RD->setCompleteDefinition(true);
+      break;
+    }
+    case Decl::ClassTemplate: {
+      ClassTemplateDecl *CTD = cast<ClassTemplateDecl>(D);
+      // Skip incomplete generic struct decl.
+      RecordDecl *RD = NULL;
+      if ((RD = dyn_cast<RecordDecl>(CTD->getTemplatedDecl()))) {
+        if (!RD->isCompleteDefinition()) {
+          break;
+        }
+      }
+      for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations()) {
+        // Because we only want to print the declaration of the generic struct,
+        // we set it to incomplete before printing, and then restore it after
+        // printing.
+        RD->setCompleteDefinition(false);
+        bool isCompleted = CTSD->isCompleteDefinition();
+        if (isCompleted)
+          CTSD->setCompleteDefinition(false);
+        CTSD->print(Buf, Policy);
+        Buf << ";\n";
+        RD->setCompleteDefinition(true);
+        CTSD->setCompleteDefinition(isCompleted);
+      }
+      break;
+    }
+    default:
+      break;
+    }
+  }
 }
 
 void RewriteBSC::RewriteTypedefAndEnum(std::vector<Decl *> &DeclList) {

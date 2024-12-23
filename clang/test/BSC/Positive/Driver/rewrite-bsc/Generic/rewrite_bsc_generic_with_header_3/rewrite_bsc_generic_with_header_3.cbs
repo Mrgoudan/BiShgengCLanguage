@@ -51,6 +51,10 @@ int main() {
 // CHECK-NEXT: #include <sys/epoll.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+// CHECK-NEXT: struct BSCGenericStruct_int;
+// CHECK-NEXT: struct UserHBSStruct;
+// CHECK-NEXT: struct CBSGenericFieldStruct;
+// CHECK-NEXT: struct CBSStruct;
 // CHECK-NEXT: enum UserHBSEnum {
 // CHECK-NEXT:   UFIRST,
 // CHECK-NEXT:   USECOND,

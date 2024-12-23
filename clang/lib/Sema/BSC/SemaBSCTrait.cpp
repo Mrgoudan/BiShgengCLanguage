@@ -336,7 +336,6 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
                                    SourceLocation TypeLoc, TraitDecl *TD,
                                    QualType OriginTraitTy) {
   CXXScopeSpec SS;
-  NamedDecl *Def = nullptr;
 
   if (ImplQT.getCanonicalType()->isRecordType()) {
     const RecordDecl *RD =

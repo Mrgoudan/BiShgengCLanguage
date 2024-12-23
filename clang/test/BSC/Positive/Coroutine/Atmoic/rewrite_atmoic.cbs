@@ -46,6 +46,7 @@ int main() {
 // CHECK:      #include <stdatomic.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+// CHECK-NEXT: struct Person_int_10;
 // CHECK-NEXT: struct Person_int_10 {
 // CHECK-NEXT:   char name[50];
 // CHECK-NEXT:   int age;

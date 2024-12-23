@@ -32,6 +32,10 @@ int main() {
 // CHECK:      #include <stdlib.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+// CHECK-NEXT: struct __Trait_F_Vtable;
+// CHECK-NEXT: struct __Trait_F;
+// CHECK-NEXT: struct __Trait_F_Owned;
+// CHECK-NEXT: struct __Trait_F_Borrow;
 // CHECK-NEXT: struct __Trait_F_Vtable {
 // CHECK-NEXT:   int (*foo)(void *);
 // CHECK-NEXT: };

@@ -77,7 +77,7 @@ struct PrintingPolicy {
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true)
         #if ENABLE_BSC
-        , RewriteBSC(false), FunctionDeclaraionOnly(false)
+        , RewriteBSC(false), FunctionDeclarationOnly(false)
         #endif
         {
   }
@@ -322,7 +322,7 @@ struct PrintingPolicy {
 
   /// Whether printing function declaration only while rewriting BSC source
   /// code.
-  unsigned FunctionDeclaraionOnly : 1;
+  unsigned FunctionDeclarationOnly : 1;
   #endif
 
   /// Callbacks to use to allow the behavior of printing to be customized.

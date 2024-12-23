@@ -60,6 +60,7 @@ int main() {
 // CHECK:      #include <stdbool.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+// CHECK-NEXT: struct S_5;
 // CHECK-NEXT: typedef short MyShort;
 // CHECK-EMPTY:
 // CHECK-NEXT: struct S_5 {

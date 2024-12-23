@@ -20,6 +20,9 @@ int main() {
 // CHECK:      #include <stdlib.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
+// CHECK-NEXT: struct _BSC_ListNode_struct_S;
+// CHECK-NEXT: struct LinkedList_struct_S;
+// CHECK-NEXT: struct S;
 // CHECK-NEXT: struct S {
 // CHECK-NEXT:   int a;
 // CHECK-NEXT: };

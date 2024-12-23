@@ -958,7 +958,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       }
 
 #if ENABLE_BSC
-      if (!Policy.FunctionDeclaraionOnly) {
+      if (!Policy.FunctionDeclarationOnly) {
 #endif
         if (D->getBody())
           D->getBody()->printPrettyControlled(Out, nullptr, SubPolicy,

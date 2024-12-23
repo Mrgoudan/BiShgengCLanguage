@@ -19,20 +19,20 @@ int main() {
   test<struct Block>(bb);
 }
 
-
-// CHECK:struct Block 
+// CHECK: struct Block;
+// CHECK-NEXT:struct Block
 // CHECK-NEXT: {
 // CHECK-NEXT:    int a;
-// CHECK-NEXT:};
+// CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT:static void test_struct_Block(struct Block a);
+// CHECK-NEXT: static void test_struct_Block(struct Block a);
 // CHECK-EMPTY:
-// CHECK-NEXT:int main(void) {
-// CHECK-NEXT:  int b1 = 2;
-// CHECK-NEXT:  struct Block bb;
-// CHECK-NEXT:  test_struct_Block(bb);
-// CHECK-NEXT:}
+// CHECK-NEXT: int main(void) {
+// CHECK-NEXT:   int b1 = 2;
+// CHECK-NEXT:   struct Block bb;
+// CHECK-NEXT:   test_struct_Block(bb);
+// CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT:static void test_struct_Block(struct Block a)   {
+// CHECK-NEXT: static void test_struct_Block(struct Block a)   {
 // CHECK-NEXT:      int c = 1;
 // CHECK-NEXT:  }
