@@ -24,7 +24,7 @@ safe void test_normal_struct_move2(Test* owned pt) {
 
 safe void test_normal_struct(void) {
     Test t = {.t = safe_malloc(1)};
-    Test*owned pt = safe_malloc(t);
+    Test *owned pt = safe_malloc(t);
 
     int *owned elem = pt->t;
 

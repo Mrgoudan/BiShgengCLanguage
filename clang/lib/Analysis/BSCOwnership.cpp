@@ -945,7 +945,8 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldUse(
         set(VD, Ownership::Status::PartialMoved);
       }
     }
-    if (OPSOwnedOwnedFields[VD].empty()  && !VD->getType()->getPointeeType()->isOwnedStructureType()) {
+    if (!OPSAllOwnedFields[VD].empty() && OPSOwnedOwnedFields[VD].empty() &&
+        !VD->getType()->getPointeeType()->isOwnedStructureType()) {
       if (!is(VD, Ownership::Status::Moved)) {
         resetAll(VD);
         set(VD, Ownership::Status::AllMoved);
