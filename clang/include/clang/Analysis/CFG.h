@@ -1246,7 +1246,7 @@ public:
     bool AddTemporaryDtors = false;
     bool AddScopes = false;
     #if ENABLE_BSC
-    bool AddAllScopes = false;
+    bool BSCMode = false;
     #endif
     bool AddStaticInitBranches = false;
     bool AddCXXNewAllocator = false;

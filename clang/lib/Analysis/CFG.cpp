@@ -537,6 +537,11 @@ public:
 
   bool alwaysAdd(const Stmt *stmt);
 
+  // Only used by BSC, report error when the CFG is not structured.
+  DiagnosticsEngine& getDiagnostic() {
+    return Context->getDiagnostics();
+  }
+
 private:
   // Visitors to walk an AST and construct the CFG.
   CFGBlock *VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc);
@@ -624,12 +629,12 @@ private:
                                     const Stmt *S) {
     if (ScopePos && (VD == ScopePos.getFirstVarInScope())
       #if ENABLE_BSC
-      && !BuildOpts.AddAllScopes
+      && !BuildOpts.BSCMode
       #endif
       )
       appendScopeBegin(B, VD, S);
     #if ENABLE_BSC
-    else if (BuildOpts.AddAllScopes && ScopePos)
+    else if (BuildOpts.BSCMode && ScopePos)
       appendScopeBegin(B, VD, S);
     #endif
   }
@@ -1846,10 +1851,10 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
   if (B == E)
     return;
   #if ENABLE_BSC
-  if (BuildOpts.AddAllScopes && ScopePos == LocalScope::const_iterator())
+  if (BuildOpts.BSCMode && ScopePos == LocalScope::const_iterator())
     return;
   int dist = B.distance(E);
-  if (BuildOpts.AddAllScopes && dist <= 0)
+  if (BuildOpts.BSCMode && dist <= 0)
     return;
   #endif
   // We need to append the destructors in reverse order, but any one of them
@@ -1867,14 +1872,14 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
       // ScopeEnd marker in a Block.
       if (BuildOpts.AddScopes && DeclsWithEndedScope.count(VD)
           #if ENABLE_BSC
-          && !BuildOpts.AddAllScopes
+          && !BuildOpts.BSCMode
           #endif
       ) {
         autoCreateBlock();
         appendScopeEnd(Block, VD, S);
       }
       #if ENABLE_BSC
-      else if (BuildOpts.AddAllScopes && BuildOpts.AddScopes) {
+      else if (BuildOpts.BSCMode && BuildOpts.AddScopes) {
         autoCreateBlock();
         appendScopeEnd(Block, VD, S);
       }
@@ -3419,8 +3424,20 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
   LabelMapTy::iterator I = LabelMap.find(G->getLabel());
 
   if (I == LabelMap.end())
-    // We will need to backpatch this block later.
-    BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
+    // Label appears first, then goto stmt
+    // This is not structured cfg, bishengc should report error
+    if (BuildOpts.BSCMode) {
+      badCFG = true;
+      DiagnosticsEngine &Diag = getDiagnostic();
+      unsigned ID = Diag.getCustomDiagID(
+        DiagnosticsEngine::Error,
+        "The CFG is not structured" 
+      );
+      Diag.Report(G->getBeginLoc(), ID);
+    } else {
+      // We will need to backpatch this block later.
+      BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
+    }
   else {
     JumpTarget JT = I->second;
     addAutomaticObjHandling(ScopePos, JT.scopePosition, G);

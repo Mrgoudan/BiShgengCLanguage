@@ -2214,8 +2214,8 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
 #if ENABLE_BSC
   // If D does not use memory safety features like "owned, borrow, &mut, &const",
   // we do not do borrow checking.
-  bool useSafeFeature = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
-  bool EnableOwnershipCheck = useSafeFeature && !(getLangOpts().DisableOwnershipCheck);
+  // bool useSafeFeature = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
+  bool EnableOwnershipCheck = LangOpts.BSC ? (!(getLangOpts().DisableOwnershipCheck)) : false;
   bool EnableNullabilityCheck = LangOpts.BSC ? (getLangOpts().getNullabilityCheck() != LangOptions::NC_NONE) : false;
   if (EnableOwnershipCheck || EnableNullabilityCheck) {
     if (!isBSCCoroutine &&

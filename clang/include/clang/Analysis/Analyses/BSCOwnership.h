@@ -48,7 +48,11 @@ public:
 
   class OwnershipStatus {
   public:
-    enum Source { OPS, S, BOP };
+    enum Source { 
+      OPS, // Owned Pointer to Struct, e.g. struct S* owned s
+      S,   // Struct, e.g. struct S s
+      BOP  // Owned Pointer to Basic Types, e.g. int* owned p
+    };
     using OwnershipSet = llvm::BitVector;
 
     // owned pointer struct status, e.g. struct S * owned s

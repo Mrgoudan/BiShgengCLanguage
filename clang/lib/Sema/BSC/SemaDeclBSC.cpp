@@ -161,10 +161,11 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
   AC.getCFGBuildOptions().AddImplicitDtors = true;
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
   AC.getCFGBuildOptions().AddScopes = true;
-  AC.getCFGBuildOptions().AddAllScopes = true;
+  AC.getCFGBuildOptions().BSCMode = true;
   AC.getCFGBuildOptions().setAllAlwaysAdd();
 
-  if (AC.getCFG()) {
+  bool RequireCFGAnalysis = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
+  if (RequireCFGAnalysis && AC.getCFG()) {
     const FunctionDecl *FD = cast<FunctionDecl>(D);
     unsigned NumNullabilityCheckErrorsInCurrFD = 0;
     LangOptions::NullCheckZone CheckZone = getLangOpts().getNullabilityCheck();
