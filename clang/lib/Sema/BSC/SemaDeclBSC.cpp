@@ -111,10 +111,12 @@ bool Sema::HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
 }
 
 // Return true if any memory safe features are found in a FunctionDecl.
+// Qualifiers: owned, borrow, fat
+// AddrOp: &mut, &const
 bool Sema::FindSafeFeatures(const FunctionDecl* FnDecl) {
   if (!FnDecl) return false;
-  BSCFeatureFinder finder = BSCFeatureFinder(Context);
-  if (finder.Visit(const_cast<FunctionDecl*>(FnDecl))) {
+  SafeFeatureFinder finder = SafeFeatureFinder();
+  if (finder.FindOwnedOrBorrow(const_cast<FunctionDecl*>(FnDecl))) {
     return true;
   }
   return false;
@@ -151,6 +153,17 @@ bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
   return HasSafeZoneInCompoundStmt(FuncBody);
 }
 
+/// BSC's dataflow analysis process is as follows:
+/// ====================================================================
+///                      __________________       ___________________
+///                     |                  |     |                   |
+/// FuncDecl--> CFG --> | NullabilityCheck | --> | OwnershipAnalysis | -->
+///                     |__________________|     |___________________|
+///       __________________              
+///      |                  |
+///  --> |   BorrowCheck    | -->  FuncDecl  --> CodeGen
+///      |__________________|
+/// ====================================================================
 void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
                                bool EnableNullabilityCheck) {
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
@@ -164,8 +177,19 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
   AC.getCFGBuildOptions().BSCMode = true;
   AC.getCFGBuildOptions().setAllAlwaysAdd();
 
-  bool RequireCFGAnalysis = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
-  if (RequireCFGAnalysis && AC.getCFG()) {
+  const FunctionDecl *FD = nullptr;
+  if (D->getKind() == Decl::BSCMethod) {
+    const BSCMethodDecl* BSCMethod = dyn_cast_or_null<BSCMethodDecl>(D);
+    FD = BSCMethod;
+  } else {
+    FD = dyn_cast_or_null<FunctionDecl>(D);
+  }
+
+  // If D does not use memory safety features like "owned, borrow, &mut, &const",
+  // we should not do borrow checking.
+  bool RequireBorrowCheck = LangOpts.BSC ? FindSafeFeatures(FD) : false;
+  bool RequireCFGAnalysis = EnableNullabilityCheck || RequireBorrowCheck;
+  if (RequireCFGAnalysis && AC.getCFG()) { // Only build the CFG when needed.
     const FunctionDecl *FD = cast<FunctionDecl>(D);
     unsigned NumNullabilityCheckErrorsInCurrFD = 0;
     LangOptions::NullCheckZone CheckZone = getLangOpts().getNullabilityCheck();
@@ -179,7 +203,8 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
     }
     // Run ownership analysis when there is no nullability errors in current
     // function.
-    if (EnableOwnershipCheck && !NumNullabilityCheckErrorsInCurrFD) {
+    bool DoBorrowCheck = EnableOwnershipCheck & RequireBorrowCheck;
+    if (DoBorrowCheck && !NumNullabilityCheckErrorsInCurrFD) {
       OwnershipDiagReporter OwnershipReporter(*this);
       runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter, Context);
       OwnershipReporter.flushDiagnostics();

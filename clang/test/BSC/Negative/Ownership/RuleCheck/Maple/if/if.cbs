@@ -72,9 +72,8 @@ void func6(int * owned argA, int * owned argB) {
     int * owned b;
 label1:
     if (rand()) {
-        a = argA; // expected-error {{assign to owned value: `a`}} expected-error {{use of moved value: `argA`}}
-        goto label1;
+        a = argA;
+        goto label1; // expected-error {{The CFG is not structured}}
     }
-} // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}}
-
+}
 int main() { return 0; }

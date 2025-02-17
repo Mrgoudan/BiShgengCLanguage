@@ -2212,10 +2212,9 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
     popOpenMPFunctionRegion(Scope.get());
 
 #if ENABLE_BSC
-  // If D does not use memory safety features like "owned, borrow, &mut, &const",
-  // we do not do borrow checking.
-  // bool useSafeFeature = LangOpts.BSC ? FindSafeFeatures(dyn_cast_or_null<FunctionDecl>(D)) : false;
+  // FIXME: Rename EnableOwnershipCheck, maybe EnableBorrowCheck is a better name.
   bool EnableOwnershipCheck = LangOpts.BSC ? (!(getLangOpts().DisableOwnershipCheck)) : false;
+  // If NullabilityCheck is in Mode: {SafeOnly, All}, we should build CFG.
   bool EnableNullabilityCheck = LangOpts.BSC ? (getLangOpts().getNullabilityCheck() != LangOptions::NC_NONE) : false;
   if (EnableOwnershipCheck || EnableNullabilityCheck) {
     if (!isBSCCoroutine &&

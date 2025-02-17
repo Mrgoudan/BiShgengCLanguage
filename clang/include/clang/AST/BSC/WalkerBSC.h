@@ -202,14 +202,10 @@ public:
   bool VisitStaticAssertDecl(StaticAssertDecl *D) {
     return Visit(D->getAssertExpr());
   }
-  
-  bool VisitTypeAliasDecl(TypeAliasDecl *D) {
-    return true;
-  }
 
-  bool VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
-    return true;
-  }
+  bool VisitTypeAliasDecl(TypeAliasDecl *D) { return true; }
+
+  bool VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) { return true; }
 
   bool VisitStmt(Stmt *S) {
     for (auto *C : S->children()) {
@@ -337,26 +333,6 @@ public:
     return false;
   }
 
-  bool VisitParenExpr(ParenExpr *PE) { return Visit(PE->getSubExpr()); }
-
-  bool VisitCallExpr(CallExpr *CE) {
-    for (auto *Arg : CE->arguments()) {
-      if (Visit(Arg)) {
-        return true;
-      }
-    }
-    return Visit(CE->getCallee());
-  }
-
-  bool VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
-    return Visit(ICE->getSubExpr());
-  }
-
-  bool VisitBinaryOperator(BinaryOperator *BO) {
-    return Visit(BO->getLHS()) || Visit(BO->getRHS());
-  }
-
-  bool VisitUnaryOperator(UnaryOperator *UO) { return Visit(UO->getSubExpr()); }
 
 protected:
   ASTContext &Context;
@@ -375,6 +351,109 @@ private:
     }
     return false;
   }
+};
+
+/// Whether a FunctionDecl has any "safe" features in it.
+/// TODO: add Unit Test
+class SafeFeatureFinder : public StmtVisitor<SafeFeatureFinder, bool>,
+                          public DeclVisitor<SafeFeatureFinder, bool>,
+                          public TypeVisitor<SafeFeatureFinder, bool> {
+public:
+  using TypeVisitor<SafeFeatureFinder, bool>::Visit;
+  using DeclVisitor<SafeFeatureFinder, bool>::Visit;
+  using StmtVisitor<SafeFeatureFinder, bool>::Visit;
+
+  // TODO: Is this enough? Do we need VisitType API?
+  bool VisitQualType(QualType QT) {
+    if (QT.isOwnedQualified() || QT.isBorrowQualified() ||
+        QT->hasBorrowFields() || QT->hasOwnedFields()) {
+      return true;
+    }
+    return false;
+  }
+
+  bool VisitFunctionDecl(FunctionDecl *FD) {
+    // Return Type has owned, borrow
+    if (VisitQualType(FD->getType())) {
+      return true;
+    }
+
+    // Function Parameters has owned, borrow
+    for (auto *Param : FD->parameters()) {
+      if (VisitQualType(Param->getType())) {
+        return true;
+      }
+    }
+
+    // FuncBody has owned, borrow
+    if (FD->doesThisDeclarationHaveABody()) {
+      // Dispatch to VisitCompoundStmt
+      if (Visit(FD->getBody())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool VisitVarDecl(VarDecl *D) {
+    if (VisitQualType(D->getType())) {
+      return true;
+    }
+
+    if (D->hasInit()) {
+      if (Visit((D->getInit()))) {
+        return true;
+      }
+      if (VisitQualType(D->getInit()->getType())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // TODO: Not sure other Decls should be override or not.
+  // RecordDecl, StaticAssertDecl, TypeAliasDecl, BSCMethodDecl etc.
+
+  // If VisitXXXStmt is not implemented, fallback to VisitStmt
+  bool VisitStmt(Stmt *S) {
+    // Children() is the common interface implemented by XStmt
+    for (auto *C : S->children()) {
+      if (C) {
+        if (Visit(C)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool VisitDeclStmt(DeclStmt *DS) {
+    for (auto *D : DS->decls()) {
+      if (Visit(D))
+        return true;
+    }
+    return false;
+  }
+
+  bool VisitCStyleCastExpr(CStyleCastExpr *E) {
+    if (VisitQualType(E->getType())) {
+      return true;
+    }
+    if (VisitExplicitCastExpr(E)) {
+      return true;
+    }
+    return false;
+  }
+
+  bool VisitUnaryOperator(UnaryOperator *UO) {
+    constexpr std::array<UnaryOperatorKind, 4> BSCOps = {
+        UO_AddrMut, UO_AddrMutDeref, UO_AddrConst, UO_AddrConstDeref};
+    return std::find(BSCOps.begin(), BSCOps.end(), UO->getOpcode()) !=
+           BSCOps.end();
+  }
+
+  bool FindOwnedOrBorrow(FunctionDecl *FD) { return VisitFunctionDecl(FD); }
 };
 
 } // namespace clang
