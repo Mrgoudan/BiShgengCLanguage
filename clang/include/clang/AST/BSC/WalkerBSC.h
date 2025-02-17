@@ -16,15 +16,16 @@
 
 #if ENABLE_BSC
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DeclVisitor.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
-#include "clang/AST/DeclVisitor.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 
 namespace clang {
@@ -151,6 +152,10 @@ public:
         return true;
       }
     }
+
+    if (FD->hasAttr<OperatorAttr>()) {
+      return true;
+    }
     return false;
   }
   bool VisitVarDecl(VarDecl *D) {
@@ -243,7 +248,9 @@ public:
     if (IS->isConstexpr()) {
       return true;
     }
-    Visit(IS->getCond());
+    if (Visit(IS->getCond())) {
+      return true;
+    }
     if (IS->getConditionVariable()) {
       if (Visit(IS->getConditionVariable())) {
         return true;
@@ -300,7 +307,8 @@ public:
 
     if (DRE->getDecl()->getKind() == Decl::Function) {
       FunctionDecl *FD = cast<FunctionDecl>(DRE->getDecl());
-      if (FD->isTemplateInstantiation() || FD->isConstexpr()) {
+      if (FD->isTemplateInstantiation() || FD->isConstexpr() ||
+          FD->hasAttr<OperatorAttr>()) {
         return true;
       }
     }
@@ -328,6 +336,27 @@ public:
     }
     return false;
   }
+
+  bool VisitParenExpr(ParenExpr *PE) { return Visit(PE->getSubExpr()); }
+
+  bool VisitCallExpr(CallExpr *CE) {
+    for (auto *Arg : CE->arguments()) {
+      if (Visit(Arg)) {
+        return true;
+      }
+    }
+    return Visit(CE->getCallee());
+  }
+
+  bool VisitImplicitCastExpr(ImplicitCastExpr *ICE) {
+    return Visit(ICE->getSubExpr());
+  }
+
+  bool VisitBinaryOperator(BinaryOperator *BO) {
+    return Visit(BO->getLHS()) || Visit(BO->getRHS());
+  }
+
+  bool VisitUnaryOperator(UnaryOperator *UO) { return Visit(UO->getSubExpr()); }
 
 protected:
   ASTContext &Context;

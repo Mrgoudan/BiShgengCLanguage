@@ -39,10 +39,7 @@ bool MangleBSCContext::mangleBSCName(const NamedDecl *ND, raw_ostream &Out) {
     }
   } else if (BFD && BFD->isTemplateInstantiation()) {
     // Handle the functiondecl with template args.
-    MethodStr = getBSCFunctionMangleName(BFD);
-  } else if (BFD && BFD->isOverloadedOperator()) {
-    IdentifierInfo *II = BFD->getDeclName().getCXXOperatorIdNameIdentInBSC();
-    MethodStr = II->getName().str();
+    MethodStr = getBSCFunctionMangleName(BFD, ManglePolicy);
   } else {
     // Without the BSC mangling, handle it separately at the point of call-in.
     return false;
@@ -74,13 +71,13 @@ MangleBSCContext::getBSCDesturctorMangleName(const BSCMethodDecl *BMD) {
   return TypeStr;
 }
 
-std::string
-MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD) {
+std::string MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD,
+                                                       PrintingPolicy &Policy) {
   std::string FunctionName = BFD->getNameAsString();
   if (const TemplateArgumentList *TArgs =
           BFD->getTemplateSpecializationArgs()) {
     ArrayRef<TemplateArgument> Args = TArgs->asArray();
-    std::string TemplateArgsName = getBSCTemplateArgsName(Args, ManglePolicy);
+    std::string TemplateArgsName = getBSCTemplateArgsName(Args, Policy);
     FunctionName += TemplateArgsName;
   }
   return FunctionName;

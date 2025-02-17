@@ -103,9 +103,6 @@ class alignas(IdentifierInfoAlignment) CXXOperatorIdName {
 
   /// The kind of this operator.
   OverloadedOperatorKind Kind = OO_None;
-#if ENABLE_BSC
-  IdentifierInfo *ID = nullptr;
-#endif
 
   /// Extra information associated with this operator name that
   /// can be used by the front end. All bits are really needed
@@ -479,15 +476,6 @@ public:
     return OO_None;
   }
 
-#if ENABLE_BSC
-  void setCXXOperatorIdNameIdentInBSC(IdentifierInfo *Id) const {
-    castAsCXXOperatorIdName()->ID = Id;
-  }
-  IdentifierInfo *getCXXOperatorIdNameIdentInBSC() const {
-    return castAsCXXOperatorIdName()->ID;
-  }
-#endif
-
   /// If this name is the name of a literal operator,
   /// retrieve the identifier associated with it.
   IdentifierInfo *getCXXLiteralIdentifier() const {
@@ -608,8 +596,11 @@ class DeclarationNameTable {
   /// Manage the uniqued CXXOperatorIdName, which contain extra information
   /// for the name of overloaded C++ operators. getCXXOperatorName
   /// can be used to obtain a DeclarationName from the operator kind.
-  detail::CXXOperatorIdName CXXOperatorNames[NUM_OVERLOADED_OPERATORS];
 
+  detail::CXXOperatorIdName CXXOperatorNames[NUM_OVERLOADED_OPERATORS];
+#if ENABLE_BSC
+  std::vector<IdentifierInfo *> BSCOperatorNames[NUM_OVERLOADED_OPERATORS];
+#endif
   /// Manage the uniqued CXXLiteralOperatorIdName, which contain extra
   /// information for the name of C++ literal operators.
   /// getCXXLiteralOperatorName can be used to obtain a DeclarationName
@@ -663,6 +654,12 @@ public:
 
   /// Get the name of the literal operator function with II as the identifier.
   DeclarationName getCXXLiteralOperatorName(IdentifierInfo *II);
+#if ENABLE_BSC
+  DeclarationName getBSCOperatorName(IdentifierInfo *II,
+                                     OverloadedOperatorKind Op);
+  std::vector<IdentifierInfo *>
+  getBSCOperatorIdentifierInfoTable(OverloadedOperatorKind Op);
+#endif
 };
 
 /// DeclarationNameLoc - Additional source/type location info

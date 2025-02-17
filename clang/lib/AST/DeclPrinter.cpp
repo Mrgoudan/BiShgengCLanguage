@@ -267,6 +267,13 @@ void DeclPrinter::prettyPrintAttributes(Decl *D
 #define PRAGMA_SPELLING_ATTR(X) case attr::X:
 #include "clang/Basic/AttrList.inc"
         break;
+#if ENABLE_BSC
+      case attr::Operator:
+        if (Policy.RewriteBSC) {
+          continue;
+        }
+        LLVM_FALLTHROUGH;
+#endif
       default:
         A->printPretty(Out, Policy);
 #if ENABLE_BSC

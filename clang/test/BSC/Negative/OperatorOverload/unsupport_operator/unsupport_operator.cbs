@@ -113,3 +113,8 @@ __attribute__((operator &const))        // expected-error {{unsupported operator
 int operator21(struct A s) {            // expected-error@-1 {{expected ')'}}
     return s.a;
 }
+
+__attribute__((operator &))
+int operator21(struct A s) {            // expected-error {{overloaded 'operator21' must be a binary operator (has 1 parameter)}}
+    return s.a;
+}

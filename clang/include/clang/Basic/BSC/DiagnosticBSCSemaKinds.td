@@ -201,6 +201,8 @@ def err_use_expired_borrow_var : Error<
 
 // BSC operator overload errors.
 def err_unsupport_overload_fun : Error<"function unsupport overload">;
+def err_operator_overload_needs_point : Error<
+  "overloaded function %0 first parameter or return type must be struct or enumeration pointer type">;
 
 // BSC Pointer Nullability Check errors.
 def err_nullable_pointer_dereference : Error<

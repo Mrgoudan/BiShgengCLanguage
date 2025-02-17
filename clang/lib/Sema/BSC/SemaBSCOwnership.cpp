@@ -312,8 +312,9 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, Sou
 }
 
 bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
-  QualType RHSCanType = RHSExpr->getType().getCanonicalType();
-  QualType LHSCanType = LHSType.getCanonicalType();
+  QualType RHSCanType =
+      RHSExpr->getType().getCanonicalType().getUnqualifiedType();
+  QualType LHSCanType = LHSType.getCanonicalType().getUnqualifiedType();
   SourceLocation ExprLoc = RHSExpr->getBeginLoc();
   bool Res = true;
 

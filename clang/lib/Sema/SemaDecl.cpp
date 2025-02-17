@@ -1558,11 +1558,6 @@ static bool AllowOverloadingOfFunction(const LookupResult &Previous,
   if (Context.getLangOpts().CPlusPlus || New->hasAttr<OverloadableAttr>())
     return true;
 
-#if ENABLE_BSC
-  if (Context.getLangOpts().BSC && New->isOverloadedOperator())
-    return true;
-#endif
-
   // Multiversion function declarations are not overloads in the
   // usual sense of that term, but lookup will report that an
   // overload set was found if more than one multiversion function
@@ -4125,7 +4120,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
         return true;
       }
-      if (New->hasAttr<OperatorAttr>() != Old->hasAttr<OperatorAttr>()) {
+      if (New->getOverloadedOperator() != Old->getOverloadedOperator()) {
         Diag(New->getLocation(), diag::err_conflicting_types) << New;
         Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
         return true;
@@ -5876,12 +5871,21 @@ Decl *Sema::BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
 /// GetNameForDeclarator - Determine the full declaration name for the
 /// given Declarator.
 DeclarationNameInfo Sema::GetNameForDeclarator(Declarator &D) {
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    return GetNameFromUnqualifiedId(D.getName(), getOperatorKindByDeclarator(D));
+  }
+#endif
   return GetNameFromUnqualifiedId(D.getName());
 }
 
 /// Retrieves the declaration name from a parsed unqualified-id.
-DeclarationNameInfo
-Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
+DeclarationNameInfo Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name
+#if ENABLE_BSC
+                                                   ,
+                                                   OverloadedOperatorKind Op
+#endif
+) {
   DeclarationNameInfo NameInfo;
   NameInfo.setLoc(Name.StartLocation);
 
@@ -5889,7 +5893,16 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
 
   case UnqualifiedIdKind::IK_ImplicitSelfParam:
   case UnqualifiedIdKind::IK_Identifier:
-    NameInfo.setName(Name.Identifier);
+#if ENABLE_BSC
+    if (getLangOpts().BSC && Op != OO_None) {
+      NameInfo.setName(
+          Context.DeclarationNames.getBSCOperatorName(Name.Identifier, Op));
+    } else {
+#endif
+      NameInfo.setName(Name.Identifier);
+#if ENABLE_BSC
+    }
+#endif
     return NameInfo;
 
   case UnqualifiedIdKind::IK_DeductionGuideName: {
@@ -5922,11 +5935,6 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
   case UnqualifiedIdKind::IK_OperatorFunctionId:
     NameInfo.setName(Context.DeclarationNames.getCXXOperatorName(
                                            Name.OperatorFunctionId.Operator));
-#if ENABLE_BSC
-    if (getLangOpts().BSC)
-      NameInfo.getName().setCXXOperatorIdNameIdentInBSC(
-          Name.OperatorFunctionId.Identifier);
-#endif
     NameInfo.setCXXOperatorNameRange(SourceRange(
         Name.OperatorFunctionId.SymbolLocations[0], Name.EndLocation));
 
@@ -6537,12 +6545,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   // If this has an identifier and is not a function template specialization,
   // add it to the scope stack.
   if (New->getDeclName() && AddToScope)
-    PushOnScopeChains(New, S
-#if ENABLE_BSC
-                      ,
-                      CheckOperatorDeclNeedAddToContext(D)
-#endif
-    );
+    PushOnScopeChains(New, S);
   if (isInOpenMPDeclareTargetContext())
     checkDeclIsAllowedInOpenMPTarget(nullptr, New);
 
@@ -10354,22 +10357,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
     }
     BSCMethodDecl *BSCMD = dyn_cast<BSCMethodDecl>(NewFD);
-    if (NewFD->getAttr<OperatorAttr>() && (BSCMD || DC->isTrait())) {
-      // Avoid displaying errors multiple times
-      if (!NewFD->isOverloadedOperator()) {
-        Diag(NewFD->getLocation(), diag::err_unsupport_overload_fun);
-      }
+    if (NewFD->hasAttr<OperatorAttr>() && (BSCMD || DC->isTrait())) {
+      Diag(NewFD->getLocation(), diag::err_unsupport_overload_fun);
       NewFD->setInvalidDecl();
     }
-    if (NewFD->isOverloadedOperator() &&
-        !CheckOperatorFunReturnTypeIsLegal(NewFD)) {
+    if (NewFD->hasAttr<OperatorAttr>() &&
+        CheckBSCOverloadedOperatorDeclaration(NewFD)) {
       NewFD->setInvalidDecl();
-    }
-    NamedDecl *PrincipalDecl =
-        (FunctionTemplate ? cast<NamedDecl>(FunctionTemplate) : NewFD);
-    if (NewFD->isOverloadedOperator() && !DC->isRecord() &&
-        PrincipalDecl->isInIdentifierNamespace(Decl::IDNS_Ordinary)) {
-      PrincipalDecl->setNonMemberOperator();
     }
   }
 #endif
@@ -11906,11 +11900,6 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     // check BSC constexpr function
     if (NewFD->isConstexprSpecified())
       CheckBSCConstexprFunction(NewFD);
-    if (NewFD->isOverloadedOperator() &&
-        CheckOverloadedOperatorDeclaration(NewFD)) {
-      NewFD->setInvalidDecl();
-      return Redeclaration;
-    }
   }
   #endif
 
@@ -15139,23 +15128,6 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   if (LangOpts.OpenMP && isInOpenMPDeclareVariantScope())
     ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
         ParentScope, D, TemplateParameterLists, Bases);
-#if ENABLE_BSC
-  if (getLangOpts().BSC &&
-      D.getDeclSpec().getAttributes().hasAttribute(ParsedAttr::AT_Operator)) {
-    for (ParsedAttr &AL : D.getMutableDeclSpec().getAttributes()) {
-      if (AL.getKind() == ParsedAttr::AT_Operator) {
-        SourceLocation SymbolLocations[3] = {AL.getScopeLoc(), AL.getScopeLoc(),
-                                             AL.getScopeLoc()};
-        HandleDeclarator(ParentScope, D, TemplateParameterLists);
-        D.getName().setOperatorFunctionId(
-            D.getName().StartLocation, AL.getOperatorTypeBuffer().Kind,
-            SymbolLocations, D.getName().Identifier);
-        AL.getOperatorTypeBuffer().AddToContext = true;
-        break;
-      }
-    }
-  }
-#endif
 
   D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
   Decl *DP = HandleDeclarator(ParentScope, D, TemplateParameterLists);

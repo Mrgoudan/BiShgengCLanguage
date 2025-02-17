@@ -3363,6 +3363,22 @@ void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
   //        expression according to the usual rules for name lookup in
   //        unqualified function calls (3.4.2) except that all member
   //        functions are ignored.
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    std::vector<IdentifierInfo *> Id =
+        Context.DeclarationNames.getBSCOperatorIdentifierInfoTable(Op);
+    for (auto it = Id.begin(); it != Id.end(); it++) {
+      DeclarationName OpName = DeclarationName(*it);
+      LookupResult Operators(*this, OpName, SourceLocation(),
+                             LookupOrdinaryName);
+      LookupName(Operators, S);
+
+      assert(!Operators.isAmbiguous() && "Operator lookup cannot be ambiguous");
+      Functions.append(Operators.begin(), Operators.end());
+    }
+    return;
+  }
+#endif
   DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
   LookupResult Operators(*this, OpName, SourceLocation(), LookupOperatorName);
   LookupName(Operators, S);

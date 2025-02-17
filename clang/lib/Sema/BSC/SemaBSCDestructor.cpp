@@ -277,6 +277,9 @@ public:
                    .BuildCallExpr(nullptr, DestructorRef, SourceLocation(),
                                   Args, SourceLocation())
                    .get();
+    if (!CE) {
+      return nullptr;
+    }
     Expr *FlagRefExpr = SemaRef.BuildDeclRefExpr(
         FlagMap[VD], FlagMap[VD]->getType(), VK_LValue, SourceLocation());
     FlagRefExpr =

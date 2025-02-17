@@ -6328,7 +6328,11 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
 
   if (T1->isRecordType() || (!T2.isNull() && T2->isRecordType()))
     return true;
-
+#if ENABLE_BSC
+  if (T1->isPointerType() && T1->getPointeeType()->isRecordType()) {
+    return true;
+  }
+#endif
   const auto *Proto = Fn->getType()->castAs<FunctionProtoType>();
   if (Proto->getNumParams() < 1)
     return false;
@@ -7748,8 +7752,23 @@ void Sema::AddNonMemberOperatorCandidates(
     FunctionDecl *FD =
         FunTmpl ? FunTmpl->getTemplatedDecl() : cast<FunctionDecl>(D);
 
+#if ENABLE_BSC
+    Expr *ArgsArray[2];
+    if (getLangOpts().BSC) {
+      if (IsDesugarNeededOperatorKind(FD->getOverloadedOperator())) {
+        Expr *DesugaredArg = DesugarOperatorFirstArg(FD, Args);
+        ArgsArray[0] = DesugaredArg;
+        ArgsArray[1] = Args.size() >= 2 ? Args[1] : nullptr;
+        FunctionArgs = {ArgsArray, Args.size()};
+      }
+    }
+#endif
     // Don't consider rewritten functions if we're not rewriting.
-    if (!CandidateSet.getRewriteInfo().isAcceptableCandidate(FD))
+    if (
+#if ENABLE_BSC
+        !getLangOpts().BSC &&
+#endif
+        !CandidateSet.getRewriteInfo().isAcceptableCandidate(FD))
       continue;
 
     assert(!isa<CXXMethodDecl>(FD) &&
@@ -13548,7 +13567,9 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       Expr *Base = nullptr;
       // We matched an overloaded operator. Build a call to that
       // operator.
-
+#if ENABLE_BSC
+      bool ArgDesugared = false;
+#endif
       // Convert the arguments.
       if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FnDecl)) {
         CheckMemberOperatorAccess(OpLoc, Args[0], nullptr, Best->FoundDecl);
@@ -13560,6 +13581,14 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
           return ExprError();
         Base = Input = InputRes.get();
       } else {
+#if ENABLE_BSC
+        if (Op == OO_Star) {
+          Input = DesugarOperatorFirstArg(FnDecl, ArgsArray);
+          if (ArgsArray[0] != Input) {
+            ArgDesugared = true;
+          }
+        }
+#endif
         // Convert the arguments.
         ExprResult InputInit
           = PerformCopyInitialization(InitializedEntity::InitializeParameter(
@@ -13585,9 +13614,22 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       ResultTy = ResultTy.getNonLValueExprType(Context);
 
       Args[0] = Input;
-      CallExpr *TheCall = CXXOperatorCallExpr::Create(
-          Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc,
-          CurFPFeatureOverrides(), Best->IsADLCandidate);
+      CallExpr *TheCall;
+#if ENABLE_BSC
+      if (getLangOpts().BSC) {
+        if (CheckIsUnsafeOverloadCall(FnExpr.get()))
+          return ExprError();
+
+        TheCall = CallExpr::Create(Context, FnExpr.get(), ArgsArray, ResultTy,
+                                   VK, OpLoc, CurFPFeatureOverrides());
+      } else {
+#endif
+        TheCall = CXXOperatorCallExpr::Create(
+            Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc,
+            CurFPFeatureOverrides(), Best->IsADLCandidate);
+#if ENABLE_BSC
+      }
+#endif
 
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
@@ -13595,6 +13637,13 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       if (CheckFunctionCall(FnDecl, TheCall,
                             FnDecl->getType()->castAs<FunctionProtoType>()))
         return ExprError();
+#if ENABLE_BSC
+      if (getLangOpts().BSC && ArgDesugared) {
+        ExprResult InputRes =
+            CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), FnDecl);
+        return DesugarOperatorCallExpr(FnDecl, InputRes.get());
+      }
+#endif
       return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), FnDecl);
     } else {
       // We matched a built-in operator. Convert the arguments, then
@@ -13942,11 +13991,32 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         QualType ResultTy = FnDecl->getReturnType();
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(Context);
+#if ENABLE_BSC
+        if (getLangOpts().BSC) {
+          if (CheckIsUnsafeOverloadCall(FnExpr.get()))
+            return ExprError();
 
+          CallExpr *TheCall =
+              CallExpr::Create(Context, FnExpr.get(), Args, ResultTy, VK, OpLoc,
+                               CurFPFeatureOverrides());
+          if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall,
+                                  FnDecl))
+            return ExprError();
+
+          ExprResult R = MaybeBindToTemporary(TheCall);
+          if (R.isInvalid())
+            return ExprError();
+
+          R = CheckForImmediateInvocation(R, FnDecl);
+          if (R.isInvalid())
+            return ExprError();
+
+          return R;
+        }
+#endif
         CXXOperatorCallExpr *TheCall = CXXOperatorCallExpr::Create(
             Context, ChosenOp, FnExpr.get(), Args, ResultTy, VK, OpLoc,
             CurFPFeatureOverrides(), Best->IsADLCandidate);
-
         if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall,
                                 FnDecl))
           return ExprError();
@@ -14323,6 +14393,13 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 
   // Add operator candidates that are member functions.
   AddMemberOperatorCandidates(OO_Subscript, LLoc, Args, CandidateSet);
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    UnresolvedSet<16> Functions;
+    LookupOverloadedOperatorName(OO_Subscript, getCurScope(), Functions);
+    AddNonMemberOperatorCandidates(Functions, Args, CandidateSet);
+  }
+#endif
 
   // Add builtin operator candidates.
   if (Args.size() == 2)
@@ -14340,7 +14417,67 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
       if (FnDecl) {
         // We matched an overloaded operator. Build a call to that
         // operator.
+#if ENABLE_BSC
+        if (getLangOpts().BSC) {
+          Expr *FirstArg = Args[0];
+          bool ArgDesugared = false;
+          Base = DesugarOperatorFirstArg(FnDecl, Args);
+          if (Base != FirstArg) {
+            ArgDesugared = true;
+          }
+          ExprResult FnExpr =
+              CreateFunctionRefExpr(*this, FnDecl, Best->FoundDecl, Base,
+                                    HadMultipleCandidates, LLoc);
+          if (FnExpr.isInvalid())
+            return ExprError();
+          if (CheckIsUnsafeOverloadCall(FnExpr.get()))
+            return ExprError();
+          // Determine the result type
+          QualType ResultTy = FnDecl->getReturnType();
+          ExprValueKind VK = Expr::getValueKindForType(ResultTy);
+          ResultTy = ResultTy.getNonLValueExprType(Context);
+          SmallVector<Expr *, 2> Arguments;
+          if (Base->isLValue()) {
+            Expr *CastBase = ImplicitCastExpr::Create(
+                Context, Base->getType(), clang::CK_LValueToRValue, Base,
+                nullptr, VK_PRValue, FPOptionsOverride());
+            Arguments.push_back(CastBase);
+          } else {
+            Arguments.push_back(Base);
+          }
 
+          for (auto Arg : ArgExpr) {
+            if (Arg->isLValue()) {
+              Expr *CastArg = ImplicitCastExpr::Create(
+                  Context, Arg->getType(), clang::CK_LValueToRValue, Arg,
+                  nullptr, VK_PRValue, FPOptionsOverride());
+              Arguments.push_back(CastArg);
+            } else {
+              Arguments.push_back(Arg);
+            }
+          }
+
+          CallExpr *TheCall =
+              CallExpr::Create(Context, FnExpr.get(), Arguments, ResultTy, VK,
+                               LLoc, CurFPFeatureOverrides());
+
+          if (CheckCallReturnType(FnDecl->getReturnType(), LLoc, TheCall,
+                                  FnDecl))
+            return ExprError();
+
+          if (CheckFunctionCall(FnDecl, TheCall,
+                                FnDecl->getType()->castAs<FunctionProtoType>()))
+            return ExprError();
+
+          ExprResult InputRes = CheckForImmediateInvocation(
+              MaybeBindToTemporary(TheCall), FnDecl);
+          if (ArgDesugared) {
+            return DesugarOperatorCallExpr(FnDecl, InputRes.get());
+          } else {
+            return InputRes;
+          }
+        }
+#endif
         CheckMemberOperatorAccess(LLoc, Args[0], ArgExpr, Best->FoundDecl);
 
         // Convert the arguments.
@@ -14413,8 +14550,17 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
                  << Args[0]->getSourceRange() << Range)
               : (PDiag(diag::err_ovl_no_viable_subscript)
                  << Args[0]->getType() << Args[0]->getSourceRange() << Range);
-      CandidateSet.NoteCandidates(PartialDiagnosticAt(LLoc, PD), *this,
-                                  OCD_AllCandidates, ArgExpr, "[]", LLoc);
+#if ENABLE_BSC
+      if (getLangOpts().BSC) {
+        CandidateSet.NoteCandidates(PartialDiagnosticAt(LLoc, PD), *this,
+                                    OCD_AllCandidates, Args, "[]", LLoc);
+      } else {
+#endif
+        CandidateSet.NoteCandidates(PartialDiagnosticAt(LLoc, PD), *this,
+                                    OCD_AllCandidates, ArgExpr, "[]", LLoc);
+#if ENABLE_BSC
+      }
+#endif
       return ExprError();
     }
 
@@ -14445,8 +14591,8 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
       return ExprError();
     }
 
-  // We matched a built-in operator; build it.
-  return CreateBuiltinArraySubscriptExpr(Args[0], LLoc, Args[1], RLoc);
+    // We matched a built-in operator; build it.
+    return CreateBuiltinArraySubscriptExpr(Args[0], LLoc, Args[1], RLoc);
 }
 
 /// BuildCallToMemberFunction - Build a call to a member
@@ -15024,16 +15170,27 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
                           diag::err_typecheck_incomplete_tag, Base))
     return ExprError();
 
-  LookupResult R(*this, OpName, OpLoc, LookupOrdinaryName);
-  LookupQualifiedName(R, Base->getType()->castAs<RecordType>()->getDecl());
-  R.suppressDiagnostics();
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    UnresolvedSet<16> Functions;
+    LookupOverloadedOperatorName(OO_Arrow, S, Functions);
+    AddNonMemberOperatorCandidates(Functions, Base, CandidateSet);
+  } else {
+#endif
 
-  for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
-       Oper != OperEnd; ++Oper) {
-    AddMethodCandidate(Oper.getPair(), Base->getType(), Base->Classify(Context),
-                       None, CandidateSet, /*SuppressUserConversion=*/false);
+    LookupResult R(*this, OpName, OpLoc, LookupOrdinaryName);
+    LookupQualifiedName(R, Base->getType()->castAs<RecordType>()->getDecl());
+    R.suppressDiagnostics();
+
+    for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
+         Oper != OperEnd; ++Oper) {
+      AddMethodCandidate(Oper.getPair(), Base->getType(),
+                         Base->Classify(Context), None, CandidateSet,
+                         /*SuppressUserConversion=*/false);
+    }
+#if ENABLE_BSC
   }
-
+#endif
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 
   // Perform overload resolution.
@@ -15080,7 +15237,38 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
         *this, OCD_AllCandidates, Base);
     return ExprError();
   }
+#if ENABLE_BSC
+  if (getLangOpts().BSC) {
+    FunctionDecl *Method = cast<FunctionDecl>(Best->Function);
+    // Build the operator call.
+    ExprResult FnExpr = CreateFunctionRefExpr(
+        *this, Method, Best->FoundDecl, Base, HadMultipleCandidates, OpLoc);
+    if (FnExpr.isInvalid())
+      return ExprError();
+    if (CheckIsUnsafeOverloadCall(FnExpr.get()))
+      return ExprError();
+    QualType ResultTy = Method->getReturnType();
+    ExprValueKind VK = Expr::getValueKindForType(ResultTy);
+    ResultTy = ResultTy.getNonLValueExprType(Context);
+    Expr *Args = DesugarOperatorFirstArg(Method, Base);
+    if (Args->isLValue()) {
+      Args = ImplicitCastExpr::Create(Context, Args->getType(),
+                                      clang::CK_LValueToRValue, Args, nullptr,
+                                      VK_PRValue, FPOptionsOverride());
+    }
+    CallExpr *TheCall = CallExpr::Create(Context, FnExpr.get(), Args, ResultTy,
+                                         VK, OpLoc, CurFPFeatureOverrides());
 
+    if (CheckCallReturnType(Method->getReturnType(), OpLoc, TheCall, Method))
+      return ExprError();
+
+    if (CheckFunctionCall(Method, TheCall,
+                          Method->getType()->castAs<FunctionProtoType>()))
+      return ExprError();
+
+    return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
+  }
+#endif
   CheckMemberOperatorAccess(OpLoc, Base, nullptr, Best->FoundDecl);
 
   // Convert the object parameter.

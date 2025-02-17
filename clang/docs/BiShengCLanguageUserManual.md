@@ -75,7 +75,7 @@
   $ export MTP=/path/to/ThirdParty
   $ export BiShengC_GCC_Path=$MTP/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/bin/aarch64-linux-gnu-gcc
   $ export PATH=$PATH:$Maple_Path/bin:$MTP/qemu/usr/bin
-
+  
   # 设置编译时和 qemu 运行时依赖的库
   $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MTP/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/aarch64-linux-gnu/libc/lib
   $ export QEMU_LD_PREFIX=$MTP/gcc-linaro-7.5.0-2019.12-i686_aarch64-linux-gnu/aarch64-linux-gnu/libc
@@ -2211,10 +2211,10 @@ clang -rewrite-bsc boo.cbs foo.cbs
         char *buf;
         int len;
     } MSG;
-
+    
     // 生成的 C 文件中：
     typedef struct MSG MSG;
-
+    
     struct MSG {
         char *buf;
         int len;
@@ -2245,7 +2245,7 @@ clang -rewrite-bsc boo.cbs foo.cbs
         Vec<int> ele = l.pop_back();
         return 0;
     }
-
+    
     // 编译命令：clang -rewrite-bsc main.cbs -I/path/to/libcbs/include
     // 生成的 C 文件中的类型定义（省略其他代码）：
     struct RawVec_int {
@@ -2489,36 +2489,36 @@ ownership-qualifier:
     ```
 
 11. `owned`可以修饰 trait 类型，即`trait T* owned`，也表示该变量拥有其内部存储的数据的所有权。
-该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持`trait T* owned`与`trait T*`之间的类型转换。
+    该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持`trait T* owned`与`trait T*`之间的类型转换。
 
     ```c
     trait T {
         safe void release(This* owned this);
     };
-
+    
     struct IPv4 {
         char* buf1;
     };
-
+    
     struct IPv6 {
         char* buf1;
         char* buf2;
     };
-
+    
     safe void struct IPv4::release(struct IPv4* owned this) {
         free(this->buf1);
         safe_free((void* owned)this);
     }
-
+    
     safe void struct IPv6::release(struct IPv6* owned this) {
         free(this->buf1);
         free(this->buf2);
         safe_free((void* owned)this);
     }
-
+    
     impl trait T for IPv4;
     impl trait T for IPv6;
-
+    
     void cleanup(trait T* owned t) {
         t->release();
     }
@@ -3967,17 +3967,11 @@ struct square squareAdd(struct square s1, struct square s2){
     return s;
 }
 
-// 普通函数
-struct square square_add(struct square s1, struct square s2){
-    struct square s = {s1.width + s2.width, s1.height + s2.height};
-    return s;
-}
-
 int main(){
     struct square s1 = {100, 50};
     struct square s2 = {60, 110};
     // 在之前我们必须主动调用函数来完成结构体运算操作。
-    struct square s3 = square_add(s1, s2);
+    struct square s3 = squareAdd(s1, s2);
     assert(s3.width == 160);
     assert(s3.height == 160);
 	// 将函数加上重载标记后，现在我们可以直接对该结构体进行运算操作。
@@ -4006,22 +4000,136 @@ struct square squareAdd(struct square s1, struct square s2){
     return s;
 }
 ```
-
 2、运算符重载函数只能是全局函数，不允许标记成员函数、`trait`声明的函数为重载函数。
 
-3、运算符重载函数至少有一个参数是用户自定义类型，如结构体、枚举。
+3、支持重载的运算符列表。
 
-代码示例：
+| 类别           | 运算符                                                       |
+| -------------- | ------------------------------------------------------------ |
+| 双目算术运算符 | + (加)，- (减)，* (乘)，/ (除)，% (取模)                     |
+| 关系运算符     | == (等于)，!= (不等于)，< (小于)，> (大于)，<= (小于等于)，>= (大于等于) |
+| 位运算符       | \| (按位或)，& (按位与)，~ (按位取反)，^ (按位异或),，<< (左移)，>> (右移) |
+| 单目运算符     | \+ (正)，- (负)，* (解引用)                                  |
+| 成员访问运算符 | ->                                                           |
+| 索引运算符     | []                                                           |
 
-```c
-// error: 不允许定义无用户自定义类型运算符重载函数。
-__attribute__((operator +))
-int squareAdd(int a, int b){
-	return a + b;
-}
-```
+4、运算符重载函数入参和返回值要求。
 
-4、运算符重载函数名不能与普通函数名冲突。对同一个运算符定义多个重载函数时，如果函数名不同并且参数类型不完全一致，允许同时存在。
+| 运算符           | 入参要求     | 返回值要求                                                |
+| -------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 关系运算符 | 只允许有两个入参, 且至少有一个参数是用户自定义类型，如结构体、枚举。 | 返回值类型必须是_Bool类型         |
+| *(解引用), <br />-> (成员访问运算符) | 只允许有一个入参,且第一个参数为用户自定义类型的指针类型，包括裸指针、可变借用指针、不可变借用指针。 | 返回值类型必须是指针类型，包括裸指针、可变借用指针、不可变借用指针、Rc指针。 |
+| [] (索引运算符) | 只允许有两个入参,且第一个参数为用户自定义类型的指针类型，包括裸指针、可变借用指针、不可变借用指针。 | 返回值类型必须是指针类型，包括裸指针、可变借用指针、不可变借用指针、Rc指针。 |
+| 其他     | 单目运算符只允许有一个入参, 双目运算符值只允许有两个入参。函数至少有一个入参是用户自定义类型。 | 无                              |
+
+- 关系运算符重载代码示例
+
+    ```c
+    #include <assert.h>
+    struct Foo {
+        int x;
+        int y;
+    };
+
+    __attribute__((operator >))
+    _Bool FooCompare(struct Foo A, struct Foo B) {  // 参数至少有一个是用户自定义类型
+        return A.y > B.y;
+    };
+
+    int main() {
+        struct Foo f1 = {180, 18};
+        struct Foo f2 = {166, 22};
+        assert(f2 > f1 && "compare error");
+        return 0;
+    }
+    ```
+
+- 解引用运算符重载代码示例
+
+    ```c
+    #include <assert.h>
+    struct MyPoint<T> {
+        T * data;
+    };
+    
+    __attribute__((operator *))
+    T * derefMyPoint<T>(struct MyPoint<T> * borrow p) {  // 入参和返回值必须是指针类型。
+        return p->data;
+    }
+    
+    int main() {
+        int data = 100;
+        struct MyPoint<int> p = {&data};
+        // 编译器匹配到重载函数后，自动对p取地址并传入重载函数，并对函数返回值做解引用。此处等效为(*derefMypoint(&mut p)) == 100。
+        assert(*p == 100);
+        *p = 10;
+        assert(*p == 10);
+        return 0;
+    }
+    ```
+
+- 成员访问运算符重载代码示例
+
+    ```c
+    #include <assert.h>
+    struct MyData<T> {
+        T a;
+    };
+    struct MyPoint<T> {
+        MyData<T>* data;
+    };
+    
+    __attribute__((operator ->))
+    MyData<T> * mDerefMyPoint<T>(struct MyPoint<T> * borrow p) {   // 入参和返回值必须是指针类型。
+        return p->data;
+    }
+    
+    int main() {
+        struct MyData<int> d = {100};
+        struct MyPoint<int> p = {&d};
+        assert(p->a == 100);   // 编译器匹配到重载函数后，自动对p取地址并传入重载函数。此处等效为mDerefMyPoint(&mut p)->a == 100。
+        p->a = 10;
+        assert(p->a == 10);
+        return 0;
+    }
+    ```
+
+-  索引运算符重载代码示例
+
+    ```c
+    #include <assert.h>
+    #define ARRLEN 10
+    struct MyArray<T> {
+        T data[ARRLEN];
+    };
+    
+    __attribute__((operator []))
+    T * GetMyArrayData<T>(struct MyArray<T> * p, int index) {
+        return &p->data[index];
+    }
+    
+    int main() {
+        struct MyArray<int> array;
+        for (int i = 0; i < ARRLEN; i++) {
+            // 编译器匹配到重载函数后，自动对p取地址并传入重载函数,并对函数返回值做解引用。此处等效为*GetMyArrayData(&mut p, i) = i。
+    		array[i] = i;
+        }
+        assert(array[5] == 5);
+        return 0;
+    }
+    ```
+    
+-  运算符重载错误代码示例
+
+    ```c
+    // error: 不允许定义无用户自定义入参类型的运算符重载函数。
+    __attribute__((operator +))
+    int squareAdd(int a, int b){
+        return a + b;
+    }
+    ```
+
+5、运算符重载函数名不能与普通函数名冲突。对同一个运算符定义多个重载函数时，如果函数名不同并且参数类型不完全一致，允许同时存在。
 
 ```c
 __attribute__((operator +))
@@ -4034,38 +4142,6 @@ struct oblong oblongAdd(struct oblong s1, struct oblong s2){
     /* code */
 }
 ```
-
-5、支持的重载运算符列表。
-
-| 类别           | 运算符                                                       |
-| -------------- | ------------------------------------------------------------ |
-| 双目算术运算符 | + (加)，-(减)，*(乘)，/(除)，% (取模)                        |
-| 关系运算符     | ==(等于)，!= (不等于)，< (小于)，> (大于)，<=(小于等于)，>=(大于等于) |
-| 位运算符       | \| (按位或)，& (按位与)，~(按位取反)，^(按位异或),，<< (左移)，>>(右移) |
-| 单目运算符     | \+ (正)，-(负)，*(解引用)                                      |
-
-```c
-#include <stdio.h>
-
-struct Point {
-    int * x;
-};
-// 定义了一个解引用运算符重载函数 
-__attribute__((operator *))
-int star(struct Point p) {
-    return *(p.x);
-}
-
-int main() {
-    int num = 100;
-    struct Point p = {&num};
-    int val = *p;
-    printf("val is %d\n", val);
-}
-```
-注：当前不支持 `->`和 `[]` 的运算符重载功能，将在后续版本中支持。
-
-6、关系运算符重载函数的返回值必须为 `_Bool` 类型。
 
 7、运算符重载函数可以是泛型函数。
 
@@ -4113,8 +4189,6 @@ int main() {
   test2();
 }
 ```
-
-注：运算符重载当前未支持源源变换、将在后续版本中支持。
 
 ## 非空指针
 为了提高指针使用的安全性，BSC 为指针引入了可空（Nullable）和非空（Nonnull）属性：
@@ -5393,13 +5467,13 @@ int main() {
       char name[50];
       int age;
   };
-
+  
   static char *struct_Person_int_getName( struct Person_int *this);
-
+  
   static int struct_Person_int_getAge( struct Person_int *this);
-
+  
   static void struct_Person_int_D( struct Person_int this);
-
+  
   #line 18 "debug_demo.cbs"
   int main(void) {
       struct Person_int per = {"davi", 21};
@@ -5410,23 +5484,23 @@ int main() {
           struct_Person_int_D(per);
       return 0;
   }
-
+  
   #line 9 "debug_demo.cbs"
   static char *struct_Person_int_getName( struct Person_int *this) {
       return this->name;
   }
-
+  
   #line 13 "debug_demo.cbs"
   static int struct_Person_int_getAge( struct Person_int *this) {
       int a = this->age;
       return a;
    }
-
+  
   #line 5 "debug_demo.cbs"
   static void struct_Person_int_D( struct Person_int this) {
       _Bool this_is_moved = 0;
   }
-
+  
   ```
   观察生成的c文件，可以发现，每段函数代码块前都插入了其在原始cbs文件中对应部分的开始行号，格式为
   ```c
@@ -5451,7 +5525,7 @@ int main() {
   Breakpoint 1 at 0x1152: file /path/to/debug_demo.cbs, line 19.
   (gdb) r
   Starting program: /path/to/debug_demo_c
-
+  
   Breakpoint 1, main () at /path/to/debug_demo.cbs:19
   19	    Person<int> per = {"davi", 21};
   (gdb) s
@@ -5484,7 +5558,7 @@ int main() {
   (gdb) s
   struct_Person_int_D (this=...) at /path/to/debug_demo.cbs:6
   6	    }
-
+  
   ...
   ```
 
@@ -5495,22 +5569,22 @@ int main() {
   `basic_math.cbs`
   ```c
   #include "basic_math.hbs"
-
+  
   int struct MyStruct::add(int a, int b){
       int res = a + b;
       return res;
   }
-
+  
   int struct MyStruct::subtract(int a, int b) {
       int res = a - b;
       return res;
   }
-
+  
   int struct MyStruct::multiply(int a, int b) {
       int res = a * b;
       return res;
   }
-
+  
   int struct MyStruct::divide(int a, int b) {
       if (b != 0) {
           return a/b;
@@ -5524,32 +5598,32 @@ int main() {
   ```c
   #ifndef REWRITE_H
   #define REWRITE_H
-
+  
   struct MyStruct {
       int a;
       int b;
   };
-
+  
   int struct MyStruct::add(int a, int b);
   int struct MyStruct::subtract(int a, int b);
   int struct MyStruct::multiply(int a, int b);
   int struct MyStruct::divide(int a, int b);
-
+  
   T min<T>(T a, T b) {
       return a > b ? b : a;
   }
-
+  
   T max<T>(T a, T b) {
       return a > b ? a : b;
   }
-
+  
   #endif
   ```
 
   `cacl_demo.cbs`
   ```c
   #include "basic_math.hbs"
-
+  
   int main() {
       struct MyStruct s = {4, 2};
       int r1 = struct MyStruct::add(s.a, s.b);
@@ -5570,25 +5644,25 @@ int main() {
   `basic_math.c`
   ```c
   #include "basic_math.h"
-
+  
   #line 3 "basic_math.cbs"
   int struct_MyStruct_add(int a, int b) {
       int res = a + b;
       return res;
   }
-
+  
   #line 8 "basic_math.cbs"
   int struct_MyStruct_subtract(int a, int b) {
       int res = a - b;
       return res;
   }
-
+  
   #line 13 "basic_math.cbs"
   int struct_MyStruct_multiply(int a, int b) {
       int res = a * b;
       return res;
   }
-
+  
   #line 18 "basic_math.cbs"
   int struct_MyStruct_divide(int a, int b) {
       if (b != 0) {
@@ -5602,21 +5676,21 @@ int main() {
   ```c
   #ifndef REWRITE_H
   #define REWRITE_H
-
+  
   struct MyStruct {
       int a;
       int b;
   };
-
+  
   #line 9 "basic_math.hbs"
   int struct_MyStruct_add(int a, int b);
-
+  
   #line 10 "basic_math.hbs"
   int struct_MyStruct_subtract(int a, int b);
-
+  
   #line 11 "basic_math.hbs"
   int struct_MyStruct_multiply(int a, int b);
-
+  
   #line 12 "basic_math.hbs"
   int struct_MyStruct_divide(int a, int b);
 
@@ -5677,13 +5751,13 @@ int main() {
   $1 = 6
   (gdb) c
   Continuing.
-
+  
   Breakpoint 2, max_int (a=4, b=2) at ./basic_math.hbs:19
   19	  return a > b ? a : b;
-
+  
   ...
   ```
-该调试特性支持的功能与问题，汇总如下：
+  该调试特性支持的功能与问题，汇总如下：
 - 调试的对象是变换后的标准c，不改其运行逻辑、变量信息等。
 - 调试中显示的代码位置指向原始cbs文件，支持多源文件的调试跳转。
 - 当源源变换前后代码行数存在差异、无法逐行映射时，例如owned struct析构函数、trait等会生成新代码的特性，显示的调试位置可能不准确，需要开发者注意。

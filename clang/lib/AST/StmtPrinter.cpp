@@ -1190,14 +1190,18 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     }
     if (Node->getFoundDecl()->isTemplateDecl()) {
       auto *FD = dyn_cast<FunctionDecl>(Node->getDecl());
-      std::string FunctionNameStr = FD->getDeclName().getAsString();
-      if (const TemplateArgumentList *TArgs = FD->getTemplateSpecializationArgs()) {
-        std::string TemplateArgsName =
-            MangleBSCContext::getBSCTemplateArgsName(TArgs->asArray(), Policy);
-        FunctionNameStr += TemplateArgsName;
-      }
+      std::string FunctionNameStr =
+          MangleBSCContext::getBSCFunctionMangleName(FD, Policy);
       OS << FunctionNameStr;
       return;
+    }
+    if (auto *FD = dyn_cast<FunctionDecl>(Node->getFoundDecl())) {
+      if (FD->isOverloadedOperator()) {
+        std::string FunctionNameStr =
+            MangleBSCContext::getBSCFunctionMangleName(FD, Policy);
+        OS << FunctionNameStr;
+        return;
+      }
     }
     if (auto *BD = dyn_cast<BSCMethodDecl>(Node->getFoundDecl())) {
       std::string ExtendedTypeStr =

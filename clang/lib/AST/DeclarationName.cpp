@@ -176,19 +176,10 @@ void DeclarationName::print(raw_ostream &OS,
   case DeclarationName::CXXOperatorName: {
     const char *OpName = getOperatorSpelling(getCXXOverloadedOperator());
     assert(OpName && "not an overloaded operator");
-#if ENABLE_BSC
-    if (const IdentifierInfo *II = getCXXOperatorIdNameIdentInBSC()) {
-      StringRef Name = II->getName();
-      OS << Name;
-    } else {
-#endif
-      OS << "operator";
-      if (OpName[0] >= 'a' && OpName[0] <= 'z')
-        OS << ' ';
-      OS << OpName;
-#if ENABLE_BSC
-    }
-#endif
+    OS << "operator";
+    if (OpName[0] >= 'a' && OpName[0] <= 'z')
+      OS << ' ';
+    OS << OpName;
     return;
   }
 
@@ -391,6 +382,26 @@ DeclarationNameTable::getCXXLiteralOperatorName(IdentifierInfo *II) {
   CXXLiteralOperatorNames.InsertNode(LiteralName, InsertPos);
   return DeclarationName(LiteralName);
 }
+
+#if ENABLE_BSC
+DeclarationName
+DeclarationNameTable::getBSCOperatorName(IdentifierInfo *II,
+                                         OverloadedOperatorKind Op) {
+  auto it =
+      std::find(BSCOperatorNames[Op].begin(), BSCOperatorNames[Op].end(), II);
+  if (it != BSCOperatorNames[Op].end()) {
+    return DeclarationName(*it);
+  }
+  BSCOperatorNames[Op].push_back(II);
+  return DeclarationName(II);
+}
+
+std::vector<IdentifierInfo *>
+DeclarationNameTable::getBSCOperatorIdentifierInfoTable(
+    OverloadedOperatorKind Op) {
+  return BSCOperatorNames[Op];
+}
+#endif
 
 DeclarationNameLoc::DeclarationNameLoc(DeclarationName Name) {
   switch (Name.getNameKind()) {

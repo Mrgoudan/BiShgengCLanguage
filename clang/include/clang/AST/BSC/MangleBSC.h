@@ -37,11 +37,13 @@ public:
   static std::string getBSCTypeName(QualType QT, PrintingPolicy &Policy);
   static std::string getBSCTemplateArgsName(ArrayRef<TemplateArgument> Args,
                                             PrintingPolicy &Policy);
+  static std::string getBSCFunctionMangleName(const FunctionDecl *BFD,
+                                              PrintingPolicy &Policy);
 
 private:
   std::string getBSCMethodMangleName(const BSCMethodDecl *BMD);
   std::string getBSCDesturctorMangleName(const BSCMethodDecl *BMD);
-  std::string getBSCFunctionMangleName(const FunctionDecl *BFD);
+
   static std::string getBSCArgName(const TemplateArgument &TemplateArg,
                             PrintingPolicy &Policy);
 };

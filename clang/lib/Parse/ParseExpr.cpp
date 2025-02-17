@@ -2350,7 +2350,15 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       PreferredType.enterMemAccess(Actions, Tok.getLocation(), OrigLHS);
 
-      if (getLangOpts().CPlusPlus && !LHS.isInvalid()) {
+      if (
+#if ENABLE_BSC
+          (
+#endif
+              getLangOpts().CPlusPlus
+#if ENABLE_BSC
+              || getLangOpts().BSC)
+#endif
+          && !LHS.isInvalid()) {
         Expr *Base = OrigLHS;
         const Type* BaseType = Base->getType().getTypePtrOrNull();
         if (BaseType && Tok.is(tok::l_paren) &&

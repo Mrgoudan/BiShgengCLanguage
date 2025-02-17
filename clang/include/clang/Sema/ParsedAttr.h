@@ -208,14 +208,10 @@ struct PropertyData {
 #if ENABLE_BSC
 struct OperatorType {
   OverloadedOperatorKind Kind;
+  SourceLocation Loc;
 
-  // when AddToContext is fasle, analyze according to ordinary functions,
-  // in order to avoid having the same name with ordinary functions.
-  // when AddToContext is true, analyze according to operator overload
-  // functions, and add to AST node.
-  bool AddToContext;
-
-  OperatorType(OverloadedOperatorKind kind) : Kind(kind), AddToContext(false) {}
+  OperatorType(OverloadedOperatorKind kind, SourceLocation loc)
+      : Kind(kind), Loc(loc) {}
 };
 #endif
 
@@ -403,12 +399,12 @@ private:
              OverloadedOperatorKind kind, Syntax syntaxUsed)
       : AttributeCommonInfo(attrName, scopeName, attrRange, scopeLoc,
                             syntaxUsed),
-        NumArgs(0), Invalid(false), UsedAsTypeAttr(false),
+        NumArgs(1), Invalid(false), UsedAsTypeAttr(false),
         IsAvailability(false), IsTypeTagForDatatype(false), IsProperty(false),
         HasParsedType(false), HasProcessingCache(false),
         IsPragmaClangAttribute(false), HasOperatorType(true),
         Info(ParsedAttrInfo::get(*this)) {
-    new (&getOperatorTypeBuffer()) detail::OperatorType(kind);
+    new (&getOperatorTypeBuffer()) detail::OperatorType(kind, scopeLoc);
   }
 #endif
 

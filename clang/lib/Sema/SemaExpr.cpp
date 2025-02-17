@@ -5159,7 +5159,10 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     << base->getType() << base->getSourceRange();
     return ExprError();
   }
-  #endif
+  if (getLangOpts().BSC && base->getType()->isRecordType()) {
+    return CreateOverloadedArraySubscriptExpr(lbLoc, rbLoc, base, ArgExprs);
+  }
+#endif
 
   ExprResult Res =
       CreateBuiltinArraySubscriptExpr(base, lbLoc, ArgExprs.front(), rbLoc);
@@ -10466,7 +10469,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
   }
 
   #if ENABLE_BSC
-  if (getLangOpts().BSC) {
+  if (getLangOpts().BSC && Diagnose) {
     if (!IsSafeConversion(LHSType, RHS.get())) {
       return IncompatibleBSCSafeZone;
     }
@@ -10506,7 +10509,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
         return IncompatibleBorrowPointer;
     }
   }
-  #endif
+#endif
 
   if (getLangOpts().CPlusPlus) {
     if (!LHSType->isRecordType() && !LHSType->isAtomicType()) {

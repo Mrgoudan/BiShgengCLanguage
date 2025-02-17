@@ -3790,6 +3790,11 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
 OverloadedOperatorKind FunctionDecl::getOverloadedOperator() const {
   if (getDeclName().getNameKind() == DeclarationName::CXXOperatorName)
     return getDeclName().getCXXOverloadedOperator();
+#if ENABLE_BSC
+  if (const auto *TA = getAttr<OperatorAttr>()) {
+    return (OverloadedOperatorKind)TA->getOperatorKind();
+  }
+#endif
   return OO_None;
 }
 

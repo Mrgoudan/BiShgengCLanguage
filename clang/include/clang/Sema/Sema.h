@@ -2099,7 +2099,13 @@ public:
   /// Package the given type and TSI into a ParsedType.
   ParsedType CreateParsedType(QualType T, TypeSourceInfo *TInfo);
   DeclarationNameInfo GetNameForDeclarator(Declarator &D);
-  DeclarationNameInfo GetNameFromUnqualifiedId(const UnqualifiedId &Name);
+  DeclarationNameInfo
+  GetNameFromUnqualifiedId(const UnqualifiedId &Name
+#if ENABLE_BSC
+                           ,
+                           OverloadedOperatorKind Op = OO_None
+#endif
+  );
   static QualType GetTypeFromParser(ParsedType Ty,
                                     TypeSourceInfo **TInfo = nullptr);
   CanThrowResult canThrow(const Stmt *E);
@@ -3245,7 +3251,10 @@ public:
   void ActOnStartBSCMemberDeclarations(Scope *S, Decl *TagDecl,
                                        SourceLocation LBraceLoc);
   void CheckReturnStmtMemoryLeak(Expr *E);
-  #endif
+  bool IsDesugarNeededOperatorKind(OverloadedOperatorKind Op);
+  Expr *DesugarOperatorFirstArg(FunctionDecl *FD, ArrayRef<Expr *> Args);
+  Expr *DesugarOperatorCallExpr(FunctionDecl *FD, Expr *TheCall);
+#endif
 
   /// We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
@@ -12438,8 +12447,10 @@ public:
                                            const Expr *InputExpr,
                                            UnaryOperatorKind &Opc,
                                            SourceLocation OpLoc);
-  bool CheckOperatorDeclNeedAddToContext(Declarator &D);
-  bool CheckOperatorFunReturnTypeIsLegal(FunctionDecl *FnDecl);
+  OverloadedOperatorKind getOperatorKindByDeclarator(Declarator &D);
+  bool CheckComparisonKindOperatorFunReturnType(FunctionDecl *FnDecl);
+  bool CheckBSCOverloadedOperatorDeclaration(FunctionDecl *FnDecl);
+  bool CheckIsUnsafeOverloadCall(Expr *Fn);
   bool FindSafeFeatures(const FunctionDecl* FnDecl);
   bool HasSafeZoneInCompoundStmt(const CompoundStmt* CompStmt);
   bool HasSafeZoneInFunction(const FunctionDecl* FnDecl);

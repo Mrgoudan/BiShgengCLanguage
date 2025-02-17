@@ -87,5 +87,6 @@ def FunctionLikeMacro : InheritableAttr {
 def Operator : InheritableAttr {
   let Spellings = [GNU<"operator">];
   let Subjects = SubjectList<[Function]>;
+  let Args = [IntArgument<"OperatorKind">];
   let Documentation = [Undocumented];
 }

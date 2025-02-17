@@ -8685,7 +8685,8 @@ static void handleFunctionLikeMacro(Sema &S, Decl *D, const ParsedAttr &Attrs) {
 }
 
 static void handleOperatorAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
-  D->addAttr(::new (S.Context) OperatorAttr(S.Context, Attrs));
+  D->addAttr(::new (S.Context) OperatorAttr(
+      S.Context, Attrs, Attrs.getOperatorTypeBuffer().Kind));
 }
 #endif
 
