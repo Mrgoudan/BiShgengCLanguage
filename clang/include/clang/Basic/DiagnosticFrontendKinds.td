@@ -322,4 +322,9 @@ def warn_profile_data_misexpect : Warning<
   InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+// BSC warnings and errors
+#ifdef BSC
+include "clang/Basic/BSC/DiagnosticBSCFrontendKinds.td"
+#endif
+
 }

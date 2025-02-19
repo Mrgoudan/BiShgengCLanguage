@@ -734,7 +734,17 @@ enum class BorrowDiagKind {
   ForRead,
   ForWrite,
   ForStorageDead,
+  BorrowMaxDiagKind
 };
+
+const unsigned BorrowDiagIdList[] = {
+    diag::err_borrow_immut_borrow_when_mut_borrowed,
+    diag::err_borrow_move_when_borrowed,
+    diag::err_borrow_mut_borrow_more_than_once,
+    diag::err_borrow_mut_borrow_when_immut_borrowed,
+    diag::err_borrow_use_when_mut_borrowed,
+    diag::err_borrow_not_live_long,
+    diag::err_borrow_assign_when_borrowed};
 
 struct BorrowDiagInfo {
   BorrowDiagKind Kind;
@@ -846,8 +856,19 @@ public:
                                    path->to_string(), LoanLoc));
   }
 
+  unsigned getBorrowDiagID(BorrowDiagKind Kind) {
+    unsigned index = static_cast<unsigned>(Kind);
+    assert(index < static_cast<unsigned>(BorrowDiagKind::BorrowMaxDiagKind) &&
+           "Unknown error type");
+    return BorrowDiagIdList[index];
+  }
+
   void emitDiag(BorrowDiagKind Kind, SourceLocation Location, const Path *path,
                 SourceLocation LoanLoc, const Path *loanPath = nullptr) {
+    if (S.getDiagnostics().getDiagnosticLevel(
+            getBorrowDiagID(Kind), Location) == DiagnosticsEngine::Ignored) {
+      return;
+    }
     switch (Kind) {
     case BorrowDiagKind::ForImmutWhenMut:
       ForImmutWhenMut(Location, path, LoanLoc);

@@ -364,9 +364,13 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
                                     SourceLocation L) {
   assert(Diag < diag::DIAG_UPPER_LIMIT &&
          "Can only map builtin diagnostics");
+#if ENABLE_BSC
+  // BSC allows modification of error log levels
+#else
   assert((Diags->isBuiltinWarningOrExtension(Diag) ||
           (Map == diag::Severity::Fatal || Map == diag::Severity::Error)) &&
          "Cannot map errors into warnings!");
+#endif
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
 
   // Don't allow a mapping to a warning override an error/fatal mapping.

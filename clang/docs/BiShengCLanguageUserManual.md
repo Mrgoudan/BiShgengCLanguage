@@ -5673,19 +5673,17 @@ int main() {
   
   #line 12 "basic_math.hbs"
   int struct_MyStruct_divide(int a, int b);
-
-
-
   #endif
   ```
+
   `calc_demo.c`
   ```c
   #include "basic_math.h"
-
+  
   static int min_int(int a, int b); 
-
+  
   static int max_int(int a, int b); 
-
+  
   #line 3 "calc_demo.cbs"
   int main(void) {
       struct MyStruct s = {4, 2}; 
@@ -5697,12 +5695,12 @@ int main() {
       int c2 = min_int(s.a, s.b);
       return 0;
   }
-
+  
   #line 14 "./basic_math.hbs"
   static int min_int(int a, int b) {
       return a > b ? b : a;
   }
-
+  
   #line 18 "./basic_math.hbs"
   static int max_int(int a, int b) {
       return a > b ? a : b;
@@ -5741,6 +5739,89 @@ int main() {
 - 调试的对象是变换后的标准c，不改其运行逻辑、变量信息等。
 - 调试中显示的代码位置指向原始cbs文件，支持多源文件的调试跳转。
 - 当源源变换前后代码行数存在差异、无法逐行映射时，例如owned struct析构函数、trait等会生成新代码的特性，显示的调试位置可能不准确，需要开发者注意。
+
+## 编译错误屏蔽
+
+### 	概述
+
+​	开发者可以针对性的让编译器在编译时不显示某些已知且暂时无需关注的错误，从而避免编译过程被这些错误打断，提高开发效率。当前只支持屏蔽 Nullability、Owned、Borrow 数据流安全分析过程中的报错，不支持屏蔽其他语法语义报错。在某些场景中，这些安全规则可能会过于严格，开发者可以针对这些过于严格的报错进行屏蔽。但需注意，屏蔽错误并不意味着错误不存在，只是在编译阶段不展示相关提示。过度使用错误屏蔽功能可能会导致一些严重问题被忽视。
+
+### 	使用方式
+
+- 使用编译选项屏蔽错误：毕昇 C 编译器新增了 `-Eno-xxx` 错误屏蔽编译选项。这里的`xxx`代表具体的**错误类型标识**。
+
+  示例: 对于如下代码，使用毕昇编译器编译时会上报注释中所述错误，我们通过在编译命令中添加 `-Eno-repeated-borrow`可关闭此类错误提示。
+
+  ```c++
+  // file: test1.cbs
+  // clang -Eno-repeated-borrow test1.cbs
+  void use(int * borrow a){}
+  int main() {
+    int local = 1;
+    int * borrow p1 = &mut local;
+    int * borrow p2 = &mut local;	// error: cannot borrow `local` as mutable more than once at a time
+    use(p2);
+    use(p1);
+    return 0;
+  }
+  ```
+
+- 屏蔽代码片段中的错误：通过在代码片段中添加`#pragma` 预处理指令管理编译过程中的报错行为。
+
+  `#pragma GCC diagnostic push`保存当前的诊断状态。
+
+  `#pragma GCC diagnostic ignored "-Exxx"`告诉编译器忽略`xxx`错误类型的报错。这里的`xxx`代表具体的**错误类型标识**。
+
+  `#pragma GCC diagnostic pop`恢复到之前保存的诊断状态。
+
+  示例：对于如下代码，编译器会忽略`*p1 = 2;`触发的`assign-borrowed`错误类型的报错。
+
+  ```c++
+  int main() {
+    int local = 42;
+    int temp = 2;
+    int *borrow p1 = &mut local;
+    int *borrow p2 = &mut temp;
+    p2 = p1;
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Eassign-borrowed"
+    *p1 = 2; 					// error: cannot assign to `*p1` because it is borrowed
+    #pragma GCC diagnostic pop
+    temp = *p2;
+    return 0;
+  }
+  ```
+### 可被屏蔽的错误
+
+  具体错误类型标识对应的错误日志详情见下表:
+
+| **错误类型标识**     | 可屏蔽错误日志 (日志中%0、%1为您所写的代码中变量的属性。)    |
+| -------------------- | ------------------------------------------------------------ |
+| deref-nullable       | "nullable pointer cannot be dereferenced"                    |
+| pass-nullable        | "cannot pass nullable pointer argument"                      |
+| return-nullable      | "cannot return nullable pointer type"                        |
+| cast-nullable        | "cannot cast nullable pointer to nonnull type"               |
+| assign-nullable      | "cannot access member through nullable pointer"              |
+| assign-nonnull       | "nonnull pointer cannot be assigned by nullable pointer"     |
+| bsc-nullability      | 可屏蔽所有 Nullability 数据流分析过程的报错，<br />包括 deref-nullable、pass-nullable、return-nullable、cast-nullable、<br />assign-nullable、assign-nonnull 错误类型标识。 |
+| use-moved-owned      | "use of moved value: \`%0\`“<br />"use of partially moved value: \`%0\`, %1 moved"<br />"use of all moved value: \`%0\`" |
+| use-uninit-owned     | "use of uninitialized value: \`%0\`"<br />"use of possibly uninitialized value: \`%0\`" |
+| use-owned            | 包括use-moved-owned、use-uninit-owned 错误类型标识可屏蔽的错误日志 |
+| assign-moved-owned   | "assign to partially moved value: \`%0\`, %1 moved"<br />"assign to possibly partially moved value: \`%0\`, %1 possibly moved"<br />"assign to all moved value: \`%0\`"<br />"assign to part of moved value: \`%0\`" |
+| assign-uninit-owned  | "assign to part of uninitialized value: \`%0\`"              |
+| assign-owned         | "assign to owned value: \`%0\`"<br />"assign to part of owned value: \`%0\`"<br />"assign to subfield owned value: \`%0\`, %1 owned"<br />还包括assign-moved-owned、assign-uninit-owned 错误类型标识可屏蔽的错误日志 |
+| cast-moved-owned     | "invalid cast to `void * owned` of moved value: \`%0\`"      |
+| cast-owned           | "invalid cast to `void * owned` of owned value: \`%0\`"<br />"invalid cast to `void * owned` of uninit value: \`%0\`"<br />"invalid cast to `void * owned` of not all moved value: \`%0\`, %1 owned"<br />"invalid cast to `void * owned` of moved value:\`%0\`" |
+| check-memory-leak    | "field memory leak of value: `%0`, %1 leak"<br />"memory leak of value: `%0` |
+| bsc-ownership        | 可屏蔽所有 owned 数据流分析过程的报错，<br />包括 use-owned、assign-owned、cast-owned、check-memory-leak 错误类型标识可屏蔽的错误日志。 |
+| assign-borrowed      | "cannot assign to \`%0\` because it is borrowed"             |
+| move-borrowed        | "cannot move out of \`%0\` because it is borrowed"           |
+| use-mutably-borrowed | "cannot use \`%0\` because it was mutably borrowed"          |
+| repeated-borrow      | "cannot borrow \`%0\` as mutable more than once at a time"<br />"cannot borrow \`%0\` as immutable because it is also borrowed as mutable"<br />"cannot borrow \`%0\` as mutable because it is also borrowed as immutable" |
+| return-local-borrow  | "cannot return reference to local variable \`%0\`"           |
+| short-life-borrow    | "\`%0\` does not live long enough"                           |
+| bsc-borrow           | 可屏蔽所有 borrow 数据流分析过程的报错，<br />包括assign-borrowed、move-borrowed、use-mutably-borrowed、<br />repeated-borrow、return-local-borrow、short-life-borrow错误类型标识可屏蔽的错误日志。 |
+| bsc-safety-check     | 可屏蔽所有 Nullability、owned、borrow 数据流分析过程的报错，<br />包括bsc-nullability、bsc-ownership、bsc-borrow错误类型标识可屏蔽的错误日志。 |
 
 
 

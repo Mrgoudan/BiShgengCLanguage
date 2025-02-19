@@ -246,7 +246,7 @@ safe void test17(void) {
     if (p != nullptr) {
         p->a = 10;
     } else {
-        p->a = 20; // expected-error {{cannot access member througn nullable pointer}}
+        p->a = 20; // expected-error {{cannot access member through nullable pointer}}
     }
-    p->a = 30;  // expected-error {{cannot access member througn nullable pointer}}
+    p->a = 30;  // expected-error {{cannot access member through nullable pointer}}
 }

@@ -2324,6 +2324,12 @@ void CompilerInvocation::GenerateDiagnosticArgs(
     Args.push_back(SA(StringRef("-W") + Warning));
   }
 
+#if ENABLE_BSC
+  for (const auto &Error : Opts.Errors) {
+    Args.push_back(SA(StringRef("-E") + Error));
+  }
+#endif
+
   for (const auto &Remark : Opts.Remarks) {
     // These arguments are generated from OptimizationRemark fields of
     // CodeGenOptions.
@@ -2409,6 +2415,9 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
 
   addDiagnosticArgs(Args, OPT_W_Group, OPT_W_value_Group, Opts.Warnings);
   addDiagnosticArgs(Args, OPT_R_Group, OPT_R_value_Group, Opts.Remarks);
+#if ENABLE_BSC
+  addDiagnosticArgs(Args, OPT_E_Group, OPT_E_value_Group, Opts.Errors);
+#endif
 
   return Diags->getNumErrors() == NumErrorsBefore;
 }

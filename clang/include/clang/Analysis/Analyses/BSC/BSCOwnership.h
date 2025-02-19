@@ -186,7 +186,29 @@ enum OwnershipDiagKind {
   InvalidCastFieldOwned,
   FieldMemoryLeak,
   MemoryLeak,
+  OwnershipMaxDiagKind
 };
+
+const unsigned OwnershipDiagIdList[] = {
+    diag::err_ownership_use_moved,
+    diag::err_ownership_use_partially_moved,
+    diag::err_ownership_use_all_moved,
+    diag::err_ownership_use_possibly_uninit,
+    diag::err_ownership_use_uninit,
+    diag::err_ownership_assign_owned,
+    diag::err_ownership_assign_partially_moved,
+    diag::err_ownership_assign_possibly_partially_moved,
+    diag::err_ownership_assign_all_moved,
+    diag::err_ownership_assign_field_uninit,
+    diag::err_ownership_assign_field_owned,
+    diag::err_ownership_assign_field_moved,
+    diag::err_ownership_assign_field_subfield_owned,
+    diag::err_ownership_cast_moved,
+    diag::err_ownership_cast_owned,
+    diag::err_ownership_cast_uninit,
+    diag::err_ownership_cast_subfield_owned,
+    diag::err_ownership_memory_leak_field,
+    diag::err_ownership_memory_leak};
 
 class OwnershipDiagInfo {
 public:
@@ -235,7 +257,20 @@ public:
       if (DI == *it)
         return;
     }
+    if (S.getDiagnostics().getDiagnosticLevel(getOwnershipDiagID(DI.Kind),
+                                              DI.Loc) ==
+        DiagnosticsEngine::Ignored) {
+      return;
+    }
     DIV.push_back(DI);
+  }
+
+  unsigned getOwnershipDiagID(OwnershipDiagKind Kind) {
+    unsigned index = static_cast<unsigned>(Kind);
+    assert(index <
+               static_cast<unsigned>(OwnershipDiagKind::OwnershipMaxDiagKind) &&
+           "Unknown error type");
+    return OwnershipDiagIdList[index];
   }
 
   void flushDiagnostics() {
@@ -250,68 +285,28 @@ public:
 
     for (const OwnershipDiagInfo &DI : DIV) {
       switch (DI.Kind) {
-      case InvalidUseOfMoved:
-        S.Diag(DI.Loc, diag::err_ownership_use_moved) << DI.Name;
-        break;
-      case InvalidUseOfPartiallyMoved:
-        S.Diag(DI.Loc, diag::err_ownership_use_partially_moved)
-            << DI.Name << DI.Fields;
-        break;
-      case InvalidUseOfAllMoved:
-        S.Diag(DI.Loc, diag::err_ownership_use_all_moved) << DI.Name;
-        break;
-      case InvalidUseOfUninit:
-        S.Diag(DI.Loc, diag::err_ownership_use_uninit) << DI.Name;
-        break;
-      case InvalidUseOfPossiblyUninit:
-        S.Diag(DI.Loc, diag::err_ownership_use_possibly_uninit) << DI.Name;
-        break;
       case InvalidAssignOfOwned:
-        S.Diag(DI.Loc, diag::err_ownership_assign_owned) << DI.Name;
+      case InvalidAssignOfAllMoved:
+      case InvalidAssignFieldOfUninit:
+      case InvalidAssignFieldOfOwned:
+      case InvalidAssignFieldOfMoved:
+      case InvalidCastMoved:
+      case InvalidCastOwned:
+      case InvalidCastUninit:
+      case InvalidUseOfAllMoved:
+      case InvalidUseOfMoved:
+      case InvalidUseOfPossiblyUninit:
+      case InvalidUseOfUninit:
+      case MemoryLeak:
+        S.Diag(DI.Loc, getOwnershipDiagID(DI.Kind)) << DI.Name;
         break;
       case InvalidAssignOfPartiallyMoved:
-        S.Diag(DI.Loc, diag::err_ownership_assign_partially_moved)
-            << DI.Name << DI.Fields;
-        break;
       case InvalidAssignOfPossiblyPartiallyMoved:
-        S.Diag(DI.Loc, diag::err_ownership_assign_possibly_partially_moved)
-            << DI.Name << DI.Fields;
-        break;
-      case InvalidAssignOfAllMoved:
-        S.Diag(DI.Loc, diag::err_ownership_assign_all_moved) << DI.Name;
-        break;
-      case InvalidAssignFieldOfUninit:
-        S.Diag(DI.Loc, diag::err_ownership_assign_field_uninit) << DI.Name;
-        break;
-      case InvalidAssignFieldOfOwned:
-        S.Diag(DI.Loc, diag::err_ownership_assign_field_owned) << DI.Name;
-        break;
-      case InvalidAssignFieldOfMoved:
-        S.Diag(DI.Loc, diag::err_ownership_assign_field_moved) << DI.Name;
-        break;
       case InvalidAssignSubFieldOwned:
-        S.Diag(DI.Loc, diag::err_ownership_assign_field_subfield_owned)
-            << DI.Name << DI.Fields;
-        break;
-      case InvalidCastMoved:
-        S.Diag(DI.Loc, diag::err_ownership_cast_moved) << DI.Name;
-        break;
-      case InvalidCastOwned:
-        S.Diag(DI.Loc, diag::err_ownership_cast_owned) << DI.Name;
-        break;
-      case InvalidCastUninit:
-        S.Diag(DI.Loc, diag::err_ownership_cast_uninit) << DI.Name;
-        break;
       case InvalidCastFieldOwned:
-        S.Diag(DI.Loc, diag::err_ownership_cast_subfield_owned)
-            << DI.Name << DI.Fields;
-        break;
+      case InvalidUseOfPartiallyMoved:
       case FieldMemoryLeak:
-        S.Diag(DI.Loc, diag::err_ownership_memory_leak_field)
-            << DI.Name << DI.Fields;
-        break;
-      case MemoryLeak:
-        S.Diag(DI.Loc, diag::err_ownership_memory_leak) << DI.Name;
+        S.Diag(DI.Loc, getOwnershipDiagID(DI.Kind)) << DI.Name << DI.Fields;
         break;
       default:
         llvm_unreachable("Unknown error type");

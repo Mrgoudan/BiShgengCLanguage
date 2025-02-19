@@ -11,3 +11,8 @@ def nullability_check : Joined<["-"], "nullability-check=">, Flags<[CC1Option]>,
   Values<"none,safeonly,all">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["NC_NONE", "NC_SAFE", "NC_ALL"]>,
   MarshallingInfoEnum<LangOpts<"NullabilityCheck">, "NC_SAFE">;
+def E_Group : OptionGroup<"<E group>">, Group<Diag_Group>, DocFlatten;
+def E_value_Group : OptionGroup<"<E (with value) group>">, Group<E_Group>,
+                    DocFlatten;
+def E_Joined : Joined<["-"], "E">, Group<E_Group>, Flags<[CC1Option, CoreOption]>,
+  MetaVarName<"<error>">, HelpText<"Enable the specified error">;

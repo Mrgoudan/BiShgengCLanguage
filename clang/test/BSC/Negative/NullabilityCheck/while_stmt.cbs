@@ -79,5 +79,5 @@ safe void test7(void) {
         p->a = 10;
         p = get_random_ptr_S(&mut a);
     }
-    p->a = 20;  // expected-error {{cannot access member througn nullable pointer}}
+    p->a = 20;  // expected-error {{cannot access member through nullable pointer}}
 }

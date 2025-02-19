@@ -28,7 +28,16 @@ enum NullabilityCheckDiagKind {
   NullableCastNonnull,
   NullablePointerDereference,
   NullablePointerAccessMember,
+  NullabilityMaxDiagKind
 };
+
+const unsigned NullabilityDiagIdList[] = {
+    diag::err_nonnull_assigned_by_nullable,
+    diag::err_pass_nullable_argument,
+    diag::err_return_nullable,
+    diag::err_nullable_cast_nonnull,
+    diag::err_nullable_pointer_dereference,
+    diag::err_nullable_pointer_access_member};
 
 struct NullabilityCheckDiagInfo {
   SourceLocation Loc;
@@ -60,7 +69,20 @@ public:
       if (DI == *it)
         return;
     }
+    if (S.getDiagnostics().getDiagnosticLevel(getNullabilityDiagID(DI.Kind),
+                                              DI.Loc) ==
+        DiagnosticsEngine::Ignored) {
+      return;
+    }
     DIV.push_back(DI);
+  }
+
+  unsigned getNullabilityDiagID(NullabilityCheckDiagKind Kind) {
+    unsigned index = static_cast<unsigned>(Kind);
+    assert(index < static_cast<unsigned>(
+                       NullabilityCheckDiagKind::NullabilityMaxDiagKind) &&
+           "Unknown error type");
+    return NullabilityDiagIdList[index];
   }
 
   void flushDiagnostics() {
@@ -75,29 +97,7 @@ public:
               });
 
     for (const NullabilityCheckDiagInfo &DI : DIV) {
-      switch (DI.Kind) {
-      case NonnullAssignedByNullable:
-        S.Diag(DI.Loc, diag::err_nonnull_assigned_by_nullable);
-        break;
-      case PassNullableArgument:
-        S.Diag(DI.Loc, diag::err_pass_nullable_argument);
-        break;
-      case ReturnNullable:
-        S.Diag(DI.Loc, diag::err_return_nullable);
-        break;
-      case NullableCastNonnull:
-        S.Diag(DI.Loc, diag::err_nullable_cast_nonnull);
-        break;
-      case NullablePointerDereference:
-        S.Diag(DI.Loc, diag::err_nullable_pointer_dereference);
-        break;
-      case NullablePointerAccessMember:
-        S.Diag(DI.Loc, diag::err_nullable_pointer_access_member);
-        break;
-      default:
-        llvm_unreachable("Unknown error type");
-        break;
-      }
+      S.Diag(DI.Loc, getNullabilityDiagID(DI.Kind));
       S.getDiagnostics().increaseNullabilityCheckErrors();
     }
   }

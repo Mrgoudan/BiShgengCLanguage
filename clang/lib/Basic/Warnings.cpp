@@ -35,8 +35,20 @@ static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
                                    diag::Flavor Flavor, StringRef Prefix,
                                    StringRef Opt) {
   StringRef Suggestion = DiagnosticIDs::getNearestOption(Flavor, Opt);
-  Diags.Report(diag::warn_unknown_diag_option)
-      << (Flavor == diag::Flavor::WarningOrError ? 0 : 1)
+  Diags.Report(
+#if ENABLE_BSC
+      diag::warn_unknown_bsc_diag_option
+#else
+      diag::warn_unknown_diag_option
+#endif
+      )
+      << (
+#if ENABLE_BSC
+             Flavor == diag::Flavor::Error
+                 ? 2
+                 :
+#endif
+                 Flavor == diag::Flavor::WarningOrError ? 0 : 1)
       << (Prefix.str() += std::string(Opt)) << !Suggestion.empty()
       << (Prefix.str() += std::string(Suggestion));
 }
@@ -197,6 +209,34 @@ void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,
         Diags.setSeverityForGroup(Flavor, Opt, Mapping);
       }
     }
+
+#if ENABLE_BSC
+    for (unsigned i = 0, e = Opts.Errors.size(); i != e; ++i) {
+      const auto Flavor = diag::Flavor::Error;
+      StringRef Opt = Opts.Errors[i];
+
+      // Check to see if this error starts with "no-", if so, this is a
+      // negative form of the option.
+      bool isPositive = true;
+      if (Opt.startswith("no-")) {
+        isPositive = false;
+        Opt = Opt.substr(3);
+      }
+
+      // Figure out how this option affects the error.  If -Efoo, map the
+      // diagnostic to a error, if -Eno-foo, map it to ignore.
+      diag::Severity Mapping =
+          isPositive ? diag::Severity::Error : diag::Severity::Ignored;
+
+      if (Report) {
+        if (DiagIDs->getDiagnosticsInGroup(Flavor, Opt, _Diags))
+          EmitUnknownDiagWarning(Diags, Flavor, isPositive ? "-E" : "-Eno-",
+                                 Opt);
+      } else {
+        Diags.setSeverityForGroup(Flavor, Opt, Mapping);
+      }
+    }
+#endif
 
     for (unsigned i = 0, e = Opts.Remarks.size(); i != e; ++i) {
       StringRef Opt = Opts.Remarks[i];
