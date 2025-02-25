@@ -73,7 +73,7 @@ void func6(int * owned argA, int * owned argB) {
 label1:
     if (rand()) {
         a = argA;
-        goto label1; // expected-error {{The CFG is not structured}}
+        goto label1; // expected-error {{Invalid code structure. Jumping back to previous labels is not allowed.}}
     }
 }
 int main() { return 0; }

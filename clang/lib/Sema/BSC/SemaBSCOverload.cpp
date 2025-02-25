@@ -29,8 +29,7 @@ bool Sema::IsDesugarNeededOperatorKind(OverloadedOperatorKind Op) {
 // overloaded function.
 Expr *Sema::DesugarOperatorFirstArg(FunctionDecl *FD, ArrayRef<Expr *> Args) {
   if (const auto *FPT = FD->getType()->castAs<FunctionProtoType>()) {
-    unsigned num = FPT->getNumParams();
-    assert(num != 0 && "The function must have at least one parameter.");
+    assert(FPT->getNumParams() != 0 && "The function must have at least one parameter.");
     QualType FirstParamTy = FPT->getParamType(0);
     if (FirstParamTy->isPointerType() && !Args[0]->getType()->isPointerType()) {
       QualType QT = Args[0]->getType();

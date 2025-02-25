@@ -2294,6 +2294,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
           ArgsSizeOK =
               ArgExprs.size() == 1 || ArgExprs.size() - 2 == CommaLocs.size();
         }
+        // TODO: change this ASSERT to to a Diagnostic.
         assert(ArgsSizeOK && "Unexpected number of commas!");
 #else
         assert(

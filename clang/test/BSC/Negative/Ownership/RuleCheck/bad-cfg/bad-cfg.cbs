@@ -4,7 +4,7 @@
 void test1(int* owned p, int x) { 
 L1:
     x = x + 1;
-    if (x < 10) goto L1;  // expected-error {{The CFG is not structured}}
+    if (x < 10) goto L1;  // expected-error {{Invalid code structure. Jumping back to previous labels is not allowed.}}
     void* temp = (void*)(void* owned)p;
 }
 

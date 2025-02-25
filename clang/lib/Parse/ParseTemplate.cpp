@@ -1069,9 +1069,8 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 NamedDecl *Parser::ParseBSCTypeParameter(unsigned Depth, unsigned Position) {
   // Check Tok location
   Token PeekTok = PP.LookAhead(BSCGenericLookAhead);
-  bool isBSCTemplateTypeParameter = getLangOpts().BSC; // TODO: fix the cond
   assert(
-      isBSCTemplateTypeParameter &&
+      getLangOpts().BSC &&
       "A type-parameter starts with 'class', 'typename' or a type-constraint");
 
   if (PeekTok.is(tok::kw_struct)) {

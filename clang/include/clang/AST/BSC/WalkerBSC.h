@@ -356,10 +356,8 @@ private:
 /// Whether a FunctionDecl has any "safe" features in it.
 /// TODO: add Unit Test
 class SafeFeatureFinder : public StmtVisitor<SafeFeatureFinder, bool>,
-                          public DeclVisitor<SafeFeatureFinder, bool>,
-                          public TypeVisitor<SafeFeatureFinder, bool> {
+                          public DeclVisitor<SafeFeatureFinder, bool> {
 public:
-  using TypeVisitor<SafeFeatureFinder, bool>::Visit;
   using DeclVisitor<SafeFeatureFinder, bool>::Visit;
   using StmtVisitor<SafeFeatureFinder, bool>::Visit;
 
@@ -447,10 +445,7 @@ public:
   }
 
   bool VisitUnaryOperator(UnaryOperator *UO) {
-    constexpr std::array<UnaryOperatorKind, 4> BSCOps = {
-        UO_AddrMut, UO_AddrMutDeref, UO_AddrConst, UO_AddrConstDeref};
-    return std::find(BSCOps.begin(), BSCOps.end(), UO->getOpcode()) !=
-           BSCOps.end();
+    return UO->getOpcode() >= UO_AddrMut && UO->getOpcode() <= UO_AddrConstDeref;
   }
 
   bool FindOwnedOrBorrow(FunctionDecl *FD) { return VisitFunctionDecl(FD); }

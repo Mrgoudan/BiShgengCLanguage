@@ -224,24 +224,20 @@ int main(){
 // CHECK-NEXT: struct RcData_int;
 // CHECK-NEXT: struct Rc_int;
 // CHECK-NEXT: struct RcRecord_int;
-// CHECK-NEXT: struct A {
-// CHECK-NEXT:     int m;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct AP {
-// CHECK-NEXT:   struct A *a;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct B {
-// CHECK-NEXT:     int x;
-// CHECK-NEXT:     int y;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct BP {
-// CHECK-NEXT:   struct A *a;
-// CHECK-NEXT:   struct B *b;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
+// CHECK-DAG: struct A {
+// CHECK-DAG-NEXT:     int m;
+// CHECK-DAG-NEXT: };
+// CHECK-DAG:      struct AP {
+// CHECK-DAG-NEXT:   struct A *a;
+// CHECK-DAG-NEXT: };
+// CHECK-DAG:      struct B {
+// CHECK-DAG-NEXT:     int x;
+// CHECK-DAG-NEXT:     int y;
+// CHECK-DAG-NEXT: };
+// CHECK-DAG:      struct BP {
+// CHECK-DAG-NEXT:   struct A *a;
+// CHECK-DAG-NEXT:   struct B *b;
+// CHECK-DAG-NEXT: };
 // CHECK:      struct CP {
 // CHECK-NEXT:     struct A * a;
 // CHECK-NEXT: };

@@ -3423,7 +3423,8 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
   // If we already know the mapping to the label block add the successor now.
   LabelMapTy::iterator I = LabelMap.find(G->getLabel());
 
-  if (I == LabelMap.end())
+  if (I == LabelMap.end()) {
+  #if ENABLE_BSC
     // Label appears first, then goto stmt
     // This is not structured cfg, bishengc should report error
     if (BuildOpts.BSCMode) {
@@ -3431,13 +3432,16 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
       DiagnosticsEngine &Diag = getDiagnostic();
       unsigned ID = Diag.getCustomDiagID(
         DiagnosticsEngine::Error,
-        "The CFG is not structured" 
+        "Invalid code structure. Jumping back to previous labels is not allowed." 
       );
       Diag.Report(G->getBeginLoc(), ID);
     } else {
-      // We will need to backpatch this block later.
+  #endif    // We will need to backpatch this block later.
       BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
+  #if ENABLE_BSC
     }
+  #endif
+  }
   else {
     JumpTarget JT = I->second;
     addAutomaticObjHandling(ScopePos, JT.scopePosition, G);

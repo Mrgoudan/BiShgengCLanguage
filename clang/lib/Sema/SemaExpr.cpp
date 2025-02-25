@@ -14032,6 +14032,7 @@ enum NonConstCaptureKind { NCCK_None, NCCK_Block, NCCK_Lambda };
 static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   #if ENABLE_BSC
   if (S.getLangOpts().BSC) {
+    // FIXME: Change these ASSERT to Diagostic
     if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
       assert(E->isLValue() && (E->getType().isConstQualified()
              || UO->getSubExpr()->getType().isConstBorrow()));
