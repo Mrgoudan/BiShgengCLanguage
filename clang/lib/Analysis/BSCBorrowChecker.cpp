@@ -23,7 +23,7 @@ static bool IsTrackedType(QualType type) {
 }
 
 namespace {
-/// Given a statement, returns (defs, uses).
+/// Given a statement, returns the corresponding (defs, uses).
 ///
 /// The `defs` contains variables whose current value is completely
 /// overwritten, and the `uses` contains variables whose current value is used.
@@ -51,17 +51,21 @@ public:
   void VisitReturnStmt(ReturnStmt *RS);
   void VisitStmt(Stmt *S);
   void VisitUnaryDeref(UnaryOperator *UO);
-  void VisitUnaryPostDec(UnaryOperator *UO);
-  void VisitUnaryPostInc(UnaryOperator *UO);
-  void VisitUnaryPreDec(UnaryOperator *UO);
-  void VisitUnaryPreInc(UnaryOperator *UO);
+  void VisitUnaryOperator(UnaryOperator *UO);
 };
 } // namespace
 
 void DefUse::VisitBinaryOperator(BinaryOperator *BO) {
-  if ((BO->getOpcode() >= BO_Mul && BO->getOpcode() <= BO_Shr) ||
-      (BO->getOpcode() >= BO_And && BO->getOpcode() <= BO_LOr) ||
-      (BO->getOpcode() >= BO_LT && BO->getOpcode() <= BO_NE)) {
+  auto Opcode = BO->getOpcode();
+  if ((Opcode >= BO_Mul && Opcode <= BO_Shr) ||
+      (Opcode >= BO_And && Opcode <= BO_LOr) ||
+      (Opcode >= BO_LT && Opcode <= BO_NE)) {
+    Action = Use;
+    Visit(BO->getLHS());
+    Visit(BO->getRHS());
+  } else if (Opcode >= BO_MulAssign && Opcode <= BO_OrAssign) {
+    Action = Def;
+    Visit(BO->getLHS());
     Action = Use;
     Visit(BO->getLHS());
     Visit(BO->getRHS());
@@ -130,32 +134,15 @@ void DefUse::VisitUnaryDeref(UnaryOperator *UO) {
   Visit(UO->getSubExpr());
 }
 
-void DefUse::VisitUnaryPostDec(UnaryOperator *UO) {
-  Action = Def;
-  Visit(UO->getSubExpr());
-  Action = Use;
-  Visit(UO->getSubExpr());
-}
-
-void DefUse::VisitUnaryPostInc(UnaryOperator *UO) {
-  Action = Def;
-  Visit(UO->getSubExpr());
-  Action = Use;
-  Visit(UO->getSubExpr());
-}
-
-void DefUse::VisitUnaryPreDec(UnaryOperator *UO) {
-  Action = Def;
-  Visit(UO->getSubExpr());
-  Action = Use;
-  Visit(UO->getSubExpr());
-}
-
-void DefUse::VisitUnaryPreInc(UnaryOperator *UO) {
-  Action = Def;
-  Visit(UO->getSubExpr());
-  Action = Use;
-  Visit(UO->getSubExpr());
+void DefUse::VisitUnaryOperator(UnaryOperator *UO) {
+  if (UO->isIncrementDecrementOp()) {
+    Action = Def;
+    Visit(UO->getSubExpr());
+    Action = Use;
+    Visit(UO->getSubExpr());
+  } else {
+    Visit(UO->getSubExpr());
+  }
 }
 
 namespace {
@@ -908,6 +895,8 @@ bool DFS::Copy(const Region &From, Region &To, Point StartPoint) {
 
 /// Iterates until a fixed point, computing live variables on the entry of each
 /// basic block.
+///
+/// Note that an empty callback is sufficient when computing liveness.
 void Liveness::Compute() {
   LivenessFact fact;
   bool changed = true;
@@ -1683,6 +1672,8 @@ void RegionCheck::PreprocessForParamAndReturn() {
   infer.CapVar(FreeRV);
 }
 
+/// Traverse each statement in the CFG, check the corresponding actions and
+/// report erros according to the loans in scope information.
 void clang::borrow::BorrowCk(const Environment &env, RegionCheck &rc,
                              LoansInScope &LIS) {
   LIS.Walk([&](Point point, const Stmt *S,

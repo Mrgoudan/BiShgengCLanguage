@@ -247,6 +247,7 @@ private:
   virtual void anchor();
 };
 
+/// ActionNoop represents statement that does not use any variables.
 struct ActionNoop : public Action {
   ActionNoop() : Action(Noop) {}
 
@@ -260,6 +261,9 @@ private:
   void anchor() override;
 };
 
+/// ActionInit represents a variable declaration or assignment statement.
+///
+/// Note that the declared or assigned variable is of a non-borrow type.
 struct ActionInit : public Action {
   std::unique_ptr<Path> Dest;
   std::vector<std::unique_ptr<Path>> Sources;
@@ -296,6 +300,8 @@ private:
   void anchor() override;
 };
 
+/// ActionBorrow represents a statement that explicity borrows a variable using
+/// `&mut`, `&const`, `&mut *`, or `&const *`.
 struct ActionBorrow : public Action {
   std::unique_ptr<Path> Dest;
   RegionName RNL;
@@ -334,6 +340,7 @@ private:
   void anchor() override;
 };
 
+/// ActionAssign represents an assignment between variables of borrow types.
 struct ActionAssign : public Action {
   std::unique_ptr<Path> Dest;
   RegionName RNL;
@@ -372,6 +379,8 @@ private:
   void anchor() override;
 };
 
+/// ActionUse represents the usage of a vairble, including reading, writing, or
+/// transferring its ownership.
 struct ActionUse : public Action {
   std::vector<std::unique_ptr<Path>> Uses;
   std::vector<std::unique_ptr<Path>> DerefSources;
@@ -401,6 +410,8 @@ private:
   void anchor() override;
 };
 
+/// ActionStorageDead represents leaving the lexical scope of a variable,
+/// meaning it is destroyed on the stack.
 struct ActionStorageDead : public Action {
   std::unique_ptr<Path> Var;
 
@@ -524,11 +535,14 @@ public:
   llvm::SmallVector<Point> SuccessorPoints(Point point) const;
 };
 
+/// All the information required for inference solving, including the
+/// definition of region variables and all the constraints in the function.
 class InferenceContext {
 private:
   llvm::SmallVector<VarDefinition> definitions;
   llvm::SmallVector<Constraint> constraints;
 
+  /// Used for implicit borrows.
   Region emptyRegion;
 
 public:
@@ -584,6 +598,9 @@ private:
 
   const Environment &env;
   RegionCheck &rc;
+
+  /// For a given key, which is a basic block, the value is the set of all live
+  /// variables at the entry of the block.
   llvm::DenseMap<const CFGBlock *, LivenessFact> liveness;
 
   void Kill(LivenessFact &fact, VarDecl *D) { fact.erase(D); }
@@ -658,8 +675,14 @@ private:
 
   const Environment &env;
   const RegionCheck &rc;
+
+  /// All loans in the function.
   llvm::SmallVector<Loan> loans;
+
   llvm::DenseMap<const CFGBlock *, LoansFact> loansInScopeAfterBlock;
+
+  /// For a given key, which is a point of the CFG, the value is a vector of
+  /// the index of all loans at the entry of the point.
   std::map<Point, std::vector<unsigned>> loansByPoint;
 
   void Kill(LoansFact &fact, unsigned index) { fact.erase(index); }

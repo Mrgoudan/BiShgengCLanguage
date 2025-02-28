@@ -2592,7 +2592,12 @@ CFGBlock *CFGBuilder::VisitBinaryOperator(BinaryOperator *B,
 
   if (B->getOpcode() == BO_Comma) { // ,
     autoCreateBlock();
+#if ENABLE_BSC
+    if (!BuildOpts.BSCBorrowCk)
+      appendStmt(Block, B);
+#else
     appendStmt(Block, B);
+#endif
     addStmt(B->getRHS());
     return addStmt(B->getLHS());
   }
@@ -4318,7 +4323,11 @@ CFGBlock *CFGBuilder::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E,
 /// VisitStmtExpr - Utility method to handle (nested) statement
 ///  expressions (a GCC extension).
 CFGBlock *CFGBuilder::VisitStmtExpr(StmtExpr *SE, AddStmtChoice asc) {
+#if ENABLE_BSC
+  if (!BuildOpts.BSCBorrowCk && asc.alwaysAdd(*this, SE)) {
+#else
   if (asc.alwaysAdd(*this, SE)) {
+#endif
     autoCreateBlock();
     appendStmt(Block, SE);
   }
