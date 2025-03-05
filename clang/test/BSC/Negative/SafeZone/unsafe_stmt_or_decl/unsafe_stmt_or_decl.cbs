@@ -3,10 +3,10 @@
 safe int main(void) {
   int a;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
   a = 0;
-  lab:   // expected-error {{label statement is forbidden in the safe zone}}
+  lab:
   if (a < 10) {
     a = a + 1;
-    goto lab;  // expected-error {{goto statement is forbidden in the safe zone}}
+    goto lab;
   }
   switch (a) {
     int b = 1; // expected-error {{variable declaration in the top-level switch block is forbidden in the safe zone}}

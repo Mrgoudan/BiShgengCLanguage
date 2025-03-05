@@ -22,15 +22,6 @@ void Parser::CheckStmtTokInSafeZone(tok::TokenKind Kind) {
     return;
   }
   switch (Kind) {
-  case tok::identifier: {
-    Token Next = NextToken();
-    if (Next.is(tok::colon))
-      Diag(Tok, diag::err_unsafe_action) << "label statement";
-    break;
-  }
-  case tok::kw_goto:
-    Diag(Tok, diag::err_unsafe_action) << "goto statement";
-    break;
   case tok::kw_asm:
     Diag(Tok, diag::err_unsafe_action) << "asm statement";
     break;
