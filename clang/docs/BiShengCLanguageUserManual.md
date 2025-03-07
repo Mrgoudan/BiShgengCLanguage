@@ -2802,9 +2802,9 @@ void use_mut(int *borrow p);
 void test() {
     int local = 5;
     int *borrow p1 = &mut local;         //p1是可变借用指针，借用了local
-    const int *borrow p2 = &const local; //p2是不可变借用指针，也借用了local
-    use_immut(p2);
     use_mut(p1);
+    const int *borrow p2 = &const local; //p2是不可变借用指针，借用了local
+    use_immut(p2);
 }
 ```
 另外，表达式 e 如果是指针的解引用表达式，`&mut *p`和`&const *p`分别可以看作对地址 p 中存放的值，也就是`*p`，取可变借用和不可变借用，这一操作不为`*p`产生临时变量。其中，p可以是裸指针、owned指针和其它借用指针。例如：
@@ -2812,14 +2812,14 @@ void test() {
 void test() {
     int *x1 = malloc(sizeof(int));
     *x1 = 42;
-    int *borrow p1 = &mut *x1;    //p1借用了*x1，但由于我们没有办法跟踪裸指针所指向的内存，所以我们假设x1和*x1是一一对应的，等价于p1借用了x1
+    int *borrow p1 = &mut *x1;    //p1借用了*x1
 
     int* owned x2 = safe_malloc<int>();
-    int *borrow p2 = &mut *x2;    //p2借用了*x2，由于owned指针与它所指向的内存是一一对应的，等价于p2借用了x2
+    int *borrow p2 = &mut *x2;    //p2借用了*x2
 
     int local = 5;
     int *borrow x3 = &mut local;
-    int *borrow p3 = &mut *x3;    //p3借用了*x3，由于x3借用了local，所以我们认为p3也借用了local
+    int *borrow p3 = &mut *x3;    //p3借用了*x3
 }
 ```
 #### 1.2 借用的作用
@@ -2861,7 +2861,7 @@ void other_operation(MyFile* borrow p) {  //其他文件操作函数，对文件
 
 int main(void) {
     MyFile* owned p = create_file();
-    insert_str(&mut *p, str); //不取得文件指针p的所有权，而是借用p，后续p可以继续被使用
+    insert_str(&mut *p, str); //不取得文件指针p的所有权，而是借用*p，后续p可以继续被使用
     other_operation(&mut *p);
     safe_free(p);
     return 0;
@@ -2902,7 +2902,7 @@ void test() {
         int local1 = 5;
         p = &mut local1; //对 p 进行再赋值之后，p 不再借用 local，而是借用 local1
     }
-    use(p); // error，借用变量 p 的生命周期比被借用对象 local1 的生命周期长
+    use(p); // error，local1 的生命周期不够长
 }
 ```
 
@@ -2914,16 +2914,16 @@ void test(int a, int *owned b, int *c, struct S d) {
     // 被借用对象是普通局部变量
     int local = 5;
     int *borrow p1 = &mut local;  //p1的被借用对象是local
-    int *borrow p2 = &mut *p1;    //p2的被借用对象是local,因为p1的借用对象是local
-    int *borrow p3 = p1;          //p3的被借用对象是local,因为p1的借用对象是local
+    int *borrow p2 = &mut *p1;    //p2的被借用对象是*p1
+    int *borrow p3 = p1;          //p3的被借用对象是*p1
 
     // 被借用对象是owned变量
     int *owned x1 = safe_malloc<int>(2);
-    int *borrow p4 = &mut *x1;    //p4的被借用对象是x1
+    int *borrow p4 = &mut *x1;    //p4的被借用对象是*x1
 
     // 被借用对象是裸指针变量
     int *x2 = malloc(sizeof(int));
-    int *borrow p5 = &mut *x2;    //p5的被借用对象是x2
+    int *borrow p5 = &mut *x2;    //p5的被借用对象是*x2
 
     // 被借用对象是结构体的某个字段
     struct S s = { .a = 5 };
@@ -2938,14 +2938,14 @@ void test(int a, int *owned b, int *c, struct S d) {
 
     // 被借用对象是函数入参
     int *borrow p9 = &mut a;      //p9的被借用对象是a
-    int *borrow p10 = &mut *b;    //p10的被借用对象是b
-    int *borrow p11 = &mut *c;    //p11的被借用对象是c
+    int *borrow p10 = &mut *b;    //p10的被借用对象是*b
+    int *borrow p11 = &mut *c;    //p11的被借用对象是*c
     int *borrow p12 = &mut d.a;   //p12的被借用对象是d.a
 }
 ```
 
 ##### 2.3 借用变量的 Non-Lexical Lifetime
-一个变量的生命周期从它的声明开始，到当前整个语句块结束，这个设计被称为Lexical Lifetime，因为变量的生命周期是严格和词法中的作用域范围绑定的。这个策略实现起来非常简单，但它可能过于保守了，某些情况下借用变量的作用范围被过度拉长了，以至于某些实质上是安全的代码也被阻止了，这在一定程度上限制了程序员的发挥。因此，毕昇 C 为借用变量引入 Non-Lexical Lifetime（简写为NLL），用更精细的手段计算借用变量真正起作用的范围，**借用变量的 NLL 范围为：从借用处开始，一直持续到最后一次使用的地方**。具体的，它是**从借用变量定义或被再赋值开始，到被再赋值之前最后一次被使用结束**。
+一个变量的生命周期从它的声明开始，到当前整个语句块结束，这个设计被称为Lexical Lifetime，因为变量的生命周期是严格和词法中的作用域范围绑定的。这个策略实现起来非常简单，但它可能过于保守了，某些情况下借用变量的作用范围被过度拉长了，以至于某些实质上是安全的代码也被阻止了，这在一定程度上限制了程序员能编写出的代码。因此，毕昇 C 为借用变量引入 Non-Lexical Lifetime（简写为NLL），用更精细的手段计算借用变量真正起作用的范围，**借用变量的 NLL 范围为：从借用处开始，一直持续到最后一次使用的地方**。具体的，它是**从借用变量定义或被再赋值开始，到被再赋值之前最后一次被使用结束**。
 
 其中，以下场景属于对借用变量p的使用：
 1. 函数调用use(p)或use(&mut*p)
@@ -3033,7 +3033,7 @@ void test4() {
     use(p);                     //#10
 }
 
-//本例中，p的生命周期为[2,4]，被借用对象x的生命周期为[1,3]，不满足生命周期约束，error
+//本例中，p的生命周期为[2,4]，被借用对象*x的生命周期为[1,3]，不满足生命周期约束，error
 void test5() {
     int *owned x = safe_malloc<int>(5); //#1
     int *borrow p = &mut *x;           //#2
@@ -3079,78 +3079,44 @@ void test() {
     read_a(p2);    //该函数会读取 a 所指向的内存
 }
 ```
-由于借用本质上也是指针，所以为了避免上述问题，毕昇 C 规定，**同一时刻，对于同一个对象，只能拥有要么一个可变借用, 要么任意多个不可变借用**。
+由于借用本质上也是指针，所以为了避免上述问题，毕昇 C 规定，**同一时刻，对于同一个对象，要么只能拥有一个可变借用, 要么任意多个不可变借用**。
 ```C
 void test1() {
     int local = 5;
     int *borrow p1 = &mut local;
-    int *borrow p2 = &mut local;
-    modify(p1);  //error，同一时刻最多只能有一个指向local的可变借用变量
+    int *borrow p2 = &mut local;  //error，同一时刻最多只能有一个指向local的可变借用变量
+    modify(p1);
     modify(p2);
 }
 
 void test2() {
     int local = 1;
-    int * borrow p1 = &mut local;
-    const int * borrow p2 = &const local;
-    use(p1);     //error，指向local的可变和不可变借用不能同时存在
+    int *borrow p1 = &mut local;
+    int *borrow p2 = &mut local;  //error，同一时刻最多只能有一个指向local的可变借用变量
     use(p2);
+    use(p1);
 }
-```
-由于不可变借用不会导致被借用对象被修改，因此同一时刻可以拥有任意多个不可变借用，例如：
-```C
-void test() {
-    int local = 5;
-    const int *borrow p1 = &const local;
-    const int *borrow p2 = &const local;
-    read(p1);  //ok，同一时刻可以拥有任意多个不可变借用
-    read(p2);
-}
-```
 
-##### 3.3 定义可变借用会使在它之前定义的其它借用被冻结
-定义一个可变借用变量，会导致在它之前定义的其它借用变量（前提是这些借用变量都借用了同一个对象）处于冻结状态，我们认为借用在被冻结期间不存在，也就不能被使用。例如：
-```C
-void test1() {
+void test3() {
     int local = 1;
     int * borrow p1 = &mut local;
-    int * borrow p2 = &mut local;  //p2生命周期开始，p1被p2冻结
-    use(p1);                       //error，p2生命周期此时没有结束，因此p1仍然处于被冻结状态，不能使用p1
+    const int * borrow p2 = &const local; //error，指向local的可变和不可变借用不能同时存在
+    use(p1);
     use(p2);
 }
 
-void test2() {
+void test4() {
     int local = 1;
     const int * borrow p1 = &const local;
-    int * borrow p2 = &mut local;  //p2生命周期开始，p1被p2冻结
-    use(p1);                       //error，p2生命周期此时没有结束，因此p1仍然处于被冻结状态，不能使用p1
+    int * borrow p2 = &mut local; // error，指向local的可变和不可变借用不能同时存在
+    use(p1);
     use(p2);
 }
 ```
-这条规则实际上是 3.2 中“可变借用同时只能存在一个”规则的补充，它保证了同一时刻，最多只有一个可变借用处于活跃状态。
 
-##### 3.4 使用可变借用会使在它之前定义的其它借用失效
-可变借用变量能够使在它之前被定义的其它借用变量（前提是这些借用变量都借用了同一个对象）失效，我们认为失效的借用不存在，也就无法再被使用。例如：
-```C
-void test1() {
-    int local = 1;
-    int * borrow p1 = &mut local;
-    int * borrow p2 = &mut local;
-    use(p2);                       //使用p2，会使p1失效
-    use(p1);                       //error，p1已经失效，无法再被使用
-}
-
-void test2() {
-    int local = 1;
-    const int * borrow p1 = &mut local;
-    int * borrow p2 = &mut local;
-    use(p2);                       //使用p2，会使p1失效
-    use_immut(p1);                 //error，p1已经失效，无法再被使用
-}
-```
-
-使用可变借用，可能会导致被借用对象的内存状态发生改变，如果后续通过其它借用变量访问这块被修改的内存，可能会导致未定义行为。
+如果同时存在对一个变量的可变借用和不可变借用，可能会出现通过可变借用修改被借用对象的内存状态，然后再使用不可借用访问被修改的内存，从而导致未定义行为的情况。
 例如：
+
 ```C
 struct A {
     int *p;
@@ -3172,7 +3138,19 @@ int main() {
     return 0;
 }
 ```
+
 上述代码中，`a.free_p()`实际上使用了一个指向 a 的可变借用，该可变借用会使在它之前被定义的借用 q 失效，由于`printf("%d", *q)`使用了失效的 q，毕昇 C 编译器会报错，也就阻止了不安全行为的发生。
+
+由于不可变借用不会导致被借用对象被修改，因此同一时刻可以拥有任意多个不可变借用，例如：
+```C
+void test() {
+    int local = 5;
+    const int *borrow p1 = &const local;
+    const int *borrow p2 = &const local;
+    read(p1);  //ok，同一时刻可以拥有任意多个不可变借用
+    read(p2);
+}
+```
 
 #### 4.借用对被借用对象的影响
 ##### 4.1 不可变借用对被借用对象的影响
@@ -3185,7 +3163,7 @@ int main() {
 | &const e->field | e->field 进入 “只读” 状态，也不允许整体修改 *e。但允许修改 e 指向的其它成员，或者对其它成员做可变借用 |
 | &const e.field | e.field 进入 “只读” 状态，也不允许整体修改 e。但允许修改 e 的其它成员，或者对其它成员做可变借用 |
 | &const e[index] | e 进入 “只读” 状态，不允许修改 e 及其直接或间接成员，或者对其它成员做可变借用 |
-| &const *e | e 进入 “只读” 状态，不允许修改 e 及其直接或间接成员，或者对其它成员做可变借用 |
+| &const *e | *e 进入 “只读” 状态，不允许修改 *e 及其直接或间接成员，或者对其它成员做可变借用，如果 e 是 owned 指针类型，则 e 也进入只读状态 |
 
 ##### 4.2 可变借用对被借用对象的影响
 对表达式 e 做可变借用， 即`&mut e`，表达式 e 进入 “冻结” 状态。在这个可变借用的生命周期结束之前，e 不能读，不能修改（包含被move），也不能被借用。
@@ -3197,7 +3175,7 @@ int main() {
 | &mut e->field | e->field 被冻结，不允许读写 e->field，不允许整体修改 *e，但允许修改 e 指向的其它成员，或者对其它成员做可变借用 |
 | &mut e.field | e.field 被冻结，不允许读写 e.field，不允许整体修改 e，但允许修改 e 的其它成员，或者对其它成员做可变借用 |
 | &mut e[index] | e 被冻结，不允许读写 e 以及它的成员 |
-| &mut *e | e 被冻结，不允许读写 e 以及它的成员 |
+| &mut *e | *e 被冻结，不允许读写 *e 以及它的成员，如果 e 是 owned 指针类型，则也不允许读写 e |
 
 #### 5. 函数定义中包含借用类型
 1. 不允许函数参数中没有借用类型的参数，但是函数返回是借用类型。
@@ -3398,25 +3376,27 @@ void int *borrow::f() {} //error
 8. union 的成员不允许是借用类型。
 ```C
 union MyUnion {
-    int *borrow p;//error，借用指针不允许作为泛型实参
+    int *borrow p;//error，借用指针不允许作为union成员
 };
 ```
 
-9. 借用指针变量不支持索引运算。
+9. 借用指针类型不能是泛型实参。
 
-10. 借用指针变量不支持算术运算。
+10. 借用指针变量不支持索引运算。
 
-11. 允许同类型的借用变量之间，使用 `==`、`!=`、`>`、`<`、`<=`、`>=` 等比较运算符操作。
+11. 借用指针变量不支持算术运算。
 
-12. 允许对借用类型使用 `sizeof`、`alignof`操作符，并且有：
+12. 允许同类型的借用变量之间，使用 `==`、`!=`、`>`、`<`、`<=`、`>=` 等比较运算符操作。
+
+13. 允许对借用类型使用 `sizeof`、`alignof`操作符，并且有：
 sizeof(T* borrow) == sizeof(T*)
 _Alignof(T* borrow) == _Alignof(T*)
 
-13. 允许对借用类型使用一元的`&`、`!`及二元的`&&`、`||`运算符。
+14. 允许对借用类型使用一元的`&`、`!`及二元的`&&`、`||`运算符。
 
-14. 不允许对借用类型使用一元的`-`、`~`、`&const`、`&mut`、`[]`、`++`、`--`运算符，也不允许对借用类型使用二元的`*`、`/`、`%`、`&`、`|`、`<<`、`>>`、`+`、`-`运算符。
+15. 不允许对借用类型使用一元的`-`、`~`、`&const`、`&mut`、`[]`、`++`、`--`运算符，也不允许对借用类型使用二元的`*`、`/`、`%`、`&`、`|`、`<<`、`>>`、`+`、`-`运算符。
 
-15. 如果一个借用指针变量指向的是函数，那么可以通过这个借用指针变量来调用函数。
+16. 如果一个借用指针变量指向的是函数，那么可以通过这个借用指针变量来调用函数。
 ```C
 int f() {}
 void test() {
@@ -3425,7 +3405,7 @@ void test() {
 }
 ```
 
-16.  不允许对函数做可变借用，只能做只读借用。
+17. 不允许对函数做可变借用，只能做只读借用。
 
 
 ### 安全区
