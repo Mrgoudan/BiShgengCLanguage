@@ -12,7 +12,7 @@
 
 #if ENABLE_BSC
 
-#include "clang/Analysis/Analyses/BSCNullabilityCheck.h"
+#include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"

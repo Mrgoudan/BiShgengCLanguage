@@ -12,7 +12,7 @@
 
 #if ENABLE_BSC
 
-#include "clang/Analysis/Analyses/BSCOwnership.h"
+#include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"

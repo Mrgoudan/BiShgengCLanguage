@@ -12,7 +12,7 @@
 
 #if ENABLE_BSC
 
-#include "clang/Analysis/Analyses/BSCBorrowChecker.h"
+#include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
 #include "clang/AST/StmtVisitor.h"
 
 using namespace clang;

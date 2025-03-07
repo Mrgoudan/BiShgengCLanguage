@@ -15,9 +15,9 @@
 
 #include "TreeTransform.h"
 #include "clang/AST/BSC/WalkerBSC.h"
-#include "clang/Analysis/Analyses/BSCBorrowChecker.h"
-#include "clang/Analysis/Analyses/BSCNullabilityCheck.h"
-#include "clang/Analysis/Analyses/BSCOwnership.h"
+#include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
+#include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
+#include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/Sema.h"
 
@@ -159,7 +159,7 @@ bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
 ///                     |                  |     |                   |
 /// FuncDecl--> CFG --> | NullabilityCheck | --> | OwnershipAnalysis | -->
 ///                     |__________________|     |___________________|
-///       __________________              
+///       __________________
 ///      |                  |
 ///  --> |   BorrowCheck    | -->  FuncDecl  --> CodeGen
 ///      |__________________|
@@ -185,17 +185,17 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
   bool RequireBorrowCheck = LangOpts.BSC ? FindSafeFeatures(FD) : false;
   // nullability-check happens in mode: {SafeOnly, All}.
   // For SafeOnly, do not build cfg when there is no SafeZone in Function.
-  bool RequireNullabilityCheck = EnableNullabilityCheck; 
+  bool RequireNullabilityCheck = EnableNullabilityCheck;
   if (getLangOpts().getNullabilityCheck() == LangOptions::NC_SAFE) {
     if(HasSafeZoneInFunction(FD)) {
-      RequireNullabilityCheck = EnableNullabilityCheck; 
+      RequireNullabilityCheck = EnableNullabilityCheck;
     } else {
       RequireNullabilityCheck = false;
     }
   }
   bool RequireCFGAnalysis = RequireNullabilityCheck || RequireBorrowCheck;
   if (RequireCFGAnalysis && FD && AC.getCFG()) { // Only build the CFG when needed.
-    // Step one: Run NullabilityCheck 
+    // Step one: Run NullabilityCheck
     unsigned NumNullabilityCheckErrorsInCurrFD = 0;
     if (RequireNullabilityCheck) {
       NullabilityCheckDiagReporter NullabilityCheckReporter(*this);
