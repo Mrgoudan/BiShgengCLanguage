@@ -5826,116 +5826,403 @@ int main() {
 
 
 
-------
+---
 
-# 附录
 
-## 成员函数
-BNF 基于 C11 标准附录 A2.2 修改，对于 `direct-declarator` 新增一条：
-```c
-direct-declarator:
-    type-name :: identifier (parameter-type=list)
+# 附录 A — Language syntax summary
+
+本章对毕昇 C 语言的语法使用 EBNF（Extended Backus-Naur Form，扩展巴科斯范式）进行规范化描述。由于毕昇 C 语言扩展自 C 语言，本节不再列出 C 语言已有的语法的 EBNF 表示，**仅给出毕昇 C 语言扩展的语法的 EBNF 表示**，关于 C 语言已有语法的 EBNF 表示可查阅[ C11 标准规范](https://www.iso-9899.info/n1570.html#A.)。本章的组织结构与 C11 标准规范的附录 A 保持一致，用户可将两者对比阅读，能够清晰直观地了解到毕昇 C 扩展的 EBNF 表示的内容。
+
+在本章中使用的语法符号中，采用与 C11 标准规范中类似的表示方式：
+
+- 使用前下划线（_）表示语法类别（即非终结符，`_Nonnull`和`_Nullable`除外，他们是终结符），没有前下划线则表示字面量和字符集合（即终结符）；
+- 在代码块的第一行，非终结符后接冒号（:）表示非终结符的具体定义（即产生式规则）；
+- 除了以“one of”开头外，其他的可选定义都列在不同的行中，可选的非终结符使用后缀“_opt”表示；
+- 对于向 C11 已有的语法类别中新增语法，使用“....”表示省略已有的语法规则。
+
+
+## A.1 Lexical grammar
+
+### A.1.1 Lexical elements
+
+无新增或修改。
+
+### A.1.2 Keywords
+
+`_keyword`的产生式规则有如下变化：
+
+1. 新增 17 个关键字，为`_keyword`新增 17 条产生式：
+
+```text
+_keyword : one of
+    ....         impl         This
+    async        nullptr      this
+    await        owned        trait
+    borrow       private      unsafe
+    constexpr    public       _Nonnull
+    fat          safe         _Nullable
 ```
 
-在表达式那里，需要给 `postfix-expression` 新增一条：
-```c
-postfix-expression:
-    type-name :: identifier opt-generic-param
-```
-其中 `opt-generic-param` 是可选的，如果这个成员函数是泛型函数，那么需要带泛型参数，比如 `string::convert_to<int>()` 。
+### A.1.3 Identifiers
 
-------
+无新增或修改。
 
-## 泛型
+### A.1.4 Universal character names
 
-### 泛型BNF
+无新增或修改。
 
-```c
-template-parameter-list:
-	identifier
-	template-parameter-list , identifier
+### A.1.5 Constants
 
-template-declaration:
-	< template-parameter-list >
+无新增或修改。
 
-// 泛型类型的定义
-struct-or-union-specifier:
-	struct-or-union identifieropt template-declaration-opt { struct-declaration-list }
-	struct-or-union identifier template-declaration-opt
+### A.1.6 String literals
 
-// 泛型函数的定义
-direct-declarator:
-    identifier template-declaration-opt (parameter-type-list) // 新增
+无新增或修改。
+
+### A.1.7 Punctuators
+
+`_punctuator`的产生式规则有如下变化：
+
+1. 新增 6 个运算符和分隔符，为`_punctuator`新增 6 条产生式。
+
+```text
+_punctuator : one of
+    ....         &fat         ::
+    &const       &mut
+    &const *     &mut *
 ```
 
-### 常量泛型BNF
+### A.1.8 Header names
 
-对于泛型定义处的语法：
+无新增或修改。
 
-```c
-template-parameter-list:
-        template-parameter-item, template-parameter-list
+### A.1.9 Preprocessing numbers
 
-template-parameter-item:
-        type-name identifier
-        identifier
-```
+无新增或修改。
 
-对于泛型实例化处的语法：
+### A.1.10 Pointer literals
 
-```c
-postfix-expression:
-    postfix-expression < generic-parameter-list > ( argument-expression-list-opt )
+新增`_pointer-literal`，表示空指针字面量：
 
-generic-parameter-list:
-    generic-parameter-item, generic-parameter-list
-
-generic-parameter-item:
-    type-name
-    int-literal  // int 字面量
-    identifier  // constexpr 常量
-    ( constant-expression ) // 常量表达式，必须包含在小括号里面
+```text
+_pointer-literal :
+    nullptr
 ```
 
 
+## A.2 Phrase structure grammar
 
-------
+### A.2.1 Expressions
 
-## trait
-```c
-translateion-unit:
-    external-declaration
-    translation-unit external-declaration
+`_primary-expression`的产生式规则有如下变化：
 
-external-declaration:
-	function-definition
-    trait-definition // 新增
-    impl-definition  // 新增
-    declaration
+1. 支持泛型特性，修改了`_primary-expression`的第 1 条产生式；
+2. `this`属于`_primary-expression`，为`_primary-expression`新增 1 条产生式。
 
-trait-definition:
-    trait identifier generic-parameters? {
-        function-declaration-list;
-    };
-
-impl-declaration:
-	impl identifier generic-parameters? for type-name generic-parameters? ;
+```text
+_primary-expression :
+    ....
+    _identifier _template-declaration_opt
+    this
 ```
 
-------
+`_postfix-expression`的产生式规则有如下变化：
 
-## 无栈协程
+1. 支持泛型函数，修改了`_postfix-expression`的第 4 和第 5 条产生式；
+2. 允许调用静态成员函数和实例成员函数，为`_postfix-expression`新增 2 条产生式。
 
-
-------
-
-## 内存安全
-
-```c
-type-qualifier:
-    const
-    volatile
-    _Atomic
-    owned  //新增
+```text
+_postfix-expression :
+    ....
+    _postfix-expression . _identifier _template-declaration_opt
+    _postfix-expression -> _identifier _template-declaration_opt
+    _nested-name-specifier
+    _postfix-expression _identifier _template-declaration_opt
 ```
 
+`_unary-expression`的产生式规则有如下变化：
+
+1. 允许使用`await`关键字修饰表达式，为`_unary-expression`新增 1 条产生式。
+
+```text
+_unary-expression :
+    ....
+    await _unary-expression
+```
+
+`_unary-operator`的产生式规则有如下变化：
+
+1. 新增 5 种一元运算符，为`_unary-operator`新增 5 条产生式。
+
+```text
+_unary-operator : one of
+    ....         &const *     &mut
+    &const       &fat         &mut *
+```
+
+### A.2.2 Declarations
+
+新增`_template-parameter`，表示泛型形参：
+
+```text
+_template-parameter :
+    _identifier
+    _parameter-declaration
+```
+
+新增`_template-parameter-list`，表示泛型形参列表：
+
+```text
+_template-parameter-list :
+    _template-parameter
+    _template-parameter-list , _template-parameter
+```
+
+新增`_template-argument`，表示泛型实参：
+
+```text
+_template-argument :
+    _constant-expression
+    _type-name
+```
+
+新增`_template-argument-list`，表示泛型实参列表：
+
+```text
+_template-argument-list :
+    _template-argument
+    _template-argument-list , _template-argument
+```
+
+新增`_template-declaration`，表示泛型形参声明或泛型实参声明：
+
+```text
+_template-declaration :
+    < _template-parameter-list >
+    < _template-argument-list >
+```
+
+新增`_constexpr-specifier`，表示常量表达式限定符：
+
+```text
+_constexpr-specifier :
+    constexpr
+```
+
+`_declaration-specifiers`的产生式规则有如下变化：
+
+1. `_constexpr-specifier`可修饰声明，为`_declaration-specifiers`新增 1 条产生式。
+
+```text
+_declaration-specifiers :
+    ....
+    _constexpr-specifier _declaration-specifiers_opt
+```
+
+`_initializer`的产生式规则有如下变化：
+
+1. 支持通过`typedef`和等号定义类型别名的新语法，为`_initializer`新增 1 条产生式。
+
+```text
+_initializer :
+    ....
+    _type-name
+```
+
+`_type-specifier`的产生式规则有如下变化：
+
+1. 新增 2 种类型限定符，为`_type-specifier`新增 2 条产生式。
+
+```text
+_type-specifier :
+    ....
+    This
+    _trait-name
+```
+
+`_struct-or-union-specifier`的产生式规则有如下变化：
+
+1. 允许定义泛型结构体和联合体，修改了`_struct-or-union-specifier`的第 1 和第 2 条产生式。
+
+```text
+_struct-or-union-specifier :
+    _struct-or-union _identifier_opt _template-declaration_opt { _struct-declaration-list }
+    _struct-or-union _identifier _template-declaration_opt
+```
+
+`_type-qualifier`的产生式规则有如下变化：
+
+1. 新增 5 种类型说明符，为`_type-qualifier`新增 5 条产生式。
+
+```text
+_type-qualifier :
+    ....
+    borrow
+    fat
+    owned
+    _Nonnull
+    _Nullable
+```
+
+新增`_safe-specifier`，表示安全限定符：
+
+```text
+_safe-specifier :
+    safe
+    unsafe
+```
+
+新增`_access-specifier`，表示访问限定符：
+
+```text
+_access-specifier :
+    public
+    private
+```
+
+`_function-specifier`的产生式规则有如下变化：
+
+1. 新增 3 种函数限定符，为`_function-specifier`新增 2 条产生式。
+
+```text
+_function-specifier :
+    ....
+    async
+    _safe-specifier
+```
+
+新增`_nested-name-specifier`，表示嵌套限定符：
+
+```text
+_nested-name-specifier :
+    _type-name ::
+```
+
+`_direct-declarator`的产生式规则有如下变化：
+
+1. 支持泛型函数定义，修改了`_direct-declarator`的第 1 条产生式；
+2. 支持为类型声明和定义扩展成员函数，为`_direct-declarator`新增 2 条产生式。
+
+```text
+_direct-declarator :
+    ....
+    _identifier _template-declaration_opt
+    _nested-name-specifier
+    _direct-declarator _identifier _template-declaration_opt ( _parameter-type-list )
+```
+
+`_typedef-name`的产生式规则有如下变化：
+
+1. 支持对泛型类型定义别名，修改了`_typedef-name`的第 1 条产生式。
+
+```text
+_typedef-name :
+    _identifier _template-declaration_opt
+```
+
+### A.2.3 Statements
+
+`_compound-statement`的产生式规则有如下变化：
+
+1. 安全限定符可修饰代码块，修改了`_compound-statement`的第 1 条产生式。
+
+```text
+_compound-statement :
+    _safe-specifier_opt { _block-item-list_opt }
+```
+
+`_selection-statement`的产生式规则有如下变化：
+
+1. 常量表达式限定符可修饰`if`语句的条件表达式，修改了`_selection-statement`的第 1 和 第 2 条产生式。
+
+```text
+_selection-statement :
+    if _constexpr-specifier_opt ( _expression ) _statement
+    if _constexpr-specifier_opt ( _expression ) _statement else _statement
+```
+
+### A.2.4 External definitions
+
+新增`_function-declaration`，表示函数声明：
+
+```text
+_function-declaration :
+    _declaration-specifiers _pointer_opt _identifier ( _parameter-type-list ) ;
+```
+
+新增`_function-declaration-list`，表示函数声明列表：
+
+```text
+_function-declaration-list :
+    _function-declaration
+    _function-declaration-list _function-declaration
+```
+
+新增`_trait-name`的定义，表示`trait`的名称：
+
+```text
+_trait-name :
+    trait _identifier _template-declaration_opt
+```
+
+新增`_trait-definition`，表示`trait`的定义：
+
+```text
+_trait-definition :
+    _trait-name { _function-declaration-list } ;
+```
+
+新增`_impl-declaration`，表示实现`trait`：
+
+```text
+_impl-declaration :
+    impl _trait-name for _type-name ;
+```
+
+新增`_dtor-definition`，表示析构函数定义：
+
+```text
+_dtor-definition :
+    ~ _identifier ( _declaration ) _compound-statement
+```
+
+新增`_member-declaration`，表示`owned struct`成员种类：
+
+```text
+_member-declaration :
+    _declaration
+    _dtor-definition
+    _function-definition
+```
+
+新增`_member-specification`，表示`owned struct`成员变量或成员函数：
+
+```text
+_member-specification :
+    _member-declaration _member-specification_opt
+    _access-specifier : _member-specification_opt
+```
+
+新增`_owned-struct-declaration`，表示`owned struct`类型声明：
+
+```text
+_owned-struct-declaration :
+    owned struct _identifier _template-declaration_opt { _member-specification_opt } ;
+```
+
+`_external-declaration`的产生式规则有如下变化：
+
+1. `trait`定义、实现`trait`和`owned struct`类型声明都属于外部声明，为`_external-declaration`新增 3 条产生式。
+
+```text
+_external-declaration :
+    ....
+    _trait-definition
+    _impl-declaration
+    _owned-struct-declaration
+```
+
+
+## A.3 Preprocessing directives
+
+无新增或修改。
