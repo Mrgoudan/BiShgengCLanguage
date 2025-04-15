@@ -11,6 +11,7 @@ endif()
 
 # Needed by LLVM's CMake checks because this file defines multiple targets.
 set(LLVM_OPTIONAL_SOURCES
+  ClangBSCFuzzer.cpp
   ClangFuzzer.cpp
   ClangObjectiveCFuzzer.cpp
   DummyClangFuzzer.cpp
@@ -110,6 +111,18 @@ endif()
 add_clang_subdirectory(handle-cxx)
 add_clang_subdirectory(handle-llvm)
 add_clang_subdirectory(dictionary)
+
+add_clang_executable(clang-bsc-fuzzer
+  EXCLUDE_FROM_ALL
+  ${DUMMY_MAIN}
+  ClangBSCFuzzer.cpp
+  )
+
+target_link_libraries(clang-bsc-fuzzer
+  PRIVATE
+  ${LLVM_LIB_FUZZING_ENGINE}
+  clangHandleCXX
+  )
 
 add_clang_executable(clang-fuzzer
   EXCLUDE_FROM_ALL
