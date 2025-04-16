@@ -262,9 +262,7 @@ Retry:
       if (Tok.isNot(tok::identifier))
         goto Retry;
     }
-
-    // Fall through
-    LLVM_FALLTHROUGH;
+    goto Default;
   }
 
 #if ENABLE_BSC

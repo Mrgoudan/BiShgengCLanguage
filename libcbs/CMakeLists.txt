@@ -14,6 +14,9 @@ set(CMAKE_EXE_LINKER_FLAGS "-lpthread")
 
 set(CMAKE_C_COMPILER ${BSC_CLANG})
 
+string(REPLACE "-fcoverage-mapping" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+string(REPLACE "-fcoverage-mapping" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 include(LLVMLibCBSRules)
 

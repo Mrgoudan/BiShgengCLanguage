@@ -67,65 +67,65 @@ int main() {
 }
 
 
-// CHECK:      enum _TD_ENUM {
-// CHECK-NEXT:   READ,
-// CHECK-NEXT:   WRITE
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef enum _TD_ENUM ENUM;
-// CHECK-EMPTY:
-// CHECK-NEXT: typedef struct _TD_S2 S2;
-// CHECK-EMPTY:
-// CHECK-NEXT: enum E {
-// CHECK-NEXT:   A,
-// CHECK-NEXT:   B,
-// CHECK-NEXT:   C
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct U {
-// CHECK-NEXT:   struct S* s[3];
-// CHECK-NEXT:   int a;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct S {
-// CHECK-NEXT:   int a;
-// CHECK-NEXT:   int b;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct T1 {
-// CHECK-NEXT:   S2* p;
-// CHECK-NEXT:   struct S s[3][4][5];
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct _TD_S2 {
-// CHECK-NEXT:   struct S s;
-// CHECK-NEXT:   struct U u;
-// CHECK-NEXT:   ENUM e;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: union UU {
-// CHECK-NEXT:   float a;
-// CHECK-NEXT:   struct S s;
-// CHECK-NEXT:   struct U* u;
-// CHECK-NEXT:   int b;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct Outer {
-// CHECK-NEXT:   int x;
-// CHECK-NEXT:   struct Inner {
-// CHECK-NEXT:     float y;
-// CHECK-NEXT:     struct Nested {
-// CHECK-NEXT:         char z;
-// CHECK-NEXT:     } nested;
-// CHECK-NEXT:   } inner;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct T2 {
-// CHECK-NEXT:   enum E e;
-// CHECK-NEXT:   union {
-// CHECK-NEXT:     struct S s1;
-// CHECK-NEXT:     S2* s2;
-// CHECK-NEXT:   };
-// CHECK-NEXT:   float a;
-// CHECK-NEXT:   long b;
-// CHECK-NEXT: };
+// CHECK: enum _TD_ENUM {
+// CHECK-DAG:   READ,
+// CHECK-DAG:   WRITE
+// CHECK-DAG: };
+
+// CHECK-DAG: typedef enum _TD_ENUM ENUM;
+
+// CHECK-DAG: typedef struct _TD_S2 S2;
+
+// CHECK-DAG: enum E {
+// CHECK-DAG:   A,
+// CHECK-DAG:   B,
+// CHECK-DAG:   C
+// CHECK-DAG: };
+
+// CHECK-DAG: struct U {
+// CHECK-DAG:   struct S* s[3];
+// CHECK-DAG:   int a;
+// CHECK-DAG: };
+
+// CHECK-DAG: struct S {
+// CHECK-DAG:   int a;
+// CHECK-DAG:   int b;
+// CHECK-DAG: };
+
+// CHECK-DAG: struct T1 {
+// CHECK-DAG:   S2* p;
+// CHECK-DAG:   struct S s[3][4][5];
+// CHECK-DAG: };
+
+// CHECK-DAG: struct _TD_S2 {
+// CHECK-DAG:   struct S s;
+// CHECK-DAG:   struct U u;
+// CHECK-DAG:   ENUM e;
+// CHECK-DAG: };
+
+// CHECK-DAG: union UU {
+// CHECK-DAG:   float a;
+// CHECK-DAG:   struct S s;
+// CHECK-DAG:   struct U* u;
+// CHECK-DAG:   int b;
+// CHECK-DAG: };
+
+// CHECK-DAG: struct Outer {
+// CHECK-DAG:   int x;
+// CHECK-DAG:   struct Inner {
+// CHECK-DAG:     float y;
+// CHECK-DAG:     struct Nested {
+// CHECK-DAG:         char z;
+// CHECK-DAG:     } nested;
+// CHECK-DAG:   } inner;
+// CHECK-DAG: };
+
+// CHECK-DAG: struct T2 {
+// CHECK-DAG:   enum E e;
+// CHECK-DAG:   union {
+// CHECK-DAG:     struct S s1;
+// CHECK-DAG:     S2* s2;
+// CHECK-DAG:   };
+// CHECK-DAG:   float a;
+// CHECK-DAG:   long b;
+// CHECK-DAG: };

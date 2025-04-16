@@ -2860,7 +2860,7 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
       Instantiation->setInvalidDecl();
       continue;
     }
-      Decl *NewMember;
+    Decl *NewMember = nullptr;
 #if ENABLE_BSC
       if (isa<BSCMethodDecl>(Member) &&
           !dyn_cast<BSCMethodDecl>(Member)->isThisDeclarationADefinition()) {

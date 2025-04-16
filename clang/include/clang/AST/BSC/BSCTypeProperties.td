@@ -11,7 +11,7 @@ let Class = TraitType in {
 
 let Class = ConditionalType in {
   def : Property<"CondResult", Bool> {
-    let Read = [{ node->getCondResult() }];
+    let Read = [{ node->getCondResult() ? *node->getCondResult() : false }];
   }
   def : Property<"CondExpr", ExprRef> {
     let Read = [{ node->getCondExpr() }];
