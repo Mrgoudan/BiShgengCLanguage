@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -verify %s
+
+int rand();
+
+void func(int *owned argA, int *owned argB) {
+  int *owned a;
+  int *owned b;
+label1:
+  if (rand()) {
+    a = argA;
+    goto label1; // expected-error {{invalid code structure, jumping back to previous labels is not allowed}}
+  }
+}

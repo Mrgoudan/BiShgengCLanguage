@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -verify %s
+
+int test3() {
+    int temp = 1;
+    int *borrow p = &mut temp;
+    int x = 0;
+  
+    if (x == 0)
+      goto state_A;
+  
+  state_B:
+    if (x < 2) {
+      x++;
+      goto state_C;
+    }   
+    goto end;
+  
+  state_A:
+    x++;
+    if (x == 1)
+      goto state_B;
+    else
+      goto state_C;
+  
+  state_C:
+    if (x < 3)
+      goto state_B; // expected-error {{invalid code structure, jumping back to previous labels is not allowed}}
+    goto end;
+  
+  end:
+    return 0;
+  }

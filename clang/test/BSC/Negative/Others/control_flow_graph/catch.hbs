@@ -1,0 +1,28 @@
+#ifndef CATCH_H
+#define CATCH_H
+
+static void dummy_func() {
+}
+
+#define DUMMY() dummy_func();
+
+#define ERR_MSG (err_msg)
+#define ERR_LINE (err_line)
+
+#define ERR_HANDLE() {err_line = __LINE__; goto err;}
+
+#define TRY int err_msg = 0; \
+  int err_line = -1;
+
+#define EXEC(func) {if (0 != (err_msg = func)) {ERR_HANDLE()}}
+
+#define CATCH DUMMY(); \
+  err: \
+  (void)err_msg; \
+  (void)err_line;
+
+#define THROW(errmsg) {err_msg = errmsg; ERR_HANDLE()}
+
+#define THROW_IF(expr, errmsg) {if (expr) {THROW(errmsg)}}
+
+#endif

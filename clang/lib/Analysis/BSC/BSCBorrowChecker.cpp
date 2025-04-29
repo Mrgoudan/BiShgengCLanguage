@@ -308,14 +308,14 @@ class ActionExtract : public clang::StmtVisitor<ActionExtract> {
   }
 
 public:
-  ActionExtract(Stmt *S, const VarDecl *VD, SourceLocation ScopeEndLoc,
+  ActionExtract(Stmt *S, const VarDecl *VD, SourceLocation LifetimeEndsLoc,
                 RegionCheck &rc)
       : rc(rc) {
-    /// For CFGScopeEnd, just create an `ActionStorageDead`.
+    /// For CFGLifetimeEnds, just create an `ActionStorageDead`.
     if (VD) {
       Kind = Action::StorageDead;
       Dest = std::make_unique<Path>(VD->getName().str(), VD->getType(),
-                                    ScopeEndLoc);
+                                    LifetimeEndsLoc);
     } else {
       Visit(S);
     }
@@ -928,8 +928,8 @@ void Liveness::SimulateBlock(LivenessFact &fact, const CFGBlock *Block,
        it != ei; ++it) {
     const CFGElement &elem = *it;
     const Stmt *S = nullptr;
-    const VarDecl *ScopeEndVD = nullptr;
-    SourceLocation ScopeEndLoc;
+    const VarDecl *LifetimeEndsVD = nullptr;
+    SourceLocation LifetimeEndsLoc;
 
     if (elem.getAs<CFGStmt>()) {
       S = elem.castAs<CFGStmt>().getStmt();
@@ -949,17 +949,17 @@ void Liveness::SimulateBlock(LivenessFact &fact, const CFGBlock *Block,
       }
     }
 
-    // There is no need to handle CFGScopeEnd when calculating liveness, while
-    // it's necessary to handle CFGScopeEnd when populating inference, so we
-    // need to get the `ScopeEndVD` and `ScopeEndLoc` here.
-    if (elem.getAs<CFGScopeEnd>()) {
-      ScopeEndVD = elem.castAs<CFGScopeEnd>().getVarDecl();
-      ScopeEndLoc = elem.castAs<CFGScopeEnd>().getTriggerStmt()->getEndLoc();
+    // There is no need to handle CFGLifetimeEnds when calculating liveness, while
+    // it's necessary to handle CFGLifetimeEnds when populating inference, so we
+    // need to get the `LifetimeEndsVD` and `LifetimeEndsLoc` here.
+    if (elem.getAs<CFGLifetimeEnds>()) {
+      LifetimeEndsVD = elem.castAs<CFGLifetimeEnds>().getVarDecl();
+      LifetimeEndsLoc = elem.castAs<CFGLifetimeEnds>().getTriggerStmt()->getEndLoc();
     }
 
     Point point(Block->getBlockID(), std::distance(it, ei));
 
-    callback(point, S, fact, ScopeEndVD, ScopeEndLoc);
+    callback(point, S, fact, LifetimeEndsVD, LifetimeEndsLoc);
   }
 }
 
@@ -1474,7 +1474,7 @@ void RegionCheck::PopulateInference(Liveness &liveness) {
   liveness.Walk([&, this](Point point, const Stmt *S,
                           llvm::DenseSet<VarDecl *> liveOnEntry,
                           const VarDecl *VD,
-                          SourceLocation ScopeEndLoc) -> void {
+                          SourceLocation LifetimeEndsLoc) -> void {
     // To start, find every variable `x` that is live. All regions in the type
     // of `x` must include `point`.
     std::set<RegionName> liveRegionsOnEntry = liveness.LiveRegions(liveOnEntry);
@@ -1494,7 +1494,7 @@ void RegionCheck::PopulateInference(Liveness &liveness) {
 
     // Next, walk the actions and establish any additional constraints that may
     // arise from subtyping.
-    ActionExtract AE(const_cast<Stmt *>(S), VD, ScopeEndLoc, *this);
+    ActionExtract AE(const_cast<Stmt *>(S), VD, LifetimeEndsLoc, *this);
     actionMap[point] = std::move(AE.GetAction());
     const auto &actions = actionMap[point];
     for (const std::unique_ptr<Action> &action : actions) {

@@ -1,0 +1,132 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdlib.h>
+
+typedef struct {
+  int a;
+} Data1;
+
+typedef struct {
+  int b;
+} Data2;
+
+typedef struct {
+  unsigned key;
+} Key;
+
+typedef struct {
+  float a;
+} X509;
+
+static int use_cert_blob(int type) {
+  int tmp = 0;
+  int *borrow p = &mut tmp;
+  int ret = 0;
+  Data1 *x = NULL;
+  Data2 *in = (Data2 *)malloc(sizeof(Data2));
+  if (!in)
+    return 1;
+
+  if (type == 1) {
+    x = (Data1 *)malloc(sizeof(Data1));
+  } else if (type == 2) {
+    x = (Data1 *)malloc(sizeof(Data1));
+  } else {
+    ret = 0;
+    goto end;
+  }
+
+  if (!x) {
+    ret = 0;
+    goto end;
+  }
+
+  ret = 1;
+end:
+  free(x);
+  free(in);
+  return ret;
+}
+
+static int use_private_blob(int type) {
+  int tmp = 0;
+  int *borrow p = &mut tmp;
+  int ret = 0;
+  Key *pKey = NULL;
+  Data2 *in = (Data2 *)malloc(sizeof(Data2));
+  if (!in)
+    return 1;
+
+  if (type == 1) {
+    pKey = (Key *)malloc(sizeof(Key));
+  } else if (type == 2) {
+    pKey = (Key *)malloc(sizeof(Key));
+  } else {
+    goto end;
+  }
+
+  if (!pKey)
+    goto end;
+
+  ret = 0;
+  free(pKey);
+end:
+  free(in);
+  return ret;
+}
+
+int g_err_num = 0;
+
+static int use_cert_chain_blob(void *ctx, int status) {
+  int tmp = 0;
+  int *borrow p = &mut tmp;
+  int ret = 0;
+  Data1 *x = NULL;
+  Data2 *in = (Data2 *)malloc(sizeof(Data2));
+  if (!in)
+    return -1;
+
+  g_err_num = 0;
+
+  x = (Data1 *)malloc(sizeof(Data1));
+  if (!x)
+    goto end;
+
+  ret = 0;
+
+  if (g_err_num != 0)
+    ret = 0;
+
+  if (ret) {
+    X509 *ca;
+
+    if (!ctx) {
+      ret = 0;
+      goto end;
+    }
+
+    while ((ca = (X509 *)malloc(sizeof(X509))) != NULL) {
+      if (status == 0) {
+        free(ca);
+        ret = 0;
+        goto end;
+      }
+    }
+
+    ret = 0;
+  }
+
+end:
+  free(x);
+  free(in);
+  return ret;
+}
+
+int main() {
+  use_cert_blob(1);
+  use_private_blob(2);
+  use_cert_chain_blob(NULL, 0);
+  return 0;
+}

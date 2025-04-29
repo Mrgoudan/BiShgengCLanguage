@@ -537,10 +537,12 @@ public:
 
   bool alwaysAdd(const Stmt *stmt);
 
+#if ENABLE_BSC
   // Only used by BSC, report error when the CFG is not structured.
   DiagnosticsEngine& getDiagnostic() {
     return Context->getDiagnostics();
   }
+#endif
 
 private:
   // Visitors to walk an AST and construct the CFG.
@@ -627,16 +629,8 @@ private:
 
   void maybeAddScopeBeginForVarDecl(CFGBlock *B, const VarDecl *VD,
                                     const Stmt *S) {
-    if (ScopePos && (VD == ScopePos.getFirstVarInScope())
-      #if ENABLE_BSC
-      && !BuildOpts.BSCMode
-      #endif
-      )
+    if (ScopePos && (VD == ScopePos.getFirstVarInScope()))
       appendScopeBegin(B, VD, S);
-    #if ENABLE_BSC
-    else if (BuildOpts.BSCMode && ScopePos)
-      appendScopeBegin(B, VD, S);
-    #endif
   }
 
   /// When creating the CFG for temporary destructors, we want to mirror the
@@ -1860,13 +1854,6 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
 
   if (B == E)
     return;
-  #if ENABLE_BSC
-  if (BuildOpts.BSCMode && ScopePos == LocalScope::const_iterator())
-    return;
-  int dist = B.distance(E);
-  if (BuildOpts.BSCMode && dist <= 0)
-    return;
-  #endif
   // We need to append the destructors in reverse order, but any one of them
   // may be a no-return destructor which changes the CFG. As a result, buffer
   // this sequence up and replay them in reverse order when appending onto the
@@ -1880,20 +1867,10 @@ void CFGBuilder::addAutomaticObjDtors(LocalScope::const_iterator B,
     if (hasTrivialDestructor(VD)) {
       // If AddScopes is enabled and *I is a first variable in a scope, add a
       // ScopeEnd marker in a Block.
-      if (BuildOpts.AddScopes && DeclsWithEndedScope.count(VD)
-          #if ENABLE_BSC
-          && !BuildOpts.BSCMode
-          #endif
-      ) {
+      if (BuildOpts.AddScopes && DeclsWithEndedScope.count(VD)) {
         autoCreateBlock();
         appendScopeEnd(Block, VD, S);
       }
-      #if ENABLE_BSC
-      else if (BuildOpts.BSCMode && BuildOpts.AddScopes) {
-        autoCreateBlock();
-        appendScopeEnd(Block, VD, S);
-      }
-      #endif
       continue;
     }
     // If this destructor is marked as a no-return destructor, we need to
@@ -3450,7 +3427,7 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
   LabelMapTy::iterator I = LabelMap.find(G->getLabel());
 
   if (I == LabelMap.end()) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
     // Label appears first, then goto stmt
     // This is not structured cfg, bishengc should report error
     if (BuildOpts.BSCMode) {
@@ -3458,15 +3435,16 @@ CFGBlock *CFGBuilder::VisitGotoStmt(GotoStmt *G) {
       DiagnosticsEngine &Diag = getDiagnostic();
       unsigned ID = Diag.getCustomDiagID(
         DiagnosticsEngine::Error,
-        "Invalid code structure. Jumping back to previous labels is not allowed." 
+        "invalid code structure, jumping back to previous labels is not allowed" 
       );
       Diag.Report(G->getBeginLoc(), ID);
     } else {
-  #endif    // We will need to backpatch this block later.
+#endif
+      // We will need to backpatch this block later.
       BackpatchBlocks.push_back(JumpSource(Block, ScopePos));
-  #if ENABLE_BSC
+#if ENABLE_BSC
     }
-  #endif
+#endif
   }
   else {
     JumpTarget JT = I->second;

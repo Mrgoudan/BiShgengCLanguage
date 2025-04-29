@@ -168,21 +168,16 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
                                bool EnableNullabilityCheck) {
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
 
-  // TODO: understand how these parameters affect the CFG.
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
-  AC.getCFGBuildOptions().AddEHEdges = false;
-  AC.getCFGBuildOptions().AddInitializers = true;
-  AC.getCFGBuildOptions().AddImplicitDtors = true;
-  AC.getCFGBuildOptions().AddTemporaryDtors = true;
-  AC.getCFGBuildOptions().AddScopes = true;
+  AC.getCFGBuildOptions().AddLifetime = true;
   AC.getCFGBuildOptions().BSCMode = true;
   AC.getCFGBuildOptions().setAllAlwaysAdd();
 
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
+  const FunctionDecl *FD = cast<FunctionDecl>(D);
 
   // If D does not use memory safety features like "owned, borrow, &mut, &const",
   // we should not do borrow checking.
-  bool RequireBorrowCheck = LangOpts.BSC ? FindSafeFeatures(FD) : false;
+  bool RequireBorrowCheck = FindSafeFeatures(FD);
   // nullability-check happens in mode: {SafeOnly, All}.
   // For SafeOnly, do not build cfg when there is no SafeZone in Function.
   bool RequireNullabilityCheck = EnableNullabilityCheck;
@@ -950,11 +945,7 @@ void Sema::BSCBorrowChecker(FunctionDecl *FD) {
 
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, FD);
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
-  AC.getCFGBuildOptions().AddEHEdges = false;
-  AC.getCFGBuildOptions().AddInitializers = true;
-  AC.getCFGBuildOptions().AddImplicitDtors = true;
-  AC.getCFGBuildOptions().AddTemporaryDtors = true;
-  AC.getCFGBuildOptions().AddScopes = true;
+  AC.getCFGBuildOptions().AddLifetime = true;
   AC.getCFGBuildOptions().BSCMode = true;
   AC.getCFGBuildOptions().BSCBorrowCk = true;
   AC.getCFGBuildOptions()

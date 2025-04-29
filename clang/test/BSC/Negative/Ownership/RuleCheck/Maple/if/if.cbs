@@ -66,14 +66,3 @@ void func5(int * owned argA, int * owned argB) {
     }
     b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
 } // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `argA`}} expected-error {{memory leak of value: `argB`}}
-
-void func6(int * owned argA, int * owned argB) {
-    int * owned a;
-    int * owned b;
-label1:
-    if (rand()) {
-        a = argA;
-        goto label1; // expected-error {{Invalid code structure. Jumping back to previous labels is not allowed.}}
-    }
-}
-int main() { return 0; }

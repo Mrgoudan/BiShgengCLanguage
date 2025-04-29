@@ -1775,7 +1775,7 @@ public:
   void VisitInitListExpr(InitListExpr *ILE);
   void VisitMemberExpr(MemberExpr *ME);
   void VisitReturnStmt(ReturnStmt *RS);
-  void VisitScopeEnd(VarDecl *VD, SourceLocation SL);
+  void VisitLifetimeEnds(VarDecl *VD, SourceLocation SL);
   void VisitStmt(Stmt *S);
   void VisitUnaryOperator(UnaryOperator *UO);
 
@@ -2025,7 +2025,7 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   }
 }
 
-void TransferFunctions::VisitScopeEnd(VarDecl *VD, SourceLocation SL) {
+void TransferFunctions::VisitLifetimeEnds(VarDecl *VD, SourceLocation SL) {
   // don't check memory leak of an owned struct type variable
   if (VD->getType().getTypePtr()->isOwnedStructureType())
     return;
@@ -2226,10 +2226,10 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
       }
     }
 
-    if (elem.getAs<CFGScopeEnd>()) {
-      const Stmt *S = elem.castAs<CFGScopeEnd>().getTriggerStmt();
-      const VarDecl *VD = elem.castAs<CFGScopeEnd>().getVarDecl();
-      TF.VisitScopeEnd(const_cast<VarDecl *>(VD), S->getEndLoc());
+    if (elem.getAs<CFGLifetimeEnds>()) {
+      const Stmt *S = elem.castAs<CFGLifetimeEnds>().getTriggerStmt();
+      const VarDecl *VD = elem.castAs<CFGLifetimeEnds>().getVarDecl();
+      TF.VisitLifetimeEnds(const_cast<VarDecl *>(VD), S->getEndLoc());
     }
   }
 
