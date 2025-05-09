@@ -12,8 +12,9 @@
 
 #if ENABLE_BSC
 
-#include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::borrow;
@@ -543,22 +544,21 @@ void ActionExtract::VisitInitListExpr(InitListExpr *ILE) {
 
 void ActionExtract::VisitMemberExpr(MemberExpr *ME) {
   if (op == LHS) {
-    bool oldIsArrow = isArrow;
+    llvm::SaveAndRestore<bool> save_is_arrow(isArrow);
     isArrow = ME->isArrow();
     Visit(ME->getBase());
     std::unique_ptr<Path> Member = std::make_unique<Path>(
         std::move(Dest), ME->getMemberNameInfo().getAsString(), ME->getType(),
         ME->getMemberLoc());
-    if (oldIsArrow) {
+    if (save_is_arrow.get()) {
       Member = std::make_unique<Path>(std::move(Member), "*",
                                       ME->getType()->getPointeeType(),
                                       ME->getMemberLoc());
     }
-    isArrow = oldIsArrow;
     Dest = std::move(Member);
   } else if (op == RHS) {
     ++pathDepth;
-    bool oldIsArrow = isArrow;
+    llvm::SaveAndRestore<bool> save_is_arrow(isArrow);
     isArrow = ME->isArrow();
     Visit(ME->getBase());
     std::unique_ptr<Path> Member = std::make_unique<Path>(
@@ -567,12 +567,11 @@ void ActionExtract::VisitMemberExpr(MemberExpr *ME) {
     if (ME->getType().isBorrowQualified()) {
       Member->setDecl(D);
     }
-    if (oldIsArrow) {
+    if (save_is_arrow.get()) {
       Member = std::make_unique<Path>(std::move(Member), "*",
                                       ME->getType()->getPointeeType(),
                                       ME->getMemberLoc());
     }
-    isArrow = oldIsArrow;
     Src = std::move(Member);
     --pathDepth;
     if (pathDepth == 0)
