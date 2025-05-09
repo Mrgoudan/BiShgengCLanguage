@@ -26,7 +26,7 @@ owned struct D {
 
 owned struct E {
     int f(E* this) { return 0; } 
-    int f1(E* this) { return f(this); } // expected-warning {{call to undeclared function 'f'; ISO C99 and later do not support implicit function declarations}}
+    int f1(E* this) { return f(this); } // expected-error {{use of undeclared identifier 'f'}}
 };
 
 owned struct F {
@@ -39,5 +39,5 @@ int F::f(F* this) {
 }
 
 int F::f1(F* this) {
-    return f(this); // expected-warning {{call to undeclared function 'f'; ISO C99 and later do not support implicit function declarations}}
+    return f(this); // expected-error {{use of undeclared identifier 'f'}}
 }

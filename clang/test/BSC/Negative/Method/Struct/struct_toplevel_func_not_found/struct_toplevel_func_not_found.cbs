@@ -7,6 +7,6 @@ void struct F::increase(struct F* this) {
 }
 
 int main() {
-    increase(); // expected-warning {{call to undeclared function 'increase'; ISO C99 and later do not support implicit function declarations}}
+    increase(); //expected-error {{use of undeclared identifier 'increase'}}
     return 0;
 }

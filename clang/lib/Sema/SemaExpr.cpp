@@ -2571,17 +2571,6 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
       TemplateArgs);
 }
 
-static bool IsFunctionTemplateScope(const Scope *S) {
-  if (S && S->isFunctionScope()) {
-    const DeclContext *DC = S->getEntity();
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
-      if (FD->getDescribedFunctionTemplate())
-        return true;
-    }
-  }
-  return false;
-}
-
 ExprResult
 Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                         SourceLocation TemplateKWLoc, UnqualifiedId &Id,
@@ -2709,11 +2698,7 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 // functions.
 #endif
   if (R.empty() && HasTrailingLParen && II &&
-      (getLangOpts().implicitFunctionsAllowed())
-#if ENABLE_BSC
-      && !(getLangOpts().BSC && (!T.isNull() || IsFunctionTemplateScope(S)))
-#endif
-  ) {
+      (getLangOpts().implicitFunctionsAllowed())) {
     NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *II, S);
     if (D) R.addDecl(D);
   }

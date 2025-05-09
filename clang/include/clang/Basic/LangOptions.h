@@ -558,7 +558,13 @@ public:
   /// Returns true if implicit function declarations are allowed in the current
   /// language mode.
   bool implicitFunctionsAllowed() const {
-    return !requiresStrictPrototypes() && !OpenCL;
+    return !requiresStrictPrototypes() && !OpenCL
+    #if ENABLE_BSC
+    //Bisheng C disallow impllicit function declarations to strengthen safety and
+    //relibility. 
+      && !BSC
+    #endif
+    ;
   }
 
   /// Returns true if implicit int is part of the language requirements.
