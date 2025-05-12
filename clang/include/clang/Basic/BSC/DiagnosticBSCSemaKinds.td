@@ -77,6 +77,7 @@ def err_borrow_qualcheck_compare : Error<
   "incompatible borrow types, %0 and %1 cannot be compared">;
 def err_typecheck_borrow_func : Error<"no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified">;
 def err_typecheck_borrow_subscript : Error<"subscript of borrow pointer is not allowed">;
+def err_owned_and_borrow_conflict : Error<"cannot combine 'owned' and 'borrow' qualifiers on the same type">;
 
 
 // BSC trait warnings and errors.

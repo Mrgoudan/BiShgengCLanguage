@@ -1999,10 +1999,15 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     Qs.removeVolatile();
   }
 #if ENABLE_BSC
-  if (getLangOpts().BSC && Qs.hasBorrow()) {
-    if (!T->isPointerType())
+  if (getLangOpts().BSC) {
+    if (Qs.hasBorrow() && Qs.hasOwned()) {
+      Diag(Loc, diag::err_owned_and_borrow_conflict);
+    }
+    if (Qs.hasBorrow() && !T->isPointerType()) {
       Diag(DS ? DS->getBorrowSpecLoc() : Loc,
-           diag::err_typecheck_invalid_borrow_not_pointer) << T;
+           diag::err_typecheck_invalid_borrow_not_pointer)
+          << T;
+    }
   }
 #endif
 
