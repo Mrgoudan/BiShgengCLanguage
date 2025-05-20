@@ -1,0 +1,38 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+
+#include <stdlib.h>
+#include <errno.h>
+#include "a.hbs"
+
+int main(void) {
+  S<int> s = { .a = 1, .b = 2 };
+  int x = S<int>::member(&s);
+  fooA();
+  return 0;
+}
+
+// CHECK:      #include "bsc.h"
+// CHECK-NEXT: #include <complex.h>
+// CHECK-NEXT: #include <errno.h>
+// CHECK-NEXT: #include <stdio.h>
+// CHECK-NEXT: #include <stdlib.h>
+
+// CHECK:      static int GenericB_int(int t);
+
+// CHECK:      static void fooA(void) {
+// CHECK-NEXT:   (void)GenericB_int(2);
+// CHECK-NEXT: }
+
+// CHECK:      int main(void) {
+// CHECK-NEXT:   struct S_int s = {.a = 1, .b = 2};
+// CHECK-NEXT:   int x = struct_S_int_member(&s);
+// CHECK-NEXT:   fooA();
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }
+
+// CHECK:      static int GenericB_int(int t) {
+// CHECK-NEXT:   return t;
+// CHECK-NEXT: }

@@ -1,0 +1,72 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+
+#include <stdlib.h>
+#include <errno.h>
+#include "a.h"
+#include "c.h"
+
+void bar() {
+  struct N n = { 1, 2 };
+  struct M m = { NULL, n };
+}
+
+int main(void) {
+  bar();
+  S<int> s = { .a = 1, .b = 2 };
+  int x = S<int>::member(&s);
+  fooA();
+  return 0;
+}
+
+// CHECK:      #include "d.h"
+// CHECK-NEXT: #include <complex.h>
+// CHECK-NEXT: #include <errno.h>
+// CHECK-NEXT: #include <math.h>
+// CHECK-NEXT: #include <stdio.h>
+// CHECK-NEXT: #include <stdlib.h>
+
+// CHECK:      struct S_int;
+// CHECK-NEXT: struct M;
+// CHECK-NEXT: struct S_int {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+
+// CHECK:      struct M {
+// CHECK-NEXT:   int *p;
+// CHECK-NEXT:   struct N n;
+// CHECK-NEXT: };
+
+// CHECK:      static int struct_S_int_member(struct S_int *this);
+
+// CHECK:      static int GenericB_int(int t);
+
+// CHECK:      static void fooA(void) {
+// CHECK-NEXT:   (void)GenericB_int(2);
+// CHECK-NEXT: }
+
+// CHECK:      void bar() {
+// CHECK-NEXT:   struct N n = { 1, 2 };
+// CHECK-NEXT:   struct M m = { NULL, n };
+// CHECK-NEXT: }
+
+// CHECK:      int main(void) {
+// CHECK-NEXT:   bar();
+// CHECK-NEXT:   struct S_int s = {.a = 1, .b = 2};
+// CHECK-NEXT:   int x = struct_S_int_member(&s);
+// CHECK-NEXT:   fooA();
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }
+
+// CHECK:      static int struct_S_int_member(struct S_int *this) {
+// CHECK-NEXT:   return this->a;
+// CHECK-NEXT: }
+
+// CHECK:      static int GenericB_int(int t) {
+// CHECK-NEXT:   return t;
+// CHECK-NEXT: }

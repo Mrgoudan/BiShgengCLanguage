@@ -1498,7 +1498,7 @@ public:
     return Filename.equals("<scratch space>");
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// Returns whether \p Loc is located in a hbs file.
   bool isWrittenInHBSFile(SourceLocation Loc) const {
     PresumedLoc Presumed = getPresumedLoc(Loc);
@@ -1507,7 +1507,7 @@ public:
     StringRef Filename(Presumed.getFilename());
     return Filename.endswith(".hbs");
   }
-  #endif
+#endif
 
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {

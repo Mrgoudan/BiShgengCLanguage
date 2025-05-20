@@ -1,0 +1,57 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -I %S -o %t-rw.output
+// RUN: %t-rw.output
+
+#include <stdio.h>
+#include <math.h>
+#include "level1.h"
+
+int main(void) {
+  bsc_func1<int>(1);
+  bsc_func1<float>(1.0);
+  return 0;
+}
+
+// CHECK:      #include "level3.h"
+// CHECK-NEXT: #include <assert.h>
+// CHECK-NEXT: #include <errno.h>
+// CHECK-NEXT: #include <math.h>
+// CHECK-NEXT: #include <stdio.h>
+// CHECK-NEXT: #include <stdlib.h>
+
+// CHECK:      struct S_int;
+// CHECK-NEXT: struct S_float;
+// CHECK-NEXT: struct S_int {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+
+// CHECK:      struct S_float {
+// CHECK-NEXT:   float a;
+// CHECK-NEXT:   float b;
+// CHECK-NEXT: };
+
+// CHECK:      static struct S_int bsc_func1_int(int t);
+
+// CHECK:      static struct S_float bsc_func1_float(float t);
+
+// CHECK:      void level2_func1();
+
+// CHECK:      void level2_func0();
+
+// CHECK:      int main(void) {
+// CHECK-NEXT:   bsc_func1_int(1);
+// CHECK-NEXT:   bsc_func1_float(1.);
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }
+
+// CHECK:      static struct S_int bsc_func1_int(int t) {
+// CHECK-NEXT:   struct S_int local = {t, t};
+// CHECK-NEXT:   return local;
+// CHECK-NEXT: }
+
+// CHECK:      static struct S_float bsc_func1_float(float t) {
+// CHECK-NEXT:   struct S_float local = {t, t};
+// CHECK-NEXT:   return local;
+// CHECK-NEXT: }

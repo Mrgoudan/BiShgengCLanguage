@@ -1,0 +1,10 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "rewrite_bsc_generic_header.hbs"
+
+int main(void) {
+  int maximum = max<int, int>(2, 3);
+  return 0;
+}

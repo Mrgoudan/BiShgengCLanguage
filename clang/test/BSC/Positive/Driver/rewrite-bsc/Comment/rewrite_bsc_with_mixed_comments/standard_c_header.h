@@ -1,0 +1,4 @@
+#ifndef STANDARD_C_HEADER_H
+#define STANDARD_C_HEADER_H
+
+#endif

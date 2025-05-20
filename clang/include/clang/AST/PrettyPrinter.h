@@ -76,9 +76,9 @@ struct PrintingPolicy {
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true)
-        #if ENABLE_BSC
+#if ENABLE_BSC
         , RewriteBSC(false), FunctionDeclarationOnly(false)
-        #endif
+#endif
         {
   }
 
@@ -92,14 +92,14 @@ struct PrintingPolicy {
     UseVoidForZeroParams = false;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// Adjust this printing policy for rewriting BSC code to C doe.
   void adjustForRewritingBSC() {
     Bool = false;
     RewriteBSC = true;
     PrintCanonicalTypes = true;
   }
-  #endif
+#endif
 
   /// The number of spaces to use to indent each line.
   unsigned Indentation : 8;
@@ -291,9 +291,9 @@ struct PrintingPolicy {
   /// Whether to print an InjectedTraitNameType with template arguments or as
   /// written. When a template argument is unnamed, printing it results in
   /// invalid BSC code.
-  #if ENABLE_BSC
+#if ENABLE_BSC
   unsigned PrintInjectedTraitNameWithArguments : 1;
-  #endif
+#endif
 
   /// Whether to use C++ template preferred_name attributes when printing
   /// templates.
@@ -316,14 +316,14 @@ struct PrintingPolicy {
   /// enumerator name or via cast of an integer.
   unsigned UseEnumerators : 1;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   /// Whether rewriting BSC source code to C source code.
   unsigned RewriteBSC : 1;
 
   /// Whether printing function declaration only while rewriting BSC source
   /// code.
   unsigned FunctionDeclarationOnly : 1;
-  #endif
+#endif
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

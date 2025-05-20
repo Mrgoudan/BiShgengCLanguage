@@ -23,28 +23,6 @@
 
 using namespace clang;
 
-//------------------------- Common static functions -------------------------//
-
-/// EndsWith - Check if a string ends with a given suffix.
-static bool EndsWith(const std::string &str, const std::string &suffix) {
-  if (str.length() >= suffix.length()) {
-    return 0 ==
-           str.compare(str.length() - suffix.length(), suffix.length(), suffix);
-  }
-  return false;
-}
-
-/// IsInStandardHeaderFile - Check whether a SourceLocation is in standard
-/// header file.
-static bool IsInStandardHeaderFile(const SourceManager *SM,
-                                   const SourceLocation &Loc) {
-  bool isInMainFile = SM->isWrittenInMainFile(SM->getSpellingLoc(Loc)) ||
-                      SM->isWrittenInMainFile(SM->getExpansionLoc(Loc));
-  bool isInHBSFile = SM->isWrittenInHBSFile(SM->getSpellingLoc(Loc)) ||
-                     SM->isWrittenInHBSFile(SM->getExpansionLoc(Loc));
-  return !isInMainFile && !isInHBSFile;
-}
-
 namespace {
 
 //----------------- Topological sorting of type definitions -----------------//
@@ -188,11 +166,11 @@ private:
 
   llvm::SmallPtrSet<Decl *, 16> DeclsWithoutBSCFeature;
 
-  // avoid repeatedly include of header files.
+  // Avoid repeatedly include of header files.
   std::set<std::string> IncludedHeaders;
 
-  /// Save rewritten decls to aviod rewritting one decl twice.
-  std::vector<Decl *> RewrittenDecls;
+  // Record all FileIDs of bishengc files.
+  std::set<FileID> BSCFiles;
 
   // Save all rewritten texts.
   std::string SStr;
@@ -201,8 +179,9 @@ private:
   void CollectIncludes();
   void CollectIncludesInFile(FileID FID);
   void FindDeclsWithoutBSCFeature();
+  bool IsInStandardHeaderFile(SourceLocation Loc);
   void PrintDebugLineInfo(Decl *D);
-  std::set<FileID> RetrieveFileIDsFromIncludeStack(const Decl *D);
+  void ResolveFileIDsFromIncludeStack(const Decl *D);
   void RewriteMacroDirectives();
   void RewriteDecls();
   void RewriteRecordDeclaration(std::vector<Decl *> &DeclList);
@@ -325,20 +304,16 @@ void RewriteBSC::HandleTranslationUnit(ASTContext &C) {
 
 /// CollectIncludes - Collect all include macro directives in hbs and cbs files.
 void RewriteBSC::CollectIncludes() {
-  // Collect include directives written in cbs file.
-  CollectIncludesInFile(MainFileID);
-
-  std::set<FileID> ProcessedFiles = {MainFileID};
-  // Collect include directives written in hbs files which are included by cbs
-  // file directly or indirectly.
+  // Traverse all Decls in the TranslationUnit, and collect all the hbs and cbs
+  // files that need to be processed by resolving the include stack.
   for (const Decl *D : TUDecl->decls()) {
-    std::set<FileID> FIDs = RetrieveFileIDsFromIncludeStack(D);
-    for (FileID FID : FIDs) {
-      if (ProcessedFiles.find(FID) == ProcessedFiles.end()) {
-        CollectIncludesInFile(FID);
-        ProcessedFiles.insert(FID);
-      }
-    }
+    ResolveFileIDsFromIncludeStack(D);
+  }
+
+  // Collect include directives written in cbs file and hbs files which are
+  // included by cbs file directly or indirectly.
+  for (const FileID &FID : BSCFiles) {
+    CollectIncludesInFile(FID);
   }
 
   // Insert all the include directives into the output stream.
@@ -403,11 +378,23 @@ void RewriteBSC::CollectIncludesInFile(FileID FID) {
               return;
           }
           Header += *it;
+          StringRef HeaderRef = StringRef(Header).substr(1, Header.size() - 2);
           // If the included file is a hbs file, we just ignore it.
           // Otherwise, we reserve it.
-          if (!EndsWith(Header, ".hbs\"") && !EndsWith(Header, ".hbs>")) {
-            IncludedHeaders.insert(Header);
+          bool NotFound = true;
+          for (const FileID &fid : BSCFiles) {
+            const FileEntry *FE = SM->getFileEntryForID(fid);
+
+            if (!FE)
+              continue;
+
+            if (FE->getName().endswith(HeaderRef)) {
+              NotFound = false;
+              break;
+            }
           }
+          if (NotFound)
+            IncludedHeaders.insert(Header);
         }
       }
     }
@@ -417,7 +404,7 @@ void RewriteBSC::CollectIncludesInFile(FileID FID) {
 void RewriteBSC::FindDeclsWithoutBSCFeature() {
   BSCFeatureFinder finder = BSCFeatureFinder(*Context);
   for (Decl *D : TUDecl->decls()) {
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     switch (D->getKind()) {
@@ -436,6 +423,11 @@ void RewriteBSC::FindDeclsWithoutBSCFeature() {
   }
 }
 
+bool RewriteBSC::IsInStandardHeaderFile(SourceLocation Loc) {
+  FileID FID = SM->getFileID(SM->getFileLoc(Loc));
+  return BSCFiles.find(FID) == BSCFiles.end();
+}
+
 /// PrintDebugLineInfo - Print debug line info for each declaration.
 /// The debug info is composed of a `#line` macro directive, which contains
 /// the original line number and file name of the start of the declaration.
@@ -449,27 +441,31 @@ void RewriteBSC::PrintDebugLineInfo(Decl *D) {
       << "\"\n";
 }
 
-/// RetrieveFileIDsFromIncludeStack - For a given declaration, it has a include
+/// ResolveFileIDsFromIncludeStack - For a given declaration, it has a include
 /// stack. Because we want to collect include macro directives in hbs files,
-/// we search the stack for hbs files, record them and return.
-std::set<FileID> RewriteBSC::RetrieveFileIDsFromIncludeStack(const Decl *D) {
+/// we search the stack for hbs files, record them and save in BSCFiles.
+void RewriteBSC::ResolveFileIDsFromIncludeStack(const Decl *D) {
   // Get the FileID of D.
   FileID CurFileID = SM->getFileID(SM->getSpellingLoc(D->getLocation()));
   FileID PrevFileID = CurFileID;
   std::set<FileID> FIDs;
+  bool IsHBSFile = false;
 
   if (CurFileID.isInvalid())
-    return FIDs;
+    return;
 
   while (true) {
     const FileEntry *CurFileEntry = SM->getFileEntryForID(CurFileID);
     if (!CurFileEntry)
       break;
-    // Because hbs file can only be included by hbs file, c file and cbs file.
     if (CurFileEntry->getName().endswith(".cbs") ||
-        CurFileEntry->getName().endswith(".c"))
+        CurFileEntry->getName().endswith(".c")) {
+      FIDs.insert(CurFileID);
       break;
-    if (CurFileEntry->getName().endswith(".hbs")) {
+    }
+    if (CurFileEntry->getName().endswith(".hbs") ||
+        SM->getBufferData(CurFileID).startswith("#pragma bsc") || IsHBSFile) {
+      IsHBSFile |= true;
       FIDs.insert(CurFileID);
     }
 
@@ -481,7 +477,7 @@ std::set<FileID> RewriteBSC::RetrieveFileIDsFromIncludeStack(const Decl *D) {
     CurFileID = SM->getFileID(IncludeLoc);
   }
 
-  return FIDs;
+  BSCFiles.insert(FIDs.begin(), FIDs.end());
 }
 
 /// RewriteMacroDirectives - This is called for rewriting all macro directives
@@ -504,8 +500,7 @@ void RewriteBSC::RewriteMacroDirectives() {
     if (MD && MD->isDefined()) {
       MacroInfo *MI = MD->getMacroInfo();
       SourceLocation MacroLoc = MI->getDefinitionLoc();
-      if (!IsInStandardHeaderFile(SM, MacroLoc) &&
-          !MI->isUsedForHeaderGuard() &&
+      if (!IsInStandardHeaderFile(MacroLoc) && !MI->isUsedForHeaderGuard() &&
           !MacrosSet.count(id_macro_pair(I->first, MI))) {
         MacrosSet.insert(id_macro_pair(I->first, MI));
         const char *startBuf = SM->getCharacterData(MacroLoc);
@@ -587,7 +582,7 @@ void RewriteBSC::RewriteDecls() {
 void RewriteBSC::RewriteRecordDeclaration(std::vector<Decl *> &DeclList) {
   for (Decl *D : TUDecl->decls()) {
     // Skip declarations in header files with suffix .h.
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     switch (D->getKind()) {
@@ -638,7 +633,7 @@ void RewriteBSC::RewriteRecordDeclaration(std::vector<Decl *> &DeclList) {
 void RewriteBSC::RewriteTypedefAndEnum(std::vector<Decl *> &DeclList) {
   for (Decl *D : TUDecl->decls()) {
     // Skip declarations in header files with suffix .h.
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     switch (D->getKind()) {
@@ -679,7 +674,7 @@ void RewriteBSC::RewriteTypeDefinitions(std::vector<Decl *> &DeclList) {
 
   std::vector<RecordDecl *> sorted = TDV.Sort();
   for (RecordDecl *D : sorted) {
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     // Skip nested RecordDecl.
@@ -694,7 +689,7 @@ void RewriteBSC::RewriteInstantFunctionDecl(
     std::vector<Decl *> &DeclList,
     std::set<Decl *> &RewritedFunctionDeclarationSet) {
   for (Decl *D : TUDecl->decls()) {
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     switch (D->getKind()) {
@@ -767,7 +762,7 @@ void RewriteBSC::RewriteInstantFunctionDecl(
 
 void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
   for (Decl *D : TUDecl->decls()) {
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     switch (D->getKind()) {
@@ -833,7 +828,7 @@ void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
 
 void RewriteBSC::RewriteInstantFunctionDef(std::vector<Decl *> &DeclList) {
   for (Decl *D : TUDecl->decls()) {
-    if (IsInStandardHeaderFile(SM, D->getLocation())) {
+    if (IsInStandardHeaderFile(D->getLocation())) {
       continue;
     }
     switch (D->getKind()) {
