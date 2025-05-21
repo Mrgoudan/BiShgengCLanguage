@@ -2192,11 +2192,15 @@ clang -rewrite-bsc boo.cbs foo.cbs
 对于源源变换，还有以下几点需要说明和注意：
 
 1. 使用源源变换模式进行编译时，编译器同样会像普通编译模式下那样先对要变换的文件进行词法、语法、语义的检查，对文件中的错误会编译报错，并且不会进行源源变换生成 C 文件。只有能正确通过编译的文件才会在源源变换模式下生成对应的 C 文件。
-2. 对于非 cbs 后缀文件使用 -rewrite-bsc 选项，该选项会被忽略，并报如下 warning 。
+2. 对于非 cbs 后缀文件使用 -rewrite-bsc 选项，该选项会被忽略（除非添加`-x bsc`将文件按照毕昇 C 进行处理），并报如下 warning 。
     ```shell
     warning: ignoring '-rewrite-bsc' option because rewriting input type 'c' is not supported [-Woption-ignored]
     ```
 3. 只需要对毕昇 C 源文件（cbs 文件）进行源源变换，不需要对毕昇 C 头文件（hbs 文件）进行变换。源源变换生成的 C 文件在后续编译时不再依赖任何 hbs 文件，原先 cbs 文件中依赖的 hbs 文件中的内容已经包含在了生成的 C 文件中。因此，可以直接编译生成的 C 文件并生成二进制代码。
+4. 源源变换严格区分标准 C 头文件和 hbs 文件，但为方便用户使用，并不要求所有的 hbs 文件后缀名都为 .hbs。具体的区分规则为：
+   - 以 .hbs 为后缀的是 hbs 文件
+   - 以 .h 为后缀的头文件，且文件的第一行为`#pragma bsc`，则该文件也被视为 hbs 文件
+   - 以 .h 为后缀的头文件，且该文件直接或间接包含了 hbs 文件，则该文件也被视为 hbs 文件
 
 ### 目标文件结构
 
@@ -2213,9 +2217,9 @@ clang -rewrite-bsc boo.cbs foo.cbs
     } MSG;
     
     // 生成的 C 文件中：
-    typedef struct MSG MSG;
+    typedef struct _TD_MSG MSG;
     
-    struct MSG {
+    struct _TD_MSG {
         char *buf;
         int len;
     };
