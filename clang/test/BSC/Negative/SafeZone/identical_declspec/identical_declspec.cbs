@@ -5,11 +5,11 @@ safe int add(int x, int y) {  // expected-error {{conflicting types for 'add'}}
   return x + y;
 }
 
-safe int g_a;   // expected-error {{'safe' can only appear before on function or compound statement}}
-safe struct b {  // expected-error {{'safe' can only appear before on function or compound statement}}
+safe int g_a;   // expected-error {{'safe' can only appear before on function or statement or parenthesized expression}}
+safe struct b {  // expected-error {{'safe' can only appear before on function or statement or parenthesized expression}}
   int a;
 };
-safe enum c {   // expected-error {{'safe' can only appear before on function or compound statement}}
+safe enum c {   // expected-error {{'safe' can only appear before on function or statement or parenthesized expression}}
   TA,
   TB,
   TC
@@ -35,6 +35,7 @@ int (*pfun)(int x, int y);
 int main() {
   unsafe int (*qq)(int x, int y); // expected-note {{previous definition is here}}
   safe int (*qq)(int x, int y);   // expected-error {{redefinition of 'qq' with a different type: 'safe int (*)(int, int)' vs 'int (*)(int, int)'}}
+                                  // expected-error@-1 {{uninitialized declarator is forbidden in the safe zone}}
 
   sapfun = safun;
   sapfun = unfun;   // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int, int)' from 'int (int, int)'}}

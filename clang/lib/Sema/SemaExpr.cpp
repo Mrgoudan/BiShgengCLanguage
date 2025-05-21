@@ -7105,14 +7105,6 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   #if ENABLE_BSC
   if (getLangOpts().BSC) {
-    // unsafe function call is forbidden in the safe zone
-    if ((IsInSafeZone()) &&
-        (Fn->getType()->checkFunctionProtoType(SZ_None) ||
-         Fn->getType()->checkFunctionProtoType(SZ_Unsafe))) {
-      Diag(Fn->getBeginLoc(), diag::err_unsafe_action)
-          << "unsafe function call";
-    }
-    //
     // This branch is for attempting to parse a function-call
     // in the body of template function. Such as:
     // @Code:
@@ -7498,7 +7490,16 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     // Keep flag unchanged in transformation.
     TheCall->getCallee()->IsDesugaredBSCMethodCall = Fn->IsDesugaredBSCMethodCall;
     TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
-    #endif
+    if (getLangOpts().BSC) {
+      // unsafe function call is forbidden in the safe zone
+      if ((IsInSafeZone()) &&
+          (Fn->getType()->checkFunctionProtoType(SZ_None) ||
+           Fn->getType()->checkFunctionProtoType(SZ_Unsafe))) {
+        Diag(Fn->getBeginLoc(), diag::err_unsafe_action)
+            << "unsafe function call";
+      }
+    }
+#endif
   }
 
   if (!Context.isDependenceAllowed()) {

@@ -16,14 +16,17 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #if ENABLE_BSC
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include <stack>
 #endif
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include <cassert>
+#if ENABLE_BSC
+#include <stack>
+#endif
 
 namespace llvm {
 
@@ -233,6 +236,7 @@ private:
 #if ENABLE_BSC
   SafeZoneSpecifier SafeZoneSpec;
   SafeZoneSource SafeZoneSrc;
+  SourceLocation SafeZoneLoc;
 #endif
 
 public:
@@ -281,9 +285,13 @@ public:
   void setScopeSafeZoneSource(SafeZoneSource SafeZoneSrc) {
     const_cast<Scope *>(this)->SafeZoneSrc = SafeZoneSrc;
   }
+  void setScopeSafeZoneLoc(SourceLocation SafeZoneLoc) {
+    const_cast<Scope *>(this)->SafeZoneLoc = SafeZoneLoc;
+  }
 
   SafeZoneSpecifier getScopeSafeZoneSpecifier() const { return SafeZoneSpec; }
   SafeZoneSource getScopeSafeZoneSource() const { return SafeZoneSrc; }
+  SourceLocation getScopeSafeZoneLoc() const { return SafeZoneLoc; }
 #endif
   // Set whether we're in the scope of a condition variable, where 'continue'
   // is disallowed despite being a continue scope.

@@ -325,12 +325,14 @@ Default:
     Token Next = NextToken();
     if (Next.is(tok::l_brace))
       return ParseCompoundStatement();
+    if (Next.is(tok::l_paren))
+      return ParseExprStatement(StmtCtx);
     if (Next.is(tok::kw_safe) || Next.is(tok::kw_unsafe)) {
       Diag(Next.getLocation(), diag::err_duplicate_declspec) << Tok.getKind();
       ConsumeToken();
       return StmtError();
     }
-    goto Default;
+    return ParseSafeStatement(StmtCtx);
   }
 #endif
 
@@ -1083,13 +1085,13 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ResetPreferInlineScopeToNone();
 
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
-
+  SourceLocation SafeZoneLoc;
   if (Tok.is(tok::kw_safe)) {
     SafeZoneSpec = SZ_Safe;
-    ConsumeToken();
+    SafeZoneLoc = ConsumeToken();
   } else if (Tok.is(tok::kw_unsafe)) {
     SafeZoneSpec = SZ_Unsafe;
-    ConsumeToken();
+    SafeZoneLoc = ConsumeToken();
   }
 #endif
 
@@ -1102,6 +1104,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   if (getCurScope() && SafeZoneSpec != SZ_None) {
     getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
     getCurScope()->setScopeSafeZoneSource(SZS_Compound);
+    getCurScope()->setScopeSafeZoneLoc(SafeZoneLoc);
   }
 #endif
   // Parse the statements in the body.

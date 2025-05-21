@@ -15471,6 +15471,10 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 
   case Expr::ParenExprClass:
     return CheckICE(cast<ParenExpr>(E)->getSubExpr(), Ctx);
+#if ENABLE_BSC
+  case Expr::SafeExprClass:
+    return CheckICE(cast<SafeExpr>(E)->getSubExpr(), Ctx);
+#endif
   case Expr::GenericSelectionExprClass:
     return CheckICE(cast<GenericSelectionExpr>(E)->getResultExpr(), Ctx);
   case Expr::IntegerLiteralClass:

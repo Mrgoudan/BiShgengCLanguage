@@ -23,7 +23,9 @@ int main()
     int b = 1;
   }
   safe safe int (*r)(int a);    // expected-error {{duplicate 'safe' declaration specifier}}
+                                // expected-error@-1 {{uninitialized declarator is forbidden in the safe zone}}
   unsafe safe int (*s)(int a);  // expected-error {{duplicate 'unsafe' declaration specifier}}
+                                // expected-error@-1 {{uninitialized declarator is forbidden in the safe zone}}
 
 return 0;
 }

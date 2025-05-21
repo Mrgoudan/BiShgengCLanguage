@@ -13,6 +13,7 @@
 
 #if ENABLE_BSC
 
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Parse/Parser.h"
 
 using namespace clang;
@@ -28,6 +29,50 @@ void Parser::CheckStmtTokInSafeZone(tok::TokenKind Kind) {
   default:
     break;
   }
+}
+struct ScopeSafeZoneInfo Parser::getCurScopeSafeZoneInfo() {
+  if (getCurScope()) {
+    return {getCurScope()->getScopeSafeZoneSpecifier(),
+            getCurScope()->getScopeSafeZoneSource(),
+            getCurScope()->getScopeSafeZoneLoc()};
+  }
+  return {SZ_None, SZS_Inherit, SourceLocation()};
+}
+
+void Parser::setCurScopeSafeZoneInfo(struct ScopeSafeZoneInfo SZ) {
+  if (getCurScope()) {
+    getCurScope()->setScopeSafeZoneSpecifier(SZ.SafeZoneSpec);
+    getCurScope()->setScopeSafeZoneSource(SZ.SafeZoneSrc);
+    getCurScope()->setScopeSafeZoneLoc(SZ.SafeZoneLoc);
+  }
+}
+
+/// ParseSafeExpression:In BSC grammar, use of the 'safe' or 'unsafe' keyword to
+/// modify statement is permitted, such as `safe int a = funcall()`.
+///
+/// safe-statement
+///   'safe' statement
+///   'unsafe' statement
+StmtResult Parser::ParseSafeStatement(ParsedStmtContext StmtCtx) {
+  SafeZoneSpecifier SafeZoneSpec = SZ_None;
+  SourceLocation SafeLoc;
+  if (Tok.is(tok::kw_safe)) {
+    SafeZoneSpec = SZ_Safe;
+    SafeLoc = ConsumeToken();
+  } else if (Tok.is(tok::kw_unsafe)) {
+    SafeZoneSpec = SZ_Unsafe;
+    SafeLoc = ConsumeToken();
+  }
+  struct ScopeSafeZoneInfo newInfo = {SafeZoneSpec, SZS_SafeStmt, SafeLoc};
+  struct ScopeSafeZoneInfo oldInfo = getCurScopeSafeZoneInfo();
+  setCurScopeSafeZoneInfo(newInfo);
+  StmtResult SubStmt = ParseStatement(nullptr, StmtCtx);
+  if (SubStmt.isInvalid())
+    SubStmt = Actions.ActOnNullStmt(SafeLoc);
+
+  StmtResult Stmt = Actions.ActOnSafeStmt(SafeLoc, SafeZoneSpec, SubStmt.get());
+  setCurScopeSafeZoneInfo(oldInfo);
+  return Stmt;
 }
 
 #endif

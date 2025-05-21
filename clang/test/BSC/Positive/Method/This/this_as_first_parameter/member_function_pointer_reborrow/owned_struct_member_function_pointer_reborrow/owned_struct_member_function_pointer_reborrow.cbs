@@ -18,9 +18,9 @@ T* owned safe_malloc<T>(T value);
 void free_owned<T>(T* owned p);
 
 T* owned safe_malloc<T>(T value) {
-  T * p = (T *) malloc( sizeof(T) );
-  *p = value;
-  return (T* owned)p;
+    T * p = (T *) malloc( sizeof(T) );
+    *p = value;
+    return (T* owned)p;
 }
 
 void free_owned<T>(T* owned p) {
@@ -54,7 +54,7 @@ safe int Bar::getC_2(const This* borrow this) {
 }
 
 safe void Bar::getD(This* owned this) {
-  free_owned<Bar>(this);
+  unsafe free_owned<Bar>(this);
 }
 
 void test_non_pointer_This_call_reborrow() {

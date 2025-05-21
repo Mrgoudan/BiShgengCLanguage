@@ -22,6 +22,7 @@
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/BSC/StmtBSC.h"
 #endif
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/DeclTemplate.h"
@@ -5125,6 +5126,12 @@ public:
                                       Stmt *SubStmt, Scope *CurScope);
   StmtResult ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
                             SourceLocation ColonLoc, Stmt *SubStmt);
+#if ENABLE_BSC
+  StmtResult ActOnSafeStmt(SourceLocation SafeZoneLoc,
+                           SafeZoneSpecifier safeZoneSpec, Stmt *SubStmt);
+  ExprResult ActOnSafeExpr(SourceLocation SafeZoneLoc,
+                           SafeZoneSpecifier safeZoneSpec, Expr *SubExpr);
+#endif
 
   StmtResult BuildAttributedStmt(SourceLocation AttrsLoc,
                                  ArrayRef<const Attr *> Attrs, Stmt *SubStmt);
@@ -12428,6 +12435,7 @@ public:
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;
   SafeZoneSpecifier getInstantiationSafeZoneSpecifier();
+  void setInstantiationSafeZoneSpecifier(SafeZoneSpecifier SZ);
   bool HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
                                                     QualType RHS);
   ExprResult CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, bool IsConstexpr);
@@ -12453,7 +12461,7 @@ public:
   bool CheckBSCOverloadedOperatorDeclaration(FunctionDecl *FnDecl);
   bool CheckIsUnsafeOverloadCall(Expr *Fn);
   bool FindSafeFeatures(const FunctionDecl* FnDecl);
-  bool HasSafeZoneInCompoundStmt(const CompoundStmt* CompStmt);
+  bool HasSafeZoneInStmt(const Stmt *CompStmt);
   bool HasSafeZoneInFunction(const FunctionDecl* FnDecl);
   void CheckMemberThisCallAccess(Expr *ActualArgExpr, QualType formalType);
   bool CheckNeedCastQualifiedType(QualType actualType, QualType formalType);

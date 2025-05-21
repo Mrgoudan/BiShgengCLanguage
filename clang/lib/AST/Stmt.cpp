@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/BSC/StmtBSC.h"
 #endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
@@ -226,6 +227,10 @@ const Stmt *Stmt::stripLabelLikeStatements() const {
       S = SC->getSubStmt();
     else if (const auto *AS = dyn_cast<AttributedStmt>(S))
       S = AS->getSubStmt();
+#if ENABLE_BSC
+    else if (const auto *SS = dyn_cast<SafeStmt>(S))
+      S = SS->getSubStmt();
+#endif
     else
       return S;
   }

@@ -122,18 +122,31 @@ bool Sema::FindSafeFeatures(const FunctionDecl* FnDecl) {
   return false;
 }
 
-bool Sema::HasSafeZoneInCompoundStmt(const CompoundStmt* CompStmt) {
+bool Sema::HasSafeZoneInStmt(const Stmt *CompStmt) {
   if (!CompStmt) {
     return false;
   }
   for (const Stmt *child: CompStmt->children()) {
+    if (!child) {
+      continue;
+    }
     if (auto *CompChild = dyn_cast<CompoundStmt>(child)) {
       if (CompChild->getCompSafeZoneSpecifier() == SZ_Safe) {
         return true;
       }
-      if (HasSafeZoneInCompoundStmt(CompChild)) {
+    }
+    if (auto *CompChild = dyn_cast<SafeStmt>(child)) {
+      if (CompChild->getSafeZoneSpecifier() == SZ_Safe) {
         return true;
       }
+    }
+    if (auto *CompChild = dyn_cast<SafeExpr>(child)) {
+      if (CompChild->getSafeZoneSpecifier() == SZ_Safe) {
+        return true;
+      }
+    }
+    if (HasSafeZoneInStmt(child)) {
+      return true;
     }
   }
   return false;
@@ -150,7 +163,7 @@ bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
   if (!FuncBody) {
     return false;
   }
-  return HasSafeZoneInCompoundStmt(FuncBody);
+  return HasSafeZoneInStmt(FuncBody);
 }
 
 /// BSC's dataflow analysis process is as follows:

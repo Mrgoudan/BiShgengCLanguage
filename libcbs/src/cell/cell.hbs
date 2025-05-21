@@ -10,7 +10,7 @@ struct Cell<T> {
 };
 
 safe Cell<T> Cell<T>::new(T value) {
-    _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
+    unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     Cell<T> cell = { .value = value };
     return cell;
 }
@@ -18,13 +18,13 @@ safe Cell<T> Cell<T>::new(T value) {
 // Return a copy of the contained value,
 // Here T should not be owned type, because borrow type cannot move ownership.
 safe T Cell<T>::get(const This * borrow this) {
-    _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
+    unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     return this->value;
 }
 
 // Replace the contained value by val.
 safe void Cell<T>::set(const This * borrow this, T val) {
-    _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
+    unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     unsafe {
         Cell<T> * borrow p = (Cell<T> * borrow)this;
         p->value = val;

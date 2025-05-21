@@ -7,9 +7,11 @@ safe void check_dereferenced_test1(void) {
     unsafe {
       int a = 2;
       *p = a;
+      safe *p = a; // expected-error {{nullable pointer cannot be dereferenced}}
     }
   }
-  *p = 5; // expected-error {{nullable pointer cannot be dereferenced}}
+  *p = 5;         // expected-error {{nullable pointer cannot be dereferenced}}
+  unsafe *p = 5;  // ok
 }
 void check_dereferenced_test2() {
   int *borrow _Nullable p = nullptr;
@@ -33,6 +35,15 @@ void check_dereferenced_test3() {
     }
     *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
   }
+}
+
+
+void check_dereferenced_test4() {
+  int *borrow _Nullable p = nullptr;
+  if (p != nullptr) {
+    safe *p = 5;
+  }
+  safe *p = 10;            // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
 safe void check_assigned_test(void) {

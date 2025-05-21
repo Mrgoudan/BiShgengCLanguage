@@ -438,6 +438,18 @@ sema::InsCompoundSafeZoneInfo &Sema::getCurInsCompoundSafeZone() const {
   return getCurFunction()->InsCompoundSafeZone.back();
 }
 
+void Sema::setInstantiationSafeZoneSpecifier(SafeZoneSpecifier SZ) {
+  if (getCurFunction()) {
+    if (getCurFunction()->InsCompoundSafeZone.size() == 0) {
+      if (CurrentInstantiationScope)
+        CurrentInstantiationScope->setScopeSafeZoneSpecifier(SZ);
+    } else {
+      PopInsSafeZone();
+      PushInsSafeZone(SZ);
+    }
+  }
+}
+
 SafeZoneSpecifier Sema::getInstantiationSafeZoneSpecifier() {
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   if (getCurFunction()) {

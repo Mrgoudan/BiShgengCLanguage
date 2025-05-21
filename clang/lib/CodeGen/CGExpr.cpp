@@ -24,6 +24,9 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/ExprBSC.h"
+#endif
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/Basic/Builtins.h"
@@ -1361,6 +1364,10 @@ LValue CodeGenFunction::EmitLValue(const Expr *E) {
   }
   case Expr::ParenExprClass:
     return EmitLValue(cast<ParenExpr>(E)->getSubExpr());
+#if ENABLE_BSC
+  case Expr::SafeExprClass:
+    return EmitLValue(cast<SafeExpr>(E)->getSubExpr());
+#endif
   case Expr::GenericSelectionExprClass:
     return EmitLValue(cast<GenericSelectionExpr>(E)->getResultExpr());
   case Expr::PredefinedExprClass:

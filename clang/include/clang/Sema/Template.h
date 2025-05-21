@@ -462,6 +462,7 @@ enum class TemplateSubstitutionKind : char {
     }
 #if ENABLE_BSC
     SafeZoneSpecifier getScopeSafeZoneSpecifier() const { return SafeZoneSpec; }
+    void setScopeSafeZoneSpecifier(SafeZoneSpecifier SZ) { SafeZoneSpec = SZ; }
 #endif
     /// Find the instantiation of the declaration D within the current
     /// instantiation scope.

@@ -116,7 +116,6 @@ def err_constexpr_if_cond_expr_unsupported_type : Error<
 def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
 def err_safe_function : Error<"%0 is forbidden in the safe function">;
-def err_safe_zone_decl : Error<"%select{|'safe'|'unsafe'}0 can only appear before on function or compound statement"> ;
 def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;
 
 // BSC owned struct

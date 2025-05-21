@@ -1060,6 +1060,9 @@ ExprResult Parser::ParseCastExpression(
                                isVectorLiteral, NotPrimaryExpression);
 
 #if ENABLE_BSC
+  case tok::kw_safe:
+  case tok::kw_unsafe:
+    return ParseSafeExpression();
   case tok::kw_union:
   case tok::kw_enum:
   case tok::kw_struct:

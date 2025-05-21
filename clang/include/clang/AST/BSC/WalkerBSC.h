@@ -265,6 +265,10 @@ public:
     return false;
   }
 
+  bool VisitSafeStmt(SafeStmt *SS) { return true; }
+
+  bool VisitSafeExpr(SafeExpr *SE) { return true; }
+
   bool VisitInitListExpr(InitListExpr *ILE) {
     if (VisitQualType(ILE->getType())) {
       return true;

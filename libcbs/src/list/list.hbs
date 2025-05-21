@@ -66,7 +66,7 @@ static void LinkedList<T>::unlink_node(LinkedList<T> * borrow this, _BSC_ListNod
 
 
 safe LinkedList<T> LinkedList<T>::new(void){
-    _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate LinkedList with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 				    "Fix: You can wrap T with an owned struct.");

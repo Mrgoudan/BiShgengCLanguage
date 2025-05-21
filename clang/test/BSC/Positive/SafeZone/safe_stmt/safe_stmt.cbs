@@ -1,0 +1,93 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+int *g_a;
+safe void test_safe_stmt1(void) {
+    int v = 1;
+    unsafe g_a = &v;
+    unsafe int *borrow a = &mut *g_a;
+    int b = *a;
+}
+
+safe void test_safe_stmt2(void) {
+    int v = 1;
+    unsafe g_a = &v;
+    int b = 0;
+    unsafe b = *g_a;
+}
+
+safe void test_safe_stmt3(void){
+    int v = 1;
+    unsafe g_a = &v;
+    unsafe for(int i = 0; i < 10; i++) {
+        int b = *g_a;
+    }
+}
+
+safe void test_safe_stmt4(void){
+    int v = 1;
+    unsafe g_a = &v;
+    unsafe for(int i = 0; i < 10; i++) {
+        int b = *g_a;
+        safe {
+            b = b + 1;
+            unsafe b++;
+        }
+    }
+}
+
+int main() {
+    test_safe_stmt1();
+    test_safe_stmt2();
+    test_safe_stmt3();
+    test_safe_stmt4();
+}
+
+// CHECK:      int *g_a;
+// CHECK-EMPTY: 
+// CHECK:      void test_safe_stmt1(void) {
+// CHECK-NEXT:     int v = 1;
+// CHECK-NEXT:     g_a = &v;
+// CHECK-NEXT:     int * a = &*g_a;
+// CHECK-NEXT:     int b = *a;
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      void test_safe_stmt2(void) {
+// CHECK-NEXT:     int v = 1;
+// CHECK-NEXT:     g_a = &v;
+// CHECK-NEXT:     int b = 0;
+// CHECK-NEXT:     b = *g_a;
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      void test_safe_stmt3(void) {
+// CHECK-NEXT:     int v = 1;
+// CHECK-NEXT:     g_a = &v;
+// CHECK-NEXT:     for (int i = 0; i < 10; i++) {
+// CHECK-NEXT:         int b = *g_a;
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      void test_safe_stmt4(void) {
+// CHECK-NEXT:     int v = 1;
+// CHECK-NEXT:     g_a = &v;
+// CHECK-NEXT:     for (int i = 0; i < 10; i++) {
+// CHECK-NEXT:         int b = *g_a;
+// CHECK-NEXT:         {
+// CHECK-NEXT:             b = b + 1;
+// CHECK-NEXT:             b++;
+// CHECK-NEXT:         }
+// CHECK-NEXT:     }
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      int main() {
+// CHECK-NEXT:     test_safe_stmt1();
+// CHECK-NEXT:     test_safe_stmt2();
+// CHECK-NEXT:     test_safe_stmt3();
+// CHECK-NEXT:     test_safe_stmt4();
+// CHECK-NEXT: }
+// CHECK-EMPTY:

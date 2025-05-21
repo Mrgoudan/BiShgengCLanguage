@@ -4,8 +4,8 @@ struct Foo {
   int a;
 };
 
-T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+safe T* owned safe_malloc<T>(T value);
+safe void free_owned<T>(T* owned p);
 
 safe int struct Foo::getA(This this) {
   return this.a;

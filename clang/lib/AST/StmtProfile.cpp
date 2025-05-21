@@ -259,6 +259,11 @@ void StmtProfiler::VisitLabelStmt(const LabelStmt *S) {
   VisitDecl(S->getDecl());
 }
 
+#if ENABLE_BSC
+void StmtProfiler::VisitSafeStmt(const SafeStmt *S) { VisitStmt(S); }
+void StmtProfiler::VisitSafeExpr(const SafeExpr *S) { VisitExpr(S); }
+#endif
+
 void StmtProfiler::VisitAttributedStmt(const AttributedStmt *S) {
   VisitStmt(S);
   // TODO: maybe visit attributes?

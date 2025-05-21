@@ -50,4 +50,16 @@ ExprResult Sema::CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, 
   }
   return CheckCXXBooleanCondition(CondExpr, IsConstexpr);
 }
+
+StmtResult Sema::ActOnSafeStmt(SourceLocation SafeZoneLoc,
+                               SafeZoneSpecifier safeZoneSpec, Stmt *SubStmt) {
+  SafeStmt *LS = new (Context) SafeStmt(SafeZoneLoc, safeZoneSpec, SubStmt);
+  return LS;
+}
+
+ExprResult Sema::ActOnSafeExpr(SourceLocation SafeZoneLoc,
+                               SafeZoneSpecifier safeZoneSpec, Expr *SubExpr) {
+  SafeExpr *LS = new (Context) SafeExpr(SafeZoneLoc, safeZoneSpec, SubExpr);
+  return LS;
+}
 #endif

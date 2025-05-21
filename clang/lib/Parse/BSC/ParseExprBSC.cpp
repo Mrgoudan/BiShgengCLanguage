@@ -14,6 +14,7 @@
 
 #include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 
 using namespace clang;
@@ -155,6 +156,46 @@ bool Parser::IsSupportedOverloadType(OverloadedOperatorKind Op) {
   default:
     return false;
   }
+}
+
+/// ParseSafeExpression:In BSC grammar, use of the 'safe' or 'unsafe' keyword to
+/// modify parenthetical expressions is permitted, such as `int a = safe
+/// (funcall())`.
+///
+/// safe-expression
+///   'safe' ParenExpression
+///   'unsafe' ParenExpression
+ExprResult Parser::ParseSafeExpression() {
+  SafeZoneSpecifier SafeZoneSpec = SZ_None;
+  SourceLocation SafeLoc;
+  if (Tok.is(tok::kw_safe)) {
+    SafeZoneSpec = SZ_Safe;
+    SafeLoc = ConsumeToken();
+  } else if (Tok.is(tok::kw_unsafe)) {
+    SafeZoneSpec = SZ_Unsafe;
+    SafeLoc = ConsumeToken();
+  }
+  if (Tok.isNot(tok::l_paren)) {
+    Diag(Tok, diag::err_expected_lparen_after) << "safe";
+    return ExprError();
+  }
+  struct ScopeSafeZoneInfo newInfo = {SafeZoneSpec, SZS_SafeStmt, SafeLoc};
+  struct ScopeSafeZoneInfo oldInfo = getCurScopeSafeZoneInfo();
+  setCurScopeSafeZoneInfo(newInfo);
+
+  ParenParseOption ParenExprType = SimpleExpr;
+  ParsedType CastTy;
+  SourceLocation RParenLoc;
+  ExprResult SubExpr =
+      ParseParenExpression(ParenExprType, false, false, CastTy, RParenLoc);
+  if (SubExpr.isInvalid()) {
+    setCurScopeSafeZoneInfo(oldInfo);
+    return ExprError();
+  }
+
+  ExprResult Expr = Actions.ActOnSafeExpr(SafeLoc, SafeZoneSpec, SubExpr.get());
+  setCurScopeSafeZoneInfo(oldInfo);
+  return Expr;
 }
 
 #endif // ENABLE_BSC

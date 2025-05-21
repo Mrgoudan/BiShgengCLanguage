@@ -1581,6 +1581,8 @@ public:
   }
 
   SafeZoneSpecifier getCompSafeZoneSpecifier() const { return SafeZoneSpec; }
+
+  void setCompSafeZoneSpecifier(SafeZoneSpecifier sz) { SafeZoneSpec = sz; }
 #endif
 
   SourceLocation getBeginLoc() const { return LBraceLoc; }

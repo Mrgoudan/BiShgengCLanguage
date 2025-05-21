@@ -5,8 +5,8 @@ owned struct Bar {
 public:
   int a;
 };
-T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+safe T* owned safe_malloc<T>(T value);
+safe void free_owned<T>(T* owned p);
 
 // T* owned safe_malloc<T>(T value) {
 //   T * p = (T *) malloc( sizeof(T) );

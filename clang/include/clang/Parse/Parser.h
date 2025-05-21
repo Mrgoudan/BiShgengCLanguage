@@ -2169,6 +2169,12 @@ private:
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
   StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
                                    ParsedStmtContext StmtCtx);
+#if ENABLE_BSC
+  StmtResult ParseSafeStatement(ParsedStmtContext StmtCtx);
+  ExprResult ParseSafeExpression();
+  struct ScopeSafeZoneInfo getCurScopeSafeZoneInfo();
+  void setCurScopeSafeZoneInfo(struct ScopeSafeZoneInfo SZ);
+#endif
   StmtResult ParseCaseStatement(ParsedStmtContext StmtCtx,
                                 bool MissingCase = false,
                                 ExprResult Expr = ExprResult());

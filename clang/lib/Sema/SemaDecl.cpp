@@ -6526,12 +6526,17 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
     QualType T = TInfo->getType();
     if (TryDesugarTrait(T))
       AddToScope = false;
-    // 'safe' or 'unsafe' can only appear before on function or compound
-    // statement
+    // 'safe' or 'unsafe' can only appear before on function or statement or
+    // parenthesized expression.
     if (D.getDeclSpec().getSafeZoneSpecifier() != SZ_None &&
-        !R->isFunctionPointerType() && !R->isFunctionType())
-      Diag(D.getDeclSpec().getSafeZoneSpecifierLoc(), diag::err_safe_zone_decl)
-          << D.getDeclSpec().getSafeZoneSpecifier();
+        !R->isFunctionPointerType() && !R->isFunctionType()) {
+      if (!getCurScope() ||
+          (getCurScope() &&
+           getCurScope()->getScopeSafeZoneSource() != SZS_SafeStmt))
+        Diag(D.getDeclSpec().getSafeZoneSpecifierLoc(),
+             diag::err_safe_zone_decl)
+            << D.getDeclSpec().getSafeZoneSpecifier();
+    }
   }
   #endif
   // If this has an identifier and is not a function template specialization,

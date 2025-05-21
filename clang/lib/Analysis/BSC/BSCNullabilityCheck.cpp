@@ -16,6 +16,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/AST/BSC/ExprBSC.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "llvm/ADT/DenseMap.h"
 #include "clang/AST/ParentMap.h"
@@ -258,6 +259,22 @@ bool TransferFunctions::IsStmtInSafeZone(Stmt *S) {
   while (ParentStmt) {
     if (auto *CS = dyn_cast<CompoundStmt>(ParentStmt)) {
       SafeZoneSpecifier SafeZoneSpec = CS->getCompSafeZoneSpecifier();
+      if (SafeZoneSpec == SZ_Safe) {
+        return true;
+      } else if (SafeZoneSpec == SZ_Unsafe) {
+        return false;
+      }
+    }
+    if (auto *SS = dyn_cast<SafeStmt>(ParentStmt)) {
+      SafeZoneSpecifier SafeZoneSpec = SS->getSafeZoneSpecifier();
+      if (SafeZoneSpec == SZ_Safe) {
+        return true;
+      } else if (SafeZoneSpec == SZ_Unsafe) {
+        return false;
+      }
+    }
+    if (auto *SE = dyn_cast<SafeExpr>(ParentStmt)) {
+      SafeZoneSpecifier SafeZoneSpec = SE->getSafeZoneSpecifier();
       if (SafeZoneSpec == SZ_Safe) {
         return true;
       } else if (SafeZoneSpec == SZ_Unsafe) {

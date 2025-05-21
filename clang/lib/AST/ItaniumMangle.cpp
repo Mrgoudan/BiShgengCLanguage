@@ -18,6 +18,7 @@
 #include "clang/AST/Attr.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
+#include "clang/AST/BSC/ExprBSC.h"
 #endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -4923,6 +4924,12 @@ recurse:
   case Expr::ParenExprClass:
     E = cast<ParenExpr>(E)->getSubExpr();
     goto recurse;
+
+#if ENABLE_BSC
+  case Expr::SafeExprClass:
+    E = cast<SafeExpr>(E)->getSubExpr();
+    goto recurse;
+#endif
 
   case Expr::ConceptSpecializationExprClass: {
     //  <expr-primary> ::= L <mangled-name> E # external name

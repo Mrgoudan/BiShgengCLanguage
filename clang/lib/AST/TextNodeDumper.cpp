@@ -2437,3 +2437,23 @@ void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
   if (S->hasStoredFPFeatures())
     printFPOptions(S->getStoredFPFeatures());
 }
+
+#if ENABLE_BSC
+void TextNodeDumper::VisitSafeStmt(const SafeStmt *SS) {
+  SafeZoneSpecifier SafeZoneSpec = SS->getSafeZoneSpecifier();
+  if (SafeZoneSpec == SZ_Safe) {
+    OS << " safe";
+  } else if (SafeZoneSpec == SZ_Unsafe) {
+    OS << " unsafe";
+  }
+}
+
+void TextNodeDumper::VisitSafeExpr(const SafeExpr *SE) {
+  SafeZoneSpecifier SafeZoneSpec = SE->getSafeZoneSpecifier();
+  if (SafeZoneSpec == SZ_Safe) {
+    OS << " safe";
+  } else if (SafeZoneSpec == SZ_Unsafe) {
+    OS << " unsafe";
+  }
+}
+#endif

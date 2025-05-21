@@ -3418,7 +3418,7 @@ void test() {
 
 c 语言有很多规则过于灵活，不方便编译器做静态检查。因此我们引入一个新语法，使得在一定范围内的毕昇 c 代码必须遵循更严格的约束，保证在这个范围内的代码肯定不会出现“内存安全”问题。
 
-允许用 safe/unsafe 关键字修饰一个代码块或者一个函数。
+允许用 safe/unsafe 关键字修饰函数、语句、括号表达式。
 
 - ​    unsafe 表示这段代码在非安全区，这部分代码遵循标准 c 的规定，同时这部分代码的安全性由用户保证。
 
@@ -3454,17 +3454,15 @@ safe void safe_free(FileID* owned p) {
 int main(void) {
   FileID* owned p1 = create();
   FileID* owned p2 = consume_and_return(p1);
-  // 使用 safe 修饰代码块，表示这段代码在安全区
-  safe {
-  	safe_free(p2);
-  }
+  // 使用 safe 修饰语句，表示这段代码在安全区
+  safe safe_free(p2);
   return 0;
 }
 ```
 
 #### 语法规则：
 
-1. 允许使用 safe/unsafe 修饰代码块、函数声明、函数签名、函数定义。
+1. 允许使用 safe/unsafe 修饰函数声明、函数签名、函数定义、函数指针、语句、括号表达式。
 
    ```c
    // 修饰函数签名
@@ -3477,36 +3475,39 @@ int main(void) {
    }
    // 修饰函数指针
    safe int (*p)(int, int);
-
-   int main() {
+   
+   safe int main(void) {
        safe {  // 修饰代码块
            int a = 1;
        }
        unsafe {
            int b = 1;
        }
+       // 修饰语句
+       safe int c = 1;
+       unsafe c++;
+       // 修饰括号表达式
+       char d = unsafe((char)c);
        return 0;
    }
    ```
 
-2. 不允许使用 safe/unsafe 修饰全局变量、类型声明、typedef 声明（允许修饰函数指针)、static_assert。
+2. 不允许使用 safe/unsafe 修饰全局变量、函数外类型声明、typedef 声明（允许修饰函数指针)。
 
    ```c
    #include <assert.h>
-
+   
    safe int g_a; // error: 不允许修饰全局变量
-   safe struct b {   // error: 不允许修饰类型声明
+   safe struct b {   // error: 不允许修饰函数外类型声明
        int a;
    };
    safe typedef int mm; // error: 不允许修饰 typedef
    safe typedef int (*p)(int a); // ok: 允许修饰函数指针
    int main() {
-       safe int a;  // error: 不允许修饰类型声明
-       safe static_assert(1, "error"); // error: 不允许修饰 static_assert
        return 0;
    }
    ```
-
+   
 3. safe 修饰的函数，参数类型和返回类型必须是 safe 类型。
 
    非 safe 类型包括：裸指针类型、union 类型、成员中包含不安全类型的 struct 类型、成员中包含不安全类型的数组类型。
@@ -3588,8 +3589,8 @@ int main(void) {
     ```c
     safe void test1(int a) {}
     safe void test2(void) {}
+    safe void (*p)(int a);
     int main() {
-    	safe void (*p)(int a);
     	p = test1; // ok
     	p = test2; // error: 参数类型不一致，不允许赋值
     }
@@ -3618,7 +3619,7 @@ int main(void) {
     }
     ```
 
-13. 安全区内允许再包含 unsafe 修饰的代码块、非安全区内也允许再包含 safe 修饰的代码块。
+13. 安全区内允许再包含 unsafe 修饰的语句、函数指针、括号表达式，非安全区内也允许再包含 safe 修饰的语句、函数指针、括号表达式。
 
     ```c
     int test1(int a, int b) {
@@ -3630,26 +3631,11 @@ int main(void) {
     int main() {
         safe {
             int a = 0;
+            unsafe a++;
             unsafe {
                 a = test1(1, 3);
-                safe {
-                    a = test2(3, 5);
-                }
+                safe a = test2(3, 5);
             }
-        }
-    }
-    ```
-
-14. 安全区内不允许使用标签和 goto 语句。
-
-    ```c
-    void test(int a) {
-        safe {
-            if (a < 10) {
-                goto error; // error: 安全区不允许使用 goto 语句
-            }
-            error:  // error: 安全区内不允许使用标签
-            return;
         }
     }
     ```

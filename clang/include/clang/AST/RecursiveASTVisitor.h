@@ -19,6 +19,7 @@
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/BSC/StmtBSC.h"
 #endif
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -2500,6 +2501,8 @@ DEF_TRAVERSE_STMT(ObjCForCollectionStmt, {})
 DEF_TRAVERSE_STMT(ObjCAutoreleasePoolStmt, {})
 #if ENABLE_BSC
 DEF_TRAVERSE_STMT(AwaitExpr, {})
+DEF_TRAVERSE_STMT(SafeExpr, {})
+DEF_TRAVERSE_STMT(SafeStmt, {})
 #endif
 
 DEF_TRAVERSE_STMT(CXXForRangeStmt, {

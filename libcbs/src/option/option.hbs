@@ -45,7 +45,7 @@ safe _Bool Option<T>::is_some(const Option<T>* borrow this) {
 
 // Creates a `Some` value.
 safe Option<T> Option<T>::Some(T t) {
-    _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Option with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
@@ -62,7 +62,7 @@ safe Option<T> Option<T>::Some(T t) {
 
 // Creates a `None` value.
 safe Option<T> Option<T>::None(void) {
-    _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Option with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 				    "Fix: You can wrap T with an owned struct.");

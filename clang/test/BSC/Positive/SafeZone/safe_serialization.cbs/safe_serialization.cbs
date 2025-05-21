@@ -1,0 +1,64 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+// Test with serialization:
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-pch -o %t %s
+// RUN: %clang_cc1 -x bsc -triple x86_64-unknown-unknown -include-pch %t -ast-dump-all /dev/null \
+// RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
+// RUN: | FileCheck --strict-whitespace %s
+
+int *g_a;
+
+safe void test_safe_stmt1(void) {
+    int v = 1;
+    unsafe g_a = &v;
+    unsafe int *borrow a = &mut *g_a;
+    safe int b = *a;
+    safe {
+        int c = *a;
+    }
+}
+
+int main() {
+    test_safe_stmt1();
+}
+
+// CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-14]]:1, line:[[@LINE-6]]:1> line:[[@LINE-14]]:11 used test_safe_stmt1 'void (void)'
+// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:33, line:[[@LINE-7]]:1>
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-15]]:5, col:14>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:13> col:9 used v 'int' cinit
+// CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:13> 'int' 1
+// CHECK-NEXT: SafeStmt 0x{{[^ ]*}} <line:[[@LINE-17]]:5, col:19> unsafe
+// CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:19> 'int *' '='
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int *' lvalue Var 0x{{[^ ]*}} 'g_a' 'int *'
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:18, col:19> 'int *' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:19> 'int' lvalue Var 0x{{[^ ]*}} 'v' 'int'
+// CHECK-NEXT: SafeStmt 0x{{[^ ]*}} <line:[[@LINE-21]]:5, col:37> unsafe
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <col:12, col:37>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:12, col:34> col:24 used a 'int *borrow' cinit
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:34> 'int *' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:34> 'int *' lvalue Var 0x{{[^ ]*}} 'g_a' 'int *'
+// CHECK-NEXT: SafeStmt 0x{{[^ ]*}} <line:[[@LINE-25]]:5, col:20> safe
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <col:10, col:20>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:10, col:19> col:14 b 'int' cinit
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:18, col:19> 'int' <LValueToRValue>
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:18, col:19> 'int' lvalue prefix '*' cannot overflow
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:19> 'int *borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:19> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'a' 'int *borrow'
+// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <line:[[@LINE-31]]:10, line:[[@LINE-29]]:5> safe
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-31]]:9, col:19>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:9, col:18> col:13 c 'int' cinit
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:17, col:18> 'int' <LValueToRValue>
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:17, col:18> 'int' lvalue prefix '*' cannot overflow
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:18> 'int *borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:18> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'a' 'int *borrow'
+// CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-33]]:1, line:[[@LINE-31]]:1> line:[[@LINE-33]]:5 main 'int (void)'
+// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:12, line:[[@LINE-32]]:1>
+// CHECK-NEXT: CallExpr 0x{{[^ ]*}} <line:[[@LINE-34]]:5, col:21> 'void'
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:5> 'void (*)(void)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:5> 'void (void)' Function 0x{{[^ ]*}} 'test_safe_stmt1' 'void (void)'

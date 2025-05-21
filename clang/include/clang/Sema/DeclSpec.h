@@ -670,6 +670,10 @@ public:
     return (SafeZoneSpecifier)FS_safe_zone_specified;
   }
   SourceLocation getSafeZoneSpecifierLoc() const { return FS_safe_zone_loc; }
+  void SetSafeZoneSpecifier(SafeZoneSpecifier SZS) {
+    FS_safe_zone_specified = SZS;
+  }
+  void SetSafeZoneSpecifierLoc(SourceLocation SL) { FS_safe_zone_loc = SL; }
 #endif
 
   ExplicitSpecifier getExplicitSpecifier() const {

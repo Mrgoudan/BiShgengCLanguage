@@ -156,6 +156,7 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   assert(S->hasStoredFPFeatures() == HasFPFeatures);
 #if ENABLE_BSC
   S->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
+  S->setCompSafeZoneSpecifier(static_cast<SafeZoneSpecifier>(Record.readInt()));
 #endif
   while (NumStmts--)
     Stmts.push_back(Record.readSubStmt());
@@ -200,6 +201,22 @@ void ASTStmtReader::VisitLabelStmt(LabelStmt *S) {
   S->setIdentLoc(readSourceLocation());
   S->setSideEntry(IsSideEntry);
 }
+
+#if ENABLE_BSC
+void ASTStmtReader::VisitSafeStmt(SafeStmt *S) {
+  VisitStmt(S);
+  S->setSafeZoneSpecifier(static_cast<SafeZoneSpecifier>(Record.readInt()));
+  S->setSubStmt(Record.readSubStmt());
+  S->setSafeLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitSafeExpr(SafeExpr *E) {
+  VisitExpr(E);
+  E->setSafeZoneSpecifier(static_cast<SafeZoneSpecifier>(Record.readInt()));
+  E->setSubExpr(Record.readSubExpr());
+  E->setSafeLoc(readSourceLocation());
+}
+#endif
 
 void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
   VisitStmt(S);
@@ -4025,6 +4042,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 #if ENABLE_BSC
     case EXPR_BSC_AWAIT:
       S = new (Context) AwaitExpr(Empty);
+      break;
+    case STMT_SAFE:
+      S = new (Context) SafeStmt(Empty);
+      break;
+    case EXPR_SAFE:
+      S = new (Context) SafeExpr(Empty);
       break;
 #endif
 

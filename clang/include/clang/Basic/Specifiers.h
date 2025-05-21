@@ -415,6 +415,7 @@ namespace clang {
     SZS_Inherit = 0,
     SZS_Function = 1,
     SZS_Compound = 2,
+    SZS_SafeStmt = 3,
   };
 
   enum PreferInlineScopeSpecifier {

@@ -14,7 +14,7 @@ struct Foo {
 };
 
 T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+safe void free_owned<T>(T* owned p);
 
 T* owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
@@ -22,8 +22,8 @@ T* owned safe_malloc<T>(T value) {
   return (T* owned)p;
 }
 
-void free_owned<T>(T* owned p) {
-  free( (void *)p );
+safe void free_owned<T>(T* owned p) {
+  unsafe free( (void *)p );
 }
 
 int struct Foo::getB(This* this) {

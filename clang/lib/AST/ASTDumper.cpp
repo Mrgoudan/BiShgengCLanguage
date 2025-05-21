@@ -13,6 +13,9 @@
 
 #include "clang/AST/ASTDumper.h"
 #include "clang/AST/ASTContext.h"
+#if ENABLE_BSC
+#include "clang/AST/BSC/StmtBSC.h"
+#endif
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/JSONNodeDumper.h"
 #include "clang/Basic/Builtins.h"

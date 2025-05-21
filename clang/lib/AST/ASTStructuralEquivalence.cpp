@@ -65,6 +65,7 @@
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/BSC/StmtBSC.h"
 #endif
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"

@@ -1405,6 +1405,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (SafeZoneSpec != SZ_None) {
     getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
     getCurScope()->setScopeSafeZoneSource(SZS_Function);
+    getCurScope()->setScopeSafeZoneLoc(
+        D.getDeclSpec().getSafeZoneSpecifierLoc());
   }
 #endif
 

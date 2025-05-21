@@ -4641,6 +4641,12 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
 #if ENABLE_BSC
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : SwitchTok.getLocation());
+    // Handle the case where the "safe" keyword modifies the function pointer
+    if (getCurScope() &&
+        getCurScope()->getScopeSafeZoneSource() == SZS_SafeStmt) {
+      DS.SetSafeZoneSpecifier(getCurScope()->getScopeSafeZoneSpecifier());
+      DS.SetSafeZoneSpecifierLoc(getCurScope()->getScopeSafeZoneLoc());
+    }
 #else
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 #endif
@@ -7224,6 +7230,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   if (SafeZoneSpec != SZ_None) {
     getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
     getCurScope()->setScopeSafeZoneSource(SZS_Function);
+    getCurScope()->setScopeSafeZoneLoc(
+        D.getDeclSpec().getSafeZoneSpecifierLoc());
   }
 #endif
 

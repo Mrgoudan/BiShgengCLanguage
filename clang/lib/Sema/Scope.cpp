@@ -42,6 +42,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
 #if ENABLE_BSC
     SafeZoneSpec = parent->SafeZoneSpec;
     SafeZoneSrc = SZS_Inherit;
+    SafeZoneLoc = parent->SafeZoneLoc;
 #endif
     if ((Flags & (FnScope | ClassScope | BlockScope | TemplateParamScope |
                   FunctionPrototypeScope | AtCatchScope | ObjCMethodScope)) ==
@@ -58,6 +59,7 @@ void Scope::setFlags(Scope *parent, unsigned flags) {
 #if ENABLE_BSC
     SafeZoneSpec = SZ_Unsafe;
     SafeZoneSrc = SZS_Inherit;
+    SafeZoneLoc = SourceLocation();
 #endif
   }
 

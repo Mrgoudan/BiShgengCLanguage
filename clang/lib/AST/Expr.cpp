@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/BSC/StmtBSC.h"
 #endif
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/DeclCXX.h"
@@ -3592,6 +3593,9 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ShuffleVectorExprClass:
   case ConvertVectorExprClass:
   case AsTypeExprClass:
+#if ENABLE_BSC
+  case SafeExprClass:
+#endif
     // These have a side-effect if any subexpression does.
     break;
 

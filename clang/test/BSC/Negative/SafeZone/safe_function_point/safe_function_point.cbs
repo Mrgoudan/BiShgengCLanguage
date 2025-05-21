@@ -8,17 +8,21 @@ safe double dadd(double a, double b) {
   return a + b;
 }
 
+safe int dadd2(double a, double b) {
+  return 1;
+}
+
 typedef safe int (*TP)(int a, int b);
 
 int main() {
-  safe int (*p)(int a, int b);
+  safe int (*p)(int a, int b) = add;
   p = add;      //ok
   TP tp = add;  // ok
 
-  safe int (*pa)(int a);
+  safe int (*pa)(int a);             // expected-error {{uninitialized declarator is forbidden in the safe zone}}
   pa = add;                          // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int)' from 'safe int (int, int)'}}
 
-  safe int (*pp)(double a, double b);
+  safe int (*pp)(double a, double b) = dadd2;
   pp = add;                          // expected-error {{incompatible function pointer types assigning to 'safe int (*)(double, double)' from 'safe int (int, int)'}}
   pp = dadd;                         // expected-error {{incompatible function pointer types assigning to 'safe int (*)(double, double)' from 'safe double (double, double)'}}
 

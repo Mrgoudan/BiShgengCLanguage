@@ -17,6 +17,7 @@
 #include "TypeLocBuilder.h"
 #if ENABLE_BSC
 #include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/BSC/StmtBSC.h"
 #endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -1321,6 +1322,26 @@ public:
                               SourceLocation ColonLoc, Stmt *SubStmt) {
     return SemaRef.ActOnLabelStmt(IdentLoc, L, ColonLoc, SubStmt);
   }
+
+#if ENABLE_BSC
+  /// Build a new safe statement.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  StmtResult RebuildSafeStmt(SourceLocation SafeZoneLoc,
+                             SafeZoneSpecifier safeZoneSpec, Stmt *SubStmt) {
+    return SemaRef.ActOnSafeStmt(SafeZoneLoc, safeZoneSpec, SubStmt);
+  }
+
+  /// Build a new safe expression.
+  ///
+  /// By default, performs semantic analysis to build the new statement.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildSafeExpr(SourceLocation SafeZoneLoc,
+                             SafeZoneSpecifier safeZoneSpec, Expr *SubExpr) {
+    return SemaRef.ActOnSafeExpr(SafeZoneLoc, safeZoneSpec, SubExpr);
+  }
+#endif
 
   /// Build a new attributed statement.
   ///
@@ -7556,6 +7577,41 @@ TreeTransform<Derived>::TransformLabelStmt(LabelStmt *S, StmtDiscardKind SDK) {
                                        cast<LabelDecl>(LD), SourceLocation(),
                                        SubStmt.get());
 }
+
+#if ENABLE_BSC
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformSafeStmt(SafeStmt *S) {
+  SafeZoneSpecifier OldSafeZoneSpec =
+      getSema().getInstantiationSafeZoneSpecifier();
+  getSema().setInstantiationSafeZoneSpecifier(S->getSafeZoneSpecifier());
+  StmtResult SubStmt = getDerived().TransformStmt(S->getSubStmt());
+  if (SubStmt.isInvalid()) {
+    getSema().setInstantiationSafeZoneSpecifier(OldSafeZoneSpec);
+    return StmtError();
+  }
+  StmtResult Stmt = getDerived().RebuildSafeStmt(
+      S->getSafeLoc(), S->getSafeZoneSpecifier(), SubStmt.get());
+  getSema().setInstantiationSafeZoneSpecifier(OldSafeZoneSpec);
+  return Stmt;
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformSafeExpr(SafeExpr *E) {
+  SafeZoneSpecifier OldSafeZoneSpec =
+      getSema().getInstantiationSafeZoneSpecifier();
+  getSema().setInstantiationSafeZoneSpecifier(E->getSafeZoneSpecifier());
+  ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
+  if (SubExpr.isInvalid()) {
+    getSema().setInstantiationSafeZoneSpecifier(OldSafeZoneSpec);
+    return ExprError();
+  }
+
+  ExprResult Stmt = getDerived().RebuildSafeExpr(
+      E->getSafeLoc(), E->getSafeZoneSpecifier(), SubExpr.get());
+  getSema().setInstantiationSafeZoneSpecifier(OldSafeZoneSpec);
+  return Stmt;
+}
+#endif
 
 template <typename Derived>
 const Attr *TreeTransform<Derived>::TransformAttr(const Attr *R) {

@@ -310,6 +310,15 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
   PrintStmt(Node->getSubStmt(), 0);
 }
 
+#if ENABLE_BSC
+void StmtPrinter::VisitSafeStmt(SafeStmt *Node) {
+  PrintStmt(Node->getSubStmt(), 0);
+}
+void StmtPrinter::VisitSafeExpr(SafeExpr *Node) {
+  PrintExpr(Node->getSubExpr());
+}
+#endif
+
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
   for (const auto *Attr : Node->getAttrs()) {
     Attr->printPretty(OS, Policy);

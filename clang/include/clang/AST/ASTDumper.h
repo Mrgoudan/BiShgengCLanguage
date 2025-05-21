@@ -46,7 +46,7 @@ public:
   #if ENABLE_BSC
   void VisitTraitTemplateDecl(const TraitTemplateDecl *D);
   void VisitCompoundStmt(const CompoundStmt *Node);
-  #endif
+#endif
 };
 
 } // namespace clang

@@ -224,11 +224,11 @@ safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* borrow this, const K* 
 // The hash map will be able to hold at least `cap` elements without
 // reallocating. If `cap` is 0, the hash map will not allocate.
 safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S hash_builder) {
-    _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
+    unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap K with an owned struct.");
-    _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
+    unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap V with an owned struct.");
@@ -245,11 +245,11 @@ safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S h
 // The hash map is initially created with a capacity of 0,
 // so it will not allocate until it is first inserted into.
 safe HashMap<K, V, S> HashMap<K, V, S>::with_hasher(S hash_builder) {
-    _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
+    unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap K with an owned struct.");
-    _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
+    unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap V with an owned struct.");

@@ -339,7 +339,9 @@ public:
   void VisitVarDecl(const VarDecl *D);
   #if ENABLE_BSC
   void VisitImplTraitDecl(const ImplTraitDecl *D);
-  #endif
+  void VisitSafeStmt(const SafeStmt *SS);
+  void VisitSafeExpr(const SafeExpr *SE);
+#endif
   void VisitBindingDecl(const BindingDecl *D);
   void VisitCapturedDecl(const CapturedDecl *D);
   void VisitImportDecl(const ImportDecl *D);

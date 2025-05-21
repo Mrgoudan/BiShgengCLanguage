@@ -51,11 +51,11 @@ safe _Bool Result<T, E>::is_ok(const Result<T, E>* borrow this) {
 
 // Creates an `Ok` value.
 safe Result<T, E> Result<T, E>::Ok(T t) {
-    _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-    _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
+    unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap E with an owned struct.");
@@ -73,11 +73,11 @@ safe Result<T, E> Result<T, E>::Ok(T t) {
 
 // Creates an `Err` value.
 safe Result<T, E> Result<T, E>::Err(E e) {
-    _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-    _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
+    unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap E with an owned struct.");
