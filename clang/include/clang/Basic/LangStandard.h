@@ -41,9 +41,9 @@ enum class Language : uint8_t {
   RenderScript,
   HIP,
   HLSL,
-  #if ENABLE_BSC
+#if ENABLE_BSC
   BSC,
-  #endif
+#endif
   ///@}
 };
 
@@ -64,10 +64,6 @@ enum LangFeatures {
   HexFloat = (1 << 13),
   OpenCL = (1 << 14),
   HLSL = (1 << 15)
-#if ENABLE_BSC
-      ,
-  BSC = (1 << 16)
-#endif
 };
 
 /// LangStandard - Information about the properties of a particular language
@@ -139,11 +135,6 @@ public:
 
   /// isOpenCL - Language is a OpenCL variant.
   bool isOpenCL() const { return Flags & OpenCL; }
-
-  #if ENABLE_BSC
-  /// isBSC - Language is a BiSheng C variant.
-  bool isBSC() const { return Flags & BSC; }
-  #endif
 
   static Kind getLangKind(StringRef Name);
   static const LangStandard &getLangStandardForKind(Kind K);

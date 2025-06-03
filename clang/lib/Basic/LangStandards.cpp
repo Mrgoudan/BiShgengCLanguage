@@ -85,10 +85,13 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
     return LangStandard::lang_hip;
   case Language::HLSL:
     return LangStandard::lang_hlsl2021;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case Language::BSC:
-    return LangStandard::lang_bsc;
-  #endif
+    if (CLANG_DEFAULT_STD_C != LangStandard::lang_unspecified)
+      return CLANG_DEFAULT_STD_C;
+
+    return LangStandard::lang_gnu11;
+#endif
   }
   llvm_unreachable("unhandled Language kind!");
 }

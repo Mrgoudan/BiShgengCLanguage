@@ -3248,6 +3248,9 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
   case Language::C:
   case Language::ObjC:
   case Language::RenderScript:
+#if ENABLE_BSC
+  case Language::BSC:
+#endif
     return S.getLanguage() == Language::C;
 
   case Language::OpenCL:
@@ -3268,11 +3271,6 @@ static bool IsInputCompatibleWithStandard(InputKind IK,
 
   case Language::HIP:
     return S.getLanguage() == Language::CXX || S.getLanguage() == Language::HIP;
-
-  #if ENABLE_BSC
-  case Language::BSC:
-    return S.getLanguage() == Language::C || S.getLanguage() == Language::BSC;
-  #endif
 
   case Language::Asm:
     // Accept (and ignore) all -std= values.

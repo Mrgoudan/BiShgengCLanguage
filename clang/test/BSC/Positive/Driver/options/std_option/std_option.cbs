@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -std=c11 -verify %s
+// RUN: %clang_cc1 -std=c89 -verify %s
+// RUN: %clang_cc1 -std=c99 -verify %s
+// RUN: %clang_cc1 -std=c17 -verify %s
+// RUN: %clang_cc1 -std=gnu11 -verify %s
+// RUN: %clang_cc1 -x bsc -std=c11 -verify %s
+// RUN: %clang_cc1 -x bsc -std=c89 -verify %s
+// RUN: %clang_cc1 -x bsc -std=c99 -verify %s
+// RUN: %clang_cc1 -x bsc -std=c17 -verify %s
+// RUN: %clang_cc1 -x bsc -std=gnu11 -verify %s
+// expected-no-diagnostics
+
+struct Foo {
+};
+int struct Foo::getA(struct Foo* this) { 
+    return 1;
+}

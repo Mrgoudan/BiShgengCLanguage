@@ -213,11 +213,6 @@ LANGSTANDARD(hlsl, "hlsl",
              HLSL, "High Level Shader Language",
              LineComment | HLSL | CPlusPlus )
 
-#if ENABLE_BSC
-LANGSTANDARD(bsc, "bsc", BSC, "BiSheng C Language",
-             LineComment | BSC | C99 | C11 | C17 | Digraphs | GNUMode | HexFloat)
-#endif
-
 LANGSTANDARD(hlsl2015, "hlsl2015",
              HLSL, "High Level Shader Language 2015",
              LineComment | HLSL | CPlusPlus )

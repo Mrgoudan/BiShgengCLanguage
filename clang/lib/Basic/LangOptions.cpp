@@ -94,6 +94,11 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   } else if (Lang == Language::ObjC || Lang == Language::ObjCXX) {
     Opts.ObjC = 1;
   }
+#if ENABLE_BSC
+  else if (Lang == Language::BSC) {
+    Opts.BSC = 1;
+  }
+#endif
 
   if (LangStd == LangStandard::lang_unspecified)
     LangStd = getDefaultLanguageStandard(Lang, T);
@@ -104,9 +109,6 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.C11 = Std.isC11();
   Opts.C17 = Std.isC17();
   Opts.C2x = Std.isC2x();
-  #if ENABLE_BSC
-  Opts.BSC = Std.isBSC();
-  #endif
   Opts.CPlusPlus = Std.isCPlusPlus();
   Opts.CPlusPlus11 = Std.isCPlusPlus11();
   Opts.CPlusPlus14 = Std.isCPlusPlus14();
