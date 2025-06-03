@@ -3,7 +3,7 @@ owned struct A<T> {
     public:
     int * owned a;
     ~A(A<T> this) {
-    }// expected-error {{field memory leak of value: `this`, this.a is leak}}
+    }// expected-error {{destructor for`owned A<int>` incorrect, this.a is of owned type and needs to be handled manually}}
 };
 int main() {
     int local = 1;

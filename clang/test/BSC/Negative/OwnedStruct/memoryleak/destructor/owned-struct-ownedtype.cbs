@@ -13,5 +13,5 @@ public:
         struct A y;
         ~S(S this) {
                 free((void *)this.x);
-        } // expected-error {{field memory leak of value: `this`, this.y.b is leak}}
+        } // expected-error {{destructor for`owned struct S` incorrect, this.y.b is of owned type and needs to be handled manually}}
 };

@@ -131,7 +131,8 @@ public:
     checkCastField(const VarDecl *VD, const SourceLocation &Loc,
                    std::string fullFieldName);
     llvm::SmallVector<OwnershipDiagInfo, 3>
-    checkMemoryLeak(const VarDecl *VD, const SourceLocation &Loc);
+    checkMemoryLeak(const VarDecl *VD, const SourceLocation &Loc,
+                    bool isDestructor);
 
     OwnershipStatus()
         : OPSStatus(0), OPSAllOwnedFields(0), OPSOwnedOwnedFields(0),
@@ -186,6 +187,8 @@ enum OwnershipDiagKind {
   InvalidCastFieldOwned,
   FieldMemoryLeak,
   MemoryLeak,
+  OwnedStructPartiallyMoved,
+  OwnedStructNotProperlyFreed,
   OwnershipMaxDiagKind
 };
 
@@ -208,7 +211,9 @@ const unsigned OwnershipDiagIdList[] = {
     diag::err_ownership_cast_uninit,
     diag::err_ownership_cast_subfield_owned,
     diag::err_ownership_memory_leak_field,
-    diag::err_ownership_memory_leak};
+    diag::err_ownership_memory_leak,
+    diag::err_ownership_owned_struct_patially_moved,
+    diag::err_ownership_owned_struct_not_properly_freed};
 
 class OwnershipDiagInfo {
 public:
@@ -306,6 +311,8 @@ public:
       case InvalidCastFieldOwned:
       case InvalidUseOfPartiallyMoved:
       case FieldMemoryLeak:
+      case OwnedStructPartiallyMoved:
+      case OwnedStructNotProperlyFreed:
         S.Diag(DI.Loc, getOwnershipDiagID(DI.Kind)) << DI.Name << DI.Fields;
         break;
       default:

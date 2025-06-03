@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -verify %s
+
+owned struct B {
+};
+struct A {
+    B b;
+};
+void test(struct A a) {
+} // expected-error {{field memory leak of value: `a`, a.b is leak}}
+
+int main(){
+    return 0;
+}

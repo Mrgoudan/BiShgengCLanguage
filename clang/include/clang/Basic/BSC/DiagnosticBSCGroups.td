@@ -24,11 +24,15 @@ def AssignOwned :  DiagGroup<"assign-owned",[AssignUninitOwned, AssignMovedOwned
 def CastMovedOwned : DiagGroup<"cast-moved-owned">;
 def CastOwned : DiagGroup<"cast-owned", [CastMovedOwned]>;
 def CheckMemoryLeak : DiagGroup<"check-memory-leak">;
+def DestructOwnedStruct : DiagGroup<"destruct-owned-struct">;
+def PartiallyMovedStruct : DiagGroup<"partially-moved-struct">;
 def BSCOwnership : DiagGroup<"bsc-ownership", 
                                 [UseOwned,
                                  AssignOwned,
                                  CastOwned,
-                                 CheckMemoryLeak]>;
+                                 CheckMemoryLeak,
+                                 PartiallyMovedStruct,
+                                 DestructOwnedStruct]>;
 
 def AssignBorrowed : DiagGroup<"assign-borrowed">;
 def MoveBorrowed : DiagGroup<"move-borrowed">;

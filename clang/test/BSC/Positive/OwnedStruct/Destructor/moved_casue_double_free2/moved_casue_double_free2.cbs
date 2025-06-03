@@ -1,0 +1,81 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
+int x = 0;
+int f = 0;
+int z = 0;
+owned struct A{
+    public:
+    int * y;
+    ~A(A this){
+        x++;
+    }
+};
+owned struct B{
+    public:
+    int * y;
+    A a;
+    ~B(B this){
+        f++;
+    }
+};
+owned struct C{
+    public:
+    int * y;
+    A a;
+    B b;
+    ~C(C this){
+        z++;
+    }
+};
+void test(){
+    int temp = 0;
+    A a1 = {};
+    B b1 = {.y=&temp,.a = a1};
+    A a2 = b1.a;
+    A a3 = {};
+    b1.a =a3;
+    C c1 = {.a = a2,.b=b1};
+}
+
+
+
+
+// CHECK-L: #line 35 "{{.*}}.cbs"
+//CHECK-L-NEXT:void test(void) {
+//CHECK-L-NEXT:    int temp = 0;
+//CHECK-L-NEXT:     struct A a1 = {};
+//CHECK-L-NEXT:    _Bool a1_is_moved = 0;
+//CHECK-L-NEXT:     struct B b1 = {.y = &temp, .a = a1};
+//CHECK-L-NEXT:    _Bool b1_is_moved = 0;
+//CHECK-L-NEXT:    a1_is_moved = 1;
+//CHECK-L-NEXT:     struct A a2 = b1.a;
+//CHECK-L-NEXT:    _Bool a2_is_moved = 0;
+//CHECK-L-NEXT:     struct A a3 = {};
+//CHECK-L-NEXT:    _Bool a3_is_moved = 0;
+//CHECK-L-NEXT:    b1.a = a3;
+//CHECK-L-NEXT:    a3_is_moved = 1;
+//CHECK-L-NEXT:     struct C c1 = {.a = a2, .b = b1};
+//CHECK-L-NEXT:    _Bool c1_is_moved = 0;
+//CHECK-L-NEXT:    a2_is_moved = 1;
+//CHECK-L-NEXT:    b1_is_moved = 1;
+//CHECK-L-NEXT:    if (!c1_is_moved)
+//CHECK-L-NEXT:        struct_C_D(c1);
+//CHECK-L-NEXT:    if (!a3_is_moved)
+//CHECK-L-NEXT:        struct_A_D(a3);
+//CHECK-L-NEXT:    if (!a2_is_moved)
+//CHECK-L-NEXT:        struct_A_D(a2);
+//CHECK-L-NEXT:    if (!b1_is_moved)
+//CHECK-L-NEXT:        struct_B_D(b1);
+//CHECK-L-NEXT:    if (!a1_is_moved)
+//CHECK-L-NEXT:        struct_A_D(a1);
+//CHECK-L-NEXT:}
+
+int main(){
+    test();
+    return (x-2==0&&f-1==0&&z-1==0)?0:1;
+}

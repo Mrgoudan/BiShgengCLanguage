@@ -3811,7 +3811,7 @@ int main(void) {
 
 ### 定义 `owned struct` 类型
 `owned struct` 类型的定义由关键字 `owned struct` 和自定义的名字组成，紧跟着是定义在一对花括号中 `owned struct` 定义体，在定义体中可以定义成员变量、析构函数、成员函数和访问修饰符。允许定义泛型 `owned struct`。
-
+示例：
 ```c
 owned struct Person{
 public:
@@ -3854,6 +3854,19 @@ owned struct S {
    }
 };
 ```
+当`owned struct`内有owned 修饰的指针的时候，该指针需要在析构函数内手动释放
+```c
+owned struct Person{
+public:
+    int * owned age;
+    ~Person(Person this){
+        safe_free((void * owned) this.p);
+    }
+};
+Person p = {.p = safe_malloc(42)};
+```
+
+
 析构函数的使用有以下限制：
 
 + 一个 `owned struct` 最多只能有一个析构函数。
@@ -3865,7 +3878,12 @@ owned struct S {
 + 自定义类型内部的成员带有析构函数的时候，析构函数调用顺序：
   + 先调用外层类型的析构函数，再调用成员变量的析构函数
   + 不保证各个成员的析构函数的调用顺序
-
++ `owned struct` 及其内部的成员变量，在作用域结束时，必须处于以下两种状态之一
+  + owned 状态：`owned struct` 及其内部所有owned修饰的成员（1.owned struct 也属于owned 修饰的成员 2.递归包含）均未被移动
+  + moved 状态：`owned struct` 作为一个整体已被显式移动
++ `owned struct` 及其内部的成员变量，在作用域结束时，如若处于如下状态，则报错。 报错信息模板为 partially moved `owned struct`:`%0` at scope end, `%1` moved"（%0 为`owned struct` 变量名，%1 为被移动的成员变量名）
+  + 有成员变量被转移所有权的状态： `owned struct`（递归包含嵌套成员）至少有一个owned 修饰的成员被移动。结构体本身未被整体移动。
++ `owned struct`内owned 修饰的指针需要在析构函数内被手动释放。如未被手动释放，则报错。 报错模板信息为 destructor for`%0` incorrect, %1 of owned type and needs to be handled manually（ %0 为owned struct 变量名）
 #### 成员函数
 `owned struct` 的成员函数分为实例成员函数和静态成员函数(不允许 `static` 修饰)。实例成员函数需要显式参数 `this`, 假设当前 `owned struct` 类型是 `C`, `this` 的类型可以是 `C*`、`const C*`、`C* borrow`、`const C * borrow`、`C * owned`。静态成员函数是没有 `this`。成员函数的访问与 `struct` 扩展成员函数访问一样(详见成员函数章节)。
 
@@ -5817,6 +5835,8 @@ int main() {
 | cast-moved-owned     | "invalid cast to `void * owned` of moved value: \`%0\`"      |
 | cast-owned           | "invalid cast to `void * owned` of owned value: \`%0\`"<br />"invalid cast to `void * owned` of uninit value: \`%0\`"<br />"invalid cast to `void * owned` of not all moved value: \`%0\`, %1 owned"<br />"invalid cast to `void * owned` of moved value:\`%0\`" |
 | check-memory-leak    | "field memory leak of value: `%0`, %1 leak"<br />"memory leak of value: `%0` |
+| destruct-owned-struct    | "destructor for`%0` incorrect, %1 of owned type and needs to be handled manually |
+| partially-moved-struct    | "partially moved owned struct:`%0` at scope end, %1 moved |
 | bsc-ownership        | 可屏蔽所有 owned 数据流分析过程的报错，<br />包括 use-owned、assign-owned、cast-owned、check-memory-leak 错误类型标识可屏蔽的错误日志。 |
 | assign-borrowed      | "cannot assign to \`%0\` because it is borrowed"             |
 | move-borrowed        | "cannot move out of \`%0\` because it is borrowed"           |

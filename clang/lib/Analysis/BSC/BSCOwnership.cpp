@@ -20,7 +20,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
-
 using namespace clang;
 using namespace std;
 
@@ -38,7 +37,8 @@ public:
 
   Ownership::OwnershipStatus runOnBlock(const CFGBlock *block,
                                         Ownership::OwnershipStatus status,
-                                        OwnershipDiagReporter &reporter);
+                                        OwnershipDiagReporter &reporter,
+                                        bool isDestructor);
 
   void MaybeSetNull(const CFGBlock *block, Ownership::OwnershipStatus &status);
 
@@ -66,6 +66,7 @@ static bool IsCallExpr(Expr *E) {
 // 1. the basic owned pointer type such as `int * owned p`
 // 2. the struct owned pointer type such as `struct S * owned s`
 // 3. the struct type with at least one owned field
+// 4. the owned struct type such as `owned struct S`
 static bool IsTrackedType(QualType type) {
   // case 1 and case 2
   if (type->isPointerType() && type.isOwnedQualified())
@@ -130,7 +131,7 @@ static string moveAsterisksToFront(string str) {
 }
 
 static string concatFields(const VarDecl *VD,
-                           llvm::SmallSet<string, 10> fields) {
+                           const llvm::SmallSet<string, 10> &fields) {
   string contactedFields = "";
   size_t count = 0;
   for (const string &element : fields) {
@@ -161,6 +162,18 @@ static string concatFields(const VarDecl *VD,
     contactedFields += " is";
   }
   return contactedFields;
+}
+
+static string concatUnmovedFields(const VarDecl *VD,
+                                  const llvm::SmallSet<string, 10> &ownedFields,
+                                  const llvm::SmallSet<string, 10> &allFields) {
+  llvm::SmallSet<string, 10> unmovedFields;
+  for (const auto &field : allFields) {
+    if (!ownedFields.count(field)) {
+      unmovedFields.insert(field);
+    }
+  }
+  return concatFields(VD, unmovedFields);
 }
 
 //===----------------------------------------------------------------------===//
@@ -510,7 +523,7 @@ void Ownership::OwnershipStatus::initS(const RecordDecl *RD, const VarDecl *VD,
     }
   }
 
-  // record all owned fields ofr VD in SAllOwnedFields
+  // record all owned fields of VD in SAllOwnedFields
   for (RecordDecl::field_iterator it = RD->field_begin(), ei = RD->field_end();
        it != ei; ++it) {
     QualType FT = it->getType().getCanonicalType();
@@ -1690,9 +1703,8 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkCastField(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
-Ownership::OwnershipStatus::checkMemoryLeak(const VarDecl *VD,
-                                            const SourceLocation &Loc) {
+SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkMemoryLeak(
+    const VarDecl *VD, const SourceLocation &Loc, bool isDestructor) {
   SmallVector<OwnershipDiagInfo, 3> diags;
   // for a struct pointer owned variable,
   // the following two situations indicates that a memory leak has occurred:
@@ -1720,11 +1732,36 @@ Ownership::OwnershipStatus::checkMemoryLeak(const VarDecl *VD,
   // the following situation indicates that a memory leak has occurred:
   // 1. if SOwnedOwnedFields[VD] is not empty, VD's owned fields memory leak
   if (SStatus.count(VD)) {
-    if (!SOwnedOwnedFields[VD].empty()) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::FieldMemoryLeak, VD->getNameAsString(),
-          concatFields(VD, SOwnedOwnedFields[VD])));
-      SOwnedOwnedFields[VD].clear();
+    if (!VD->getType().getCanonicalType()->isOwnedStructureType()) {
+      if (!SOwnedOwnedFields[VD].empty()) {
+        diags.push_back(OwnershipDiagInfo(
+            Loc, OwnershipDiagKind::FieldMemoryLeak, VD->getNameAsString(),
+            concatFields(VD, SOwnedOwnedFields[VD])));
+        SOwnedOwnedFields[VD].clear();
+      }
+    } else {
+      if (isDestructor) {
+        if (const ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(VD)) {
+          if (!SOwnedOwnedFields[VD].empty()) {
+            diags.push_back(OwnershipDiagInfo(
+                Loc, OwnershipDiagKind::OwnedStructNotProperlyFreed,
+                VD->getType().getAsString(),
+                concatFields(VD, SOwnedOwnedFields[VD])));
+            SOwnedOwnedFields[VD].clear();
+          }
+        }
+      } else {
+        if ((SOwnedOwnedFields[VD].size() + SNullOwnedFields[VD].size() !=
+             SAllOwnedFields[VD].size()) &&
+            !is(VD, Moved)) {
+          diags.push_back(OwnershipDiagInfo(
+              Loc, OwnershipDiagKind::OwnedStructPartiallyMoved,
+              VD->getNameAsString(),
+              concatUnmovedFields(VD, SOwnedOwnedFields[VD],
+                                  SAllOwnedFields[VD])));
+          SOwnedOwnedFields[VD].clear();
+        }
+      }
     }
   }
 
@@ -1781,7 +1818,7 @@ public:
   void VisitInitListExpr(InitListExpr *ILE);
   void VisitMemberExpr(MemberExpr *ME);
   void VisitReturnStmt(ReturnStmt *RS);
-  void VisitLifetimeEnds(VarDecl *VD, SourceLocation SL);
+  void VisitLifetimeEnds(VarDecl *VD, SourceLocation SL, bool isDestructor);
   void VisitStmt(Stmt *S);
   void VisitUnaryOperator(UnaryOperator *UO);
 
@@ -2031,11 +2068,10 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   }
 }
 
-void TransferFunctions::VisitLifetimeEnds(VarDecl *VD, SourceLocation SL) {
-  // don't check memory leak of an owned struct type variable
-  if (VD->getType().getTypePtr()->isOwnedStructureType())
-    return;
-  SmallVector<OwnershipDiagInfo, 3> diags = stat.checkMemoryLeak(VD, SL);
+void TransferFunctions::VisitLifetimeEnds(VarDecl *VD, SourceLocation SL,
+                                          bool isDestructor) {
+  SmallVector<OwnershipDiagInfo, 3> diags =
+      stat.checkMemoryLeak(VD, SL, isDestructor);
   reporter.addDiags(diags);
 }
 
@@ -2213,7 +2249,7 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block,
 Ownership::OwnershipStatus
 OwnershipImpl::runOnBlock(const CFGBlock *block,
                           Ownership::OwnershipStatus status,
-                          OwnershipDiagReporter &reporter) {
+                          OwnershipDiagReporter &reporter, bool isDestructor) {
   MaybeSetNull(block, status);
 
   TransferFunctions TF(*this, status, block, reporter);
@@ -2235,7 +2271,8 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
     if (elem.getAs<CFGLifetimeEnds>()) {
       const Stmt *S = elem.castAs<CFGLifetimeEnds>().getTriggerStmt();
       const VarDecl *VD = elem.castAs<CFGLifetimeEnds>().getVarDecl();
-      TF.VisitLifetimeEnds(const_cast<VarDecl *>(VD), S->getEndLoc());
+      TF.VisitLifetimeEnds(const_cast<VarDecl *>(VD), S->getEndLoc(),
+                           isDestructor);
     }
   }
 
@@ -2270,7 +2307,10 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
   for (const CFGBlock *B : cfg.const_reverse_nodes())
     if (B != entry && !B->pred_empty())
       worklist.enqueueBlock(B);
-
+  bool isDestructor = false;
+  if (auto md = dyn_cast<BSCMethodDecl>(&fd)) {
+    isDestructor = md->isDestructor();
+  }
   while (const CFGBlock *block = worklist.dequeue()) {
     Ownership::OwnershipStatus &preVal = OS->blocksBeginStatus[block];
 
@@ -2284,7 +2324,8 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
       }
     }
 
-    OS->blocksEndStatus[block] = OS->runOnBlock(block, val, reporter);
+    OS->blocksEndStatus[block] =
+        OS->runOnBlock(block, val, reporter, isDestructor);
 
     if (preVal.equals(val))
       continue;
@@ -2294,27 +2335,14 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
     // Enqueue the value to the successors.
     worklist.enqueueSuccessors(block);
   }
-  bool isDestructor = false;
-  if (auto md = dyn_cast<BSCMethodDecl>(&fd)) {
-    isDestructor = md->isDestructor();
-  }
+
   // check ownership rules of function parameters
   const CFGBlock *exit = &cfg.getExit();
   for (ParmVarDecl *PVD : fd.parameters()) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(PVD)) {
-      // don't check memory leak of an owned struct type variable
-      bool isOwnedStructType =
-          (PVD->getType().getCanonicalType()->isOwnedStructureType() ||
-           PVD->getType()
-               .getCanonicalType()
-               ->isOwnedTemplateSpecializationType());
-      if (isOwnedStructType && !isDestructor) {
-        continue;
-      }
-
       SmallVector<OwnershipDiagInfo, 3> diags =
           OS->blocksEndStatus[exit].checkMemoryLeak(
-              VD, fd.getSourceRange().getEnd());
+              VD, fd.getSourceRange().getEnd(), isDestructor);
       reporter.addDiags(diags);
     }
   }

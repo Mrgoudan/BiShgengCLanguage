@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -verify %s
+
+owned struct A {
+
+  };
+  
+  owned struct S {
+  public:
+      A a;
+      char a2;
+
+  };
+  
+  int foo() {
+    S s1 = {};
+    A a = s1.a;
+    return 1;// expected-error {{partially moved owned struct:`s1` at scope end, s1.a is moved}}
+  }
+
+  int main() {
+    foo();
+    return 0;
+  }

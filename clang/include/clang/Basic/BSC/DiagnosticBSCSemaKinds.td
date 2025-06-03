@@ -202,6 +202,12 @@ def err_ownership_memory_leak_field : Error<
 def err_ownership_memory_leak : Error<
   "memory leak of value: `%0`">,
   InGroup<CheckMemoryLeak>;
+def err_ownership_owned_struct_patially_moved : Error<
+  "partially moved owned struct:`%0` at scope end, %1 moved">,
+  InGroup<PartiallyMovedStruct>;
+def err_ownership_owned_struct_not_properly_freed : Error<
+  "destructor for`%0` incorrect, %1 of owned type and needs to be handled manually">,
+  InGroup<DestructOwnedStruct>;
 
 // BSC Borrow Checker errors.
 def err_borrow_live_longer_than_target_var : Error<

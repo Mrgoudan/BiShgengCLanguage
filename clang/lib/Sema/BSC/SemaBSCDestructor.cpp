@@ -239,6 +239,12 @@ public:
   bool VisitUnaryOperator(const UnaryOperator *UOp) { return false; }
 
   bool VisitMemberExpr(const MemberExpr *MA) { return false; }
+  bool VisitInitListExpr(InitListExpr *ILE) {
+    for (auto *Init : ILE->inits()) {
+      RecursiveASTVisitor<DeclRefFinder>::TraverseStmt(Init);
+    }
+    return false;
+  }
 
   llvm::SmallVector<VarDecl *> MovedDecls;
   llvm::SmallVector<VarDecl *> ReAssignedDecls;
