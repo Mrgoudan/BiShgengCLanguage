@@ -1235,13 +1235,19 @@ Ownership::OwnershipStatus::checkSAssign(const VarDecl *VD,
     resetAll(VD);
     set(VD, Owned);
   }
-
   // when assign a struct, all of its owned fields must be MOVED
+  // owned struct does not abide with this rule.
+  if (!VD->getType().getTypePtr()->isOwnedStructureType()) {
+    if (!SOwnedOwnedFields[VD].empty() && diags.empty()) {
+      if (SAllOwnedFields[VD].size() == SOwnedOwnedFields[VD].size()) {
+        diags.push_back(
+            OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidAssignOfOwned,
+                              VD->getNameAsString()));
+      }
+    }
+  }
   if (!SOwnedOwnedFields[VD].empty() && diags.empty()) {
-    if (SAllOwnedFields[VD].size() == SOwnedOwnedFields[VD].size()) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidAssignOfOwned, VD->getNameAsString()));
-    } else {
+    if (SAllOwnedFields[VD].size() != SOwnedOwnedFields[VD].size()) {
       diags.push_back(OwnershipDiagInfo(
           Loc, OwnershipDiagKind::InvalidAssignOfPartiallyMoved,
           VD->getNameAsString(), collectMovedFields(VD)));

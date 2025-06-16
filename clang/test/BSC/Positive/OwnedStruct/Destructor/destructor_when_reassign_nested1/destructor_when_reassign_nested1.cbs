@@ -1,0 +1,68 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
+
+// Flaw in Nested owned sturct reassign 
+// https://gitee.com/bisheng_c_language_dep/llvm-project/issues/ICD2TU
+int x = 0;
+int y = 0;
+owned struct Weak{
+    public:
+    ~Weak(Weak this){
+        x++;
+    }
+};
+owned struct W{
+    public:
+    Weak p;
+    ~W(W this){
+        y++;
+    }
+};
+
+void test(){
+    Weak w1={};
+    Weak w2={};
+    // w2=w1;
+    W ww1={.p= w1};
+    W ww2={.p=w2};
+    ww2=ww1;
+}
+
+
+
+//CHECK-L: #line 27 "{{.*}}.cbs"
+//CHECK-L-NEXT:void test(void) {
+//CHECK-L-NEXT:    struct Weak w1 = {};
+//CHECK-L-NEXT:   _Bool w1_is_moved = 0;
+//CHECK-L-NEXT:    struct Weak w2 = {};
+//CHECK-L-NEXT:   _Bool w2_is_moved = 0;
+//CHECK-L-NEXT:    struct W ww1 = {.p = w1};
+//CHECK-L-NEXT:   _Bool ww1_is_moved = 0;
+//CHECK-L-NEXT:   w1_is_moved = 1;
+//CHECK-L-NEXT:    struct W ww2 = {.p = w2};
+//CHECK-L-NEXT:   _Bool ww2_is_moved = 0;
+//CHECK-L-NEXT:   w2_is_moved = 1;
+//CHECK-L-NEXT:   if (!ww2_is_moved)
+//CHECK-L-NEXT:       struct_W_D(ww2);
+//CHECK-L-NEXT:   ww2 = ww1;
+//CHECK-L-NEXT:   ww2_is_moved = 0;
+//CHECK-L-NEXT:   ww1_is_moved = 1;
+//CHECK-L-NEXT:   if (!ww2_is_moved)
+//CHECK-L-NEXT:       struct_W_D(ww2);
+//CHECK-L-NEXT:   if (!ww1_is_moved)
+//CHECK-L-NEXT:       struct_W_D(ww1);
+//CHECK-L-NEXT:   if (!w2_is_moved)
+//CHECK-L-NEXT:       struct_Weak_D(w2);
+//CHECK-L-NEXT:   if (!w1_is_moved)
+//CHECK-L-NEXT:       struct_Weak_D(w1);
+//CHECK-L-NEXT:}
+
+int main(){
+    test();
+    return (x-2==0&&y-2==0)?0:-1;
+    }

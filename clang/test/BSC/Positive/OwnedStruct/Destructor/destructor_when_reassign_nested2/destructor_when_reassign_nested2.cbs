@@ -1,0 +1,93 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
+// RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
+int x = 0;
+int y = 0;
+int z = 0;
+owned struct A{
+    public:
+    ~A(A this){
+        x++;
+    }
+};
+owned struct B{
+    public:
+    A a;
+    ~B(B this){
+        y++;
+    }
+};
+owned struct C{
+    public:
+    A a;
+    B b;
+    ~C(C this){
+        z++;
+    }
+};
+void test(){
+    A a1 = {};
+    A a2 = {};
+    A a3= {};
+    A a4= {};
+    B b1 ={.a=a1};
+    B b2 ={.a=a2};
+    C c1 = {.a=a3,.b=b1};
+    C c2 = {.a=a4,.b=b2};
+    c2=c1;
+}
+
+// CHECK-L: #line 32 "{{.*}}.cbs"
+//CHECK-L-NEXT:void test(void) {
+//CHECK-L-NEXT:    struct A a1 = {};
+//CHECK-L-NEXT:   _Bool a1_is_moved = 0;
+//CHECK-L-NEXT:    struct A a2 = {};
+//CHECK-L-NEXT:   _Bool a2_is_moved = 0;
+//CHECK-L-NEXT:    struct A a3 = {};
+//CHECK-L-NEXT:   _Bool a3_is_moved = 0;
+//CHECK-L-NEXT:    struct A a4 = {};
+//CHECK-L-NEXT:   _Bool a4_is_moved = 0;
+//CHECK-L-NEXT:    struct B b1 = {.a = a1};
+//CHECK-L-NEXT:   _Bool b1_is_moved = 0;
+//CHECK-L-NEXT:   a1_is_moved = 1;
+//CHECK-L-NEXT:    struct B b2 = {.a = a2};
+//CHECK-L-NEXT:   _Bool b2_is_moved = 0;
+//CHECK-L-NEXT:   a2_is_moved = 1;
+//CHECK-L-NEXT:    struct C c1 = {.a = a3, .b = b1};
+//CHECK-L-NEXT:   _Bool c1_is_moved = 0;
+//CHECK-L-NEXT:   a3_is_moved = 1;
+//CHECK-L-NEXT:   b1_is_moved = 1;
+//CHECK-L-NEXT:    struct C c2 = {.a = a4, .b = b2};
+//CHECK-L-NEXT:   _Bool c2_is_moved = 0;
+//CHECK-L-NEXT:   a4_is_moved = 1;
+//CHECK-L-NEXT:   b2_is_moved = 1;
+//CHECK-L-NEXT:   if (!c2_is_moved)
+//CHECK-L-NEXT:       struct_C_D(c2);
+//CHECK-L-NEXT:   c2 = c1;
+//CHECK-L-NEXT:   c2_is_moved = 0;
+//CHECK-L-NEXT:   c1_is_moved = 1;
+//CHECK-L-NEXT:   if (!c2_is_moved)
+//CHECK-L-NEXT:       struct_C_D(c2);
+//CHECK-L-NEXT:   if (!c1_is_moved)
+//CHECK-L-NEXT:       struct_C_D(c1);
+//CHECK-L-NEXT:   if (!b2_is_moved)
+//CHECK-L-NEXT:       struct_B_D(b2);
+//CHECK-L-NEXT:   if (!b1_is_moved)
+//CHECK-L-NEXT:       struct_B_D(b1);
+//CHECK-L-NEXT:   if (!a4_is_moved)
+//CHECK-L-NEXT:       struct_A_D(a4);
+//CHECK-L-NEXT:   if (!a3_is_moved)
+//CHECK-L-NEXT:       struct_A_D(a3);
+//CHECK-L-NEXT:   if (!a2_is_moved)
+//CHECK-L-NEXT:       struct_A_D(a2);
+//CHECK-L-NEXT:   if (!a1_is_moved)
+//CHECK-L-NEXT:       struct_A_D(a1);
+//CHECK-L-NEXT:}
+int main(){
+    test();
+    return (x-4==0&&y-2==0&&z-2==0)?0:-1;
+    }

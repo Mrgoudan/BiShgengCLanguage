@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -verify %s
+
+owned struct A{
+};
+owned struct B{
+    public:
+    A a;
+};
+owned struct C{
+    public:
+    A a;
+    B b;
+};
+
+int main(){
+    A a1 = {};
+    A a2 = {};
+    A a3= {};
+    A a4= {};
+    B b1 ={.a=a1};
+    B b2 ={.a=a2};
+    C c1 = {.a=a3,.b=b1};
+    c1.b = b2;// expected-error {{assign to part of owned value: `c1.b`}}
+    return 0;
+}
+
