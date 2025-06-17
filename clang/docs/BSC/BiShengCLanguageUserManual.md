@@ -5814,6 +5814,7 @@ int main() {
 | bsc-nullability      | 可屏蔽所有 Nullability 数据流分析过程的报错，<br />包括 deref-nullable、pass-nullable、return-nullable、cast-nullable、<br />assign-nullable、assign-nonnull 错误类型标识。 |
 | use-moved-owned      | "use of moved value: \`%0\`“<br />"use of partially moved value: \`%0\`, %1 moved"<br />"use of all moved value: \`%0\`" |
 | use-uninit-owned     | "use of uninitialized value: \`%0\`"<br />"use of possibly uninitialized value: \`%0\`" |
+| init-nonnull    | "`%0` is a _Nonnull pointer and must be properly initialized." |
 | use-owned            | 包括use-moved-owned、use-uninit-owned 错误类型标识可屏蔽的错误日志 |
 | assign-moved-owned   | "assign to partially moved value: \`%0\`, %1 moved"<br />"assign to possibly partially moved value: \`%0\`, %1 possibly moved"<br />"assign to all moved value: \`%0\`"<br />"assign to part of moved value: \`%0\`" |
 | assign-uninit-owned  | "assign to part of uninitialized value: \`%0\`"              |

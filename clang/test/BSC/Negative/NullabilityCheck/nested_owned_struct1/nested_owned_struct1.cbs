@@ -1,0 +1,50 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+safe T *owned safe_malloc<T>(T t);
+safe void safe_free(void *owned p);
+
+owned struct B{
+    public:
+    int * owned p;
+    int pp;
+    ~B(B this){
+        safe_free((void*owned)this.p);
+    }
+};
+
+owned struct A{
+    public:
+    B b;
+    int * owned p;
+    int * q;
+    int * _Nullable nq;
+    ~A(A this){
+        safe_free((void* owned)this.p);
+    }
+};
+
+void test1(){
+    A a ={};// #1
+    B b = {};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
+}
+// expected-error@#1 {{`a.b.p` is a _Nonnull pointer and must be properly initialized.}}
+// expected-error@#1 {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+
+void test2(){
+    B b ={};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
+    A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+}
+
+void test3(){
+    B b = {.p=nullptr};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
+    A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+}
+
+void test4(){
+    B b = {.p=safe_malloc(42)};
+    A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+}
+
+void test5(){
+    A a ={.b={safe_malloc(42)},.p=safe_malloc(420)};
+}

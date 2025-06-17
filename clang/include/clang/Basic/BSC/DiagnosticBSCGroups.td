@@ -7,13 +7,15 @@ def ReturnNullable : DiagGroup<"return-nullable">;
 def CastNullable : DiagGroup<"cast-nullable">;
 def AssignNullable : DiagGroup<"assign-nullable">;
 def AssignNonnull : DiagGroup<"assign-nonnull">;
+def InitNonnull : DiagGroup<"init-nonnull">;
 def BSCNullability : DiagGroup<"bsc-nullability",
                                    [DerefNullable,
                                     PassNullable,
                                     ReturnNullable,
                                     CastNullable,
                                     AssignNullable,
-                                    AssignNonnull]>;
+                                    AssignNonnull,
+                                    InitNonnull]>;
 
 def UseMovedOwned : DiagGroup<"use-moved-owned">;
 def UseUninitOwned : DiagGroup<"use-uninit-owned">;

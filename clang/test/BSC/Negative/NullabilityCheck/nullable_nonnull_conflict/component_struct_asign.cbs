@@ -1,43 +1,59 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
+
 int *_Nullable foo() {
     return nullptr;
 }
+
 struct inside{
     int* _Nonnull p;
 };
+
 struct mid{
     struct inside c1;
 };
+
 struct out{
     struct inside a;
     struct mid b;
     int* _Nonnull pt;
 };
+
+struct simOut{
+    struct inside a;
+};
+
 void test1(void){
 
-    struct inside a = (struct inside){ nullptr };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    struct inside a = (struct inside){ nullptr };// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
 
 }
 
 void test2(void){
 
-    struct mid m = { { nullptr } };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    struct mid m = { { nullptr } };// expected-error {{`m.c1.p` is a _Nonnull pointer and must be properly initialized.}}
 
 }
 
 void test3(void){
 
-    struct out o = { {nullptr},// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    struct out o = { {nullptr},// #1
 
-    {{nullptr}},// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    {{nullptr}},
 
-    nullptr };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    nullptr };
 
 }
+// expected-error@#1 {{`o.a.p` is a _Nonnull pointer and must be properly initialized.}}
+// expected-error@#1 {{`o.b.c1.p` is a _Nonnull pointer and must be properly initialized.}}
+// expected-error@#1 {{`o.pt` is a _Nonnull pointer and must be properly initialized.}}
 
+void test4(){
+    struct simOut o1={(struct inside)(struct inside){nullptr}};// expected-error {{`o1.a.p` is a _Nonnull pointer and must be properly initialized.}}
+    struct simOut o2={(struct inside)(struct inside){}};// expected-error {{`o2.a.p` is a _Nonnull pointer and must be properly initialized.}}
+}
 
-void test4(void){
+void test5(void){
     int * _Nullable p0 = nullptr;
-    struct inside a = (struct inside){ p0 };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    struct inside b = (struct inside){ foo() };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    struct inside a = (struct inside){ p0 };// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+    struct inside b = (struct inside){ foo() };// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
 }

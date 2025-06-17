@@ -278,4 +278,7 @@ def err_nullable_pointer_access_member : Error<
 def err_nonnull_assigned_by_nullable : Error<
   "nonnull pointer cannot be assigned by nullable pointer">,
   InGroup<AssignNonnull>;
+def err_nonnull_init_by_default : Error<
+  "`%0` is a _Nonnull pointer and must be properly initialized.">,
+  InGroup<InitNonnull>;
 

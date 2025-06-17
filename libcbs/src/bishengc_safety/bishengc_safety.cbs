@@ -63,7 +63,7 @@ safe void bsc_refcell_immut_borrow_failed(void) {
     }
 }
 
-safe void safe_free(void * owned p) {
+safe void safe_free(void * _Nullable owned p) {
 	unsafe {
 		free((void *)p);
 	}

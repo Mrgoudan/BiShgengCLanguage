@@ -28,6 +28,7 @@ enum NullabilityCheckDiagKind {
   NullableCastNonnull,
   NullablePointerDereference,
   NullablePointerAccessMember,
+  NonnullInitByDefault,
   NullabilityMaxDiagKind
 };
 
@@ -37,17 +38,21 @@ const unsigned NullabilityDiagIdList[] = {
     diag::err_return_nullable,
     diag::err_nullable_cast_nonnull,
     diag::err_nullable_pointer_dereference,
-    diag::err_nullable_pointer_access_member};
+    diag::err_nullable_pointer_access_member,
+    diag::err_nonnull_init_by_default};
 
 struct NullabilityCheckDiagInfo {
   SourceLocation Loc;
   NullabilityCheckDiagKind Kind;
-
+  std::string Name;
   NullabilityCheckDiagInfo(SourceLocation Loc, NullabilityCheckDiagKind Kind)
       : Loc(Loc), Kind(Kind) {}
+  NullabilityCheckDiagInfo(SourceLocation Loc, NullabilityCheckDiagKind Kind,
+                           std::string Name)
+      : Loc(Loc), Kind(Kind), Name(Name) {}
 
   bool operator==(const NullabilityCheckDiagInfo &other) const {
-    return Loc == other.Loc && Kind == other.Kind;
+    return Loc == other.Loc && Kind == other.Kind && Name == other.Name;
   }
 };
 
@@ -97,7 +102,23 @@ public:
               });
 
     for (const NullabilityCheckDiagInfo &DI : DIV) {
-      S.Diag(DI.Loc, getNullabilityDiagID(DI.Kind));
+      switch (DI.Kind) {
+      case NonnullAssignedByNullable:
+      case PassNullableArgument:
+      case ReturnNullable:
+      case NullableCastNonnull:
+      case NullablePointerDereference:
+      case NullablePointerAccessMember:
+        S.Diag(DI.Loc, getNullabilityDiagID(DI.Kind));
+        break;
+      case NonnullInitByDefault:
+        S.Diag(DI.Loc, getNullabilityDiagID(DI.Kind)) << DI.Name;
+        break;
+      default:
+        llvm_unreachable("Unknown error type");
+        break;
+      }
+
       S.getDiagnostics().increaseNullabilityCheckErrors();
     }
   }

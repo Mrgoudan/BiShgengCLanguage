@@ -116,8 +116,8 @@ public:
   void HandleVarDeclInit(DeclStmt *DS, VarDecl *VD);
   void HandlePointerInit(DeclStmt *DS, VarDecl *VD);
   void HandleStructInit(DeclStmt *DS, VarDecl *VD);
-  void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD, Expr *FieldInit);
-  void HandleFieldStructInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD,InitListExpr *ILE);
+  void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD,
+                       Expr *FieldInit, std::string FullFieldPath);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitMemberExpr(MemberExpr *ME);
@@ -126,6 +126,8 @@ public:
   void VisitCStyleCastExpr(CStyleCastExpr *CSCE);
   NullabilityKind getExprPathNullability(Expr *E);
   void PassConditionStatusToSuccBlocks(Stmt *Cond);
+  void HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
+                              InitListExpr *InitList, std::string FieldPrefix);
 };
 } // namespace
 
@@ -328,99 +330,90 @@ void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
 
 // Init a struct variable with pointer fields.
 void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD) {
-  Expr *Init = VD->getInit();
-  if (!Init)
-    return;
+  if (auto RecTy = dyn_cast<RecordType>(VD->getType().getCanonicalType())) {
+    if (RecordDecl *RD = RecTy->getDecl()) {
+      if (Expr *Init = VD->getInit()) {
 
-  // Skip all ParenExpr/ImplicitCastExpr
-  Init = Init->IgnoreParenImpCasts();
-  // Strip all CStyleCastExpr (casts) and CompoundLiteralExpr (compound
-  // literals)
-  while (true) {
-    if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
-      Init = CSE->getSubExpr()->IgnoreParenImpCasts();
-      continue;
-    }
-    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
-      if (Expr *Sub = CLE->getInitializer()) {
-        Init = Sub->IgnoreParenImpCasts();
-        continue;
+        Init = Init->IgnoreParenImpCasts();
+        while (true) {
+          if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
+            Init = CSE->getSubExpr()->IgnoreParenImpCasts();
+            continue;
+          }
+          if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+            if (Expr *Sub = CLE->getInitializer()) {
+              Init = Sub->IgnoreParenImpCasts();
+              continue;
+            }
+          }
+          break;
+        }
+        if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
+          HandleNestedStructInit(DS, VD, RD, InitListE, "");
+        }
       }
     }
-    break;
-  }
-
-  // Finally attempt InitListExpr
-  auto *InitListE = dyn_cast<InitListExpr>(Init);
-  if (!InitListE)
-    return;
-
-  // Get the RecordDecl of variable VD
-  QualType QT = VD->getType().getCanonicalType();
-  if (auto *RT = dyn_cast<RecordType>(QT)) {
-    RecordDecl *RD = RT->getDecl();
-    // Use ParentVD = VD as the recursive context; all subfields belong to the
-    // same top-level variable
-    HandleFieldStructInit(DS, VD, RD, InitListE);
   }
 }
 
-// Modified by Huang Bowen
-void TransferFunctions::HandleFieldStructInit(DeclStmt *DS, VarDecl *ParentVD,
-                                              RecordDecl *RD,
-                                              InitListExpr *ILE) {
-  Expr **Inits = ILE->getInits();
-  // Iterate over all fields in the record
+void TransferFunctions::HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD,
+                                               RecordDecl *RD,
+                                               InitListExpr *InitList,
+                                               std::string FieldPrefix) {
+  Expr **Inits = InitList->getInits();
   for (FieldDecl *FD : RD->fields()) {
-    Expr *FieldInit = Inits[FD->getFieldIndex()]->IgnoreParenImpCasts();
+    unsigned idx = FD->getFieldIndex();
+    std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
+
+    Expr *fieldInit = Inits[idx];
 
     // Skip all ParenExpr/ImplicitCastExpr
-    FieldInit = FieldInit->IgnoreParenImpCasts();
-    // Process C99 compound literals (CompoundLiteralExpr) and strip all
-    // CStyleCastExpr (casts) and CompoundLiteralExpr (compound literals)
     while (true) {
-      if (auto *CSE = dyn_cast<CStyleCastExpr>(FieldInit)) {
-        FieldInit = CSE->getSubExpr()->IgnoreParenImpCasts();
+      if (auto *CSE = dyn_cast<CStyleCastExpr>(fieldInit)) {
+        fieldInit = CSE->getSubExpr()->IgnoreParenImpCasts();
         continue;
       }
-      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(FieldInit)) {
+      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(fieldInit)) {
         if (Expr *Sub = CLE->getInitializer()) {
-          FieldInit = Sub->IgnoreParenImpCasts();
+          fieldInit = Sub->IgnoreParenImpCasts();
           continue;
         }
       }
       break;
     }
 
-    // (A) If the field is a pointer, perform nullability check
     if (FD->getType()->isPointerType()) {
-      HandleFieldInit(DS, ParentVD, FD, Inits[FD->getFieldIndex()]);
-    }
-    // (B) If the field is also a struct/class, recurse into it
-    else if (auto *NestedRT =
-                 dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
-      if (RecordDecl *NestedRD = NestedRT->getDecl()) {
-        // The inner FieldInit should be an InitListExpr
-        if (auto *NestedILE = dyn_cast<InitListExpr>(FieldInit)) {
-          HandleFieldStructInit(DS, ParentVD, NestedRD, NestedILE);
+      HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
+    } else if (auto nestedRecTy =
+                   dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
+      if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
+        if (auto nestedInitList = dyn_cast<InitListExpr>(fieldInit)) {
+          HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
+                                 fullFieldPath);
         }
       }
     }
   }
 }
 
-void TransferFunctions::HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD, Expr *FieldInit) {
+void TransferFunctions::HandleFieldInit(DeclStmt *DS, VarDecl *VD,
+                                        FieldDecl *FD, Expr *FieldInit,
+                                        std::string FullFieldPath) {
+  FieldPath FP(VD, FullFieldPath);
+
   NullabilityKind LHSKind = getDefNullability(FD->getType(), Ctx);
   NullabilityKind RHSKind = getExprPathNullability(FieldInit);
+
   if (LHSKind == NullabilityKind::NonNull) {
-    if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(DS)) {
-      NullabilityCheckDiagInfo DI(FieldInit->getBeginLoc(), NonnullAssignedByNullable);
+    if (RHSKind != NullabilityKind::NonNull && ShouldReportNullPtrError(DS)) {
+      NullabilityCheckDiagInfo DI(VD->getBeginLoc(), NonnullInitByDefault,
+                                  VD->getNameAsString() + FullFieldPath);
       Reporter.addDiagInfo(DI);
     }
   } else {
-    FieldPath FP(VD, "." + FD->getNameAsString());
-    if (CurrStatusFP.count(FP))
+    if (CurrStatusFP.count(FP)) {
       CurrStatusFP[FP] = RHSKind;
+    }
   }
 }
 
