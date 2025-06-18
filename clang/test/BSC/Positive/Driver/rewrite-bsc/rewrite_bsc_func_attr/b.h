@@ -1,0 +1,1 @@
+#define FMT_PRINT(a, b) __attribute__((format(printf, (a), (b))))

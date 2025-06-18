@@ -1,0 +1,17 @@
+// RUN: %clang -c %s -o %t.output.o
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang -c %t-rw.c -o %t-rw.output -I%S
+// expected-no-diagnostics
+
+#include "a.h"
+
+// CHECK:      #include "b.h"
+// CHECK-NEXT: #include <execinfo.h>
+// CHECK-NEXT: #include <stdatomic.h>
+// CHECK-NEXT: #include <stdio.h>
+// CHECK-NEXT: #include <stdlib.h>
+// CHECK-NEXT: #include <string.h>
+// CHECK-EMPTY:
+// CHECK-EMPTY:
+// CHECK-NEXT: __attribute__((format(printf, 2, 3))) void foo(const char *a, const char *b, ...);
