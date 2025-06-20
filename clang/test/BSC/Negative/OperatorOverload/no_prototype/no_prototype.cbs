@@ -1,0 +1,53 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+struct E1
+{
+    int a1;
+};
+struct E2
+{
+    int a2;
+};
+
+
+int func1(struc_param, int_param); // expected-error{{a parameter list without types is only allowed in a function definition}}
+
+__attribute__((operator -))
+int func1(struct E1 f1, int b){
+    return f1.a1 - b;
+}
+
+
+__attribute__((operator -))
+int func2(struc_param, int_param); // expected-error{{a parameter list without types is only allowed in a function definition}} expected-error{{overloaded 'func2' must have at least one parameter of class or enumeration type}}
+
+__attribute__((operator -))
+int func2(struct E1 f1, int b){
+    return f1.a1 - b;
+}
+
+
+int func3(struct E1 struc_param, int int_param); // expected-note{{previous declaration is here}}
+
+__attribute__((operator -))
+int func3(struct E1 f1, int b){ // expected-error{{conflicting types for 'func3'}}
+    return f1.a1 - b;
+}
+
+
+__attribute__((operator -))
+int func4(struct E1 struc_param, int int_param);
+
+__attribute__((operator -))
+int func4(struct E1 f1, int b){
+    return f1.a1 - b;
+}
+
+
+__attribute__((operator -))
+int func5(struct E2 struc_param, int int_param); // expected-note{{previous declaration is here}}
+
+__attribute__((operator -))
+int func5(struct E1 f1, int b){ // expected-error{{conflicting types for 'func5'}}
+    return f1.a1 - b;
+}

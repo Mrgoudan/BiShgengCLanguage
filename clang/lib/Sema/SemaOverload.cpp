@@ -7753,6 +7753,11 @@ void Sema::AddNonMemberOperatorCandidates(
         FunTmpl ? FunTmpl->getTemplatedDecl() : cast<FunctionDecl>(D);
 
 #if ENABLE_BSC
+    QualType QT = FD->getType();
+    const Type *T = QT.getTypePtrOrNull();
+    if (!T || isa<FunctionNoProtoType>(T))
+      continue;
+
     Expr *ArgsArray[2];
     if (getLangOpts().BSC) {
       if (IsDesugarNeededOperatorKind(FD->getOverloadedOperator())) {
