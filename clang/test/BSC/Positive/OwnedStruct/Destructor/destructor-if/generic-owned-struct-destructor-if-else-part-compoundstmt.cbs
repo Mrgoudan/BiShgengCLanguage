@@ -12,9 +12,9 @@ public:
     }
 };
 int foo() {
-  if (1) 
+  if (1){
     S<int> s1 = {};
-  else if (0) {
+  } else if (0) {
     S<int> s1 = {};
   }
   return 0;
@@ -25,9 +25,9 @@ int goo() {
     S<int> s1 = {};
   } else if (0) {
     S<int> s1 = {};
-  } else 
+  } else {
     S<int> s1 = {};
-  
+  }
   return 0;
 }
 int main() {

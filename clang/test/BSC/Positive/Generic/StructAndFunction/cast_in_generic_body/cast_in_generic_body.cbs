@@ -4,7 +4,7 @@
 
 int foo<T> (T a, T b)
 {
-  int x = int(a) + int(b); // this should report error
+  int x = (int)a + (int)b; // this should report error
   return x;
 }
 

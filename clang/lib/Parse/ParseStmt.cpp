@@ -275,9 +275,6 @@ Default:
                                 llvm::all_of(GNUAttrs, IsStmtAttr);
     // FIXME: if-cond is too complex here.
     if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
-#if ENABLE_BSC
-         getLangOpts().BSC ||
-#endif
          (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
              ParsedStmtContext()) &&
         ((GNUAttributeLoc.isValid() && !(HaveAttrs && AllAttrsAreStmtAttrs)) ||

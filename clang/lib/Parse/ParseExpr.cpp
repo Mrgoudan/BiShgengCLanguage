@@ -1634,11 +1634,8 @@ ExprResult Parser::ParseCastExpression(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);
     }
-    // Enter the type-cast check in bsc generic.
-    if (!(getLangOpts().CPlusPlus || getLangOpts().BSC)) {
-#else
-    if (!getLangOpts().CPlusPlus) {
 #endif
+    if (!getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_expression);
       return ExprError();
     }

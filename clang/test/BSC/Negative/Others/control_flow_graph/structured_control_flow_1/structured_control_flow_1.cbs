@@ -35,10 +35,11 @@ int test3(){
     goto FAIL;
   }
 	return 0;
-FAIL:
-  int x2 = 0;
-  int *owned p2 = (int *owned)&x2;     
-  return 1; //expected-error {{memory leak of value: `p2`}}
+FAIL:{
+    int x2 = 0;
+    int *owned p2 = (int *owned)&x2;     
+    return 1; //expected-error {{memory leak of value: `p2`}}
+  }
 }
 
 int g_a = 0;
@@ -51,8 +52,9 @@ int test4() {
     goto next; // expected-error {{memory leak of value: `p1`}}
   }
   int v = 3;
-next:
-  int x2 = 0;
-  int *owned p2 = (int *owned)&x2;
-  return 0; // expected-error {{memory leak of value: `p2`}}
+next:{
+    int x2 = 0;
+    int *owned p2 = (int *owned)&x2;
+    return 0; // expected-error {{memory leak of value: `p2`}}
+  }
 }

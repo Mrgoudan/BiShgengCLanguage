@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -verify %s
+void test1(void){
+    int A = int(42);// expected-error {{expected expression}}
+}
+
+int test2(float a, float b) {
+    int x = int(a) + int(b);// expected-error {{expected expression}}
+    return x;
+}
+
+int test3(float a, float b) {
+    int x = int();// expected-error {{expected expression}}
+    a = (float) x;
+    return x;
+}

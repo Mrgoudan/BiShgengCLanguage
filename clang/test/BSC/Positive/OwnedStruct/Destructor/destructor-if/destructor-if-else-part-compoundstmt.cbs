@@ -12,8 +12,9 @@ public:
     }
 };
 int foo() {
-  if (1) 
+  if (1) {
     S s1 = {};
+  }
   else if (0) {
     S s1 = {};
   }
@@ -25,8 +26,9 @@ int goo() {
     S s1 = {};
   } else if (0) {
     S s1 = {};
-  } else 
+  } else {
     S s1 = {};
+  }
   
   return 0;
 }

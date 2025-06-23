@@ -2,7 +2,7 @@
 
 T1 foo<T1, T2> (T1 a, T2 b)
 {
-  int x = int(b);           // expected-error {{operand of type 'struct S' where arithmetic or pointer type is required}}
+  int x = (int) b;           // expected-error {{operand of type 'struct S' where arithmetic or pointer type is required}}
   return x;
 }
 

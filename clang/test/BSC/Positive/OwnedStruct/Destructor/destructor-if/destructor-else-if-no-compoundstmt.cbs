@@ -13,20 +13,25 @@ public:
     }
 };
 int foo() {
-  if (0) 
-    S s1 = {};
-   else if (1)
-    S s1 = {};
+  if (0) {
+      S s1 = {};
+    }
+   else if (1){
+      S s1 = {};
+    }
   return 0;
 }
 
 int goo() {
-  if (0) 
-    S s1 = {};
-  else if (0)
-    S s1 = {};
-  else 
-    S s1 = {};
+  if (0) {
+      S s1 = {};
+    }
+  else if (0){
+      S s1 = {};
+    }
+  else {
+      S s1 = {};
+    }
   
   return 0;
 }

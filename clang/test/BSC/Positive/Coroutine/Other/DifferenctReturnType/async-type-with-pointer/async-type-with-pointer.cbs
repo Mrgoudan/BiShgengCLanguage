@@ -18,8 +18,9 @@ async int* f() {
     int* b = &a;
     int c;
     if(a == 1) {
-        if (*b == 3)
-           int c = await read(3);
+        if (*b == 3){
+            int c = await read(3);
+        }
         int c = await read(2);
     }
     int* d = &c;
