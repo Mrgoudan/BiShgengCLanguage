@@ -116,6 +116,7 @@ public:
   void HandlePointerInit(DeclStmt *DS, VarDecl *VD);
   void HandleStructInit(DeclStmt *DS, VarDecl *VD);
   void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD, Expr *FieldInit);
+  void HandleFieldStructInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD,InitListExpr *ILE);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitMemberExpr(MemberExpr *ME);
@@ -310,14 +311,83 @@ void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
 
 // Init a struct variable with pointer fields.
 void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD) {
-  auto RecTy = dyn_cast<RecordType>(VD->getType().getCanonicalType());
-  if (RecordDecl *RD = RecTy->getDecl()) {
-    if (auto InitListE = dyn_cast<InitListExpr>(VD->getInit())) {
-      // Init by InitListExpr, such as `struct S s = { .a = &local };`
-      Expr **Inits = InitListE->getInits();
-      for (FieldDecl *FD : RD->fields())
-        if (FD->getType()->isPointerType())
-          HandleFieldInit(DS, VD, FD, Inits[FD->getFieldIndex()]);
+  Expr *Init = VD->getInit();
+  if (!Init)
+    return;
+
+  // Skip all ParenExpr/ImplicitCastExpr
+  Init = Init->IgnoreParenImpCasts();
+  // Strip all CStyleCastExpr (casts) and CompoundLiteralExpr (compound
+  // literals)
+  while (true) {
+    if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
+      Init = CSE->getSubExpr()->IgnoreParenImpCasts();
+      continue;
+    }
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+      if (Expr *Sub = CLE->getInitializer()) {
+        Init = Sub->IgnoreParenImpCasts();
+        continue;
+      }
+    }
+    break;
+  }
+
+  // Finally attempt InitListExpr
+  auto *InitListE = dyn_cast<InitListExpr>(Init);
+  if (!InitListE)
+    return;
+
+  // Get the RecordDecl of variable VD
+  QualType QT = VD->getType().getCanonicalType();
+  if (auto *RT = dyn_cast<RecordType>(QT)) {
+    RecordDecl *RD = RT->getDecl();
+    // Use ParentVD = VD as the recursive context; all subfields belong to the
+    // same top-level variable
+    HandleFieldStructInit(DS, VD, RD, InitListE);
+  }
+}
+
+// Modified by Huang Bowen
+void TransferFunctions::HandleFieldStructInit(DeclStmt *DS, VarDecl *ParentVD,
+                                              RecordDecl *RD,
+                                              InitListExpr *ILE) {
+  Expr **Inits = ILE->getInits();
+  // Iterate over all fields in the record
+  for (FieldDecl *FD : RD->fields()) {
+    Expr *FieldInit = Inits[FD->getFieldIndex()]->IgnoreParenImpCasts();
+
+    // Skip all ParenExpr/ImplicitCastExpr
+    FieldInit = FieldInit->IgnoreParenImpCasts();
+    // Process C99 compound literals (CompoundLiteralExpr) and strip all
+    // CStyleCastExpr (casts) and CompoundLiteralExpr (compound literals)
+    while (true) {
+      if (auto *CSE = dyn_cast<CStyleCastExpr>(FieldInit)) {
+        FieldInit = CSE->getSubExpr()->IgnoreParenImpCasts();
+        continue;
+      }
+      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(FieldInit)) {
+        if (Expr *Sub = CLE->getInitializer()) {
+          FieldInit = Sub->IgnoreParenImpCasts();
+          continue;
+        }
+      }
+      break;
+    }
+
+    // (A) If the field is a pointer, perform nullability check
+    if (FD->getType()->isPointerType()) {
+      HandleFieldInit(DS, ParentVD, FD, Inits[FD->getFieldIndex()]);
+    }
+    // (B) If the field is also a struct/class, recurse into it
+    else if (auto *NestedRT =
+                 dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
+      if (RecordDecl *NestedRD = NestedRT->getDecl()) {
+        // The inner FieldInit should be an InitListExpr
+        if (auto *NestedILE = dyn_cast<InitListExpr>(FieldInit)) {
+          HandleFieldStructInit(DS, ParentVD, NestedRD, NestedILE);
+        }
+      }
     }
   }
 }

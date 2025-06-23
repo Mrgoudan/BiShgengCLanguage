@@ -1,0 +1,43 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+int *_Nullable foo() {
+    return nullptr;
+}
+struct inside{
+    int* _Nonnull p;
+};
+struct mid{
+    struct inside c1;
+};
+struct out{
+    struct inside a;
+    struct mid b;
+    int* _Nonnull pt;
+};
+void test1(void){
+
+    struct inside a = (struct inside){ nullptr };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+}
+
+void test2(void){
+
+    struct mid m = { { nullptr } };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+}
+
+void test3(void){
+
+    struct out o = { {nullptr},// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+    {{nullptr}},// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+    nullptr };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+}
+
+
+void test4(void){
+    int * _Nullable p0 = nullptr;
+    struct inside a = (struct inside){ p0 };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    struct inside b = (struct inside){ foo() };// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+}
