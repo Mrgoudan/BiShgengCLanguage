@@ -1073,9 +1073,9 @@ ExprResult Parser::ParseCastExpression(
       return ParseOptionalBSCScopeSpecifier(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);
+    } else {
+      return ExprError();
     }
-    // Fall through; this isn't a message send.
-    LLVM_FALLTHROUGH;
 #endif
 
   case tok::identifier: {      // primary-expression: identifier

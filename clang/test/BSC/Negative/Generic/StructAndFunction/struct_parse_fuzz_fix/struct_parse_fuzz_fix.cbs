@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+void func1(){
+    +struct SomeStruct<void>; // expected-error{{explicit specialization of undeclared template struct 'SomeStruct'}}
+}
+
+void func2(){
+    -struct SomeStruct<void>; // expected-error{{explicit specialization of undeclared template struct 'SomeStruct'}}
+}
+
+void func3(){
+    *struct SomeStruct<void>; // expected-error{{explicit specialization of undeclared template struct 'SomeStruct'}}
+}
+
+void func4(){
+    \struct SomeStruct<void>; // expected-error{{expected expression}}
+}
+
+void func5(){
+    >struct SomeStruct<void>; // expected-error{{expected expression}} expected-error{{explicit specialization of undeclared template struct 'SomeStruct'}}
+}
+
+void func6(int n) { // expected-note{{to match this '{'}}
+    switch (n) { // expected-note{{to match this '{'}}
+        g_noise.getTaskCount+;+ // expected-error{{use of undeclared identifier 'g_noise'}} expected-error{{expected expression}}
+        struct PollResult<struct Void> s = task->future->poll(); // expected-error{{explicit specialization of undeclared template struct 'PollResult'}} expected-error{{expected '}'}} expected-error{{expected '}'}}
