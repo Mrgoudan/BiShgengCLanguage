@@ -24,13 +24,12 @@ int main() {
   struct A<void *>::foo(&s, future);
   return 0;
 }
-
-// CHECK:      struct A_void_P {
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct __Trait_Future_void_P {
+// CHECK: struct __Trait_Future_void_P {
 // CHECK-NEXT:   void *data;
 // CHECK-NEXT:   struct __Trait_Future_Vtable_void_P *vtable;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT:   struct A_void_P {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static void struct_A_void_P_foo(struct A_void_P *this, struct __Trait_Future_void_P future);

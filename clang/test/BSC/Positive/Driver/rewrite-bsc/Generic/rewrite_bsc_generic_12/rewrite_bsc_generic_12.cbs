@@ -82,6 +82,10 @@ int main() { return 0; }
 // CHECK-NEXT:   int value;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
+// CHECK-NEXT: struct B {
+// CHECK-NEXT:   struct A_int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
 // CHECK-NEXT: struct C {
 // CHECK-NEXT:   struct A_int *a;
 // CHECK-NEXT: };
@@ -92,10 +96,6 @@ int main() { return 0; }
 // CHECK-EMPTY:
 // CHECK-NEXT: struct _TD_E {
 // CHECK-NEXT:   struct A_int *a;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct B {
-// CHECK-NEXT:   struct A_int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct A_int a;

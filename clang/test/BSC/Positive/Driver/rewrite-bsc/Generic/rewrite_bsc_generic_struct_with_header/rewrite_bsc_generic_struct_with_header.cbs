@@ -27,16 +27,16 @@ int main() {
 // CHECK-NEXT:   int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct LinkedList_struct_S {
-// CHECK-NEXT:     struct _BSC_ListNode_struct_S *head;
-// CHECK-NEXT:     struct _BSC_ListNode_struct_S *tail;
-// CHECK-NEXT:     size_t len;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: struct _BSC_ListNode_struct_S {
 // CHECK-NEXT:   struct _BSC_ListNode_struct_S *next;
 // CHECK-NEXT:   struct _BSC_ListNode_struct_S *prev;
 // CHECK-NEXT:   struct S element;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct LinkedList_struct_S {
+// CHECK-NEXT:     struct _BSC_ListNode_struct_S *head;
+// CHECK-NEXT:     struct _BSC_ListNode_struct_S *tail;
+// CHECK-NEXT:     size_t len;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct _BSC_ListNode_struct_S *struct__BSC_ListNode_struct_S_new(struct S el);

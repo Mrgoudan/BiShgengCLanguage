@@ -182,24 +182,12 @@ int main() {
 // CHECK-NEXT:     int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
-// CHECK:      struct G {
-// CHECK-NEXT:     int a;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct I {
-// CHECK-NEXT:     int a;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct K {
-// CHECK-NEXT:     int a;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK:      struct Data_int {
-// CHECK-NEXT:     int data;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
 // CHECK:      struct F {
 // CHECK-NEXT:     struct E e[10];
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK:      struct G {
+// CHECK-NEXT:     int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
 // CHECK:      struct H {
@@ -207,14 +195,25 @@ int main() {
 // CHECK-NEXT:     int b;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
+// CHECK:      struct I {
+// CHECK-NEXT:     int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
 // CHECK:      struct J {
 // CHECK-NEXT:     struct I i[10];
 // CHECK-NEXT:     int b;
+// CHECK-NEXT: };
+// CHECK:      struct K {
+// CHECK-NEXT:     int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
 // CHECK:      struct L {
 // CHECK-NEXT:     struct K g[10];
 // CHECK-NEXT:     int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK:      struct Data_int {
+// CHECK-NEXT:     int data;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
 // CHECK:      struct DataArray_int {

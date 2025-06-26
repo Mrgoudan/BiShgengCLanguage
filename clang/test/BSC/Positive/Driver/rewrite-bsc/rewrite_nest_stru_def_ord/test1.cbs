@@ -1,0 +1,129 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+
+struct A{
+    int a;
+};
+
+struct B{
+    struct A a;
+};
+
+struct C{
+    struct A a;
+};
+
+struct D{
+    struct A a;
+};
+
+struct E{
+    struct A a;
+};
+
+struct F{
+    struct A a;
+};
+
+struct G{
+    struct A a;
+};
+
+struct H{
+    struct A a;
+};
+
+struct I{
+    struct A a;
+};
+
+struct J{
+    struct A a;
+};
+
+struct K{
+    struct A a;
+};
+
+struct L{
+    struct A a;
+};
+
+struct M{
+    struct A a;
+};
+
+struct out{
+    struct A a;
+    struct B b;
+    struct C c;
+    struct D d;
+    struct E e;
+    struct F f ;
+    struct G g;
+    struct H h;
+    struct I i;
+    struct J j;
+    struct K k;
+    struct L l;
+    struct M m;
+};
+
+int main(){
+    struct out o = {};
+    return 0;
+}
+// CHECK: struct A{
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct B{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct C{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct D{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct E{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct F{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct G{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct H{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct I{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct J{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct K{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct L{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct M{
+// CHECK-NEXT:   struct A a;
+// CHECK-NEXT: };

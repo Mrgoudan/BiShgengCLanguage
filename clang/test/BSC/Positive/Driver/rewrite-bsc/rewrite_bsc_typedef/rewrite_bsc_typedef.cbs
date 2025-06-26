@@ -37,12 +37,12 @@ int main() {
 // CHECK-NEXT: struct S_int {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: union _TD_MyUnion {
-// CHECK-NEXT:   int a;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: struct _TD_MyStruct {
 // CHECK-NEXT:     struct S_int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: union _TD_MyUnion {
+// CHECK-NEXT:   int a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: int main() {

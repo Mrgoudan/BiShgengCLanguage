@@ -85,22 +85,22 @@ int main() {
 // CHECK-NEXT:   ANONDIGIT_END
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct UserHBSStruct {
-// CHECK-NEXT:   int a;
-// CHECK-NEXT:   int b;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: struct BSCGenericStruct_int {
 // CHECK-NEXT:   int t;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct CBSStruct {
+// CHECK-NEXT: struct UserHBSStruct {
 // CHECK-NEXT:   int a;
 // CHECK-NEXT:   int b;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct CBSGenericFieldStruct {
 // CHECK-NEXT:   TBSCGSI a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct CBSStruct {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct BSCGenericStruct_int init_int(int t);

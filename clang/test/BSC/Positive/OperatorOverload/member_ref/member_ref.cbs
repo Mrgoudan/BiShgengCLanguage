@@ -224,41 +224,50 @@ int main(){
 // CHECK-NEXT: struct RcData_int;
 // CHECK-NEXT: struct Rc_int;
 // CHECK-NEXT: struct RcRecord_int;
-// CHECK-DAG:      struct A {
-// CHECK-DAG-NEXT:     int m;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG:      struct AP {
-// CHECK-DAG-NEXT:   struct A *a;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG-:      struct B {
-// CHECK-DAG--NEXT:     int x;
-// CHECK-DAG--NEXT:     int y;
-// CHECK-DAG--NEXT: };
-// CHECK-DAG:      struct BP {
-// CHECK-DAG-NEXT:   struct A *a;
-// CHECK-DAG-NEXT:   struct B *b;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG:      struct CP {
-// CHECK-DAG-NEXT:     struct A * a;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG:      struct DP {
-// CHECK-DAG-NEXT:     struct A * a;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG:      struct FP {
-// CHECK-DAG-NEXT:     struct A* a;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG:      struct Rc_int {
-// CHECK-DAG-NEXT:     struct RcData_int *ptr;
-// CHECK-DAG-NEXT: };
-// CHECK-DAG:      struct RcData_int {
-// CHECK-DAG-NEXT:     int data;
-// CHECK-DAG-NEXT: };
-// CHECK:      struct GP {
+// CHECK:      struct A {
+// CHECK-NEXT:     int m;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct AP {
+// CHECK-NEXT:   struct A *a;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct B {
+// CHECK-NEXT:     int x;
+// CHECK-NEXT:     int y;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct BP {
+// CHECK-NEXT:   struct A *a;
+// CHECK-NEXT:   struct B *b;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct CP {
+// CHECK-NEXT:     struct A * a;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct DP {
+// CHECK-NEXT:     struct A * a;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct FP {
+// CHECK-NEXT:     struct A* a;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct GP {
 // CHECK-NEXT:   struct FP fp;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
-// CHECK:      struct RcRecord_int {
-// CHECK-NEXT:      struct Rc_int rc;
+// CHECK-NEXT: struct RcData_int {
+// CHECK-NEXT:     int data;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct Rc_int {
+// CHECK-NEXT:     struct RcData_int *ptr;
+// CHECK-NEXT: };
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct RcRecord_int {
+// CHECK-NEXT: struct Rc_int rc;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
 // CHECK:      static  struct Rc_int struct_Rc_int_new(int data);

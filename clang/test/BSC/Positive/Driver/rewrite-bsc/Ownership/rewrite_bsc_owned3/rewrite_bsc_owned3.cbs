@@ -104,6 +104,10 @@ int main() {
 // CHECK-NEXT:      int **c;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
+// CHECK-NEXT: struct D { 
+// CHECK-NEXT:     struct C c;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
 // CHECK-NEXT: struct E {
 // CHECK-NEXT:      int e;
 // CHECK-NEXT: };
@@ -118,10 +122,6 @@ int main() {
 // CHECK-EMPTY:
 // CHECK-NEXT: struct H {
 // CHECK-NEXT:     int * *h;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct D { 
-// CHECK-NEXT:     struct C c;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT:  int (a)(void);

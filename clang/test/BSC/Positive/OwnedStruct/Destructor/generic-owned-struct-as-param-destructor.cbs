@@ -57,12 +57,12 @@ int main(void) {
 // CHECK:      struct A_int {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct C_int {
-// CHECK-NEXT:   int elem;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: struct B_int {
 // CHECK-NEXT:   struct A_int a;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct C_int {
+// CHECK-NEXT:   int elem;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static void struct_A_int_D( struct A_int this);

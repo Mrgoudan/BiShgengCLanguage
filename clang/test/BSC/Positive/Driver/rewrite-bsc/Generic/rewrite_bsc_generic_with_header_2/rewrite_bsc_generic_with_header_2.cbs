@@ -48,12 +48,12 @@ int main() {
 // CHECK-NEXT: struct G_int {
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct B {
-// CHECK-NEXT:   struct A **a;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
 // CHECK-NEXT: struct A {
 // CHECK-NEXT:   struct G_int g;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct B {
+// CHECK-NEXT:   struct A **a;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct S_int_char *newS_int_char(int a);

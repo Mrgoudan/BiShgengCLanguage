@@ -43,13 +43,13 @@ int main() {
 
 // CHECK: struct B {};
 // CHECK-EMPTY:
+// CHECK-NEXT: struct Foo_struct_B {
+// CHECK-NEXT:       struct B a;
+// CHECK-NEXT:   };
+// CHECK-EMPTY:
 // CHECK-NEXT: struct Goo_struct_B_struct_B {
 // CHECK-NEXT:       struct B a;
 // CHECK-NEXT:       struct B b;
-// CHECK-NEXT:   };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct Foo_struct_B {
-// CHECK-NEXT:       struct B a;
 // CHECK-NEXT:   };
 // CHECK-EMPTY:
 // CHECK-NEXT: static struct Foo_struct_B max_struct_B(struct B a, struct Foo_struct_B foo);

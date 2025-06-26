@@ -60,18 +60,19 @@ int main() {
     return 0;
 }
 
-// CHECK:      struct RawVec_int {
-// CHECK-NEXT:   int *ptr;
-// CHECK-NEXT:   int cap;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct LinkedList_struct_Vec_int {
+// CHECK: struct LinkedList_struct_Vec_int {
 // CHECK-NEXT:   struct _BSC_ListNode_struct_Vec_int *head;
 // CHECK-NEXT:   struct _BSC_ListNode_struct_Vec_int *tail;
 // CHECK-NEXT:   int len;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
+// CHECK-NEXT: struct RawVec_int {
+// CHECK-NEXT:   int *ptr;
+// CHECK-NEXT:   int cap;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
 // CHECK-NEXT: struct Vec_int {
-// CHECK-NEXT:    struct RawVec_int buf;
+// CHECK-NEXT:   struct RawVec_int buf;
 // CHECK-NEXT:   int len;
 // CHECK-NEXT: };
+

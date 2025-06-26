@@ -26,14 +26,13 @@ int main() {
     }
     return 1;
 }
-
-// CHECK:      struct __Trait_Future_int {
-// CHECK-NEXT:   void *data;
-// CHECK-NEXT:   struct __Trait_Future_Vtable_int *vtable;
+// CHECK:      struct __Trait_Future_Vtable_int {
+// CHECK-NEXT:   int (*poll)(void *);
 // CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: struct __Trait_Future_Vtable_int {
-// CHECK-NEXT:   int (*poll)(void *);
+// CHECK-NEXT: struct __Trait_Future_int {
+// CHECK-NEXT:   void *data;
+// CHECK-NEXT:   struct __Trait_Future_Vtable_int *vtable;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: int main(void) {

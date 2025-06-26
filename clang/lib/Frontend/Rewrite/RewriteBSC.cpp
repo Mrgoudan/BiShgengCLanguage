@@ -34,11 +34,15 @@ public:
     addNode(dependency);
   }
 
-  void addNode(RecordDecl *RD) { nodes.insert(RD); }
+  // recording appear index
+  void addNode(RecordDecl *RD) {
+    nodes.insert({RD, nodes.size()});
+  } 
 
   std::vector<RecordDecl *> topologicalSort() {
     std::map<RecordDecl *, int> inDegree;
-    for (RecordDecl *node : nodes) {
+    for (auto &entry : nodes) {
+      RecordDecl *node = entry.first;
       inDegree[node] = 0;
     }
     for (auto &entry : typeDependencyMap) {
@@ -47,7 +51,13 @@ public:
       }
     }
 
-    std::queue<RecordDecl *> zeroInDegree;
+    auto cmp = [this](RecordDecl *A, RecordDecl *B) {
+      return nodes.at(A) > nodes.at(B);
+    };
+
+    std::priority_queue<RecordDecl *, std::vector<RecordDecl *>, decltype(cmp)>
+        zeroInDegree(cmp);
+
     for (auto &entry : inDegree) {
       if (entry.second == 0) {
         zeroInDegree.push(entry.first);
@@ -56,7 +66,7 @@ public:
 
     std::vector<RecordDecl *> sorted;
     while (!zeroInDegree.empty()) {
-      RecordDecl *current = zeroInDegree.front();
+      RecordDecl *current = zeroInDegree.top();
       zeroInDegree.pop();
       sorted.push_back(current);
 
@@ -81,7 +91,8 @@ private:
   // For a struct S, which has a field of struct T, the S depends on T, so we
   // use T as the key and add S to its value.
   std::map<RecordDecl *, std::unordered_set<RecordDecl *>> typeDependencyMap;
-  std::set<RecordDecl *> nodes;
+  // map to memo the appear index
+  std::map<RecordDecl *,int> nodes;
 };
 
 class TypeDependencyVisitor : public DeclVisitor<TypeDependencyVisitor> {
@@ -92,6 +103,9 @@ public:
     // Skip incomplete definitions and calculated definitions.
     if (!RD->isThisDeclarationADefinition() || visited.count(RD))
       return;
+
+    graph.addNode(RD);
+    visited.insert(RD);
 
     // Traverse all fields to calculate type dependencies.
     for (FieldDecl *Field : RD->fields()) {
@@ -116,8 +130,6 @@ public:
         }
       }
     }
-    graph.addNode(RD);
-    visited.insert(RD);
   }
 
   void VisitClassTemplateDecl(ClassTemplateDecl *CTD) {

@@ -27,17 +27,18 @@ int main() {
     return b - 10;
 }
 
-// CHECK:      struct S {
-// CHECK-NEXT:   int c;
-// CHECK-NEXT: };
-// CHECK-EMPTY:
-// CHECK-NEXT: struct __Trait_Future_Vtable_struct_S {
+
+// CHECK:      struct __Trait_Future_Vtable_struct_S {
 // CHECK-NEXT:   struct S (*poll)(void *, struct S);
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct __Trait_Future_struct_S {
 // CHECK-NEXT:   void *data;
 // CHECK-NEXT:   struct __Trait_Future_Vtable_struct_S *vtable;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S {
+// CHECK-NEXT:   int c;
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: struct S int_poll(int *this, struct S a) {
