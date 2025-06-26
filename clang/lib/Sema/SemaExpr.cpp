@@ -2367,7 +2367,10 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
   DeclContext *DC = SS.isEmpty() ? CurContext : nullptr;
   #if ENABLE_BSC
   if (!ET.isNull()) {
-    DC = getASTContext().BSCDeclContextMap[ET.getCanonicalType().getTypePtr()];
+    if(getASTContext().BSCDeclContextMap.find(ET.getCanonicalType().getTypePtr()) != 
+       getASTContext().BSCDeclContextMap.end()){
+      DC = getASTContext().BSCDeclContextMap[ET.getCanonicalType().getTypePtr()];
+    }
   }
   #endif
   while (DC) {

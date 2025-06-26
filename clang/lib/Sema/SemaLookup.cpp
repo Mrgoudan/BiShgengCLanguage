@@ -2775,8 +2775,11 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
 
 #if ENABLE_BSC
   if (!T.isNull() && getLangOpts().BSC) {
-    DeclContext *DC =
-        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    DeclContext *DC = nullptr;
+    if(getASTContext().BSCDeclContextMap.find(T.getCanonicalType().getTypePtr()) != 
+       getASTContext().BSCDeclContextMap.end()){
+      DC = getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    }
     if (DC)
       return LookupQualifiedName(R, DC);
     else

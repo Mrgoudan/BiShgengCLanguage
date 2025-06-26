@@ -1,0 +1,43 @@
+// RUN: %clang_cc1 -verify %s
+
+void * func1() {
+    void::memvar; // expected-error{{variable has incomplete type 'void'}} expected-error{{use of undeclared identifier 'memvar'}}
+    void *ptr;
+    ptr->var; // expected-error{{no member named 'var' in type 'void'}}
+}
+
+
+void * func2() {
+    void *ptr;
+    ptr->var;  // expected-error{{no member named 'var' in type 'void'}}
+}
+
+void * func3() {
+    void::memfunc();  // expected-error{{variable has incomplete type 'void'}} expected-error{{use of undeclared identifier 'memfunc'}}
+    void *ptr;
+    ptr->var;  // expected-error{{no member named 'var' in type 'void'}}
+}
+
+void void::memfunc_defined(){  // expected-error{{variable has incomplete type 'void'}}
+    return;
+}
+void * func4() {
+    void::memfunc_defined();  // expected-error{{variable has incomplete type 'void'}} expected-error{{use of undeclared identifier 'memfunc_defined'}}
+    void *ptr;
+    ptr->var;  // expected-error{{no member named 'var' in type 'void'}}
+}
+
+void int::memfunc_defined(){
+    return;
+}
+void * func5() {
+    int::memfunc_defined();
+    int *ptr;
+    ptr->var;  // expected-error{{no member named 'var' in type 'int'}}
+}
+
+void * func6() {
+    void int::var;  // expected-error{{cannot combine with previous 'void' declaration specifier}} expected-error{{variable has incomplete type 'void'}} expected-error{{use of undeclared identifier 'var'}}
+    void *ptr;
+    ptr->var;  // expected-error{{no member named 'var' in type 'void'}}
+}

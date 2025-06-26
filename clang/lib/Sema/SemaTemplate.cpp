@@ -494,8 +494,11 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   }
 #if ENABLE_BSC
   if (!T.isNull() && getLangOpts().BSC) {
-    DeclContext *DC =
-        getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    DeclContext *DC = nullptr;
+    if(getASTContext().BSCDeclContextMap.find(T.getCanonicalType().getTypePtr()) != 
+       getASTContext().BSCDeclContextMap.end()){
+      DC = getASTContext().BSCDeclContextMap[T.getCanonicalType().getTypePtr()];
+    }
     if (DC)
       LookupQualifiedName(Found, DC);
   }
@@ -3213,9 +3216,11 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       T = QualType(SS.getScopeRep()->getAsType(), 0);
   #if ENABLE_BSC
   } else if (!ExtendedTy.isNull()) {
-    DeclContext *DC =
-        getASTContext()
-            .BSCDeclContextMap[ExtendedTy.getCanonicalType().getTypePtr()];
+    DeclContext *DC = nullptr;
+    if(getASTContext().BSCDeclContextMap.find(ExtendedTy.getCanonicalType().getTypePtr()) != 
+       getASTContext().BSCDeclContextMap.end()){
+      DC = getASTContext().BSCDeclContextMap[ExtendedTy.getCanonicalType().getTypePtr()];
+    }
     if (DC) {
       if (RecordDecl *Record = dyn_cast_or_null<RecordDecl>(DC))
         T = Context.getTypeDeclType(Record);

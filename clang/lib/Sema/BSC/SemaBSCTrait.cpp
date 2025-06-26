@@ -371,9 +371,11 @@ static bool IsImplTraitDeclIllegal(Sema &S, QualType TraitQT, QualType &ImplQT,
     QualType TraitQT = FieldIt->getType()->getPointeeType();
     const FunctionProtoType *TraitTy = TraitQT->getAs<FunctionProtoType>();
     BSCMethodDecl *MD = nullptr;
-    DeclContext *DC = // The Type's member functions
-        S.getASTContext()
-            .BSCDeclContextMap[ImplQT.getCanonicalType().getTypePtr()];
+    DeclContext *DC = nullptr;
+    if(S.getASTContext().BSCDeclContextMap.find(ImplQT.getCanonicalType().getTypePtr()) != 
+       S.getASTContext().BSCDeclContextMap.end()){
+      DC = S.getASTContext().BSCDeclContextMap[ImplQT.getCanonicalType().getTypePtr()];
+    }
     if (DC) {
       DeclContext::lookup_result DR = DC->lookup(FunctionID);
       for (NamedDecl *D : DR)

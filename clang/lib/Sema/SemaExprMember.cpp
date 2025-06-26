@@ -1333,9 +1333,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (!ET.isNull()) {
       if (const BuiltinType *BTy = ET->getAs<BuiltinType>())
         BuiltinName = BTy->getNameAsCString(getPrintingPolicy());
-      else
-        DC = getASTContext()
-                 .BSCDeclContextMap[ET.getCanonicalType().getTypePtr()];
+      else if(getASTContext().BSCDeclContextMap.find(ET.getCanonicalType().getTypePtr()) != 
+          getASTContext().BSCDeclContextMap.end()){
+          DC = getASTContext().BSCDeclContextMap[ET.getCanonicalType().getTypePtr()];
+      }
       // If this first parameter is not "this",
       // it can only be called through '::'.
       if (!MemberFn->getHasThisParam()) {
@@ -1560,6 +1561,8 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
           S.getASTContext().BSCDeclContextMap.end()) {
         auto DeclContext = S.getASTContext().BSCDeclContextMap[BTy];
         // TODO: add assert
+        if(!DeclContext)
+          return ExprResult(TE); 
         RecordDecl *Rdecl = dyn_cast<RecordDecl>(DeclContext);
         const RecordType *RTy = dyn_cast<RecordType>(Rdecl->getTypeForDecl());
         if (LookupMemberExprInRecord(S, R, BaseExpr.get(), RTy, OpLoc, IsArrow,
