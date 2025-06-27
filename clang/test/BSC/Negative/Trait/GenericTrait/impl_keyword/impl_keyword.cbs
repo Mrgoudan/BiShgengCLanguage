@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -verify %s
+
+trait T {
+    void f(This* this);
+};
+
+void int::f(int* this) {};
+
+impl trait T for int;
+
+struct S { // expected-error{{expected ';' at end of declaration list}}
+    impl x; // expected-error{{type name requires a specifier or qualifier}} expected-error{{expected member name or ';' after declaration specifiers}}
+};
+
+struct S2<impl> {}; // expected-error{{expected expression}} expected-error{{explicit specialization of undeclared template struct 'S2'}}
+
+int main() {
+    int impl = 1; // expected-error{{expected identifier or '('}}
+}

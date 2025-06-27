@@ -785,19 +785,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
   return false;
 }
 
-#if ENABLE_BSC
-static bool ShouldParseImplTraitDecl(Sema &S, const Token &Tok,
-                                     const Token &TokNext) {
-  if (!S.getLangOpts().BSC)
-    return false;
-  if (Tok.is(tok::identifier) &&
-      Tok.getIdentifierInfo()->getName().equals("impl"))
-    if (TokNext.isOneOf(tok::kw_trait, tok::identifier))
-      return true;
-  return false;
-}
-#endif
-
 /// ParseExternalDeclaration:
 ///
 /// The `Attrs` that are passed in are C++11 attributes and appertain to the
@@ -1059,13 +1046,16 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     SkipUntil(tok::semi);
     return nullptr;
 
+#if ENABLE_BSC
+  case tok::kw_impl:
+    if (getLangOpts().BSC &&
+        NextToken().isOneOf(tok::kw_trait, tok::identifier))
+      return ParseImplTraitDeclaration();
+#endif
+
   default:
   dont_know:
 #if ENABLE_BSC
-    if (getLangOpts().BSC &&
-        ShouldParseImplTraitDecl(Actions, Tok, NextToken()))
-      return ParseImplTraitDeclaration();
-
     // parse BSC template declaration
     // TODO: change if entrance condition, abandon isBSCTemplateDecl()
     if (isBSCTemplateDecl(Tok)) {
