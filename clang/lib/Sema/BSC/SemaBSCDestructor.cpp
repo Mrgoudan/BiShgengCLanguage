@@ -134,6 +134,23 @@ void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
         if (FieldType->isOwnedStructureType()) {
           RecordDecl *ThisRD = cast<RecordType>(FieldType)->getDecl();
           BSCMethodDecl *DestructorToCall = ThisRD->getBSCDestructor();
+          // If owned struct template field has a valid destructor declaration,
+          // we instantiate it here to ensure the generated
+          // destructor body (e.g., for A<T>) has access to the destructor
+          // of its nested owned struct field (e.g., B<T>).
+          // This is critical when dealing with nested owned structs, like:
+          //   owned struct A<T> { B<T> buf; ~A(A<T> this) { /* call ~B<T> */ } }
+          //   owned struct B<T> { ~B(B<T> this) { } }
+          // so that ~B<T> is instantiated before being used in ~A<T>.
+          if (DestructorToCall && !DestructorToCall->isInvalidDecl()) {
+              SourceLocation PointOfInstantiation = DestructorToCall->getPointOfInstantiation();
+              DestructorToCall->setInstantiationIsPending(true);
+              InstantiateFunctionDefinition(PointOfInstantiation,
+                                            DestructorToCall,
+                                            /*Recursive=*/true,
+                                            /*DefinitionRequired=*/true,
+                                            /*AtEndOfTU=*/false);
+          }  
           ParmVarDecl *PVD = Destructor->getParamDecl(0);
           QualType ParamType = getASTContext().getRecordType(RD);
           ParamType.addOwned();

@@ -1,0 +1,54 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+owned struct B<T> {
+    ~B(B<T> this) {
+
+    }
+};
+owned struct A<T> {
+public:
+    B<int> buf;
+~A(A<T> this) {
+    }
+};
+
+int main() {
+A<int> m = {};
+return 0;
+}
+
+//CHECK:struct B_int;
+//CHECK-NEXT:struct A_int;
+//CHECK-NEXT:struct B_int {
+//CHECK-NEXT:};
+//CHECK-EMPTY:
+//CHECK-NEXT:truct A_int {
+//CHECK-NEXT:     struct B_int buf;
+//CHECK-NEXT:};
+//CHECK-EMPTY:
+//CHECK-NEXT:static void struct_B_int_D( struct B_int this);
+//CHECK-EMPTY:
+//CHECK-NEXT:static void struct_A_int_D( struct A_int this);
+//CHECK-EMPTY:
+//CHECK-NEXT:int main(void) {
+//CHECK-NEXT:     struct A_int m = {};
+//CHECK-NEXT:    _Bool m_is_moved = 0;
+//CHECK-NEXT:    if (!m_is_moved)
+//CHECK-NEXT:        struct_A_int_D(m);
+//CHECK-NEXT:    return 0;
+//CHECK-NEXT:}
+//CHECK-EMPTY:
+//CHECK-NEXT:static void struct_B_int_D( struct B_int this) {
+//CHECK-NEXT:    _Bool this_is_moved = 0;
+//CHECK-NEXT:}
+//CHECK-EMPTY:
+//CHECK-NEXT:static void struct_A_int_D( struct A_int this) {
+//CHECK-NEXT:    _Bool this_is_moved = 0;
+//CHECK-NEXT:    struct_B_int_D(this.buf);
+//CHECK-NEXT:}
+

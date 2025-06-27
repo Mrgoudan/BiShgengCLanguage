@@ -7,3 +7,11 @@ add_libcbs_test(
   SRCS
     vec_test.cbs
 )
+
+add_libcbs_test(
+  test_destructor-nested-templates-with-vec
+  SUITE
+    libcbs-vec-tests
+  SRCS
+    destructor-nested-templates-with-vec.cbs
+)
