@@ -13062,6 +13062,11 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
   }
 
   if (LHSTy->isNullPtrType()) {
+#if ENABLE_BSC
+    // not support compile-time evaluation of null pointer comparisons for bsc
+    if (Info.getLangOpts().BSC && RHSTy->isPointerType())
+      return false;
+#endif
     assert(E->isComparisonOp() && "unexpected nullptr operation");
     assert(RHSTy->isNullPtrType() && "missing pointer conversion");
     // C++11 [expr.rel]p4, [expr.eq]p3: If two operands of type std::nullptr_t

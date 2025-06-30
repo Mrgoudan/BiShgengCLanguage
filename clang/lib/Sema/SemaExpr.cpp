@@ -13426,7 +13426,9 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
 #if ENABLE_BSC
-  if (getLangOpts().BSC && LHSType->isPointerType() && RHSType->isNullPtrType())
+  if (getLangOpts().BSC &&
+      (LHSType->isPointerType() || LHSType->isNullPtrType()) &&
+      (RHSType->isPointerType() || RHSType->isNullPtrType()))
     return computeResultTy();
 #endif
 

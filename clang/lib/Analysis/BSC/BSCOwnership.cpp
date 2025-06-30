@@ -1741,7 +1741,7 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkMemoryLeak(
       }
     } else {
       if (isDestructor) {
-        if (const ParmVarDecl *PVD = dyn_cast<ParmVarDecl>(VD)) {
+        if (isa<ParmVarDecl>(VD)) {
           if (!SOwnedOwnedFields[VD].empty()) {
             diags.push_back(OwnershipDiagInfo(
                 Loc, OwnershipDiagKind::OwnedStructNotProperlyFreed,
@@ -2230,9 +2230,15 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block,
     return;
   }
   if (const IfStmt *IS = dyn_cast_or_null<IfStmt>(pred->getTerminatorStmt())) {
-    if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(IS->getCond())) {
-      if (BO->getRHS()->isNullExpr(ctx)) {
-        if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(BO->getLHS())) {
+    if (const BinaryOperator *BO =
+            dyn_cast<BinaryOperator>(IS->getCond()->IgnoreParenImpCasts())) {
+      bool isNullPtrEqual =
+          BO->getRHS()->isNullExpr(ctx) || BO->getLHS()->isNullExpr(ctx);
+      if (isNullPtrEqual) {
+        Expr *PointerE =
+            BO->getRHS()->isNullExpr(ctx) ? BO->getLHS() : BO->getRHS();
+        if (const ImplicitCastExpr *ICE =
+                dyn_cast<ImplicitCastExpr>(PointerE)) {
           if (BO->getOpcode() == BO_EQ) {
             if (*pred->succ_begin() == block) // block is True branch.
               status.setToNull(ICE->getSubExpr());

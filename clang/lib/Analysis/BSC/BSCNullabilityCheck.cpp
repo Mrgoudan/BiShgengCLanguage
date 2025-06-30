@@ -544,9 +544,12 @@ void TransferFunctions::PassConditionStatusToSuccBlocks(Stmt *Cond) {
         // Condition expr is BinaryOperator, such as:
         // if (p != nullptr), if (s.p != nullptr), if (p == nullptr), if (s.p !=
         // nullptr), ...
-        if (BO->isEqualityOp() && BO->getRHS()->isNullExpr(Ctx)) {
-          Expr *LHS = BO->getLHS();
-          if (VarDecl *VD = getVarDeclFromExpr(LHS)) {
+        bool isNullPtrEqual =
+            BO->getRHS()->isNullExpr(Ctx) || BO->getLHS()->isNullExpr(Ctx);
+        if (BO->isEqualityOp() && isNullPtrEqual) {
+          Expr *PointerE =
+              BO->getRHS()->isNullExpr(Ctx) ? BO->getLHS() : BO->getRHS();
+          if (VarDecl *VD = getVarDeclFromExpr(PointerE)) {
             if (getDefNullability(VD->getType(), Ctx) ==
                 NullabilityKind::Nullable) {
               NullabilityKind TrueKind = BO->getOpcode() == BO_EQ
@@ -560,7 +563,7 @@ void TransferFunctions::PassConditionStatusToSuccBlocks(Stmt *Cond) {
               NCI.BlocksConditionStatusVD[FalseBlock][Block] =
                   std::pair<VarDecl *, NullabilityKind>(VD, FalseKind);
             }
-          } else if (MemberExpr *ME = getMemberExprFromExpr(LHS)) {
+          } else if (MemberExpr *ME = getMemberExprFromExpr(PointerE)) {
             if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
               if (getDefNullability(FD->getType(), Ctx) ==
                   NullabilityKind::Nullable) {

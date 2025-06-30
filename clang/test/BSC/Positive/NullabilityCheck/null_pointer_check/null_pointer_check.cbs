@@ -1,0 +1,79 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output | FileCheck %s
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include <stdlib.h>
+#include <stdio.h>
+
+#define RETURN_IF(expr, ret) \
+    if (expr) {            \
+      return ret;            \
+    }
+
+safe T *owned safe_malloc<T>(T t) {
+    unsafe {
+        T *addr = (T *)malloc(sizeof(T));
+        if (!addr) {
+            addr = &t;
+            T* forget = &t;
+            *forget = t;
+            exit(EXIT_FAILURE);
+        } else {
+            *addr = t;
+        }
+        return (T *owned)addr;
+	}
+}
+
+safe void safe_free<T>(T *owned p) {
+    unsafe {
+        free((void *)p);
+    }
+}
+
+safe int test(void) {
+  int * owned _Nullable p = nullptr;
+  RETURN_IF(nullptr == p, 1);
+  int a = 1;
+  p = safe_malloc<int>(a);
+  RETURN_IF(nullptr == p, 1);
+  safe_free<int>(p);
+  return 0;
+}
+
+void nullptr_equals() {
+  int a = 0;
+  int *owned _Nullable p = nullptr;
+  if (nullptr == nullptr) {
+    printf ("nullptr equals nullptr\n");
+  } else {
+    printf ("nullptr not equals nullptr\n");
+  }
+  if (nullptr == p) {
+    printf ("nullptr equals q\n");
+  } else {
+    printf ("nullptr not equals q\n");
+  }
+  p = safe_malloc<int>(4);
+  if (nullptr == p) {
+    printf ("nullptr equals q\n");
+  } else {
+    printf ("nullptr not equals q\n");
+    safe_free<int>(p);
+  }
+  if (nullptr >= p) {
+    int b =1;
+  }
+}
+
+int main() {
+  test();
+  nullptr_equals();
+}
+
+// CHECK: nullptr equals nullptr
+// CHECK-NEXT: nullptr equals q
+// CHECK-NEXT: nullptr not equals q
