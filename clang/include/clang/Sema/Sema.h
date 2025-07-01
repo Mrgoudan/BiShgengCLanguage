@@ -3226,6 +3226,7 @@ public:
   bool IsBSCCompatibleFutureType(QualType Ty);
 
   // BSC Destructor related.
+  bool IsCallDestructorExpr(Expr *E);
   BSCMethodDecl *getOrInsertBSCDestructor(RecordDecl *RD);
   void HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
                                std::stack<FieldDecl *> InstanceFields);

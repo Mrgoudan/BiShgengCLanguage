@@ -15983,11 +15983,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     // the declaration context below. Otherwise, we're unable to transform
     // 'this' expressions when transforming immediate context functions.
 
-  if (!IsInstantiation)
-    PopDeclContext();
-
-  PopFunctionScopeInfo(ActivePolicy, dcl);
-
   #if ENABLE_BSC
   if (LangOpts.BSC) {
     if (auto FD = dyn_cast_or_null<FunctionDecl>(dcl)) {
@@ -16018,6 +16013,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     }
   }
 #endif
+
+  if (!IsInstantiation)
+    PopDeclContext();
+
+  PopFunctionScopeInfo(ActivePolicy, dcl);
 
   // If any errors have occurred, clear out any temporaries that may have
   // been leftover. This ensures that these temporaries won't be picked up for

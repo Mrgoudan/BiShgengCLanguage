@@ -319,6 +319,7 @@ public:
         VarDecl::Create(SemaRef.Context, FD, D->getLocation(), D->getLocation(),
                         &(SemaRef.Context.Idents).get(IName),
                         SemaRef.Context.BoolTy, nullptr, SC_None);
+    FD->addDecl(VD);
     llvm::APInt Zero(SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), 0);
     Expr *IInit = IntegerLiteral::Create(
         SemaRef.Context, Zero, SemaRef.Context.IntTy, SourceLocation());
@@ -739,6 +740,21 @@ public:
         D);
   }
 };
+
+bool Sema::IsCallDestructorExpr(Expr *E) {
+  Expr *NakedE = E->IgnoreParens();
+  if (auto *CastExpr = llvm::dyn_cast<ImplicitCastExpr>(NakedE)) {
+    if (Expr *SubExpr = CastExpr->getSubExpr()) {
+      if (auto *DRE = llvm::dyn_cast<DeclRefExpr>(SubExpr)) {
+        NamedDecl *NDecl = DRE->getDecl();
+        if (auto *MD = dyn_cast<BSCMethodDecl>(NDecl)) {
+          return MD->isDestructor();
+        }
+      }
+    }
+  }
+  return false;
+}
 
 void Sema::DesugarDestructorCall(FunctionDecl *FD) {
   if (!getLangOpts().BSC)
