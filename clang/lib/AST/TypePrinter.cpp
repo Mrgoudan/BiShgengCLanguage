@@ -234,11 +234,25 @@ static bool isTypedefType(QualType QT) {
   return false;
 }
 
+static bool isFuncType(QualType QT) {
+  if (QT.getTypePtr()->isFunctionType()) {
+    return true;
+  }
+  if (const auto *PT = dyn_cast<PointerType>(QT)) {
+    return isFuncType(PT->getPointeeType());
+  }
+  if (const auto *AT = dyn_cast<ArrayType>(QT)) {
+    return isFuncType(AT->getElementType());
+  }
+  return false;
+}
+
 static SplitQualType splitAccordingToPolicy(QualType QT,
                                             const PrintingPolicy &Policy) {
 #if ENABLE_BSC
-  // for original or pointee or array typedef type in BSCMethodDecl, we just print the original TypedefType name
-  if (Policy.RewriteBSC && isTypedefType(QT)) {
+  // for original or pointee or array typedef type or function proto type in BSCMethodDecl, 
+  // we just print the original TypedefType name
+  if (Policy.RewriteBSC && (isFuncType(QT) || isTypedefType(QT))) {
     return QT.split();
   }
 #endif

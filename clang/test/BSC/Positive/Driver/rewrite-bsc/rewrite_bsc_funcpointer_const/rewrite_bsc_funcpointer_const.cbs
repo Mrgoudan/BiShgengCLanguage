@@ -1,0 +1,46 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+//test1
+const int( * const q)(int const a,const float b,const int c , const int d);
+
+//test2
+const int( * const p)(const int* owned const a,const float b,const int c , const int d);
+
+//test3
+int add(int a, int b) { return a + b; }
+int sub(int a, int b) { return a - b; }
+int mul(int a, int b) { return a * b; }
+int (*ops[])(int const a, int const b) = { add, sub, mul };
+
+//test4
+typedef int myint;
+typedef Myfloat = float;
+const myint( * const qs)(myint const a,const Myfloat b,const myint c , const myint d);
+
+int main(){
+    return 0;
+}
+// CHECK:     typedef int myint;
+// CHECK-EMPTY:
+// CHECK-NEXT:typedef float Myfloat;
+// CHECK-EMPTY:
+// CHECK-NEXT:const int (*const q)(const int, const float, const int, const int);
+// CHECK-EMPTY:
+// CHECK-NEXT:const int (*const p)(const int *const, const float, const int, const int);
+// CHECK-EMPTY:
+// CHECK-NEXT:int add(int a, int b) { return a + b; }
+// CHECK-EMPTY:
+// CHECK-NEXT:int sub(int a, int b) { return a - b; }
+// CHECK-EMPTY:
+// CHECK-NEXT:int mul(int a, int b) { return a * b; }
+// CHECK-EMPTY:
+// CHECK-NEXT:int (*ops[])(const int, const int) = {add, sub, mul};
+// CHECK-EMPTY:
+// CHECK-NEXT:const myint (*const qs)(const myint, const Myfloat, const myint, const myint);
+// CHECK-EMPTY:
+// CHECK-NEXT:int main(){
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }

@@ -62,10 +62,10 @@ int main(){
 // CHECK-NEXT: int (*foo)(const void *);
 // CHECK-NEXT: int (*goo)( void *);
 // CHECK-NEXT: int (*hoo)(const void *);
-// CHECK-NEXT: int (*ioo)(void *);
-// CHECK-NEXT: int (*joo)(const void *);
+// CHECK-NEXT: int (*ioo)(void *const);
+// CHECK-NEXT: int (*joo)(const void *const);
 // CHECK-NEXT: int (*koo)( void *);
-// CHECK-NEXT: int (*loo)( void *);
+// CHECK-NEXT: int (*loo)( void *const);
 // CHECK-NEXT: int (*moo)(const void *);
 // CHECK-NEXT: };
 
@@ -109,7 +109,7 @@ int main(){
 // CHECK-NEXT: return 1;
 // CHECK-NEXT: }
 
-// CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(const void *))int_foo, .goo = (int (*)( void *))int_goo, .hoo = (int (*)(const void *))int_hoo, .ioo = (int (*)(void *))int_ioo, .joo = (int (*)(const void *))int_joo, .koo = (int (*)( void *))int_koo, .loo = (int (*)( void *))int_loo, .moo = (int (*)(const void *))int_moo};
+// CHECK: struct __Trait_F_Vtable __int_trait_F = {.foo = (int (*)(const void *))int_foo, .goo = (int (*)( void *))int_goo, .hoo = (int (*)(const void *))int_hoo, .ioo = (int (*)(void *const))int_ioo, .joo = (int (*)(const void *const))int_joo, .koo = (int (*)( void *))int_koo, .loo = (int (*)( void *const))int_loo, .moo = (int (*)(const void *))int_moo};
 
 // CHECK: int main(){
 // CHECK-NEXT:  return 0;
