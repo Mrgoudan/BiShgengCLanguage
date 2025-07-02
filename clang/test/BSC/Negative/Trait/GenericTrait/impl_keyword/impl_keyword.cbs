@@ -14,6 +14,9 @@ struct S { // expected-error{{expected ';' at end of declaration list}}
 
 struct S2<impl> {}; // expected-error{{expected expression}} expected-error{{explicit specialization of undeclared template struct 'S2'}}
 
+int a;
+impl a; // expected-error{{unexpected token for ImplTraitDecl}}
+
 int main() {
     int impl = 1; // expected-error{{expected identifier or '('}}
 }

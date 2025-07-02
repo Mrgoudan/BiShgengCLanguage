@@ -532,11 +532,13 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
         TypeAliasDecl *TAD = TATD->getTemplatedDecl();
         QT = TAD->getUnderlyingType().getCanonicalType();
       }
-      if (auto TT = dyn_cast<TraitType>(QT))
-        Trait = TT->getDecl();
-      else if (auto TST = dyn_cast<TemplateSpecializationType>(QT)) {
-        TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
-        Trait = dyn_cast_or_null<TraitDecl>(TempT->getTemplatedDecl());
+      if (!QT.isNull()) {
+        if (auto TT = dyn_cast<TraitType>(QT))
+          Trait = TT->getDecl();
+        else if (auto TST = dyn_cast<TemplateSpecializationType>(QT)) {
+          TemplateDecl *TempT = TST->getTemplateName().getAsTemplateDecl();
+          Trait = dyn_cast_or_null<TraitDecl>(TempT->getTemplatedDecl());
+        }
       }
       if (Trait)
         TraitII = Trait->getIdentifier();

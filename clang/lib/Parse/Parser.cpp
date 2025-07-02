@@ -1051,6 +1051,7 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     if (getLangOpts().BSC &&
         NextToken().isOneOf(tok::kw_trait, tok::identifier))
       return ParseImplTraitDeclaration();
+    goto dont_know;
 #endif
 
   default:
