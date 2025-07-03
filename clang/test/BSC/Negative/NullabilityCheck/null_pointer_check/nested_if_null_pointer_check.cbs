@@ -1,0 +1,48 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+
+int test1(void) {
+  int * _Nullable p = nullptr;
+  while (p){
+    if (p != nullptr) { 
+      *p =1; 
+      p = nullptr;
+    }
+    *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+  }
+  return 0;
+}
+
+int test2(void) {
+  int * _Nullable p = nullptr;
+  int * _Nullable q = nullptr;
+  if (p){
+    if (p != nullptr) { 
+      *p =1; 
+      p = q;
+    }
+    *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+
+  };
+  return 0;
+}
+
+int test3(void) {
+  int * _Nullable p;
+  int * _Nullable q;
+  if (p){
+    if (p != nullptr) { 
+      *p =1; 
+      p = q;
+    }
+    *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+  }
+  return 0;
+}
+
+int main() {
+  test1();
+  test2();
+  test3();
+  return 0;
+}

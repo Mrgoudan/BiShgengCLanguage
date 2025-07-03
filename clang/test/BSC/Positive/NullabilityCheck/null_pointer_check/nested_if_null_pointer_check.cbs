@@ -1,0 +1,84 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+// expected-no-diagnostics
+
+int test1(void) {
+  int * _Nullable p = nullptr;
+  if (p != nullptr){
+    if (p != nullptr) { *p =1; }
+    else {int a = 1;}
+    *p = 2; // should not report error
+  }
+  return 0;
+}
+
+int test2(void) {
+  int * _Nullable p = nullptr;
+  if (nullptr != p){
+    if (p != nullptr) { *p =1; }
+    else {int a = 1;}
+    *p = 2; // should not report error
+  }
+  return 0;
+}
+
+int test3(void) {
+  int * _Nullable p = nullptr;
+  if (p){
+    if (p != nullptr) { *p =1; }
+    else {int a = 1;}
+    *p = 2; // should not report error
+  }
+  return 0;
+}
+
+int test4(void) {
+  int * _Nullable p = nullptr;
+  if (!p) return 1;
+  if (p != nullptr) { *p =1; }
+  *p = 2; // should not report error
+  return 0;
+}
+
+struct S{
+int * _Nullable p;
+};
+
+int test5(void) {
+  struct S s ;
+  if (s.p != nullptr){
+    if (s.p != nullptr) { *s.p =1; }
+    else {int a = 1;}
+    *s.p = 2; // should not report error
+  }
+  return 0;
+}
+
+int test6(void) {
+  struct S s ;
+  if (s.p){
+    if (s.p != nullptr) { *s.p =1; }
+    else {int a = 1;}
+    *s.p = 2; // should not report error
+  }
+  return 0;
+}
+
+int test7(void) {
+  struct S s ;
+  if (!s.p) return 1;
+  if (s.p != nullptr) { *s.p =1; }
+  else {int a = 1;}
+  *s.p = 2; // should not report error
+  return 0;
+}
+
+int main() {
+  test1();
+  test2();
+  test3();
+  test4();
+  test5();
+  test6();
+  test7();
+  return 0;
+}

@@ -125,6 +125,8 @@ public:
   void VisitReturnStmt(ReturnStmt *RS);
   void VisitCStyleCastExpr(CStyleCastExpr *CSCE);
   NullabilityKind getExprPathNullability(Expr *E);
+  void SetCFGBlocksByExpr(Expr *PtrE, const CFGBlock *NonNullBlock,
+                          const CFGBlock *NullableBlock);
   void PassConditionStatusToSuccBlocks(Stmt *Cond);
   void HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                               InitListExpr *InitList, std::string FieldPrefix);
@@ -525,6 +527,38 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   }
 }
 
+// This function handles CFGBlocks setting by expression
+void TransferFunctions::SetCFGBlocksByExpr(Expr *PtrE,
+                                               const CFGBlock *NonNullBlock,
+                                               const CFGBlock *NullableBlock) {
+  if (VarDecl *VD = getVarDeclFromExpr(PtrE)) {
+    if (getDefNullability(VD->getType(), Ctx) == NullabilityKind::Nullable &&
+        CurrStatusVD.count(VD) &&
+        CurrStatusVD[VD] != NullabilityKind::NonNull) {
+      NCI.BlocksConditionStatusVD[NonNullBlock][Block] =
+          std::pair<VarDecl *, NullabilityKind>(VD, NullabilityKind::NonNull);
+      NCI.BlocksConditionStatusVD[NullableBlock][Block] =
+          std::pair<VarDecl *, NullabilityKind>(VD, NullabilityKind::Nullable);
+    }
+  } else if (MemberExpr *ME = getMemberExprFromExpr(PtrE)) {
+    if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      FieldPath FP;
+      VisitMEForFieldPath(ME, FP);
+      if (getDefNullability(FD->getType(), Ctx) == NullabilityKind::Nullable &&
+          CurrStatusFP.count(FP) &&
+          CurrStatusFP[FP] != NullabilityKind::NonNull) {
+        FieldPath FP;
+        VisitMEForFieldPath(ME, FP);
+        NCI.BlocksConditionStatusFP[NonNullBlock][Block] =
+            std::pair<FieldPath, NullabilityKind>(FP, NullabilityKind::NonNull);
+        NCI.BlocksConditionStatusFP[NullableBlock][Block] =
+            std::pair<FieldPath, NullabilityKind>(FP,
+                                                  NullabilityKind::Nullable);
+      }
+    }
+  }
+}
+
 // This function handles condition expression and
 // pass the conditions to successor block.
 void TransferFunctions::PassConditionStatusToSuccBlocks(Stmt *Cond) {
@@ -549,96 +583,24 @@ void TransferFunctions::PassConditionStatusToSuccBlocks(Stmt *Cond) {
         if (BO->isEqualityOp() && isNullPtrEqual) {
           Expr *PointerE =
               BO->getRHS()->isNullExpr(Ctx) ? BO->getLHS() : BO->getRHS();
-          if (VarDecl *VD = getVarDeclFromExpr(PointerE)) {
-            if (getDefNullability(VD->getType(), Ctx) ==
-                NullabilityKind::Nullable) {
-              NullabilityKind TrueKind = BO->getOpcode() == BO_EQ
-                                             ? NullabilityKind::Nullable
-                                             : NullabilityKind::NonNull;
-              NullabilityKind FalseKind = BO->getOpcode() == BO_EQ
-                                              ? NullabilityKind::NonNull
-                                              : NullabilityKind::Nullable;
-              NCI.BlocksConditionStatusVD[TrueBlock][Block] =
-                  std::pair<VarDecl *, NullabilityKind>(VD, TrueKind);
-              NCI.BlocksConditionStatusVD[FalseBlock][Block] =
-                  std::pair<VarDecl *, NullabilityKind>(VD, FalseKind);
-            }
-          } else if (MemberExpr *ME = getMemberExprFromExpr(PointerE)) {
-            if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-              if (getDefNullability(FD->getType(), Ctx) ==
-                  NullabilityKind::Nullable) {
-                NullabilityKind TrueKind = BO->getOpcode() == BO_EQ
-                                               ? NullabilityKind::Nullable
-                                               : NullabilityKind::NonNull;
-                NullabilityKind FalseKind = BO->getOpcode() == BO_EQ
-                                                ? NullabilityKind::NonNull
-                                                : NullabilityKind::Nullable;
-                FieldPath FP;
-                VisitMEForFieldPath(ME, FP);
-                NCI.BlocksConditionStatusFP[TrueBlock][Block] =
-                    std::pair<FieldPath, NullabilityKind>(FP, TrueKind);
-                NCI.BlocksConditionStatusFP[FalseBlock][Block] =
-                    std::pair<FieldPath, NullabilityKind>(FP, FalseKind);
-              }
-            }
+          if (BO->getOpcode() == BO_EQ) {
+            // set FalseBlock NoNull
+            SetCFGBlocksByExpr(PointerE, FalseBlock, TrueBlock);
+          } else {
+            // set TrueBlock NoNull
+            SetCFGBlocksByExpr(PointerE, TrueBlock, FalseBlock);
           }
         }
       } else if (auto ICE = dyn_cast<ImplicitCastExpr>(Cond)) {
         // Condition expr is ImplicitCastExpr, such as: if (p), if (s.p), ...
-        if (VarDecl *VD = getVarDeclFromExpr(ICE)) {
-          if (getDefNullability(VD->getType(), Ctx) ==
-              NullabilityKind::Nullable) {
-            NCI.BlocksConditionStatusVD[TrueBlock][Block] =
-                std::pair<VarDecl *, NullabilityKind>(VD,
-                                                      NullabilityKind::NonNull);
-            NCI.BlocksConditionStatusVD[FalseBlock][Block] =
-                std::pair<VarDecl *, NullabilityKind>(
-                    VD, NullabilityKind::Nullable);
-          }
-        } else if (MemberExpr *ME = getMemberExprFromExpr(ICE)) {
-          if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-            if (getDefNullability(FD->getType(), Ctx) ==
-                NullabilityKind::Nullable) {
-              FieldPath FP;
-              VisitMEForFieldPath(ME, FP);
-              NCI.BlocksConditionStatusFP[TrueBlock][Block] =
-                  std::pair<FieldPath, NullabilityKind>(
-                      FP, NullabilityKind::NonNull);
-              NCI.BlocksConditionStatusFP[FalseBlock][Block] =
-                  std::pair<FieldPath, NullabilityKind>(
-                      FP, NullabilityKind::Nullable);
-            }
-          }
-        }
+        // set TrueBlock NoNull
+        SetCFGBlocksByExpr(ICE, TrueBlock, FalseBlock);
       } else if (auto UO = dyn_cast<UnaryOperator>(Cond)) {
         // Condition expr is UnaryOperator, such as:
         // if (!p), if (!s.p), ...
         if (UO->getOpcode() == UO_LNot) {
-          if (VarDecl *VD = getVarDeclFromExpr(UO->getSubExpr())) {
-            if (getDefNullability(VD->getType(), Ctx) ==
-                NullabilityKind::Nullable) {
-              NCI.BlocksConditionStatusVD[TrueBlock][Block] =
-                  std::pair<VarDecl *, NullabilityKind>(
-                      VD, NullabilityKind::Nullable);
-              NCI.BlocksConditionStatusVD[FalseBlock][Block] =
-                  std::pair<VarDecl *, NullabilityKind>(
-                      VD, NullabilityKind::NonNull);
-            }
-          } else if (MemberExpr *ME = getMemberExprFromExpr(UO->getSubExpr())) {
-            if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-              if (getDefNullability(FD->getType(), Ctx) ==
-                  NullabilityKind::Nullable) {
-                FieldPath FP;
-                VisitMEForFieldPath(ME, FP);
-                NCI.BlocksConditionStatusFP[TrueBlock][Block] =
-                    std::pair<FieldPath, NullabilityKind>(
-                        FP, NullabilityKind::Nullable);
-                NCI.BlocksConditionStatusFP[FalseBlock][Block] =
-                    std::pair<FieldPath, NullabilityKind>(
-                        FP, NullabilityKind::NonNull);
-              }
-            }
-          }
+          // set FalseBlock NoNull
+          SetCFGBlocksByExpr(UO->getSubExpr(), FalseBlock, TrueBlock);
         }
       }
     }
