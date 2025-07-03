@@ -266,9 +266,11 @@ class ParsedAttr final
   size_t numTrailingObjects(OverloadToken<detail::PropertyData>) const {
     return IsProperty;
   }
+#if ENABLE_BSC
   size_t numTrailingObjects(OverloadToken<detail::OperatorType>) const {
     return HasOperatorType;
   }
+#endif
 
 private:
   IdentifierInfo *MacroII = nullptr;
@@ -820,7 +822,7 @@ public:
 #if ENABLE_BSC
     OperatorAllocSize = ParsedAttr::totalSizeToAlloc<
         ArgsUnion, detail::AvailabilityData, detail::TypeTagForDatatypeData,
-        ParsedType, detail::PropertyData, detail::OperatorType>(0, 0, 0, 0, 0,
+        ParsedType, detail::PropertyData, detail::OperatorType>(1, 0, 0, 0, 0,
                                                                 1),
 #endif
   };
