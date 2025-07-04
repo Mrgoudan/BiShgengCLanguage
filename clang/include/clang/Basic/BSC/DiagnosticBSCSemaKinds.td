@@ -101,7 +101,9 @@ def err_invalid_struct_definition : Error <
   "struct definition in generic fuction is not supported in BSC">;
 def err_extended_type_not_instantiated_type : Error<
   "extended type of a BSC member function cannot be an instantiated type">;
-
+def err_conflicting_function_declarations : Error<
+  "conflicting function declarations for %0">;
+  
 // BSC constexpr warnings and errors.
 def err_constexpr_func_unsupported : Error<
   "BSC constexpr function does not support %0">;

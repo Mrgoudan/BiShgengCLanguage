@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -verify %s
+void test() { // expected-note{{previous definition is here}}
+}
+void test<T>() { // expected-error{{conflicting function declarations for 'test'}}
+}
+
+int main(){ 
+  return 0;
+}

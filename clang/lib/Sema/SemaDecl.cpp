@@ -11816,6 +11816,22 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       auto *OldFD = OldTemplateDecl->getTemplatedDecl();
       FunctionTemplateDecl *NewTemplateDecl
         = NewFD->getDescribedFunctionTemplate();
+#if ENABLE_BSC
+      if (!NewTemplateDecl) {
+        // Check for conflicts between a function template and a non-template
+        // function. If the previous declaration (OldFD) is a function template
+        // while the current declaration (NewFD) is not, they cannot be treated
+        // as redeclarations of the same function. This constitutes a semantic
+        // conflict. In such cases, emit an error, mark the current declaration
+        // as invalid, and prevent further analysis to avoid downstream crashes.
+        Diag(NewFD->getLocation(),
+             diag::err_conflicting_function_declarations)
+            << NewFD->getDeclName();
+        Diag(OldFD->getLocation(), diag::note_previous_definition);
+        NewFD->setInvalidDecl();
+        return Redeclaration;
+      }
+#endif
       assert(NewTemplateDecl && "Template/non-template mismatch");
 
       // The call to MergeFunctionDecl above may have created some state in
@@ -11846,6 +11862,25 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       }
 
     } else {
+#if ENABLE_BSC
+      // Detect and report mismatches between template and non-template function
+      // declarations. If the previous declaration  (OldFD) is a non-template function and the
+      // current (NewFD) is template, they are considered semantically incompatible and cannot
+      // represent the same function. This situation typically arises when a
+      // developer mistakenly re-declares a function as a template. Emit diagnostics to indicate the mismatch, mark the newer
+      // declaration as invalid, and exit early to avoid inconsistent
+      // redeclaration handling or potential crashes in later stages.
+      if ((NewFD->getDescribedFunctionTemplate() != nullptr) !=
+          (cast<FunctionDecl>(OldDecl)->getDescribedFunctionTemplate() !=
+           nullptr)) {
+        Diag(NewFD->getLocation(),
+             diag::err_conflicting_function_declarations)
+            << NewFD->getDeclName();
+        Diag(OldDecl->getLocation(), diag::note_previous_definition);
+        NewFD->setInvalidDecl();
+        return Redeclaration;
+      }
+#endif
       if (shouldLinkDependentDeclWithPrevious(NewFD, OldDecl)) {
         auto *OldFD = cast<FunctionDecl>(OldDecl);
         // This needs to happen first so that 'inline' propagates.
