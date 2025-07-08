@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -verify %s
+struct Point {
+    static void print(int x); // expected-error {{type name does not allow storage class to be specified}} expected-error {{field 'print' declared as a function}}
+}; 
+
+int main() {
+    Point::print(42); // expected-error {{must use 'struct' tag to refer to type 'Point'}}
+}

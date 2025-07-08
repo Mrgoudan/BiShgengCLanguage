@@ -117,6 +117,12 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
         if (R->isOwnedDecl())
           return IMA_Error_Owned_Struct;
       }
+      // Ensure that the DeclContext is a CXXRecordDecl before casting.
+      // This is a general type safety check to prevent potential crashes.
+      DeclContext *DC = D->getDeclContext();
+      if (!isa<CXXRecordDecl>(DC)) {
+        continue;
+      }
 #endif
       CXXRecordDecl *R = cast<CXXRecordDecl>(D->getDeclContext());
       Classes.insert(R->getCanonicalDecl());
