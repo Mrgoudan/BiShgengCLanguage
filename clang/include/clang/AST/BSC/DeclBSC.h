@@ -82,31 +82,11 @@ class TraitDecl : public TagDecl {
   RecordDecl *OwnedTraitR = nullptr;
   RecordDecl *BorrowTraitR = nullptr;
   RecordDecl *Vtable = nullptr;
-  std::map<QualType, VarDecl *, QualTypeOrdering> TypeImpled;
 
 public:
-  void MapInsert(QualType QT, VarDecl *VD) {
-    TypeImpled.insert(std::pair<QualType, VarDecl *>(QT, VD));
-  }
-
-  VarDecl *getTypeImpledVarDecl(QualType QT) {
-    std::map<QualType, VarDecl *, QualTypeOrdering>::iterator find;
-    if (QT.isNull())
-      return nullptr;
-    find = TypeImpled.find(QT.getCanonicalType().getUnqualifiedType());
-    if (find == TypeImpled.end())
-      return nullptr;
-    return find->second;
-  }
-
-  void dumpTypeImplMap() {
-    for (auto i = TypeImpled.begin(); i != TypeImpled.end(); i++) {
-      llvm::outs() << "[key]:\n";
-      i->first->dump();
-      llvm::outs() << "[value]:\n";
-      i->second->dump();
-    }
-  }
+  void MapInsert(QualType QT, VarDecl *VD);
+  VarDecl *getTypeImpledVarDecl(QualType QT);
+  void dumpTypeImplMap();
 
   friend class DeclContext;
   llvm::PointerUnion<TraitTemplateDecl *, MemberSpecializationInfo *>

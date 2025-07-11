@@ -106,6 +106,37 @@ void TraitDecl::completeDefinition() {
   TagDecl::completeDefinition();
 }
 
+void TraitDecl::MapInsert(QualType QT, VarDecl *VD) {
+  ASTContext &Ctx = getASTContext();
+  std::pair<const TraitDecl *, QualType> key = std::make_pair(this, QT);
+  Ctx.TraitImplMap[key] = VD;
+}
+
+VarDecl *TraitDecl::getTypeImpledVarDecl(QualType QT) {
+  if (QT.isNull())
+    return nullptr;
+  ASTContext &Ctx = getASTContext();
+  QualType CanonicalQT = QT.getCanonicalType().getUnqualifiedType();
+  std::pair<const TraitDecl *, QualType> key =
+      std::make_pair(this, CanonicalQT);
+  auto it = Ctx.TraitImplMap.find(key);
+  if (it == Ctx.TraitImplMap.end())
+    return nullptr;
+  return it->second;
+}
+
+void TraitDecl::dumpTypeImplMap() {
+  ASTContext &Ctx = getASTContext();
+  for (auto &entry : Ctx.TraitImplMap) {
+    if (entry.first.first == this) {
+      llvm::outs() << "[key]:\n";
+      entry.first.second->dump();
+      llvm::outs() << "[value]:\n";
+      entry.second->dump();
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // ImplTraitDecl Implementation
 //===----------------------------------------------------------------------===//

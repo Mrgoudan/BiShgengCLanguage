@@ -490,6 +490,11 @@ public:
   #if ENABLE_BSC
   mutable llvm::DenseMap<const Type *, DeclContext *> BSCDeclContextMap;
 
+  /// A mapping from TraitDecl to type implementation maps.
+  /// Maps (TraitDecl, QualType) -> VarDecl for trait implementations.
+  mutable llvm::DenseMap<std::pair<const TraitDecl *, QualType>, VarDecl *>
+      TraitImplMap;
+
   mutable llvm::DenseMap<NamedDecl *,
                          llvm::DenseMap<const Stmt *, SmallVector<VarDecl *>>>
       DestructMap;
