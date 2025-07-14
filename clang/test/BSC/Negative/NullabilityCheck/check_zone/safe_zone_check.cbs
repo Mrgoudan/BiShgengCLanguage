@@ -37,8 +37,31 @@ void check_dereferenced_test3() {
   }
 }
 
-
 void check_dereferenced_test4() {
+  int *borrow _Nullable p = nullptr;
+  if (p != nullptr) {
+    safe *p = 5;
+  }
+  safe *p = 10;            // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+void check_dereferenced_test5<T>() {
+  safe {
+    int *borrow _Nullable p = nullptr;
+    unsafe {
+      *p = 5;
+      safe {
+        if (p != nullptr) {
+          *p = 10;
+        }
+        *p = 15; // expected-error {{nullable pointer cannot be dereferenced}}
+      }
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+  }
+}
+
+void check_dereferenced_test6<T>() {
   int *borrow _Nullable p = nullptr;
   if (p != nullptr) {
     safe *p = 5;
@@ -64,4 +87,9 @@ safe void check_param_pass_test(int *borrow ptr) {
   unsafe {
     int *borrow p3 = check_returned_test(p);
   }
+}
+
+int main() {
+  check_dereferenced_test5<int>();    // expected-note {{in instantiation of function template specialization 'check_dereferenced_test5<int>' requested here}}
+  check_dereferenced_test6<int>();    // expected-note {{in instantiation of function template specialization 'check_dereferenced_test6<int>' requested here}}
 }

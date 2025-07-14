@@ -7492,11 +7492,18 @@ TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
   if (!getDerived().AlwaysRebuild() &&
       !SubStmtChanged)
     return S;
-
-  return getDerived().RebuildCompoundStmt(S->getLBracLoc(),
-                                          Statements,
-                                          S->getRBracLoc(),
-                                          IsStmtExpr);
+#if ENABLE_BSC
+  StmtResult Stmt = getDerived().RebuildCompoundStmt(
+      S->getLBracLoc(), Statements, S->getRBracLoc(), IsStmtExpr);
+  if (!Stmt.isInvalid()) {
+    auto *CS = dyn_cast<CompoundStmt>(Stmt.get());
+    CS->setCompSafeZoneSpecifier(S->getCompSafeZoneSpecifier());
+  }
+  return Stmt;
+#else
+  return getDerived().RebuildCompoundStmt(S->getLBracLoc(), Statements,
+                                          S->getRBracLoc(), IsStmtExpr);
+#endif
 }
 
 template<typename Derived>
