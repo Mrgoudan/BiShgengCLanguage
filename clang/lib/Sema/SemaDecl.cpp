@@ -16021,6 +16021,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   #if ENABLE_BSC
   if (LangOpts.BSC) {
     if (auto FD = dyn_cast_or_null<FunctionDecl>(dcl)) {
+      BSCDataflowAnalysisFlag = true;
       // FIXME: Rename EnableOwnershipCheck, maybe EnableBorrowCheck is a better name.
       bool EnableOwnershipCheck = !getLangOpts().DisableOwnershipCheck;
       // If NullabilityCheck is in Mode: {SafeOnly, All}, we should build CFG.
@@ -16045,6 +16046,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       }
       // Desugar BSC Function.
       DesugarDestructorCall(FD);
+      BSCDataflowAnalysisFlag = false;
     }
   }
 #endif

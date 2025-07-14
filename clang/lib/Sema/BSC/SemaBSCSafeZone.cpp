@@ -25,6 +25,12 @@ bool Sema::IsInSafeZone() {
   if (!getLangOpts().BSC) {
     return false;
   }
+  // The data flow analysis and destructor function process does not check the
+  // safe zone rules
+  if (BSCDataflowAnalysisFlag) {
+    return false;
+  }
+
   if (CurrentInstantiationScope) {
     return getInstantiationSafeZoneSpecifier() == SZ_Safe;
   } else {

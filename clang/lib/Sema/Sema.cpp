@@ -222,6 +222,10 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   TUScope = nullptr;
   isConstantEvaluatedOverride = false;
 
+#if ENABLE_BSC
+  BSCDataflowAnalysisFlag = false;
+#endif
+
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
     NSNumberLiteralMethods[I] = nullptr;

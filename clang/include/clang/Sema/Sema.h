@@ -3226,7 +3226,6 @@ public:
   bool IsBSCCompatibleFutureType(QualType Ty);
 
   // BSC Destructor related.
-  bool IsCallDestructorExpr(Expr *E);
   BSCMethodDecl *getOrInsertBSCDestructor(RecordDecl *RD);
   void HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
                                std::stack<FieldDecl *> InstanceFields);
@@ -9739,6 +9738,10 @@ public:
   /// disabled.
   bool DisableTypoCorrection;
 
+#if ENABLE_BSC
+  /// Marking into the data flow analysis process
+  bool BSCDataflowAnalysisFlag;
+#endif
   /// The number of typos corrected by CorrectTypo.
   unsigned TyposCorrected;
 

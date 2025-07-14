@@ -758,21 +758,6 @@ public:
   }
 };
 
-bool Sema::IsCallDestructorExpr(Expr *E) {
-  Expr *NakedE = E->IgnoreParens();
-  if (auto *CastExpr = llvm::dyn_cast<ImplicitCastExpr>(NakedE)) {
-    if (Expr *SubExpr = CastExpr->getSubExpr()) {
-      if (auto *DRE = llvm::dyn_cast<DeclRefExpr>(SubExpr)) {
-        NamedDecl *NDecl = DRE->getDecl();
-        if (auto *MD = dyn_cast<BSCMethodDecl>(NDecl)) {
-          return MD->isDestructor();
-        }
-      }
-    }
-  }
-  return false;
-}
-
 void Sema::DesugarDestructorCall(FunctionDecl *FD) {
   if (!getLangOpts().BSC)
     return;
@@ -797,8 +782,10 @@ void Sema::DesugarDestructor(RecordDecl *RD) {
   if (Destructor->isInvalidDecl())
     return;
   std::stack<FieldDecl *> Fields = CollectInstanceFieldWithDestructor(RD);
+  BSCDataflowAnalysisFlag = true;
   HandleBSCDestructorBody(RD, Destructor, Fields);
   BSCDataflowAnalysis(Destructor);
+  BSCDataflowAnalysisFlag = false;
 }
 
 void Sema::CheckBSCDestructorDeclarator(FunctionDecl *NewFD) {
