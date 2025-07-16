@@ -12,14 +12,14 @@
 
 #if ENABLE_BSC
 
-#include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
+#include "clang/AST/BSC/ExprBSC.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/AST/BSC/ExprBSC.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "llvm/ADT/DenseMap.h"
-#include "clang/AST/ParentMap.h"
 
 using namespace clang;
 using namespace std;
@@ -115,7 +115,8 @@ public:
   void VisitDeclStmt(DeclStmt *S);
   void HandleVarDeclInit(DeclStmt *DS, VarDecl *VD);
   void HandlePointerInit(DeclStmt *DS, VarDecl *VD);
-  void HandleStructInit(DeclStmt *DS, VarDecl *VD);
+  void HandleStructInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD);
+  void HandleUnionInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD);
   void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD,
                        Expr *FieldInit, std::string FullFieldPath);
   void VisitBinaryOperator(BinaryOperator *BO);
@@ -130,6 +131,8 @@ public:
   void PassConditionStatusToSuccBlocks(Stmt *Cond);
   void HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                               InitListExpr *InitList, std::string FieldPrefix);
+  void HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
+                             InitListExpr *InitList, std::string FieldPrefix);
 };
 } // namespace
 
@@ -306,11 +309,17 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
 }
 
 void TransferFunctions::HandleVarDeclInit(DeclStmt *DS, VarDecl *VD) {
-  QualType VQT = VD->getType();
-  if (VQT->isPointerType())
+  if (VD->getType()->isPointerType())
     HandlePointerInit(DS, VD);
-  else if (VQT->isRecordType())
-    HandleStructInit(DS, VD);
+  else if (auto RecTy =
+               dyn_cast<RecordType>(VD->getType().getCanonicalType())) {
+    if (RecordDecl *RD = RecTy->getDecl()) {
+      if (RD->isStruct())
+        HandleStructInit(DS, VD, RD);
+      else if (RD->isUnion())
+        HandleUnionInit(DS, VD, RD);
+    }
+  }
 }
 
 // Init a pointer variable
@@ -321,8 +330,7 @@ void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
     // NonNull pointer cannot be assigned by expr
     // whose PathNullability is nullable.
     if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(DS)) {
-      NullabilityCheckDiagInfo DI(VD->getLocation(),
-                                  NonnullAssignedByNullable);
+      NullabilityCheckDiagInfo DI(VD->getLocation(), NonnullAssignedByNullable);
       Reporter.addDiagInfo(DI);
     }
   } else if (CurrStatusVD.count(VD))
@@ -331,29 +339,25 @@ void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
 }
 
 // Init a struct variable with pointer fields.
-void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD) {
-  if (auto RecTy = dyn_cast<RecordType>(VD->getType().getCanonicalType())) {
-    if (RecordDecl *RD = RecTy->getDecl()) {
-      if (Expr *Init = VD->getInit()) {
-
-        Init = Init->IgnoreParenImpCasts();
-        while (true) {
-          if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
-            Init = CSE->getSubExpr()->IgnoreParenImpCasts();
-            continue;
-          }
-          if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
-            if (Expr *Sub = CLE->getInitializer()) {
-              Init = Sub->IgnoreParenImpCasts();
-              continue;
-            }
-          }
-          break;
-        }
-        if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
-          HandleNestedStructInit(DS, VD, RD, InitListE, "");
+void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD,
+                                         RecordDecl *RD) {
+  if (Expr *Init = VD->getInit()) {
+    Init = Init->IgnoreParenImpCasts();
+    while (true) {
+      if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
+        Init = CSE->getSubExpr()->IgnoreParenImpCasts();
+        continue;
+      }
+      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+        if (Expr *Sub = CLE->getInitializer()) {
+          Init = Sub->IgnoreParenImpCasts();
+          continue;
         }
       }
+      break;
+    }
+    if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
+      HandleNestedStructInit(DS, VD, RD, InitListE, "");
     }
   }
 }
@@ -390,9 +394,88 @@ void TransferFunctions::HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD,
                    dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
       if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
         if (auto nestedInitList = dyn_cast<InitListExpr>(fieldInit)) {
+          if (nestedRD->isStruct())
+            HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
+                                   fullFieldPath);
+          else if (nestedRD->isUnion())
+            HandleNestedUnionInit(DS, TopVD, nestedRD, nestedInitList,
+                                  fullFieldPath);
+        }
+      }
+    }
+  }
+}
+
+void TransferFunctions::HandleUnionInit(DeclStmt *DS, VarDecl *VD,
+                                        RecordDecl *RD) {
+  if (RD->field_empty())
+    return;
+  if (Expr *Init = VD->getInit()) {
+    Init = Init->IgnoreParenImpCasts();
+    while (true) {
+      if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
+        Init = CSE->getSubExpr()->IgnoreParenImpCasts();
+        continue;
+      }
+      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
+        if (Expr *Sub = CLE->getInitializer()) {
+          Init = Sub->IgnoreParenImpCasts();
+          continue;
+        }
+      }
+      break;
+    }
+    if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
+      HandleNestedUnionInit(DS, VD, RD, InitListE, "");
+    }
+  }
+}
+
+void TransferFunctions::HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD,
+                                              RecordDecl *RD,
+                                              InitListExpr *InitList,
+                                              std::string FieldPrefix) {
+  FieldDecl *FD = *RD->field_begin();
+  std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
+  if (InitList->inits().empty()) {
+    if (!FD->getType()->isPointerType())
+      return;
+    if (!ShouldReportNullPtrError(DS))
+      return;
+    if (getDefNullability(FD->getType(), Ctx) != NullabilityKind::NonNull)
+      return;
+    NullabilityCheckDiagInfo DI(TopVD->getLocation(), NonnullInitByDefault,
+                                TopVD->getNameAsString() + fullFieldPath);
+    Reporter.addDiagInfo(DI);
+    return;
+  }
+
+  Expr *fieldInit = InitList->getInit(0);
+  while (true) {
+    if (auto *CSE = dyn_cast<CStyleCastExpr>(fieldInit)) {
+      fieldInit = CSE->getSubExpr()->IgnoreParenImpCasts();
+      continue;
+    }
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(fieldInit)) {
+      if (Expr *Sub = CLE->getInitializer()) {
+        fieldInit = Sub->IgnoreParenImpCasts();
+        continue;
+      }
+    }
+    break;
+  }
+  if (FD->getType()->isPointerType()) {
+    HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
+  } else if (auto nestedRecTy =
+                 dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
+    if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
+      if (auto nestedInitList = dyn_cast<InitListExpr>(fieldInit)) {
+        if (nestedRD->isStruct())
           HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
                                  fullFieldPath);
-        }
+        else if (nestedRD->isUnion())
+          HandleNestedUnionInit(DS, TopVD, nestedRD, nestedInitList,
+                                fullFieldPath);
       }
     }
   }
@@ -506,8 +589,7 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
   if (getDefNullability(CSCE->getTypeAsWritten(), Ctx) == NullabilityKind::NonNull) {
     if (getExprPathNullability(CSCE->getSubExpr()) == NullabilityKind::Nullable &&
         ShouldReportNullPtrError(CSCE)) {
-      NullabilityCheckDiagInfo DI(CSCE->getBeginLoc(),
-                                  NullableCastNonnull);
+      NullabilityCheckDiagInfo DI(CSCE->getBeginLoc(), NullableCastNonnull);
       Reporter.addDiagInfo(DI);
     }
   }
@@ -529,8 +611,8 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
 
 // This function handles CFGBlocks setting by expression
 void TransferFunctions::SetCFGBlocksByExpr(Expr *PtrE,
-                                               const CFGBlock *NonNullBlock,
-                                               const CFGBlock *NullableBlock) {
+                                           const CFGBlock *NonNullBlock,
+                                           const CFGBlock *NullableBlock) {
   if (VarDecl *VD = getVarDeclFromExpr(PtrE)) {
     if (getDefNullability(VD->getType(), Ctx) == NullabilityKind::Nullable &&
         CurrStatusVD.count(VD) &&

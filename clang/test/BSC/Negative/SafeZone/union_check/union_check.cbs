@@ -1,0 +1,92 @@
+// RUN: %clang_cc1 -verify %s
+
+void case1(){
+    union UInt{
+        int x;
+    };
+    union UPtr{
+        int* _Nonnull p;
+    };
+    int x = 1;
+    int* p = &x;
+    
+    unsafe{
+        union UInt u1 = {};
+        union UInt u2 = {x};
+        union UPtr u3 = {};
+        union UPtr u4 = {p};
+    }
+    safe {
+        
+        union UInt u1 = {};
+        union UInt u2 = {x};
+        union UPtr u3 = {};  // expected-error{{`u3.p` is a _Nonnull pointer and must be properly initialized.}}
+        union UPtr u4 = {p};
+    }   
+}
+
+void case2(){
+    union UIn{
+        int* _Nonnull p;
+    };
+    union UOut{
+        union UIn u;
+    };
+    int x = 1;
+    int* p = &x;
+
+    unsafe {
+        union UOut u1 = {};
+        union UOut u2 = {{}};
+        union UOut u3 = {{p}};
+    }
+    safe {
+        union UOut u1 = {};  // expected-error{{`u1.u.p` is a _Nonnull pointer and must be properly initialized.}}
+        union UOut u2 = {{}};  // expected-error{{`u2.u.p` is a _Nonnull pointer and must be properly initialized.}}
+        union UOut u3 = {{p}};
+    }
+}
+
+void case3(){
+    union UIn{
+        int* _Nonnull p;
+    };
+    struct SOut{
+        union UIn u;
+    };
+    int x = 1;
+    int* p = &x;
+
+    unsafe {
+        struct SOut s1 = {};
+        struct SOut s2 = {{}};
+        struct SOut s3 = {{p}};
+    }
+    safe {
+        struct SOut s1 = {};  // expected-error{{`s1.u.p` is a _Nonnull pointer and must be properly initialized.}}
+        struct SOut s2 = {{}};  // expected-error{{`s2.u.p` is a _Nonnull pointer and must be properly initialized.}}
+        struct SOut s3 = {{p}};
+    }
+}
+
+void case4(){
+    struct SIn{
+        int* _Nonnull p;
+    };
+    union UOut{
+        struct SIn s;
+    };
+    int x = 1;
+    int* p = &x;
+
+    unsafe {
+        union UOut u1 = {};
+        union UOut u2 = {{}};
+        union UOut u3 = {{p}};
+    }
+    safe {
+        union UOut u1 = {};  // expected-error{{`u1.s.p` is a _Nonnull pointer and must be properly initialized.}}
+        union UOut u2 = {{}};  // expected-error{{`u2.s.p` is a _Nonnull pointer and must be properly initialized.}}
+        union UOut u3 = {{p}};
+    }
+}
