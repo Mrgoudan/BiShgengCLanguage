@@ -115,8 +115,7 @@ public:
   void VisitDeclStmt(DeclStmt *S);
   void HandleVarDeclInit(DeclStmt *DS, VarDecl *VD);
   void HandlePointerInit(DeclStmt *DS, VarDecl *VD);
-  void HandleStructInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD);
-  void HandleUnionInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD);
+  void HandleRecordInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD);
   void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD,
                        Expr *FieldInit, std::string FullFieldPath);
   void VisitBinaryOperator(BinaryOperator *BO);
@@ -313,12 +312,8 @@ void TransferFunctions::HandleVarDeclInit(DeclStmt *DS, VarDecl *VD) {
     HandlePointerInit(DS, VD);
   else if (auto RecTy =
                dyn_cast<RecordType>(VD->getType().getCanonicalType())) {
-    if (RecordDecl *RD = RecTy->getDecl()) {
-      if (RD->isStruct())
-        HandleStructInit(DS, VD, RD);
-      else if (RD->isUnion())
-        HandleUnionInit(DS, VD, RD);
-    }
+    if (RecordDecl *RD = RecTy->getDecl())
+      HandleRecordInit(DS, VD, RD);
   }
 }
 
@@ -338,9 +333,11 @@ void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
     CurrStatusVD[VD] = RHSKind;
 }
 
-// Init a struct variable with pointer fields.
-void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD,
-                                         RecordDecl *RD) {
+// Init a record type variable.
+void TransferFunctions::HandleRecordInit(DeclStmt *DS, VarDecl *VD,
+                                             RecordDecl *RD) {
+  if (RD->field_empty())
+    return;
   if (Expr *Init = VD->getInit()) {
     Init = Init->IgnoreParenImpCasts();
     while (true) {
@@ -357,7 +354,10 @@ void TransferFunctions::HandleStructInit(DeclStmt *DS, VarDecl *VD,
       break;
     }
     if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
-      HandleNestedStructInit(DS, VD, RD, InitListE, "");
+      if (RD->isStruct())
+        HandleNestedStructInit(DS, VD, RD, InitListE, "");
+      if (RD->isUnion())
+        HandleNestedUnionInit(DS, VD, RD, InitListE, "");
     }
   }
 }
@@ -366,6 +366,8 @@ void TransferFunctions::HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD,
                                                RecordDecl *RD,
                                                InitListExpr *InitList,
                                                std::string FieldPrefix) {
+  if (!RD->isStruct())
+    return;
   Expr **Inits = InitList->getInits();
   for (FieldDecl *FD : RD->fields()) {
     unsigned idx = FD->getFieldIndex();
@@ -396,8 +398,8 @@ void TransferFunctions::HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD,
         if (auto nestedInitList = dyn_cast<InitListExpr>(fieldInit)) {
           if (nestedRD->isStruct())
             HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
-                                   fullFieldPath);
-          else if (nestedRD->isUnion())
+                      fullFieldPath);
+          if (nestedRD->isUnion())
             HandleNestedUnionInit(DS, TopVD, nestedRD, nestedInitList,
                                   fullFieldPath);
         }
@@ -406,35 +408,12 @@ void TransferFunctions::HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD,
   }
 }
 
-void TransferFunctions::HandleUnionInit(DeclStmt *DS, VarDecl *VD,
-                                        RecordDecl *RD) {
-  if (RD->field_empty())
-    return;
-  if (Expr *Init = VD->getInit()) {
-    Init = Init->IgnoreParenImpCasts();
-    while (true) {
-      if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
-        Init = CSE->getSubExpr()->IgnoreParenImpCasts();
-        continue;
-      }
-      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
-        if (Expr *Sub = CLE->getInitializer()) {
-          Init = Sub->IgnoreParenImpCasts();
-          continue;
-        }
-      }
-      break;
-    }
-    if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
-      HandleNestedUnionInit(DS, VD, RD, InitListE, "");
-    }
-  }
-}
-
 void TransferFunctions::HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD,
                                               RecordDecl *RD,
                                               InitListExpr *InitList,
                                               std::string FieldPrefix) {
+  if (!RD->isUnion())
+    return;
   FieldDecl *FD = *RD->field_begin();
   std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
   if (InitList->inits().empty()) {
@@ -473,7 +452,7 @@ void TransferFunctions::HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD,
         if (nestedRD->isStruct())
           HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
                                  fullFieldPath);
-        else if (nestedRD->isUnion())
+        if (nestedRD->isUnion())
           HandleNestedUnionInit(DS, TopVD, nestedRD, nestedInitList,
                                 fullFieldPath);
       }

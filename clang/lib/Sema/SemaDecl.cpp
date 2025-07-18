@@ -6159,6 +6159,15 @@ Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
         S, D, MultiTemplateParamsArg(), Bases);
 
   Decl *Dcl = HandleDeclarator(S, D, MultiTemplateParamsArg());
+#if ENABLE_BSC
+  if (getLangOpts().BSC && IsInSafeZone()) {
+    QualType T = GetTypeForDeclarator(D, S)->getType();
+    if (IsContainsUnionType(T)) {
+      DiagnoseUnionTypeInSafeZone(D.getIdentifierLoc());
+      Dcl->setInvalidDecl();
+    }
+  }
+#endif
 
   if (OriginalLexicalContext && OriginalLexicalContext->isObjCContainer() &&
       Dcl && Dcl->getDeclContext()->isFileContext())
@@ -8838,7 +8847,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
 /// Returns true if the variable declaration is a redeclaration.
 bool Sema::CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous) {
   CheckVariableDeclarationType(NewVD);
-
   // If the decl is already known invalid, don't check it.
   if (NewVD->isInvalidDecl())
     return false;
@@ -17895,6 +17903,10 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
         Diag(RD->getLocation(), diag::err_sycl_special_type_num_init_method);
     }
   }
+#if ENABLE_BSC
+  if (getLangOpts().BSC && IsInSafeZone() && IsContainsUnionTag(Tag))
+    DiagnoseUnionTypeInSafeZone(Tag->getLocation());
+#endif
 
   // Exit this scope of this tag's definition.
   PopDeclContext();

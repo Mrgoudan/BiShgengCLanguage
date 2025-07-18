@@ -351,6 +351,54 @@ bool Sema::IsUnsafeType(QualType Type) {
   return false;
 }
 
+bool Sema::IsContainsUnionType(QualType Type) {
+  if (Type->isUnionType()) {
+    return true;
+  }
+  
+  if (Type->isPointerType())
+    return IsContainsUnionType(Type->getPointeeType());
+  
+  if (Type->isStructureType()) {
+    if (const auto *RT = Type->getAs<RecordType>()) {
+      RecordDecl *RD = RT->getDecl();
+      for (RecordDecl::field_iterator i = RD->field_begin(),
+                                      e = RD->field_end();
+           i != e; ++i) {
+        if (IsContainsUnionType(i->getType()))
+          return true;
+      }
+    }
+  }
+
+  if (Type->isArrayType())
+    return IsContainsUnionType(cast<ArrayType>(Type)->getElementType());
+  return false;
+}
+
+bool Sema::IsContainsUnionTag(TagDecl *Tag) {
+  if (Tag->isUnion())
+    return true;
+
+  for (Decl *Member : Tag->decls()) {
+    if (auto *FD = dyn_cast<FieldDecl>(Member)) {
+      QualType MemberType = FD->getType();
+      if (!MemberType.isNull() && MemberType->isUnionType())
+        return true;
+      if (!MemberType.isNull() && MemberType->isStructureType()) {
+        if (const auto *RT = MemberType->getAs<RecordType>()) {
+          if (IsContainsUnionTag(RT->getDecl()))
+            return true;
+        }
+      }
+    } else if (auto *NestedTag = dyn_cast<TagDecl>(Member)) {
+      if (IsContainsUnionTag(NestedTag))
+        return true;
+    }
+  }
+  return false;
+}
+
 void Sema::DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
                                                      tok::TokenKind Kind,
                                                      QualType T) {
@@ -426,6 +474,13 @@ void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList) {
     Diag(IList->getBeginLoc(), diag::err_unsafe_action)
         << "incomplete initialization";
   }
+}
+
+void Sema::DiagnoseUnionTypeInSafeZone(SourceLocation Loc){
+  if (!IsInSafeZone())
+    return;
+  Diag(Loc, diag::err_unsafe_action)
+      << "union type";
 }
 
 void Sema::PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec) {

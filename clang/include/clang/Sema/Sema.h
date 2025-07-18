@@ -12429,12 +12429,15 @@ public:
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   bool IsSafeFunctionPointerType(QualType Type);
   bool IsUnsafeType(QualType Type);
+  bool IsContainsUnionType(QualType Type);
+  bool IsContainsUnionTag(TagDecl *Tag);
   void DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
                                                  tok::TokenKind Kind,
                                                  QualType Type);
   void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
                                           UnaryOperatorKind Opc, QualType Type);
   void DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList);
+  void DiagnoseUnionTypeInSafeZone(SourceLocation Loc);
   void PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec);
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;

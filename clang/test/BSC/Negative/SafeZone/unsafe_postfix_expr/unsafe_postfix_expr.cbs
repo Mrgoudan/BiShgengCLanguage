@@ -20,8 +20,7 @@ void UnsafeOperator() {
     int a = 0;
     a++;     // expected-error {{'++' operator is forbidden in the safe zone}}
     a--;     // expected-error {{'--' operator is forbidden in the safe zone}}
-    union un pa = {10}; 
-    a = pa.age;   // expected-error {{'.' operator used by union type is forbidden in the safe zone}}
+    
     a = pb.age;   // ok , not union type
     a = pc->age;  // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
     a = po->age;  // ok , not raw point type
@@ -68,17 +67,5 @@ void IncomInitList() {
     int arr8[] = {1, 2};
     struct F arr9[2] = {0};
     //int *arr10[10] = {0};
-  }
-
-  union E {
-    char a;
-    int b;
-  };
-  safe {
-    union E ua = {0};            // ok
-    union E ub = {127};          // ok
-    union E uc = {128};          // expected-error {{conversion from type 'int' to 'char' is forbidden in the safe zone}}
-    union E ud = {.b = 128};     // ok
-    union E ue = {.a = 'a'};     // ok
   }
 }
