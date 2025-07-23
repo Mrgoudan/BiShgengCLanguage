@@ -32,7 +32,7 @@ int main() {
   if (q != q1) {}
   if (q != &p) {}
   // compare with trait *
-  if (q != p) {} // expected-error {{invalid operands to binary expression ('struct __Trait_F<int> *' and 'struct __Trait_F<int>')}}
+  if (q != p) {} // expected-error {{comparison of distinct pointer types ('trait F<int> **' and 'trait F<int> *')}}
                  // expected-warning@-1 {{comparison of distinct pointer types ('trait F<int> **' and 'trait F<int> *')}}
 
   // compare with int

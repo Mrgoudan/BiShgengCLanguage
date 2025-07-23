@@ -1186,18 +1186,26 @@ ExprResult Sema::ActOnTraitCompare(Scope *S, SourceLocation TokLoc,
   bool LHSIsTrait = IsTraitExpr(LHSExpr);
   bool RHSIsTrait = IsTraitExpr(RHSExpr);
   if (LHSIsTrait && RHSIsTrait) {
-    if (Context.hasSameType(CompleteTraitType(LHSExpr->getType()),
-                            CompleteTraitType(RHSExpr->getType())) == false) {
+    QualType LHSOriginalType = CompleteTraitType(LHSExpr->getType());
+    QualType RHSOriginalType = CompleteTraitType(RHSExpr->getType());
+    if (Context.hasSameType(LHSOriginalType, RHSOriginalType) == false) {
       Diag(TokLoc, diag::ext_typecheck_comparison_of_distinct_pointers)
-          << CompleteTraitType(LHSExpr->getType())
-          << CompleteTraitType(RHSExpr->getType()) << LHSExpr->getSourceRange()
+          << LHSOriginalType << RHSOriginalType << LHSExpr->getSourceRange()
           << RHSExpr->getSourceRange();
     }
-
     if (LHSExpr->getType()->isPointerType() ||
-        RHSExpr->getType()->isPointerType())
+        RHSExpr->getType()->isPointerType()) {
+      // Check pointer levels
+      int LHSPointerLevels = CountPointerLevels(LHSOriginalType);
+      int RHSPointerLevels = CountPointerLevels(RHSOriginalType);
+      if (LHSPointerLevels != RHSPointerLevels) {
+        Diag(TokLoc, diag::err_typecheck_comparison_of_distinct_pointers)
+            << LHSOriginalType << RHSOriginalType << LHSExpr->getSourceRange()
+            << RHSExpr->getSourceRange();
+        return ExprError();
+      }
       return BuildBinOp(S, TokLoc, Opc, LHSExpr, RHSExpr);
-
+    }
     SmallVector<Expr *, 2> NewLHSExprs;
     RecordDecl *LRD =
         dyn_cast<RecordType>(LHSExpr->getType().getCanonicalType())->getDecl();
