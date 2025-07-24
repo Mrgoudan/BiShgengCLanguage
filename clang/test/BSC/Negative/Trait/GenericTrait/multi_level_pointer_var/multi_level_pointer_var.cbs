@@ -21,6 +21,7 @@ int main() {
   struct S s;
   int num = 1;
   trait F<int> *p = &s;
+  trait F<int> **pp = p; // expected-error {{incompatible pointer types initializing 'trait F<int> **' with an expression of type 'trait F<int> *'}}
 
   trait F<int> **q = &p;
   trait F<int> **q1 = &p;

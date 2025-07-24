@@ -672,6 +672,15 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
   return RT;
 }
 
+static int CountPointerLevels(QualType T) {
+  int PointerLevels = 0;
+  while (T->isPointerType()) {
+    T = T->getPointeeType();
+    ++PointerLevels;
+  }
+  return PointerLevels;
+}
+
 // In this function, we aim to assign the Trait_xxx struct,
 // for example, we have desugared as follows:
 //`struct Trait_I {
@@ -757,7 +766,7 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   else if (VD->getType().isBorrowQualified())
     TraitTy = QualType(TD->getBorrowTrait()->getTypeForDecl(), 0);
   else
-    TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);;
+    TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);
   if (dyn_cast<InjectedClassNameType>(TraitTy)) {
     TraitTy = CompleteRecordType(TD->getTrait(), NewVD->getTypeSourceInfo());
   }
@@ -767,6 +776,15 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   // trait I **c = (trait F **)a;
   // @endcode
   if (!TraitTy.isNull() && Context.hasSameType(InnerTy, TraitTy)) {
+    if (CountPointerLevels(Context.getPointerType(OriginQT)) !=
+        CountPointerLevels(CompleteTraitType(T))) {
+      Diag(UO->getBeginLoc(),
+           diag::err_typecheck_convert_incompatible_pointer)
+          << Context.getPointerType(OriginQT) << CompleteTraitType(T)
+          << 4  // operation type: 4 = initializing
+          << 0; // hint type: 0 = no additional hint
+      return nullptr;
+    }
     AddInitializerToDecl(NewVD, UO, false);
     return NewVD;
   }
