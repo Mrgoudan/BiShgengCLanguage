@@ -772,7 +772,8 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   }
   const PointerType *PT = dyn_cast_or_null<PointerType>(T.getTypePtr());
   if (!PT) {
-    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait) << OriginQT << T;
+    Diag(UO->getBeginLoc(), diag::err_type_has_not_impl_trait)
+        << OriginQT << CompleteTraitType(T);
     return nullptr;
   }
 

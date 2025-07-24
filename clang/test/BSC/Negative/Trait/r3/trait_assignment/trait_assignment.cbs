@@ -11,6 +11,6 @@ trait F<float>* f() {
 
 int main() {
    int m = 0;
-   trait F<int>* b = f();  // expected-error {{expected a pointer type which has implemented 'trait F<int>', found 'struct __Trait_F<float>'}}
+   trait F<int>* b = f();  // expected-error {{expected a pointer type which has implemented 'trait F<int>', found 'trait F<float> *'}}
    return 0;
 }

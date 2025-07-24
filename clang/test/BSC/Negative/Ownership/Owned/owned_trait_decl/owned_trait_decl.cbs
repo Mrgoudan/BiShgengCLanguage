@@ -28,5 +28,5 @@ void test2(int x, float y, double d) {
   trait T* owned t2 = t1;
   trait U* owned u1 = (int* owned)&x;
   trait T* owned t3 = u1; // expected-error {{incompatible owned types, cannot cast 'struct __Trait_U_Owned' to 'trait T *owned'}}
-                          // expected-error@-1 {{expected a pointer type which has implemented 'trait T', found 'struct __Trait_U_Owned'}}
+                          // expected-error@-1 {{expected a pointer type which has implemented 'trait T', found 'trait U *'}}
 }
