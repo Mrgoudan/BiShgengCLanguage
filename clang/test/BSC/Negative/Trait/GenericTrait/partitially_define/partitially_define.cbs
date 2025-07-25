@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+trait T; // expected-error {{invalid syntax, semi not expected after 'trait T'}}
+impl trait T for int; // expected-error {{unexpected token for ImplTraitDecl}}
+
+trait T*; // expected-error {{expected identifier or '('}}
+impl trait T for int; // expected-error {{unexpected token for ImplTraitDecl}}

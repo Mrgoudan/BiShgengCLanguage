@@ -556,7 +556,7 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
       Trait = TTD->getTemplatedDecl();
     }
   }
-  if (!Trait) {
+  if (!Trait || Trait->isInvalidDecl() || !Trait->isCompleteDefinition()) {
     Diag(Tok.getLocation(), diag::err_unexpected_token_for_impl_trait_decl);
     SkipUntil(tok::semi);
     return nullptr;
