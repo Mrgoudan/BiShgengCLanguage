@@ -38,9 +38,9 @@ int main() {
   // compare with struct S
   if (q != s) {} // expected-error {{invalid operands to binary expression ('struct __Trait_F *' and 'struct S')}}
   // compare with int *
-  if (q != &num) {} // expected-warning {{comparison of distinct pointer types ('struct __Trait_F *' and 'int *')}}
+  if (q != &num) {} // expected-warning {{comparison of distinct pointer types ('trait F **' and 'int *')}}
   // compare with struct S *
-  if (q != &s) {} // expected-warning {{comparison of distinct pointer types ('struct __Trait_F *' and 'struct S *')}}
+  if (q != &s) {} // expected-warning {{comparison of distinct pointer types ('trait F **' and 'struct S *')}}
 
   // desugar
   // compare with trait pointer

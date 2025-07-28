@@ -12362,11 +12362,28 @@ static void diagnoseDistinctPointerComparison(Sema &S, SourceLocation Loc,
   if (isDesugaredTraitTypeComparison(S, LHS) && !IsError) {
     return;
   }
+
+  // Convert desugared trait struct types back to trait types for display
+  QualType LHSType = LHS.get()->getType();
+  QualType RHSType = RHS.get()->getType();
+
+  if (S.getLangOpts().BSC) {
+    if (S.IsDesugaredFromTraitType(LHSType)) {
+      LHSType = S.CompleteTraitType(LHSType);
+    }
+    if (S.IsDesugaredFromTraitType(RHSType)) {
+      RHSType = S.CompleteTraitType(RHSType);
+    }
+  }
 #endif
   S.Diag(Loc, IsError ? diag::err_typecheck_comparison_of_distinct_pointers
                       : diag::ext_typecheck_comparison_of_distinct_pointers)
-    << LHS.get()->getType() << RHS.get()->getType()
-    << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+#if ENABLE_BSC
+      << LHSType << RHSType
+#else
+      << LHS.get()->getType() << RHS.get()->getType()
+#endif
+      << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
 }
 
 /// Returns false if the pointers are converted to a composite type,
