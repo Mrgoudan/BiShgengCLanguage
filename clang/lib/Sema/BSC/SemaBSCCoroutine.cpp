@@ -3050,7 +3050,11 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDeclaration(FunctionDecl *FD) {
 SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   SmallVector<Decl *, 8> Decls;
   Decls.push_back(FD);
-
+  // clangd does not analyze the function bodies of functions defined in header
+  // files, such as inline functions
+  if (!FD->getBody()) {
+    return Decls;
+  }
   AwaitExprFinder AwaitFinder = AwaitExprFinder();
   AwaitFinder.Visit(FD->getBody());
 
