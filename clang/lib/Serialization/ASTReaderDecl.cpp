@@ -921,6 +921,10 @@ void ASTDeclReader::VisitRecordDecl(RecordDecl *RD) {
 ASTDeclReader::RedeclarableResult
 ASTDeclReader::VisitTraitDeclImpl(TraitDecl *TD) {
   RedeclarableResult Redecl = VisitTagDecl(TD);
+  TD->setTrait(readDeclAs<RecordDecl>());
+  TD->setOwnedTrait(readDeclAs<RecordDecl>());
+  TD->setBorrowTrait(readDeclAs<RecordDecl>());
+  TD->setVtable(readDeclAs<RecordDecl>());
   return Redecl;
 }
 

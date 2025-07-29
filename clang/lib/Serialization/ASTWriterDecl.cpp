@@ -494,6 +494,10 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
 #if ENABLE_BSC
 void ASTDeclWriter::VisitTraitDecl(TraitDecl *D) {
   VisitTagDecl(D);
+  Record.AddDeclRef(D->getTrait());
+  Record.AddDeclRef(D->getOwnedTrait());
+  Record.AddDeclRef(D->getBorrowTrait());
+  Record.AddDeclRef(D->getVtable());
   if (D->getDeclContext() == D->getLexicalDeclContext() && !D->hasAttrs() &&
       !D->isImplicit() && !D->isUsed(false) && !D->hasExtInfo() &&
       !D->getTypedefNameForAnonDecl() &&
