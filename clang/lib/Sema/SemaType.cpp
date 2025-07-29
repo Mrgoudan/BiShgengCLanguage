@@ -6246,6 +6246,8 @@ namespace {
 
       TL.setConditionalTInfo1(ConditionalTInfo1);
       TL.setConditionalTInfo2(ConditionalTInfo2);
+      TL.setUnderlyingTInfo(DS.getConditionalCondResult() ? ConditionalTInfo1
+                                                          : ConditionalTInfo2);
     }
 #endif
     void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
