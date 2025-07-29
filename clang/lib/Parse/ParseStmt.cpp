@@ -1395,8 +1395,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr
           }
           if (Decls.size()) {
             DeclGroupPtrTy DataPT = Actions.BuildDeclaratorGroup(Decls);
-            StmtResult SR = Actions.ActOnDeclStmt(DataPT, SourceLocation(),
-                                                  SourceLocation());
+            StmtResult SR = Actions.ActOnDeclStmt(DataPT, DS->getBeginLoc(),
+                                                  DS->getEndLoc());
             R = SR;
           }
         }
