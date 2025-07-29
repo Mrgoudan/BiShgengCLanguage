@@ -488,8 +488,8 @@ public:
     if (Stmts.size() <= 1)
       return S;
     return CompoundStmt::Create(SemaRef.getASTContext(), Stmts,
-                                FPOptionsOverride(), SourceLocation(),
-                                SourceLocation());
+                                FPOptionsOverride(), S->getBeginLoc(),
+                                S->getEndLoc());
   }
 
   bool TraverseWhileStmt(WhileStmt *WS) {

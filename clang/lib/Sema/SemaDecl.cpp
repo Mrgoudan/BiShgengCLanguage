@@ -14861,11 +14861,19 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
     // For example    ~S(This this);
     if (!isDestructor && parmDeclType->isPointerType()) {
       parmDeclType = Context.getQualifiedType(
-        Context.getPointerType(desugarThisType), ThisPointerQual);
+          Context.getPointerType(desugarThisType), ThisPointerQual);
     } else {
-      parmDeclType = Context.getQualifiedType(desugarThisType, ThisPointerQual); // FIXME: check This Qualifiers
+      parmDeclType = Context.getQualifiedType(
+          desugarThisType, ThisPointerQual); // FIXME: check This Qualifiers
     }
-    TInfo = Context.CreateTypeSourceInfo(parmDeclType);
+
+    // Try to get the valid source location TypeLoc
+    SourceLocation TypeLoc =
+        D.getIdentifierLoc().isValid()
+            ? D.getIdentifierLoc()
+            : (D.getBeginLoc().isValid() ? D.getBeginLoc() : DS.getBeginLoc());
+
+    TInfo = Context.getTrivialTypeSourceInfo(parmDeclType, TypeLoc);
     // if EntendedType is a generic type,
     // TemplateArgumentLocInfo is needed when instantiation,
     if (TypePtr->isDependentType()) {
@@ -14877,17 +14885,16 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
       }
       TemplateSpecializationTypeLoc SpecTL =
           CurrTL.getAs<TemplateSpecializationTypeLoc>();
-      const TemplateSpecializationType* SpecType = SpecTL.getTypePtr();
+      const TemplateSpecializationType *SpecType = SpecTL.getTypePtr();
       for (unsigned i = 0, e = SpecTL.getNumArgs(); i != e; ++i) {
         TemplateArgument TemplateArg = SpecType->getArg(i);
         if (TemplateArg.getKind() == clang::TemplateArgument::Expression) {
           Expr *TemplateArgExpr = TemplateArg.getAsExpr();
           SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgExpr));
-        } else if (TemplateArg.getKind() == clang::TemplateArgument::Type){
+        } else if (TemplateArg.getKind() == clang::TemplateArgument::Type) {
           QualType TemplateArgType = TemplateArg.getAsType();
           TypeSourceInfo *TemplateArgTypeInfo =
-              Context.getTrivialTypeSourceInfo(TemplateArgType,
-                                               DS.getBeginLoc());
+              Context.getTrivialTypeSourceInfo(TemplateArgType, TypeLoc);
           SpecTL.setArgLocInfo(i, TemplateArgumentLocInfo(TemplateArgTypeInfo));
         }
       }
