@@ -255,6 +255,15 @@ std::vector<const NamedDecl *> HeuristicResolver::resolveDependentMember(
     auto Result = ET->getDecl()->lookup(Name);
     return {Result.begin(), Result.end()};
   }
+#if ENABLE_BSC
+  // Todo: Add BSC processing flow
+  // Below is the analysis process for C++
+  // The shielding may prevent clangd from automatically recognizing generic
+  // struct members
+  if (Ctx.getLangOpts().BSC) {
+    return {};
+  }
+#endif
   if (auto *RD = resolveTypeToRecordDecl(T)) {
     if (!RD->hasDefinition())
       return {};

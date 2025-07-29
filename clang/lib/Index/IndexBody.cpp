@@ -168,6 +168,15 @@ public:
         dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
     if (!TD)
       return true;
+#if ENABLE_BSC
+    // Todo: Add BSC processing flow
+    // Below is the analysis process for C++
+    // The shielding may prevent clangd from automatically recognizing generic
+    // struct members
+    if (IndexCtx.getLangOpts().BSC) {
+      return true;
+    }
+#endif
     CXXRecordDecl *RD = TD->getTemplatedDecl();
     if (!RD->hasDefinition())
       return true;
