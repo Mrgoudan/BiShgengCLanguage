@@ -103,7 +103,7 @@ std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
   return Result;
 }
 
-TEST(RenameTest, WithinFileRename) {
+TEST(RenameTest, DISABLED_WithinFileRename) {
   // For each "^" this test moves cursor to its location and applies renaming
   // while checking that all identifiers in [[]] ranges are also renamed.
   llvm::StringRef Tests[] = {

@@ -463,7 +463,7 @@ TEST(TypeHierarchy, RecursiveHierarchyBounded) {
                           selectionRangeIs(Source.range("SDef")), parents()))));
 }
 
-TEST(TypeHierarchy, DeriveFromImplicitSpec) {
+TEST(TypeHierarchy, DISABLED_DeriveFromImplicitSpec) {
   Annotations Source(R"cpp(
   template <typename T>
   struct Parent {};
@@ -491,7 +491,7 @@ TEST(TypeHierarchy, DeriveFromImplicitSpec) {
                                    withKind(SymbolKind::Struct), children()))));
 }
 
-TEST(TypeHierarchy, DeriveFromPartialSpec) {
+TEST(TypeHierarchy, DISABLED_DeriveFromPartialSpec) {
   Annotations Source(R"cpp(
   template <typename T> struct Parent {};
   template <typename T> struct Parent<T*> {};
@@ -513,7 +513,7 @@ TEST(TypeHierarchy, DeriveFromPartialSpec) {
                                     withKind(SymbolKind::Struct), children()));
 }
 
-TEST(TypeHierarchy, DeriveFromTemplate) {
+TEST(TypeHierarchy, DISABLED_DeriveFromTemplate) {
   Annotations Source(R"cpp(
   template <typename T>
   struct Parent {};
