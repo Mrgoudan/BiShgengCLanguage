@@ -1820,7 +1820,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     break;
   default:
 #if ENABLE_BSC
-    if (getLangOpts().BSC && Tok.is(tok::kw_typedef) && PP.LookAhead(1).is(tok::equal)) {
+    if (getLangOpts().BSC && Tok.is(tok::kw_typedef) &&
+        PP.LookAhead(0).is(tok::identifier) && PP.LookAhead(1).is(tok::equal)) {
       // Only handle typealias declaration without template, for example:
       //   typedef MyLongInt = long int;
       //   typedef MyInt = typeof(3 + 5);

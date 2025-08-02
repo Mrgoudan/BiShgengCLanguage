@@ -1,0 +1,9 @@
+// RUN: cp %s %t.cbs
+// RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+// CHECK: [expected_comma_greater] Line 9: expected ',' or '>' in template-parameter-list
+// CHECK-NEXT: [invalid_decl_spec_combination] Line 9: cannot combine with previous 'int' declaration specifier
+// CHECK-NEXT: [expected_either] Line 9: expected identifier or '('
+// CHECK: All checks completed, 3 errors
+
+int struct MyStruct<T

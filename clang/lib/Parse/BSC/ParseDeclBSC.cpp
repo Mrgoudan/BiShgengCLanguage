@@ -288,7 +288,8 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     // BSC Trait Template Declaration may have "<T>" syntax.
     //      This param list must been parsed, skip it.
     if (isParsingBSCTemplateTrait) {
-      while (Tok.getKind() != tok::greater) {
+      while (Tok.getKind() != tok::greater && Tok.isNot(tok::eof) &&
+             !isTokenSpecial()) {
         ConsumeToken();
       }
       if (Tok.is(tok::greater)) {

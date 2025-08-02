@@ -108,6 +108,9 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 static bool IsBSCTemplateDeclaration(bool IsBSC,
                                      bool IsIdentifier,
                                      Preprocessor &PP) {
+  if (!PP.LookAhead(0).is(tok::less)) {
+    return false;
+  }
   bool IsCase_1 = (PP.LookAhead(1).is(tok::kw_int) &&
                    PP.LookAhead(2).is(tok::identifier));
 
@@ -136,7 +139,6 @@ static bool IsBSCTemplateDeclaration(bool IsBSC,
 
   bool IsBSCTemplateDecl = IsBSC &&
                            IsIdentifier &&
-                           PP.LookAhead(0).is(tok::less) &&
                            (IsCase_1 || IsCase_2 ||
                             IsCase_3 || IsCase_4);
 

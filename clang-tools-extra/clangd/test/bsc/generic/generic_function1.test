@@ -1,0 +1,9 @@
+// RUN: cp %s %t.cbs
+// RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+int struct MyStruct<T>::foo
+
+// CHECK: [no_template] Line 4: no template named 'MyStruct'
+// CHECK: [expected_semi_declaration] Line 4: expected ';' at end of declaration
+// CHECK: All checks completed, 4 errors
+

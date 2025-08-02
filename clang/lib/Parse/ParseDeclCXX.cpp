@@ -1702,7 +1702,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     // BSC Sturct Template Declaration may have "<T>" syntax.
     //      This param list must been parsed, skip it.
     if (isParsingBSCTemplateStruct) {
-      while (Tok.getKind() != tok::greater) {
+      while (Tok.getKind() != tok::greater && Tok.isNot(tok::eof) &&
+             !isTokenSpecial()) {
         ConsumeToken();
       }
       if (Tok.is(tok::greater)) {
