@@ -1,0 +1,14 @@
+// RUN: cp %s %t.cbs
+// RUN: cp %S/conditional.hbs %T/conditional.hbs
+// RUN: clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+#include "conditional.hbs"
+
+constexpr int g_a = 0;
+
+int foo(int a) {
+    conditional<g_a, float, int> b = a;
+    return b;
+}
+
+// CHECK: All checks completed, 0 errors

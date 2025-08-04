@@ -1,0 +1,14 @@
+// RUN: cp %s %t.cbs
+// RUN: cp %S/method1.hbs %T/method1.hbs
+// RUN: cp %S/method2.hbs %T/method2.hbs
+// RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+#include "method1.hbs"
+#include "method2.hbs"
+
+int main() {
+    return 0;
+}
+
+// CHECK: [redefinition] Line 7: in included file: redefinition of 'to_int'
+// CHECK: All checks completed, 1 errors

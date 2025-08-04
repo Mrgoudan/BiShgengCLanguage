@@ -512,19 +512,19 @@ static bool isRefactorStmt(Stmt *S) {
 
 static QualType lookupGenericType(Sema &S, SourceLocation SLoc, QualType T,
                                   std::string GenericDeclName) {
-  DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
-      DeclarationName(&(S.Context.Idents).get(GenericDeclName)));
+  LookupResult Previous(S, &S.Context.Idents.get(GenericDeclName),
+                        SourceLocation(), S.LookupTagName,
+                        S.NotForRedeclaration);
+  S.LookupName(Previous, S.TUScope);
   ClassTemplateDecl *CTD = nullptr;
-  if (Decls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                              E = Decls.end();
-         I != E; ++I) {
-      if (isa<ClassTemplateDecl>(*I)) {
-        CTD = dyn_cast<ClassTemplateDecl>(*I);
-        break;
-      }
+  for (LookupResult::iterator I = Previous.begin(), E = Previous.end(); I != E;
+       ++I) {
+    if ((CTD = dyn_cast<ClassTemplateDecl>(*I))) {
+      break;
     }
-  } else {
+  }
+
+  if (!CTD) {
     S.Diag(SLoc, diag::err_function_not_found)
         << GenericDeclName << "\"future.hbs\"";
     return QualType();
@@ -639,28 +639,26 @@ static RecordDecl *buildFutureRecordDecl(
 static std::pair<RecordDecl *, bool>
 generateVoidStruct(Sema &S, SourceLocation BLoc, SourceLocation ELoc) {
   std::string Recordname = "Void";
-  DeclContext::lookup_result Decls = S.Context.getTranslationUnitDecl()->lookup(
-      DeclarationName(&(S.Context.Idents).get(Recordname)));
   RecordDecl *VoidRD = nullptr;
   bool IsExisted = false;
-
-  if (Decls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                              E = Decls.end();
-         I != E; ++I) {
-      if (isa<RecordDecl>(*I)) {
-        VoidRD = dyn_cast<RecordDecl>(*I);
-        break;
-      }
+  LookupResult Previous(S, &S.Context.Idents.get(Recordname), SourceLocation(),
+                        S.LookupTagName, S.NotForRedeclaration);
+  S.LookupName(Previous, S.TUScope);
+  for (LookupResult::iterator I = Previous.begin(), E = Previous.end(); I != E;
+       ++I) {
+    if ((VoidRD = dyn_cast<RecordDecl>(*I))) {
+      IsExisted = true;
+      break;
     }
-    IsExisted = true;
-  } else if (Decls.empty()) {
+  }
+  if (!IsExisted) {
     VoidRD = buildAsyncDataRecord(S.Context, Recordname, BLoc, ELoc,
                                   clang::TagDecl::TagKind::TTK_Struct);
     VoidRD->startDefinition();
     VoidRD->completeDefinition();
     S.PushOnScopeChains(VoidRD, S.getCurScope(), true);
   }
+
   return std::make_pair(VoidRD, IsExisted);
 }
 
@@ -671,28 +669,34 @@ static VarDecl *buildVtableInitDecl(Sema &S, FunctionDecl *FD,
   auto SLoc = FD->getBeginLoc();
   auto ELoc = FD->getEndLoc();
 
-  auto lookupInternal = [&](std::string Name) {
-    DeclContext::lookup_result Decls =
-        S.Context.getTranslationUnitDecl()->lookup(
-            DeclarationName(&(S.Context.Idents).get(Name)));
-    return Decls;
-  };
+  LookupResult Previous(S, &S.Context.Idents.get("Future"), SourceLocation(),
+                        S.LookupTagName, S.NotForRedeclaration);
+  S.LookupName(Previous, S.TUScope);
 
-  auto TraitDecl = lookupInternal("Future").find_first<TraitTemplateDecl>();
+  TraitTemplateDecl *TTD = nullptr;
+  for (LookupResult::iterator I = Previous.begin(), E = Previous.end(); I != E;
+       ++I) {
+    if ((TTD = dyn_cast<TraitTemplateDecl>(*I))) {
+      break;
+    }
+  }
+  if (!TTD) {
+    return nullptr;
+  }
 
   TemplateArgumentListInfo Args(SLoc, SLoc);
   Args.addArgument(TemplateArgumentLoc(
       TemplateArgument(ReturnType),
       S.Context.getTrivialTypeSourceInfo(ReturnType, SLoc)));
   QualType InstantiatedTrait =
-      S.CheckTemplateIdType(TemplateName(TraitDecl), SourceLocation(), Args);
+      S.CheckTemplateIdType(TemplateName(TTD), SourceLocation(), Args);
 
   if (InstantiatedTrait.isNull()) {
     return nullptr;
   }
 
   auto x = S.DesugarImplTrait(
-      TraitDecl->getTemplatedDecl(), SLoc, SLoc, ELoc, SourceRange(SLoc, ELoc),
+      TTD->getTemplatedDecl(), SLoc, SLoc, ELoc, SourceRange(SLoc, ELoc),
       RecordType,
       S.Context.getElaboratedType(ETK_Trait, nullptr, InstantiatedTrait), SLoc,
       Initialize);
@@ -753,21 +757,17 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
   Stmts.push_back(DataDS);
 
   std::string CallocName = "calloc";
-
-  DeclContext::lookup_result CallocDecls =
-      S.Context.getTranslationUnitDecl()->lookup(
-          DeclarationName(&(S.Context.Idents).get(CallocName)));
+  LookupResult Previous(S, &S.Context.Idents.get(CallocName), SourceLocation(),
+                        S.LookupOrdinaryName, S.NotForRedeclaration);
+  S.LookupName(Previous, S.TUScope);
   FunctionDecl *CallocFunc = nullptr;
-  if (CallocDecls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = CallocDecls.begin(),
-                                              E = CallocDecls.end();
-         I != E; ++I) {
-      if (isa<FunctionDecl>(*I)) {
-        CallocFunc = dyn_cast<FunctionDecl>(*I);
-        break;
-      }
+  for (LookupResult::iterator I = Previous.begin(), E = Previous.end(); I != E;
+       ++I) {
+    if ((CallocFunc = dyn_cast<FunctionDecl>(*I))) {
+      break;
     }
-  } else {
+  }
+  if (!CallocFunc) {
     S.Diag(FD->getBeginLoc(), diag::err_function_not_found)
         << CallocName << "<stdlib.h>";
     return nullptr;
@@ -817,21 +817,18 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
 
   // bsc: exit(1);
   std::string ExitName = "exit";
-
-  DeclContext::lookup_result ExitDecls =
-      S.Context.getTranslationUnitDecl()->lookup(
-          DeclarationName(&(S.Context.Idents).get(ExitName)));
+  LookupResult ExitPrevious(S, &S.Context.Idents.get(ExitName),
+                            SourceLocation(), S.LookupOrdinaryName,
+                            S.NotForRedeclaration);
+  S.LookupName(ExitPrevious, S.TUScope);
   FunctionDecl *ExitFunc = nullptr;
-  if (ExitDecls.isSingleResult()) {
-    for (DeclContext::lookup_result::iterator I = ExitDecls.begin(),
-                                              E = ExitDecls.end();
-         I != E; ++I) {
-      if (isa<FunctionDecl>(*I)) {
-        ExitFunc = dyn_cast<FunctionDecl>(*I);
-        break;
-      }
+  for (LookupResult::iterator I = ExitPrevious.begin(), E = ExitPrevious.end();
+       I != E; ++I) {
+    if ((ExitFunc = dyn_cast<FunctionDecl>(*I))) {
+      break;
     }
-  } else {
+  }
+  if (!ExitFunc) {
     S.Diag(FD->getBeginLoc(), diag::err_function_not_found)
         << ExitName << "<stdlib.h>";
     return nullptr;
@@ -1244,19 +1241,16 @@ public:
   FunctionDecl *TransformFunctionDecl(FunctionDecl *D) {
     FunctionDecl *NewFD = D;
     if (D->getReturnType()->isVoidType()) {
-      std::string ReturnStructName = "Void";
-      DeclContext::lookup_result ReturnDecls =
-          SemaRef.Context.getTranslationUnitDecl()->lookup(
-              DeclarationName(&(SemaRef.Context.Idents).get(ReturnStructName)));
+      LookupResult ExitPrevious(SemaRef, &SemaRef.Context.Idents.get("Void"),
+                                SourceLocation(), SemaRef.LookupTagName,
+                                SemaRef.NotForRedeclaration);
+      SemaRef.LookupName(ExitPrevious, SemaRef.TUScope);
       RecordDecl *ReturnDecl = nullptr;
-      if (ReturnDecls.isSingleResult()) {
-        for (DeclContext::lookup_result::iterator I = ReturnDecls.begin(),
-                                                  E = ReturnDecls.end();
-             I != E; ++I) {
-          if (isa<RecordDecl>(*I)) {
-            ReturnDecl = dyn_cast<RecordDecl>(*I);
-            break;
-          }
+      for (LookupResult::iterator I = ExitPrevious.begin(),
+                                  E = ExitPrevious.end();
+           I != E; ++I) {
+        if ((ReturnDecl = dyn_cast<RecordDecl>(*I))) {
+          break;
         }
       }
 
@@ -2614,20 +2608,19 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
 
   if (!IsOptimization) {
     std::string FreeName = "free";
-    DeclContext::lookup_result Decls =
-        S.Context.getTranslationUnitDecl()->lookup(
-            DeclarationName(&(S.Context.Idents).get(FreeName)));
+    LookupResult ExitPrevious(S, &S.Context.Idents.get(FreeName),
+                              SourceLocation(), S.LookupOrdinaryName,
+                              S.NotForRedeclaration);
+    S.LookupName(ExitPrevious, S.TUScope);
     FunctionDecl *FreeFunc = nullptr;
-    if (Decls.isSingleResult()) {
-      for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                                E = Decls.end();
-           I != E; ++I) {
-        if (isa<FunctionDecl>(*I)) {
-          FreeFunc = dyn_cast<FunctionDecl>(*I);
-          break;
-        }
+    for (LookupResult::iterator I = ExitPrevious.begin(),
+                                E = ExitPrevious.end();
+         I != E; ++I) {
+      if ((FreeFunc = dyn_cast<FunctionDecl>(*I))) {
+        break;
       }
-    } else {
+    }
+    if (!FreeFunc) {
       S.Diag(FD->getBeginLoc(), diag::err_function_not_found)
           << FreeName << "<stdlib.h>";
       return nullptr;

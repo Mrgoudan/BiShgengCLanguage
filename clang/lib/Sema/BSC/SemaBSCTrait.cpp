@@ -17,6 +17,7 @@
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaInternal.h"
@@ -39,9 +40,9 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
   SourceLocation NameLoc = TD->getLocation();
   SourceLocation StartLoc = TD->getBeginLoc();
   std::string TraitVTableName = "__Trait_" + TD->getNameAsString() + "_Vtable";
-  DeclContext::lookup_result VtableDecls =
-      getASTContext().getTranslationUnitDecl()->lookup(
-          DeclarationName(&Context.Idents.get(TraitVTableName)));
+  LookupResult Previous(*this, &Context.Idents.get(TraitVTableName),
+                        SourceLocation(), LookupTagName, NotForRedeclaration);
+  LookupName(Previous, TUScope);
   TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate();
   TemplateParameterList *TParams = nullptr;
   bool DelayTypeCreation = false;
@@ -49,7 +50,7 @@ RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
     TParams = TTD->getTemplateParameters();
     DelayTypeCreation = true;
   }
-  if (VtableDecls.empty()) {
+  if (Previous.empty()) {
     TraitVtableRD = RecordDecl::Create(
         Context, TTK_Struct, CurContext, StartLoc, NameLoc,
         &Context.Idents.get(TraitVTableName), nullptr, DelayTypeCreation);
@@ -144,10 +145,10 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
     TParams = TTD->getTemplateParameters();
     DelayTypeCreation = true;
   }
-  DeclContext::lookup_result TraitDecls =
-      getASTContext().getTranslationUnitDecl()->lookup(
-          DeclarationName(&Context.Idents.get(TraitName)));
-  if (TraitDecls.empty()) {
+  LookupResult Previous(*this, &Context.Idents.get(TraitName), SourceLocation(),
+                        LookupTagName, NotForRedeclaration);
+  LookupName(Previous, TUScope);
+  if (Previous.empty()) {
     TraitRD = RecordDecl::Create(Context, TTK_Struct, CurContext, StartLoc,
                                  NameLoc, &Context.Idents.get(TraitName),
                                  nullptr, DelayTypeCreation);

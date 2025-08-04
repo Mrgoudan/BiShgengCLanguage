@@ -1,0 +1,9 @@
+// RUN: cp %s %t.cbs
+// RUN: clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+trait F {};
+int main() {
+    sizeof(trait F);
+}
+
+// CHECK: All checks completed, 0 errors

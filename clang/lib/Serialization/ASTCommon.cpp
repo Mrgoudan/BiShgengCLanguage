@@ -303,6 +303,9 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
   // C/C++ tag types can only be defined in one place.
   case Decl::Enum:
   case Decl::Record:
+#if ENABLE_BSC
+  case Decl::Trait:
+#endif
     if (const TagDecl *Def = cast<TagDecl>(DC)->getDefinition())
       return Def;
     return nullptr;
@@ -311,6 +314,11 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
   // functions and out-of-line definitions.
   case Decl::CXXRecord:
   case Decl::ClassTemplateSpecialization:
+#if ENABLE_BSC
+  case Decl::ImplTrait:
+  case Decl::TraitTemplate:
+  case Decl::TraitTemplateSpecialization:
+#endif
   case Decl::ClassTemplatePartialSpecialization:
     return nullptr;
 
@@ -365,13 +373,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::TypeAlias:
   case Decl::Enum:
   case Decl::Record:
-  #if ENABLE_BSC
-  case Decl::Trait:
-  #endif
   case Decl::CXXRecord:
-  #if ENABLE_BSC
-  case Decl::TraitTemplateSpecialization:
-  #endif
   case Decl::ClassTemplateSpecialization:
   case Decl::ClassTemplatePartialSpecialization:
   case Decl::VarTemplateSpecialization:
@@ -386,13 +388,14 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::ConstructorUsingShadow:
   case Decl::Var:
   #if ENABLE_BSC
+  case Decl::Trait:
   case Decl::ImplTrait:
-  #endif
+  case Decl::TraitTemplate:
+  case Decl::TraitTemplateSpecialization:
+  case Decl::BSCMethod:
+#endif
   case Decl::FunctionTemplate:
   case Decl::ClassTemplate:
-  #if ENABLE_BSC
-  case Decl::TraitTemplate:
-  #endif
   case Decl::VarTemplate:
   case Decl::TypeAliasTemplate:
   case Decl::ObjCProtocol:
@@ -401,9 +404,6 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
     return true;
 
   // Never redeclarable.
-  #if ENABLE_BSC
-  case Decl::BSCMethod:
-  #endif
   case Decl::UsingDirective:
   case Decl::Label:
   case Decl::UnresolvedUsingTypename:

@@ -5171,6 +5171,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 #if ENABLE_BSC
       if (LangOpts.BSC) {
         if (TraitDecl *TD = S.TryDesugarTrait(T)) {
+          if (!TD->getTrait()) {
+            D.setInvalidType(true);
+          }
           T = S.DesugarTraitToStructTrait(TD, T, D.getBeginLoc());
           // The trait pointer type has been desugar, so we need to remove it.
           // And no need to obtain the source code information for trait pointer

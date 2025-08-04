@@ -2352,7 +2352,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       }
       return Info;
     }
-
+#if ENABLE_BSC
+    // Evaluating with sizeof (trait) will result in a coredump
+    // Keep TraitType width and align consistent with the function
+    if (isa<TraitType>(TT)) {
+      Width = 0;
+      Align = 32;
+      break;
+    }
+#endif
     const auto *RT = cast<RecordType>(TT);
     const RecordDecl *RD = RT->getDecl();
     const ASTRecordLayout &Layout = getASTRecordLayout(RD);

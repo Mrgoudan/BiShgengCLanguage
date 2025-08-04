@@ -6,6 +6,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Template.h"
@@ -49,6 +50,9 @@ std::stack<FieldDecl *> CollectInstanceFieldWithDestructor(RecordDecl *RD) {
 }
 
 BSCMethodDecl *Sema::getOrInsertBSCDestructor(RecordDecl *RD) {
+  if (RD->isInvalidDecl()) {
+    return nullptr;
+  }
   BSCMethodDecl *Destructor;
   if (RD->getBSCDestructor() == nullptr) {
     assert(RD->isOwnedDecl());
@@ -283,6 +287,9 @@ public:
     const Type *VDType = VD->getType().getCanonicalType().getTypePtr();
     RecordDecl *RD = cast<RecordType>(VDType)->getDecl();
     BSCMethodDecl *DestructorToCall = SemaRef.getOrInsertBSCDestructor(RD);
+    if (!DestructorToCall) {
+      return nullptr;
+    }
     Expr *IDRE = SemaRef.BuildDeclRefExpr(VD, VD->getType().getCanonicalType(),
                                           VK_LValue, SourceLocation());
     SmallVector<Expr *, 1> Args;
@@ -779,7 +786,7 @@ void Sema::DesugarDestructor(RecordDecl *RD) {
     return;
   }
   BSCMethodDecl *Destructor = getOrInsertBSCDestructor(RD);
-  if (Destructor->isInvalidDecl())
+  if (!Destructor || Destructor->isInvalidDecl())
     return;
   std::stack<FieldDecl *> Fields = CollectInstanceFieldWithDestructor(RD);
   BSCDataflowAnalysisFlag = true;

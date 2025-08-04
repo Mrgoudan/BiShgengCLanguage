@@ -14842,8 +14842,12 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
 
 #if ENABLE_BSC
   if (getLangOpts().BSC)
-    if (TraitDecl *TD = TryDesugarTrait(parmDeclType))
+    if (TraitDecl *TD = TryDesugarTrait(parmDeclType)) {
+      if (!TD->getTrait()) {
+        D.setInvalidType(true);
+      }
       parmDeclType = DesugarTraitToStructTrait(TD, parmDeclType, D.getBeginLoc());
+    }
 #endif
 
   // Temporarily put parameter variables in the translation unit, not
@@ -18377,6 +18381,9 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       Diag(Loc, diag::err_variables_not_trait_pointer);
     } else if (T->hasTraitType()) {
       TraitDecl *TD = TryDesugarTrait(T);
+      if (TD && !TD->getTrait()) {
+        InvalidDecl = true;
+      }
       T = DesugarTraitToStructTrait(TD, T, Loc);
       TInfo = Context.getTrivialTypeSourceInfo(T);
     }

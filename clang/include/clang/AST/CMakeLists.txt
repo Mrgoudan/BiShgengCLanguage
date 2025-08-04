@@ -30,11 +30,11 @@ clang_tablegen(TypeNodes.inc -gen-clang-type-nodes ${BSC_OPTION}
   SOURCE ../Basic/TypeNodes.td
   TARGET ClangTypeNodes)
 
-clang_tablegen(AbstractBasicReader.inc -gen-clang-basic-reader
+clang_tablegen(AbstractBasicReader.inc -gen-clang-basic-reader ${BSC_OPTION}
   SOURCE PropertiesBase.td
   TARGET ClangAbstractBasicReader)
 
-clang_tablegen(AbstractBasicWriter.inc -gen-clang-basic-writer
+clang_tablegen(AbstractBasicWriter.inc -gen-clang-basic-writer ${BSC_OPTION}
   SOURCE PropertiesBase.td
   TARGET ClangAbstractBasicWriter)
 

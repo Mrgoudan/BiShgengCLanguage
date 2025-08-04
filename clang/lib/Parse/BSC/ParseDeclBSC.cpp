@@ -16,11 +16,11 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Parse/ParseDiagnostic.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/SemaDiagnostic.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 
@@ -545,10 +545,10 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
         TraitII = Trait->getIdentifier();
     }
   }
-  DeclContext::lookup_result Decls = Actions.getASTContext().getTranslationUnitDecl()->lookup(TraitII);
-  for (DeclContext::lookup_result::iterator I = Decls.begin(),
-                                            E = Decls.end();
-       I != E; ++I) {
+  LookupResult Result(Actions, TraitII, SourceLocation(), Sema::LookupTagName);
+  Actions.LookupName(Result, Actions.TUScope);
+  for (LookupResult::iterator I = Result.begin(), E = Result.end(); I != E;
+       ++I) {
     if (isa<TraitDecl>(*I)) {
       Trait = dyn_cast<TraitDecl>(*I);
     } else if (isa<TraitTemplateDecl>(*I)) {

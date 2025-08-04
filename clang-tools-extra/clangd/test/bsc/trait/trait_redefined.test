@@ -1,0 +1,9 @@
+// RUN: cp %s %t.cbs
+// RUN: cp %S/trait_redefined.hbs %T/trait_redefined.hbs
+// RUN: clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+#include "trait_redefined.hbs"
+
+int A;
+
+// CHECK: All checks completed, 0 errors
