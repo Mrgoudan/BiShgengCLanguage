@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -verify %s
+
+void mutualNestedUnionDef() {
+    union U {};
+    safe {
+        struct S4 { // expected-note{{definition of 'struct S4' is not complete until the closing '}'}} expected-error{{union type is forbidden in the safe zone}}
+            struct S3 { // expected-error{{union type is forbidden in the safe zone}}
+                struct S2 { // expected-error{{union type is forbidden in the safe zone}}
+                    struct S1 { // expected-error{{union type is forbidden in the safe zone}}
+                        struct S4 s4; // expected-error{{field has incomplete type 'struct S4'}}
+                        union U u; 
+                    } s1;
+                } s2;
+            } s3; 
+        };
+    }
+}
+
+void mutalNestedUnionDecl() {
+    union U {};
+    struct S1; // expected-note{{forward declaration of 'struct S1'}}
+    struct S2 { struct S1 s1; };  // expected-error{{field has incomplete type 'struct S1'}}
+    struct S3 { struct S2 s2; };
+    struct S4 { struct S3 s3; };
+    struct S1 { struct S4 s4; union U u; };
+    safe {
+        struct S1 s1 = {}; // expected-error{{union type is forbidden in the safe zone}}
+        struct S2 s2 = {}; // expected-error{{union type is forbidden in the safe zone}}
+        struct S3 s3 = {}; // expected-error{{union type is forbidden in the safe zone}}
+        struct S4 s4 = {}; // expected-error{{union type is forbidden in the safe zone}}
+    }
+}

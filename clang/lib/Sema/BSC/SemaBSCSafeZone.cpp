@@ -320,80 +320,108 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
 }
 
 bool Sema::IsUnsafeType(QualType Type) {
-  if (Type.isNull()) {
-    return false;
-  }
-  if (Type->isPointerType() && !Type->isFunctionPointerType() &&
-      !(Type.isOwnedQualified() || Type.isBorrowQualified())) {
-    return true;
-  }
-  if (Type->isUnionType()) {
-    return true;
-  }
-  if (Type->isOwnedStructureType()) {
-    return false;
-  }
-  if (Type->isStructureType()) {
-    if (const auto *RT = Type->getAs<RecordType>()) {
-      RecordDecl *RD = RT->getDecl();
-      for (RecordDecl::field_iterator i = RD->field_begin(),
-                                      e = RD->field_end();
-           i != e; ++i) {
-        if (IsUnsafeType(i->getType())) {
-          return true;
+  llvm::SmallPtrSet<const clang::Type *, 16> Visited;
+  llvm::SmallVector<QualType, 16> Stack;
+
+  Stack.push_back(Type);
+  while (!Stack.empty()) {
+    QualType CurType = Stack.pop_back_val();
+
+    if (CurType.isNull())
+      continue;
+    const clang::Type *TyPtr = CurType.getTypePtr();
+    if (!Visited.insert(TyPtr).second)
+      continue;
+
+    if (CurType->isPointerType() && !CurType->isFunctionPointerType() &&
+        !(CurType.isOwnedQualified() || CurType.isBorrowQualified())) {
+      return true;
+    }
+    if (CurType->isUnionType()) {
+      return true;
+    }
+    if (CurType->isOwnedStructureType()) {
+      continue;
+    }
+    if (CurType->isStructureType()) {
+      if (const auto *RT = CurType->getAs<RecordType>()) {
+        RecordDecl *RD = RT->getDecl();
+        for (RecordDecl::field_iterator i = RD->field_begin(),
+                                        e = RD->field_end();
+             i != e; ++i) {
+          Stack.push_back(i->getType());
         }
       }
     }
-  }
-  if (Type->isArrayType()) {
-    return IsUnsafeType(cast<ArrayType>(Type)->getElementType());
+    if (CurType->isArrayType()) {
+      Stack.push_back(cast<ArrayType>(CurType)->getElementType());
+    }
   }
   return false;
 }
 
 bool Sema::IsContainsUnionType(QualType Type) {
-  if (Type->isUnionType()) {
-    return true;
-  }
-  
-  if (Type->isPointerType())
-    return IsContainsUnionType(Type->getPointeeType());
-  
-  if (Type->isStructureType()) {
-    if (const auto *RT = Type->getAs<RecordType>()) {
-      RecordDecl *RD = RT->getDecl();
-      for (RecordDecl::field_iterator i = RD->field_begin(),
-                                      e = RD->field_end();
-           i != e; ++i) {
-        if (IsContainsUnionType(i->getType()))
-          return true;
+  llvm::SmallPtrSet<const clang::Type *, 16> Visited;
+  llvm::SmallVector<QualType, 16> Stack;
+  Stack.push_back(Type);
+
+  while (!Stack.empty()) {
+    QualType CurType = Stack.pop_back_val();
+
+    if (CurType.isNull())
+      continue;
+    const clang::Type *TyPtr = CurType.getTypePtr();
+    if (!Visited.insert(TyPtr).second)
+      continue;
+
+    if (CurType->isUnionType()) {
+      return true;
+    }
+    if (CurType->isPointerType() && !CurType->isFunctionPointerType()) {
+      Stack.push_back(CurType->getPointeeType());
+    }
+    if (CurType->isStructureType()) {
+      if (const auto *RT = CurType->getAs<RecordType>()) {
+        RecordDecl *RD = RT->getDecl();
+        for (RecordDecl::field_iterator i = RD->field_begin(),
+                                        e = RD->field_end();
+             i != e; ++i) {
+          Stack.push_back(i->getType());
+        }
       }
     }
+    if (CurType->isArrayType()) {
+      Stack.push_back(cast<ArrayType>(CurType)->getElementType());
+    }
   }
-
-  if (Type->isArrayType())
-    return IsContainsUnionType(cast<ArrayType>(Type)->getElementType());
   return false;
 }
 
 bool Sema::IsContainsUnionTag(TagDecl *Tag) {
-  if (Tag->isUnion())
-    return true;
+  llvm::SmallPtrSet<const TagDecl *, 16> Visited;
+  llvm::SmallVector<const TagDecl *, 16> Stack;
+  Stack.push_back(Tag);
 
-  for (Decl *Member : Tag->decls()) {
-    if (auto *FD = dyn_cast<FieldDecl>(Member)) {
-      QualType MemberType = FD->getType();
-      if (!MemberType.isNull() && MemberType->isUnionType())
-        return true;
-      if (!MemberType.isNull() && MemberType->isStructureType()) {
-        if (const auto *RT = MemberType->getAs<RecordType>()) {
-          if (IsContainsUnionTag(RT->getDecl()))
-            return true;
+  while (!Stack.empty()) {
+    const TagDecl *CurTag = Stack.pop_back_val();
+    
+    if (!Visited.insert(CurTag).second)
+      continue;
+    if (CurTag->isUnion())
+      return true;
+    for (Decl *Member : CurTag->decls()) {
+      if (auto *FD = dyn_cast<FieldDecl>(Member)) {
+        QualType MemberType = FD->getType();
+        if (!MemberType.isNull() && MemberType->isUnionType())
+          return true;
+        if (!MemberType.isNull() && MemberType->isStructureType()) {
+          if (const auto *RT = MemberType->getAs<RecordType>()) {
+            Stack.push_back(RT->getDecl());
+          }
         }
+      } else if (auto *NestedTag = dyn_cast<TagDecl>(Member)) {
+        Stack.push_back(NestedTag);
       }
-    } else if (auto *NestedTag = dyn_cast<TagDecl>(Member)) {
-      if (IsContainsUnionTag(NestedTag))
-        return true;
     }
   }
   return false;
