@@ -75,7 +75,7 @@ BSCMethodDecl *Sema::getOrInsertBSCDestructor(RecordDecl *RD) {
         TInfo, SC_None, RD->getTypeForDecl()->getCanonicalTypeInternal());
     SmallVector<ParmVarDecl *, 1> ParmVarDecls;
     TypeSourceInfo *ParamTInfo =
-        Context.getTrivialTypeSourceInfo(ParamType, RD->getEndLoc());
+        Context.getTrivialTypeSourceInfo(ParamType, SourceLocation());
     ParmVarDecl *PVD = ParmVarDecl::Create(
         getASTContext(), Destructor, RD->getEndLoc(), RD->getEndLoc(),
         &(getASTContext().Idents).get("this"), ParamType, ParamTInfo, SC_None,

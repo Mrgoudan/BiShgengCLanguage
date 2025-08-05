@@ -1,0 +1,11 @@
+// RUN: cp %s %t.cbs
+// RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
+
+owned struct S{
+  private2:
+};
+
+// CHECK: [expected_expression] Line 6: expected expression
+// CHECK: [expected] Line 11: expected '}'
+// CHECK: [expected_after] Line 6: expected ';' after struct
+// CHECK: All checks completed, 3 errors
