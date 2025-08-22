@@ -1,0 +1,50 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// RUN: gcc %t-rw.c -o %t-rw.output
+// expected-no-diagnostics
+
+#include <stdint.h>
+
+typedef struct Taglock {
+    uint16_t locked;                        /**< lock status */
+    uint16_t pause;                         /**< backoff mode */
+} lock;
+
+static inline void Pause(uint32_t *cnt)
+{
+}
+typedef void (*Func)(uint32_t *cnt);
+static Func g_Func[2] = {
+    Pause,
+};
+
+void foo(lock *sl)
+{
+    uint16_t exp = 0;
+    uint32_t cnt = 1;
+    while (!__atomic_compare_exchange_n(&sl->locked, &exp, 1, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+        while (__atomic_load_n(&sl->locked, __ATOMIC_RELAXED) != 0) {
+            g_Func[sl->pause](&cnt);
+        }
+        exp = 0;
+    }
+}
+int main(){
+    return 0;
+}
+
+// CHECK: void foo(lock *sl)
+// CHECK-NEXT: {
+// CHECK-NEXT:     uint16_t exp = 0;
+// CHECK-NEXT:     uint32_t cnt = 1;
+// CHECK-NEXT:     while (!__atomic_compare_exchange_n(&sl->locked, &exp, 1, 0, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+// CHECK-NEXT:         while (__atomic_load_n(&sl->locked, __ATOMIC_RELAXED) != 0) {
+// CHECK-NEXT:             g_Func[sl->pause](&cnt);
+// CHECK-NEXT:         }
+// CHECK-NEXT:         exp = 0;
+// CHECK-NEXT:     }
+// CHECK-NEXT: }

@@ -2030,6 +2030,10 @@ static std::string getAtomicFunctionName(AtomicExpr *Node, const char *Name) {
       NameStr = "atomic_flag_clear";
     }
   }
+
+  // Only add _explicit suffix for C11 standard functions, not __atomic_*
+  // builtins
+  bool isGccBuiltin = (NameStr.find("__atomic_") == 0);
   if (isExplicitExpr(Node->getOrder())) {
     NameStr += "_explicit";
   }
@@ -2063,15 +2067,42 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
       }
       OS << ")";
       return;
+    } else {
+      PrintExpr(Node->getPtr());
     }
-  } else {
-#endif
-  OS << Name;
-#if ENABLE_BSC
+    if (Node->getOp() != AtomicExpr::AO__c11_atomic_load &&
+        Node->getOp() != AtomicExpr::AO__atomic_load_n &&
+        Node->getOp() != AtomicExpr::AO__opencl_atomic_load &&
+        Node->getOp() != AtomicExpr::AO__hip_atomic_load) {
+      OS << ", ";
+      PrintExpr(Node->getVal1());
+    }
+    if (Node->getOp() == AtomicExpr::AO__atomic_exchange || Node->isCmpXChg()) {
+      OS << ", ";
+      PrintExpr(Node->getVal2());
+    }
+    if (Node->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
+        Node->getOp() == AtomicExpr::AO__atomic_compare_exchange_n) {
+      OS << ", ";
+      PrintExpr(Node->getWeak());
+    }
+    if (Node->getOp() != AtomicExpr::AO__c11_atomic_init &&
+        Node->getOp() != AtomicExpr::AO__opencl_atomic_init &&
+        isExplicitExpr(Node->getOrder())) {
+      OS << ", ";
+      PrintExpr(Node->getOrder());
+    }
+    if (Node->isCmpXChg()) {
+      OS << ", ";
+      PrintExpr(Node->getOrderFail());
+    }
+    OS << ")";
+    return;
   }
 #endif
 
   // AtomicExpr stores its subexpressions in a permuted order.
+  OS << Name;
   PrintExpr(Node->getPtr());
   if (Node->getOp() != AtomicExpr::AO__c11_atomic_load &&
       Node->getOp() != AtomicExpr::AO__atomic_load_n &&
@@ -2085,16 +2116,6 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
     OS << ", ";
     PrintExpr(Node->getVal2());
   }
-#if ENABLE_BSC
-  if (Policy.RewriteBSC) {
-    if (isExplicitExpr(Node->getOrder())) {
-        OS << ", ";
-        PrintExpr(Node->getOrder());
-    }
-    OS << ")";
-    return;
-  }
-#endif
   if (Node->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
       Node->getOp() == AtomicExpr::AO__atomic_compare_exchange_n) {
     OS << ", ";
