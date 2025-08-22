@@ -16,6 +16,7 @@ target_include_directories(stdcbs
     raw_vec
     vec
     scheduler
+    slice
     string
     list
     hash
@@ -51,6 +52,7 @@ install(FILES
     raw_table/raw_table.hbs
     result/result.hbs
     rc/rc.hbs
+    slice/slice.hbs
     cell/cell.hbs
     DESTINATION include/libcbs
 )

@@ -5291,6 +5291,75 @@ String new_s = world.slice(1, 4);
 注：`bsc_string_no_pos`实际上是一个很大的 size_t 类型的值，即 SIZE_MAX。
 
 
+#### `Slice`
+
+`Slice`是 BiShengC 语言提供的不可变切片类型，用于对一段连续的且类型相同的内存进行读操作。其使用示例如下：
+
+```c
+#include "slice.hbs"
+
+int main() {
+  int arr[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  Slice<int> slice = Slice<int>::new(&const *arr, 5);
+  const int *borrow _Nonnull first = slice.get(2);
+  if (*first == 3) {
+    printf("The third element of the slice is 3\n");
+  }
+  return 0;
+}
+```
+
+索引：
+`Slice`目前不支持直接使用索引进行访问，但其提供了`get`等方法,可以传入想要访问的元素的索引，通过函数调用的方式进行访问。在访问`Slice`的元素时，会做**边界检查**。
+
+`Slice`提供的对外接口及相应的使用用例如下：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`unsafe Slice<T> Slice<T>::new(const T *borrow _Nonnull ptr, size_t len)`|根据指针和长度创建切片|Slice<int> slice = Slice<int>::new(&const *arr, 5);|
+|`safe Slice<T> Slice<T>::sub(This this, size_t start, size_t end)`|从现有的切片中创建子切片|Slice<int> sub = slice.sub(0, 5);|
+|`safe const T *borrow _Nonnull Slice<T>::get(This this, size_t index)`|返回切片中下标为index的元素的不可变借用|const int *borrow _Nonnull first = slice.get(0);|
+|`safe size_t Slice<T>::length(This this)`|返回切片长度|size_t len = slice.length();|
+|`safe _Bool Slice<T>::is_empty(This this)`|判断切片是否为空|_Bool is_empty = slice.is_empty();|
+|`unsafe const T *_Nonnull Slice<T>::as_ptr(This this)`|返回切片中保存的裸指针|const T *_Nonnull ptr = slice.as_ptr();|
+
+
+#### `SliceMut`
+
+`SliceMut`是 BiShengC 语言提供的可变切片类型，用于对一段连续的且类型相同的内存进行读写操作。其使用示例如下：
+
+```c
+#include "slice.hbs"
+
+int main() {
+  int arr[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  SliceMut<int> slice = SliceMut<int>::new(&const *arr, 5);
+  const int *borrow _Nonnull first = slice.get(2);
+  *first = 5;
+  if (*first == 5) {
+    printf("The third element of the slice is 5\n");
+  }
+  return 0;
+}
+```
+
+索引：
+`SliceMut`目前不支持直接使用索引进行访问，但其提供了`set`和`get`等方法,可以传入想要访问的元素的索引，通过函数调用的方式进行访问。在访问`SliceMut`的元素时，会做**边界检查**。
+
+`SliceMut`提供的对外接口及相应的使用用例如下：
+
+|对外接口|接口功能|代码示例|
+|---|---|---|
+|`unsafe SliceMut<T> SliceMut<T>::new(T *borrow _Nonnull ptr, size_t len)`|根据指针和长度创建可变切片|SliceMut<int> slice = SliceMut<int>::new(&mut *arr, 5);|
+|`safe Slice<T> SliceMut<T>::sub(This this, size_t start, size_t end)`|从现有的切片中创建不可变子切片|Slice<int> sub = slice.sub(0, 4);|
+|`safe SliceMut<T> SliceMut<T>::sub_mut(This this, size_t start, size_t end)`|从现有的切片中创建可变子切片|SliceMut<int> sub_mut = slice.sub_mut(0, 4);|
+|`safe const T *borrow _Nonnull SliceMut<T>::get(This this, size_t index)`|返回切片中下标为index的元素的不可变借用|const int *borrow _Nonnull first = slice.get(0);|
+|`safe T *borrow _Nonnull SliceMut<T>::get_mut(This this, size_t index)`|返回切片中下标为index的元素的可变借用|int *borrow _Nonnull first = slice.get_mut(0);|
+|`safe size_t SliceMut<T>::length(This this)`|返回切片长度|size_t len = slice.length();|
+|`safe _Bool SliceMut<T>::is_empty(This this)`|判断切片是否为空|_Bool is_empty = slice.is_empty();|
+|`unsafe const T *_Nonnull SliceMut<T>::as_ptr(This this)`|返回切片中保存的裸指针|const T *_Nonnull ptr = slice.as_ptr();|
+|`unsafe T *_Nonnull SliceMut<T>::as_mut_ptr(This this)`|返回切片中保存的裸指针|T *_Nonnull ptr = slice.as_mut_ptr();|
+
 #### LinkedList
 
 ##### 概述：
@@ -6783,6 +6852,7 @@ _direct-declarator :
     ....
     _identifier _template-declaration_opt
     _nested-name-specifier
+int main(void) {
     _direct-declarator _identifier _template-declaration_opt ( _parameter-type-list )
 ```
 
