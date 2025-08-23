@@ -2031,10 +2031,15 @@ static std::string getAtomicFunctionName(AtomicExpr *Node, const char *Name) {
     }
   }
 
-  // Only add _explicit suffix for C11 standard functions, not __atomic_*
-  // builtins
+  // Clang supports both C11 atomic_* functions and GCC-style __atomic_* builtins:
+  // - C11 functions have _explicit variants when memory order is explicitly specified
+  // - GCC __atomic_* builtins always require explicit memory order, no _explicit suffix needed
+  // BSC needs this distinction to generate correct function names during fat pointer conversion:
+  // e.g., __atomic_compare_exchange_n stays as-is, but atomic_compare_exchange_weak becomes
+  // atomic_compare_exchange_weak_explicit when explicit memory order is used
+  
   bool isGccBuiltin = (NameStr.find("__atomic_") == 0);
-  if (isExplicitExpr(Node->getOrder())) {
+  if (!isGccBuiltin && isExplicitExpr(Node->getOrder())) {
     NameStr += "_explicit";
   }
   return NameStr;
