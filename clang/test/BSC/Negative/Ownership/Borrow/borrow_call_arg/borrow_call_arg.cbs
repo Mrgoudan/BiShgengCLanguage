@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -verify %s
+
+owned struct Rc<T> {
+};
+
+owned struct Weak<T> {
+};
+
+Weak<T> Weak<T>::new(const Rc<T> *borrow rc);
+
+owned struct S { 
+};
+
+void test(Rc<S> rc) {
+    Weak<int> wk1 = Weak<int>::new(&const rc); // expected-error {{incompatible borrow types, cannot cast 'const owned Rc<owned struct S> *borrow' to 'const owned Rc<int> *borrow'}}
+}
