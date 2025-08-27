@@ -1,0 +1,31 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+void use(int *borrow p) {
+    *p = 2;
+}
+
+void use_immut(const int *borrow p) {
+    int x = *p;
+}
+
+void test1<T>() {
+  int a = 1;
+  int *borrow p = &mut a;
+  int *borrow q = &mut *p;
+  use(q);
+}
+
+void test2<T>() {
+    int a = 1;
+    int *borrow p = &mut a;
+    const int *borrow q = &const *p;
+    use_immut(q);
+}
+
+int main() {
+  test1<int>();
+  test2<int>();
+  return 0;
+}
