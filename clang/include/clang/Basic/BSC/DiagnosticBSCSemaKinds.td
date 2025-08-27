@@ -65,7 +65,7 @@ def err_owned_temporary_memLeak : Error<
   "memory leak because temporary variable '%0' is owned or indirect owned type, please fix it">;
 def err_funcPtr_incompatible : Error<
   "incompatible borrow function pointer types, cannot cast %0 to %1">;
-def err_borrow_on_borrow : Error<"%0 on a 'borrow' quialified type is not allowed">;
+def err_borrow_on_borrow : Error<"%0 on a 'borrow' qualified type is not allowed">;
 def err_mut_expr_unmodifiable  : Error<"the expression after '&mut' must be modifiable">;
 def err_mut_expr_func : Error<"'&mut' for function pointer is not allowed">;
 def err_safe_mut : Error<"global or static variables are not allowed to be mutably borrowed within the safe zone">;

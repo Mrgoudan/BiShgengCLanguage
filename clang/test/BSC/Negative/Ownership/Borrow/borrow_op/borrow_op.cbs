@@ -59,13 +59,13 @@ int test() {
   ~p5; // expected-error {{invalid argument type 'const int *borrow' to unary expression}}
   p5 << 6; // expected-error {{invalid operands to binary expression ('const int *borrow' and 'int')}}
   p3 >> p4; // expected-error {{invalid operands to binary expression ('int *borrow' and 'int *borrow')}}
-  &mut p3; // expected-error {{'&mut' on a 'borrow' quialified type is not allowed}}
+  &mut p3; // expected-error {{'&mut' on a 'borrow' qualified type is not allowed}}
            // expected-warning@-1 {{expression result unused}}
-  &mut p5; // expected-error {{'&mut' on a 'borrow' quialified type is not allowed}}
+  &mut p5; // expected-error {{'&mut' on a 'borrow' qualified type is not allowed}}
            // expected-warning@-1 {{expression result unused}}
-  &const p3; // expected-error {{'&const' on a 'borrow' quialified type is not allowed}}
+  &const p3; // expected-error {{'&const' on a 'borrow' qualified type is not allowed}}
              // expected-warning@-1 {{expression result unused}}
-  &const p5; // expected-error {{'&const' on a 'borrow' quialified type is not allowed}}
+  &const p5; // expected-error {{'&const' on a 'borrow' qualified type is not allowed}}
              // expected-warning@-1 {{expression result unused}}
 
   // unary -- ++
