@@ -367,9 +367,15 @@ bool Sema::CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType) {
 }
 
 void Sema::CheckBorrowFunctionType(QualType ReturnTy, SmallVector<QualType, 16> ParamTys, SourceLocation SL) {
+  if (ReturnTy->isDependentType()) {
+    return;
+  }
   if (ReturnTy.hasBorrow()) {
     bool HasBorrowParam = false;
     for (QualType PT : ParamTys) {
+      if (PT->isDependentType()) {
+        return;
+      }
       if (PT.hasBorrow()) {
         HasBorrowParam = true;
         break;
