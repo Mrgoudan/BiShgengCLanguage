@@ -323,11 +323,11 @@ bool QualType::hasBorrow() const {
 
 bool QualType::isConstBorrow() const {
   QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
-  if (QT.isLocalBorrowQualified()) {
+  if (QT.isBorrowQualified()) {
     while (QT->isPointerType()) {
       QT = QT->getPointeeType();
     }
-    if (QT.isLocalConstQualified())
+    if (QT.isConstQualified())
       return true;
   }
   return false;
