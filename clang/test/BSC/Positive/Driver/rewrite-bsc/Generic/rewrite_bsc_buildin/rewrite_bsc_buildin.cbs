@@ -1,0 +1,22 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#define ____IS(x) (((x) != ((typeof(x))0)) ? 1 : 0)
+void __bzero_const_maybe_32byte_40byte()
+{
+	if (____IS(__builtin_constant_p(1))) {} 
+}
+int main(){
+    return 0;
+}
+
+// CHECK: #define ____IS(x) (((x) != ((typeof(x))0)) ? 1 : 0)
+// CHECK: void __bzero_const_maybe_32byte_40byte()
+// CHECK-NEXT: {
+// CHECK-NEXT: 	if (____IS(__builtin_constant_p(1))) {} 
+// CHECK-NEXT: }
+// CHECK: int main(){
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }

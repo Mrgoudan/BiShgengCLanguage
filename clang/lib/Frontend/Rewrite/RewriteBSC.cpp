@@ -783,6 +783,9 @@ void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
       FunctionDecl *FD = cast<FunctionDecl>(D);
       // Don't print the declaration of a function of a generic class.
       // It will be printed when manipulating ClassTemplateDecl.
+      if (FD->getBuiltinID()) {
+        break;
+      }
       if (isa_and_nonnull<RecordDecl>(FD->getParent()) &&
           cast<RecordDecl>(FD->getParent())->getDescribedClassTemplate()) {
         break;
