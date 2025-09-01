@@ -1,0 +1,86 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+safe void use(int *borrow p) {
+    *p = 5;
+}
+
+void test1(int a, int b, char c) {
+    safe switch (a) {
+    case 5: {
+        int *borrow pb = &mut b;
+        use(pb);
+        break;
+    }
+    default:
+        c += 1;
+    }
+}
+
+void test2(int a, int b, char c) {
+    safe switch (a) {
+    case 0:
+        a += 1;
+        break;
+    case 1:
+        a += 2;
+    case 2:
+    case 3:
+        break;
+    case 4: {
+        c += 1;
+        break;
+    }
+    case 5: {
+        int *borrow pb = &mut b;
+        use(pb);
+        break;
+    }
+    case 6:
+        unsafe {
+            safe {
+                unsafe {
+                    safe switch (c) {
+                    case 0:
+                        a+=1;
+                        break;
+                    case 1:
+                        a += 2;
+                    case 2:
+                    case 3:
+                        break;
+                    case 4: {
+                        c += 1;
+                        break;
+                    }
+                    case 5: {
+                        int *borrow pb = &mut b;
+                        use(pb);
+                        break;
+                    }
+                    default:
+                        c += 1;
+                    }
+                    break;
+                }
+            }
+        }
+    case 7:
+    unsafe {
+        a++;
+        break;
+    }
+    default:
+        c += 1;
+    }
+}
+
+int main(void) {
+    test1(5, 2, '3');
+    test2(1, 2, '3');
+    return 0;
+}
