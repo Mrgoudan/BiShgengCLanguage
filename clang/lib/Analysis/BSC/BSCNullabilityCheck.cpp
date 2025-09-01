@@ -124,7 +124,7 @@ public:
   void VisitCallExpr(CallExpr *CE);
   void VisitReturnStmt(ReturnStmt *RS);
   void VisitCStyleCastExpr(CStyleCastExpr *CSCE);
-  NullabilityKind getExprPathNullability(Expr *E);
+  NullabilityKind getExprPathNullability(Expr *E, bool Point = false);
   void SetCFGBlocksByExpr(Expr *PtrE, const CFGBlock *NonNullBlock,
                           const CFGBlock *NullableBlock);
   void PassConditionStatusToSuccBlocks(Stmt *Cond);
@@ -189,17 +189,6 @@ static MemberExpr *getMemberExprFromExpr(Expr *E) {
   return nullptr;
 }
 
-static CallExpr *getCallExprFromExpr(Expr *E) {
-  if (auto CE = dyn_cast<CallExpr>(E)) {
-    return CE;
-  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    return getCallExprFromExpr(ICE->getSubExpr());
-  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
-    return getCallExprFromExpr(PE->getSubExpr());
-  }
-  return nullptr;
-}
-
 // We can get PathNullability for these exprs:
 //   1. int *p = nullptr;   // nullptr is NullExpr
 //   2. int *p = foo();     // foo() is CallExpr
@@ -207,51 +196,88 @@ static CallExpr *getCallExprFromExpr(Expr *E) {
 //   4. int *p = p1;        // p1 is VarDecl
 //   5. int *p = s.p;       // s.p is MemberExpr
 //   6. int *p = a == 1 ? nullptr : &a; // ConditionOperator
-NullabilityKind TransferFunctions::getExprPathNullability(Expr *E) {
+NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
   QualType QT = E->getType();
   QualType CanQT = QT.getCanonicalType();
-  if (CanQT->isPointerType()) {
-    if (E->isNullExpr(Ctx))
-      return NullabilityKind::Nullable;
-    if (auto CE = getCallExprFromExpr(E))
-      return getDefNullability(CE->getType(), Ctx);
-    if (auto CSCE = dyn_cast<CStyleCastExpr>(E))
-      return getDefNullability(CSCE->getTypeAsWritten(), Ctx);
-    if (auto UO = dyn_cast<UnaryOperator>(E)) {
-      UnaryOperator::Opcode Op = UO->getOpcode();
+  if (Point || CanQT->isPointerType()) {
+    switch (E->getStmtClass()) {
+    case Expr::ParenExprClass:
+      return getExprPathNullability(cast<ParenExpr>(E)->getSubExpr(), true);
+    case Expr::SafeExprClass:
+      return getExprPathNullability(cast<SafeExpr>(E)->getSubExpr(), true);
+    case Expr::ImplicitCastExprClass:
+      return getExprPathNullability(cast<ImplicitCastExpr>(E)->getSubExpr(),
+                                    true);
+    case Expr::CallExprClass:
+      return getDefNullability(cast<CallExpr>(E)->getType(), Ctx);
+    case Expr::ConditionalOperatorClass: {
+      NullabilityKind LHSNK =
+          getExprPathNullability(cast<ConditionalOperator>(E)->getLHS(), true);
+      NullabilityKind RHSNK =
+          getExprPathNullability(cast<ConditionalOperator>(E)->getRHS(), true);
+      if (LHSNK == NullabilityKind::Nullable ||
+          RHSNK == NullabilityKind::Nullable)
+        return NullabilityKind::Nullable;
+      else if (LHSNK == NullabilityKind::NonNull &&
+               RHSNK == NullabilityKind::NonNull)
+        return NullabilityKind::NonNull;
+      break;
+    }
+    case Expr::CStyleCastExprClass:
+      return getDefNullability(cast<CStyleCastExpr>(E)->getTypeAsWritten(),
+                               Ctx);
+    case Expr::UnaryOperatorClass: {
+      UnaryOperator::Opcode Op = cast<UnaryOperator>(E)->getOpcode();
       if (Op == UO_AddrOf || Op == UO_AddrMut || Op == UO_AddrConst ||
           Op == UO_AddrMutDeref || Op == UO_AddrConstDeref)
         return NullabilityKind::NonNull;
+      break;
     }
-    if (VarDecl *VD = getVarDeclFromExpr(E)) {
-      NullabilityKind NK = getDefNullability(VD->getType(), Ctx);
-      if (NK == NullabilityKind::NonNull)
-        return NullabilityKind::NonNull;
-      else if (NK == NullabilityKind::Nullable && CurrStatusVD.count(VD))
-        return CurrStatusVD[VD];
+    case Expr::BinaryOperatorClass: {
+      auto *BO = cast<BinaryOperator>(E);
+      if (BO->getOpcode() == BO_Comma) {
+        return getExprPathNullability(cast<BinaryOperator>(E)->getRHS(), true);
+      }
+      break;
     }
-    if (MemberExpr *ME = getMemberExprFromExpr(E)) {
-      if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+    case Expr::DeclRefExprClass: {
+      if (VarDecl *VD = dyn_cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl())) {
+        NullabilityKind NK = getDefNullability(VD->getType(), Ctx);
+        if (NK == NullabilityKind::NonNull)
+          return NullabilityKind::NonNull;
+        else if (NK == NullabilityKind::Nullable && CurrStatusVD.count(VD))
+          return CurrStatusVD[VD];
+      }
+      break;
+    }
+    case Expr::MemberExprClass: {
+      if (auto FD = dyn_cast<FieldDecl>(cast<MemberExpr>(E)->getMemberDecl())) {
         NullabilityKind NK = getDefNullability(FD->getType(), Ctx);
         if (NK == NullabilityKind::NonNull)
           return NullabilityKind::NonNull;
         else if (NK == NullabilityKind::Nullable) {
           FieldPath FP;
-          VisitMEForFieldPath(ME, FP);
+          VisitMEForFieldPath(cast<MemberExpr>(E), FP);
           if (CurrStatusFP.count(FP))
             return CurrStatusFP[FP];
         }
       }
+      break;
     }
-    if (ConditionalOperator *CO = dyn_cast<ConditionalOperator>(E)) {
-      NullabilityKind LHSNK = getExprPathNullability(CO->getLHS());
-      NullabilityKind RHSNK = getExprPathNullability(CO->getRHS());
-      if (LHSNK == NullabilityKind::Nullable ||
-          RHSNK == NullabilityKind::Nullable)
+    case Expr::IntegerLiteralClass: {
+      if (cast<IntegerLiteral>(E)->getValue().getZExtValue() == 0)
         return NullabilityKind::Nullable;
-      else if (LHSNK == NullabilityKind::NonNull ||
-               RHSNK == NullabilityKind::NonNull)
-        return NullabilityKind::NonNull;
+      break;
+    }
+    default:
+      break;
+    }
+    if (QT->isNullPtrType()) {
+      return NullabilityKind::Nullable;
+    }
+    if (Optional<llvm::APSInt> I = E->getIntegerConstantExpr(Ctx)) {
+      if (*I == 0)
+        return NullabilityKind::Nullable;
     }
   }
   // For no-pointer type, we treat it as Unspecified.

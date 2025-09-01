@@ -119,6 +119,29 @@ safe void test7(void) {
     }
 }
 
+struct S2 {
+    int *owned _Nullable p;
+    int *borrow _Nullable q;
+};
+
+safe void test8(void) {
+    int a = 1;
+    struct S2 s = {
+        .p = unsafe(safe_malloc<int>(a)),
+        .q = unsafe(&mut a)
+    };
+    safe_free((void *owned)s.p);
+}
+
+safe void test9(void) {
+    int a = 1;
+    struct S2 s = {
+        .p = (safe_malloc<int>(a)),
+        .q = (&mut a)
+    };
+    safe_free((void *owned)s.p);
+}
+
 int main() {
     test1();
     test2();

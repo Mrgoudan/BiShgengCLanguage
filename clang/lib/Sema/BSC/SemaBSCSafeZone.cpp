@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if ENABLE_BSC
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -112,12 +113,12 @@ bool Sema::IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
   return false;
 }
 
-bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *Expr) {
-  QualType SrcType = Expr->getType();
+bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *E) {
+  QualType SrcType = E->getType();
   if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context)) {
-    QualType IntTy = Expr->getType().getUnqualifiedType();
+    QualType IntTy = E->getType().getUnqualifiedType();
     Expr::EvalResult EVResult;
-    bool CstInt = Expr->EvaluateAsInt(EVResult, Context);
+    bool CstInt = E->EvaluateAsInt(EVResult, Context);
     bool IntSigned = IntTy->hasSignedIntegerRepresentation();
     bool OtherIntSigned = DestType->hasSignedIntegerRepresentation();
 
@@ -148,10 +149,10 @@ bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *Expr) {
     }
   }
   if (DestType->isRealFloatingType()) {
-    if (SrcType->isRealFloatingType() && !Expr->isValueDependent()) {
+    if (SrcType->isRealFloatingType() && !E->isValueDependent()) {
       // lose of the precision conversion is not allowed
       llvm::APFloat Result(0.0);
-      bool CstFloat = Expr->EvaluateAsFloat(Result, Context);
+      bool CstFloat = E->EvaluateAsFloat(Result, Context);
       if (CstFloat) {
         bool Truncated = true;
         Result.convert(Context.getFloatTypeSemantics(DestType),
@@ -227,7 +228,34 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   return true;
 }
 
-bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
+DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
+  if (!E) {
+    return nullptr;
+  }
+  switch (E->getStmtClass()) {
+  case Expr::ParenExprClass:
+    return getDeclRefExprForEnumCoversion(cast<ParenExpr>(E)->getSubExpr());
+  case Expr::SafeExprClass:
+    return getDeclRefExprForEnumCoversion(cast<SafeExpr>(E)->getSubExpr());
+  case Expr::ImplicitCastExprClass:
+    return getDeclRefExprForEnumCoversion(
+        cast<ImplicitCastExpr>(E)->getSubExpr());
+  case Expr::DeclRefExprClass:
+    return dyn_cast<DeclRefExpr>(E);
+  case Expr::BinaryOperatorClass: {
+    auto *BO = cast<BinaryOperator>(E);
+    if (BO->getOpcode() == BO_Comma) {
+      return getDeclRefExprForEnumCoversion(cast<BinaryOperator>(E)->getRHS());
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  return nullptr;
+}
+
+bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
   // check function pointer Type in 'IsSafeFunctionPointerTypeCast'
   if (DestType->isFunctionPointerType()) {
     return true;
@@ -240,20 +268,20 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
   // Init a owned or borrow pointer by nullptr is allowed in the safe zone
   if ((DestType.isOwnedQualified() && DestType->isPointerType()) ||
       DestType.isBorrowQualified()) {
-    if (isa<CXXNullPtrLiteralExpr>(Expr))
+    if (isa<CXXNullPtrLiteralExpr>(E))
       return true;
   }
 
   bool IsSafeBehavior = true;
-  QualType SrcType = Expr->getType();
-  if (IsTraitExpr(Expr)) {
+  QualType SrcType = E->getType();
+  if (IsTraitExpr(E)) {
     SrcType = CompleteTraitType(SrcType);
   }
   // conversion from non trait pointer type to trait pointer type is allowed
   if (DestType->isTraitPointerType() && !SrcType->isTraitPointerType()) {
     return true;
   }
-  if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(Expr)) {
+  if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(E)) {
     if (IsSafeConversion(DestType, Exp->getTrueExpr())) {
       return IsSafeConversion(DestType, Exp->getFalseExpr());
     } else {
@@ -290,7 +318,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
     }
     // conversion const value is allowed, if the destination type can embrace it
     if (!DestType->isEnumeralType() && !SrcType->isEnumeralType() &&
-        IsSafeConstantValueConversion(DestType, Expr)) {
+        IsSafeConstantValueConversion(DestType, E)) {
       IsSafeBehavior = true;
     }
 
@@ -300,7 +328,8 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
       if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
         IsSafeBehavior = true;
         // conversion enum value type to enum variable type is allowed
-      } else if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Expr)) {
+      }
+      if (auto *DRE = getDeclRefExprForEnumCoversion(E)) {
         if (EnumConstantDecl *ECD =
                 dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
           EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
@@ -314,7 +343,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *Expr) {
   }
 
   if (!IsSafeBehavior) {
-    Diag(Expr->getExprLoc(), diag::err_unsafe_cast) << SrcType << DestType;
+    Diag(E->getExprLoc(), diag::err_unsafe_cast) << SrcType << DestType;
   }
   return IsSafeBehavior;
 }

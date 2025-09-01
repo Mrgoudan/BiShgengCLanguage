@@ -111,11 +111,17 @@ void baseTypeCastConver() {
     char b = a;                // expected-error{{conversion from type 'int' to 'char' is forbidden in the safe zone}}
     b = 1;                     // ok
     b = 128;                   // expected-error{{conversion from type 'int' to 'char' is forbidden in the safe zone}}
+    b = unsafe(1);             // ok
+    b = safe(1);               // ok
+    b = unsafe(128);           // expected-error{{conversion from type 'int' to 'char' is forbidden in the safe zone}}
+    b = safe(128);             // expected-error{{conversion from type 'int' to 'char' is forbidden in the safe zone}}
+
     constexpr int c = 10;
     b = c;
     a = b;                      // char->int ok
     a = 'b';                    // char->int ok
-
+    a = unsafe(b);              // ok
+    a = safe(b);                // ok
     unsigned int d = 0;
     d = b;             // expected-error{{conversion from type 'char' to 'unsigned int' is forbidden in the safe zone}}
   }
@@ -126,6 +132,8 @@ void baseTypeCastConver() {
     _Bool c = b;      // expected-error{{conversion from type 'int' to '_Bool' is forbidden in the safe zone}}
     c = 1;
     c = 2;            // expected-error{{conversion from type 'int' to '_Bool' is forbidden in the safe zone}}
+    c = unsafe(1);
+    c = safe(1);
   }
   // char <-> long double
   safe {
@@ -149,11 +157,17 @@ void baseTypeCastConver() {
     enum E num = a;     // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
     num = 0;            // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
     num = ZERO;         // ok
+    num = safe(ZERO);   // ok
+    num = unsafe(ZERO); // ok
     enum F day = SUN;
     num = day;          // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
     num = SUN;          // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}     
     a = num;            // expected-error{{conversion from type 'enum E' to 'int' is forbidden in the safe zone}}
     a = ZERO;
+    num = safe(day);    // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
+    num = safe(SUN);    // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
+    num = unsafe(day);  // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
+    num = unsafe(SUN);  // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
     enum F f1 = a > 0 ? SUN : MON;   // ok
     enum F f2 = a == 0 ? SUN : MON;  // ok
     enum F f3 = a > 0 ? SUN : ZERO;  // expected-error{{conversion from type 'enum E' to 'enum F' is forbidden in the safe zone}}

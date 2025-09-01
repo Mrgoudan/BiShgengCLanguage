@@ -7437,6 +7437,10 @@ public:
 
   bool VisitParenExpr(const ParenExpr *E)
     { return StmtVisitorTy::Visit(E->getSubExpr()); }
+#if ENABLE_BSC
+  bool VisitSafeExpr(const SafeExpr *E)
+    { return StmtVisitorTy::Visit(E->getSubExpr()); }
+#endif
   bool VisitUnaryExtension(const UnaryOperator *E)
     { return StmtVisitorTy::Visit(E->getSubExpr()); }
   bool VisitUnaryPlus(const UnaryOperator *E)
