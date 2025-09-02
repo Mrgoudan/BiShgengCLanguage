@@ -939,7 +939,7 @@ private:
   std::map<Point, std::vector<std::unique_ptr<Action>>> actionMap;
 
   void PopulateInference(Liveness &liveness);
-  RegionVariable getRegionVariable(RegionName RV);
+  RegionVariable getRegionVariable(RegionName RN);
   void EnsureBorrowSource(Point SuccPoint, RegionName BorrowRegionName,
                           const std::unique_ptr<Path> &SourcePath);
   void RelateRegions(Point SuccPoint, RegionName Sub, RegionName Sup);

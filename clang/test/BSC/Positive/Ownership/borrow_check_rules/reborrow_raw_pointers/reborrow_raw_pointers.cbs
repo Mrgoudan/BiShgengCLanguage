@@ -1,0 +1,24 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+void call1(int *borrow p, int *raw) {
+    p = &mut *raw;
+}
+
+void call2(const int *borrow q, int x) {
+    q = &const x;
+}
+
+int main() {
+    int a = 1, b = 2;
+    int *raw = &a;
+    int *borrow p = &mut a;
+    const int *borrow q = &const b;
+    call1(p, raw);
+    call2(q, 2);
+    return 0;
+}

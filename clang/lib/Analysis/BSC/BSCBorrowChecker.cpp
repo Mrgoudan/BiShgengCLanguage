@@ -1557,6 +1557,8 @@ RegionName RegionCheck::getRegionName(Decl *D) {
                << RN.print() << '\n';
 #endif
   declToRegionNameMap[D] = RN;
+  // Ensure that the region variable corresponding to RN exists.
+  (void)getRegionVariable(RN);
   return RN;
 }
 
@@ -1569,6 +1571,8 @@ RegionName RegionCheck::getRegionName(Stmt *S) {
                << '\n';
 #endif
   stmtToRegionNameMap[S] = RN;
+  // Ensure that the region variable corresponding to RN exists.
+  (void)getRegionVariable(RN);
   return RN;
 }
 
