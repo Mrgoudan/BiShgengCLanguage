@@ -85,45 +85,62 @@ std::string MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD,
 
 std::string MangleBSCContext::getBSCTypeName(QualType QT,
                                              PrintingPolicy &Policy) {
-  std::string ExtendedTypeStr;
-  llvm::raw_string_ostream OS(ExtendedTypeStr);
+  std::string typeStr;
+  llvm::raw_string_ostream OS(typeStr);
   QT.print(OS, Policy);
-  int len = ExtendedTypeStr.length() - 1;
-  for (int i = len; i >= 0; i--) {
-    if (ExtendedTypeStr[i] == ' ') {
-      if (i == 0) {
-        ExtendedTypeStr.replace(i, 1, "");
-        continue;
-      }
-      ExtendedTypeStr.replace(i, 1, "_");
-    } else if (ExtendedTypeStr[i] == '*') {
-      // Since '*' is not allowed to appear in identifier,
-      // we replace it with 'P'.
-      // FIXME: it may conflict with user defined type Char_P.
-      ExtendedTypeStr.replace(i, 1, "P");
-    } else if (ExtendedTypeStr[i] == '(') {
-      // Since '(' is not allowed to appear in identifier,
-      // we replace it with 'LP'.
-      ExtendedTypeStr.replace(i, 1, "LP");
-    } else if (ExtendedTypeStr[i] == ')') {
-      // Since ')' is not allowed to appear in identifier,
-      // we replace it with 'RP'.
-      ExtendedTypeStr.replace(i, 1, "RP");
-    } else if (ExtendedTypeStr[i] == '[') {
-      // Since '[' is not allowed to appear in identifier,
-      // we replace it with 'LB'.
-      ExtendedTypeStr.replace(i, 1, "LB");
-    } else if (ExtendedTypeStr[i] == ']') {
-      // Since ']' is not allowed to appear in identifier,
-      // we replace it with 'RB'.
-      ExtendedTypeStr.replace(i, 1, "RB");
-    } else if (ExtendedTypeStr[i] == ',') {
-      // Since ',' is not allowed to appear in identifier,
-      // we replace it with 'COMMA'.
-      ExtendedTypeStr.replace(i, 1, "COMMA");
+  OS.flush();
+
+  if (const BuiltinType *T = QT->getAs<BuiltinType>()) {
+    // Eliminate the space character in the name of the BuiltinType type,
+    // Avoid generic names such as <long, long double> and <long long,
+    // double> having duplicate function names after mangle.
+    StringRef BTS = T->getName(Policy);
+    std::string BTSS = BTS.str();
+    size_t pos = typeStr.find(BTSS);
+    if (pos != std::string::npos) {
+      std::string replacement = BTS.str();
+      replacement.erase(
+          std::remove(replacement.begin(), replacement.end(), ' '),
+          replacement.end());
+      typeStr.replace(pos, BTSS.length(), replacement);
     }
   }
-  return ExtendedTypeStr;
+
+  std::string result;
+  result.reserve(typeStr.size() * 2);
+
+  for (char c : typeStr) {
+    switch (c) {
+    case ' ':
+      if (!result.empty()) {
+        result += '_';
+      }
+      break;
+    case '*':
+      result += 'P';
+      break;
+    case '(':
+      result += "LP";
+      break;
+    case ')':
+      result += "RP";
+      break;
+    case '[':
+      result += "LB";
+      break;
+    case ']':
+      result += "RB";
+      break;
+    case ',':
+      result += "COMMA";
+      break;
+    default:
+      result += c;
+      break;
+    }
+  }
+
+  return result;
 }
 
 std::string
@@ -139,10 +156,10 @@ MangleBSCContext::getBSCTemplateArgsName(ArrayRef<TemplateArgument> Args,
 std::string MangleBSCContext::getBSCArgName(const TemplateArgument &TemplateArg,
                                             PrintingPolicy &Policy) {
   std::string ArgName;
-  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type)
+  if (TemplateArg.getKind() == clang::TemplateArgument::ArgKind::Type) {
     ArgName = getBSCTypeName(TemplateArg.getAsType(), Policy);
-  else if (TemplateArg.getKind() ==
-           clang::TemplateArgument::ArgKind::Integral) {
+  } else if (TemplateArg.getKind() ==
+             clang::TemplateArgument::ArgKind::Integral) {
     llvm::APSInt TemplateInt = TemplateArg.getAsIntegral();
     if (TemplateInt.isNegative())
       ArgName = "n" + std::to_string(-TemplateInt.getExtValue());

@@ -2414,7 +2414,7 @@ safe typedef int mm;
 
 int main() { return 0; }
 ```
-   
+
 3. `safe`修饰的函数，参数类型和返回类型必须是`safe`类型。
 
    非`safe`类型包括：裸指针类型、`union`类型、成员中包含不安全类型的`struct`类型、成员中包含不安全类型的数组类型。
@@ -2694,7 +2694,9 @@ int main() {
 }
 ```
 
-18. 安全区内不允许指向类型不同的指针类型之间转换，不允许指针和非指针类型之间的转换，不允许`owned/borrow/raw`指针之间的转换。
+18. 安全区内不允许指向类型不同的指针类型之间转换，但允许其他类型owned指针显式转换为void类型的owned指针。
+
+    安全区内不允许指针和非指针类型之间的转换，不允许`owned/borrow/raw`指针之间的转换。
 
 ```c
 void test() {
@@ -2715,12 +2717,14 @@ void test() {
     // error：不允许指针和非指针类型之间的转换
     i = pa;
   }
-  int *owned pd = (int *owned) & pc;
+  int *owned pd = (int *owned)pa;
   safe {
     // error：不允许 owned/raw 指针之间的转换
     pa = pd;
     // error：不允许 owned/raw 指针之间的转换
     pd = pa;
+    // ok : 允许显式转换为void类型的owned指针
+    void *owned pe = (void *owned)pd;
   }
 }
 
@@ -4693,7 +4697,7 @@ int main() {
   return 0;
 }
 ```
-    
+
 -  运算符重载错误代码示例
 
 ```c

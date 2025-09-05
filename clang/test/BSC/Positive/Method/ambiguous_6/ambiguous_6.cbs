@@ -47,25 +47,25 @@ int main() {
     return 0;
 }
 
-// CHECK: GG long_long_f1(void) {
+// CHECK: GG longlong_f1(void) {
 // CHECK-NEXT:   struct F g;
 // CHECK-NEXT:   return g;
 // CHECK-NEXT: }
 
-// CHECK: struct F long_long_f2(void) {
+// CHECK: struct F longlong_f2(void) {
 // CHECK-NEXT:   struct F g;
 // CHECK-NEXT:   return g;
 // CHECK-NEXT: }
 
-// CHECK: _Bool long_long_f3(void) {
+// CHECK: _Bool longlong_f3(void) {
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 
-// CHECK: _Bool unsigned_long_f4(void) {
+// CHECK: _Bool unsignedlong_f4(void) {
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 
-// CHECK: double unsigned_int_f5(void) {
+// CHECK: double unsignedint_f5(void) {
 // CHECK-NEXT:   return 0;
 // CHECK-NEXT: }
 

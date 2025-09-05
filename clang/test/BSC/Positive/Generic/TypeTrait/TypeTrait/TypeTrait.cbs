@@ -139,9 +139,9 @@ int main() {
 
 // CHECK: _Bool is_signed_int(void);
 
-// CHECK: _Bool is_signed_unsigned_int(void);
+// CHECK: _Bool is_signed_unsignedint(void);
 
-// CHECK: _Bool is_unsigned_unsigned_int(void);
+// CHECK: _Bool is_unsigned_unsignedint(void);
 
 // CHECK: _Bool is_unsigned_int(void);
 
@@ -199,7 +199,7 @@ int main() {
 
 // CHECK: _Bool is_convertible_int_const_int(void);
 
-// CHECK: _Bool is_convertible_int_unsigned_int(void);
+// CHECK: _Bool is_convertible_int_unsignedint(void);
 
 // CHECK: _Bool is_convertible_int_void(void);
 
@@ -406,11 +406,11 @@ int main() {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: static _Bool is_signed_unsigned_int(void) {
+// CHECK: static _Bool is_signed_unsignedint(void) {
 // CHECK-NEXT:    return 0;
 // CHECK-NEXT: }
 
-// CHECK: static _Bool is_unsigned_unsigned_int(void) {
+// CHECK: static _Bool is_unsigned_unsignedint(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
@@ -526,7 +526,7 @@ int main() {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 
-// CHECK: static _Bool is_convertible_int_unsigned_int(void) {
+// CHECK: static _Bool is_convertible_int_unsignedint(void) {
 // CHECK-NEXT:    return 1;
 // CHECK-NEXT: }
 

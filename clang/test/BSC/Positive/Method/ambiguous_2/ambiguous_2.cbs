@@ -48,7 +48,7 @@ int main() {
 // CHECK-NEXT:   return 1;
 // CHECK-NEXT: }
 
-// CHECK: long long unsigned_int_getD(void) {
+// CHECK: long long unsignedint_getD(void) {
 // CHECK-NEXT:   return 1;
 // CHECK-NEXT: }
 

@@ -1,0 +1,84 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+void conversion<T, B>(T a, B b) {}
+
+int main() {
+    long a1 = 5;
+    long long a2 = 6;
+    double a3 = 8.0;
+    long double a4 = 9.0;
+    unsigned long a5= 1;
+    unsigned long long a6 = 1;
+
+    conversion<>(a1, a2); conversion<>(a2, a1);
+
+    conversion<>(a1, a4); conversion<>(a2, a3); 
+
+    conversion<>(a5, a4); conversion<>(a6, a3);
+
+    conversion<int const, int>(1, 2); conversion<int, const int>(1, 2);
+}
+
+// CHECK:      static void conversion_long_longlong(long a, long long b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_longlong_long(long long a, long b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_long_longdouble(long a, long double b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_longlong_double(long long a, double b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_unsignedlong_longdouble(unsigned long a, long double b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_unsignedlonglong_double(unsigned long long a, double b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_const_int_int(const int a, int b);
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_int_const_int(int a, const int b);
+// CHECK-EMPTY: 
+// CHECK:      int main(void) {
+// CHECK-NEXT:     long a1 = 5;
+// CHECK-NEXT:     long long a2 = 6;
+// CHECK-NEXT:     double a3 = 8.;
+// CHECK-NEXT:     long double a4 = 9.;
+// CHECK-NEXT:     unsigned long a5 = 1;
+// CHECK-NEXT:     unsigned long long a6 = 1;
+// CHECK-NEXT:     conversion_long_longlong(a1, a2);
+// CHECK-NEXT:     conversion_longlong_long(a2, a1);
+// CHECK-NEXT:     conversion_long_longdouble(a1, a4);
+// CHECK-NEXT:     conversion_longlong_double(a2, a3);
+// CHECK-NEXT:     conversion_unsignedlong_longdouble(a5, a4);
+// CHECK-NEXT:     conversion_unsignedlonglong_double(a6, a3);
+// CHECK-NEXT:     conversion_const_int_int(1, 2);
+// CHECK-NEXT:     conversion_int_const_int(1, 2);
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_long_longlong(long a, long long b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_longlong_long(long long a, long b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_long_longdouble(long a, long double b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_longlong_double(long long a, double b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_unsignedlong_longdouble(unsigned long a, long double b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_unsignedlonglong_double(unsigned long long a, double b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_const_int_int(const int a, int b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      static void conversion_int_const_int(int a, const int b) {
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
