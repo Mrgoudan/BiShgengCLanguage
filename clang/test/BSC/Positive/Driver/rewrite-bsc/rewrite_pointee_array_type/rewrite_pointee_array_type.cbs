@@ -1,0 +1,64 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+struct T<T1, T2, T3> {
+  T1 (*a[2])[5];
+  T2 (**b)[2];
+  T3 (*c)[5];
+};
+
+struct S { 
+  int a;
+};
+
+struct M { 
+  int a;
+};
+
+struct N {
+  int a;
+};
+
+void test(T<struct S, struct M, struct N> t) {
+}
+
+int main() {
+    T<struct S, struct M, struct N> t;
+    test(t);
+    return 0;
+}
+
+// CHECK:      struct T_struct_S_struct_M_struct_N;
+// CHECK-NEXT: struct S;
+// CHECK-NEXT: struct M;
+// CHECK-NEXT: struct N;
+// CHECK-NEXT: struct S { 
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+
+// CHECK:      struct M { 
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+
+// CHECK:      struct N { 
+// CHECK-NEXT:   int a;
+// CHECK-NEXT: };
+
+// CHECK:      struct T_struct_S_struct_M_struct_N {
+// CHECK-NEXT:     struct S (*a[2])[5];
+// CHECK-NEXT:     struct M (**b)[2];
+// CHECK-NEXT:     struct N (*c)[5];
+// CHECK-NEXT: };
+
+// CHECK:      void test(struct T_struct_S_struct_M_struct_N t) {
+// CHECK-NEXT: }
+
+// CHECK:      int main(void) {
+// CHECK-NEXT:     struct T_struct_S_struct_M_struct_N t;
+// CHECK-NEXT:     test(t);
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }

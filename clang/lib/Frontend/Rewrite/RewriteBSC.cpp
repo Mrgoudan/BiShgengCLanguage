@@ -116,15 +116,16 @@ public:
         Visit(FieldDecl);
         graph.addDependency(FieldDecl, RD);
       }
-      if (const ArrayType *AT = dyn_cast<ArrayType>(FieldType)) {
-        // Recursive to get innermost element type.
-        QualType ElementType = AT->getElementType();
-        while (const ArrayType *at = dyn_cast<ArrayType>(ElementType)) {
-          ElementType = at->getElementType();
+      if (const ArrayType *AT = FieldType->getAsArrayTypeUnsafe()) {
+        RecordDecl *FieldDecl = ProcessArrayType(AT);
+        if (FieldDecl) {
+          Visit(FieldDecl);
+          graph.addDependency(FieldDecl, RD);
         }
-        if (const RecordType *RT = ElementType->getAs<RecordType>()) {
-          RecordDecl *FieldDecl = RT->getDecl();
-          // Recursive for nested type definitions.
+      }
+      if (const PointerType *PT = FieldType->getAs<PointerType>()) {
+        RecordDecl *FieldDecl = ProcessPointerType(PT);
+        if (FieldDecl) {
           Visit(FieldDecl);
           graph.addDependency(FieldDecl, RD);
         }
@@ -136,6 +137,33 @@ public:
     for (ClassTemplateSpecializationDecl *CTSD : CTD->specializations()) {
       Visit(CTSD);
     }
+  }
+
+  RecordDecl *ProcessArrayType(const ArrayType *AT) {
+    // Recursive to get innermost element type.
+    QualType ElementType = AT->getElementType();
+    while (const ArrayType *at = ElementType->getAsArrayTypeUnsafe()) {
+      ElementType = at->getElementType();
+    }
+    if (const RecordType *RT = ElementType->getAs<RecordType>()) {
+      return RT->getDecl();
+    }
+    if (const PointerType *PT = ElementType->getAs<PointerType>()) {
+      return ProcessPointerType(PT);
+    }
+    return nullptr;
+  }
+
+  RecordDecl *ProcessPointerType(const PointerType *PT) {
+    // Recursive to get innermost pointee type.
+    QualType PointeeType = PT->getPointeeType();
+    while (const PointerType *InnerPT = PointeeType->getAs<PointerType>()) {
+      PointeeType = InnerPT->getPointeeType();
+    }
+    if (const ArrayType *AT = PointeeType->getAsArrayTypeUnsafe()) {
+      return ProcessArrayType(AT);
+    }
+    return nullptr;
   }
 
   std::vector<RecordDecl *> Sort() { return graph.topologicalSort(); }
