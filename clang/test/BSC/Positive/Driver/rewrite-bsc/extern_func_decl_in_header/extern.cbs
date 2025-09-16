@@ -1,0 +1,5 @@
+#include "extern_func_decl_in_header.hbs"
+
+int Entryf1(struct S **p) {
+  return 0;
+}

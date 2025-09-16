@@ -1,0 +1,34 @@
+// RUN: %clang %s %S/extern.cbs -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw1.c
+// RUN: %clang -rewrite-bsc %S/extern.cbs -o %t-rw2.c
+// RUN: FileCheck --input-file=%t-rw1.c %s
+// RUN: %clang %t-rw1.c %t-rw2.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#include "extern_func_decl_in_header.hbs"
+
+Foo(f1)
+
+Ptr table = { Entryf1 };
+
+int main(void) {
+  return 0;
+}
+
+// CHECK:      #define Foo(Name) extern int Entry##Name(struct S **p);
+
+// CHECK:      struct S;
+// CHECK-NEXT: typedef int (*Ptr)(struct S **);
+
+// CHECK:      struct S { 
+// CHECK-NEXT:   int x;
+// CHECK-NEXT: };
+
+// CHECK:      extern int Entryf1(struct S **p);
+
+// CHECK:      Ptr table = {Entryf1};
+
+// CHECK:      int main(void) {
+// CHECK-NEXT:   return 0;
+// CHECK-NEXT: }

@@ -820,11 +820,6 @@ void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
       if (FD->isAsyncSpecified())
         break;
       if (!FD->isTemplateInstantiation()) {
-        if (!SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getBeginLoc())) &&
-            !SM->isWrittenInMainFile(SM->getSpellingLoc(FD->getEndLoc())) &&
-            FD->getStorageClass() == StorageClass::SC_Extern)
-          break;
-
         // If it is BscMethod or macro expansion function, output the code
         // according to AST; Otherwise, simply retrieve the source code
         if (DeclsWithoutBSCFeature.find(FD) == DeclsWithoutBSCFeature.end() ||

@@ -1,0 +1,12 @@
+#ifndef HEADER_H
+#define HEADER_H
+
+struct S { 
+  int x;
+};
+
+typedef int (*Ptr)(struct S **p);
+
+#define Foo(Name) extern int Entry##Name(struct S **p);
+
+#endif
