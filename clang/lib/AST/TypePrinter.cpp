@@ -1450,6 +1450,13 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
     OS << Typedef->getIdentifier()->getName();
   } else {
+#if ENABLE_BSC
+    if (Policy.RewriteBSC) { 
+      OS << "__unnamed_" << D->getID();
+      spaceBeforePlaceHolder(OS);
+      return;
+    }
+#endif
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)
     OS << (Policy.MSVCFormatting ? '`' : '(');

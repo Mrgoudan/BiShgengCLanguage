@@ -35,9 +35,7 @@ public:
   }
 
   // recording appear index
-  void addNode(RecordDecl *RD) {
-    nodes.insert({RD, nodes.size()});
-  } 
+  void addNode(RecordDecl *RD) { nodes.insert({RD, nodes.size()}); }
 
   std::vector<RecordDecl *> topologicalSort() {
     std::map<RecordDecl *, int> inDegree;
@@ -92,7 +90,7 @@ private:
   // use T as the key and add S to its value.
   std::map<RecordDecl *, std::unordered_set<RecordDecl *>> typeDependencyMap;
   // map to memo the appear index
-  std::map<RecordDecl *,int> nodes;
+  std::map<RecordDecl *, int> nodes;
 };
 
 class TypeDependencyVisitor : public DeclVisitor<TypeDependencyVisitor> {
@@ -591,14 +589,15 @@ void RewriteBSC::RewriteDecls() {
       Buf << ";\n\n";
     } else {
       if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-        // For an anonymous tagdecl with typedef, use pretty printer. Otherwise,
-        // use original string text.
-        if (!TD->getTypedefNameForAnonDecl()) {
+        // For an anonymous tagdecl with typedef or unnamed recorddecl, use
+        // pretty printer. Otherwise, use original string text.
+        if (TD->getTypedefNameForAnonDecl() ||
+            (!TD->getIdentifier() && isa<RecordDecl>(TD))) {
+          D->print(Buf, Policy);
+        } else {
           const char *startBuf = SM->getCharacterData(D->getBeginLoc());
           const char *endBuf = SM->getCharacterData(D->getEndLoc());
           Buf << std::string(startBuf, endBuf - startBuf + 1);
-        } else {
-          D->print(Buf, Policy);
         }
         Buf << ";\n\n";
       } else {

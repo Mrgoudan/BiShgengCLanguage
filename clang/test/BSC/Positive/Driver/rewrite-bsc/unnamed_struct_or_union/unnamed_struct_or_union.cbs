@@ -1,0 +1,51 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+struct {
+  int a;
+} s = { 2 };
+
+static struct {
+  int b;
+} p = { 3 };
+
+union {
+  char c;
+  int a;
+} q;
+
+int main() {
+    q.a = 4;
+    return q.a + 1 - s.a - p.b;
+}
+
+// CHECK:      struct __unnamed_{{[0-9]+}};
+// CHECK-NEXT: struct __unnamed_{{[0-9]+}};
+// CHECK-NEXT: union __unnamed_{{[0-9]+}};
+// CHECK-NEXT: struct __unnamed_{{[0-9]+}} {
+// CHECK-NEXT:     int a;
+// CHECK-NEXT: };
+
+// CHECK:      struct __unnamed_{{[0-9]+}} {
+// CHECK-NEXT:     int b;
+// CHECK-NEXT: };
+
+// CHECK:      union __unnamed_{{[0-9]+}} {
+// CHECK-NEXT:     char c;
+// CHECK-NEXT:     int a;
+// CHECK-NEXT: };
+
+// CHECK:      struct __unnamed_{{[0-9]+}} s = {2};
+
+// CHECK:      static struct __unnamed_{{[0-9]+}} p = {3};
+
+// CHECK:      union __unnamed_{{[0-9]+}} q;
+
+// CHECK:      int main() {
+// CHECK-NEXT:     q.a = 4;
+// CHECK-NEXT:     return q.a + 1 - s.a - p.b;
+// CHECK-NEXT: }

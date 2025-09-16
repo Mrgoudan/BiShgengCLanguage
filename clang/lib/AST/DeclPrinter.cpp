@@ -674,9 +674,12 @@ void DeclPrinter::VisitRecordDecl(RecordDecl *D) {
     Out << ' ' << *D;
 #if ENABLE_BSC
   // Handling anonymous struct/union defined through typedef for rewriting
-  else if (Context.getLangOpts().BSC) {
+  else if (Policy.RewriteBSC) {
     if (TypedefNameDecl *TND = D->getTypedefNameForAnonDecl())
       Out << ' ' << "_TD_" << TND->getName();
+    else if (!D->isAnonymousStructOrUnion()) {
+      Out << ' ' << "__unnamed_" << D->getID();
+    }
   }
 #endif
 
