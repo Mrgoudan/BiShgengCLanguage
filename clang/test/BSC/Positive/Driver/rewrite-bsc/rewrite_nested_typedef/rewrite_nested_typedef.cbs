@@ -1,0 +1,32 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+typedef struct {
+  int a;
+} REQUEST, RESPONSE;
+
+typedef RESPONSE NEW_RESPONSE;
+
+void test() {
+  NEW_RESPONSE nr = {1};
+}
+
+int main(void) {
+  test();
+  return 0;
+}
+
+// CHECK:      struct _TD_REQUEST;
+// CHECK-NEXT: typedef struct _TD_REQUEST REQUEST;
+// CHECK-EMPTY: 
+// CHECK-NEXT: typedef struct _TD_REQUEST RESPONSE;
+// CHECK-EMPTY: 
+// CHECK-NEXT: typedef RESPONSE NEW_RESPONSE;
+// CHECK-EMPTY: 
+// CHECK-NEXT: struct _TD_REQUEST {
+// CHECK-NEXT:     int a;
+// CHECK-NEXT: };

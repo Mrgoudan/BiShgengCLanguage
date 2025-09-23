@@ -582,13 +582,15 @@ void DeclPrinter::VisitTypedefDecl(TypedefDecl *D) {
   QualType Ty = D->getTypeSourceInfo()->getType();
 #if ENABLE_BSC
   // Handling anonymous struct/union/enum defined through typedef for rewriting
-  if (Context.getLangOpts().BSC) {
-    if (const RecordType *RT = D->getUnderlyingType()->getAs<RecordType>()) {
+  if (Policy.RewriteBSC) {
+    if (D->getUnderlyingType()->getAs<TypedefType>()) {
+      // Just skip, do nothing
+    } else if (const RecordType *RT = D->getUnderlyingType()->getAs<RecordType>()) {
       RecordDecl *RD = RT->getDecl();
       if (!RD->getIdentifier()) {
         if (RD->isStruct())
           Out << "struct _TD_";
-        if (RD->isUnion())
+        else if (RD->isUnion())
           Out << "union _TD_";
       }
     } else if (const EnumType *ET = D->getUnderlyingType()->getAs<EnumType>()) {
