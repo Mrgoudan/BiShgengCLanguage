@@ -1,0 +1,48 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#define VOS_LIST_FOR_EACH_ITEM_SAFE(item, temp, head) \
+    for ((item) = (head)->next, (temp) = (item)->next; \
+         (item) != (head); \
+         (item) = (temp), (temp) = (item)->next)
+
+typedef struct tagVosListHead {
+    struct tagVosListHead *next, *prev;
+} VOS_LIST_HEAD_S;
+
+typedef struct tag_MESSAGE_MEMORY_MALLOC {
+    VOS_LIST_HEAD_S stMemList; /* Mem list */
+    unsigned int uiMemSize;          /* Mem Size */
+} MESSAGE_MEMORY_MALLOC_S;
+
+#define VOS_LIST_ENTRY(item, type, member) \
+    ((type *)((char *)(item) - (unsigned int)(&((type *)0)->member)))
+	
+typedef struct tag_MESSAGE_MEMORY_LIST_NODE {
+    VOS_LIST_HEAD_S stNode; /* vos list */
+} MESSAGE_MEMORY_LIST_NODE_S;
+
+MESSAGE_MEMORY_MALLOC_S g_stMessageMemory; /* */
+
+void bug() {
+	int a = 1;
+	int * borrow b = &mut a;
+    VOS_LIST_HEAD_S *pstListNode = 0;
+	VOS_LIST_HEAD_S *pstListNodeTemp = 0;
+	  VOS_LIST_FOR_EACH_ITEM_SAFE(pstListNode, pstListNodeTemp, &g_stMessageMemory.stMemList)
+	{
+		if (g_stMessageMemory.uiMemSize == 0) {
+			break;
+		}
+		MESSAGE_MEMORY_LIST_NODE_S *pstMemFree = VOS_LIST_ENTRY(pstListNode, MESSAGE_MEMORY_LIST_NODE_S, stNode);
+
+	}
+}
+
+int main() {
+    return 0;
+}

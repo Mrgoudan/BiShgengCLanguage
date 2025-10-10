@@ -561,6 +561,16 @@ void ActionExtract::VisitMemberExpr(MemberExpr *ME) {
     llvm::SaveAndRestore<bool> save_is_arrow(isArrow);
     isArrow = ME->isArrow();
     Visit(ME->getBase());
+    // Early return when `Src` is nullptr, which is a special handling for
+    // member offset calculation pattern like:
+    // \code
+    // #define OFFSET_OF_START (unsigned int *)0x1000
+    // (((unsigned int *)&((type *)OFFSET_OF_START)->member) - OFFSET_OF_START)
+    // \endcode
+    if (!Src) {
+      --pathDepth;
+      return;
+    }
     std::unique_ptr<Path> Member = std::make_unique<Path>(
         std::move(Src), ME->getMemberNameInfo().getAsString(), ME->getType(),
         ME->getMemberLoc());

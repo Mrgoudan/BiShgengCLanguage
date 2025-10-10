@@ -1,0 +1,59 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#define NULL (void *)0
+
+struct dlist_node {
+  struct dlist_node *prev;
+  struct dlist_node *next;
+};
+
+#define __OFFSET_OF_START_PAGE ((unsigned int *)0x1000)
+
+#define offset_of(type, member) \
+  (((unsigned int *)&((type *)__OFFSET_OF_START_PAGE)->member) - __OFFSET_OF_START_PAGE)
+
+#define container_of(ptr, type, member) \
+  ((type *)(((unsigned int *)(ptr)) - offset_of(type, member)))
+
+#define dlist_entry(ptr, type, member) \
+  container_of(ptr, type, member)
+
+#define dlist_first_entry(ptr, type, member) \
+  dlist_entry((ptr)->next, type, member)
+
+#define dlist_next_entry(pos, type, member) \
+  dlist_entry((pos)->member.next, type, member)
+
+#define dlist_for_each_entry(pos, head, type, member)  \
+  for ((pos) = dlist_first_entry(head, type, member); \
+       (const struct dlist_node *)&((pos)->member) != (const struct dlist_node *)(head); \
+       (pos) = dlist_next_entry(pos, type, member))
+
+typedef struct {
+  struct dlist_node list_hash;
+  int cnt;
+} info_t;
+
+
+int bug() {
+  int a = 1;
+  int *borrow b = &mut a;
+
+  struct dlist_node *hdr = NULL;
+  info_t *info = NULL;
+
+  dlist_for_each_entry(info, hdr, info_t, list_hash)
+  {
+  }
+
+  return 0;
+}
+
+int main() {
+  return 0;
+}
