@@ -411,6 +411,11 @@ void ActionExtract::VisitCallExpr(CallExpr *CE) {
 }
 
 void ActionExtract::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
+  if (CStyleCastExpr *sub = dyn_cast<CStyleCastExpr>(CSCE->getSubExpr()->IgnoreParens())) {
+    if (sub->getCastKind() == CK_NullToPointer) {
+      return;
+    }
+  }
   Visit(CSCE->getSubExpr());
   if (op == RHS) {
     if (CSCE->getType().isBorrowQualified()) {
