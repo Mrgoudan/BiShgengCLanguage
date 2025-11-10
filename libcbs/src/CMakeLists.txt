@@ -1,6 +1,7 @@
 add_library(
     stdcbs STATIC
     bishengc_safety/bishengc_safety.cbs
+    net/net.cbs
     scheduler/scheduler.cbs
     string/string.cbs
     hash/sip.cbs
@@ -21,6 +22,7 @@ target_include_directories(stdcbs
     list
     hash
     map
+    net
     option
     raw_table
     result
@@ -48,6 +50,7 @@ install(FILES
     list/list.hbs
     hash/sip.hbs
     map/hash_map.hbs
+    net/net.hbs
     option/option.hbs
     raw_table/raw_table.hbs
     result/result.hbs
