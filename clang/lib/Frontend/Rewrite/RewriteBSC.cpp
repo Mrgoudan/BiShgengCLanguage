@@ -589,6 +589,11 @@ void RewriteBSC::RewriteDecls() {
       Buf << ";\n\n";
     } else {
       if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
+        if (RecordDecl *RD = dyn_cast<RecordDecl>(TD)) {
+          if (MaxFieldAlignmentAttr *MFAA = RD->getAttr<MaxFieldAlignmentAttr>()) {
+            Buf << "#pragma pack(" << MFAA->getAlignment() / 8 << ")\n";
+          }
+        }
         // For an anonymous tagdecl with typedef or unnamed recorddecl, use
         // pretty printer. Otherwise, use original string text.
         if (TD->getTypedefNameForAnonDecl() ||
@@ -600,6 +605,11 @@ void RewriteBSC::RewriteDecls() {
           Buf << std::string(startBuf, endBuf - startBuf + 1);
         }
         Buf << ";\n\n";
+        if (RecordDecl *RD = dyn_cast<RecordDecl>(TD)) {
+          if (RD->hasAttr<MaxFieldAlignmentAttr>()) {
+            Buf << "#pragma pack()\n";
+          }
+        }
       } else {
         llvm_unreachable("Unreachable branch");
       }

@@ -1,0 +1,60 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+#pragma pack(4)
+struct S1 {
+  int a;
+  int b;
+};
+
+#pragma pack(1)
+struct S2 {
+  unsigned char c;
+  unsigned int d;
+};
+
+#pragma pack()
+
+struct S3 {
+  int a;
+  int b;
+};
+
+#pragma pack()
+
+struct S4 {
+  int a;
+  int b;
+};
+
+int main() {
+  return 0;
+}
+
+// CHECK:      #pragma pack(4)
+// CHECK-NEXT: struct S1 {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: #pragma pack()
+// CHECK-NEXT: #pragma pack(1)
+// CHECK-NEXT: struct S2 {
+// CHECK-NEXT:   unsigned char c;
+// CHECK-NEXT:   unsigned int d;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: #pragma pack()
+// CHECK-NEXT: struct S3 {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
+// CHECK-EMPTY:
+// CHECK-NEXT: struct S4 {
+// CHECK-NEXT:   int a;
+// CHECK-NEXT:   int b;
+// CHECK-NEXT: };
