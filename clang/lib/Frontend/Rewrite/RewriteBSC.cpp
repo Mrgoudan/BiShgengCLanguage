@@ -368,10 +368,18 @@ void RewriteBSC::CollectIncludesInFile(FileID FID) {
   if (FID.isInvalid())
     return;
 
+  // Structure to track preprocessor conditional blocks
+  struct ConditionalBlock {
+    bool isCppCheck;   // Is this checking __cplusplus?
+    bool inElseBranch; // Are we in the #else/#elif branch?
+    bool isIfndef;     // Is it #ifndef (vs #ifdef/#if)?
+  };
+
   StringRef FileContents = SM->getBufferData(FID);
-  size_t IncludeLen = strlen("include");
+  std::vector<ConditionalBlock> conditionalStack;
   bool InBlockComment = false;
   bool InSingleComment = false;
+
   // Loop over the whole file, looking for all includes.
   for (const char *it = FileContents.begin(), *ei = FileContents.end();
        it != ei; ++it) {
@@ -395,44 +403,103 @@ void RewriteBSC::CollectIncludesInFile(FileID FID) {
         if (++it == ei)
           return;
       }
-      if (!strncmp(it, "include", IncludeLen)) {
-        it += IncludeLen;
-        if (it == ei)
-          return;
-        // Skip spaces and tabs.
-        while (*it == ' ' || *it == '\t') {
-          if (++it == ei)
-            return;
+
+      // Check for preprocessor directives
+      if (!strncmp(it, "ifndef", 6)) {
+        const char *directiveIt = it + 6;
+        // Skip spaces and tabs
+        while (directiveIt != ei &&
+               (*directiveIt == ' ' || *directiveIt == '\t'))
+          directiveIt++;
+        // Check if it's __cplusplus
+        bool isCpp =
+            (directiveIt != ei && !strncmp(directiveIt, "__cplusplus", 11));
+        conditionalStack.push_back({isCpp, false, true});
+      } else if (!strncmp(it, "ifdef", 5)) {
+        const char *directiveIt = it + 5;
+        // Skip spaces and tabs
+        while (directiveIt != ei &&
+               (*directiveIt == ' ' || *directiveIt == '\t'))
+          directiveIt++;
+        // Check if it's __cplusplus
+        bool isCpp =
+            (directiveIt != ei && !strncmp(directiveIt, "__cplusplus", 11));
+        conditionalStack.push_back({isCpp, false, false});
+      } else if (!strncmp(it, "endif", 5)) {
+        if (!conditionalStack.empty())
+          conditionalStack.pop_back();
+      } else if (!strncmp(it, "elif", 4)) {
+        if (!conditionalStack.empty())
+          conditionalStack.back().inElseBranch = true;
+      } else if (!strncmp(it, "else", 4)) {
+        if (!conditionalStack.empty())
+          conditionalStack.back().inElseBranch = true;
+      } else if (!strncmp(it, "if", 2) && (it + 2 == ei || it[2] == ' ' ||
+                                           it[2] == '\t' || it[2] == '(')) {
+        // Parse #if directive - check if line contains __cplusplus
+        const char *lineStart = it + 2;
+        const char *lineEnd = lineStart;
+        while (lineEnd != ei && *lineEnd != '\n')
+          lineEnd++;
+        std::string condition(lineStart, lineEnd - lineStart);
+        bool isCpp = (condition.find("__cplusplus") != std::string::npos);
+        conditionalStack.push_back({isCpp, false, false});
+      } else if (!strncmp(it, "include", 7)) {
+        // Check if we should skip this include (i.e., if we're in a __cplusplus
+        // block)
+        bool shouldSkip = false;
+        for (const auto &block : conditionalStack) {
+          // Determine if we're in the C++ branch
+          // For #ifdef __cplusplus: C++ branch is when !inElseBranch
+          // For #ifndef __cplusplus: C++ branch is when inElseBranch
+          bool inCppBranch =
+              block.isIfndef ? block.inElseBranch : !block.inElseBranch;
+          if (block.isCppCheck && inCppBranch) {
+            shouldSkip = true;
+            break;
+          }
         }
-        // Match '"' or '<'.
-        if (*it == '"' || *it == '<') {
-          std::string Header;
-          Header += *it;
-          if (++it == ei)
+
+        if (!shouldSkip) {
+          it += 7; // strlen("include")
+          if (it == ei)
             return;
-          while (*it != '"' && *it != '>') {
-            Header += *it;
+          // Skip spaces and tabs.
+          while (*it == ' ' || *it == '\t') {
             if (++it == ei)
               return;
           }
-          Header += *it;
-          StringRef HeaderRef = StringRef(Header).substr(1, Header.size() - 2);
-          // If the included file is a hbs file, we just ignore it.
-          // Otherwise, we reserve it.
-          bool NotFound = true;
-          for (const FileID &fid : BSCFiles) {
-            const FileEntry *FE = SM->getFileEntryForID(fid);
-
-            if (!FE)
-              continue;
-
-            if (FE->getName().endswith(HeaderRef)) {
-              NotFound = false;
-              break;
+          // Match '"' or '<'.
+          if (*it == '"' || *it == '<') {
+            std::string Header;
+            Header += *it;
+            if (++it == ei)
+              return;
+            while (*it != '"' && *it != '>') {
+              Header += *it;
+              if (++it == ei)
+                return;
             }
+            Header += *it;
+            StringRef HeaderRef =
+                StringRef(Header).substr(1, Header.size() - 2);
+            // If the included file is a hbs file, we just ignore it.
+            // Otherwise, we reserve it.
+            bool NotFound = true;
+            for (const FileID &fid : BSCFiles) {
+              const FileEntry *FE = SM->getFileEntryForID(fid);
+
+              if (!FE)
+                continue;
+
+              if (FE->getName().endswith(HeaderRef)) {
+                NotFound = false;
+                break;
+              }
+            }
+            if (NotFound)
+              IncludedHeaders.insert(Header);
           }
-          if (NotFound)
-            IncludedHeaders.insert(Header);
         }
       }
     }

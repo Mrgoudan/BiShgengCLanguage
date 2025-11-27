@@ -1,0 +1,14 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang -c %t-rw.c -I %S -o %t-rw.output
+
+#include "level1.h"
+
+int main(){return 0;}
+
+// CHECK: #include <limits.h>
+// CHECK: #include <stdarg.h>
+// CHECK: #include <stddef.h>
+// CHECK: #include <stdint.h>
+// CHECK: typedef int *a;
+// CHECK: int main(){return 0;}
