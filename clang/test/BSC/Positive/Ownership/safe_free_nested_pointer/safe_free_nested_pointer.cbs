@@ -1,0 +1,26 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+T* owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc( sizeof(T) );
+  *p = value;
+  return (T* owned)p;
+}
+
+void safe_free<T>(T* owned p) {
+  free( (T*)p );
+}
+
+void test_double_pointer_ok() {
+  int* owned inner = safe_malloc(1);
+  int* owned * owned outer = safe_malloc(inner);
+  int* owned * owned * owned ultraout = safe_malloc(outer);
+  safe_free((void *owned)**ultraout);
+  safe_free((void *owned)*ultraout);
+  safe_free((void *owned)ultraout);
+}
+int main(){
+  test_double_pointer_ok();
+  return 0;
+}

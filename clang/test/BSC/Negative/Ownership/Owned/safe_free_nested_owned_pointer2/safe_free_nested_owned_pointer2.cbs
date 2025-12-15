@@ -1,0 +1,21 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+T* owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc( sizeof(T) );
+  *p = value;
+  return (T* owned)p;
+}
+
+void safe_free<T>(T* owned p) {
+  free( (T*)p );
+}
+
+int main() {
+    int * owned p = safe_malloc(2);
+    int * owned * owned pp = safe_malloc(p);
+    safe_free((void * owned) *pp);
+    safe_free((void * owned) pp);
+    return 0;
+}

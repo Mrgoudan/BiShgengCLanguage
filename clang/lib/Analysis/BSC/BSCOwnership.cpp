@@ -1614,7 +1614,9 @@ Ownership::OwnershipStatus::checkCastBOP(const VarDecl *VD,
                                          const SourceLocation &Loc) {
   SmallVector<OwnershipDiagInfo, 3> diags;
 
-  if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) {
+  // AllMoved is OK - it means all sub-fields are freed, so we can free the variable itself
+  if ((has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) &&
+      !is(VD, Ownership::Status::AllMoved)) {
     diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidCastMoved,
                                       VD->getNameAsString()));
   }
@@ -1697,6 +1699,31 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkCastField(
     SOwnedOwnedFields[VD].erase(fullFieldName);
     for (auto str : ownedPrefixStrs) {
       SOwnedOwnedFields[VD].erase(str);
+    }
+  }
+
+  if (BOPStatus.count(VD)) {
+    if (!BOPOwnedOwnedFields[VD].count(fullFieldName) && diags.empty()) {
+      diags.push_back(OwnershipDiagInfo(
+          Loc, OwnershipDiagKind::InvalidCastMoved,
+          moveAsterisksToFront(VD->getNameAsString() + "." + fullFieldName)));
+    }
+    // Check for deeper-level owned fields (e.g., when freeing **, check if *** exists)
+    auto ownedPrefixStrs = findPrefixStrings(BOPOwnedOwnedFields[VD], fullFieldName + "*");
+    if (!ownedPrefixStrs.empty() && diags.empty()) {
+      diags.push_back(OwnershipDiagInfo(
+          Loc, OwnershipDiagKind::InvalidCastFieldOwned,
+          moveAsterisksToFront(VD->getNameAsString() + "." + fullFieldName),
+          concatFields(VD, ownedPrefixStrs)));
+    }
+    BOPOwnedOwnedFields[VD].erase(fullFieldName);
+    // Remove deeper-level fields
+    for (auto str : ownedPrefixStrs) {
+      BOPOwnedOwnedFields[VD].erase(str);
+    }
+    if (BOPOwnedOwnedFields[VD].empty()) {
+      resetAll(VD);
+      set(VD, Ownership::Status::AllMoved);
     }
   }
 
@@ -1974,6 +2001,29 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
           SmallVector<OwnershipDiagInfo, 3> diags =
               stat.checkCastField(dyn_cast<VarDecl>(DRE->getDecl()),
                                   DRE->getLocation(), memberField.second);
+          reporter.addDiags(diags);
+        }
+      }
+      // @code
+      // (void * owned)*outer
+      // (void * owned)**ultraout
+      // @endcode
+      if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(ICE->getSubExpr()->IgnoreParens())) {
+        // Count dereferences and find the base DeclRefExpr
+        string fieldName;
+        const Expr *E = UO;
+        while (const UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
+          if (U->getOpcode() == UO_Deref) {
+            fieldName += "*";
+            E = U->getSubExpr()->IgnoreParenImpCasts();
+          } else {
+            break;
+          }
+        }
+        if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+          const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+          SmallVector<OwnershipDiagInfo, 3> diags =
+              stat.checkCastField(VD, DRE->getLocation(), fieldName);
           reporter.addDiags(diags);
         }
       }
