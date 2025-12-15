@@ -1951,7 +1951,7 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
       // @code
       // (void * owned)s
       // @endcode
-      if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr())) {
+      if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr()->IgnoreParens())) {
         const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
         if (stat.OPSStatus.count(VD)) {
           SmallVector<OwnershipDiagInfo, 3> diags =
@@ -1968,7 +1968,7 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
       // (void * owned)s->p
       // (void * owned)s.p
       // @endcode
-      if (const MemberExpr *ME = dyn_cast<MemberExpr>(ICE->getSubExpr())) {
+      if (const MemberExpr *ME = dyn_cast<MemberExpr>(ICE->getSubExpr()->IgnoreParens())) {
         auto memberField = getMemberFullField(ME);
         if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
           SmallVector<OwnershipDiagInfo, 3> diags =

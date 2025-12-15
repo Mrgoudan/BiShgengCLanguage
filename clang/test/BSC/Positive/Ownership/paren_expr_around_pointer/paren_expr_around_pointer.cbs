@@ -1,0 +1,29 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+T* owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc( sizeof(T) );
+  *p = value;
+  return (T* owned)p;
+}
+
+void safe_free<T>(T* owned p) {
+  free( (T*)p );
+}
+
+safe int foo(int *borrow x) { return *x; }
+typedef struct S {
+  int *owned p;
+} S;
+
+int main(void) {
+  int *owned ptr = safe_malloc(0);
+  int x = foo(&mut * ptr);
+  safe_free((void *owned)(ptr));
+  S s = {.p = safe_malloc(1)};
+  S *owned pp = safe_malloc(s);
+  safe_free((void *owned)(pp->p));
+  safe_free((void *owned)(pp));
+  return 0;
+}
