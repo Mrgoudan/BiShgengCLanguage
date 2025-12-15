@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -verify %s
+
+void *malloc(unsigned long);
+
+void log_print(void *msg, const char *pcFormat, ...){}
+
+#define bsc_log_print(msg, pcFormat, ...) \
+  unsafe {log_print(msg, pcFormat, ##__VA_ARGS__);}
+
+safe T* owned _Nullable bsc_malloc<T>(int  size) {
+  unsafe {return (T* owned _Nullable )malloc(size);}
+}
+
+int main() {
+  void * owned _Nullable pMsg = nullptr;
+  pMsg = bsc_malloc<void>(100);
+  bsc_log_print(&mut *pMsg, "Info: no memory!"); // expected-error {{incompatible borrow types, cannot cast 'void *borrow' to 'void *'}}
+  void * a = (void *)pMsg;
+  return 0;
+}

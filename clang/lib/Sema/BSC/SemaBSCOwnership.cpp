@@ -340,7 +340,8 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
       return true;
 
     if (LHSCanType->isVoidPointerType()) {
-      if (LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified())
+      if (LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified() &&
+          LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified())
         return true;
     }
     if (!Context.hasSameType(LHSCanType, RHSCanType))

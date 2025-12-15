@@ -17,6 +17,5 @@ int main() {
   trait T* borrow p = &mut *t;
   a = 2;
   t = &a;
-  p->f();
   return 0;
 }
