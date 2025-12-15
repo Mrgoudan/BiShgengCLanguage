@@ -426,8 +426,13 @@ void ActionExtract::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
         } else {
           BK = borrow::BorrowKind::Mut;
         }
-        Kind = Action::Borrow;
-        bool AddDeref = Sources[0]->ty != Dest->ty->getPointeeType();
+        if (!Sources[0]->ty.isBorrowQualified()) {
+          Kind = Action::Borrow;
+        }
+        bool AddDeref = false;
+        if (Dest) {
+          AddDeref = Sources[0]->ty != Dest->ty->getPointeeType();
+        }
         if (UnaryOperator *Sub = dyn_cast<UnaryOperator>(
                 CSCE->getSubExpr()->IgnoreParenImpCasts())) {
           if (Sub->getOpcode() == UO_AddrOf) {
