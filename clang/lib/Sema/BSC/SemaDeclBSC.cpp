@@ -541,7 +541,14 @@ public:
     ExprResult Res = getDerived().TransformExpr(CLE->getInitializer());
     Expr *E = Res.get();
     CLE->setInitializer(E);
-    return CLE;
+    DeclRefExpr *DRE = ReplaceWithTemporaryVariable(CLE->getInitializer());
+    CastKind Kind =
+        DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
+    ImplicitCastExpr *ICE =
+        ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind, DRE,
+                                 nullptr, VK_PRValue, FPOptionsOverride());
+    replacedNodesMap.Insert(ICE, CLE);
+    return ICE;
   }
 
   ExprResult TransformCStyleCastExpr(CStyleCastExpr *CSCE) {

@@ -94,6 +94,20 @@ struct S test14(struct S s, int* borrow p) {
   return s; 
 }
 
+typedef struct {
+    int* borrow data;
+} Holder;
+
+int test15() {
+    int y = 10;
+    Holder res = (Holder){ .data = &mut y };
+    return *res.data;
+}
+
+Holder test16(int* borrow dummy) {
+    return (Holder){ .data = &mut *dummy };
+}
+
 int main() {
   int local = 5;
   int *p = &local;
@@ -113,5 +127,7 @@ int main() {
   test13(s);
   int local2 = 5;
   test14(s, &mut local2);
+  int a = test15();
+  Holder h = test16(&mut a);
   return 0;
 }

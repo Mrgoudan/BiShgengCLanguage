@@ -165,3 +165,19 @@ int *borrow test18(int *borrow p) {
   int *borrow r = &mut *q1->g.b;
   return r; // expected-note {{`q` dropped here while still borrowed}}
 }
+
+typedef struct {
+    int* borrow data;
+} Holder;
+
+Holder test19(int* borrow dummy) {
+    int y = 10;
+    Holder res = (Holder){ .data = &mut y }; // expected-error {{`y` does not live long enough}}
+    return res; // expected-note {{`y` dropped here while still borrowed}}
+}
+
+Holder test20(int* borrow dummy) {
+    int y = 10;
+    return (Holder){ .data = &mut y }; // expected-error {{`y` does not live long enough}}
+                                       // expected-note@-1 {{`y` dropped here while still borrowed}}
+}
