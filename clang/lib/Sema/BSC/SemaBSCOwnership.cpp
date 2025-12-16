@@ -48,6 +48,70 @@ bool Sema::CheckOwnedDecl(SourceLocation ErrLoc, QualType T) {
   return true;
 }
 
+// Check if 'owned' qualifier is applied to a non-pointer type
+// The 'owned' qualifier is only valid on:
+//   - Pointer types (e.g., int* owned, int** owned *)
+//   - Owned structure types
+//   - Owned template specialization types
+// Invalid examples:
+//   - owned int x           (owned on primitive type)
+//   - owned int * a[3]      (owned int inside array of pointers)
+void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
+  // Early exit if feature is disabled or owned not explicitly specified
+  if (!getLangOpts().BSC || getLangOpts().DisableOwnershipCheck ||
+      !DS.getOwnedSpecLoc().isValid())
+    return;
+
+  // Helper to check if a type can validly have owned qualifier
+  // Returns true for pointers, owned structures, and owned template types
+  auto isValidOwnedType = [](QualType Ty) {
+    return Ty->isPointerType() || Ty->isOwnedStructureType() ||
+           Ty->isOwnedTemplateSpecializationType();
+  };
+
+  // Helper to emit diagnostic with unqualified type
+  // Removes 'owned' qualifier before displaying the type in error message
+  auto emitDiagnostic = [&](QualType Ty) {
+    QualType UnqualType = Ty;
+    UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
+    Diag(DS.getOwnedSpecLoc(), diag::err_owned_qualifier_non_pointer)
+        << "owned" << UnqualType;
+  };
+
+  // First Check: Deep type analysis
+  // Strip all pointer and array levels to reach the innermost base type
+  // Example: owned int **p → strip 2 levels → owned int (base type)
+  QualType BaseType = T;
+  while (const auto *PT = BaseType->getAs<PointerType>())
+    BaseType = PT->getPointeeType();
+  if (const auto *AT = BaseType->getAsArrayTypeUnsafe())
+    BaseType = AT->getElementType();
+
+  // Check if the innermost base type incorrectly has 'owned' on a non-pointer
+  // This catches: owned int **p (where 'owned int' is at the base)
+  if (BaseType.isOwnedQualified() && !isValidOwnedType(BaseType)) {
+    emitDiagnostic(BaseType);
+    return;
+  }
+
+  // Second Check: Top-level type analysis
+  // Handle cases where the complete type declaration is invalid
+  // Example: owned int x, or owned int * a[3]
+  if (!isValidOwnedType(T)) {
+    QualType CheckType = T;
+    // Strip at most one array level, then one pointer level
+    // For "owned int * a[3]": strip array → owned int*, then strip pointer → owned int
+    if (const auto *AT = CheckType->getAsArrayTypeUnsafe())
+      CheckType = AT->getElementType();
+    if (const auto *PT = CheckType->getAs<PointerType>())
+      CheckType = PT->getPointeeType();
+
+    // If we found 'owned' after stripping, it's invalid
+    if (CheckType.isOwnedQualified())
+      emitDiagnostic(CheckType);
+  }
+}
+
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();

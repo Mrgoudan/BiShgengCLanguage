@@ -1,0 +1,90 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+struct A {
+    owned int a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+};
+
+struct B {
+    owned int b; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+};
+
+struct C {
+    owned int** c; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+};
+
+struct D { struct C c; };
+
+struct E {
+    int owned e; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+};
+
+struct F {
+    int* owned f;
+};
+
+struct G {
+    int** owned g;
+};
+
+struct H {
+    int* owned *  h;
+};
+
+owned int (a)(); // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+
+owned int* (b)(); // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+
+owned int** (c)(); // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+
+
+// as return type
+owned int case1() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return 0;
+}
+
+owned int* case2() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return 0;
+}
+
+owned int** case3() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return 0;
+}
+
+// as param type
+owned int case5(owned int a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}}
+}
+
+int case6(owned int* a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return 0;
+}
+
+int case7(owned int** a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return 0;
+}
+
+// as local var type
+owned int case8() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  owned int a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return a;
+}
+
+int case9() {
+  owned int* a = 0; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+  return 0;
+}
+
+int case10() {
+  owned int** a = 0; // expected-error {{type of 'int' cannot be qualified by 'owned'}} 
+  return 0;
+}
+
+int case11() {
+  (owned int*)0; // expected-warning {{expression result unused}}
+  return 0;
+}
+
+int main() {
+    struct D * d;
+    return 0;
+}
+

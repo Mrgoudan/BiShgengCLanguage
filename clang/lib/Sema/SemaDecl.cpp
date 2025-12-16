@@ -6783,6 +6783,11 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
     Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_invalid_constexpr)
         << 1 << static_cast<int>(D.getDeclSpec().getConstexprSpecifier());
 
+#if ENABLE_BSC
+  // Check if 'owned' qualifier is applied to a non-pointer type (typedefs)
+  CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), TInfo->getType());
+#endif
+
   if (D.getName().Kind != UnqualifiedIdKind::IK_Identifier) {
     if (D.getName().Kind == UnqualifiedIdKind::IK_DeductionGuideName)
       Diag(D.getName().StartLocation,
@@ -7537,6 +7542,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   DeclContext *OriginalDC = DC;
   bool IsLocalExternDecl = SC == SC_Extern &&
                            adjustContextForLocalExternDecl(DC);
+
+#if ENABLE_BSC
+  // Check if 'owned' qualifier is applied to a non-pointer type (variables)
+  CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), R);
+#endif
 
   if (SCSpec == DeclSpec::SCS_mutable) {
     // mutable can only appear on non-static class members, so it's always
@@ -9764,6 +9774,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   assert(R->isFunctionType());
   if (R.getCanonicalType()->castAs<FunctionType>()->getCmseNSCallAttr())
     Diag(D.getIdentifierLoc(), diag::err_function_decl_cmse_ns_call);
+
+#if ENABLE_BSC
+  // Check if 'owned' qualifier is applied to a non-pointer return type
+    QualType ReturnType = R->getAs<FunctionType>()->getReturnType();
+    CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), ReturnType);
+#endif
 
   SmallVector<TemplateParameterList *, 4> TemplateParamLists;
   llvm::append_range(TemplateParamLists, TemplateParamListsRef);
@@ -14702,22 +14718,6 @@ void Sema::CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D) {
   }
 }
 
-static bool CheckThisParamQualifiers(QualType thisParamT) {
-  if (!thisParamT->isPointerType()) {
-    // not allow  This owned/borrow
-    // borrow not pointer is alredy checked in the Sema::BuildQualifiedType
-    if (thisParamT.isOwnedQualified()) {
-      bool IsOwnedStruct = thisParamT->isOwnedStructureType() ||
-                           thisParamT->isOwnedTemplateSpecializationType();
-      // only owned struct ok
-      if (!(IsOwnedStruct && thisParamT.getQualifiers().hasOnlyOwned())) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
 /// ActOnParamDeclarator - Called from Parser::ParseFunctionDeclarator()
 /// to introduce parameters into function prototype scope.
 Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
@@ -14770,6 +14770,8 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
   // Check for redeclaration of parameters, e.g. int foo(int x, int x);
   IdentifierInfo *II = D.getIdentifier();
   #if ENABLE_BSC
+  // Check if 'owned' qualifier is applied to a non-pointer type (parameters)
+  CheckOwnedQualifierOnNonPointerType(DS, parmDeclType);
   if (getLangOpts().BSC && DS.getSafeZoneSpecifier() != SZ_None) {
     Diag(DS.getSafeZoneSpecifierLoc(), diag::err_safe_zone_decl)
         << DS.getSafeZoneSpecifier();
@@ -14790,11 +14792,6 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
             ETQ.hasOnlyOwned())) {
         Diag(D.getBeginLoc(), diag::err_cvrqualified_member_type_unsupported)
             << ExtendedType.getAsString();
-        D.setInvalidType(true);
-      }
-      if (!CheckThisParamQualifiers(parmDeclType)) {
-        Diag(D.getBeginLoc(), diag::err_cvrqualified_this_type_unsupported)
-            << parmDeclType.getAsString();
         D.setInvalidType(true);
       }
       auto ThisTypePtr = parmDeclType.getTypePtrOrNull();
@@ -18135,6 +18132,8 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclSt
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), T, "union field");
     CheckBorrowOrIndirectBorrowType(D.getIdentifierLoc(), T, "union field");
   }
+  // Check if 'owned' qualifier is applied to a non-pointer type (fields)
+  CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), T);
   #endif
 
   // Check to see if this name was declared as a member previously

@@ -11,8 +11,8 @@ void* const test2(void* p) {   //expected-error {{'const' type qualifier on retu
     return a;
 }
 
-int owned test3(int size) { //legal
-    int owned a = (int owned)size;
+int owned test3(int size) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned a = (int owned)size; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return a;
 }
 
@@ -21,14 +21,14 @@ int const test4(int size) {   //expected-error {{'const' type qualifier on retur
     return a;
 }
 
-int const owned test5(int size) { //legal
-    int const owned a = (int const owned)size;
+int const owned test5(int size) { // expected-error {{type of 'const int' cannot be qualified by 'owned'}}
+    int const owned a = (int const owned)size; // expected-error {{type of 'const int' cannot be qualified by 'owned'}}
     return a;
 }
 
 
-owned void* test7(void* p) {
-    owned void* a = (owned void*)(p);
+owned void* test7(void* p) { // expected-error {{type of 'void' cannot be qualified by 'owned'}}
+    owned void* a = (owned void*)(p); // expected-error {{type of 'void' cannot be qualified by 'owned'}}
     return a;
 }
 

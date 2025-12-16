@@ -1,10 +1,4 @@
-// RUN: %clang_cc1 -verify %s
-// expected-no-diagnostics
-// RUN: %clang %s -o %t.output
-// RUN: %t.output
-// RUN: %clang -rewrite-bsc %s -o %t-rw.c
-// RUN: %clang %t-rw.c -o %t-rw.output
-// RUN: %t-rw.output
+// RUN: %clang_cc1 -ast-dump -verify %s
 
 void cons(int * owned p) {
     int* a = (int *)p;
@@ -28,7 +22,7 @@ void consumePtr(int * owned p) {
     return;
 }
 
-void f1(int owned * p) {
+void f1(int owned * p) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return;
 }
 

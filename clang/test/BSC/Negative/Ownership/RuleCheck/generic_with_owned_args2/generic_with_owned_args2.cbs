@@ -1,9 +1,8 @@
-// RUN: %clang_cc1 -ast-dump -verify %s
-// expected-no-diagnostics
+// RUN: %clang_cc1 -verify %s
 
-owned T Func_1<T>(T t)
+owned T Func_1<T>(T t) // expected-error {{type of 'T' cannot be qualified by 'owned'}}
 {
-    T owned tmp = (owned T)t;
+    T owned tmp = (owned T)t; // expected-error {{type of 'T' cannot be qualified by 'owned'}}
     return tmp;
 }
 

@@ -5,15 +5,15 @@
 
 int a = 0;
 
-owned int* Func_1<T>()
+owned int* Func_1<T>() // expected-error {{type of 'int' cannot be qualified by 'owned'}}
 {
-    T tmp = (owned int*)a;  //expected-warning {{cast to 'owned int *' from smaller integer type 'int'}} [-Wincompatible-pointer-types-discards-qualifiers] expected-warning {{cast to 'owned int *' from smaller integer type 'int'}} [-Wincompatible-pointer-types-discards-qualifiers]
+    T tmp = (owned int*)a; // expected-warning {{cast to 'owned int *' from smaller integer type 'int'}} [-Wincompatible-pointer-types-discards-qualifiers] expected-warning {{cast to 'owned int *' from smaller integer type 'int'}} [-Wincompatible-pointer-types-discards-qualifiers]
     return tmp;
 }
 
 int main()
 {
-    owned int* res = Func_1<owned int*>(); //expected-note {{in instantiation of function template specialization 'Func_1<owned int *>' requested here}}
+    owned int* res = Func_1<owned int*>(); // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-note {{in instantiation of function template specialization 'Func_1<owned int *>' requested here}}
 
     if (*res != 0) {
         return 1;

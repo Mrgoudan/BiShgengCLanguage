@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-owned int a = 10; //expected-error {{type of global variable cannot qualified by 'owned'}}
+owned int a = 10; //expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of global variable cannot qualified by 'owned'}}
 
 typedef struct A {
-    owned int num;
+    owned int num; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
 }SA;
 
 SA sa1 = {.num = 10};   //expected-error {{type of global variable cannot qualified by 'owned'(even indirectly), 'SA' (aka 'struct A') contains 'owned' type}}

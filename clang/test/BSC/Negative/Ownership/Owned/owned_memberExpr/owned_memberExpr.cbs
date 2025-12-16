@@ -6,17 +6,17 @@ struct Base {
 
 struct A {
     int b;
-    owned int* c;
-    owned struct Base base;
+    owned int* c; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    owned struct Base base; // expected-error {{type of 'struct Base' cannot be qualified by 'owned'}}
 };
 
-int * owned foo(owned int* a) {
+int * owned foo(owned int* a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return (int* owned)a;
 }
 
 void test2() {
-    struct A owned a;
+    struct A owned a; // expected-error {{type of 'struct A' cannot be qualified by 'owned'}}
     int res = a.b;                  //unlike const, a.b's QualType is int(not owned int)
     int * owned res2 = foo(a.c);      //a.c's QualType is owned int*(not owned int* owned)
     int res3 = a.base.num;
-} // expected-error {{memory leak of value: `res2`}}
+}

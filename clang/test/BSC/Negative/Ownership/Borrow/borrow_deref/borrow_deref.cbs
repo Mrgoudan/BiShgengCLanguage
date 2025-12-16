@@ -7,9 +7,9 @@ struct R {
 int * owned foo(int * owned a) {
     return a;
 }
-int owned foo1() {
-    int owned a = 1;
-    int owned * borrow b = &mut a;
+int owned foo1() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned * borrow b = &mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return *b; // expected-error {{borrow type does not allow move ownership}}
 }
 
@@ -21,26 +21,26 @@ void foo2() {
     return;
 }
 
-int owned test_use(int owned a){
+int owned test_use(int owned a){ // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return a;
 }
 int foo3() {
-    int owned a = 1;
-    int owned * borrow b = &mut a;
-    int owned c = test_use(*b);     // expected-error {{borrow type does not allow move ownership}}
+    int owned a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned * borrow b = &mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned c = test_use(*b);     // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{borrow type does not allow move ownership}}
     int d = (int)a;
     return 0;
 }
 
 struct S1 {
-    int owned * borrow a;
+    int owned * borrow a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int * b;
 };
 int foo4() {
-    int owned m = 1;
+    int owned m = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int n = 1;
     struct S1 k = {&mut m, &n};
-    int owned a = *(k.a);          // expected-error {{borrow type does not allow move ownership}}
+    int owned a = *(k.a);          // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{borrow type does not allow move ownership}}
     int b = *(k.b);
 }
 
@@ -51,8 +51,8 @@ struct S2 {
 int foo5() {
     int m = 1;
     int n = 1;
-    struct S2 owned * borrow k = &mut(struct S2 owned){&m, &n};
-    struct S2 owned a = *(k);    // expected-error {{borrow type does not allow move ownership}}
+    struct S2 owned * borrow k = &mut(struct S2 owned){&m, &n};  // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}}
+    struct S2 owned a = *(k);   // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}} expected-error {{borrow type does not allow move ownership}}
 }
 
 

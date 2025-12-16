@@ -7,6 +7,7 @@ owned struct D<T> {
 owned struct D<int> b; // expected-error {{must ignore 'owned struct' tag before struct name}}
                        // expected-error@-1 {{type of global variable cannot qualified by 'owned'}}
 int owned struct D<T>::f() { // expected-error {{must ignore 'owned struct' tag before struct name}}
+                             // expected-error@-1 {{type of 'int' cannot be qualified by 'owned'}}
     return 0;
 }
 struct F<T>; 

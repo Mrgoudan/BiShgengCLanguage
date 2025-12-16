@@ -12417,6 +12417,7 @@ public:
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
+  void CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
   void BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck = true,
                            bool EnableNullabilityCheck = true);

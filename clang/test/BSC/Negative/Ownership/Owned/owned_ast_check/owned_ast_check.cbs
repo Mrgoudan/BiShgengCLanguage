@@ -3,9 +3,9 @@
 // RUN: | FileCheck -strict-whitespace %s
 
 struct A {
-    owned int a;
-    int owned b;
-    int owned * c;
+    owned int a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned b; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned * c; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int* owned d;
     int* owned* owned e;
 };
@@ -17,7 +17,7 @@ struct A {
 // CHECK-NEXT:  FieldDecl 0x{{[^ ]*}} {{.*}}e 'int *owned *owned'
 
 void ownedTest0() {
-    int owned a;
+    int owned a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int* owned b;
     int* owned * owned d;
     return;
@@ -32,9 +32,9 @@ void ownedTest0() {
 // CHECK-NEXT:  VarDecl 0x{{[^ ]*}} {{.*}}d 'int *owned *owned'
 // CHECK-NEXT:  ReturnStmt 0x{{[^ ]*}} {{.*}}
 
-int ownedTest1(owned int x, owned int* y, owned int* owned c, owned int* owned * d) {
+int ownedTest1(owned int x, owned int* y, owned int* owned c, owned int* owned * d) { // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return 0;
-} // expected-error {{memory leak of value: `c`}}
+} 
 // CHECK:       FunctionDecl 0x{{[^ ]*}} {{.*}}ownedTest1 'int (owned int, owned int *, owned int *owned, owned int *owned *)'
 // CHECK-NEXT:  ParmVarDecl 0x{{[^ ]*}} {{.*}}x 'owned int'
 // CHECK-NEXT:  ParmVarDecl 0x{{[^ ]*}} {{.*}}y 'owned int *'

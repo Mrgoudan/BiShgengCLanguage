@@ -1,8 +1,4 @@
-// RUN: %clang %s -o %test.output
-// RUN: %test.output
-// RUN: %clang -rewrite-bsc %s -o %t-rw.c
-// RUN: %clang %t-rw.c -o %t-rw.output
-// RUN: %t-rw.output
+// RUN: %clang_cc1 -ast-dump -verify %s
 
 owned struct D{
     int a ;
@@ -22,8 +18,8 @@ struct C{
     int x;
 };
 
-owned struct C init_a(){
-   owned struct C c ={2};
+owned struct C init_a(){ // expected-error {{type of 'struct C' cannot be qualified by 'owned'}}
+   owned struct C c ={2}; // expected-error {{type of 'struct C' cannot be qualified by 'owned'}}
    c.x= 2;
    return c;
 }

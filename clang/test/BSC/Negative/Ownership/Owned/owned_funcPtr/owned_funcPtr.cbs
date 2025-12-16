@@ -4,8 +4,8 @@ int myadd(int* a, int* b) {
     return *a + *b;
 }
 
-int owned myadd2(int* a, int* b) {
-    int owned x = 10;
+int owned myadd2(int* a, int* b) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned x = 10; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     return x;
 }
 
@@ -24,7 +24,7 @@ void test1() {
 
 // case2: unOwned to owned
 void test2() {
-    FTP owned ftp1 = myadd; //expected-error {{incompatible owned types, cannot cast 'int (int *, int *)' to 'owned FTP' (aka 'int (*owned)(int *, int *)'}}
+    FTP owned ftp1 = myadd; //expected-error {{incompatible owned types, cannot cast 'int (int *, int *)' to 'owned FTP' (aka 'int (*owned)(int *, int *)')}}
 }
 
 // case3: inner owned check

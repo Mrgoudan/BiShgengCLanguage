@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-typedef owned int ownInt;
+typedef owned int ownInt; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
 ownInt a = 10;  //expected-error {{type of global variable cannot qualified by 'owned', 'ownInt' (aka 'owned int') contains 'owned' type}}
 
 typedef struct A {
-    owned int a;
+    owned int a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
 }AA;
 
 AA aa;  //expected-error {{type of global variable cannot qualified by 'owned'(even indirectly), 'AA' (aka 'struct A') contains 'owned' type}}

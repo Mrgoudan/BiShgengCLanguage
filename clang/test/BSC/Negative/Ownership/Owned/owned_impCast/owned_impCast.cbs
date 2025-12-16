@@ -60,8 +60,8 @@ int test6_1()
 int test7()
 {
     short a = 0;
-    owned short *b = &a;    //expected-error {{incompatible owned types, cannot cast 'short *' to 'owned short *'}}
-    owned int **c = (owned int**)&b; // expected-error {{incompatible owned types, cannot cast 'owned short **' to 'owned int **'}}
+    owned short *b = &a;    // expected-error {{type of 'short' cannot be qualified by 'owned'}} //expected-error {{incompatible owned types, cannot cast 'short *' to 'owned short *'}}
+    owned int **c = (owned int**)&b; // expected-error {{type of 'int' cannot be qualified by 'owned'}} // expected-error {{incompatible owned types, cannot cast 'owned short **' to 'owned int **'}}
     if(**c != 0) {
         return 1;
     }
@@ -79,7 +79,7 @@ void test9() {
 }
 
 // pointer to owned type, recursively check
-void test10(owned int* p0) {
+void test10(owned int* p0) {// expected-error {{type of 'int' cannot be qualified by 'owned'}} 
     int* p1 = p0;   //expected-error {{incompatible owned types, cannot cast 'owned int *' to 'int *'}}
 }
 

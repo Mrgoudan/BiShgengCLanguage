@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
 int* owned func1(int* owned p) { return p; }
-int owned func2(int owned a) { return a; }
+int owned func2(int owned a) { return a; } // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}}
 int* func3(int* p) { return p; }
-void test1(int* owned p, int owned a, int* p2) {
+void test1(int* owned p, int owned a, int* p2) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     func1(p);   // expected-error {{memory leak because temporary variable 'func1(p)' is owned or indirect owned type, please fix it}}
     *func1(p);  // expected-error {{memory leak because temporary variable 'func1(p)' is owned or indirect owned type, please fix it}}
     int res1 = *func1(p);   // expected-error {{memory leak because temporary variable 'func1(p)' is owned or indirect owned type, please fix it}}

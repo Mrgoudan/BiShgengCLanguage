@@ -4,8 +4,6 @@ def err_no_instance_member : Error<
   "no instance member named %0 in %1; did you mean to use '::' instead of '%select{.|->}2'?">;
 def err_cvrqualified_member_type_unsupported : Error<
   "type of member function is wrong, CVR qualified type is unsupported, but found '%0'">;
-def err_cvrqualified_this_type_unsupported : Error<
-  "owned type requires a pointer, '%0' is invalid">;
 def err_this_type_unsupported : Error<
   "type of parameter 'this' is wrong, expected 'This*' or 'This' or '%0*' or '%0', but found '%1'">;
 def err_incompatible_pointer_cast : Error<
@@ -78,6 +76,9 @@ def err_borrow_qualcheck_compare : Error<
 def err_typecheck_borrow_func : Error<"no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified">;
 def err_typecheck_borrow_subscript : Error<"subscript of borrow pointer is not allowed">;
 def err_owned_and_borrow_conflict : Error<"cannot combine 'owned' and 'borrow' qualifiers on the same type">;
+def err_owned_qualifier_non_pointer : Error<
+  "type of %1 cannot be qualified by '%0'">,
+  InGroup<OwnedQualifierType>;
 
 
 // BSC trait warnings and errors.

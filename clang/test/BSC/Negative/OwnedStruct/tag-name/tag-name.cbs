@@ -18,7 +18,7 @@ owned struct A ff() { // expected-error {{must ignore 'owned struct' tag before 
     return b;
 }
 
-int owned struct A::f() { // expected-error {{must ignore 'owned struct' tag before struct name}}
+int owned struct A::f() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}  expected-error {{must ignore 'owned struct' tag before struct name}}
     return 0;
 }
 
@@ -28,10 +28,10 @@ int A::g(owned struct A* this) { // expected-error {{must ignore 'owned struct' 
 
 struct D;
 
-owned struct D {};//// expected-error {{inconsistent tag before struct name}}
+owned struct D {};// expected-error {{inconsistent tag before struct name}}
 
 int main() {
     owned struct A b; // expected-error {{must ignore 'owned struct' tag before struct name}}
-    owned struct B bb;
+    owned struct B bb; // expected-error {{type of 'struct B' cannot be qualified by 'owned'}}
     return 0;
 }
