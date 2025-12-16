@@ -530,6 +530,22 @@ public:
                                        FPOptionsOverride());
           replacedNodesMap.Insert(E, UO);
         }
+      } else if (CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
+        // Handle cast from non-borrow to borrow qualified type.
+        if (CSCE->getType().isBorrowQualified()) {
+          Expr *SubExpr = CSCE->getSubExpr()->IgnoreParenImpCasts();
+          if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+            if (!DRE->getType().isBorrowQualified()) {
+              E = ReplaceWithTemporaryVariable(CSCE);
+              CastKind Kind =
+                  E->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
+              E = ImplicitCastExpr::Create(getSema().Context, E->getType(), Kind, E,
+                                           nullptr, VK_PRValue,
+                                           FPOptionsOverride());
+              replacedNodesMap.Insert(E, CSCE);
+            }
+          }
+        }
       }
       CE->setArg(i, E);
     }
