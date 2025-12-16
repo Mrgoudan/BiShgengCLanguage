@@ -291,6 +291,16 @@ class BorrowCheckerPrologue : public TreeTransform<BorrowCheckerPrologue> {
                                E->getType(), VK_LValue);
   }
 
+  // Replace with temporary variable and wrap in ImplicitCastExpr.
+  Expr *ReplaceWithTemporaryVariableAndWrap(Expr *E) {
+    DeclRefExpr *DRE = ReplaceWithTemporaryVariable(E);
+    CastKind Kind =
+        DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
+    return ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind,
+                                    DRE, nullptr, VK_PRValue,
+                                    FPOptionsOverride());
+  }
+
   CompoundStmt *GetOrWrapWithCompoundStmt(Stmt *S) {
     if (isa<CompoundStmt>(S))
       return dyn_cast<CompoundStmt>(S);
@@ -428,23 +438,13 @@ public:
     ExprResult Res = getDerived().TransformExpr(RS->getRetValue());
     Expr *E = Res.get();
     if (CallExpr *CE = dyn_cast_or_null<CallExpr>(E)) {
-      DeclRefExpr *DRE = ReplaceWithTemporaryVariable(CE);
-      CastKind Kind =
-          DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-      ImplicitCastExpr *ICE =
-          ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind, DRE,
-                                   nullptr, VK_PRValue, FPOptionsOverride());
+      Expr *ICE = ReplaceWithTemporaryVariableAndWrap(CE);
       replacedNodesMap.Insert(ICE, CE);
       RS->setRetValue(ICE);
       return RS;
     }
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-      DeclRefExpr *DRE = ReplaceWithTemporaryVariable(UO);
-      CastKind Kind =
-          DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-      ImplicitCastExpr *ICE =
-          ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind, DRE,
-                                   nullptr, VK_PRValue, FPOptionsOverride());
+      Expr *ICE = ReplaceWithTemporaryVariableAndWrap(UO);
       replacedNodesMap.Insert(ICE, UO);
       RS->setRetValue(ICE);
       return RS;
@@ -477,12 +477,7 @@ public:
     ExprResult ResLHS = getDerived().TransformExpr(BO->getLHS());
     Expr *ELHS = ResLHS.get();
     if (CallExpr *CE = dyn_cast<CallExpr>(ELHS)) {
-      DeclRefExpr *DRE = ReplaceWithTemporaryVariable(CE);
-      CastKind Kind =
-          DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-      ELHS =
-          ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind, DRE,
-                                   nullptr, VK_PRValue, FPOptionsOverride());
+      ELHS = ReplaceWithTemporaryVariableAndWrap(CE);
       replacedNodesMap.Insert(ELHS, CE);
     }
     BO->setLHS(ELHS);
@@ -491,12 +486,7 @@ public:
     Expr *ERHS = ResRHS.get();
     if (BO->getOpcode() < BO_Assign) {
       if (CallExpr *CE = dyn_cast<CallExpr>(ERHS)) {
-        DeclRefExpr *DRE = ReplaceWithTemporaryVariable(CE);
-        CastKind Kind =
-            DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-        ERHS = ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind,
-                                        DRE, nullptr, VK_PRValue,
-                                        FPOptionsOverride());
+        ERHS = ReplaceWithTemporaryVariableAndWrap(CE);
         replacedNodesMap.Insert(ERHS, CE);
       }
     }
@@ -513,21 +503,12 @@ public:
       Expr *E = Res.get();
 
       if (CallExpr *NestedCall = dyn_cast<CallExpr>(E)) {
-        E = ReplaceWithTemporaryVariable(NestedCall);
-        CastKind Kind =
-            E->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-        E = ImplicitCastExpr::Create(getSema().Context, E->getType(), Kind, E,
-                                     nullptr, VK_PRValue, FPOptionsOverride());
+        E = ReplaceWithTemporaryVariableAndWrap(NestedCall);
         replacedNodesMap.Insert(E, NestedCall);
       } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
         if (UO->getOpcode() >= UO_AddrMut &&
             UO->getOpcode() <= UO_AddrConstDeref) {
-          E = ReplaceWithTemporaryVariable(UO);
-          CastKind Kind =
-              E->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-          E = ImplicitCastExpr::Create(getSema().Context, E->getType(), Kind, E,
-                                       nullptr, VK_PRValue,
-                                       FPOptionsOverride());
+          E = ReplaceWithTemporaryVariableAndWrap(UO);
           replacedNodesMap.Insert(E, UO);
         }
       } else if (CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
@@ -536,12 +517,7 @@ public:
           Expr *SubExpr = CSCE->getSubExpr()->IgnoreParenImpCasts();
           if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
             if (!DRE->getType().isBorrowQualified()) {
-              E = ReplaceWithTemporaryVariable(CSCE);
-              CastKind Kind =
-                  E->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-              E = ImplicitCastExpr::Create(getSema().Context, E->getType(), Kind, E,
-                                           nullptr, VK_PRValue,
-                                           FPOptionsOverride());
+              E = ReplaceWithTemporaryVariableAndWrap(CSCE);
               replacedNodesMap.Insert(E, CSCE);
             }
           }
@@ -557,12 +533,7 @@ public:
     ExprResult Res = getDerived().TransformExpr(CLE->getInitializer());
     Expr *E = Res.get();
     CLE->setInitializer(E);
-    DeclRefExpr *DRE = ReplaceWithTemporaryVariable(CLE->getInitializer());
-    CastKind Kind =
-        DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-    ImplicitCastExpr *ICE =
-        ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind, DRE,
-                                 nullptr, VK_PRValue, FPOptionsOverride());
+    Expr *ICE = ReplaceWithTemporaryVariableAndWrap(CLE->getInitializer());
     replacedNodesMap.Insert(ICE, CLE);
     return ICE;
   }
@@ -610,13 +581,7 @@ public:
       } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
         if (UO->getOpcode() >= UO_AddrMut &&
             UO->getOpcode() <= UO_AddrConstDeref) {
-          E = ReplaceWithTemporaryVariable(UO);
-          CastKind Kind =
-              E->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-          ImplicitCastExpr *ICE = ImplicitCastExpr::Create(
-              getSema().Context, E->getType(), Kind, E, nullptr, VK_PRValue,
-              FPOptionsOverride());
-          E = ICE;
+          E = ReplaceWithTemporaryVariableAndWrap(UO);
           replacedNodesMap.Insert(E, UO);
         }
       }
@@ -629,11 +594,7 @@ public:
     ExprResult Res = getDerived().TransformExpr(ME->getBase());
     Expr *E = Res.get();
     if (CallExpr *CE = dyn_cast<CallExpr>(E)) {
-      E = ReplaceWithTemporaryVariable(CE);
-      CastKind Kind =
-          E->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-      E = ImplicitCastExpr::Create(getSema().Context, E->getType(), Kind, E,
-                                   nullptr, VK_PRValue, FPOptionsOverride());
+      E = ReplaceWithTemporaryVariableAndWrap(CE);
       replacedNodesMap.Insert(E, CE);
     }
     ME->setBase(E);
@@ -644,20 +605,10 @@ public:
     ExprResult Res = getDerived().TransformExpr(PE->getSubExpr());
     Expr *E = Res.get();
     if (CallExpr *CE = dyn_cast<CallExpr>(E)) {
-      DeclRefExpr *DRE = ReplaceWithTemporaryVariable(E);
-      CastKind Kind =
-          DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-      E = ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind,
-                                   DRE, nullptr, VK_PRValue,
-                                   FPOptionsOverride());
+      E = ReplaceWithTemporaryVariableAndWrap(E);
       replacedNodesMap.Insert(E, CE);
     } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
-      DeclRefExpr *DRE = ReplaceWithTemporaryVariable(E);
-      CastKind Kind =
-          DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-      E = ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind,
-                                   DRE, nullptr, VK_PRValue,
-                                   FPOptionsOverride());
+      E = ReplaceWithTemporaryVariableAndWrap(E);
       replacedNodesMap.Insert(E, BO);
     }
     PE->setSubExpr(E);
@@ -676,20 +627,10 @@ public:
     Expr *E = Res.get();
     if (UO->getOpcode() == UO_Deref) {
       if (CallExpr *CE = dyn_cast<CallExpr>(E)) {
-        DeclRefExpr *DRE = ReplaceWithTemporaryVariable(E);
-        CastKind Kind =
-            DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-        E = ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind,
-                                     DRE, nullptr, VK_PRValue,
-                                     FPOptionsOverride());
+        E = ReplaceWithTemporaryVariableAndWrap(E);
         replacedNodesMap.Insert(E, CE);
       } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
-        DeclRefExpr *DRE = ReplaceWithTemporaryVariable(E);
-        CastKind Kind =
-            DRE->getType()->getAsCXXRecordDecl() ? CK_NoOp : CK_LValueToRValue;
-        E = ImplicitCastExpr::Create(getSema().Context, DRE->getType(), Kind,
-                                     DRE, nullptr, VK_PRValue,
-                                     FPOptionsOverride());
+        E = ReplaceWithTemporaryVariableAndWrap(E);
         replacedNodesMap.Insert(E, BO);
       }
     }

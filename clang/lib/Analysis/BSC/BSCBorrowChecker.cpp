@@ -491,8 +491,8 @@ void ActionExtract::VisitDeclStmt(DeclStmt *DS) {
   // the DeclStmt.
   for (Decl *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-      if (VD->getType()->isStructureType() && IsTrackedType(VD->getType()) &&
-          isa<InitListExpr>(VD->getInit())) {
+      if ((VD->getType()->isStructureType() || VD->getType()->isArrayType()) &&
+          IsTrackedType(VD->getType()) && isa<InitListExpr>(VD->getInit())) {
         BuildOnGet = false;
         Dest = std::make_unique<Path>(VD->getName().str(), VD->getType(),
                                       VD->getLocation());
@@ -519,14 +519,15 @@ void ActionExtract::VisitDeclStmt(DeclStmt *DS) {
 }
 
 void ActionExtract::VisitInitListExpr(InitListExpr *ILE) {
-  if (IsTrackedType(ILE->getType())) {
+  if (const RecordType *RT =
+          dyn_cast<RecordType>(ILE->getType().getCanonicalType());
+      RT && IsTrackedType(ILE->getType())) {
+    // Handle struct/union initialization with tracked fields
     Kind = Action::Noop;
     RegionName RN = RNL;
     RegionName CurRN;
     std::unique_ptr<Path> Base = std::make_unique<Path>(*Dest);
     unsigned Index = 0;
-    const RecordType *RT =
-        dyn_cast<RecordType>(ILE->getType().getCanonicalType());
     for (FieldDecl *Field : RT->getDecl()->fields()) {
       Kind = Action::Assign;
       std::unique_ptr<Path> FieldName = std::make_unique<Path>(*Base);
@@ -539,6 +540,33 @@ void ActionExtract::VisitInitListExpr(InitListExpr *ILE) {
       RNL = CurRN;
       op = RHS;
       Visit(ILE->getInit(Index));
+      if (RNL.isInvalid() || RNR.isInvalid() || Sources.empty())
+        Kind = Action::Init;
+      if (Dest)
+        BuildAction();
+      ++Index;
+    }
+  } else if (ILE->getType()->isArrayType() && IsTrackedType(ILE->getType())) {
+    // Handle array initialization with borrow-qualified elements
+    Kind = Action::Noop;
+    RegionName RN = RNL;
+    RegionName CurRN;
+    std::unique_ptr<Path> Base = std::make_unique<Path>(*Dest);
+    const ArrayType *AT = ILE->getType()->getAsArrayTypeUnsafe();
+    QualType ElementType = AT->getElementType();
+    unsigned Index = 0;
+    for (Expr *Init : ILE->inits()) {
+      Kind = Action::Assign;
+      std::unique_ptr<Path> ArrayElem = std::make_unique<Path>(*Base);
+      ArrayElem = std::make_unique<Path>(
+          std::move(ArrayElem), "[" + std::to_string(Index) + "]",
+          ElementType, ILE->getBeginLoc());
+      Dest = std::move(ArrayElem);
+      if (IsTrackedType(ElementType))
+        CurRN = RN;
+      RNL = CurRN;
+      op = RHS;
+      Visit(Init);
       if (RNL.isInvalid() || RNR.isInvalid() || Sources.empty())
         Kind = Action::Init;
       if (Dest)
