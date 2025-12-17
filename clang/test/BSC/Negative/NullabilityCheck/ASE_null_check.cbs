@@ -1,0 +1,14 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+void *malloc(unsigned long);
+
+void test() {
+  int *p = (int *)malloc(sizeof(int) * 2);
+  p[1] = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+  *p = 3;   // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+int main(){
+  test();
+  return 0;
+}

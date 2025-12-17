@@ -120,6 +120,7 @@ public:
                        Expr *FieldInit, std::string FullFieldPath);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitUnaryOperator(UnaryOperator *UO);
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
   void VisitMemberExpr(MemberExpr *ME);
   void VisitCallExpr(CallExpr *CE);
   void VisitReturnStmt(ReturnStmt *RS);
@@ -574,6 +575,16 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
                                   NullablePointerDereference);
       Reporter.addDiagInfo(DI);
     }
+  }
+}
+
+// p[i] is not allowed when p has nullable PathNullability.
+// Array subscript is equivalent to *(p + i), so it dereferences the pointer.
+void TransferFunctions::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
+  if (getExprPathNullability(ASE->getBase()) == NullabilityKind::Nullable && ShouldReportNullPtrError(ASE)) {
+    NullabilityCheckDiagInfo DI(ASE->getBeginLoc(),
+                                NullablePointerDereference);
+    Reporter.addDiagInfo(DI);
   }
 }
 
