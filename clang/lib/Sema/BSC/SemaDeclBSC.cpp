@@ -633,6 +633,12 @@ public:
         E = ReplaceWithTemporaryVariableAndWrap(E);
         replacedNodesMap.Insert(E, BO);
       }
+    } else if (UO->getOpcode() >= UO_AddrMut && UO->getOpcode() <= UO_AddrConstDeref) {
+      if (isa<StringLiteral>(E->IgnoreParenImpCasts())) {
+        Expr *BaseE = E;
+        E = ReplaceWithTemporaryVariableAndWrap(E);
+        replacedNodesMap.Insert(E, BaseE);
+      }
     }
     UO->setSubExpr(E);
     return UO;
@@ -903,10 +909,8 @@ public:
 
   ExprResult TransformUnaryOperator(UnaryOperator *UO) {
     Expr *Sub = UO->getSubExpr();
-    if (UO->getOpcode() == UO_Deref) {
-      if (replacedNodesMap.Contains(Sub)) {
-        Sub = replacedNodesMap.Get(Sub);
-      }
+    if (replacedNodesMap.Contains(Sub)) {
+      Sub = replacedNodesMap.Get(Sub);
     }
     ExprResult Res = getDerived().TransformExpr(Sub);
     UO->setSubExpr(Res.get());
