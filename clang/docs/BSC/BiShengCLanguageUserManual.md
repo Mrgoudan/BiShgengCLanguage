@@ -4149,14 +4149,16 @@ int main() {
   return 0;
 }
 ```
-2. 允许指向类型 T 的借用转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的转换，是不允许的。
+2. 允许指向类型 T 的借用隐式转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的隐式转换，是不允许的，但强制类型转换是允许的。
 ```C
 void test() {
   int x = 10;
   int *borrow r = &mut x;
   void *borrow p = r;
-  // error: 不允许转为 void *borrow 类型
-  int *borrow t = (int *borrow)p;
+  // error: 不允许隐式转为 void *borrow 类型
+  int *borrow t1 = p;
+  // ok：允许强制转换为 void *borrow 类型
+  int *borrow t2 = (int *borrow)p;
 }
 
 int main() {
