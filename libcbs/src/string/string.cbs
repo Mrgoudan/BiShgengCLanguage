@@ -22,8 +22,9 @@ safe char String::at(const String* borrow this, size_t index) {
         if (this->length() <= index) {
             bsc_out_of_bound_handler(this->length(), index);
         }
+        if (this->vec.buf.ptr != nullptr)
+            return this->vec.buf.ptr[index];
     }
-    return this->vec.buf.ptr[index];
 }
 
 safe size_t String::capacity(const String* borrow this) {
