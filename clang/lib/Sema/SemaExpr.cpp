@@ -5834,8 +5834,11 @@ ExprResult
 Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                                       Expr *Idx, SourceLocation RLoc) {
   #if ENABLE_BSC
-  if (getLangOpts().BSC && Base->getType().getCanonicalType().isBorrowQualified()) {
-    return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
+  if (getLangOpts().BSC) {
+    QualType canonical = Base->getType().getCanonicalType();
+    if (canonical->isPointerType() && canonical.isBorrowQualified()) {
+      return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
+    }
   }
   #endif
   Expr *LHSExp = Base;

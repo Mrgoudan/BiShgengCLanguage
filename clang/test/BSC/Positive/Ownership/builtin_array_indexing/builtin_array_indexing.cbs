@@ -1,0 +1,19 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+void foo(int *borrow p, int *borrow q) {
+    // an builtin array consisting of borrowed pointers
+    int *borrow arr[2] = {p, q};
+    int *borrow p2 = arr[0];
+    *p2 = 1;
+}
+
+int main() {
+    int x = 0;
+    int y = 1;
+    int *borrow px = &mut x;
+    int *borrow py = &mut y;
+    foo(px, py);
+    return 0;
+}
