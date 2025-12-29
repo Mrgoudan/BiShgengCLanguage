@@ -667,9 +667,18 @@ void RewriteBSC::RewriteDecls() {
             (!TD->getIdentifier() && isa<RecordDecl>(TD))) {
           D->print(Buf, Policy);
         } else {
-          const char *startBuf = SM->getCharacterData(D->getBeginLoc());
-          const char *endBuf = SM->getCharacterData(D->getEndLoc());
-          Buf << std::string(startBuf, endBuf - startBuf + 1);
+          // Use Lexer::getSourceText to properly handle non-contiguous source ranges
+          // (macro expansions, includes, etc.) instead of pointer arithmetic
+          SourceRange SR = D->getSourceRange();
+          CharSourceRange CSR = CharSourceRange::getTokenRange(SR);
+          StringRef SourceText = Lexer::getSourceText(CSR, *SM, Context->getLangOpts());
+
+          if (!SourceText.empty()) {
+            Buf << SourceText.str();
+          } else {
+            // Fallback to pretty printer if source text extraction failed
+            D->print(Buf, Policy);
+          }
         }
         Buf << ";\n\n";
         if (RecordDecl *RD = dyn_cast<RecordDecl>(TD)) {
@@ -904,21 +913,20 @@ void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
           PrintDebugLineInfo(FD);
           FD->print(Buf, Policy);
         } else {
-          bool Invalid = false;
-          Lexer::getSourceText(
-              CharSourceRange::getCharRange(FD->getSourceRange()), *SM,
-              LangOpts, &Invalid);
-          if (Invalid) {
-            FD->print(Buf, Policy);
+          // Use Lexer::getSourceText to properly handle non-contiguous source ranges
+          SourceRange SR = FD->getSourceRange();
+          CharSourceRange CSR = CharSourceRange::getTokenRange(SR);
+          StringRef SourceText = Lexer::getSourceText(CSR, *SM, Context->getLangOpts());
+
+          if (!SourceText.empty()) {
+            Buf << SourceText.str();
+            if (FD->isThisDeclarationADefinition()) {
+              Buf << "\n";
+            }
           } else {
-            const char *startBuf = SM->getCharacterData(FD->getBeginLoc());
-            const char *endBuf = SM->getCharacterData(FD->getEndLoc());
-            if (startBuf == endBuf)
-              break;
-            Buf << std::string(startBuf, endBuf - startBuf + 1);
-          }
-          if (FD->isThisDeclarationADefinition()) {
-            Buf << "\n";
+            // Fallback to pretty printer
+            PrintDebugLineInfo(FD);
+            FD->print(Buf, Policy);
           }
         }
 
@@ -936,9 +944,17 @@ void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
       break;
     }
     case Decl::FileScopeAsm: {
-      const char *startBuf = SM->getCharacterData(D->getBeginLoc());
-      const char *endBuf = SM->getCharacterData(D->getEndLoc());
-      Buf << std::string(startBuf, endBuf - startBuf + 1);
+      // Use Lexer::getSourceText to properly handle non-contiguous source ranges
+      SourceRange SR = D->getSourceRange();
+      CharSourceRange CSR = CharSourceRange::getTokenRange(SR);
+      StringRef SourceText = Lexer::getSourceText(CSR, *SM, Context->getLangOpts());
+
+      if (!SourceText.empty()) {
+        Buf << SourceText.str();
+      } else {
+        // Fallback to pretty printer
+        D->print(Buf, Policy);
+      }
       Buf << ";\n\n";
       break;
     }

@@ -14,4 +14,4 @@
 // CHECK-NEXT: #include <string.h>
 // CHECK-EMPTY:
 // CHECK-EMPTY:
-// CHECK-NEXT: __attribute__((format(printf, 2, 3))) void foo(const char *a, const char *b, ...);
+// CHECK-NEXT: void foo(const char *a, const char *b, ...) FMT_PRINT(2, 3);
