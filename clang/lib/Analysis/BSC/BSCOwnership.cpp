@@ -1932,13 +1932,15 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
       UO->getOpcode() == UO_AddrMut ||
       UO->getOpcode() == UO_AddrOf) {
     op = GetAddr;
+  } else if (UO->isIncrementDecrementOp()) {
+    op = Assign;
   }
   Visit(UO->getSubExpr());
   op = None;
 }
 
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
-  if (BO->getOpcode() == BO_Assign) {
+  if (BO->isAssignmentOp()) {
     Expr *LHS = BO->getLHS();
     Expr *RHS = BO->getRHS();
 
@@ -2319,6 +2321,8 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
       if (isa<DeclStmt>(S) || isa<CallExpr>(S) ||
           (isa<BinaryOperator>(S) &&
            dyn_cast<BinaryOperator>(S)->isAssignmentOp()) ||
+          (isa<UnaryOperator>(S) &&
+           dyn_cast<UnaryOperator>(S)->isIncrementDecrementOp()) ||
           isa<ReturnStmt>(S)) {
         TF.Visit(const_cast<Stmt *>(S));
       }

@@ -1,0 +1,75 @@
+// RUN: %clang_cc1 -verify %s 
+
+safe void safe_free(void * owned p);
+
+int *owned _Nullable init();
+void tinker(int *borrow);
+
+void call_function_after_free(){
+  int *owned _Nullable p = init();
+  if (p != nullptr) {
+    safe_free((void *owned) p);
+    tinker(&mut *p); // expected-error {{use of moved value: `p`}}
+  }
+}
+
+void use_binary_assignment_operator_after_free() {
+  int *owned _Nullable p = init();
+  if (p != nullptr) {
+    safe_free((void *owned) p);
+    *p += 1; // expected-error {{use of moved value: `p`}}
+    *p -= 1; // expected-error {{use of moved value: `p`}}
+    *p *= 1; // expected-error {{use of moved value: `p`}}
+    *p /= 1; // expected-error {{use of moved value: `p`}}
+    *p %= 1; // expected-error {{use of moved value: `p`}}
+    *p >>= 1; // expected-error {{use of moved value: `p`}}
+    *p <<= 1; // expected-error {{use of moved value: `p`}}
+    *p &= 1; // expected-error {{use of moved value: `p`}}
+    *p |= 1; // expected-error {{use of moved value: `p`}}
+    *p ^= 1; // expected-error {{use of moved value: `p`}}
+  }
+}
+
+void use_increment_decrement_operator_after_free(){
+  int *owned _Nullable p = init();
+  if (p != nullptr) {
+    safe_free((void *owned) p);
+    ++*p; // expected-error {{use of moved value: `p`}}
+    --*p; // expected-error {{use of moved value: `p`}}
+    (*p)++; // expected-error {{use of moved value: `p`}}
+    (*p)--; // expected-error {{use of moved value: `p`}}
+  }
+}
+
+typedef struct {
+  int value;
+} Data;
+
+Data *owned _Nullable init_data();
+void read_data(Data *borrow);
+
+int assign_to_field_after_free() {
+  Data *owned _Nullable p = init_data();
+  if (p != nullptr) {
+    read_data(&mut *p);
+    safe_free((void *owned)p);
+    p->value += 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value -= 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value *= 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value /= 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value %= 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value >>=1; // expected-error {{assign to part of moved value: `p`}}
+    p->value <<=1; // expected-error {{assign to part of moved value: `p`}}
+    p->value &= 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value |= 1; // expected-error {{assign to part of moved value: `p`}}
+    p->value ^= 1; // expected-error {{assign to part of moved value: `p`}}
+    ++p->value; // expected-error {{assign to part of moved value: `p`}}
+    --p->value; // expected-error {{assign to part of moved value: `p`}}
+    (p->value)++; // expected-error {{assign to part of moved value: `p`}}
+    (p->value)--; // expected-error {{assign to part of moved value: `p`}}
+    tinker(&mut p->value); // expected-error {{use of moved value: `p.value`}}
+  }
+  unsafe {
+    return p->value;
+  }
+}
