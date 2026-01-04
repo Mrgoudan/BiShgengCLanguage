@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+void test() {
+    int x = 0;
+    int* xp = &x;
+    float y = 1.0;
+    float* yp = &y;
+    int *borrow p1 = &mut x;            // legal
+    int *borrow p2 = & mut x;
+    int *borrow p3 = &mut *xp;          // legal
+    int *borrow p4 = & mut *xp;
+    const float * borrow p5 = &const y;   // legal
+    const float * borrow p6 = & const y;
+    const float * borrow p7 = &const *yp; // legal
+    const float * borrow p8 = & const *yp;
+}

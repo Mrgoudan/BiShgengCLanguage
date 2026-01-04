@@ -1437,6 +1437,17 @@ ExprResult Parser::ParseCastExpression(
     // Special treatment because of member pointers
     SourceLocation SavedLoc = ConsumeToken();
 #if ENABLE_BSC
+    if (SavedKind == tok::amp) {
+      if (Tok.getKind() == tok::kw_const) {
+        ConsumeToken();
+        SavedKind = tok::ampconst;
+      }
+      if (Tok.getKind() == tok::identifier &&
+          Tok.getIdentifierInfo()->getName() == "mut") {
+        ConsumeToken();
+        SavedKind = tok::ampmut;
+      }
+    }
     PreferredType.enterUnary(Actions, Tok.getLocation(), SavedKind, SavedLoc);
 #else
     PreferredType.enterUnary(Actions, Tok.getLocation(), tok::amp, SavedLoc);

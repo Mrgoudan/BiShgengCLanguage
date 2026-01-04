@@ -1,0 +1,32 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -x c %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#ifdef __bishengc
+#define CONST const
+#define MUT mut
+#define BORROW borrow
+#else
+#define CONST
+#define MUT
+#define BORROW
+#endif
+
+void bar() {
+  int a = 1;
+  int *b = &a;
+  int *BORROW p1 = &MUT a;
+  int *BORROW p2 = &    MUT a;
+  int *BORROW p3 = &   MUT a;
+  int *BORROW p4 = & MUT *b;
+  const int *BORROW q1 = &CONST a;
+  const int *BORROW q2 = &  CONST a;
+  const int *BORROW q3 = &   CONST  a;
+  const int *BORROW q4 = &CONST   *b;
+}
+
+int main(void) {
+  return 0;
+}
