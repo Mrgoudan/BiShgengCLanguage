@@ -12,8 +12,8 @@
 
 #if ENABLE_BSC
 
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
+#include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -347,6 +347,7 @@ public:
   void VisitUnaryAddrMut(UnaryOperator *UO);
   void VisitUnaryAddrMutDeref(UnaryOperator *UO);
   void VisitUnaryDeref(UnaryOperator *UO);
+  void VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE);
   void VisitUnaryPostDec(UnaryOperator *UO);
   void VisitUnaryPostInc(UnaryOperator *UO);
   void VisitUnaryPreDec(UnaryOperator *UO);
@@ -411,7 +412,8 @@ void ActionExtract::VisitCallExpr(CallExpr *CE) {
 }
 
 void ActionExtract::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
-  if (CStyleCastExpr *sub = dyn_cast<CStyleCastExpr>(CSCE->getSubExpr()->IgnoreParens())) {
+  if (CStyleCastExpr *sub =
+          dyn_cast<CStyleCastExpr>(CSCE->getSubExpr()->IgnoreParens())) {
     if (sub->getCastKind() == CK_NullToPointer) {
       return;
     }
@@ -729,6 +731,13 @@ void ActionExtract::VisitUnaryDeref(UnaryOperator *UO) {
   }
 }
 
+// Skip visiting UE's children to avoid treating them as accesses.
+// For example, `sizeof(x)` is not an access to `x`.
+void ActionExtract::VisitUnaryExprOrTypeTraitExpr(
+    UnaryExprOrTypeTraitExpr *UE) {
+  return;
+}
+
 void ActionExtract::VisitUnaryPostDec(UnaryOperator *UO) {
   if (Kind == Action::Noop) {
     Kind = Action::Init;
@@ -1000,12 +1009,13 @@ void Liveness::SimulateBlock(LivenessFact &fact, const CFGBlock *Block,
       }
     }
 
-    // There is no need to handle CFGLifetimeEnds when calculating liveness, while
-    // it's necessary to handle CFGLifetimeEnds when populating inference, so we
-    // need to get the `LifetimeEndsVD` and `LifetimeEndsLoc` here.
+    // There is no need to handle CFGLifetimeEnds when calculating liveness,
+    // while it's necessary to handle CFGLifetimeEnds when populating inference,
+    // so we need to get the `LifetimeEndsVD` and `LifetimeEndsLoc` here.
     if (elem.getAs<CFGLifetimeEnds>()) {
       LifetimeEndsVD = elem.castAs<CFGLifetimeEnds>().getVarDecl();
-      LifetimeEndsLoc = elem.castAs<CFGLifetimeEnds>().getTriggerStmt()->getEndLoc();
+      LifetimeEndsLoc =
+          elem.castAs<CFGLifetimeEnds>().getTriggerStmt()->getEndLoc();
     }
 
     Point point(Block->getBlockID(), std::distance(it, ei));
