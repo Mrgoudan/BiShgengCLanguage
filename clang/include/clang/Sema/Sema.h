@@ -5021,7 +5021,6 @@ public:
 private:
   SafeScopeSpecifier PragmaSafeInfo = SS_None;
   PreferInlineScopeSpecifier PragmaPreferInlineInfo = PI_None;
-  std::list<std::string> VTableIcallHintInfos;
 
 public:
   enum PragmaSafeStatus {
@@ -5053,20 +5052,6 @@ public:
 
   void SetPragmaPreferInlineInfo(PreferInlineScopeSpecifier PreferInlineSpec) {
     PragmaPreferInlineInfo = PreferInlineSpec;
-  }
-
-  void ActOnPragmaIcallHint(std::string funcInfo);
-
-  void SetVTableIcallHintInfos(std::string info) {
-    VTableIcallHintInfos.push_back(info);
-  }
-
-  const char* GetVTableIcallHintInfos() {
-    if (!VTableIcallHintInfos.empty()) {
-      return VTableIcallHintInfos.back().c_str();
-    } else {
-      return nullptr;
-    }
   }
 
   /// A RAII object to enter safe or unsafe zone of a compound statement.

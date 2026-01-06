@@ -1186,10 +1186,7 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_prefer_inline:
       HandlePragmaPreferInline();
       break;
-    case tok::annot_pragma_icall_hint:
-      HandlePragmaIcallHint();
-      break;
-#endif
+    #endif   
     default:
       checkForPragmas = false;
       break;

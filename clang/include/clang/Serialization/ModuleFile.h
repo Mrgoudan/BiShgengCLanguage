@@ -135,9 +135,6 @@ public:
     return FileName + ".timestamp";
   }
 
-#if ENABLE_BSC
-  std::list<std::string> IcallHintInfoList;
-#endif
   /// The original source file name that was used to build the
   /// primary AST file, which may have been modified for
   /// relocatable-pch support.
@@ -510,19 +507,6 @@ public:
            Kind == MK_PrebuiltModule;
   }
 
-#if ENABLE_BSC
-  const char* GetIcallHintInfoList() {
-    if (!IcallHintInfoList.empty()) {
-      return IcallHintInfoList.back().c_str();
-    } else {
-      return nullptr;
-    }
-  }
-
-  void SetIcallHintInfoList(std::string info) {
-    IcallHintInfoList.push_back(info);
-  }
-#endif
   /// Dump debugging output for this module.
   void dump();
 };
