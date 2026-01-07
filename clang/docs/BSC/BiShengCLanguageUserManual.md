@@ -4171,6 +4171,8 @@ int main() {
 int main() {
   // ok: 非安全区允许 T * borrow 和 T * 之间的转换
   int *borrow p = (int *borrow)NULL;
+  // error: 类型转换必须是显式的，禁止隐式类型转换
+  int *q = p;
   // error: 安全区禁止 T * borrow 和 T * 之间的转换
   safe { int *borrow p = (int *borrow)NULL; }
   return 0;
