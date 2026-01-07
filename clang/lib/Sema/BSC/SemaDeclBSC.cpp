@@ -216,7 +216,7 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
     }
     // Step two: Run ownership analysis when there is no nullability errors in
     // current function.
-    bool DoBorrowCheck = EnableOwnershipCheck & RequireBorrowCheck;
+    bool DoBorrowCheck = EnableOwnershipCheck && RequireBorrowCheck;
     if (DoBorrowCheck && !NumNullabilityCheckErrorsInCurrFD) {
       OwnershipDiagReporter OwnershipReporter(*this);
       runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter, Context);
