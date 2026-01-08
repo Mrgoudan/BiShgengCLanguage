@@ -3274,16 +3274,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
   // We use Sema's policy to get bool macros right.
   PrintingPolicy Policy = Actions.getPrintingPolicy();
   while (true) {
-#if ENABLE_BSC
-    // Get Switch Tok for BSC constant generic.
-    Token SwitchTok;
-    if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
-      SwitchTok = PP.LookAhead(BSCGenericLookAhead);
-    } else {
-      SwitchTok = Tok;
-    }
-#endif
-
     bool isInvalid = false;
     bool isStorageClass = false;
     const char *PrevSpec = nullptr;
@@ -3292,7 +3282,15 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // This value needs to be set to the location of the last token if the last
     // token of the specifier is already consumed.
     SourceLocation ConsumedEnd;
-
+  #if ENABLE_BSC
+    // Get Switch Tok for BSC constant generic.
+    Token SwitchTok;
+    if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
+      SwitchTok = PP.LookAhead(BSCGenericLookAhead);
+    } else {
+      SwitchTok = Tok;
+    }
+#endif
     // HACK: MSVC doesn't consider _Atomic to be a keyword and its STL
     // implementation for VS2013 uses _Atomic as an identifier for one of the
     // classes in <atomic>.
@@ -3302,12 +3300,15 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // the token as an identifier.
     if (getLangOpts().MSVCCompat && Tok.is(tok::kw__Atomic) &&
         DS.getStorageClassSpec() == clang::DeclSpec::SCS_typedef &&
-        !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less)) {
+        !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less))
+#if ENABLE_BSC
+    {
+#endif
       Tok.setKind(tok::identifier);
 #if ENABLE_BSC
       SwitchTok.setKind(tok::identifier);
-#endif
     }
+#endif
 
 #if ENABLE_BSC
     SourceLocation Loc = SwitchTok.getLocation();
@@ -4134,21 +4135,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_inline:
       isInvalid = DS.setFunctionSpecInline(Loc, PrevSpec, DiagID);
       break;
-#if ENABLE_BSC
-    case tok::kw_async:
-      isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
-      break;
-    case tok::kw_safe:
-    case tok::kw_unsafe: {
-      SafeZoneSpecifier SafeZoneSpec = SZ_Unsafe;
-      if (Tok.is(tok::kw_safe)) {
-        SafeZoneSpec = SZ_Safe;
-      }
-      isInvalid =
-          DS.setFunctionSafeZoneSpecifier(Loc, PrevSpec, DiagID, SafeZoneSpec);
-      break;
-    }
-#endif
     case tok::kw_virtual:
       // C++ for OpenCL does not allow virtual function qualifier, to avoid
       // function pointers restricted in OpenCL v2.0 s6.9.a.
@@ -4437,6 +4423,19 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // safe-specifier:
 #if ENABLE_BSC
+    case tok::kw_async:
+      isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
+      break;
+    case tok::kw_safe:
+    case tok::kw_unsafe: {
+      SafeZoneSpecifier SafeZoneSpec = SZ_Unsafe;
+      if (Tok.is(tok::kw_safe)) {
+        SafeZoneSpec = SZ_Safe;
+      }
+      isInvalid =
+          DS.setFunctionSafeZoneSpecifier(Loc, PrevSpec, DiagID, SafeZoneSpec);
+      break;
+    }
     case tok::kw___Safe__:
     case tok::kw___Unsafe__: {
       if (GetLookAheadToken(1).is(tok::l_square)) {
@@ -4640,6 +4639,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
+    DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
+
 #if ENABLE_BSC
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : SwitchTok.getLocation());
     // Handle the case where the "safe" keyword modifies the function pointer
@@ -4648,8 +4649,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       DS.SetSafeZoneSpecifier(getCurScope()->getScopeSafeZoneSpecifier());
       DS.SetSafeZoneSpecifierLoc(getCurScope()->getScopeSafeZoneLoc());
     }
-#else
-    DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 #endif
 
     // If the specifier wasn't legal, issue a diagnostic.

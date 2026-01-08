@@ -8206,19 +8206,19 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     return NewTemplate;
   }
 
-  if (IsMemberSpecialization && !NewVD->isInvalidDecl())
-    CompleteMemberSpecialization(NewVD, Previous);
-
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // BSC global variable owned type check
   // 'typedef owned int myInt;' is legal
-  bool IsTypedefName = D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef;
+  bool IsTypedefName =
+      D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_typedef;
   if (!IsTypedefName && getLangOpts().BSC && NewVD &&
       NewVD->getDeclContext()->isFileContext()) {
     CheckOwnedOrIndirectOwnedType(D.getIdentifierLoc(), R, "global variable");
     CheckBorrowOrIndirectBorrowType(D.getIdentifierLoc(), R, "global variable");
   }
 #endif
+  if (IsMemberSpecialization && !NewVD->isInvalidDecl())
+    CompleteMemberSpecialization(NewVD, Previous);
 
   return NewVD;
 }

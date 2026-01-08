@@ -4046,6 +4046,11 @@ def NoRandomizeLayout : InheritableAttr {
 }
 def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;
 
+// BSC attributes
+#ifdef BSC
+include "clang/Basic/BSC/BSCAttr.td"
+#endif
+
 def FunctionReturnThunks : InheritableAttr,
     TargetSpecificAttr<TargetAnyX86> {
   let Spellings = [GCC<"function_return">];
@@ -4056,8 +4061,3 @@ def FunctionReturnThunks : InheritableAttr,
   let Subjects = SubjectList<[Function]>;
   let Documentation = [FunctionReturnThunksDocs];
 }
-
-// EnhanceC attributes
-#ifdef BSC
-include "clang/Basic/BSC/BSCAttr.td"
-#endif

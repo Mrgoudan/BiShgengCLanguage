@@ -6870,6 +6870,11 @@ def _SLASH_Zg : CLFlag<"Zg">;
 def _SLASH_ZI : CLFlag<"ZI">;
 def _SLASH_ZW : CLJoined<"ZW">;
 
+// BSC Extensions.
+#ifdef BSC
+include "clang/Driver/BSC/BSCOptions.td"
+#endif
+
 //===----------------------------------------------------------------------===//
 // clang-dxc Options
 //===----------------------------------------------------------------------===//
@@ -6913,8 +6918,3 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
-
-// BSC Extensions.
-#ifdef BSC
-include "clang/Driver/BSC/BSCOptions.td"
-#endif

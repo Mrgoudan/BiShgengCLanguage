@@ -170,6 +170,9 @@ class Parser : public CodeCompletionHandler {
   // used as type traits.
   llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind> RevertibleTypeTraits;
 
+#if ENABLE_BSC
+  std::unique_ptr<PragmaHandler> SafeHandler;
+#endif
   std::unique_ptr<PragmaHandler> AlignHandler;
   std::unique_ptr<PragmaHandler> GCCVisibilityHandler;
   std::unique_ptr<PragmaHandler> OptionsHandler;
@@ -216,9 +219,6 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
-#if ENABLE_BSC
-  std::unique_ptr<PragmaHandler> SafeHandler;
-#endif
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
