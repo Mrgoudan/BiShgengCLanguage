@@ -5020,7 +5020,6 @@ public:
 #if ENABLE_BSC
 private:
   SafeScopeSpecifier PragmaSafeInfo = SS_None;
-  PreferInlineScopeSpecifier PragmaPreferInlineInfo = PI_None;
 
 public:
   enum PragmaSafeStatus {
@@ -5036,22 +5035,6 @@ public:
 
   void SetPragmaSafeInfo(SafeScopeSpecifier SafeSpec) {
     PragmaSafeInfo = SafeSpec;
-  }
-
-
-  enum PragmaPreferInlineStatus {
-    PPI_On,
-    PPI_Off,
-  };
-
-  void ActOnPragmaPreferInline(PragmaPreferInlineStatus St);
-
-  PreferInlineScopeSpecifier GetPragmaPreferInlineInfo() {
-    return PragmaPreferInlineInfo;
-  }
-
-  void SetPragmaPreferInlineInfo(PreferInlineScopeSpecifier PreferInlineSpec) {
-    PragmaPreferInlineInfo = PreferInlineSpec;
   }
 
   /// A RAII object to enter safe or unsafe zone of a compound statement.

@@ -879,11 +879,6 @@ PRAGMA_ANNOTATION(pragma_unused)
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma SAFE ... directives.
 PRAGMA_ANNOTATION(pragma_safe)
-
-// Annotations for pragma prefer_inline (ON/OFF)
-// The lexer produces these so that they only take effect when the parser
-// handles #pragma prefer_inline ... directives.
-PRAGMA_ANNOTATION(pragma_prefer_inline)
 #endif
 
 // Annotation for #pragma GCC visibility...

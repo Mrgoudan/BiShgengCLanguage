@@ -24,22 +24,6 @@ void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
   SetPragmaSafeInfo(spec);
 }
 
-void Sema::ActOnPragmaPreferInline(PragmaPreferInlineStatus St) {
-  PreferInlineScopeSpecifier spec = PI_None;
-  if (St == PPI_On) {
-    spec = PI_PreferInline;
-  } else if (St == PPI_Off) {
-    spec = PI_PreferNoInline;
-  }
-  SetPragmaPreferInlineInfo(spec);
-}
-
-void Sema::ActOnPragmaIcallHint(std::string funcInfo) {
-  if (funcInfo.size() != 0) {
-    SetVTableIcallHintInfos(funcInfo);
-  }
-}
-
 // Check if BSC constexpr if condition expression satisfy:
 // 1. type is bool, integral or char;
 // 2. constant expression which can be calculated in compile time.

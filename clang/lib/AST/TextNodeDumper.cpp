@@ -1009,13 +1009,6 @@ void TextNodeDumper::VisitCallExpr(const CallExpr *Node) {
     OS << " adl";
   if (Node->hasStoredFPFeatures())
     printFPOptions(Node->getFPFeatures());
-  #if ENABLE_BSC
-  if (Node->getPreferInlineScopeSpecifier() == PI_PreferInline) {
-    OS << " prefer_inline";
-  } else if (Node->getPreferInlineScopeSpecifier() == PI_PreferNoInline) {
-    OS << " prefer_no_inline";
-  }
-  #endif
 }
 
 void TextNodeDumper::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node) {

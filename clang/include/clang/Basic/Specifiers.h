@@ -417,12 +417,6 @@ namespace clang {
     SZS_Compound = 2,
     SZS_SafeStmt = 3,
   };
-
-  enum PreferInlineScopeSpecifier {
-    PI_None = 0,
-    PI_PreferInline = 1,
-    PI_PreferNoInline = 2,
-  };
   #endif
 } // end namespace clang
 

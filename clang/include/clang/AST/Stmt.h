@@ -470,16 +470,8 @@ protected:
     /// True if the call expression has some floating-point features.
     unsigned HasFPFeatures : 1;
 
-#if ENABLE_BSC
-    uint64_t PreferInlineSpecifier : 2;
-#endif
-
     /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-#if ENABLE_BSC
-    unsigned : 24 - 5 - NumExprBits;
-#else
     unsigned : 24 - 3 - NumExprBits;
-#endif
 
     /// The offset in bytes from the this pointer to the start of the
     /// trailing objects belonging to CallExpr. Intentionally byte sized

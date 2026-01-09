@@ -2877,16 +2877,6 @@ public:
   static constexpr ADLCallKind NotADL = ADLCallKind::NotADL;
   static constexpr ADLCallKind UsesADL = ADLCallKind::UsesADL;
 
-  #if ENABLE_BSC
-  void setPreferInlineScopeSpecifier(PreferInlineScopeSpecifier PreferInlineSpec) {
-    CallExprBits.PreferInlineSpecifier = PreferInlineSpec;
-  }
-
-  PreferInlineScopeSpecifier getPreferInlineScopeSpecifier() const {
-    return (PreferInlineScopeSpecifier) CallExprBits.PreferInlineSpecifier;
-  }
-  #endif
-
 protected:
   /// Build a call expression, assuming that appropriate storage has been
   /// allocated for the trailing objects.

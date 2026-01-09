@@ -7016,13 +7016,6 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     if (CE)
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
   }
-  #if ENABLE_BSC
-  CallExpr *CE = dyn_cast<CallExpr>(Call.get());
-  if (CE) {
-    PreferInlineScopeSpecifier CallExprSpec = GetPragmaPreferInlineInfo();
-    CE->setPreferInlineScopeSpecifier(CallExprSpec);
-  }
-  #endif
   return Call;
 }
 

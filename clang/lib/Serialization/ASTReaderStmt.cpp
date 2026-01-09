@@ -1034,9 +1034,6 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   if (HasFPFeatures)
     E->setStoredFPFeatures(
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
-#if ENABLE_BSC
-  E->setPreferInlineScopeSpecifier(static_cast<PreferInlineScopeSpecifier>(Record.readInt()));
-#endif
 }
 
 void ASTStmtReader::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {

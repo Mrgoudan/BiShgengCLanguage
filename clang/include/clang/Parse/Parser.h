@@ -218,8 +218,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 #if ENABLE_BSC
   std::unique_ptr<PragmaHandler> SafeHandler;
-  std::unique_ptr<PragmaHandler> PreferInlineHandler;
-  #endif
+#endif
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -298,13 +297,6 @@ class Parser : public CodeCompletionHandler {
       DestroyTemplateIds();
   }
   void DestroyTemplateIds();
-
-#if ENABLE_BSC
-  /// Reset "#pragma prefer_inline ON/OFF"
-  void ResetPreferInlineScopeToNone() {
-    Actions.SetPragmaPreferInlineInfo(PI_None);
-  }
-#endif
 
   /// RAII object to destroy TemplateIdAnnotations where possible, from a
   /// likely-good position during parsing.
@@ -803,8 +795,7 @@ private:
 
 #if ENABLE_BSC
   void HandlePragmaSafe();
-  void HandlePragmaPreferInline();
-  #endif
+#endif
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)

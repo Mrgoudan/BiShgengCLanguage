@@ -919,9 +919,6 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
   Code = serialization::EXPR_CALL;
-#if ENABLE_BSC
-  Record.push_back(E->getPreferInlineScopeSpecifier());
-#endif
 }
 
 void ASTStmtWriter::VisitRecoveryExpr(RecoveryExpr *E) {

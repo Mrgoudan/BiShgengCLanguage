@@ -1082,8 +1082,6 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
     SafeLoc = ConsumeToken();
   }
 
-  ResetPreferInlineScopeToNone();
-
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   SourceLocation SafeZoneLoc;
   if (Tok.is(tok::kw_safe)) {
@@ -1183,10 +1181,7 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_safe:
       HandlePragmaSafe();
       break;
-    case tok::annot_pragma_prefer_inline:
-      HandlePragmaPreferInline();
-      break;
-    #endif   
+#endif
     default:
       checkForPragmas = false;
       break;
@@ -1323,11 +1318,6 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr
     StmtResult R;
     if (Tok.isNot(tok::kw___extension__)) {
       R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
-#if ENABLE_BSC
-      if (Tok.isNot(tok::annot_pragma_prefer_inline) && R.get() != nullptr) {
-        ResetPreferInlineScopeToNone();
-      }
-#endif
     } else {
       // __extension__ can start declarations and it can also be a unary
       // operator for expressions.  Consume multiple __extension__ markers here
@@ -1687,10 +1677,6 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                                   /*MissingOK=*/false, &LParen, &RParen))
       return StmtError();
 
-#if ENABLE_BSC
-    ResetPreferInlineScopeToNone();
-#endif
-
     if (IsConstexpr)
       ConstexprCondition = Cond.getKnownValue();
   }
@@ -1782,10 +1768,6 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
     ElseStmt = ParseStatement();
-
-#if ENABLE_BSC
-    ResetPreferInlineScopeToNone();
-#endif
 
     if (ElseStmt.isUsable())
       MIChecker.Check();
@@ -1891,10 +1873,6 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
                                 /*MissingOK=*/false, &LParen, &RParen))
     return StmtError();
 
-#if ENABLE_BSC
-  ResetPreferInlineScopeToNone();
-#endif
-
   StmtResult Switch = Actions.ActOnStartOfSwitchStmt(
       SwitchLoc, LParen, InitStmt.get(), Cond, RParen);
 
@@ -1986,10 +1964,6 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
                                 /*MissingOK=*/false, &LParen, &RParen))
     return StmtError();
 
-#if ENABLE_BSC
-  ResetPreferInlineScopeToNone();
-#endif
-
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2049,29 +2023,11 @@ StmtResult Parser::ParseDoStatement() {
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
-#if ENABLE_BSC
-  bool IsPreferInlineStatement = false;
-  PreferInlineScopeSpecifier PreferInlineState;
-  if (Actions.GetPragmaPreferInlineInfo() != PI_None) {
-    IsPreferInlineStatement = true;
-    PreferInlineState = Actions.GetPragmaPreferInlineInfo();
-    Actions.SetPragmaPreferInlineInfo(PI_None);
-  }
-#endif
-
   // Read the body statement.
   StmtResult Body(ParseStatement());
 
   // Pop the body scope if needed.
   InnerScope.Exit();
-
-#if ENABLE_BSC
-  ResetPreferInlineScopeToNone();
-
-  if (IsPreferInlineStatement) {
-    Actions.SetPragmaPreferInlineInfo(PreferInlineState);
-  }
-#endif
 
   if (Tok.isNot(tok::kw_while)) {
     if (!Body.isInvalid()) {
