@@ -31,6 +31,7 @@ namespace {
 /// Note that a variable may exist in both sets.
 class DefUse : public clang::StmtVisitor<DefUse> {
   enum { None, Def, Use } Action;
+  bool isAssign = false;
   llvm::SmallVector<VarDecl *> defs;
   llvm::SmallVector<VarDecl *> uses;
 
@@ -75,6 +76,7 @@ void DefUse::VisitBinaryOperator(BinaryOperator *BO) {
 
 void DefUse::VisitBinAssign(BinaryOperator *BO) {
   Action = Def;
+  llvm::SaveAndRestore<bool> save_is_assign(isAssign, true);
   Visit(BO->getLHS());
   Action = Use;
   Visit(BO->getRHS());
@@ -110,8 +112,12 @@ void DefUse::VisitDeclStmt(DeclStmt *DS) {
 }
 
 void DefUse::VisitMemberExpr(MemberExpr *ME) {
-  /// When you have `p = ...`, which variable is reaasigned?
+  /// When you have `p = ...`, which variable is reassigned?
   /// If `p` is `x`, then `x` is. Otherwise, nothing.
+  /// When you have `p = ...`, which variable is read?
+  /// If `p` is `x.a`, then `x` is. Otherwise, nothing.
+  if (Action == Def && isAssign)
+    Action = Use;
   if (Action == Use)
     Visit(ME->getBase());
 }

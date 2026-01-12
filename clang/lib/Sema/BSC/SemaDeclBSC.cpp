@@ -542,10 +542,8 @@ public:
         replacedNodesMap.Insert(E, CE);
       }
     } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-      if (NeedToReplace) {
-        E = ReplaceWithTemporaryVariable(UO);
-        replacedNodesMap.Insert(E, UO);
-      }
+      E = ReplaceWithTemporaryVariable(UO);
+      replacedNodesMap.Insert(E, UO);
     }
     CSCE->setSubExpr(E);
     return CSCE;
