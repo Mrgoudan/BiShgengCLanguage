@@ -514,13 +514,8 @@ public:
       } else if (CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
         // Handle cast from non-borrow to borrow qualified type.
         if (CSCE->getType().isBorrowQualified()) {
-          Expr *SubExpr = CSCE->getSubExpr()->IgnoreParenImpCasts();
-          if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
-            if (!DRE->getType().isBorrowQualified()) {
-              E = ReplaceWithTemporaryVariableAndWrap(CSCE);
-              replacedNodesMap.Insert(E, CSCE);
-            }
-          }
+          E = ReplaceWithTemporaryVariableAndWrap(CSCE);
+          replacedNodesMap.Insert(E, CSCE);
         }
       }
       CE->setArg(i, E);
