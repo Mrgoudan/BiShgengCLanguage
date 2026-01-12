@@ -4179,18 +4179,6 @@ int main() {
 }
 ```
 
-4. 不允许在 `T *owned` 和 `T *borrow` 指针之间使用 C 风格强制类型转换
-
-```C
-int *owned test(int *owned p) {
-  // error: 应当使用 &mut *p 代替强制类型转换
-  int *borrow q = (int *borrow) p; 
-  // error: 不能通过强制类型转换从 T *borrow 创建一个 T *owned 副本
-  int *owned r = (int *owned) q;
-  return r;
-}
-```
-
 #### 10. 借用的其它规则
 
 除了上面的那些规则，对于借用，我们还有如下规则：

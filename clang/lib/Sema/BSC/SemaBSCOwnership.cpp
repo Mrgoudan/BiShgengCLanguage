@@ -113,9 +113,6 @@ void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
 }
 
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
-  if (LHSType.isBorrowQualified() || RHSType.isBorrowQualified()) {
-    return false;
-  }
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
@@ -142,7 +139,6 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   // 'float* owned' <->  'int* owned'   // diff type same owned
   // 'owned float*' <->  'owned int*'   // pointer to diff type same owned
   // 'int'          <->  'void* owned'  //
-  // 'int *owned'   <->  'int *borrow'  // should use borrow operators instead
 
   if (IsSameType) {
     return true;
