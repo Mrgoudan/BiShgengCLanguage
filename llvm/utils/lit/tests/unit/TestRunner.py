@@ -28,6 +28,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
                                              path=[],
                                              quiet=False,
                                              useValgrind=False,
+                                             useBSC=False,
                                              valgrindLeakCheck=False,
                                              valgrindArgs=[],
                                              noExecute=False,
