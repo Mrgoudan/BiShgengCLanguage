@@ -18,8 +18,8 @@ void UnsafeOperator() {
 
   safe {
     int a = 0;
-    a++;     // expected-error {{'++' operator is forbidden in the safe zone}}
-    a--;     // expected-error {{'--' operator is forbidden in the safe zone}}
+    a++;     // allowed
+    a--;     // allowed
     
     a = pb.age;   // ok , not union type
     a = pc->age;  // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}

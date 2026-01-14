@@ -1,0 +1,10 @@
+// RUN: %clang_cc1 -verify %s
+
+void raw_ptr_increment_decrement(int *p) {
+    safe {
+        p++; // expected-error {{'++' operator is forbidden in the safe zone}}
+        ++p; // expected-error {{'++' operator is forbidden in the safe zone}}
+        p--; // expected-error {{'--' operator is forbidden in the safe zone}}
+        --p; // expected-error {{'--' operator is forbidden in the safe zone}}
+    }
+}

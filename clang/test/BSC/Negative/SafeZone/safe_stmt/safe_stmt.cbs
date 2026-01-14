@@ -2,7 +2,7 @@
 
 safe void test_safe_stmt1(void){
     int a = 0;
-    a++;                             // expected-error {{'++' operator is forbidden in the safe zone}}
+    a++;                             // allowed
     unsafe a++;                      // ok
     int *b = &a;                     // expected-error {{'&' operator is forbidden in the safe zone}}
     unsafe int *c = &a;              // ok
@@ -15,7 +15,7 @@ safe void test_safe_stmt1(void){
 void test_safe_stmt2() {
     int a = 0;
     a++;                             // ok
-    safe a++;                        // expected-error {{'++' operator is forbidden in the safe zone}}
+    safe a++;                        // allowed
     int *b = &a;                     // ok
     safe int *c = &a;                // expected-error {{'&' operator is forbidden in the safe zone}}
     safe {
@@ -36,14 +36,14 @@ safe void foo<T>(T* owned p) {
 
 safe void test_safe_stmt3(void) {
     int a = 0;
-    for (int i = 0; i < 10; i++) {      // expected-error {{'++' operator is forbidden in the safe zone}}
-        a++;                            // expected-error {{'++' operator is forbidden in the safe zone}}
+    for (int i = 0; i < 10; i++) {      // allowed
+        a++;                            // allowed
     }
     unsafe for (int i = 0; i < 10; i++) {   // ok
         a++;                                // ok
     }
     while(a > 0) {
-        a--;                            // expected-error {{'--' operator is forbidden in the safe zone}}
+        a--;                            // allowed
     }
     unsafe while(a < 10) {
         a++;                            // ok
@@ -53,7 +53,7 @@ safe void test_safe_stmt3(void) {
     unsafe switch(a) {
         case 1: a++;                    // ok
         case 2: a = a +5;
-        safe default: a--;               // expected-error {{'--' operator is forbidden in the safe zone}}
+        safe default: a--;               // allowed
     }
     add<int>(1, 2);                      // expected-error {{unsafe function call is forbidden in the safe zone}}
     unsafe int *owned p = (int *owned)&a;

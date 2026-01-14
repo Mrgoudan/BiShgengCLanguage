@@ -512,11 +512,15 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   switch (Opc) {
   case UO_PreInc:
   case UO_PostInc:
-    Diag(OpLoc, diag::err_unsafe_action) << "'++' operator";
+    if (T->isPointerType()) {
+      Diag(OpLoc, diag::err_unsafe_action) << "'++' operator";
+    }
     break;
   case UO_PreDec:
   case UO_PostDec:
-    Diag(OpLoc, diag::err_unsafe_action) << "'--' operator";
+    if (T->isPointerType()) {
+      Diag(OpLoc, diag::err_unsafe_action) << "'--' operator";
+    }
     break;
   case UO_AddrOf: {
     if (T.isNull() || !T->isFunctionType()) {
