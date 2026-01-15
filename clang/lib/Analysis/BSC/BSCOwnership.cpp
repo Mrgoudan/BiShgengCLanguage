@@ -51,16 +51,6 @@ public:
 // Common static functions.
 //===----------------------------------------------------------------------===//
 
-static bool IsCallExpr(Expr *E) {
-  if (isa<CallExpr>(E))
-    return true;
-
-  if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    return isa<CallExpr>(ICE->getSubExpr());
-  }
-  return false;
-}
-
 // IsTrackedType judges if the status of a variable needs to be tracked.
 // We track 3 kind of variable according to its type:
 // 1. the basic owned pointer type such as `int * owned p`
@@ -1824,17 +1814,16 @@ namespace {
 class TransferFunctions : public StmtVisitor<TransferFunctions> {
   OwnershipImpl &OS;
   Ownership::OwnershipStatus &stat;
-  const CFGBlock *currentBlock;
   OwnershipDiagReporter &reporter;
+  bool isHandlingCallExpr = false;
 
   enum Operation { None, Assign, Move, GetAddr };
   mutable Operation op = Operation::None;
 
 public:
   TransferFunctions(OwnershipImpl &os, Ownership::OwnershipStatus &Stat,
-                    const CFGBlock *CurrentBlock,
                     OwnershipDiagReporter &reporter)
-      : OS(os), stat(Stat), currentBlock(CurrentBlock), reporter(reporter) {}
+      : OS(os), stat(Stat), reporter(reporter) {}
 
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitCallExpr(CallExpr *CE);
@@ -1851,6 +1840,10 @@ public:
 
   void HandleDREAssign(const DeclRefExpr *DRE, std::string fullFieldName = "");
   void HandleDREUse(const DeclRefExpr *DRE, std::string fullFieldName = "");
+
+  void SetHandlingCallExpr() {
+    isHandlingCallExpr = true;
+  }
 };
 } // namespace
 
@@ -1944,12 +1937,9 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     Expr *LHS = BO->getLHS();
     Expr *RHS = BO->getRHS();
 
-    bool IsCall = IsCallExpr(RHS);
-    if (!IsCall) {
-      op = Move;
-      Visit(RHS);
-      op = None;
-    }
+    op = Move;
+    Visit(RHS);
+    op = None;
 
     op = Assign;
     Visit(LHS);
@@ -1958,17 +1948,22 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     if (RHS->isNullExpr(OS.ctx)) {
       stat.setToNull(LHS);
     }
+  } else {
+    Visit(BO->getLHS());
+    Visit(BO->getRHS());
   }
 }
 
 void TransferFunctions::VisitCallExpr(CallExpr *CE) {
+  if (!isHandlingCallExpr)
+    return;
+
+  isHandlingCallExpr = false;
+
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
-    bool IsCall = IsCallExpr(*it);
-    if (!IsCall) {
-      op = Move;
-      Visit(*it);
-      op = None;
-    }
+    op = Move;
+    Visit(*it);
+    op = None;
   }
 }
 
@@ -2085,22 +2080,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
         } else {
           stat.setToOwned(VD);
         }
-        // manipulate the init expr if it is not CallExpr
-        bool IsCall = IsCallExpr(Init);
-        if (!IsCall) {
-          op = Move;
-          Visit(Init);
-          op = None;
-        }
-      }
-    }
-  }
-}
-
-void TransferFunctions::VisitInitListExpr(InitListExpr *ILE) {
-  for (unsigned int i = 0, e = ILE->getNumInits(); i != e; ++i) {
-    if (Expr *Init = ILE->getInit(i)) {
-      if (!IsCallExpr(Init)) {
+        // handle the init expr if it is not CallExpr
         op = Move;
         Visit(Init);
         op = None;
@@ -2109,14 +2089,21 @@ void TransferFunctions::VisitInitListExpr(InitListExpr *ILE) {
   }
 }
 
-void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
-  if (Expr *RV = RS->getRetValue()) {
-    bool IsCall = IsCallExpr(RV);
-    if (RV && !IsCall) {
+void TransferFunctions::VisitInitListExpr(InitListExpr *ILE) {
+  for (unsigned int i = 0, e = ILE->getNumInits(); i != e; ++i) {
+    if (Expr *Init = ILE->getInit(i)) {
       op = Move;
-      Visit(RV);
+      Visit(Init);
       op = None;
     }
+  }
+}
+
+void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
+  if (Expr *RV = RS->getRetValue()) {
+    op = Move;
+    Visit(RV);
+    op = None;
   }
 }
 
@@ -2310,7 +2297,7 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
                           OwnershipDiagReporter &reporter, bool isDestructor) {
   MaybeSetNull(block, status);
 
-  TransferFunctions TF(*this, status, block, reporter);
+  TransferFunctions TF(*this, status, reporter);
 
   for (CFGBlock::const_iterator it = block->begin(), ei = block->end();
        it != ei; ++it) {
@@ -2324,6 +2311,10 @@ OwnershipImpl::runOnBlock(const CFGBlock *block,
           (isa<UnaryOperator>(S) &&
            dyn_cast<UnaryOperator>(S)->isIncrementDecrementOp()) ||
           isa<ReturnStmt>(S)) {
+        // Handling CallExpr iff it is a CFG stmt.
+        if (isa<CallExpr>(S)) {
+          TF.SetHandlingCallExpr();
+        }
         TF.Visit(const_cast<Stmt *>(S));
       }
     }

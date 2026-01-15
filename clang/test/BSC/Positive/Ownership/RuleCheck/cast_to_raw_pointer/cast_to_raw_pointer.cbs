@@ -1,0 +1,46 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+typedef struct {
+  int a;
+} S;
+
+unsigned char *call(unsigned char *p) {
+  return p;
+}
+
+S *owned test1(void *owned p) {
+  return (S *owned)(void *)((unsigned char *)p + 5);
+}
+
+S *owned test2(void *owned p) {
+  return (S *owned)(S *)(unsigned char *)p;
+}
+
+S *owned test3(void *owned p) {
+  return (S *owned)(void *)(unsigned char *)p;
+}
+
+S *owned test4(void *owned p) {
+  return (S *owned)p;
+}
+
+S *owned test5(void *owned p) {
+  return (S *owned)(void *)(call((unsigned char *)p + 5) + 6);
+}
+
+int test6(void *owned p) {
+  return (int)*call((unsigned char *)p + 5) + 10;
+}
+
+S *owned test7(void *owned p) {
+  return (S *owned)(void *)((unsigned char *)p - 5);
+}
+
+int main(void) {
+  return 0;
+}
