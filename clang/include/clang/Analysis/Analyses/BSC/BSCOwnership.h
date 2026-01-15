@@ -27,12 +27,59 @@
 
 namespace clang {
 
-class CFG;
-class CFGBlock;
-class Stmt;
-class DeclRefExpr;
-class OwnershipDiagInfo;
-class SourceManager;
+enum OwnershipDiagKind {
+  InvalidUseOfMoved,
+  InvalidUseOfPartiallyMoved,
+  InvalidUseOfAllMoved,
+  InvalidUseOfPossiblyUninit,
+  InvalidUseOfUninit,
+  InvalidAssignOfOwned,
+  InvalidAssignOfPartiallyMoved,
+  InvalidAssignOfPossiblyPartiallyMoved,
+  InvalidAssignOfAllMoved,
+  InvalidAssignFieldOfUninit,
+  InvalidAssignFieldOfOwned,
+  InvalidAssignFieldOfMoved,
+  InvalidAssignSubFieldOwned,
+  InvalidCastMoved,
+  InvalidCastOwned,
+  InvalidCastUninit,
+  InvalidCastFieldOwned,
+  FieldMemoryLeak,
+  MemoryLeak,
+  OwnedStructPartiallyMoved,
+  OwnedStructNotProperlyFreed,
+  OwnershipMaxDiagKind
+};
+
+class OwnershipDiagInfo {
+  public:
+    SourceLocation Loc;
+    OwnershipDiagKind Kind;
+    std::string Name;
+    std::string Fields;
+    SourceLocation Location;
+  
+    OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
+                      std::string Name)
+        : Loc(Loc), Kind(Kind), Name(Name), Fields(""),
+          Location(SourceLocation()) {}
+  
+    OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
+                      std::string Name, std::string fields)
+        : Loc(Loc), Kind(Kind), Name(Name), Fields(fields),
+          Location(SourceLocation()) {}
+  
+    OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
+                      std::string Name, std::string fields,
+                      SourceLocation location)
+        : Loc(Loc), Kind(Kind), Name(Name), Fields(fields), Location(location) {}
+  
+    bool operator==(const OwnershipDiagInfo &other) const {
+      return Loc == other.Loc && Kind == other.Kind && Name == other.Name &&
+             Fields == other.Fields && Location == other.Location;
+    }
+  };
 
 class Ownership : public ManagedAnalysis {
 public:
@@ -87,50 +134,50 @@ public:
     void setToNull(const VarDecl *VD);
     void setToNull(const Expr *E);
 
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkOPSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr,
                 bool isStar = false);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkOPSFieldUse(const VarDecl *VD, const SourceLocation &Loc,
                      std::string fullFieldName, bool isGetAddr);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkOPSAssign(const VarDecl *VD, const SourceLocation &Loc);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkOPSAssignStar(const VarDecl *VD, const SourceLocation &Loc);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkOPSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
                         std::string fullFieldName);
 
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkSFieldUse(const VarDecl *VD, const SourceLocation &Loc,
                    std::string fullFieldName, bool isGetAddr);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkSAssign(const VarDecl *VD, const SourceLocation &Loc);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
                       std::string fullFieldName);
 
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkBOPUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkBOPFieldUse(const VarDecl *VD, const SourceLocation &Loc,
                      std::string fullFieldName, bool isGetAddr);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkBOPAssign(const VarDecl *VD, const SourceLocation &Loc);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkBOPFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
                         std::string fullFieldName);
 
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkCastOPS(const VarDecl *VD, const SourceLocation &Loc);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkCastBOP(const VarDecl *VD, const SourceLocation &Loc);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkCastField(const VarDecl *VD, const SourceLocation &Loc,
                    std::string fullFieldName);
-    llvm::SmallVector<OwnershipDiagInfo, 3>
+    llvm::SmallVector<OwnershipDiagInfo>
     checkMemoryLeak(const VarDecl *VD, const SourceLocation &Loc,
                     bool isDestructor);
 
@@ -167,32 +214,7 @@ public:
   };
 };
 
-enum OwnershipDiagKind {
-  InvalidUseOfMoved,
-  InvalidUseOfPartiallyMoved,
-  InvalidUseOfAllMoved,
-  InvalidUseOfPossiblyUninit,
-  InvalidUseOfUninit,
-  InvalidAssignOfOwned,
-  InvalidAssignOfPartiallyMoved,
-  InvalidAssignOfPossiblyPartiallyMoved,
-  InvalidAssignOfAllMoved,
-  InvalidAssignFieldOfUninit,
-  InvalidAssignFieldOfOwned,
-  InvalidAssignFieldOfMoved,
-  InvalidAssignSubFieldOwned,
-  InvalidCastMoved,
-  InvalidCastOwned,
-  InvalidCastUninit,
-  InvalidCastFieldOwned,
-  FieldMemoryLeak,
-  MemoryLeak,
-  OwnedStructPartiallyMoved,
-  OwnedStructNotProperlyFreed,
-  OwnershipMaxDiagKind
-};
-
-const unsigned OwnershipDiagIdList[] = {
+static const unsigned OwnershipDiagIdList[] = {
     diag::err_ownership_use_moved,
     diag::err_ownership_use_partially_moved,
     diag::err_ownership_use_all_moved,
@@ -215,35 +237,6 @@ const unsigned OwnershipDiagIdList[] = {
     diag::err_ownership_owned_struct_patially_moved,
     diag::err_ownership_owned_struct_not_properly_freed};
 
-class OwnershipDiagInfo {
-public:
-  SourceLocation Loc;
-  OwnershipDiagKind Kind;
-  std::string Name;
-  std::string Fields;
-  SourceLocation Location;
-
-  OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
-                    std::string Name)
-      : Loc(Loc), Kind(Kind), Name(Name), Fields(""),
-        Location(SourceLocation()) {}
-
-  OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
-                    std::string Name, std::string fields)
-      : Loc(Loc), Kind(Kind), Name(Name), Fields(fields),
-        Location(SourceLocation()) {}
-
-  OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
-                    std::string Name, std::string fields,
-                    SourceLocation location)
-      : Loc(Loc), Kind(Kind), Name(Name), Fields(fields), Location(location) {}
-
-  bool operator==(const OwnershipDiagInfo &other) const {
-    return Loc == other.Loc && Kind == other.Kind && Name == other.Name &&
-           Fields == other.Fields && Location == other.Location;
-  }
-};
-
 class OwnershipDiagReporter {
   Sema &S;
   std::vector<OwnershipDiagInfo> DIV;
@@ -251,7 +244,7 @@ class OwnershipDiagReporter {
 public:
   OwnershipDiagReporter(Sema &S) : S(S) {}
 
-  void addDiags(llvm::SmallVector<OwnershipDiagInfo, 3> &diags) {
+  void addDiags(llvm::SmallVector<OwnershipDiagInfo> &diags) {
     for (auto it = diags.begin(), ei = diags.end(); it != ei; ++it) {
       addDiagInfo(*it);
     }

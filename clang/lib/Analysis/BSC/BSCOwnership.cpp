@@ -14,12 +14,9 @@
 
 #include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
+
 using namespace clang;
 using namespace std;
 
@@ -812,9 +809,9 @@ string Ownership::OwnershipStatus::collectMovedFields(const VarDecl *VD) {
   return movedFields;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkOPSUse(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSUse(
     const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isStar) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // when use ops, we must ensure the variable is owned
 
@@ -853,10 +850,10 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkOPSUse(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldUse(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
     const VarDecl *VD, const SourceLocation &Loc, string fullFieldName,
     bool isGetAddr) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // when assign a field, we check three conditions:
   // 1. the field's parent must be owned
@@ -960,10 +957,10 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkOPSFieldUse(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkOPSAssign(const VarDecl *VD,
                                            const SourceLocation &Loc) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // when assign ops, we must ensure the variable is uninit or moved
 
@@ -994,10 +991,10 @@ Ownership::OwnershipStatus::checkOPSAssign(const VarDecl *VD,
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkOPSAssignStar(const VarDecl *VD,
                                                const SourceLocation &Loc) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   if (!is(VD, AllMoved)) {
     if (has(VD, Ownership::Status::Owned) || is(VD, Ownership::Status::Owned)) {
@@ -1022,11 +1019,11 @@ Ownership::OwnershipStatus::checkOPSAssignStar(const VarDecl *VD,
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
                                                 const SourceLocation &Loc,
                                                 string fullFieldName) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // when assign a field, we check three conditions:
   // 1. the field's parent must be owned
@@ -1131,9 +1128,9 @@ Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSUse(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSUse(
     const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // owned struct special manipulation
   if (VD->getType().getTypePtr()->isOwnedStructureType()) {
@@ -1164,10 +1161,10 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSUse(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSFieldUse(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldUse(
     const VarDecl *VD, const SourceLocation &Loc, string fullFieldName,
     bool isGetAddr) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // owned struct special manipulation
   if (VD->getType().getTypePtr()->isOwnedStructureType()) {
@@ -1223,10 +1220,10 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSFieldUse(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkSAssign(const VarDecl *VD,
                                          const SourceLocation &Loc) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // special handling is required for owned struct: do not check ownership when reassign, for example:
   // @code
@@ -1261,9 +1258,9 @@ Ownership::OwnershipStatus::checkSAssign(const VarDecl *VD,
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSFieldAssign(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldAssign(
     const VarDecl *VD, const SourceLocation &Loc, string fullFieldName) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // owned struct special manipulation
   if (VD->getType().getTypePtr()->isOwnedStructureType()) {
@@ -1354,9 +1351,9 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkSFieldAssign(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkBOPUse(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkBOPUse(
     const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // check the status of the variable
   if (!is(VD, Ownership::Status::Owned)) {
@@ -1391,10 +1388,10 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkBOPUse(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkBOPFieldUse(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkBOPFieldUse(
     const VarDecl *VD, const SourceLocation &Loc, string fullFieldName,
     bool isGetAddr) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // check field's parent
   for (int i = fullFieldName.length() - 2; i > 0; i--) {
@@ -1456,10 +1453,10 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkBOPFieldUse(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkBOPAssign(const VarDecl *VD,
                                            const SourceLocation &Loc) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // check the status of the variable
   if (!canAssign(VD)) {
@@ -1488,11 +1485,11 @@ Ownership::OwnershipStatus::checkBOPAssign(const VarDecl *VD,
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkBOPFieldAssign(const VarDecl *VD,
                                                 const SourceLocation &Loc,
                                                 string fullFieldName) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // for a non owned qualified field, just check its parent
   // for a owned qualified field, we check three conditions:
@@ -1566,10 +1563,10 @@ Ownership::OwnershipStatus::checkBOPFieldAssign(const VarDecl *VD,
 // if cast a `struct S * owned` variable to `void * owned`, we must ensure:
 // 1. it is not moved or uninit
 // 2. its owned fields are all moved
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkCastOPS(const VarDecl *VD,
                                          const SourceLocation &Loc) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) {
     diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidCastMoved,
@@ -1599,10 +1596,10 @@ Ownership::OwnershipStatus::checkCastOPS(const VarDecl *VD,
 // if cast a `int * owned` variable to `void * owned`, we must ensure:
 // 1. it is not moved
 // 2. its owned fields are all moved
-SmallVector<OwnershipDiagInfo, 3>
+SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkCastBOP(const VarDecl *VD,
                                          const SourceLocation &Loc) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   // AllMoved is OK - it means all sub-fields are freed, so we can free the variable itself
   if ((has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) &&
@@ -1622,10 +1619,9 @@ Ownership::OwnershipStatus::checkCastBOP(const VarDecl *VD,
   return diags;
 }
 
-// TODO
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkCastField(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkCastField(
     const VarDecl *VD, const SourceLocation &Loc, string fullFieldName) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
 
   if (OPSStatus.count(VD)) {
     if (is(VD, Ownership::Status::Moved) || has(VD, Ownership::Status::Moved)) {
@@ -1720,9 +1716,9 @@ SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkCastField(
   return diags;
 }
 
-SmallVector<OwnershipDiagInfo, 3> Ownership::OwnershipStatus::checkMemoryLeak(
+SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkMemoryLeak(
     const VarDecl *VD, const SourceLocation &Loc, bool isDestructor) {
-  SmallVector<OwnershipDiagInfo, 3> diags;
+  SmallVector<OwnershipDiagInfo> diags;
   // for a struct pointer owned variable,
   // the following two situations indicates that a memory leak has occurred:
   // 1. if OPSStatus[VD] is not MOVED or UNINITIALIZED, VD memory leak
@@ -1818,7 +1814,7 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   bool isHandlingCallExpr = false;
 
   enum Operation { None, Assign, Move, GetAddr };
-  mutable Operation op = Operation::None;
+  Operation op = Operation::None;
 
 public:
   TransferFunctions(OwnershipImpl &os, Ownership::OwnershipStatus &Stat,
@@ -1978,12 +1974,12 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
       if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr()->IgnoreParens())) {
         const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
         if (stat.OPSStatus.count(VD)) {
-          SmallVector<OwnershipDiagInfo, 3> diags =
+          SmallVector<OwnershipDiagInfo> diags =
               stat.checkCastOPS(VD, DRE->getLocation());
           reporter.addDiags(diags);
         }
         if (stat.BOPStatus.count(VD)) {
-          SmallVector<OwnershipDiagInfo, 3> diags =
+          SmallVector<OwnershipDiagInfo> diags =
               stat.checkCastBOP(VD, DRE->getLocation());
           reporter.addDiags(diags);
         }
@@ -1995,7 +1991,7 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
       if (const MemberExpr *ME = dyn_cast<MemberExpr>(ICE->getSubExpr()->IgnoreParens())) {
         auto memberField = getMemberFullField(ME);
         if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
-          SmallVector<OwnershipDiagInfo, 3> diags =
+          SmallVector<OwnershipDiagInfo> diags =
               stat.checkCastField(dyn_cast<VarDecl>(DRE->getDecl()),
                                   DRE->getLocation(), memberField.second);
           reporter.addDiags(diags);
@@ -2019,7 +2015,7 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
         }
         if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
           const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
-          SmallVector<OwnershipDiagInfo, 3> diags =
+          SmallVector<OwnershipDiagInfo> diags =
               stat.checkCastField(VD, DRE->getLocation(), fieldName);
           reporter.addDiags(diags);
         }
@@ -2052,8 +2048,8 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
             // If we init owned fields of a struct var with nullptr,
             // for example `struct S s = { .p = nullptr };`, here
             // we reset the status of s.p.
-            auto RD = dyn_cast<RecordType>(VQT)->getDecl();
-            auto ILE = dyn_cast<InitListExpr>(Init);
+            RecordDecl *RD = dyn_cast<RecordType>(VQT)->getDecl();
+            InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
             Expr **Inits = ILE->getInits();
             for (const auto &FD : RD->fields()) {
               Expr *FieldInit = Inits[FD->getFieldIndex()];
@@ -2109,7 +2105,7 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
 
 void TransferFunctions::VisitLifetimeEnds(VarDecl *VD, SourceLocation SL,
                                           bool isDestructor) {
-  SmallVector<OwnershipDiagInfo, 3> diags =
+  SmallVector<OwnershipDiagInfo> diags =
       stat.checkMemoryLeak(VD, SL, isDestructor);
   reporter.addDiags(diags);
 }
@@ -2127,24 +2123,24 @@ void TransferFunctions::HandleDREAssign(const DeclRefExpr *DRE,
     // situation 1 and 2
     if (stat.OPSStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkOPSAssign(VD, DRE->getLocation());
         reporter.addDiags(diags);
       } else if (fullFieldName == "*") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkOPSAssignStar(VD, DRE->getLocation());
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
           fullFieldName[fullFieldName.size() - 1] = '.';
           if (stat.OPSAllOwnedFields[VD].count(fullFieldName.substr(0, fullFieldName.size() - 1))) {
-            SmallVector<OwnershipDiagInfo, 3> diags =
+            SmallVector<OwnershipDiagInfo> diags =
                 stat.checkOPSFieldAssign(VD, DRE->getLocation(), fullFieldName);
             reporter.addDiags(diags);
           }
           fullFieldName[fullFieldName.size() - 1] = '*';
         }
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkOPSFieldAssign(VD, DRE->getLocation(), fullFieldName);
         reporter.addDiags(diags);
       }
@@ -2153,20 +2149,20 @@ void TransferFunctions::HandleDREAssign(const DeclRefExpr *DRE,
     // situation 3 and 4
     if (stat.SStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkSAssign(VD, DRE->getLocation());
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
           fullFieldName[fullFieldName.size() - 1] = '.';
           if (stat.SAllOwnedFields[VD].count(fullFieldName.substr(0, fullFieldName.size() - 1))) {
-            SmallVector<OwnershipDiagInfo, 3> diags =
+            SmallVector<OwnershipDiagInfo> diags =
                 stat.checkSFieldAssign(VD, DRE->getLocation(), fullFieldName);
             reporter.addDiags(diags);
           }
           fullFieldName[fullFieldName.size() - 1] = '*';
         }
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkSFieldAssign(VD, DRE->getLocation(), fullFieldName);
         reporter.addDiags(diags);
       }
@@ -2175,11 +2171,11 @@ void TransferFunctions::HandleDREAssign(const DeclRefExpr *DRE,
     // situation 5 and 6
     if (stat.BOPStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkBOPAssign(VD, DRE->getLocation());
         reporter.addDiags(diags);
       } else {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkBOPFieldAssign(VD, DRE->getLocation(), fullFieldName);
         reporter.addDiags(diags);
       }
@@ -2200,24 +2196,24 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     // situation 1 and 2
     if (stat.OPSStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr);
         reporter.addDiags(diags);
       } else if (fullFieldName == "*") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr, true);
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
           fullFieldName[fullFieldName.size() - 1] = '.';
           if (stat.OPSAllOwnedFields[VD].count(fullFieldName.substr(0, fullFieldName.size() - 1))) {
-            SmallVector<OwnershipDiagInfo, 3> diags = stat.checkOPSFieldUse(
+            SmallVector<OwnershipDiagInfo> diags = stat.checkOPSFieldUse(
                 VD, DRE->getLocation(), fullFieldName, op == GetAddr);
             reporter.addDiags(diags);
           }
           fullFieldName[fullFieldName.size() - 1] = '*';
         }
-        SmallVector<OwnershipDiagInfo, 3> diags = stat.checkOPSFieldUse(
+        SmallVector<OwnershipDiagInfo> diags = stat.checkOPSFieldUse(
             VD, DRE->getLocation(), fullFieldName, op == GetAddr);
         reporter.addDiags(diags);
       }
@@ -2226,20 +2222,20 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     // situation 3 and 4
     if (stat.SStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkSUse(VD, DRE->getLocation(), op == GetAddr);
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
           fullFieldName[fullFieldName.size() - 1] = '.';
           if (stat.SAllOwnedFields[VD].count(fullFieldName.substr(0, fullFieldName.size() - 1))) {
-            SmallVector<OwnershipDiagInfo, 3> diags = stat.checkSFieldUse(
+            SmallVector<OwnershipDiagInfo> diags = stat.checkSFieldUse(
                 VD, DRE->getLocation(), fullFieldName, op == GetAddr);
             reporter.addDiags(diags);
           }
           fullFieldName[fullFieldName.size() - 1] = '*';
         }
-        SmallVector<OwnershipDiagInfo, 3> diags = stat.checkSFieldUse(
+        SmallVector<OwnershipDiagInfo> diags = stat.checkSFieldUse(
             VD, DRE->getLocation(), fullFieldName, op == GetAddr);
         reporter.addDiags(diags);
       }
@@ -2248,11 +2244,11 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     // situation 5 and 6
     if (stat.BOPStatus.count(VD)) {
       if (fullFieldName == "") {
-        SmallVector<OwnershipDiagInfo, 3> diags =
+        SmallVector<OwnershipDiagInfo> diags =
             stat.checkBOPUse(VD, DRE->getLocation(), op == GetAddr);
         reporter.addDiags(diags);
       } else {
-        SmallVector<OwnershipDiagInfo, 3> diags = stat.checkBOPFieldUse(
+        SmallVector<OwnershipDiagInfo> diags = stat.checkBOPFieldUse(
             VD, DRE->getLocation(), fullFieldName, op == GetAddr);
         reporter.addDiags(diags);
       }
@@ -2344,8 +2340,12 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
   // Proceed with the worklist.
   ForwardDataflowWorklist worklist(cfg, ac);
 
-  // Mark all owned parameter Owned at the entry
   const CFGBlock *entry = &cfg.getEntry();
+  const CFGBlock *exit = &cfg.getExit();
+
+  bool isDestructor = false;
+
+  // Mark all owned parameter Owned at the entry
   for (ParmVarDecl *PVD : fd.parameters()) {
     if (IsTrackedType(PVD->getType())) {
       if (const VarDecl *VD = dyn_cast<VarDecl>(PVD)) {
@@ -2355,13 +2355,16 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
     }
   }
 
-  for (const CFGBlock *B : cfg.const_reverse_nodes())
-    if (B != entry && !B->pred_empty())
+  for (const CFGBlock *B : cfg.const_reverse_nodes()) {
+    if (B != entry && !B->pred_empty()) {
       worklist.enqueueBlock(B);
-  bool isDestructor = false;
-  if (auto md = dyn_cast<BSCMethodDecl>(&fd)) {
+    }
+  }
+
+  if (const BSCMethodDecl *md = dyn_cast<BSCMethodDecl>(&fd)) {
     isDestructor = md->isDestructor();
   }
+
   while (const CFGBlock *block = worklist.dequeue()) {
     Ownership::OwnershipStatus &preVal = OS->blocksBeginStatus[block];
 
@@ -2370,9 +2373,7 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
     for (CFGBlock::const_pred_iterator it = block->pred_begin(),
                                        ei = block->pred_end();
          it != ei; ++it) {
-      if (const CFGBlock *pred = *it) {
-        val = OS->merge(val, OS->blocksEndStatus[pred]);
-      }
+      val = OS->merge(val, OS->blocksEndStatus[*it]);
     }
 
     OS->blocksEndStatus[block] =
@@ -2388,10 +2389,9 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
   }
 
   // check ownership rules of function parameters
-  const CFGBlock *exit = &cfg.getExit();
   for (ParmVarDecl *PVD : fd.parameters()) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(PVD)) {
-      SmallVector<OwnershipDiagInfo, 3> diags =
+      SmallVector<OwnershipDiagInfo> diags =
           OS->blocksEndStatus[exit].checkMemoryLeak(
               VD, fd.getSourceRange().getEnd(), isDestructor);
       reporter.addDiags(diags);
