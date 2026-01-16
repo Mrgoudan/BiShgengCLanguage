@@ -88,9 +88,8 @@ public:
     Null = 0x2,
     Owned = 0x4,
     Moved = 0x8,
-    PartialInit = 0x10,
-    PartialMoved = 0x20,
-    AllMoved = 0x40,
+    PartialMoved = 0x10,
+    AllMoved = 0x20,
   };
 
   class OwnershipStatus {

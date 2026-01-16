@@ -177,8 +177,7 @@ bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
 ///  --> |   BorrowCheck    | -->  FuncDecl  --> CodeGen
 ///      |__________________|
 /// ====================================================================
-void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
-                               bool EnableNullabilityCheck) {
+void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableNullabilityCheck) {
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
 
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
@@ -216,8 +215,7 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck,
     }
     // Step two: Run ownership analysis when there is no nullability errors in
     // current function.
-    bool DoBorrowCheck = EnableOwnershipCheck && RequireBorrowCheck;
-    if (DoBorrowCheck && !NumNullabilityCheckErrorsInCurrFD) {
+    if (RequireBorrowCheck && !NumNullabilityCheckErrorsInCurrFD) {
       OwnershipDiagReporter OwnershipReporter(*this);
       runOwnershipAnalysis(*FD, *AC.getCFG(), AC, OwnershipReporter, Context);
       OwnershipReporter.flushDiagnostics();

@@ -12387,8 +12387,7 @@ public:
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   void CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
-  void BSCDataflowAnalysis(const Decl *D, bool EnableOwnershipCheck = true,
-                           bool EnableNullabilityCheck = true);
+  void BSCDataflowAnalysis(const Decl *D, bool EnableNullabilityCheck = true);
   void BSCBorrowChecker(FunctionDecl *FD);
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
