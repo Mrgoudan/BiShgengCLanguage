@@ -1,0 +1,150 @@
+// RUN: %clang -c %s
+// expected-no-diagnostics
+
+safe void read(int i);
+
+safe void test_basic(void) {
+  int a = 0;
+  a++;
+  ++a;
+  a--;
+  --a;
+}
+
+safe void for_loop(void) {
+  int arr[5] = {1, 2, 3, 4, 5};
+
+  // forward for loop
+  for (int i = 0; i < 5; i++) {
+    read(unsafe(arr[i]));
+  }
+  // backward for loop
+  for (int i = 4; i >= 0; i--) {
+    read(unsafe(arr[i]));
+  }
+
+}
+
+safe void while_loop(void) {
+  int arr[5] = {1, 2, 3, 4, 5};
+
+  // forward while loop
+  int j = 0;
+  while (j < 5) {
+    read(unsafe(arr[j]));
+    j++;
+  }
+
+  // backward while loop
+  j = 4;
+  while (j >= 0) {
+    read(unsafe(arr[j]));
+    j--;
+  }
+}
+
+safe void do_while_loop(void) {
+  int arr[5] = {1, 2, 3, 4, 5};
+  // forward do-while loop
+  int k = 0;
+  do {
+    read(unsafe(arr[k]));
+    ++k;
+  } while (k < 5);
+
+  // backward do-while loop
+  k = 4;
+  do {
+    read(unsafe(arr[k]));
+    --k;
+  } while (k >= 0);
+}
+
+safe void altered_while_loop(void) {
+  int arr[5] = {1, 2, 3, 4, 5};
+  int i = 5;
+  while (i-- > 0) {
+    read(unsafe(arr[i]));
+  }
+
+  i = 5;
+  while (--i >= 0) {
+    read(unsafe(arr[i]));
+  }
+
+  i = -1;
+  while (++i < 5) {
+    read(unsafe(arr[i]));
+  }
+
+  i = 0;
+  while (i < 5) {
+    read(unsafe(arr[i++]));
+  }
+
+  i = -1;
+  while (i < 4) {
+    read(unsafe(arr[++i]));
+  }
+
+  i = 5;
+  while (i > 0) {
+    read(unsafe(arr[--i]));
+  }
+
+  i = 4;
+  while (i >= 0) {
+    read(unsafe(arr[i--]));
+  }
+}
+
+safe void altered_for_loop(void) {
+  int arr[5] = {1, 2, 3, 4, 5};
+  for (int j = 5; j-- > 0;) {
+    read(unsafe(arr[j]));
+  }
+
+  for (int j = 5; --j >=0;) {
+    read(unsafe(arr[j]));
+  }
+
+  for (int j = -1; ++j < 5;) {
+    read(unsafe(arr[j]));
+  }
+
+  for (int j = 0; j < 5;) {
+    read(unsafe(arr[j++]));
+  }
+
+  for (int j = -1; j < 4;) {
+    read(unsafe(arr[++j]));
+  }
+}
+
+safe void altered_do_while_loop(void) {
+  int arr[5] = {1, 2, 3, 4, 5};
+  int i = 0;
+  do {
+    read(unsafe(arr[i]));
+  } while (++i < 5);
+
+  i = 5;
+  do {
+    read(unsafe(arr[i-1]));
+  } while (--i > 0);
+
+  i = 4;
+  do {
+    read(unsafe(arr[i]));
+  } while (i-- > 0);
+
+  i = 0;
+  do {
+    read(unsafe(arr[i++]));
+  } while (i < 5);
+
+  i = -1;
+  do {
+    read(unsafe(arr[++i]));
+  } while (i < 4);
+}
