@@ -362,6 +362,16 @@ bool Sema::IsUnsafeType(QualType Type) {
     if (!Visited.insert(TyPtr).second)
       continue;
 
+    // va_list (__builtin_va_list) is unsafe in safe zones
+    if (const BuiltinType *BT = CurType->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::BuiltinFn) {
+        return true;
+      }
+    }
+    if (CurType == Context.getBuiltinVaListType()) {
+      return true;
+    }
+
     if (CurType->isPointerType() && !CurType->isFunctionPointerType() &&
         !(CurType.isOwnedQualified() || CurType.isBorrowQualified())) {
       return true;
@@ -380,7 +390,7 @@ bool Sema::IsUnsafeType(QualType Type) {
       }
     }
     if (CurType->isArrayType()) {
-      Stack.push_back(cast<ArrayType>(CurType)->getElementType());
+      Stack.push_back(CurType->castAsArrayTypeUnsafe()->getElementType());
     }
   }
   return false;

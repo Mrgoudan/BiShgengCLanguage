@@ -11947,6 +11947,25 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     // check BSC constexpr function
     if (NewFD->isConstexprSpecified())
       CheckBSCConstexprFunction(NewFD);
+
+    // Check variadic functions in safe zones with format attribute
+    // For function definitions, we need to check if either the definition
+    // or the declaration has the format attribute
+    if (DeclIsDefn && NewFD->getSafeZoneSpecifier() == SZ_Safe &&
+        NewFD->isVariadic() && !NewFD->hasAttr<FormatAttr>()) {
+      // Check if the previous declaration has the format attribute
+      bool prevHasFormatAttr = false;
+      if (OldDecl) {
+        if (FunctionDecl *OldFD = dyn_cast<FunctionDecl>(OldDecl)) {
+          prevHasFormatAttr = OldFD->hasAttr<FormatAttr>();
+        }
+      }
+
+      if (!prevHasFormatAttr) {
+        Diag(NewFD->getLocation(), diag::err_safe_function)
+            << "variadic parameter";
+      }
+    }
   }
   #endif
 

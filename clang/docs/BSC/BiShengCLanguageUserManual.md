@@ -2438,7 +2438,11 @@ safe int test4(SF b);
 
 4. `safe`修饰的函数，函数参数列表不可以省略。`safe void test(); `是不允许的， `safe void test(void); `是允许的。
 
-5. `safe`修饰的函数，函数参数列表不可以包含变长参数。`safe int test(int a,  ...); `是不允许的。
+5. `safe`修饰的函数，函数参数列表不可以包含变长参数，除非该函数使用了`__attribute__((format(...)))`属性。例如:
+   - `safe int test(int a, ...);` 是不允许的。
+   - `__attribute__((format(printf, 1, 2))) safe int printf_like(const char *fmt, ...);` 是允许的。
+
+   注意：即使允许声明带format属性的变长参数函数，在函数体内仍然不能使用`va_start`、`va_arg`、`va_end`等，这些操作在安全区域内是被禁止的。
 
 6. 如果`trait`中的函数被声明为`safe`，那么要求实现`trait`的类型的对应成员函数也必须是`safe`修饰的函数。若`trait`中的函数未声明为`safe`，也允许实现`trait`中的类型的成员函数为`safe`，但编译器会给出**warning**。
 

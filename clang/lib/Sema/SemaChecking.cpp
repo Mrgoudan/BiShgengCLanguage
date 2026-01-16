@@ -2026,10 +2026,24 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_ms_va_start:
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
+#if ENABLE_BSC
+    // va_start is forbidden in safe zones
+    if (getLangOpts().BSC && IsInSafeZone()) {
+      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
+                       << "va_start");
+    }
+#endif
     if (SemaBuiltinVAStart(BuiltinID, TheCall))
       return ExprError();
     break;
   case Builtin::BI__va_start: {
+#if ENABLE_BSC
+    // va_start is forbidden in safe zones
+    if (getLangOpts().BSC && IsInSafeZone()) {
+      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
+                       << "va_start");
+    }
+#endif
     switch (Context.getTargetInfo().getTriple().getArch()) {
     case llvm::Triple::aarch64:
     case llvm::Triple::arm:
@@ -2044,6 +2058,15 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
     break;
   }
+  case Builtin::BI__builtin_va_end:
+#if ENABLE_BSC
+    // va_end is forbidden in safe zones
+    if (getLangOpts().BSC && IsInSafeZone()) {
+      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
+                       << "va_end");
+    }
+#endif
+    break;
 
   // The acquire, release, and no fence variants are ARM and AArch64 only.
   case Builtin::BI_interlockedbittestandset_acq:

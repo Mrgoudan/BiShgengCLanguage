@@ -5434,8 +5434,28 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               << "need void parameter declaration, empty parameter";
         }
         if (FTI.isVariadic) {
-          S.Diag(FTI.getEllipsisLoc(), diag::err_safe_function)
-              << "variadic parameter";
+          // Allow variadic functions with format attribute in safe zones
+          // We need to check all three attribute locations because format attribute
+          // can appear in different syntactic positions:
+          // 1. D.getDeclarationAttributes(): After function declarator
+          //    e.g., void func(...) __attribute__((format(printf, 1, 2)));
+          // 2. D.getAttributes(): General attributes on the declarator
+          //    e.g., void __attribute__((format(printf, 1, 2))) func(...);
+          // 3. D.getDeclSpec().getAttributes(): Before the return type
+          //    e.g., __attribute__((format(printf, 1, 2))) void func(...);
+          bool hasFormatAttr =
+              D.getDeclarationAttributes().hasAttribute(ParsedAttr::AT_Format) ||
+              D.getAttributes().hasAttribute(ParsedAttr::AT_Format) ||
+              D.getDeclSpec().getAttributes().hasAttribute(ParsedAttr::AT_Format);
+
+          // For function definitions, we defer the check to CheckFunctionDeclaration
+          // where we can check if the previous declaration has the format attribute.
+          // This allows the pattern: declaration with format attr, definition without.
+          if (!hasFormatAttr &&
+              D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration) {
+            S.Diag(FTI.getEllipsisLoc(), diag::err_safe_function)
+                << "variadic parameter";
+          }
         }
         if (S.IsUnsafeType(T)) {
           S.Diag(DeclType.Loc, diag::err_safe_function) << "unsafe return type";

@@ -21,3 +21,16 @@ unsafe void fun6(int a, ...);
 
 safe void (*m)(int a, ...);   // expected-error {{variadic parameter is forbidden in the safe function}}
 unsafe void (*n)(int a, ...);
+
+// Variadic WITH format attribute - should be allowed (no error expected)
+__attribute__((format(printf, 1, 2)))
+safe void fun7(const char * borrow fmt, ...) {}
+
+__attribute__((format(printf, 1, 2)))
+safe void fun7(const char * borrow fmt, ...);
+
+__attribute__((format(printf, 1, 2)))
+safe void (*o)(const char * borrow fmt, ...);
+
+// Variadic WITHOUT format attribute - should still error
+safe void fun8(int a, const char * borrow fmt, ...) {}  // expected-error {{variadic parameter is forbidden in the safe function}}

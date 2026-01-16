@@ -17424,6 +17424,14 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   Expr *OrigExpr = E;
   bool IsMS = false;
 
+#if ENABLE_BSC
+  // va_arg is forbidden in safe zones
+  if (getLangOpts().BSC && IsInSafeZone()) {
+    return ExprError(Diag(E->getBeginLoc(), diag::err_unsafe_action)
+                     << "va_arg");
+  }
+#endif
+
   // CUDA device code does not support varargs.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     if (const FunctionDecl *F = dyn_cast<FunctionDecl>(CurContext)) {
