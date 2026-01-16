@@ -314,6 +314,14 @@ class ActionExtract : public clang::StmtVisitor<ActionExtract> {
     }
   }
 
+  void VisitIncrementDecrementOp(UnaryOperator *UO) {
+    Kind = Action::Init;
+    op = LHS;
+    Visit(UO->getSubExpr());
+    op = RHS;
+    Visit(UO->getSubExpr());
+  }
+
 public:
   ActionExtract(Stmt *S, const VarDecl *VD, SourceLocation LifetimeEndsLoc,
                 RegionCheck &rc)
@@ -745,56 +753,20 @@ void ActionExtract::VisitUnaryExprOrTypeTraitExpr(
 }
 
 void ActionExtract::VisitUnaryPostDec(UnaryOperator *UO) {
-  if (Kind == Action::Noop) {
-    Kind = Action::Init;
-    op = LHS;
-    Visit(UO->getSubExpr());
-    op = RHS;
-    Visit(UO->getSubExpr());
-  } else {
-    op = RHS;
-    Visit(UO->getSubExpr());
-  }
+  VisitIncrementDecrementOp(UO);
 }
 
 void ActionExtract::VisitUnaryPostInc(UnaryOperator *UO) {
-  if (Kind == Action::Noop) {
-    Kind = Action::Init;
-    op = LHS;
-    Visit(UO->getSubExpr());
-    op = RHS;
-    Visit(UO->getSubExpr());
-  } else {
-    op = RHS;
-    Visit(UO->getSubExpr());
-  }
+  VisitIncrementDecrementOp(UO);
 }
 
 void ActionExtract::VisitUnaryPreDec(UnaryOperator *UO) {
-  if (Kind == Action::Noop) {
-    Kind = Action::Init;
-    op = LHS;
-    Visit(UO->getSubExpr());
-    op = RHS;
-    Visit(UO->getSubExpr());
-  } else {
-    op = RHS;
-    Visit(UO->getSubExpr());
-  }
+  VisitIncrementDecrementOp(UO);
 }
 
 void ActionExtract::VisitUnaryPreInc(UnaryOperator *UO) {
-  if (Kind == Action::Noop) {
-    Kind = Action::Init;
-    op = LHS;
-    Visit(UO->getSubExpr());
-    op = RHS;
-    Visit(UO->getSubExpr());
-  } else {
-    op = RHS;
-    Visit(UO->getSubExpr());
-  }
-}
+  VisitIncrementDecrementOp(UO);
+} 
 
 //===----------------------------------------------------------------------===//
 //                         Operations on RegionName

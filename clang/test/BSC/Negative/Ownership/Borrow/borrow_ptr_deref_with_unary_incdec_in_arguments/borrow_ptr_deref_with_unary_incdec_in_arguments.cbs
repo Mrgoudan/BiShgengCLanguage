@@ -1,0 +1,91 @@
+// RUN: %clang_cc1 -verify %s
+
+safe int read(int a, int b);
+
+void read_with_postinc(int x, int y) {
+    // a pointer whose pointee is undetermined in compile time
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    // undefined behavior: undetermined evaluation order
+    read(x++, *p); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_postdec(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(x--, *p); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_preinc(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(++x, *p); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_predec(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(--x, *p); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_postinc2(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(*p, x++); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_postdec2(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(*p, x--); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_preinc2(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(*p, ++x); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_predec2(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(*p, --x); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_with_alternative_borrow(int x, int y) {
+    const int *borrow p = &const x; 
+    if (x < y) {
+        p = &const y; // expected-note {{`y` is borrowed here}}
+    }
+    read(y++, *p); // expected-error {{cannot assign to `y` because it is borrowed}}
+}
+
+void read_with_multiple_borrows(int x, int y) {
+    const int *borrow p1 = &const x; // expected-note {{`x` is borrowed here}}
+    const int *borrow p2 = &const x;
+    read(x++, *p1 + *p2); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
+
+void read_nested_increment(int x, int y) {
+    const int *borrow p = &const x; // expected-note {{`x` is borrowed here}}
+    if (x < y) {
+        p = &const y;
+    }
+    read(1, read(x++, *p)); // expected-error {{cannot assign to `x` because it is borrowed}}
+}
