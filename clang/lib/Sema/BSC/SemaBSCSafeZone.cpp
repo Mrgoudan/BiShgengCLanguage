@@ -366,9 +366,6 @@ bool Sema::IsUnsafeType(QualType Type) {
         !(CurType.isOwnedQualified() || CurType.isBorrowQualified())) {
       return true;
     }
-    if (CurType->isUnionType()) {
-      return true;
-    }
     if (CurType->isOwnedStructureType()) {
       continue;
     }
@@ -464,15 +461,20 @@ void Sema::DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
 
   switch (Kind) {
   case tok::arrow: {
-    if (!T.isNull() && T->isPointerType() &&
-        !(T.getCanonicalType().isOwnedQualified() || T.getCanonicalType().isBorrowQualified()))
-      Diag(OpLoc, diag::err_unsafe_action)
-          << "'->' operator used by raw pointer type";
+    if (!T.isNull() && T->isPointerType()) {
+      // Check for raw pointer (not owned/borrow)
+      if (!(T.getCanonicalType().isOwnedQualified() || T.getCanonicalType().isBorrowQualified()))
+        Diag(OpLoc, diag::err_unsafe_action)
+            << "'->' operator used by raw pointer type";
+      // Check if pointing to union type
+      else if (T->getPointeeType()->isUnionType())
+        Diag(OpLoc, diag::err_union_member_access_in_safe_zone);
+    }
     break;
   }
   case tok::period: {
     if (!T.isNull() && T->isUnionType())
-      Diag(OpLoc, diag::err_unsafe_action) << "'.' operator used by union type";
+      Diag(OpLoc, diag::err_union_member_access_in_safe_zone);
     break;
   }
   default:

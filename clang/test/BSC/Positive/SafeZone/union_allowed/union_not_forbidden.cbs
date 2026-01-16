@@ -1,0 +1,87 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+// Union declarations and definitions are now allowed in safe zones
+// Only union member access is forbidden
+
+void unionDef1(){
+    safe {
+        // ok: union definition in safe zone
+        union UIn {
+          int x;
+        };
+
+        // ok: struct containing union in safe zone
+        struct SMid {
+          union UIn u;
+        };
+
+        // ok: nested struct
+        struct SOut {
+          struct SMid s2;
+        };
+    }
+}
+
+void unionDef2(){
+    union UIn {
+        int x;
+    };
+    struct SMid {
+        union UIn u;
+    };
+    safe {
+        // ok: struct definition in safe zone
+        struct SOut {
+          struct SMid s2;
+        };
+    }
+}
+
+void unionDecl(){
+    union UIn {
+        int x;
+    };
+    struct SMid {
+        union UIn u;
+    };
+    struct SOut {
+        struct SMid s2;
+    };
+
+    safe {
+        // ok: union variable declaration in safe zone
+        union UIn u1 = {};
+        union UIn u1_other = {};
+        union UIn *borrow p2 = &mut u1;
+
+        // ok: struct containing union declaration in safe zone
+        struct SOut s1 = {};
+        struct SOut s1_other = {};
+        struct SOut *borrow p4 = &mut s1;
+    }
+}
+
+void unionTypedef(){
+    typedef union UIn {
+        int x;
+    } UTypedef;
+    safe {
+        // ok: typedef union declaration in safe zone
+        UTypedef u = {};
+        UTypedef u_other = {};
+        UTypedef *borrow p2 = &mut u;
+    }
+}
+
+void unionArray() {
+    union UArr {
+        int x;
+    };
+
+    safe {
+        // ok: union array declaration in safe zone
+        union UArr arr[2] = {};
+        union UArr *parr[2] = {};
+    }
+}

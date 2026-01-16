@@ -19,8 +19,8 @@ union data {
   char b;
 };
 
-safe union data func(union data a) {  // expected-error{{unsafe return type is forbidden in the safe function}}
-  return a;                         // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe union data func(union data a) { 
+  return a;                         
 }
 
 struct SA {
@@ -43,8 +43,8 @@ struct SC {
   union data a;
 };
 
-safe struct SC funf(struct SC f) {   // expected-error{{unsafe return type is forbidden in the safe function}}
-  return f;                       // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe struct SC funf(struct SC f) {  
+  return f;                      
 }
 
 struct SD {
