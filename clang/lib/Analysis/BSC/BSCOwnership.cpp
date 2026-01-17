@@ -38,7 +38,7 @@ public:
                                         OwnershipDiagReporter &reporter,
                                         bool isDestructor);
 
-  void MaybeSetNull(const CFGBlock *block, Ownership::OwnershipStatus &status);
+  void MaybeSetNull(const CFGBlock *block, const CFGBlock *cur, Ownership::OwnershipStatus &status);
 
   OwnershipImpl(AnalysisDeclContext &ac, ASTContext &context)
       : analysisContext(ac), ctx(context), blocksBeginStatus(0), blocksEndStatus(0) {}
@@ -1783,7 +1783,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkMemoryLeak(
           }
         }
       } else {
-        if ((SOwnedOwnedFields[VD].size() + SNullOwnedFields[VD].size() !=
+        if ((SOwnedOwnedFields[VD].size() + SNullOwnedFields[VD].size() <
              SAllOwnedFields[VD].size()) &&
             !is(VD, Moved)) {
           diags.push_back(OwnershipDiagInfo(
@@ -2282,12 +2282,12 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
   }
 }
 
-void OwnershipImpl::MaybeSetNull(const CFGBlock *block,
+void OwnershipImpl::MaybeSetNull(const CFGBlock *block, const CFGBlock *cur,
                                  Ownership::OwnershipStatus &status) {
-  if (block->pred_empty())
+  if (!block || block->pred_empty())
     return;
   const CFGBlock *pred = *block->pred_rbegin();
-  if (pred == nullptr) {
+  if (pred == nullptr || pred != cur) {
     return;
   }
   Stmt *TermStmt = const_cast<Stmt *>(pred->getTerminatorStmt());
@@ -2323,8 +2323,6 @@ Ownership::OwnershipStatus
 OwnershipImpl::runOnBlock(const CFGBlock *block,
                           Ownership::OwnershipStatus status,
                           OwnershipDiagReporter &reporter, bool isDestructor) {
-  MaybeSetNull(block, status);
-
   TransferFunctions TF(*this, status, reporter);
 
   for (CFGBlock::const_iterator it = block->begin(), ei = block->end();
@@ -2405,7 +2403,9 @@ void clang::runOwnershipAnalysis(const FunctionDecl &fd, const CFG &cfg,
     for (CFGBlock::const_pred_iterator it = block->pred_begin(),
                                        ei = block->pred_end();
          it != ei; ++it) {
-      val = OS->merge(val, OS->blocksEndStatus[*it]);
+      Ownership::OwnershipStatus Status = OS->blocksEndStatus[*it];
+      OS->MaybeSetNull(block, *it, Status);
+      val = OS->merge(val, Status);
     }
 
     OS->blocksEndStatus[block] =

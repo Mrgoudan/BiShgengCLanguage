@@ -70,6 +70,6 @@ int assign_to_field_after_free() {
     tinker(&mut p->value); // expected-error {{use of moved value: `p.value`}}
   }
   unsafe {
-    return p->value;
+    return p->value; // expected-error {{use of moved value: `p.value`}}
   }
 }

@@ -68,21 +68,6 @@ safe void test4(void) {
     safe_free((void *owned)p);
 }
 
-safe void test5(void) {
-    struct S s = { nullptr };
-    struct S *owned _Nullable p = nullptr;
-    int cond = 1;
-    if (cond) {
-        p = safe_malloc<struct S>(s);
-    }
-    if (p != nullptr) {
-        if (p->p != nullptr) {
-            *p->p = 10;
-            safe_free((void *owned)p->p);
-        }
-    }
-}
-
 long * owned return_nonnull() {
     long * owned p = safe_malloc<long>(10);
     return p;
@@ -147,7 +132,6 @@ int main() {
     test2();
     test3();
     test4();
-    test5();
     test6();
     test7();
     return 0;

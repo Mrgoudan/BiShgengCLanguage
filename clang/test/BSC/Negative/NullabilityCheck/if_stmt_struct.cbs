@@ -241,3 +241,26 @@ safe void test16(void) {
     *s1.p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
     *s2.p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
+
+struct S1 {
+    int *owned _Nullable p;
+};
+
+safe T *owned safe_malloc<T>(T t);
+safe void safe_free(void *owned p);
+
+safe void test17(void) {
+    struct S1 s = { nullptr };
+    struct S1 *owned _Nullable p = nullptr;
+    int cond = 1;
+    if (cond) {
+        p = safe_malloc<struct S1>(s);
+    }
+    if (p != nullptr) {
+        if (p->p != nullptr) {
+            *p->p = 10;
+            safe_free((void *owned)p->p);
+        }
+    }
+} // expected-error {{memory leak of value: `p`}}
+  // expected-error@-1 {{field memory leak of value: `p`, p.p is leak}}
