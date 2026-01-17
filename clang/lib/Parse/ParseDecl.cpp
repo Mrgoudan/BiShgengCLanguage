@@ -2630,11 +2630,14 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   }
   case InitKind::Uninitialized: {
 #if ENABLE_BSC
-    // uninitialized declaration is not allowed in the bsc language safe zone
-    if (Actions.IsInSafeZone()) {
-      Diag(Tok, diag::err_unsafe_action) << "uninitialized declarator";
-    }
     VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
+    // Check if uninitialized declaration is allowed in the safe zone
+    if (Actions.IsInSafeZone() && VD) {
+      // Check if the type can be uninitialized in safe zones
+      if (!Actions.CanBeUninitializedInSafeZone(VD->getType())) {
+        Diag(Tok, diag::err_unsafe_action) << "uninitialized declarator";
+      }
+    }
     if (getLangOpts().BSC && VD) {
       if (VD->getType().hasBorrow())
         Diag(VD->getBeginLoc(), diag::err_borrow_not_init);

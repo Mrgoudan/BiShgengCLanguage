@@ -1,7 +1,34 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+struct StructWithPointer {
+  int *ptr;
+  int value;
+};
+
+struct StructWithoutPointer {
+  int value;
+  char name[20];
+};
+
+union UnionWithPointer {
+  int *ptr;
+  int value;
+};
+
+union UnionWithoutPointer {
+  int value;
+  float f;
+};
+
 safe int main(void) {
-  int a;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  int a;  // ok: basic types can be uninitialized
+  _Bool b;  // ok: bool type can be uninitialized
+  struct StructWithoutPointer s;  // ok: struct without pointer fields can be uninitialized
+  union UnionWithoutPointer u;  // ok: union without pointer fields can be uninitialized
+  int *p;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  int (*fp)(int);  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  struct StructWithPointer sp;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  union UnionWithPointer up;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
   a = 0;
   lab:
   if (a < 10) {

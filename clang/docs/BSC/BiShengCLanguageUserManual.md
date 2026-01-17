@@ -2567,20 +2567,61 @@ int main() {
 }
 ```
 
-14. 安全区内不允许无初始化或初始化不完整的变量声明。
+14. 安全区内对变量声明的初始化要求。
+
+   - 所有指针类型（裸指针、`owned`指针、`borrow`指针、函数指针）的变量必须初始化；
+   - 包含指针字段（包括函数指针）的`struct`与`union`类型的变量必须初始化；
+   - 布尔类型（`_Bool`）、基本数据类型（`int`、`float`、`char`等）、不含指针字段的`struct`类型、`union`类型的变量可以不初始化；
+   - 对于指针类型及包含指针字段的`struct`类型，使用初始化列表做初始化时必须是完整的初始化列表，不允许部分初始化；
+   - 对于布尔类型、基本数据类型、不含指针字段的`struct`/`union`类型，可以不初始化或进行部分初始化。
 
 ```c
 struct S {
   int age;
   char name[20];
 };
+struct T {
+  int *ptr;  // 包含指针字段
+  int value;
+};
+struct F {
+  int (*func)(int);  // 包含函数指针字段
+  int value;
+};
+union U {
+  int i;
+  float f;
+};
+union V {
+  int *ptr;  // 包含指针字段
+  int value;
+};
 void test() {
   safe {
-    // error: 安全区内不允许无初始化的变量声明
+    // ok: 基本类型可以不初始化
     int a;
-    // error：安全区不允许部分初始化
-    struct S tom = {10};
-    struct S tony = {10, "tony"};
+    _Bool b;
+    float c;
+    // ok: 不含指针字段的 struct 可以不初始化
+    struct S s1;
+    // ok: 不含指针字段的 struct 可以部分初始化
+    struct S s2 = {10};
+    // ok: 不含指针字段的 union 可以不初始化
+    union U u;
+    // error: 指针类型必须初始化
+    int *p;
+    // error: 函数指针必须初始化
+    int (*fp)(int);
+    // error: 包含指针字段的 struct 必须初始化
+    struct T t1;
+    // error: 包含函数指针字段的 struct 必须初始化
+    struct F f1;
+    // error: 包含指针字段的 struct 不允许部分初始化
+    struct T t2 = {0};  // 只初始化了 ptr，value 未初始化
+    // ok: 包含指针字段的 struct 完整初始化
+    struct T t3 = {NULL, 0};
+    // error: 包含指针字段的 union 必须初始化
+    union V v;
   }
 }
 

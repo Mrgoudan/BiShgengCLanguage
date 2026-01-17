@@ -9,7 +9,7 @@ struct R {
 struct R g_r;
 
 safe void foo1(int p) {
-  extern int num; // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  extern int num;
   static int num1 = 0; // expected-error {{defining mutable global variables is not allowed within the safe zone}}
   static const int c1 = 0; // legal
   &mut a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
@@ -33,7 +33,7 @@ safe void foo1(int p) {
 
 unsafe void foo2(int p) {
   safe {
-    extern int num; // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+    extern int num;
     static int num3 = 0; // expected-error {{defining mutable global variables is not allowed within the safe zone}}
     static const int c2 = 0; // legal
     &mut a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}

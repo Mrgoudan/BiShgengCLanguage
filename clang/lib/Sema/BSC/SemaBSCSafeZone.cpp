@@ -386,70 +386,81 @@ bool Sema::IsUnsafeType(QualType Type) {
   return false;
 }
 
-bool Sema::IsContainsUnionType(QualType Type) {
-  llvm::SmallPtrSet<const clang::Type *, 16> Visited;
-  llvm::SmallVector<QualType, 16> Stack;
-  Stack.push_back(Type);
+// Check if a type can be left uninitialized in safe zones.
+// Returns true if the type is allowed to be uninitialized.
+// Allowed types:
+// - Bool type (_Bool)
+// - Non-pointer types (int, float, char, etc.)
+// - Struct/union types that do not contain pointer fields
+bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
+  if (Type.isNull())
+    return false;
 
-  while (!Stack.empty()) {
-    QualType CurType = Stack.pop_back_val();
+  QualType CanonType = Type.getCanonicalType();
 
-    if (CurType.isNull())
-      continue;
-    const clang::Type *TyPtr = CurType.getTypePtr();
-    if (!Visited.insert(TyPtr).second)
-      continue;
+  // Bool type can be uninitialized
+  if (CanonType->isBooleanType())
+    return true;
 
-    if (CurType->isUnionType()) {
-      return true;
-    }
-    if (CurType->isPointerType() && !CurType->isFunctionPointerType()) {
-      Stack.push_back(CurType->getPointeeType());
-    }
-    if (CurType->isStructureType()) {
-      if (const auto *RT = CurType->getAs<RecordType>()) {
-        RecordDecl *RD = RT->getDecl();
-        for (RecordDecl::field_iterator i = RD->field_begin(),
-                                        e = RD->field_end();
-             i != e; ++i) {
-          Stack.push_back(i->getType());
-        }
-      }
-    }
-    if (CurType->isArrayType()) {
-      Stack.push_back(cast<ArrayType>(CurType)->getElementType());
-    }
+  // All pointer types (including function pointers) must be initialized
+  if (CanonType->isPointerType()) {
+    return false;
   }
-  return false;
-}
 
-bool Sema::IsContainsUnionTag(TagDecl *Tag) {
-  llvm::SmallPtrSet<const TagDecl *, 16> Visited;
-  llvm::SmallVector<const TagDecl *, 16> Stack;
-  Stack.push_back(Tag);
+  // For struct/union types, recursively check if they contain pointer fields
+  if (CanonType->isStructureType() || CanonType->isUnionType()) {
+    // Check if the struct/union contains any pointer fields
+    llvm::SmallPtrSet<const clang::Type *, 16> Visited;
+    llvm::SmallVector<QualType, 16> Stack;
+    Stack.push_back(CanonType);
 
-  while (!Stack.empty()) {
-    const TagDecl *CurTag = Stack.pop_back_val();
-    
-    if (!Visited.insert(CurTag).second)
-      continue;
-    if (CurTag->isUnion())
-      return true;
-    for (Decl *Member : CurTag->decls()) {
-      if (auto *FD = dyn_cast<FieldDecl>(Member)) {
-        QualType MemberType = FD->getType();
-        if (!MemberType.isNull() && MemberType->isUnionType())
-          return true;
-        if (!MemberType.isNull() && MemberType->isStructureType()) {
-          if (const auto *RT = MemberType->getAs<RecordType>()) {
-            Stack.push_back(RT->getDecl());
+    while (!Stack.empty()) {
+      QualType CurType = Stack.pop_back_val();
+
+      if (CurType.isNull())
+        continue;
+      const clang::Type *TyPtr = CurType.getTypePtr();
+      if (!Visited.insert(TyPtr).second)
+        continue;
+
+      // If we find any pointer field (including function pointers), the struct/union cannot be uninitialized
+      if (CurType->isPointerType()) {
+        return false;
+      }
+
+      // Recursively check struct members
+      if (CurType->isStructureType() || CurType->isUnionType()) {
+        if (const auto *RT = CurType->getAs<RecordType>()) {
+          RecordDecl *RD = RT->getDecl();
+          for (RecordDecl::field_iterator i = RD->field_begin(),
+                                          e = RD->field_end();
+               i != e; ++i) {
+            Stack.push_back(i->getType());
           }
         }
-      } else if (auto *NestedTag = dyn_cast<TagDecl>(Member)) {
-        Stack.push_back(NestedTag);
+      }
+
+      // Check array element types
+      if (CurType->isArrayType()) {
+        Stack.push_back(cast<ArrayType>(CurType)->getElementType());
       }
     }
+
+    // If we didn't find any pointer fields, the struct/union can be uninitialized
+    return true;
   }
+
+  // For array types, check the element type
+  if (CanonType->isArrayType()) {
+    QualType ElementType = Context.getBaseElementType(CanonType);
+    return CanBeUninitializedInSafeZone(ElementType);
+  }
+
+  // All other scalar types (int, float, char, enum, etc.) can be uninitialized
+  if (CanonType->isScalarType())
+    return true;
+
+  // For any other types, default to not allowing uninitialized
   return false;
 }
 
@@ -515,7 +526,14 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   }
 }
 
-void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList) {
+void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
+                                                       QualType DeclType) {
+  // For types that can be uninitialized (types without pointers),
+  // partial initialization is allowed
+  if (CanBeUninitializedInSafeZone(DeclType)) {
+    return;
+  }
+
   // allow initialization by '{0}' and '{}'.
   bool IsInitToZero = false;
   if (IList->getNumInits() == 1) {
@@ -535,9 +553,13 @@ void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList) {
   }
 }
 
-void Sema::DiagnoseUnionTypeInSafeZone(SourceLocation Loc){
+void Sema::DiagnoseUnionTypeInSafeZone(SourceLocation Loc, QualType Type){
   if (!IsInSafeZone())
     return;
+
+  if (CanBeUninitializedInSafeZone(Type))
+    return;
+
   Diag(Loc, diag::err_unsafe_action)
       << "union type";
 }

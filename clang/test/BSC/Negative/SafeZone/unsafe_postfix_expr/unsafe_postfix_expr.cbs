@@ -41,15 +41,14 @@ void IncomInitList() {
   safe {
     struct F a = {};             // ok
     struct F b = {0};            // ok
-    struct F c = {10};           // expected-error {{incomplete initialization is forbidden in the safe zone}}
-    struct F d = {10, "tom"};    // expected-error {{incomplete initialization is forbidden in the safe zone}}
+    struct F c = {10};           
+    struct F d = {10, "tom"};    
     struct F e = {10, "tom", 80};
-    struct F f = {.age = 10};   // expected-error {{incomplete initialization is forbidden in the safe zone}}
-    struct F g = {.age = 10, .name = "tom"};  // expected-error {{incomplete initialization is forbidden in the safe zone}}
+    struct F f = {.age = 10};   
+    struct F g = {.age = 10, .name = "tom"};  
     struct F h = {.age = 10, .name = "tom", .high = 90};
     struct G i = {0};
-    struct G j = {.f.age = 10}; // expected-error {{incomplete initialization is forbidden in the safe zone}}
-                                // expected-error@-1 {{incomplete initialization is forbidden in the safe zone}}
+    struct G j = {.f.age = 10};
     struct G k = {{10, "tom", 80}, 10};
     struct G l = {.f.age = 10, .f.name = "tom", .f.high = 90, 10};
     struct S m = {};

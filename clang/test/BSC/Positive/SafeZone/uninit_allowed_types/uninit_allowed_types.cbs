@@ -1,0 +1,66 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+struct SimpleStruct {
+  int value;
+  char name[20];
+  float score;
+};
+
+struct NestedStruct {
+  int x;
+  struct SimpleStruct s;
+  long y;
+};
+
+union SimpleUnion {
+  int i;
+  float f;
+  char c;
+};
+
+union NestedUnion {
+  int value;
+  struct SimpleStruct s;
+};
+
+safe int main(void) {
+  // Basic types can be uninitialized
+  int a;
+  char c;
+  float f;
+  double d;
+  long l;
+  short s;
+
+  // Bool type can be uninitialized
+  _Bool b;
+
+  // Struct without pointer fields can be uninitialized
+  struct SimpleStruct simple1;
+
+  // Struct without pointer fields can be partially initialized
+  struct SimpleStruct simple2 = {42};  // Only 'value' is initialized
+
+  // Nested struct without pointer fields can be uninitialized
+  struct NestedStruct nested1;
+
+  // Nested struct without pointer fields can be partially initialized
+  struct NestedStruct nested2 = {10};  // Only 'x' is initialized
+
+  // Union without pointer fields can be uninitialized
+  union SimpleUnion SimpleUnion1;
+
+  // Union without pointer fields can be partially initialized
+  union SimpleUnion SimpleUnion2 = {42};
+
+  // Union with struct (no pointers) can be uninitialized
+  union NestedUnion NestedUnion1;
+
+  // Union without pointer fields can be partially initialized
+  union NestedUnion NestedUnion2 = {42};
+
+  // Array of basic types can be uninitialized
+  int arr[10];
+  return 0;
+}
