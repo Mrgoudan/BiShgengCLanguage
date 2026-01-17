@@ -121,6 +121,13 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   }
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
+
+  // Allow owned pointer to be cast from nullptr_t
+  if (LHSCanType.isOwnedQualified() && LHSCanType->isPointerType() &&
+      RHSCanType->isNullPtrType()) {
+    return true;
+  }
+
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
@@ -233,7 +240,7 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
   SourceLocation ExprLoc = RHSExpr->getBeginLoc();
   // Owned pointer can be inited by nullptr.
   if (LHSCanType.isOwnedQualified() && LHSCanType->isPointerType() &&
-      isa<CXXNullPtrLiteralExpr>(RHSExpr))
+      isa<CXXNullPtrLiteralExpr>(RHSExpr->IgnoreParens()))
     return true;
 
   bool Res = true;
@@ -317,6 +324,13 @@ void Sema::CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL) {
 bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
+
+  // Allow borrow pointer to be cast from nullptr_t
+  if (LHSCanType.isBorrowQualified() && LHSCanType->isPointerType() &&
+      RHSCanType->isNullPtrType()) {
+    return true;
+  }
+
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
@@ -407,7 +421,8 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
     }
 
     // Borrow pointer can be inited by nullptr.
-    if (LHSCanType.isBorrowQualified() && isa<CXXNullPtrLiteralExpr>(RHSExpr))
+    if (LHSCanType.isBorrowQualified() && LHSCanType->isPointerType() &&
+        isa<CXXNullPtrLiteralExpr>(RHSExpr->IgnoreParens()))
       return true;
 
     if (LHSCanType->isVoidPointerType()) {
