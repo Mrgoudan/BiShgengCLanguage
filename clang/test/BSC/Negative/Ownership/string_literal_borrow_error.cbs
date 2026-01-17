@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+// Test error cases for mutable borrow of string literals
+
+void foo_mut(char * borrow str) {}
+void test_mut_param() {
+  foo_mut("hello");  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
+}
+
+void test_direct_mut() {
+  const char * borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+}
+
+void test_indirect_mut() {
+  const char * borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
+}
+
+int main() {
+  test_mut_param();
+  test_direct_mut();
+  test_indirect_mut();
+  return 0;
+}

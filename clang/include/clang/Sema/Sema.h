@@ -12441,6 +12441,7 @@ public:
   void CheckMemberThisCallAccess(Expr *ActualArgExpr, QualType formalType);
   bool CheckNeedCastQualifiedType(QualType actualType, QualType formalType);
   bool CheckNeedReborrowPointerType(QualType actualType, QualType formalType);
+  Expr *InsertConstBorrowForStringLiteral(Expr *StringLiteralExpr, SourceLocation Loc);
 #endif
 
   bool IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType);

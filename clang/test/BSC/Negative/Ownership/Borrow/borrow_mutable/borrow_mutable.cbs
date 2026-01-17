@@ -23,7 +23,7 @@ void test() {
   b3 = &mut pr2->r; // legal
   b4 = &mut pr2->r.a; // expected-error {{the expression after '&mut' must be modifiable}}
   b4 = &mut a; // expected-error {{the expression after '&mut' must be modifiable}}
-  &mut "const"; // expected-warning {{expression result unused}}
+  &mut "const"; // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
 
   int arr1[] = {1, 2, 3};
   const int arr2[] = {1, 2, 3};

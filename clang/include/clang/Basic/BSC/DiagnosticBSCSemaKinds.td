@@ -285,3 +285,11 @@ def err_nonnull_init_by_default : Error<
   "`%0` is a _Nonnull pointer and must be properly initialized.">,
   InGroup<InitNonnull>;
 
+// BSC string literal borrow errors.
+def err_mut_borrow_string_literal : Error<
+  "cannot take mutable borrow of string literal with '&mut'; string literals are immutable">;
+def err_mut_borrow_string_literal_indirect : Error<
+  "cannot take mutable borrow through string literal with '&mut *'; string literals are immutable">;
+def err_pass_string_literal_to_mut_borrow : Error<
+  "cannot pass string literal to parameter of type %0; string literals are immutable">;
+

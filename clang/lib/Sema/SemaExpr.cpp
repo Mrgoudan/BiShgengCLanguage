@@ -6427,6 +6427,38 @@ bool Sema::CheckNeedReborrowPointerType(QualType actualType, QualType formalType
   }
   return false;
 }
+
+/// InsertConstBorrowForStringLiteral - Insert &const * operators for string
+/// literal to const char * borrow conversion. This is a special case where we
+/// automatically convert string literals to borrow pointers for convenience.
+Expr *Sema::InsertConstBorrowForStringLiteral(Expr *StringLiteralExpr, SourceLocation Loc) {
+  // String literal has type const char[N]
+  // After array-to-pointer decay: const char *
+
+  // Step 1: Apply array-to-pointer decay if not already done
+  Expr *DecayedExpr = StringLiteralExpr;
+  if (StringLiteralExpr->getType()->isArrayType()) {
+    ExprResult Decay = DefaultFunctionArrayConversion(StringLiteralExpr);
+    if (Decay.isInvalid())
+      return StringLiteralExpr;
+    DecayedExpr = Decay.get();
+  }
+  // Now we have: const char *
+
+  // Step 2: Insert dereference operator: * (const char *)
+  // Result: const char (lvalue)
+  ExprResult DerefExpr = CreateBuiltinUnaryOp(Loc, UO_Deref, DecayedExpr);
+  if (DerefExpr.isInvalid())
+    return StringLiteralExpr;
+
+  // Step 3: Insert &const operator: &const (const char)
+  // Result: const char * borrow
+  ExprResult BorrowExpr = CreateBuiltinUnaryOp(Loc, UO_AddrConst, DerefExpr.get());
+  if (BorrowExpr.isInvalid())
+    return StringLiteralExpr;
+
+  return BorrowExpr.get();
+}
 #endif
 
 bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
@@ -6525,6 +6557,29 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
           return true;
       }
       CheckMoveVarMemoryLeak(Arg, Arg->getBeginLoc());
+
+      // BSC: Handle string literal to borrow pointer conversion
+      if (getLangOpts().BSC && ProtoArgType->isPointerType() &&
+          ProtoArgType.isBorrowQualified()) {
+        // Check if parameter is a pointer to char (const char * borrow or char * borrow)
+        QualType PointeeType = ProtoArgType->getPointeeType();
+        if (PointeeType->isCharType()) {
+          Expr *ArgIgnored = Arg->IgnoreParenImpCasts();
+
+          if (isa<StringLiteral>(ArgIgnored)) {
+            // Check if it's a const borrow (OK) or mut borrow (ERROR)
+            if (PointeeType.isConstQualified()) {
+              // Auto-insert &const * for const char * borrow
+              Arg = InsertConstBorrowForStringLiteral(Arg, Arg->getBeginLoc());
+            } else {
+              // Error: cannot mutably borrow string literal
+              Diag(Arg->getBeginLoc(), diag::err_pass_string_literal_to_mut_borrow)
+                << ProtoArgType;
+              return true;
+            }
+          }
+        }
+      }
 #endif
       if (RequireCompleteType(Arg->getBeginLoc(), ProtoArgType,
                               diag::err_call_incomplete_argument, Arg))
@@ -16659,6 +16714,30 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
     DiagnoseOwnedPointerUnaryOp(*this, Opc, OpLoc, Input);
     if (Opc == UO_Deref && CheckTemporaryVarMemoryLeak(Input))
       return ExprError();
+  }
+
+  // BSC: Check for mutable borrow of string literals (UB)
+  if (getLangOpts().BSC && Opc == UO_AddrMut) {
+    Expr *InputIgnored = Input->IgnoreParenImpCasts();
+
+    // Direct case: &mut "string"
+    if (isa<StringLiteral>(InputIgnored)) {
+      Diag(OpLoc, diag::err_mut_borrow_string_literal)
+        << Input->getSourceRange();
+      return ExprError();
+    }
+
+    // Indirect case: &mut * "string"
+    if (auto *UO = dyn_cast<UnaryOperator>(InputIgnored)) {
+      if (UO->getOpcode() == UO_Deref) {
+        Expr *DerefOperand = UO->getSubExpr()->IgnoreParenImpCasts();
+        if (isa<StringLiteral>(DerefOperand)) {
+          Diag(OpLoc, diag::err_mut_borrow_string_literal_indirect)
+            << Input->getSourceRange();
+          return ExprError();
+        }
+      }
+    }
   }
   #endif
 

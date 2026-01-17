@@ -3861,7 +3861,7 @@ int main() {
 | lvalue表达式 | 是否可修改 |
 | ---- | ---- |
 | ident | 变量 ident 没有被 const 修饰，且ident 不能是函数名 |
-| "string literal" | 不允许，因为字符串常量保存在常量区，不能写 |
+| "string literal" | 不允许，因为字符串常量保存在常量区，不能写。尝试对字符串字面量进行可变借用（如`&mut "hello"`或`&mut * "hello"`）会导致编译错误 |
 | (struct S) { ... } | 允许 |
 | e->field | 要求 e 是可变借用指针，或者是指向可修改类型的 owned 指针，或者是指向可修改类型的裸指针，且field没有被const修饰，多级 field 的情况应该要求每一级的 field 都没有 const 修饰 |
 | e.field | 要求 e 是可变的，且field没有被const修饰，多级 field 的情况应该要求每一级的 field 都没有 const 修饰 |
@@ -3981,6 +3981,62 @@ int main() {
 }
 ```
 
+##### 3.3 字符串字面量的自动借用转换
+为了方便使用字符串字面量，毕昇 C 提供了对字符串字面量的自动借用转换功能。
+
+**自动插入 `&const *` 操作符**
+
+当字符串字面量作为实参传递给 `const char * borrow` 类型的形参时，编译器会自动插入 `&const *` 操作符，将字符串字面量转换为不可变借用指针。这样可以避免每次使用字符串字面量时都需要手动添加借用操作符。
+
+例如：
+```C
+void foo(const char * borrow str) {
+  // 函数实现
+}
+
+void test() {
+  // 编译器会自动将 "hello" 转换为 &const * "hello"
+  foo("hello");
+
+  // 等价于显式写法
+  foo(&const * "hello");
+}
+
+int main() {
+  test();
+  return 0;
+}
+```
+
+**限制与错误检查**
+
+字符串字面量存储在只读内存区域，因此不能被修改。毕昇 C 对字符串字面量的借用有以下限制：
+
+1. **禁止对字符串字面量进行可变借用**：直接使用 `&mut` 操作符对字符串字面量取可变借用会导致编译错误。
+   ```C
+   void test_error1() {
+     const char * borrow p = &mut "hello";  // 编译错误：cannot take mutable borrow of string literal
+   }
+   ```
+
+2. **禁止通过解引用对字符串字面量进行可变借用**：使用 `&mut *` 操作符对字符串字面量取可变借用也会导致编译错误。
+   ```C
+   void test_error2() {
+     const char * borrow p = &mut * "hello";  // 编译错误：cannot take mutable borrow through string literal
+   }
+   ```
+
+3. **禁止将字符串字面量传递给可变借用参数**：尝试将字符串字面量作为实参传递给 `char * borrow`（可变借用）类型的形参会导致编译错误。
+   ```C
+   void foo_mut(char * borrow str) {}
+
+   void test_error3() {
+     foo_mut("hello");  // 编译错误：cannot pass string literal to parameter of type 'char *borrow'
+   }
+   ```
+
+这些限制确保了字符串字面量的不可变性，避免了对只读内存区域的非法写入操作，提高了程序的安全性。
+
 #### 4.借用对被借用对象的影响
 ##### 4.1 不可变借用对被借用对象的影响
 对表达式 e 做不可变借用， 即`&const e`，在这个不可变借用的生命周期结束之前，e 只能读不能修改，也不能对 e 创建可变借用。
@@ -3995,11 +4051,11 @@ int main() {
 | &const *e | *e 进入 “只读” 状态，不允许修改 *e 及其直接或间接成员，或者对其它成员做可变借用，如果 e 是 owned 指针类型，则 e 也进入只读状态 |
 
 ##### 4.2 可变借用对被借用对象的影响
-对表达式 e 做可变借用， 即`&mut e`，表达式 e 进入 “冻结” 状态。在这个可变借用的生命周期结束之前，e 不能读，不能修改（包含被move），也不能被借用。
+对表达式 e 做可变借用， 即`&mut e`，表达式 e 进入 "冻结" 状态。在这个可变借用的生命周期结束之前，e 不能读，不能修改（包含被move），也不能被借用。
 | 可变借用表达式 | 被借用对象的状态 |
 | ---- | ---- |
 | &mut ident` | 变量 ident 被冻结 |
-| &mut "string literal" | 编译错误 |
+| &mut "string literal" | 编译错误（字符串字面量是不可变的，不能进行可变借用） |
 | &mut (struct S) { ... } | 临时变量被冻结 |
 | &mut e->field | e->field 被冻结，不允许读写 e->field，不允许整体修改 *e，但允许修改 e 指向的其它成员，或者对其它成员做可变借用 |
 | &mut e.field | e.field 被冻结，不允许读写 e.field，不允许整体修改 e，但允许修改 e 的其它成员，或者对其它成员做可变借用 |
