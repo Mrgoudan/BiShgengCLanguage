@@ -16,6 +16,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang;
 using namespace std;
@@ -810,14 +811,15 @@ string Ownership::OwnershipStatus::collectMovedFields(const VarDecl *VD) {
 }
 
 SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSUse(
-    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isStar) {
+    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isStar, bool isAddrMut) {
   SmallVector<OwnershipDiagInfo> diags;
 
   // when use ops, we must ensure the variable is owned
 
   // check the status of the variable
   if (!is(VD, Ownership::Status::Owned)) {
-    if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) {
+    if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved) ||
+        (is(VD, Ownership::Status::Null) && !OPSAllOwnedFields[VD].empty())) {
       diags.push_back(OwnershipDiagInfo(
           Loc, OwnershipDiagKind::InvalidUseOfMoved, VD->getNameAsString()));
     } else if (is(VD, Ownership::Status::Uninitialized)) {
@@ -835,6 +837,11 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSUse(
       diags.push_back(
           OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfAllMoved,
                             VD->getNameAsString(), collectMovedFields(VD)));
+    }
+  }
+  if (isAddrMut) {
+    if (is(VD, Ownership::Status::Null)) {
+      set(VD, Ownership::Status::Owned);
     }
   }
   if (!isGetAddr) {
@@ -1129,7 +1136,7 @@ Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
 }
 
 SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSUse(
-    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr) {
+    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isAddrMut) {
   SmallVector<OwnershipDiagInfo> diags;
 
   // owned struct special manipulation
@@ -1155,6 +1162,13 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSUse(
     diags.push_back(OwnershipDiagInfo(Loc, InvalidUseOfPartiallyMoved,
                                       VD->getNameAsString(),
                                       collectMovedFields(VD)));
+  }
+  if (isAddrMut) {
+    if (SAllOwnedFields[VD].size() == SOwnedOwnedFields[VD].size() + SNullOwnedFields[VD].size()) {
+      for (auto s : SNullOwnedFields[VD])
+        SOwnedOwnedFields[VD].insert(s);
+      SNullOwnedFields[VD].clear();
+    }
   }
   if (!isGetAddr)
     SOwnedOwnedFields[VD].clear();
@@ -1352,7 +1366,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldAssign(
 }
 
 SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkBOPUse(
-    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr) {
+    const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isAddrMut) {
   SmallVector<OwnershipDiagInfo> diags;
 
   // check the status of the variable
@@ -1374,6 +1388,11 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkBOPUse(
     } else if (is(VD, AllMoved)) {
       diags.push_back(OwnershipDiagInfo(
           Loc, OwnershipDiagKind::InvalidUseOfAllMoved, VD->getNameAsString()));
+    }
+  }
+  if (isAddrMut) {
+    if (is(VD, Ownership::Status::Null)) {
+      set(VD, Ownership::Status::Owned);
     }
   }
   if (!isGetAddr) {
@@ -1812,6 +1831,7 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   Ownership::OwnershipStatus &stat;
   OwnershipDiagReporter &reporter;
   bool isHandlingCallExpr = false;
+  bool isAddrMut = false;
 
   enum Operation { None, Assign, Move, GetAddr };
   Operation op = Operation::None;
@@ -1920,6 +1940,9 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
       UO->getOpcode() == UO_AddrConst ||
       UO->getOpcode() == UO_AddrMut ||
       UO->getOpcode() == UO_AddrOf) {
+    if (UO->getOpcode() == UO_AddrMut) {
+      isAddrMut = true;
+    }
     op = GetAddr;
   } else if (UO->isIncrementDecrementOp()) {
     op = Assign;
@@ -2197,11 +2220,12 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     if (stat.OPSStatus.count(VD)) {
       if (fullFieldName == "") {
         SmallVector<OwnershipDiagInfo> diags =
-            stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr);
+            stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr, false, isAddrMut);
+        isAddrMut = false;
         reporter.addDiags(diags);
       } else if (fullFieldName == "*") {
         SmallVector<OwnershipDiagInfo> diags =
-            stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr, true);
+            stat.checkOPSUse(VD, DRE->getLocation(), op == GetAddr, true, false);
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
@@ -2223,7 +2247,8 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     if (stat.SStatus.count(VD)) {
       if (fullFieldName == "") {
         SmallVector<OwnershipDiagInfo> diags =
-            stat.checkSUse(VD, DRE->getLocation(), op == GetAddr);
+            stat.checkSUse(VD, DRE->getLocation(), op == GetAddr, isAddrMut);
+        isAddrMut = false;
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
@@ -2245,7 +2270,8 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
     if (stat.BOPStatus.count(VD)) {
       if (fullFieldName == "") {
         SmallVector<OwnershipDiagInfo> diags =
-            stat.checkBOPUse(VD, DRE->getLocation(), op == GetAddr);
+            stat.checkBOPUse(VD, DRE->getLocation(), op == GetAddr, isAddrMut);
+        isAddrMut = false;
         reporter.addDiags(diags);
       } else {
         SmallVector<OwnershipDiagInfo> diags = stat.checkBOPFieldUse(
@@ -2264,9 +2290,15 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block,
   if (pred == nullptr) {
     return;
   }
-  if (const IfStmt *IS = dyn_cast_or_null<IfStmt>(pred->getTerminatorStmt())) {
+  Stmt *TermStmt = const_cast<Stmt *>(pred->getTerminatorStmt());
+  const Expr *Cond = nullptr;
+  if (isa_and_nonnull<IfStmt, WhileStmt>(TermStmt)) {
+    llvm::TypeSwitch<Stmt *>(TermStmt)
+        .Case<IfStmt>([&](IfStmt *IS) { Cond = IS->getCond(); })
+        .Case<WhileStmt>([&](WhileStmt *WS) { Cond = WS->getCond(); })
+        .Default([&](Stmt *S) { Cond = nullptr; });
     if (const BinaryOperator *BO =
-            dyn_cast<BinaryOperator>(IS->getCond()->IgnoreParenImpCasts())) {
+            dyn_cast<BinaryOperator>(Cond->IgnoreParenImpCasts())) {
       bool isNullPtrEqual =
           BO->getRHS()->isNullExpr(ctx) || BO->getLHS()->isNullExpr(ctx);
       if (isNullPtrEqual) {

@@ -1,0 +1,114 @@
+// RUN: %clang_cc1 -verify %s
+
+typedef struct {
+  int *owned a;
+  int *owned b;
+} S;
+
+typedef struct {
+  int a;
+  int b;
+} U;
+
+void foo1(int *owned *borrow p);
+void foo2(S *owned *borrow p);
+void foo3(S *borrow p);
+void foo4(U *owned *borrow p);
+void foo5(U *borrow p);
+
+void consume(int *owned p);
+
+void test1() {
+  int *owned p = nullptr;
+  foo1(&mut p);
+} // expected-error {{memory leak of value: `p`}}
+
+void test2() {
+  int *owned p = nullptr;
+  int *owned *borrow q = &mut p;
+  foo1(q);
+} // expected-error {{memory leak of value: `p`}}
+
+void test3() {
+  S *owned p = nullptr;
+  foo2(&mut p); // expected-error {{use of moved value: `p`}}
+} // expected-error {{memory leak of value: `p`}}
+
+void test4() {
+  S s;
+  foo3(&mut s); // expected-error {{use of partially moved value: `s`, s.a, s.b are moved}}
+}
+
+void test5(S *owned p) {
+  foo2(&mut p);
+} // expected-error {{memory leak of value: `p`}}
+  // expected-error@-1 {{field memory leak of value: `p`, p.a, p.b are leak}}
+
+void test6(S *owned p) {
+  int *owned q = p->a;
+  consume(q);
+  foo2(&mut p); // expected-error {{use of partially moved value: `p`, p.a is moved}}
+} // expected-error {{memory leak of value: `p`}}
+  // expected-error@-1 {{field memory leak of value: `p`, p.b is leak}}
+
+void test7(U *owned p) {
+  foo4(&mut p);
+} // expected-error {{memory leak of value: `p`}}
+
+void test8() {
+  U *owned sp = nullptr;
+  foo4(&mut sp);
+} // expected-error {{memory leak of value: `sp`}}
+
+void test9() {
+  U u;
+  foo5(&mut u);
+}
+
+void test10(int *owned p) {
+  S s;
+  s.a = p;
+  foo3(&mut s); // expected-error {{use of partially moved value: `s`, s.b is moved}}
+} // expected-error {{field memory leak of value: `s`, s.a is leak}}
+
+void test11(int *owned p, int *owned q) {
+  S s;
+  s.a = p;
+  s.b = q;
+  foo3(&mut s);
+} // expected-error {{field memory leak of value: `s`, s.a, s.b are leak}}
+
+void test12(int *owned p, int *owned q) {
+  S s;
+  s.a = p;
+  s.b = q;
+  if (s.a == nullptr) {
+    foo3(&mut s);
+    s.a = nullptr; // expected-error {{assign to part of owned value: `s.a`}}
+  }
+} // expected-error {{field memory leak of value: `s`, s.b, s.a are leak}}
+
+void test13(int *owned p, int *owned q) {
+  S s;
+  s.a = p;
+  s.b = q;
+  if (s.a == nullptr) {
+    foo3(&mut s);
+    return; // expected-error {{field memory leak of value: `s`, s.b, s.a are leak}}
+  }
+} // expected-error {{field memory leak of value: `s`, s.a, s.b are leak}}
+
+void test14(int *owned p) {
+  S s;
+  s.a = p;
+  if (s.a == nullptr) {
+    foo3(&mut s); // expected-error {{use of partially moved value: `s`, s.a, s.b are moved}}
+  }
+} // expected-error {{field memory leak of value: `s`, s.a is leak}}
+
+void test15(int *owned q) {
+  int *owned p = q;
+  while (p != nullptr) {
+    foo1(&mut p);
+  }
+}

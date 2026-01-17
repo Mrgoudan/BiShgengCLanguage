@@ -135,7 +135,7 @@ public:
 
     llvm::SmallVector<OwnershipDiagInfo>
     checkOPSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr,
-                bool isStar = false);
+                bool isStar, bool isAddrMut);
     llvm::SmallVector<OwnershipDiagInfo>
     checkOPSFieldUse(const VarDecl *VD, const SourceLocation &Loc,
                      std::string fullFieldName, bool isGetAddr);
@@ -148,7 +148,7 @@ public:
                         std::string fullFieldName);
 
     llvm::SmallVector<OwnershipDiagInfo>
-    checkSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr);
+    checkSUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isAddrMut);
     llvm::SmallVector<OwnershipDiagInfo>
     checkSFieldUse(const VarDecl *VD, const SourceLocation &Loc,
                    std::string fullFieldName, bool isGetAddr);
@@ -159,7 +159,7 @@ public:
                       std::string fullFieldName);
 
     llvm::SmallVector<OwnershipDiagInfo>
-    checkBOPUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr);
+    checkBOPUse(const VarDecl *VD, const SourceLocation &Loc, bool isGetAddr, bool isAddrMut);
     llvm::SmallVector<OwnershipDiagInfo>
     checkBOPFieldUse(const VarDecl *VD, const SourceLocation &Loc,
                      std::string fullFieldName, bool isGetAddr);
