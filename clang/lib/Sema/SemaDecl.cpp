@@ -4112,6 +4112,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
         return true;
       }
+      if (HasDiffNullabilityParamsTypeAtBothFunction(Old->getType(),
+                                                      New->getType())) {
+        Diag(New->getLocation(), diag::err_conflicting_types) << New;
+        Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
+        return true;
+      }
       if (New->getOverloadedOperator() != Old->getOverloadedOperator()) {
         Diag(New->getLocation(), diag::err_conflicting_types) << New;
         Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();

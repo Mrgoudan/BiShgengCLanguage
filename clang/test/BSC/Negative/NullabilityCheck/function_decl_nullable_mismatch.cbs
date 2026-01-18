@@ -1,0 +1,46 @@
+// RUN: %clang_cc1 -verify %s
+
+// Test that declaration and definition with different nullability qualifiers
+// should report conflicting types error
+
+// Test 1: Declaration without _Nullable, definition with _Nullable
+safe int *owned foo1(void);  // expected-note {{previous declaration is here}}
+
+safe int *owned _Nullable foo1(void) {  // expected-error {{conflicting types for 'foo1'}}
+  return nullptr;
+}
+
+// Test 2: Declaration with _Nullable, definition without _Nullable
+safe int *borrow _Nullable foo2(int *borrow p);  // expected-note {{previous declaration is here}}
+
+safe int *borrow foo2(int *borrow p) {  // expected-error {{conflicting types for 'foo2'}}
+  return p;
+}
+
+// Test 3: Parameters with different nullability qualifiers
+safe void foo3(int *owned p);  // expected-note {{previous declaration is here}}
+
+safe void foo3(int *owned _Nullable p) {  // expected-error {{conflicting types for 'foo3'}}
+}
+
+// Test 4: Nested pointer with different nullability
+safe int **owned foo4(void);  // expected-note {{previous declaration is here}}
+
+safe int **owned _Nullable foo4(void) {  // expected-error {{conflicting types for 'foo4'}}
+  return nullptr;
+}
+
+// Test 5: Both declaration and definition have same _Nullable (should pass)
+safe int *owned _Nullable foo5(void);
+
+safe int *owned _Nullable foo5(void) {
+  return nullptr;
+}
+
+// Test 6: Both declaration and definition without _Nullable (should pass)
+safe int *owned foo6(void);
+
+safe int *owned foo6(void) {
+  int *owned p = nullptr;
+  return p;
+}

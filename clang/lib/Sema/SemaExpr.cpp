@@ -10524,6 +10524,10 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
             return IncompatibleBorrowPointer;
           }
         }
+        // Check nullability qualifiers for nested pointers
+        if (!CheckNullabilityQualTypeAssignment(LHSType, RHS.get())) {
+          return IncompatiblePointer;
+        }
       }
     }
 

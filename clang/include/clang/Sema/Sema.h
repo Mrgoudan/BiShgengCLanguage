@@ -12413,6 +12413,10 @@ public:
   void setInstantiationSafeZoneSpecifier(SafeZoneSpecifier SZ);
   bool HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
                                                     QualType RHS);
+  bool HasDiffNullabilityParamsTypeAtBothFunction(QualType LHS,
+                                                   QualType RHS);
+  bool CheckNullabilityQualTypeAssignment(QualType LHSType, QualType RHSType);
+  bool CheckNullabilityQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
   ExprResult CheckBSCConstexprCondition(SourceLocation Loc, Expr *CondExpr, bool IsConstexpr);
   // borrow
   bool IsAddrBorrowDerefOp(ExprResult &Operand);

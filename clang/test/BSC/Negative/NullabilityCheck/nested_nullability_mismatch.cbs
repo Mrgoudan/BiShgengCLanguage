@@ -1,0 +1,52 @@
+// RUN: %clang_cc1 -verify %s
+
+// Test that nested pointer nullability qualifiers are checked recursively
+
+// Test 1: Nested pointer - Nullable to Nonnull (should fail)
+void foo1(int *_Nonnull *);  // expected-note {{passing argument to parameter here}}
+
+void test1() {
+  int *_Nullable p = 0;
+  foo1(&p);  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} \
+             // expected-warning {{incompatible pointer types passing 'int * _Nullable *' to parameter of type 'int * _Nonnull *'}}
+}
+
+// Test 2: Triple nested pointer - Nullable to Nonnull (should fail)
+void foo2(int *_Nonnull **);  // expected-note {{passing argument to parameter here}}
+
+void test2() {
+  int *_Nullable *p = 0;
+  foo2(&p);  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} \
+             // expected-warning {{incompatible pointer types passing 'int * _Nullable **' to parameter of type 'int * _Nonnull **'}}
+}
+
+// Test 3: Nested pointer - both Nullable (should pass)
+void foo3(int *_Nullable *);
+
+void test3() {
+  int *_Nullable p = 0;
+  foo3(&p);
+}
+
+// Test 4: Nested pointer - both Nonnull (should pass)
+void foo4(int *_Nonnull *);
+
+void test4() {
+  int *_Nonnull p = (int*)0x1234;
+  foo4(&p);
+}
+
+// Test 5: Assignment case - Nullable to Nonnull (should fail)
+void test5() {
+  int *_Nullable p1 = 0;
+  int *_Nonnull *p2;
+  p2 = &p1;  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} \
+             // expected-warning {{incompatible pointer types assigning to 'int * _Nonnull *' from 'int * _Nullable *'}}
+}
+
+// Test 6: Assignment case - both Nullable (should pass)
+void test6() {
+  int *_Nullable p1 = 0;
+  int *_Nullable *p2;
+  p2 = &p1;
+}

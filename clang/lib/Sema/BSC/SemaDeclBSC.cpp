@@ -69,6 +69,13 @@ void Sema::CheckBSCConstexprVarType(VarDecl* VD) {
   }
 }
 
+bool HasDiffNullabilityQualifiers(QualType LHSType, QualType RHSType,
+                                   ASTContext &Ctx) {
+  Optional<NullabilityKind> LHSNullability = LHSType->getNullability(Ctx);
+  Optional<NullabilityKind> RHSNullability = RHSType->getNullability(Ctx);
+  return LHSNullability != RHSNullability;
+}
+
 bool HasDiffBorrorOrOwnedQualifiers(QualType LHSType, QualType RHSType) {
   if (LHSType.isOwnedQualified() != RHSType.isOwnedQualified()) {
     return true;
@@ -108,6 +115,77 @@ bool Sema::HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
     }
   }
   return false;
+}
+
+bool Sema::HasDiffNullabilityParamsTypeAtBothFunction(QualType LHS,
+                                                      QualType RHS) {
+  const FunctionProtoType *LSHFuncType = LHS->getAs<FunctionProtoType>();
+  const FunctionProtoType *RSHFuncType = RHS->getAs<FunctionProtoType>();
+  if (!LSHFuncType || !RSHFuncType) {
+    return false;
+  }
+
+  QualType LHSRetType = LSHFuncType->getReturnType();
+  QualType RHSRetType = RSHFuncType->getReturnType();
+  if (HasDiffNullabilityQualifiers(LHSRetType, RHSRetType, Context)) {
+    return true;
+  }
+  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
+    return true;
+  }
+  for (unsigned i = 0; i < LSHFuncType->getNumParams(); i++) {
+    QualType LHSParType = LSHFuncType->getParamType(i);
+    QualType RHSParType = RSHFuncType->getParamType(i);
+    if (HasDiffNullabilityQualifiers(LHSParType, RHSParType, Context)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Check nullability qualifier compatibility recursively for nested pointers
+bool Sema::CheckNullabilityQualTypeAssignment(QualType LHSType, QualType RHSType) {
+  const auto *LHSPtrType = LHSType->getAs<PointerType>();
+  const auto *RHSPtrType = RHSType->getAs<PointerType>();
+
+  // If both are pointers, check recursively
+  if (LHSPtrType && RHSPtrType) {
+    // Get nullability of pointee types
+    QualType LHSPointee = LHSPtrType->getPointeeType();
+    QualType RHSPointee = RHSPtrType->getPointeeType();
+
+    Optional<NullabilityKind> LHSNullability = LHSPointee->getNullability(Context);
+    Optional<NullabilityKind> RHSNullability = RHSPointee->getNullability(Context);
+
+    // Check if nullability qualifiers are incompatible
+    // Nullable cannot be assigned to nonnull
+    if (LHSNullability && RHSNullability) {
+      if (*LHSNullability == NullabilityKind::NonNull &&
+          (*RHSNullability == NullabilityKind::Nullable ||
+           *RHSNullability == NullabilityKind::NullableResult)) {
+        return false;
+      }
+    }
+
+    // Recursively check nested pointers
+    if (LHSPointee->isPointerType() && RHSPointee->isPointerType()) {
+      return CheckNullabilityQualTypeAssignment(LHSPointee, RHSPointee);
+    }
+  }
+
+  return true;
+}
+
+bool Sema::CheckNullabilityQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
+  QualType RHSType = RHSExpr->getType();
+  bool Result = CheckNullabilityQualTypeAssignment(LHSType, RHSType);
+
+  if (!Result) {
+    Diag(RHSExpr->getBeginLoc(), diag::err_nonnull_assigned_by_nullable)
+        << RHSType << LHSType;
+  }
+
+  return Result;
 }
 
 // Return true if any memory safe features are found in a FunctionDecl.

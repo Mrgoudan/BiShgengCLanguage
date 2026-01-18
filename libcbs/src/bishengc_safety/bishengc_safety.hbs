@@ -23,7 +23,7 @@ safe void bsc_unwrap_failed(void);
 safe void bsc_refcell_mut_borrow_failed(void);
 safe void bsc_refcell_immut_borrow_failed(void);
 
-safe void safe_free(void * owned p);
+safe void safe_free(void * _Nullable owned p);
 
 // Takes ownership and “forgets” about the value without running its destructor.
 safe void forget<T>(T t) {
