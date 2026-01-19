@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -verify %s
+
+typedef struct {
+  int a;
+} A;
+
+typedef struct {
+  int a;
+  int b;
+} B;
+
+B *borrow borrow_bak_offset(A *owned *borrow, int);
+void use(B *borrow header);
+
+A *owned test1() {
+  A *owned block = nullptr;
+  B *borrow header = nullptr;
+  header = borrow_bak_offset((&mut block), sizeof(B)); // expected-note {{`block` is borrowed here}}
+  A *owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
+  use(header);
+  return block2;
+}
+
+A *owned test2() {
+  A *owned block = nullptr;
+  B *borrow header = nullptr;
+  header = borrow_bak_offset(((&mut block)), sizeof(B)); // expected-note {{`block` is borrowed here}}
+  A *owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
+  use(header);
+  return block2;
+}

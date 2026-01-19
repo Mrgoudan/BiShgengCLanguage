@@ -679,9 +679,14 @@ public:
     } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
       E = ReplaceWithTemporaryVariableAndWrap(E);
       replacedNodesMap.Insert(E, BO);
+    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      if (NeedToReplace) {
+        E = ReplaceWithTemporaryVariableAndWrap(UO);
+        replacedNodesMap.Insert(E, UO);
+      }
     }
-    PE->setSubExpr(E);
 
+    PE->setSubExpr(E);
     return PE;
   }
 
