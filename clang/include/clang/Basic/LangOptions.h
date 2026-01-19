@@ -81,13 +81,8 @@ public:
   using RoundingMode = llvm::RoundingMode;
 
 #if ENABLE_BSC
-  enum NullCheckZone { 
-    NC_NONE,
-    NC_SAFE,
-    NC_ALL
-  };
+  enum NullCheckZone { NC_NONE, NC_SAFE, NC_ALL };
 #endif
-
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };
 
@@ -551,20 +546,19 @@ public:
   /// Returns true if functions without prototypes or functions with an
   /// identifier list (aka K&R C functions) are not allowed.
   bool requiresStrictPrototypes() const {
-    return CPlusPlus || C2x ||
-    DisableKNRFunctions;
+    return CPlusPlus || C2x || DisableKNRFunctions;
   }
 
   /// Returns true if implicit function declarations are allowed in the current
   /// language mode.
   bool implicitFunctionsAllowed() const {
-    return !requiresStrictPrototypes() && !OpenCL
-    #if ENABLE_BSC
-    //Bisheng C disallow impllicit function declarations to strengthen safety and
-    //relibility. 
-      && !BSC
-    #endif
-    ;
+#if ENABLE_BSC
+    // Bisheng C disallow impllicit function declarations to strengthen
+    // safety and relibility.
+    return !requiresStrictPrototypes() && !OpenCL && !BSC;
+#else
+    return !requiresStrictPrototypes() && !OpenCL;
+#endif
   }
 
   /// Returns true if implicit int is part of the language requirements.

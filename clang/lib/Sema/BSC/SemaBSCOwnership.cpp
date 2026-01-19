@@ -58,8 +58,7 @@ bool Sema::CheckOwnedDecl(SourceLocation ErrLoc, QualType T) {
 //   - owned int * a[3]      (owned int inside array of pointers)
 void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
   // Early exit if feature is disabled or owned not explicitly specified
-  if (!getLangOpts().BSC || getLangOpts().DisableOwnershipCheck ||
-      !DS.getOwnedSpecLoc().isValid())
+  if (!getLangOpts().BSC || !DS.getOwnedSpecLoc().isValid())
     return;
 
   // Helper to check if a type can validly have owned qualifier

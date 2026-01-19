@@ -79,11 +79,11 @@ namespace types {
 
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
-  
-  #if ENABLE_BSC
+
+#if ENABLE_BSC
   /// isBSC - Is this a "BSC" input (BSC sources and headers).
   bool isBSC(ID Id);
-  #endif
+#endif
 
   /// Is this LLVM IR.
   bool isLLVMIR(ID Id);

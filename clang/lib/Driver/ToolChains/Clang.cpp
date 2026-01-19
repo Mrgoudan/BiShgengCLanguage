@@ -756,13 +756,13 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   CmdArgs.push_back("-x");
   if (Args.hasArg(options::OPT_rewrite_objc))
     CmdArgs.push_back(types::getTypeName(types::TY_PP_ObjCXX));
-  #if ENABLE_BSC
+#if ENABLE_BSC
   else if (Args.hasArg(options::OPT_rewrite_bsc)) {
     CmdArgs.push_back(types::getTypeName(types::TY_PP_BSC));
     if (Args.hasArg(options::OPT_rewrite_bsc_line))
       CmdArgs.push_back("-line");
   }
-  #endif
+#endif
   else {
     // Map the driver type to the frontend type. This is mostly an identity
     // mapping, except that the distinction between module interface units
@@ -1476,7 +1476,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
         });
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   // Add bsc include arguments, if needed.
   if (types::isBSC(Inputs[0].getType())) {
     forAllAssociatedToolChains(C, JA, getToolChain(),
@@ -1484,7 +1484,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                  TC.AddClangBSCSystemIncludeArgs(Args, CmdArgs);
                                });
   }
-  #endif
+#endif
 
   // Add system include arguments for all targets but IAMCU.
   if (!IsIAMCU)
@@ -4691,11 +4691,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-Eonly");
     else {
       CmdArgs.push_back("-E");
-      if ((Args.hasArg(options::OPT_rewrite_objc)
-          #if ENABLE_BSC
-          || Args.hasArg(options::OPT_rewrite_bsc)
-          #endif
-          ) &&
+#if ENABLE_BSC
+      if ((Args.hasArg(options::OPT_rewrite_objc) ||
+           Args.hasArg(options::OPT_rewrite_bsc)) &&
+#else
+      if (Args.hasArg(options::OPT_rewrite_objc) &&
+#endif
           !Args.hasArg(options::OPT_g_Group))
         CmdArgs.push_back("-P");
       else if (JA.getType() == types::TY_PP_CXXHeaderUnit)
@@ -4765,11 +4766,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
-    #if ENABLE_BSC
+#if ENABLE_BSC
     } else if (JA.getType() == types::TY_RewrittenBSC ||
                JA.getType() == types::TY_RewrittenBSCHeader) {
       CmdArgs.push_back("-rewrite-bsc");
-    #endif
+#endif
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }
@@ -4826,7 +4827,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back(Args.MakeArgString("-nullability-check=" + v));
   }
-    
 #endif
 
   auto *MemProfArg = Args.getLastArg(options::OPT_fmemory_profile,

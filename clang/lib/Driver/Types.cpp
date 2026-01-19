@@ -104,33 +104,16 @@ bool types::onlyPrecompileType(ID Id) {
 
 bool types::canTypeBeUserSpecified(ID Id) {
   static const clang::driver::types::ID kStaticLangageTypes[] = {
-      TY_CUDA_DEVICE,
-      TY_HIP_DEVICE,
-      TY_PP_CHeader,
+      TY_CUDA_DEVICE,   TY_HIP_DEVICE,    TY_PP_CHeader,
 #if ENABLE_BSC
-      TY_PP_BSCHeader,
+      TY_PP_BSCHeader,  TY_RewrittenBSC,  TY_RewrittenBSCHeader,
 #endif
-      TY_PP_ObjCHeader,
-      TY_PP_CXXHeader,
-      TY_PP_ObjCXXHeader,
-      TY_PP_CXXModule,
-      TY_LTO_IR,
-      TY_LTO_BC,
-      TY_Plist,
-      TY_RewrittenObjC,
-      TY_RewrittenLegacyObjC,
-#if ENABLE_BSC
-      TY_RewrittenBSC,
-      TY_RewrittenBSCHeader,
-#endif
-      TY_Remap,
-      TY_PCH,
-      TY_Object,
-      TY_Image,
-      TY_dSYM,
-      TY_Dependencies,
-      TY_CUDA_FATBIN,
-      TY_HIP_FATBIN};
+      TY_PP_ObjCHeader, TY_PP_CXXHeader,  TY_PP_ObjCXXHeader,
+      TY_PP_CXXModule,  TY_LTO_IR,        TY_LTO_BC,
+      TY_Plist,         TY_RewrittenObjC, TY_RewrittenLegacyObjC,
+      TY_Remap,         TY_PCH,           TY_Object,
+      TY_Image,         TY_dSYM,          TY_Dependencies,
+      TY_CUDA_FATBIN,   TY_HIP_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
