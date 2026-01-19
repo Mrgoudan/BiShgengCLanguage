@@ -57,7 +57,7 @@ struct H {
 
 __attribute__((operator []))
 safe int * borrow deref2(struct H * borrow h, int i) {
-    return &mut(h->g[i].a);
+    return unsafe(&mut(h->g[i].a));
 }
 
 int test2() {
@@ -88,7 +88,7 @@ struct J {
 
 __attribute__((operator []))
 safe const int * borrow deref3(const struct J * borrow j, int n) {
-    return &const(j->i[n].a);
+    return unsafe(&const(j->i[n].a));
 }
 
 int test3() {
@@ -114,7 +114,7 @@ struct L {
 
 __attribute__((operator []))
 safe struct K * borrow deref4(struct L * borrow h, int i) {
-    return &mut(h->g[i]);
+    return unsafe(&mut(h->g[i]));
 }
 
 int test4() {
@@ -140,7 +140,6 @@ struct Data<T> {
 struct DataArray<T> {
   Data<T> array[10];
 };
-
 __attribute__((operator []))
 struct Data<T> * borrow deref5<T>(struct DataArray<T> * borrow da, int i) {
     return &mut(da->array[i]);
@@ -251,7 +250,7 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      int * deref2(struct H * h, int i) {
-// CHECK-NEXT:     return &(h->g[i].a);
+// CHECK-NEXT:     return (&(h->g[i].a));
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      int test2(void) {
@@ -271,7 +270,7 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      const int * deref3(const struct J * j, int n) {
-// CHECK-NEXT:     return &(j->i[n].a);
+// CHECK-NEXT:     return (&(j->i[n].a));
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      int test3(void) {
@@ -287,7 +286,7 @@ int main() {
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      struct K * deref4(struct L * h, int i) {
-// CHECK-NEXT:     return &(h->g[i]);
+// CHECK-NEXT:     return (&(h->g[i]));
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      int test4(void) {

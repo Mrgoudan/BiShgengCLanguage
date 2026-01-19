@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that both *ptr and ptr[0] are forbidden in safe zone for raw pointers
+safe void test(void) {
+    int a = 0;
+    int* ptr = unsafe(&a);
+
+    // Both of these should be errors as they are equivalent operations
+    *ptr = 1;   // expected-error {{'*' operator is forbidden in the safe zone}}
+    ptr[0] = 1; // expected-error {{'[]' operator is forbidden in the safe zone}}
+}
+
+// Test that array access syntax is also forbidden for reading
+safe void test2(void) {
+    int arr[10] = {0};
+    int* ptr = unsafe(&arr[0]);
+
+    int val1 = *ptr;   // expected-error {{'*' operator is forbidden in the safe zone}}
+    int val2 = ptr[0]; // expected-error {{'[]' operator is forbidden in the safe zone}}
+    int val3 = ptr[5]; // expected-error {{'[]' operator is forbidden in the safe zone}}
+}

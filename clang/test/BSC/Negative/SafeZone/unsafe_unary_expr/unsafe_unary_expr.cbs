@@ -7,6 +7,7 @@ int main(void) {
     ++a;          // expected-error {{'++' operator is forbidden in the safe zone}}
     --a;          // expected-error {{'--' operator is forbidden in the safe zone}}
     int c = *b;   // expected-error {{'*' operator is forbidden in the safe zone}}
+    int d = b[0]; // expected-error {{'[]' operator is forbidden in the safe zone}}
     // &const、&mut   (waiting complement...)
   }
   return 0;

@@ -41,7 +41,7 @@ safe const T* borrow Vec<T>::get(const Vec<T>* borrow this, size_t index) {
 			bsc_out_of_bound_handler(this->len, index);
 		}
 	}
-	return &const this->buf.ptr[index];
+	unsafe return &const this->buf.ptr[index];
 }
 
 safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
@@ -50,7 +50,7 @@ safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
 			bsc_out_of_bound_handler(this->len, index);
 		}
 	}
-	return &mut this->buf.ptr[index];
+	unsafe return &mut this->buf.ptr[index];
 }
 
 safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this) {
@@ -82,7 +82,7 @@ safe T Vec<T>::pop(Vec<T>* borrow this) {
 		}
 	}
 	this->len -= 1;
-	T ret = this->buf.ptr[this->len];
+	unsafe T ret = this->buf.ptr[this->len];
 	return ret;
 }
 

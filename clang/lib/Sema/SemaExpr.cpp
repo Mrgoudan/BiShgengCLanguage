@@ -5992,6 +5992,16 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     return ExprError(Diag(LLoc, diag::err_typecheck_subscript_value)
        << LHSExp->getSourceRange() << RHSExp->getSourceRange());
   }
+
+  #if ENABLE_BSC
+  // Check if array subscript on raw pointer is used in safe zone
+  // Array subscript ptr[i] is equivalent to *(ptr + i), so we apply
+  // the same safety check as dereference operator
+  if (getLangOpts().BSC) {
+    DiagnoseInvalidArraySubscriptInSafeZone(LLoc, BaseExpr->getType());
+  }
+  #endif
+
   // C99 6.5.2.1p1
   if (!IndexExpr->getType()->isIntegerType() && !IndexExpr->isTypeDependent())
     return ExprError(Diag(LLoc, diag::err_typecheck_subscript_not_integer)

@@ -56,10 +56,10 @@ safe void test_union_array_access(void) {
   union U arr[3] = {};
 
   // error: accessing union member in array element
-  arr[0].x = 5; // expected-error{{access to union field is unsafe and requires unsafe block}}
+  arr[0].x = 5; // expected-error{{'[]' operator is forbidden in the safe zone}} // expected-error{{access to union field is unsafe and requires unsafe block}}
 
   // error: reading from array element
-  int val = arr[1].x; // expected-error{{access to union field is unsafe and requires unsafe block}}
+  int val = arr[1].x; // expected-error{{'[]' operator is forbidden in the safe zone}} // expected-error{{access to union field is unsafe and requires unsafe block}}
 }
 
 // Union member access in safe block within unsafe function

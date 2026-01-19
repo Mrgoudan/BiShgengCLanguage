@@ -12403,6 +12403,8 @@ public:
                                                  QualType Type);
   void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
                                           UnaryOperatorKind Opc, QualType Type);
+  void DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
+                                               QualType BaseType);
   void DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
                                                    QualType DeclType);
   void DiagnoseUnionTypeInSafeZone(SourceLocation Loc, QualType Type);

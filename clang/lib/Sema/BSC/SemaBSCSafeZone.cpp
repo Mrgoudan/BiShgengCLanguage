@@ -536,6 +536,20 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   }
 }
 
+void Sema::DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
+                                                   QualType BaseType) {
+  if (!IsInSafeZone())
+    return;
+
+  // Array subscript on a raw pointer is equivalent to dereferencing,
+  // so we apply the same check as UO_Deref
+  if (!BaseType.isNull() && BaseType->isPointerType() &&
+      !BaseType.getCanonicalType().isOwnedQualified() &&
+      !BaseType.getCanonicalType().isBorrowQualified()) {
+    Diag(LBracLoc, diag::err_unsafe_action) << "'[]' operator";
+  }
+}
+
 void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
                                                        QualType DeclType) {
   // For types that can be uninitialized (types without pointers),
