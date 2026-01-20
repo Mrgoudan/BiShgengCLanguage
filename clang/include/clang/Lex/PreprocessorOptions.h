@@ -96,11 +96,6 @@ public:
   /// The implicit PCH included at the start of the translation unit, or empty.
   std::string ImplicitPCHInclude;
 
-#if ENABLE_BSC
-  /// Opt string for lto
-  std::string OptString;
-#endif
-
   /// Headers that will be converted to chained PCHs in memory.
   std::vector<std::string> ChainedIncludes;
 
@@ -256,9 +251,6 @@ public:
     ChainedIncludes.clear();
     DumpDeserializedPCHDecls = false;
     ImplicitPCHInclude.clear();
-#if ENABLE_BSC
-    OptString.clear();
-#endif
     SingleFileParseMode = false;
     LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;

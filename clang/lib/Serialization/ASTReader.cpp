@@ -2989,11 +2989,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.InputFilesLoaded.resize(NumInputs);
       F.NumUserInputFiles = NumUserInputs;
       break;
-
-    #if ENABLE_BSC
-    case OPT_STRING:
-      break;
-    #endif
     }
   }
 }

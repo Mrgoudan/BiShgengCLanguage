@@ -803,9 +803,6 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // Control Block.
   BLOCK(CONTROL_BLOCK);
-#if ENABLE_BSC
-  RECORD(OPT_STRING);
-#endif
   RECORD(METADATA);
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
@@ -1223,20 +1220,6 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Stream.EnterSubblock(CONTROL_BLOCK_ID, 5);
   RecordData Record;
 
-#if ENABLE_BSC
-  // add lto opt string
-  std::string OptString = PP.getPreprocessorOpts().OptString;
-  if (!OptString.empty()) {
-    OptString = OptString + '\0';
-    auto Abbrev = std::make_shared<BitCodeAbbrev>();
-    Abbrev->Add(BitCodeAbbrevOp(OPT_STRING));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
-    Record = {OPT_STRING};
-    Stream.EmitRecordWithBlob(AbbrevCode, Record, OptString);
-    Record.clear();
-  }
-#endif
   // Metadata
   auto MetadataAbbrev = std::make_shared<BitCodeAbbrev>();
   MetadataAbbrev->Add(BitCodeAbbrevOp(METADATA));

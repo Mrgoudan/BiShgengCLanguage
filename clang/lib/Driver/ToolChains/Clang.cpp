@@ -4817,8 +4817,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
 #if ENABLE_BSC
-  if (Args.getLastArg(options::OPT_opt_string))
-    Args.AddLastArg(CmdArgs, options::OPT_opt_string);
   if (Args.hasArg(options::OPT_nullability_check)) {
     Arg *A = Args.getLastArg(options::OPT_nullability_check);
     StringRef v = A->getValue();
