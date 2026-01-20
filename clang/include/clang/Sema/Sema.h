@@ -12404,8 +12404,10 @@ public:
   void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
                                           UnaryOperatorKind Opc, QualType Type,
                                           Expr *InputExpr = nullptr);
+#if ENABLE_BSC_FUTURE
   void DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
                                                QualType BaseType);
+#endif
   void DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
                                                    QualType DeclType);
   void DiagnoseUnionTypeInSafeZone(SourceLocation Loc, QualType Type);

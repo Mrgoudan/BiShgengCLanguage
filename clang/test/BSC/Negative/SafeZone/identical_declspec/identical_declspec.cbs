@@ -50,6 +50,7 @@ int main() {
   pfun = fun;
 
 safe {
+  // Note: Global variable modification restriction requires ENABLE_BSC_FUTURE
   unpfun = safun;   // expected-error {{incompatible function pointer types assigning to 'int (*)(int, int)' from 'safe int (int, int)'}}
   unpfun = unfun;
   unpfun = fun;

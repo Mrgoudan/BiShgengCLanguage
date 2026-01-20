@@ -9,21 +9,21 @@
 int *g_a;
 safe void test_safe_stmt1(void) {
     int v = 1;
-    g_a = unsafe(&v);
+    unsafe g_a = &v;
     int *borrow a = unsafe(&mut *g_a);
     int b = *a;
 }
 
 safe void test_safe_stmt2(void) {
     int v = 1;
-    g_a = unsafe(&v);
+    unsafe g_a = &v;
     int b = 0;
     b = unsafe(*g_a);
 }
 
 safe void test_safe_stmt3(void){
     int v = 1;
-    g_a = unsafe(&v);
+    unsafe g_a = &v;
     for(int i = 0; i < 10; i = i + 1) {
         int b = unsafe(*g_a);
     }
@@ -53,21 +53,21 @@ int main() {
 // CHECK-EMPTY: 
 // CHECK:      void test_safe_stmt1(void) {
 // CHECK-NEXT:     int v = 1;
-// CHECK-NEXT:     g_a = (&v);
+// CHECK-NEXT:     g_a = &v;
 // CHECK-NEXT:     int * a = (&*g_a);
 // CHECK-NEXT:     int b = *a;
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      void test_safe_stmt2(void) {
 // CHECK-NEXT:     int v = 1;
-// CHECK-NEXT:     g_a = (&v);
+// CHECK-NEXT:     g_a = &v;
 // CHECK-NEXT:     int b = 0;
 // CHECK-NEXT:     b = (*g_a);
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      void test_safe_stmt3(void) {
 // CHECK-NEXT:     int v = 1;
-// CHECK-NEXT:     g_a = (&v);
+// CHECK-NEXT:     g_a = &v;
 // CHECK-NEXT:     for (int i = 0; i < 10; i = i + 1) {
 // CHECK-NEXT:         int b = (*g_a);
 // CHECK-NEXT:     }

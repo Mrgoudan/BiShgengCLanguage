@@ -265,9 +265,8 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
     return true;
   }
 
-  // Init a owned or borrow pointer by nullptr is allowed in the safe zone
-  if ((DestType.isOwnedQualified() && DestType->isPointerType()) ||
-      DestType.isBorrowQualified()) {
+  // Init any pointer (raw, owned, or borrow) by nullptr is allowed in the safe zone
+  if (DestType->isPointerType()) {
     if (isa<CXXNullPtrLiteralExpr>(E))
       return true;
     // String literal to const char * borrow is safe
@@ -563,6 +562,7 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   }
 }
 
+#if ENABLE_BSC_FUTURE
 void Sema::DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
                                                    QualType BaseType) {
   if (!IsInSafeZone())
@@ -576,6 +576,7 @@ void Sema::DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
     Diag(LBracLoc, diag::err_unsafe_action) << "'[]' operator";
   }
 }
+#endif
 
 void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
                                                        QualType DeclType) {

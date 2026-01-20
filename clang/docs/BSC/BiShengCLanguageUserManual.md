@@ -2573,7 +2573,7 @@ int main() {
 
 14. 安全区内对变量声明的初始化要求。
 
-   - 所有指针类型（裸指针、`owned`指针、`borrow`指针、函数指针）的变量必须初始化；
+   - 所有指针类型（裸指针、`owned`指针、`borrow`指针、函数指针）的变量必须初始化，可以使用`nullptr`进行初始化；
    - 包含指针字段（包括函数指针）的`struct`与`union`类型的变量必须初始化；
    - 布尔类型（`_Bool`）、基本数据类型（`int`、`float`、`char`等）、不含指针字段的`struct`类型、`union`类型的变量可以不初始化；
    - 对于指针类型及包含指针字段的`struct`类型，使用初始化列表做初始化时必须是完整的初始化列表，不允许部分初始化；
@@ -2614,8 +2614,12 @@ void test() {
     union U u;
     // error: 指针类型必须初始化
     int *p;
+    // ok: 指针类型可以用 nullptr 初始化
+    int *p1 = nullptr;
     // error: 函数指针必须初始化
     int (*fp)(int);
+    // ok: 函数指针可以用 nullptr 初始化
+    int (*fp1)(int) = nullptr;
     // error: 包含指针字段的 struct 必须初始化
     struct T t1;
     // error: 包含函数指针字段的 struct 必须初始化
@@ -2623,7 +2627,7 @@ void test() {
     // error: 包含指针字段的 struct 不允许部分初始化
     struct T t2 = {0};  // 只初始化了 ptr，value 未初始化
     // ok: 包含指针字段的 struct 完整初始化
-    struct T t3 = {NULL, 0};
+    struct T t3 = {nullptr, 0};
     // error: 包含指针字段的 union 必须初始化
     union V v;
   }
@@ -2664,7 +2668,7 @@ int main() {
 }
 ```
 
-16. 安全区内不允许访问`union`的成员（读或写），不允许裸指针通过`->`访问成员，不允许对裸指针使用数组下标运算符`[]`（等价于解引用操作）。
+16. 安全区内不允许访问`union`的成员（读或写），不允许裸指针通过`->`访问成员。
 
     安全区内允许定义和声明`union`类型，允许`union`作为函数参数和返回类型，但不允许通过`.`操作符访问`union`的任何成员。
 
@@ -2702,8 +2706,6 @@ void test(void) {
     b.age = 20;
     // error: 安全区不允许裸指针通过"->"访问成员
     int g = e->age;
-    // error: 安全区不允许对裸指针使用数组下标运算符
-    int k = e[0].age;
     // ok: 允许owned指针通过"->"访问成员
     int h = f->age;
     // ok: 允许borrow指针通过"->"访问成员
@@ -2721,8 +2723,6 @@ int main() {
 
     安全区内不允许解引用裸指针类型，但可以解引用`owend`指针类型和`borrow`指针类型。
 
-    安全区内不允许对裸指针使用数组下标运算符`[]`，因为根据 C 标准，`ptr[i]` 等价于 `*(ptr + i)`，本质上是解引用操作。
-
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 
@@ -2733,15 +2733,13 @@ void test() {
     int *b = &a;
     // error: 安全区不允许解引用裸指针
     int c = *b;
-    // error: 安全区不允许对裸指针使用数组下标运算符（等价于解引用）
-    int d = b[0];
-    int *owned e = safe_malloc(2);
+    int *owned d = safe_malloc(2);
     // ok: 允许解引用owned指针
-    int f = *e;
-    safe_free((void *owned)e);
-    int *borrow g = &mut a;
+    int e = *d;
+    safe_free((void *owned)d);
+    int *borrow f = &mut a;
     // ok: 允许解引用borrow指针
-    int h = *g;
+    int g = *f;
   }
 }
 

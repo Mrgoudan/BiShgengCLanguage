@@ -4,15 +4,16 @@ int main(void) {
   int a = 0;
   int *b = &a;
   safe {
-    ++a;          // allowed
-    --a;          // allowed
+    ++a;          // ok: ++ on integers is allowed
+    --a;          // ok: -- on integers is allowed
     int c = *b;   // expected-error {{'*' operator is forbidden in the safe zone}}
-    int d = b[0]; // expected-error {{'[]' operator is forbidden in the safe zone}}
+    // Note: [] operator restriction on raw pointers requires ENABLE_BSC_FUTURE
+    int d = b[0];
     int x = 0;
     const int *borrow cb = &const x;
     int y = *cb;
     int *borrow mb = &mut x;
-    int z = ++*mb;
+    int z = ++*mb; // ok: ++ on dereferenced borrow pointer is allowed
     int w = *mb++; //#1
     int * p = &x; // expected-error {{'&' operator is forbidden in the safe zone}}
   }

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// REQUIRES: ENABLE_BSC_FUTURE
 
 // Test that both *ptr and ptr[0] are forbidden in safe zone for raw pointers
+// Note: This feature requires ENABLE_BSC_FUTURE macro to be enabled.
 safe void test(void) {
     int a = 0;
     int* ptr = unsafe(&a);
