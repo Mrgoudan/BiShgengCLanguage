@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump -verify %s
+// RUN: %clang_cc1 -verify %s
 
 struct R {
     int * owned p;
@@ -84,7 +84,7 @@ void test() {
 	int * owned p3 = (int * owned)&a;
 
 	int * borrow b1 = &mut *p1; // legal
-    const int * borrow b2 = &mut *p2; // legal
+    const int * borrow b2 = &mut *p2; // expected-error {{the expression after '&mut' must be modifiable}}
     int * borrow b3 = &mut *p3; // legal
     const int * borrow b4 = &const *p1; // legal
     const int * borrow b5 = &const *p2; // legal

@@ -270,6 +270,16 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
       DestType.isBorrowQualified()) {
     if (isa<CXXNullPtrLiteralExpr>(E))
       return true;
+    // String literal to const char * borrow is safe
+    // Check if DestType is const char * borrow
+    if (DestType.isBorrowQualified() && DestType->isPointerType()) {
+      QualType Pointee = DestType->getPointeeType();
+      if (Pointee->isCharType() && Pointee.isConstQualified()) {
+        // Check if E is a string literal (possibly through parens/casts/ternary)
+        if (IsStringLiteralExpr(E))
+          return true;
+      }
+    }
   }
 
   bool IsSafeBehavior = true;
@@ -505,7 +515,8 @@ void Sema::DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
 
 void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
                                               UnaryOperatorKind Opc,
-                                              QualType T) {
+                                              QualType T,
+                                              Expr *InputExpr) {
   if (!IsInSafeZone())
     return;
 
@@ -531,8 +542,20 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   case UO_Deref: {
     if (!T.isNull() && T->isPointerType() &&
         !T.getCanonicalType().isOwnedQualified() &&
-        !T.getCanonicalType().isBorrowQualified())
-      Diag(OpLoc, diag::err_unsafe_action) << "'*' operator";
+        !T.getCanonicalType().isBorrowQualified()) {
+      // Allow dereferencing string literals for borrow conversion
+      // Check if we're dereferencing a pointer that came from a string literal
+      bool IsStringLiteralDeref = false;
+      if (InputExpr) {
+        Expr *Stripped = InputExpr->IgnoreParenImpCasts();
+        if (isa<StringLiteral>(Stripped)) {
+          IsStringLiteralDeref = true;
+        }
+      }
+      if (!IsStringLiteralDeref) {
+        Diag(OpLoc, diag::err_unsafe_action) << "'*' operator";
+      }
+    }
     break;
   }
   default:

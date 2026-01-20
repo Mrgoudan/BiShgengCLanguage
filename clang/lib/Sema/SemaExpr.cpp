@@ -6438,19 +6438,50 @@ bool Sema::CheckNeedReborrowPointerType(QualType actualType, QualType formalType
   return false;
 }
 
+/// Check if type is const char * borrow.
+static bool IsConstCharPtrBorrow(QualType Ty) {
+  if (!Ty.isBorrowQualified() || !Ty->isPointerType())
+    return false;
+  QualType Pointee = Ty->getPointeeType();
+  return Pointee->isCharType() && Pointee.isConstQualified();
+}
+
+/// Check if expression is or contains only string literals.
+bool Sema::IsStringLiteralExpr(Expr *E) {
+  if (!E)
+    return false;
+  E = E->IgnoreParenImpCasts();
+  if (isa<StringLiteral>(E))
+    return true;
+  // Check ternary where both branches are string literals
+  if (auto *Cond = dyn_cast<ConditionalOperator>(E))
+    return IsStringLiteralExpr(Cond->getTrueExpr()) && IsStringLiteralExpr(Cond->getFalseExpr());
+  return false;
+}
+
 /// InsertConstBorrowForStringLiteral - Insert &const * operators for string
-/// literal to const char * borrow conversion. This is a special case where we
-/// automatically convert string literals to borrow pointers for convenience.
-Expr *Sema::InsertConstBorrowForStringLiteral(Expr *StringLiteralExpr, SourceLocation Loc) {
+/// literal to const char * borrow conversion.
+Expr *Sema::InsertConstBorrowForStringLiteral(Expr *E, SourceLocation Loc) {
+  // Handle ternary by recursively converting both branches
+  E = E->IgnoreParens();
+  if (auto *Cond = dyn_cast<ConditionalOperator>(E)) {
+    Expr *True = InsertConstBorrowForStringLiteral(Cond->getTrueExpr(), Loc);
+    Expr *False = InsertConstBorrowForStringLiteral(Cond->getFalseExpr(), Loc);
+    return new (Context) ConditionalOperator(
+        Cond->getCond(), Cond->getQuestionLoc(), True,
+        Cond->getColonLoc(), False, True->getType(),
+        Cond->getValueKind(), Cond->getObjectKind());
+  }
+
   // String literal has type const char[N]
   // After array-to-pointer decay: const char *
 
   // Step 1: Apply array-to-pointer decay if not already done
-  Expr *DecayedExpr = StringLiteralExpr;
-  if (StringLiteralExpr->getType()->isArrayType()) {
-    ExprResult Decay = DefaultFunctionArrayConversion(StringLiteralExpr);
+  Expr *DecayedExpr = E;
+  if (E->getType()->isArrayType()) {
+    ExprResult Decay = DefaultFunctionArrayConversion(E);
     if (Decay.isInvalid())
-      return StringLiteralExpr;
+      return E;
     DecayedExpr = Decay.get();
   }
   // Now we have: const char *
@@ -6459,13 +6490,13 @@ Expr *Sema::InsertConstBorrowForStringLiteral(Expr *StringLiteralExpr, SourceLoc
   // Result: const char (lvalue)
   ExprResult DerefExpr = CreateBuiltinUnaryOp(Loc, UO_Deref, DecayedExpr);
   if (DerefExpr.isInvalid())
-    return StringLiteralExpr;
+    return E;
 
   // Step 3: Insert &const operator: &const (const char)
   // Result: const char * borrow
   ExprResult BorrowExpr = CreateBuiltinUnaryOp(Loc, UO_AddrConst, DerefExpr.get());
   if (BorrowExpr.isInvalid())
-    return StringLiteralExpr;
+    return E;
 
   return BorrowExpr.get();
 }
@@ -10512,6 +10543,19 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     if (!IsSafeConversion(LHSType, RHS.get())) {
       return IncompatibleBSCSafeZone;
     }
+
+    // BSC: Auto-convert string literals to const char * borrow
+    if (IsStringLiteralExpr(RHS.get())) {
+      if (IsConstCharPtrBorrow(LHSType)) {
+        RHS = InsertConstBorrowForStringLiteral(RHS.get(), RHS.get()->getBeginLoc());
+      } else if (Diagnose && LHSType.isBorrowQualified() && LHSType->isPointerType() &&
+                 LHSType->getPointeeType()->isCharType()) {
+        // Error: trying to mutably borrow string literal
+        Diag(RHS.get()->getBeginLoc(), diag::err_pass_string_literal_to_mut_borrow) << LHSType;
+        return IncompatibleBorrowPointer;
+      }
+    }
+
     QualType LHSCanType = LHSType.getCanonicalType();
     QualType RHSCanType = RHS.get()->getType().getCanonicalType();
     if (RHSCanType.isOwnedQualified() || LHSCanType.isOwnedQualified()) {
@@ -13199,9 +13243,22 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       RHSType->castAs<PointerType>()->getPointeeType().getCanonicalType();
 
     #if ENABLE_BSC
-    if (getLangOpts().BSC && !CheckBorrowQualTypeCompare(LHSType, RHSType)) {
-      Diag(Loc, diag::err_borrow_qualcheck_compare) << RHSType << LHSType;
-      return computeResultTy();
+    // BSC: Auto-convert string literals in comparisons with const char * borrow
+    if (getLangOpts().BSC) {
+      if (IsConstCharPtrBorrow(LHSType) && IsStringLiteralExpr(RHS.get())) {
+        RHS = InsertConstBorrowForStringLiteral(RHS.get(), RHS.get()->getBeginLoc());
+        RHSType = RHS.get()->getType();
+        RCanPointeeTy = RHSType->castAs<PointerType>()->getPointeeType().getCanonicalType();
+      } else if (IsConstCharPtrBorrow(RHSType) && IsStringLiteralExpr(LHS.get())) {
+        LHS = InsertConstBorrowForStringLiteral(LHS.get(), LHS.get()->getBeginLoc());
+        LHSType = LHS.get()->getType();
+        LCanPointeeTy = LHSType->castAs<PointerType>()->getPointeeType().getCanonicalType();
+      }
+
+      if (!CheckBorrowQualTypeCompare(LHSType, RHSType)) {
+        Diag(Loc, diag::err_borrow_qualcheck_compare) << RHSType << LHSType;
+        return computeResultTy();
+      }
     }
     #endif
 
@@ -14976,6 +15033,15 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
   if (Opc == UO_AddrMut || Opc == UO_AddrMutDeref) {
     if (Opc == UO_AddrMut && IsAddrBorrowDerefOp(Input)) {
       Opc = UO_AddrMutDeref;
+      // For &mut * expr, check if expr points to const data
+      // After IsAddrBorrowDerefOp, Input now points to expr (the pointer being dereferenced)
+      if (Input.get()->getType()->isPointerType()) {
+        QualType PointeeType = Input.get()->getType()->getPointeeType();
+        if (PointeeType.isConstQualified()) {
+          Diag(OpLoc, diag::err_mut_expr_unmodifiable)
+              << InputExpr->getSourceRange();
+        }
+      }
     } else {
       if (Opc == UO_AddrMut && InputExpr->getType().hasBorrow())
         Diag(OpLoc, diag::err_borrow_on_borrow)
@@ -16419,7 +16485,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   }
 
 #if ENABLE_BSC
-  DiagnoseInvalidUnaryExprInSafeZone(OpLoc, Opc, InputExpr->getType());
+  DiagnoseInvalidUnaryExprInSafeZone(OpLoc, Opc, InputExpr->getType(), InputExpr);
 #endif
 
   switch (Opc) {

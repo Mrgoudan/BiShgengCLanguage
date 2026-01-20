@@ -12402,7 +12402,8 @@ public:
                                                  tok::TokenKind Kind,
                                                  QualType Type);
   void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
-                                          UnaryOperatorKind Opc, QualType Type);
+                                          UnaryOperatorKind Opc, QualType Type,
+                                          Expr *InputExpr = nullptr);
   void DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
                                                QualType BaseType);
   void DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
@@ -12447,6 +12448,7 @@ public:
   void CheckMemberThisCallAccess(Expr *ActualArgExpr, QualType formalType);
   bool CheckNeedCastQualifiedType(QualType actualType, QualType formalType);
   bool CheckNeedReborrowPointerType(QualType actualType, QualType formalType);
+  bool IsStringLiteralExpr(Expr *E);
   Expr *InsertConstBorrowForStringLiteral(Expr *StringLiteralExpr, SourceLocation Loc);
 #endif
 

@@ -15,9 +15,15 @@ void test_indirect_mut() {
   const char * borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
 }
 
+void test_indirect_mut_via_var() {
+  const char *value = "hello";
+  const char * borrow p = &mut * value;  // expected-error {{the expression after '&mut' must be modifiable}}
+}
+
 int main() {
   test_mut_param();
   test_direct_mut();
   test_indirect_mut();
+  test_indirect_mut_via_var();
   return 0;
 }

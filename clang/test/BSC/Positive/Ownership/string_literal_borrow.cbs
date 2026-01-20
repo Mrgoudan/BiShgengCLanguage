@@ -1,21 +1,29 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
-
+// expected-no-diagnostics
 // Test automatic &const * insertion for string literals to const char * borrow
 
 void foo_const(const char * borrow stra) {}
 
 void test_auto_insert() {
   // Automatic insertion: foo_const("hello") becomes foo_const(&const * "hello")
-  foo_const("hello");  // expected-no-diagnostics
+  foo_const("hello");  
 }
 
 void test_explicit_const() {
   // Explicit &const * should also work
-  foo_const(&const * "hello");  // expected-no-diagnostics
+  foo_const(&const * "hello");  
+}
+
+void test_auto_insert_init() {
+  // Automatic insertion for variable initialization
+  const char* borrow a = "hellowprld.";  
+  const char* borrow b = "test";  
+  const char* borrow c = "another string";  
 }
 
 int main() {
   test_auto_insert();
   test_explicit_const();
+  test_auto_insert_init();
   return 0;
 }

@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+// Test error case for explicit cast of string literal
+// Explicit casts are not auto-converted to avoid borrow checker issues
+
+void test_cstyle_cast() {
+  const char* borrow p = (const char*)"hello";  // expected-error {{incompatible borrow types, cannot cast 'const char *' to 'const char *borrow'}}
+}
+
+void test_cstyle_cast_in_init() {
+  const char* borrow arr[] = { (const char*)"one", (const char*)"two" };  // expected-error {{incompatible borrow types, cannot cast 'const char *' to 'const char *borrow'}}
+                                                                           // expected-error@-1 {{incompatible borrow types, cannot cast 'const char *' to 'const char *borrow'}}
+}
+
+int main() {
+  test_cstyle_cast();
+  test_cstyle_cast_in_init();
+  return 0;
+}
