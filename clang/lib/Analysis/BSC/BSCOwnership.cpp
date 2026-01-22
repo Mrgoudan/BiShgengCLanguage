@@ -1965,7 +1965,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     op = None;
 
     if (RHS->isNullExpr(OS.ctx)) {
-      stat.setToNull(LHS);
+      stat.setToNull(LHS->IgnoreParens());
     }
   } else {
     Visit(BO->getLHS());
