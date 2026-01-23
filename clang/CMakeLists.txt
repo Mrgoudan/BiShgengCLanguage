@@ -425,7 +425,8 @@ option(ENABLE_BSC_FUTURE "Enable BSC experimental future features" OFF)
 # Apply BSC configuration
 if (ENABLE_BSC)
   message(STATUS "BSC is enabled")
-  add_compile_definitions(ENABLE_BSC=1)
+  set(ENABLE_BSC 1)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_BSC=1")
   set(BSC_OPTION "-DBSC")
 
   if (ENABLE_BSC_FUTURE)
