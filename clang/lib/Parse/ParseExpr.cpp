@@ -1074,6 +1074,7 @@ ExprResult Parser::ParseCastExpression(
           ParseKind, isAddressOfOperand, NotCastExpr, isTypeCast,
           isVectorLiteral, NotPrimaryExpression, HasBSCScopeSpec);
     } else {
+      NotCastExpr = true;
       return ExprError();
     }
 #endif
