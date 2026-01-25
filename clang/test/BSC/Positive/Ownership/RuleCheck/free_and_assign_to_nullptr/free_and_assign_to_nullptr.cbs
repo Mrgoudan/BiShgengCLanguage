@@ -23,10 +23,21 @@ void test2(int *owned p) {
   } while(0);
 }
 
+void test3(int *owned p) {
+  do {
+    if (((nullptr)) != ((p))) {
+      consume((p));
+      ((p)) = nullptr;
+    }
+  } while(0);
+}
+
 int main() {
   int *owned p = nullptr;
   int *owned q = nullptr;
+  int *owned r = nullptr;
   test1(p);
   test2(q);
+  test3(r);
   return 0;
 }

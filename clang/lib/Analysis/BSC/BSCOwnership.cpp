@@ -699,6 +699,7 @@ void Ownership::OwnershipStatus::setToNull(const VarDecl *VD) {
 }
 
 void Ownership::OwnershipStatus::setToNull(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
   if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
     const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
     setToNull(VD);
@@ -1965,7 +1966,7 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     op = None;
 
     if (RHS->isNullExpr(OS.ctx)) {
-      stat.setToNull(LHS->IgnoreParens());
+      stat.setToNull(LHS);
     }
   } else {
     Visit(BO->getLHS());
