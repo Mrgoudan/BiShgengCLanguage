@@ -609,6 +609,73 @@ public:
     return ICE;
   }
 
+  ExprResult TransformConditionalOperator(ConditionalOperator *CO) {
+    // Transform sub-expressions
+    ExprResult ResCond = getDerived().TransformExpr(CO->getCond());
+    ExprResult ResTrue = getDerived().TransformExpr(CO->getTrueExpr());
+    ExprResult ResFalse = getDerived().TransformExpr(CO->getFalseExpr());
+
+    // Create temporary variable: Type _temp;
+    std::string TempName = "_borrowck_tmp_" + std::to_string(TempVarCounter++);
+    VarDecl *TempVD = VarDecl::Create(getSema().Context, FD, SourceLocation(),
+                                      SourceLocation(),
+                                      &getSema().Context.Idents.get(TempName),
+                                      CO->getType(), nullptr, SC_None);
+
+    DeclStmt *TempDS = new (getSema().Context)
+        DeclStmt(DeclGroupRef(TempVD), SourceLocation(), SourceLocation());
+    Stmts.push_back(TempDS);
+
+    // Create: _temp = true_expr;
+    DeclRefExpr *TempRef1 = DeclRefExpr::Create(
+        getSema().Context, NestedNameSpecifierLoc(), SourceLocation(), TempVD,
+        false, CO->getBeginLoc(), CO->getType(), VK_LValue);
+
+    BinaryOperator *TrueAssign = BinaryOperator::Create(
+        getSema().Context, TempRef1, ResTrue.get(), BO_Assign, CO->getType(),
+        VK_PRValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
+
+    CompoundStmt *ThenBody =
+        CompoundStmt::Create(getSema().Context, TrueAssign, FPOptionsOverride(),
+                             SourceLocation(), SourceLocation());
+
+    // Create: _temp = false_expr;
+    DeclRefExpr *TempRef2 = DeclRefExpr::Create(
+        getSema().Context, NestedNameSpecifierLoc(), SourceLocation(), TempVD,
+        false, CO->getBeginLoc(), CO->getType(), VK_LValue);
+
+    BinaryOperator *FalseAssign = BinaryOperator::Create(
+        getSema().Context, TempRef2, ResFalse.get(), BO_Assign, CO->getType(),
+        VK_PRValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
+
+    CompoundStmt *ElseBody = CompoundStmt::Create(
+        getSema().Context, FalseAssign, FPOptionsOverride(), SourceLocation(),
+        SourceLocation());
+
+    // Create: if (cond) { _temp = true_expr; } else { _temp = false_expr; }
+    IfStmt *IS = IfStmt::Create(
+        getSema().Context, SourceLocation(), IfStatementKind::Ordinary, nullptr,
+        nullptr, ResCond.get(), SourceLocation(), SourceLocation(), ThenBody,
+        SourceLocation(), ElseBody);
+
+    Stmts.push_back(IS);
+
+    // Return reference to the temp variable
+    DeclRefExpr *ResultRef = DeclRefExpr::Create(
+        getSema().Context, NestedNameSpecifierLoc(), SourceLocation(), TempVD,
+        false, CO->getBeginLoc(), CO->getType(), VK_LValue);
+
+    CastKind Kind = ResultRef->getType()->getAsCXXRecordDecl()
+                        ? CK_NoOp
+                        : CK_LValueToRValue;
+    Expr *ResultICE = ImplicitCastExpr::Create(
+        getSema().Context, ResultRef->getType(), Kind, ResultRef, nullptr,
+        VK_PRValue, FPOptionsOverride());
+
+    replacedNodesMap.Insert(ResultICE, CO);
+    return ResultICE;
+  }
+
   ExprResult TransformCStyleCastExpr(CStyleCastExpr *CSCE) {
     ExprResult Res = getDerived().TransformExpr(CSCE->getSubExpr());
     Expr *E = Res.get();

@@ -1,0 +1,214 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+// Comprehensive test for TransformConditionalOperator
+// Tests that ALL conditional operators are transformed into if-else with temp variables
+
+void *malloc(unsigned long size);
+void free(void *ptr);
+
+void use_mut(int *borrow p) {
+  if (p) *p += 1;
+}
+
+void use_immut(const int *borrow p) {
+  if (p) {
+    int x = *p;
+  }
+}
+
+T* owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc( sizeof(T) );
+  *p = value;
+  return (T* owned)p;
+}
+
+void free_owned<T>(T* owned p) {
+  free( (T*)p );
+}
+
+// Test 1: Simple ternary with &mut on owned pointers
+void test_mut_on_owned() {
+  int *owned ptr1 = safe_malloc<int>(10);
+  int *owned ptr2 = safe_malloc<int>(20);
+  int cond = 1;
+
+  int *borrow result = cond ? &mut * ptr1 : &mut * ptr2;
+  use_mut(result);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+}
+
+// Test 2: Ternary with &const on owned pointers
+void test_const_on_owned() {
+  int *owned ptr1 = safe_malloc<int>(100);
+  int *owned ptr2 = safe_malloc<int>(200);
+  int cond = 0;
+
+  const int *borrow result = cond ? &const * ptr1 : &const * ptr2;
+  use_immut(result);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+}
+
+// Test 3: Ternary with &mut on local variables
+void test_mut_on_locals() {
+  int a = 5, b = 10;
+  int cond = 1;
+
+  int *borrow result = cond ? &mut a : &mut b;
+  use_mut(result);
+}
+
+// Test 4: Ternary with &const on local variables
+void test_const_on_locals() {
+  int a = 5, b = 10;
+  int cond = 0;
+
+  const int *borrow result = cond ? &const a : &const b;
+  use_immut(result);
+}
+
+// Test 5: Mixed - one branch with borrow, one with parameter
+void test_mixed_borrow_param(const int *borrow date) {
+  int sdate = 0;
+  const int *borrow result = ((date) != 0) ? (date) : &const (sdate);
+  use_immut(result);
+}
+
+// Test 6: Nested ternary
+void test_nested_ternary() {
+  int *owned ptr1 = safe_malloc<int>(1);
+  int *owned ptr2 = safe_malloc<int>(2);
+  int *owned ptr3 = safe_malloc<int>(3);
+  int cond1 = 1, cond2 = 0;
+
+  int *borrow result = cond1 ? (cond2 ? &mut * ptr1 : &mut * ptr2) : &mut * ptr3;
+  use_mut(result);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+  free_owned<int>(ptr3);
+}
+
+// Test 7: Ternary in function call argument
+void test_in_function_call() {
+  int *owned ptr1 = safe_malloc<int>(30);
+  int *owned ptr2 = safe_malloc<int>(40);
+  int cond = 1;
+
+  use_mut(cond ? &mut * ptr1 : &mut * ptr2);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+}
+
+// Test 8: Ternary with &mut deref on raw pointers
+void test_mut_deref() {
+  int a = 5, b = 10;
+  int *p_a = &a;
+  int *p_b = &b;
+  int cond = 1;
+
+  int *borrow result = cond ? &mut * p_a : &mut * p_b;
+  use_mut(result);
+}
+
+// Test 9: Ternary with &const deref on raw pointers
+void test_const_deref() {
+  int a = 5, b = 10;
+  int *p_a = &a;
+  int *p_b = &b;
+  int cond = 0;
+
+  const int *borrow result = cond ? &const * p_a : &const * p_b;
+  use_immut(result);
+}
+
+// Test 10: Multiple sequential ternaries
+void test_multiple_ternaries() {
+  int *owned ptr1 = safe_malloc<int>(50);
+  int *owned ptr2 = safe_malloc<int>(60);
+  int *owned ptr3 = safe_malloc<int>(70);
+  int *owned ptr4 = safe_malloc<int>(80);
+  int cond1 = 1, cond2 = 0;
+
+  int *borrow result1 = cond1 ? &mut * ptr1 : &mut * ptr2;
+  use_mut(result1);
+
+  int *borrow result2 = cond2 ? &mut * ptr3 : &mut * ptr4;
+  use_mut(result2);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+  free_owned<int>(ptr3);
+  free_owned<int>(ptr4);
+}
+
+// Test 11: Ternary inside macro expansion
+#define SELECT_PTR(cond, p1, p2) ((cond) ? &mut * (p1) : &mut * (p2))
+
+void test_macro_ternary() {
+  int *owned ptr1 = safe_malloc<int>(90);
+  int *owned ptr2 = safe_malloc<int>(100);
+  int cond = 1;
+
+  int *borrow result = SELECT_PTR(cond, ptr1, ptr2);
+  use_mut(result);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+}
+
+// Test 12: Complex macro with multiple ternaries and mixed borrow types
+#define INIT_PTRS(date, time, pui, sdate, stime, ui) \
+  do { \
+    (date) = ((date) != 0) ? (date) : &const (sdate); \
+    (time) = ((time) != 0) ? (time) : &mut (stime); \
+    (pui) = ((pui) != 0) ? (pui) : &mut (ui); \
+  } while(0)
+
+void test_complex_macro(const int *borrow date, char *borrow time, unsigned int *borrow pui) {
+  int sdate = 0;
+  char stime = 0;
+  unsigned int ui = 0;
+  INIT_PTRS(date, time, pui, sdate, stime, ui);
+}
+
+// Test 13: Ternary with complex condition
+void test_complex_condition() {
+  int *owned ptr1 = safe_malloc<int>(110);
+  int *owned ptr2 = safe_malloc<int>(120);
+  int a = 5, b = 10;
+
+  int *borrow result = (a > b && a < 100) ? &mut * ptr1 : &mut * ptr2;
+  use_mut(result);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+}
+
+// Test 14: Ternary returning const borrow from mut borrow
+void test_const_from_mut() {
+  int *owned ptr1 = safe_malloc<int>(130);
+  int *owned ptr2 = safe_malloc<int>(140);
+  int cond = 1;
+
+  // Taking &const of owned pointers
+  const int *borrow result = cond ? &const * ptr1 : &const * ptr2;
+  use_immut(result);
+
+  free_owned<int>(ptr1);
+  free_owned<int>(ptr2);
+}
+
+// Test 15: Ternary with parenthesized expressions
+void test_with_parens() {
+  int a = 1, b = 2;
+  int cond = 1;
+
+  int *borrow result = cond ? (&mut (a)) : (&mut (b));
+  use_mut(result);
+}
