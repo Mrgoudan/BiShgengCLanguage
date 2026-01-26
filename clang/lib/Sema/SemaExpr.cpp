@@ -10563,7 +10563,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
         return IncompatibleOwnedPointer;
     }
     if (RHSCanType.isBorrowQualified() || LHSCanType.isBorrowQualified()) {
-      if (!CheckBorrowQualTypeAssignment(LHSType, RHS.get()))
+      if (!CheckBorrowQualTypeAssignment(LHSType, RHS))
         return IncompatibleBorrowPointer;
     }
     if (const auto *LHSPtrType = LHSType->getAs<PointerType>()) {
@@ -10574,7 +10574,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
           }
         }
         if (LHSPtrType->hasBorrowFields() || RHSPtrType->hasBorrowFields()) {
-          if (!CheckBorrowQualTypeAssignment(LHSType, RHS.get())) {
+          if (!CheckBorrowQualTypeAssignment(LHSType, RHS)) {
             return IncompatibleBorrowPointer;
           }
         }

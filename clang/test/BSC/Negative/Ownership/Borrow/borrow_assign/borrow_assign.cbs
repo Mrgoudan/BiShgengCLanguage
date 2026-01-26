@@ -21,7 +21,7 @@ void test() {
     float * borrow py = &mut y;     // legal
     const int * borrow p1 = &const x; // legal
     int *borrow p2 = &const x;          // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
-    const int * borrow p3 = &mut x; // expected-error {{incompatible borrow types, cannot cast 'int *borrow' to 'const int *borrow'}}
+    const int * borrow p3 = &mut x; // allow in-place re-borrowing
     const int * borrow p4 = &x; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'const int *borrow'}}
     const int * borrow *p5 = &const x; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'const int *borrow *'}}
     int *p6 = &mut x; // expected-error {{incompatible borrow types, cannot cast 'int *borrow' to 'int *'}}
@@ -29,11 +29,9 @@ void test() {
     p = p2; // legal
     p = py; // expected-error {{incompatible borrow types, cannot cast 'float *borrow' to 'int *borrow'}}
     p = p1; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
-    p1 = p; // expected-error {{incompatible borrow types, cannot cast 'int *borrow' to 'const int *borrow'}}
+    p1 = p; // allow re-borrowing
     struct R r = { .p1 = p1, .p2 = p2 }; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow}}
-                                         // expected-error@-1 {{incompatible borrow types, cannot cast 'int *borrow' to 'const int *borrow'}}
     struct R r1 = { p1, p2 }; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow}}
-                              // expected-error@-1 {{incompatible borrow types, cannot cast 'int *borrow' to 'const int *borrow'}}
     r.p1 = p1; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
     r.p1 = p; // legal
 

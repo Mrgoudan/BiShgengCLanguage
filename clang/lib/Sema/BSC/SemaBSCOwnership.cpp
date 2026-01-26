@@ -400,7 +400,8 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, Sou
   return false;
 }
 
-bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
+bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
+  Expr *RHSExpr = RHS.get();
   QualType RHSCanType =
       RHSExpr->getType().getCanonicalType().getUnqualifiedType();
   QualType LHSCanType = LHSType.getCanonicalType().getUnqualifiedType();
@@ -434,6 +435,30 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
           LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified())
         return true;
     }
+
+    // Allow mutable borrow downgrading to immutable borrow (re-borrow)
+    if (LHSCanType->isPointerType() && LHSCanType.isBorrowQualified() &&
+        RHSCanType->isPointerType() && RHSCanType.isBorrowQualified()) {
+      QualType LHSPointee = LHSCanType->getPointeeType();
+      QualType RHSPointee = RHSCanType->getPointeeType();
+      if (LHSPointee.isConstQualified() && !RHSPointee.isConstQualified()) {
+        LHSPointee.removeLocalConst();
+        if (LHSPointee == RHSPointee) {
+          ExprResult DerefExpr =
+              CreateBuiltinUnaryOp(ExprLoc, UO_Deref, RHSExpr);
+          if (!DerefExpr.isInvalid()) {
+            ExprResult ReBorrowExpr =
+                CreateBuiltinUnaryOp(ExprLoc, UO_AddrConst, DerefExpr.get());
+            if (!ReBorrowExpr.isInvalid()) {
+              RHS = ReBorrowExpr;
+              return true;
+            }
+          }
+          Res = false;
+        }
+      }
+    }
+
     if (!Context.hasSameType(LHSCanType, RHSCanType))
       Res = false;
   } else {

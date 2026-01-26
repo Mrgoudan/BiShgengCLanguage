@@ -13,7 +13,7 @@ void test() {
   const void * borrow v4 = (const void * borrow)p2; // legal
   (void * borrow)p2; // expected-warning {{expression result unused}}
   v1 = v3; // expected-error {{incompatible borrow types, cannot cast 'const void *borrow' to 'void *borrow'}}
-  v3 = v1; // expected-error {{incompatible borrow types, cannot cast 'void *borrow' to 'const void *borrow'}}
+  v3 = v1; // allow re-borrowing
 
   // void --> T
   int * borrow p3 = (int * borrow)v1; // legal
@@ -23,7 +23,7 @@ void test() {
   p3 = v1; // expected-error {{incompatible borrow types, cannot cast 'void *borrow' to 'int *borrow'}}
   p4 = v3; // expected-error {{incompatible borrow types, cannot cast 'const void *borrow' to 'const int *borrow'}}
   p3 = p4; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
-  p4 = p3; // expected-error {{incompatible borrow types, cannot cast 'int *borrow' to 'const int *borrow'}}
+  p4 = p3; // allow re-borrowing
   p3 = (int * borrow)v1; // legal
   p4 = (const int * borrow)v3; // legal
 

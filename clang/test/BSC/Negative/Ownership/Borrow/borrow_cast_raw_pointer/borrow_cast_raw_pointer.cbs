@@ -12,7 +12,7 @@ void test() {
   p1 = p; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'int *borrow'}}
   p = p1; // expected-error {{incompatible borrow types, cannot cast 'int *borrow' to 'int *'}}
   p1 = p2; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
-  p2 = p1; // expected-error {{incompatible borrow types, cannot cast 'int *borrow' to 'const int *borrow'}}
+  p2 = p1; // allow re-borrowing
 
   // T * borrow --> T *
   int * p3 = (int *)&mut a; // legal

@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+void mutable2immutable(int *borrow ref) {
+    const int *borrow cref = ref; 
+}
+
+void inplace_reborrow(int x) {
+    const int *borrow cref = &mut x;
+}
+
+void read_by_value(int);
+void read_by_borrow(const int *borrow);
+
+void non_lexical_lifetime(int x) {
+    int *borrow ref = &mut x;
+    read_by_value(*ref);
+    read_by_borrow(ref);
+    read_by_value(*ref);
+    read_by_borrow(ref);
+
+    const int *borrow cref = ref; // expected-note {{`*ref` is borrowed here}}
+    ++*ref; // expected-error {{cannot assign to `*ref` because it is borrowed}}
+    read_by_value(*cref); 
+}
+
+void raw2immutable(int *ptr) {
+    const int *borrow cref = ptr; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'const int *borrow'}}
+}
+
+int *owned own2immutable(int *owned ptr) {
+    const int *borrow cref = ptr; // expected-error {{incompatible owned types, cannot cast 'int *owned' to 'const int *borrow'}}
+    return ptr;
+}
+
+void immutable2mutable(const int *borrow cref) {
+    int *borrow ref = cref; // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
+}
+
+void raw2mutable(int *ptr) {
+    int *borrow ref = ptr; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'int *borrow'}}
+}
+
+int *owned own2mutable(int *owned ptr) {
+    int *borrow ref = ptr; // expected-error {{incompatible owned types, cannot cast 'int *owned' to 'int *borrow'}}
+    return ptr;
+}
+

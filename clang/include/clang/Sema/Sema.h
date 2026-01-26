@@ -12427,7 +12427,7 @@ public:
   bool IsAddrBorrowDerefOp(ExprResult &Operand);
   bool CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType);
   bool CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
-  bool CheckBorrowQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
+  bool CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS);
   bool CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   void CheckBorrowFunctionType(QualType ReturnTy, SmallVector<QualType, 16> ParamTys, SourceLocation SL);
   bool CheckBorrowFunctionPointerType(QualType LHSType, Expr* RHSExpr);

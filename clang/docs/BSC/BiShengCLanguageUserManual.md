@@ -4057,6 +4057,17 @@ int main() {
 }
 ```
 
+**可变借用自动重借用为不可变借用**
+
+可变借用给不可变借用赋值时，自动插入 `&const *` 操作符
+
+```C
+void foo(int *borrow ref) {
+  const int *borrow cref = ref;
+  const int *borrow equivalent = &const *ref;
+}
+```
+
 **限制与错误检查**
 
 字符串字面量存储在只读内存区域，因此不能被修改。毕昇 C 对字符串字面量的借用有以下限制：
