@@ -1,0 +1,42 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+typedef struct Msg {
+    int id;
+    const char* content;
+} Msg;
+
+void test_string_literal_pass(void) {
+    const char* null_ptr1 = nullptr;
+
+    const char* p1 = "hello world"; 
+
+    const char* p2 = ("nested parens");
+    
+    const char* p3 = ((("deeply nested")));
+
+    const char p4[] = "array decay test";
+
+    const char* ptr_source = "original";
+    const char* ptr_copy = ptr_source;
+    
+    const char* p_char = (const char*)("hello");
+
+    Msg m1 = { 1, "success" };
+
+    Msg m3 = { .id = 2, .content = ("success with parens")};
+
+    const char* status = 1 ? "Active" : "Inactive";
+
+    const char* complex = (1 ? ("Option A") : (("Option B")));
+
+    char local_char1[4]={0};
+
+    const char local_char2[] = {"hello"}; 
+    
+}
+
+int main(){
+
+    return 0;
+}

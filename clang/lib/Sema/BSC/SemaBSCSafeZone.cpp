@@ -269,15 +269,13 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
   if (DestType->isPointerType()) {
     if (isa<CXXNullPtrLiteralExpr>(E))
       return true;
-    // String literal to const char * borrow is safe
-    // Check if DestType is const char * borrow
-    if (DestType.isBorrowQualified() && DestType->isPointerType()) {
-      QualType Pointee = DestType->getPointeeType();
-      if (Pointee->isCharType() && Pointee.isConstQualified()) {
-        // Check if E is a string literal (possibly through parens/casts/ternary)
-        if (IsStringLiteralExpr(E))
-          return true;
-      }
+
+    // Allow initializing 'const char*' pointers with string literals.
+    QualType Pointee = DestType->getPointeeType();
+    if (Pointee->isCharType() && Pointee.isConstQualified()) {
+      // Check if E is a string literal (possibly through parens/casts/ternary)
+      if (IsStringLiteralExpr(E))
+        return true;
     }
   }
 
