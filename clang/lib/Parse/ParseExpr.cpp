@@ -1438,7 +1438,7 @@ ExprResult Parser::ParseCastExpression(
     // Special treatment because of member pointers
     SourceLocation SavedLoc = ConsumeToken();
 #if ENABLE_BSC
-    if (SavedKind == tok::amp) {
+    if (getLangOpts().BSC && SavedKind == tok::amp) {
       if (Tok.getKind() == tok::kw_const) {
         ConsumeToken();
         SavedKind = tok::ampconst;

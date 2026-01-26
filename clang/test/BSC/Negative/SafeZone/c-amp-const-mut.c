@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -x c %s
+
+// Test that &const and &mut are NOT recognized in standard C mode.
+
+void test_amp_const_mut() {
+  int a = 1;
+
+
+  const int *p1 = &const a; // expected-error {{expected expression}}
+  int *p2 = &mut a; // expected-error {{use of undeclared identifier 'mut'}} \
+                    // expected-error {{expected ';' at end of declaration}}
+
+
+  const int *p3 = & const a; // expected-error {{expected expression}}
+
+
+  int *p4 = & mut a; // expected-error {{use of undeclared identifier 'mut'}} \
+                     // expected-error {{expected ';' at end of declaration}}
+
+  int mut = 0;     
+  int *p_mut = &mut; //no error 
+}
