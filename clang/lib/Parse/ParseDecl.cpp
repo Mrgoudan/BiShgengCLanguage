@@ -1800,6 +1800,16 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
       SourceLocation InlineLoc = ConsumeToken();
       return ParseNamespace(Context, DeclEnd, InlineLoc);
     }
+
+#if ENABLE_BSC
+    if (isBSCTemplateDecl(Tok)) {
+      ProhibitAttributes(DeclAttrs);
+      SingleDecl =
+          ParseDeclarationStartingWithTemplate(Context, DeclEnd, DeclAttrs);
+      break; 
+    }
+#endif
+
     return ParseSimpleDeclaration(Context, DeclEnd, DeclAttrs, DeclSpecAttrs,
                                   true, nullptr, DeclSpecStart);
   case tok::kw_namespace:

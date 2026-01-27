@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -xbsc %s
+
+// expected-no-diagnostics
+
+owned struct S<T> {
+private:
+  T *ptr;
+public:
+  unsafe T *pointer(const This *borrow this);
+};
+
+
+inline unsafe T *S<T>::pointer(const This *borrow this) {
+  return this->ptr;
+}
+
+owned struct B<T> {
+private:
+  T val; 
+public:
+  safe T value(const This *borrow this);
+};
+
+inline safe T B<T>::value(const This *borrow this) {
+  return this->val;
+}
+
+void test(S<int> s,B<int> b) {
+  int *p = s.pointer();
+  int i = b.value();
+}
