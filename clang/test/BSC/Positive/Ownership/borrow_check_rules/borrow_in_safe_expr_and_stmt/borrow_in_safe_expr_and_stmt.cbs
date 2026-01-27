@@ -79,8 +79,26 @@ void test2(int a, int b, char c) {
     }
 }
 
+typedef struct {
+  unsigned char bits[256];
+} S;
+
+static unsigned index = 0;
+static S *g = (void *)0;
+
+void rre_memset(void *borrow p) {
+}
+
+void foo() {
+  if (g != nullptr) {
+    rre_memset(unsafe((void *borrow)(void *)(g[index].bits)));
+  }
+}
+
+
 int main(void) {
     test1(5, 2, '3');
     test2(1, 2, '3');
+    foo();
     return 0;
 }

@@ -442,7 +442,8 @@ public:
     for (Decl *D : DS->decls()) {
       if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
         if (VD->hasInit()) {
-          getDerived().TransformExpr(VD->getInit());
+          ExprResult Res = getDerived().TransformExpr(VD->getInit());
+          VD->setInit(Res.get());
         }
       }
     }
@@ -751,10 +752,22 @@ public:
         E = ReplaceWithTemporaryVariableAndWrap(UO);
         replacedNodesMap.Insert(E, UO);
       }
+    } else if (CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
+      if (CSCE->getType().isBorrowQualified()) {
+        E = ReplaceWithTemporaryVariableAndWrap(CSCE);
+        replacedNodesMap.Insert(E, CSCE);
+      }
     }
 
     PE->setSubExpr(E);
     return PE;
+  }
+
+  ExprResult TransformSafeExpr(SafeExpr *SE) {
+    ExprResult Res = getDerived().TransformExpr(SE->getSubExpr());
+    Expr *E = Res.get();
+    SE->setSubExpr(E);
+    return SE;
   }
 
   ExprResult TransformStmtExpr(StmtExpr *SE) {
@@ -847,7 +860,12 @@ public:
     for (Decl *D : DS->decls()) {
       if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
         if (VD->hasInit()) {
-          getDerived().TransformExpr(VD->getInit());
+          Expr *Init = VD->getInit();
+          if (replacedNodesMap.Contains(Init)) {
+            Init = replacedNodesMap.Get(Init);
+          }
+          getDerived().TransformExpr(Init);
+          VD->setInit(Init);
         }
       }
     }
@@ -1040,6 +1058,17 @@ public:
     PE->setSubExpr(Res.get());
 
     return PE;
+  }
+
+  ExprResult TransformSafeExpr(SafeExpr *SE) {
+    Expr *Sub = SE->getSubExpr();
+    if (replacedNodesMap.Contains(Sub)) {
+      Sub = replacedNodesMap.Get(Sub);
+    }
+    ExprResult Res = getDerived().TransformExpr(Sub);
+    SE->setSubExpr(Res.get());
+
+    return SE;
   }
 
   ExprResult TransformStmtExpr(StmtExpr *SE) {
