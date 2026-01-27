@@ -29,3 +29,32 @@ A *owned test2() {
   use(header);
   return block2;
 }
+
+#define GET(s, pdate, ptime, pui) \
+  do { \
+    (pdate)->a = (s)->a; \
+    (ptime)->b = (s)->b; \
+    (*pui)     = (s)->c; \
+  } while(0)
+
+typedef struct {
+  int a;
+  int b;
+  unsigned int c;
+} S;
+
+typedef struct {
+  int a;
+} Date;
+
+typedef struct {
+  int b;
+} Time;
+
+safe unsigned int foo(S *borrow);
+
+safe unsigned int test(Date *borrow date, Time *borrow time, unsigned int *borrow pui) {
+  S s = {0};
+  GET(&mut s, date, time, pui);
+  return 1;
+}

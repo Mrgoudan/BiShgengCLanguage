@@ -747,7 +747,7 @@ public:
       E = ReplaceWithTemporaryVariableAndWrap(E);
       replacedNodesMap.Insert(E, BO);
     } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-      if (NeedToReplace) {
+      if (UO->getOpcode() >= UO_AddrMut && UO->getOpcode() <= UO_AddrConstDeref) {
         E = ReplaceWithTemporaryVariableAndWrap(UO);
         replacedNodesMap.Insert(E, UO);
       }
