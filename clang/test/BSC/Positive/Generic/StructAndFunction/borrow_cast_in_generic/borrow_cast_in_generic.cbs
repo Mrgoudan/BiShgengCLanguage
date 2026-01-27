@@ -1,0 +1,48 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+#include <stdlib.h>
+#include <string.h>
+
+// Test that borrow casts work with template-dependent types
+safe T *_Nullable owned malloc_obj_zero<T>(void) {
+  unsafe {
+    T *_Nullable owned destPtr = (T * _Nullable owned)(T *)malloc(sizeof(T));
+    if (nullptr != destPtr) {
+      // This cast should work: T *mut borrow -> void *borrow
+      unsafe { memset((void *)(void *borrow) & mut * destPtr, 0, sizeof(T)); }
+    }
+    return destPtr;
+  }
+}
+
+owned struct TestStruct {
+public:
+  int x;
+  int y;
+};
+
+safe int main(void) {
+  // Test with int type
+  int *_Nullable owned ptr1 = malloc_obj_zero<int>();
+  if (ptr1 != nullptr) {
+    if (*ptr1 != 0) {
+      unsafe { free((void *)ptr1); }
+      return 1;
+    }
+    unsafe { free((void *)ptr1); }
+  }
+
+  // Test with struct type
+  TestStruct *_Nullable owned ptr2 = malloc_obj_zero<TestStruct>();
+  if (ptr2 != nullptr) {
+    if (ptr2->x != 0 || ptr2->y != 0) {
+      unsafe { free((void *)ptr2); }
+      return 1;
+    }
+    unsafe { free((void *)ptr2); }
+  }
+
+  return 0;
+}

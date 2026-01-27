@@ -330,6 +330,11 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
     return true;
   }
 
+  // Allow dependent types to bypass borrow checks, defer to instantiation
+  if (RHSCanType->isDependentType()) {
+    return true;
+  }
+
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
