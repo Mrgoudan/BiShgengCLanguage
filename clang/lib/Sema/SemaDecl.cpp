@@ -14923,6 +14923,20 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
                      D.getIdentifierLoc(), II, parmDeclType, TInfo, SC);
   #if ENABLE_BSC
   New->IsThisParam = IsThisParam;
+
+  QualType T = New->getType();
+  if (IsThisParam && T.isBorrowQualified()) {
+    // Strip outer pointer. check the inner type for nested borrows.
+    if (const auto *PT = T->getAs<PointerType>()) {
+      T = PT->getPointeeType();
+    }
+        
+    if (T.getTypePtr()->hasBorrowFields()) {
+      Diag(D.getBeginLoc(), diag::err_owned_inderictOwned_type_check)
+            << 2 /* BorrowFields */ << "borrow" << "this_pointer" << T;                   
+    }   
+  }
+  
   #endif
 
   if (D.isInvalidType())

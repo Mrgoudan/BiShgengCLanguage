@@ -1,0 +1,28 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+#include <float.h>
+#include <limits.h>
+
+owned struct S {
+    double *borrow a3; // contain borrow 
+public:
+    int a1;
+    char a2;
+
+    // Case 1: *borrow this
+    int foo(const S *borrow this, int b1, char b2, double *borrow b3) { // expected-error {{type of this_pointer cannot qualified by 'borrow'(even indirectly), 'const owned struct S' contains 'borrow' type}}
+        if(this->a1 == b1 && this->a2 == b2 && *this->a3 == *b3) {
+            return 0;
+        }
+        return 1;
+    }
+
+    // Case 2: * this
+    int bar(const S * this) {
+        return 0;
+    }
+};
+
+int main() {
+    return 0;
+}
