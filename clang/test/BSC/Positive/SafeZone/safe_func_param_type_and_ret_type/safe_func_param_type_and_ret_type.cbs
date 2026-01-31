@@ -1,0 +1,73 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang %s -o %t-rw.c -rewrite-bsc
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+struct S {
+  int *a;
+};
+
+struct T {
+  struct S s;
+};
+
+union U {
+  int a;
+  struct {
+    int b;
+  } b;
+};
+
+safe int *f1(int *a) {
+  return a;
+}
+
+safe struct S f2(struct S s) {
+  return s;
+}
+
+safe struct T f3(struct T t) {
+  return t;
+}
+
+safe struct S *f4(struct S *s) {
+  return s;
+}
+
+safe struct T *f5(struct T *t) {
+  return t;
+}
+
+safe struct S *owned f6(struct S *owned sp) {
+  return sp;
+}
+
+safe struct T *owned f7(struct T *owned tp) {
+  return tp;
+}
+
+safe struct S *borrow f8(struct S *borrow sp) {
+  return sp;
+}
+
+safe struct T *borrow f9(struct T *borrow tp) {
+  return tp;
+}
+
+safe union U f10(union U u) {
+  return u;
+}
+
+safe union U *owned f11(union U *owned up) {
+  return up;
+}
+
+safe union U *borrow f12(union U *borrow up) {
+  return up;
+}
+
+int main(void) {
+  return 0;
+}

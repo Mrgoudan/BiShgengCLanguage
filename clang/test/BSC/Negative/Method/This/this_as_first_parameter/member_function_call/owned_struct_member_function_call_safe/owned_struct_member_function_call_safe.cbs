@@ -22,11 +22,11 @@ safe int Bar::getA(This this) {
   return this.a; // expected-error {{memory leak because temporary variable 'this' is owned or indirect owned type, please fix it}}
 }
 
-safe int Bar::getB(This* this) { // expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe int Bar::getB(This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 
-safe int Bar::getB_2(const This* this) { // expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe int Bar::getB_2(const This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 

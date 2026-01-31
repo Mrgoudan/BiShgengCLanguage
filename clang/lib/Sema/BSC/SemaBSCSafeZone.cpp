@@ -379,9 +379,8 @@ bool Sema::IsUnsafeType(QualType Type) {
       return true;
     }
 
-    if (CurType->isPointerType() && !CurType->isFunctionPointerType() &&
-        !(CurType.isOwnedQualified() || CurType.isBorrowQualified())) {
-      return true;
+    if (CurType->isPointerType()) {
+      Stack.push_back(CurType->getPointeeType());
     }
     if (CurType->isOwnedStructureType()) {
       continue;

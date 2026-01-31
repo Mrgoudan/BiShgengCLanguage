@@ -11,11 +11,11 @@ safe int struct Foo::getA(This this) {
   return this.a;
 }
 
-safe int struct Foo::getB(This* this) { // expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe int struct Foo::getB(This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 
-safe int struct Foo::getB_2(const This* this) { // expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe int struct Foo::getB_2(const This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 

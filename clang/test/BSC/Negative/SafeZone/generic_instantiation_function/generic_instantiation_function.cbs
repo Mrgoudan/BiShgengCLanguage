@@ -7,12 +7,11 @@ safe T max_a<T>(T a, T b) {
 }
 
 safe T max_b<T>(T a, T b) {
-  return a > b ? a : b;
+  return a > b ? a : b; // expected-error {{use of moved value: `a`}}
+                        // expected-error@-1 {{use of moved value: `b`}}
 }
 
-safe T max_c<T>(T a, T b) {     // expected-error{{unsafe return type is forbidden in the safe function}}
-                                // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
-                                // expected-error@-2{{unsafe parameter type is forbidden in the safe function}}
+safe T max_c<T>(T a, T b) {
   return a > b ? a : b;
 }
 
@@ -22,18 +21,16 @@ void genericFun(){
   int c = max_a<int>(1, 2); // ok
   int* owned p = (int* owned)&a;
   int* owned q = (int* owned)&a;
-  int* owned m = max_b<int* owned>(p, q); // OK
-  int *n = max_c<void *>((void*)0, (void *)0); // expected-note{{in instantiation of function template specialization 'max_c<void *>' requested here}}
+  int* owned m = max_b<int* owned>(p, q); // expected-note{{in instantiation of function template specialization 'max_b<int *owned>' requested here}}
+  int *n = max_c<void *>((void*)0, (void *)0);
 
 }// expected-error {{memory leak of value: `m`}}
 
-safe int* foo_a<T>(int* a, T b) {   // expected-error{{unsafe return type is forbidden in the safe function}}
-                                    // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe int* foo_a<T>(int* a, T b) {
   return a > b ? a : b;
 }
 
-safe int* foo_b<T>(int* a, T b) {   // expected-error{{unsafe return type is forbidden in the safe function}}
-                                    // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe int* foo_b<T>(int* a, T b) {
   return a > b ? a : b;
 }
 
@@ -89,8 +86,7 @@ safe T poo_a<T>(T a) {
   return a;
 }
 
-safe T poo_b<T>(T a) {    // expected-error{{unsafe return type is forbidden in the safe function}}
-                          // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe T poo_b<T>(T a) {
   if (*a) {               // expected-error{{'*' operator is forbidden in the safe zone}}
     return a;
   }
@@ -110,7 +106,7 @@ int test_generic_type_point() {
   int* owned q = (int* owned)&a;
   int* m = poo_b(p);         // expected-note{{in instantiation of function template specialization 'poo_b<int *>' requested here}}
   int* owned n = poo_c(q);
-  return 0;
+  return 0; // expected-error {{memory leak of value: `n`}}
 }
 
 void diffPointCastConver<T>(void) {

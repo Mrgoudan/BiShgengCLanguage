@@ -1,16 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe int* funa(int *a);  // expected-error{{unsafe return type is forbidden in the safe function}}
-                         // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe int* funa(int *a);
 
-safe int* funa(int *a) {  // expected-error{{unsafe return type is forbidden in the safe function}}
-  return a;             // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe int* funa(int *a) {
+  return a;
 }
 
-safe int* (*p)(int *a);  // expected-error{{unsafe return type is forbidden in the safe function}}
-                         // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe int* (*p)(int *a);
 
-safe int funb(int arr[10]) {  // expected-error{{unsafe parameter type is forbidden in the safe function}}
+safe int funb(int arr[10]) {
   return 10;
 }
 
@@ -31,12 +29,20 @@ safe struct SA fund(struct SA f) {
   return f;
 }
 
+safe struct SA fund1(struct SA *owned fp) {
+  return *fp;
+}// expected-error {{memory leak of value: `fp`}}
+
+safe struct SA fund2(struct SA *borrow fp) {
+  return *fp;
+}
+
 struct SB {
   int *a;
 };
 
-safe struct SB fune(struct SB f) {  // expected-error{{unsafe return type is forbidden in the safe function}}
-  return f;                       // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe struct SB fune(struct SB f) {
+  return f;
 }
 
 struct SC {
@@ -59,16 +65,16 @@ struct SE {
   int (*arr)[10];
 };
 
-safe struct SE funh(struct SE f) {   // expected-error{{unsafe return type is forbidden in the safe function}}
-  return f;                        // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe struct SE funh(struct SE f) {
+  return f;
 }
 
 struct SF {
   int *arr[10];
 };
 
-safe struct SF funi(struct SF f) {   // expected-error{{unsafe return type is forbidden in the safe function}}
-  return f;                        // expected-error@-1{{unsafe parameter type is forbidden in the safe function}}
+safe struct SF funi(struct SF f) {
+  return f;
 }
 
 safe int* owned funj(int* owned a) {

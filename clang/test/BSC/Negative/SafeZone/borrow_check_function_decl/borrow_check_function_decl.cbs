@@ -4,11 +4,11 @@
 // a compilation error is reported
 
 safe void test_1(int * owned p);    // expected-note {{previous declaration is here}}
-safe void test_1(int * p) {         // expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe void test_1(int * p) {
 }                                   // expected-error@-1 {{conflicting types for 'test_1'}}
 
 safe void test_1_0(int * owned p);    // expected-note {{previous declaration is here}}
-safe void test_1_0(owned int * p) {   // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe void test_1_0(owned int * p) {   // expected-error {{type of 'int' cannot be qualified by 'owned'}}
 }                                     // expected-error@-1 {{conflicting types for 'test_1_0'}}
 
 safe void test_1_1(int * owned p);           // expected-note {{previous declaration is here}}
@@ -23,7 +23,7 @@ safe void test_2(int owned p);      // expected-error {{type of 'int' cannot be 
 safe void test_2(int p) {           // expected-error {{conflicting types for 'test_2'}}
 }
 
-safe int * test_3(int * owned p);           // expected-error {{unsafe return type is forbidden in the safe function}}
+safe int * test_3(int * owned p);
                                             // expected-note@-1 {{previous declaration is here}}
 safe int * owned test_3(int * owned p) {    // expected-error {{conflicting types for 'test_3'}}
     return p;
@@ -54,12 +54,12 @@ safe int * borrow test_6(int *borrow p) {   // expected-error {{conflicting type
 }
 
 safe void test_7(int * borrow p);           // expected-note {{previous declaration is here}}
-safe void test_7(int * p) {                 // expected-error{{unsafe parameter type is forbidden in the safe function}}
+safe void test_7(int * p) {
 }                                           // expected-error@-1 {{conflicting types for 'test_7'}}
 
 int * a;
 safe int * borrow test_8(int * borrow p);   // expected-note {{previous declaration is here}}
-safe int * test_8(int * borrow p) {         // expected-error{{unsafe return type is forbidden in the safe function}}
+safe int * test_8(int * borrow p) {
                                             // expected-error@-1{{conflicting types for 'test_8'}}
     return a;
 }

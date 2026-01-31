@@ -2402,7 +2402,7 @@ safe int main(void) {
 }
 ```
 
-2. 不允许使用`safe/unsafe`修饰全局变量、函数外类型声明、`typedef`声明（允许修饰函数指针)。
+2. 不允许使用`safe/unsafe`修饰全局变量、函数外类型声明、`typedef`声明（允许修饰函数指针）。
 
 ```c
 // error: 不允许修饰全局变量
@@ -2415,24 +2415,20 @@ safe typedef int mm;
 int main() { return 0; }
 ```
 
-3. `safe`修饰的函数，参数类型和返回类型必须是`safe`类型。
-
-   非`safe`类型包括：裸指针类型、成员中包含不安全类型的`struct`类型、成员中包含不安全类型的数组类型。
-
-   注意：`union`类型允许作为`safe`函数的参数和返回类型，但在安全区内不允许访问`union`的成员。
+3. `safe`修饰的函数，参数类型和返回类型允许是裸指针类型、成员中包含裸指针的`struct`类型、数组类型以及`union`类型。
 
 ```c
-// error: 返回值为非安全类型的裸指针类型
+// ok: 返回值为裸指针类型
 safe int *test1(int a);
-// error: 参数类型为非安全类型的裸指针类型
+// ok: 参数类型为裸指针类型
 safe int test2(int *a);
 
 typedef struct F {
   int *a;
 } SF;
-// error: 返回值为成员中包含不安全裸指针类型的 struct 类型
+// ok: 返回值为成员中包含裸指针类型的 struct 类型
 safe SF test3(int a);
-// error: 参数类型为成员中包含不安全裸指针类型的 struct 类型
+// ok: 参数类型为成员中包含裸指针类型的 struct 类型
 safe int test4(SF b);
 ```
 
@@ -2487,9 +2483,8 @@ void test() {
   int a = 1;
   int b = F<int>(a);
   int *owned c = (int *owned)safe_malloc(1);
-  int *owned d = F<int * owned>(c);
-  // error: 实列化函数入参和返回值为非安全的裸指针类型
-  int *e = F<void *>((void *)0);
+  int *owned d = F<int * owned>(c); // ok
+  int *e = F<void *>((void *)0); // ok
   safe_free((void *owned)d);
 }
 
@@ -2721,7 +2716,7 @@ int main() {
 
 17. 安全区内不允许使用取地址符`&`（允许对函数取地址），只允许`&const`，`&mut`取借用。
 
-    安全区内不允许解引用裸指针类型，但可以解引用`owend`指针类型和`borrow`指针类型。
+    安全区内不允许解引用裸指针类型，但可以解引用`owned`指针类型和`borrow`指针类型。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放

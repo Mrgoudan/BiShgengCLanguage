@@ -8,7 +8,7 @@ typedef __builtin_va_list va_list;
 // va_list type, va_start, va_arg, and va_end are all forbidden in safe zones
 
 // va_list parameter in safe function
-safe int test_va_list_param(va_list args) {  // expected-error {{unsafe parameter type is forbidden in the safe function}}
+safe int test_va_list_param(va_list args) {
     return 0;
 }
 
