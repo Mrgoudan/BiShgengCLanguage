@@ -443,6 +443,13 @@ else()
   endif()
 endif()
 
+# Save ENABLE_BSC_FUTURE value for test configuration before unsetting
+if (ENABLE_BSC_FUTURE)
+  set(CLANG_ENABLE_BSC_FUTURE ON)
+else()
+  set(CLANG_ENABLE_BSC_FUTURE OFF)
+endif()
+
 unset(ENABLE_BSC CACHE)
 unset(ENABLE_BSC_FUTURE CACHE)
 

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// UNSUPPORTED: ENABLE_BSC_FUTURE
+// REQUIRES: ENABLE_BSC_FUTURE
 
 unsafe int add(int x, int y); // expected-note {{previous declaration is here}}
 safe int add(int x, int y) {  // expected-error {{conflicting types for 'add'}}
@@ -51,10 +51,10 @@ int main() {
   pfun = fun;
 
 safe {
-  // Note: Global variable modification restriction requires ENABLE_BSC_FUTURE
-  unpfun = safun;   // expected-error {{incompatible function pointer types assigning to 'int (*)(int, int)' from 'safe int (int, int)'}}
-  unpfun = unfun;
-  unpfun = fun;
+  // When ENABLE_BSC_FUTURE is on, modifying global variables is forbidden
+  unpfun = safun;   // expected-error {{modifying global variable is forbidden in the safe zone}}
+  unpfun = unfun;   // expected-error {{modifying global variable is forbidden in the safe zone}}
+  unpfun = fun;     // expected-error {{modifying global variable is forbidden in the safe zone}}
 }
 
 return 0;

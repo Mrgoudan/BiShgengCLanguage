@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
-// UNSUPPORTED: ENABLE_BSC_FUTURE
+// REQUIRES: ENABLE_BSC_FUTURE
 
-// Test that union member access (both read and write) is forbidden in safe zones
+// Test that with ENABLE_BSC_FUTURE, [] operator restriction comes before union member access check
 
 union U {
   int x;
@@ -38,12 +38,11 @@ safe void test_nested_union_access(void) {
   // error: reading union member through struct
   int val = s.u.x; // expected-error{{access to union field is unsafe and requires unsafe block}}
 }
+
 safe void test_union_take_addr(union U *borrow p) {
   // error: accessing union member to take its address
-  // p->x accesses the union member, which is forbidden
   int *borrow s = &mut p->x; // expected-error{{access to union field is unsafe and requires unsafe block}}
 }
-
 
 safe void test_union_pointer_access(union U *borrow p) {
   // error: accessing union member through pointer
@@ -56,12 +55,10 @@ safe void test_union_pointer_access(union U *borrow p) {
 safe void test_union_array_access(void) {
   union U arr[3] = {};
 
-  // Note: [] operator restriction on raw pointers requires ENABLE_BSC_FUTURE
-  // error: accessing union member in array element
-  arr[0].x = 5; // expected-error{{access to union field is unsafe and requires unsafe block}}
+  arr[0].x = 5; // expected-error{{'[]' operator is forbidden in the safe zone}} // expected-error{{access to union field is unsafe and requires unsafe block}}
 
   // error: reading from array element
-  int val = arr[1].x; // expected-error{{access to union field is unsafe and requires unsafe block}}
+  int val = arr[1].x; // expected-error{{'[]' operator is forbidden in the safe zone}}  // expected-error{{access to union field is unsafe and requires unsafe block}}
 }
 
 // Union member access in safe block within unsafe function
@@ -97,8 +94,7 @@ safe void test_borrow_in_unsafe_block(union U u) {
   unsafe const union U *borrow bu2 = &const u; // expected-note{{variable 'bu2' declared const here}}
   // error: even though bu was created in unsafe expression, accessing union member is forbidden in safe zone
   bu->x = 1; // expected-error{{access to union field is unsafe and requires unsafe block}}
-  bu2->x = 1; // expected-error{{access to union field is unsafe and requires unsafe block}}  // expected-error{{cannot assign to variable 'bu2' with const-qualified type 'const union U *borrow'}}  
-
+  bu2->x = 1; // expected-error{{access to union field is unsafe and requires unsafe block}}  // expected-error{{cannot assign to variable 'bu2' with const-qualified type 'const union U *borrow'}}
 }
 
 int main(void) {
