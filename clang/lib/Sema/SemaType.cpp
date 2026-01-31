@@ -2003,7 +2003,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     if (Qs.hasBorrow() && Qs.hasOwned()) {
       Diag(Loc, diag::err_owned_and_borrow_conflict);
     }
-    if (Qs.hasBorrow() && !T->isPointerType()) {
+    if (Qs.hasBorrow() && !T->isPointerType() && !T->isDependentType()) {
       Diag(DS ? DS->getBorrowSpecLoc() : Loc,
            diag::err_typecheck_invalid_borrow_not_pointer)
           << T;
