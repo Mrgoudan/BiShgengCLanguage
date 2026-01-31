@@ -1,0 +1,76 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test invalid nullptr casts - should produce errors/warnings
+
+// nullptr cast to non-pointer types (should warn)
+void test_nullptr_to_non_pointer(void) {
+  int i = (int)nullptr; // expected-warning {{cast to smaller integer type 'int' from 'std::nullptr_t'}}
+  char c = (char)nullptr; // expected-warning {{cast to smaller integer type 'char' from 'std::nullptr_t'}}
+  short s = (short)nullptr; // expected-warning {{cast to smaller integer type 'short' from 'std::nullptr_t'}}
+  unsigned u = (unsigned)nullptr; // expected-warning {{cast to smaller integer type 'unsigned int' from 'std::nullptr_t'}}
+}
+
+// nullptr cast to struct/union/enum (should error)
+struct TestStruct {
+  int x;
+};
+
+union TestUnion {
+  int i;
+  float f;
+};
+
+enum TestEnum {
+  VALUE1,
+  VALUE2
+};
+
+void test_nullptr_to_aggregate(void) {
+  struct TestStruct s = (struct TestStruct)nullptr; // expected-error {{used type 'struct TestStruct' where arithmetic or pointer type is required}}
+  union TestUnion u = (union TestUnion)nullptr; // expected-error {{cast to union type from type 'std::nullptr_t' not present in union}}
+  enum TestEnum e = (enum TestEnum)nullptr; // expected-warning {{cast to smaller integer type 'enum TestEnum' from 'std::nullptr_t'}}
+}
+
+// nullptr in safe zone with incompatible pointer types
+safe void test_safe_zone_incompatible_cast(void) {
+  // Safe zone forbids implicit conversions between different pointer types
+  int *pi = (void *)nullptr; // expected-error {{conversion from type 'void *' to 'int *' is forbidden in the safe zone}}
+  char *pc = (int *)nullptr; // expected-error {{conversion from type 'int *' to 'char *' is forbidden in the safe zone}}
+
+  // Function pointer type mismatches in safe zone
+  void (*fp1)(int) = (void (*)(void))nullptr; // expected-error {{incompatible function pointer types initializing 'void (*)(int)' with an expression of type 'void (*)(void)'}}
+  int (*fp2)(char *) = (void (*)(int))nullptr; // expected-error {{incompatible function pointer types initializing 'int (*)(char *)' with an expression of type 'void (*)(int)'}}
+}
+
+// nullptr arithmetic (should error)
+void test_nullptr_arithmetic(void) {
+  void *p1 = nullptr + 1; // expected-error {{invalid operands to binary expression ('std::nullptr_t' and 'int')}}
+  void *p2 = nullptr - 1; // expected-error {{invalid operands to binary expression ('std::nullptr_t' and 'int')}}
+  void *p3 = 1 + nullptr; // expected-error {{invalid operands to binary expression ('int' and 'std::nullptr_t')}}
+}
+
+// nullptr with array types (arrays cannot be assigned)
+void test_nullptr_array_assignment(void) {
+  int arr[10];
+  arr = (int [10])nullptr; // expected-error {{used type 'int[10]' where arithmetic or pointer type is required}}
+}
+
+// Safe zone: owned/borrow qualifier mismatches
+safe void test_safe_owned_borrow_mismatch(void) {
+  int * owned po = (int * borrow)nullptr; // expected-error {{conversion from type 'int *borrow' to 'int *owned' is forbidden in the safe zone}}
+  int * borrow pb = (int * owned)nullptr; // expected-error {{conversion from type 'int *owned' to 'int *borrow' is forbidden in the safe zone}}
+}
+
+// Safe zone: pointer to different qualifiers
+safe void test_safe_cv_qualifier_mismatch(void) {
+  int *p = (const int *)nullptr; // expected-error {{conversion from type 'const int *' to 'int *' is forbidden in the safe zone}}
+  volatile int *vp = (const int *)nullptr; // expected-error {{conversion from type 'const int *' to 'volatile int *' is forbidden in the safe zone}}
+}
+
+// nullptr to function (not function pointer)
+void test_function(void) {}
+
+void test_nullptr_to_function(void) {
+  void *p = (void *)test_function; // This is valid - function to pointer conversion
+  test_function = nullptr; // expected-error {{non-object type 'void (void)' is not assignable}}
+}

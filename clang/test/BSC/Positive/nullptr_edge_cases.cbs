@@ -1,0 +1,193 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Edge cases and complex scenarios for nullptr casts
+
+// nullptr with function pointers
+typedef void (*FuncPtr)(void);
+typedef int (*FuncPtrWithArgs)(int, char *);
+
+void test_nullptr_function_pointers(void) {
+  FuncPtr fp1 = (FuncPtr)nullptr;
+  FuncPtrWithArgs fp2 = (FuncPtrWithArgs)nullptr;
+  void (*fp3)(int) = (void (*)(int))nullptr;
+}
+
+// nullptr in ternary operator with casts
+void test_nullptr_ternary(void) {
+  int condition = 1;
+  void *p1 = condition ? (void *)nullptr : (void *)nullptr;
+  int *p2 = condition ? (int *)nullptr : nullptr;
+  char *p3 = condition ? nullptr : (char *)nullptr;
+}
+
+// nullptr with complex pointer types
+void test_nullptr_complex_types(void) {
+  int (*arr_ptr)[10] = (int (*)[10])nullptr;
+  int (*func_ptr_arr[5])(void) = {nullptr, nullptr, nullptr, nullptr, nullptr};
+  void (**pp)(void) = (void (**)(void))nullptr;
+}
+
+// nullptr in comma expressions
+void test_nullptr_comma_expr(void) {
+  void *p = ((void)0, (void *)nullptr);
+  int *pi = ((void)1, (void)2, (int *)nullptr);
+}
+
+// nullptr with volatile and const qualifiers
+void test_nullptr_cv_qualifiers(void) {
+  const void *cp = (const void *)nullptr;
+  volatile void *vp = (volatile void *)nullptr;
+  const volatile void *cvp = (const volatile void *)nullptr;
+  const int *cip = (const int *)nullptr;
+  volatile int *vip = (volatile int *)nullptr;
+}
+
+// nullptr cast in loop conditions
+void test_nullptr_in_loops(void) {
+  void *p = (void *)nullptr;
+  while (p != (void *)nullptr) {
+    break;
+  }
+
+  for (int *ip = nullptr; ip != (int *)nullptr; ) {
+    break;
+  }
+}
+
+// nullptr with pointer to struct
+struct TestStruct {
+  int x;
+  char y;
+};
+
+void test_nullptr_struct_pointer(void) {
+  struct TestStruct *sp = (struct TestStruct *)nullptr;
+  const struct TestStruct *csp = (const struct TestStruct *)nullptr;
+}
+
+// nullptr in switch statements (using pointer value)
+void test_nullptr_in_switch(void) {
+  void *p = (void *)nullptr;
+  // Note: This is unusual but syntactically valid
+  switch ((long)p) {
+    case 0:
+      break;
+  }
+}
+
+// nullptr with union pointers
+union TestUnion {
+  int i;
+  float f;
+};
+
+void test_nullptr_union_pointer(void) {
+  union TestUnion *up = (union TestUnion *)nullptr;
+}
+
+// nullptr in array subscript context (should be safe to cast, though deref would fail at runtime)
+void test_nullptr_array_context(void) {
+  int *arr = (int *)nullptr;
+  // Just the cast, not dereferencing - use to avoid unused warning
+  if (arr) {}
+}
+
+// nullptr with restrict qualifier
+void test_nullptr_restrict(void) {
+  int * restrict rp = (int * restrict)nullptr;
+  void * restrict rvp = (void * restrict)nullptr;
+}
+
+// Multiple levels of casting nullptr
+void test_nullptr_multiple_casts(void) {
+  void *p1 = (void *)(int *)(char *)nullptr;
+  int *p2 = (int *)(void *)nullptr;
+  char *p3 = (char *)(void *)(int *)nullptr;
+}
+
+// nullptr in static/extern declarations
+static void *static_ptr = (void *)nullptr;
+void *global_ptr = (void *)nullptr;
+
+void test_static_global_nullptr(void) {
+  static int *local_static = (int *)nullptr;
+  (void)local_static;
+  (void)static_ptr;
+  (void)global_ptr;
+}
+
+// nullptr with type qualifiers
+void test_nullptr_qualifiers(void) {
+  const void *cp = (const void *)nullptr;
+  volatile void *vp = (volatile void *)nullptr;
+}
+
+// nullptr in compound literals
+void test_nullptr_compound_literals(void) {
+  struct TestStruct *sp = (struct TestStruct *)nullptr;
+  // Compound literal with nullptr
+  struct { void *p; } s = { (void *)nullptr };
+}
+
+// nullptr with designated initializers
+struct DesignatedStruct {
+  int *p1;
+  char *p2;
+  void *p3;
+};
+
+void test_nullptr_designated_init(void) {
+  struct DesignatedStruct ds = {
+    .p1 = (int *)nullptr,
+    .p2 = nullptr,
+    .p3 = (void *)nullptr
+  };
+}
+
+// nullptr in nested safe/unsafe blocks
+safe void test_nested_safe_unsafe(void) {
+  void *p1 = (void *)nullptr;
+  unsafe {
+    void *p2 = (void *)nullptr;
+    safe {
+      void *p3 = (void *)nullptr;
+    }
+  }
+}
+
+// nullptr with generic selection (if supported)
+void test_nullptr_generic(void) {
+  void *p = (void *)nullptr;
+  (void)_Generic(p,
+    void *: (void *)nullptr,
+    default: (void *)nullptr
+  );
+}
+
+// nullptr in macro expansion
+#define NULL_PTR (void *)nullptr
+#define INT_NULL_PTR (int *)nullptr
+
+void test_nullptr_macros(void) {
+  void *p1 = NULL_PTR;
+  int *p2 = INT_NULL_PTR;
+}
+
+// nullptr with sizeof
+void test_nullptr_sizeof(void) {
+  unsigned long s1 = sizeof((void *)nullptr);
+  unsigned long s2 = sizeof((int *)nullptr);
+  (void)s1;
+  (void)s2;
+}
+
+// nullptr in inline functions
+static inline void *inline_return_nullptr(void) {
+  return (void *)nullptr;
+}
+
+void test_inline_nullptr(void) {
+  void *p = inline_return_nullptr();
+  (void)p;
+}

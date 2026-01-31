@@ -2871,6 +2871,11 @@ void CastOperation::CheckCStyleCast() {
 
   #if ENABLE_BSC
   if (Self.getLangOpts().BSC) {
+    // Handle nullptr cast to pointer - skip BSC checks that may not handle it
+    if (isa<CXXNullPtrLiteralExpr>(SrcExpr.get()) && DestType->isPointerType()) {
+      Kind = CK_NullToPointer;
+      return;
+    }
     if (!Self.IsSafeConversion(DestType, SrcExpr.get())) {
       SrcExpr = ExprError();
       return;

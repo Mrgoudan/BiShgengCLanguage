@@ -1,0 +1,142 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test nullptr casts in various contexts - all should compile without errors
+
+// Basic nullptr casts to pointer types
+void test_basic_nullptr_cast(void) {
+  void *p1 = (void *)nullptr;
+  int *p2 = (int *)nullptr;
+  char *p3 = (char *)nullptr;
+  double *p4 = (double *)nullptr;
+
+  // Const pointer casts
+  const int *cp1 = (const int *)nullptr;
+  const void *cp2 = (const void *)nullptr;
+
+  // Function pointer casts
+  void (*fp)(void) = (void (*)(void))nullptr;
+  int (*fp2)(int, int) = (int (*)(int, int))nullptr;
+}
+
+// nullptr casts in safe zone
+safe void test_safe_nullptr_cast(void) {
+  void *p1 = (void *)nullptr;
+  int *p2 = (int *)nullptr;
+  const char *p3 = (const char *)nullptr;
+}
+
+// nullptr casts in unsafe expression
+safe void test_unsafe_nullptr_cast(void) {
+  void *p1 = unsafe((void *)nullptr);
+  int *p2 = unsafe((int *)nullptr);
+}
+
+// Direct nullptr assignments (without cast)
+void test_direct_nullptr_assignment(void) {
+  void *p1 = nullptr;
+  int *p2 = nullptr;
+  char *p3 = nullptr;
+}
+
+safe void test_safe_direct_nullptr(void) {
+  void *p = nullptr;
+  const char *cp = nullptr;
+}
+
+// nullptr in conditional expressions
+void test_nullptr_in_conditional(void) {
+  int condition = 1;
+  void *p = condition ? (void *)nullptr : (void *)0;
+  int *pi = condition ? nullptr : (int *)0;
+}
+
+// nullptr casts in function arguments
+void take_pointer(void *p) {}
+void take_int_pointer(int *p) {}
+
+void test_nullptr_in_function_args(void) {
+  take_pointer((void *)nullptr);
+  take_int_pointer((int *)nullptr);
+  take_pointer(nullptr);
+  take_int_pointer(nullptr);
+}
+
+// nullptr casts in return statements
+void *return_nullptr_cast(void) {
+  return (void *)nullptr;
+}
+
+int *return_nullptr_cast_int(void) {
+  return (int *)nullptr;
+}
+
+void *return_nullptr_direct(void) {
+  return nullptr;
+}
+
+// Nested pointer casts with nullptr
+void test_nested_pointer_casts(void) {
+  void **pp1 = (void **)nullptr;
+  int **pp2 = (int **)nullptr;
+  char ***ppp = (char ***)nullptr;
+}
+
+// nullptr casts with typedef
+typedef int *IntPtr;
+typedef void *VoidPtr;
+
+void test_typedef_nullptr_cast(void) {
+  IntPtr ip = (IntPtr)nullptr;
+  VoidPtr vp = (VoidPtr)nullptr;
+}
+
+// nullptr casts in struct initialization
+struct PointerStruct {
+  int *p1;
+  void *p2;
+  char *p3;
+};
+
+void test_struct_init_nullptr(void) {
+  struct PointerStruct s1 = {
+    (int *)nullptr,
+    (void *)nullptr,
+    (char *)nullptr
+  };
+
+  struct PointerStruct s2 = {
+    nullptr,
+    nullptr,
+    nullptr
+  };
+}
+
+// nullptr casts in array initialization
+void test_array_init_nullptr(void) {
+  void *arr1[3] = {
+    (void *)nullptr,
+    (void *)nullptr,
+    (void *)nullptr
+  };
+
+  int *arr2[3] = {
+    nullptr,
+    nullptr,
+    nullptr
+  };
+}
+
+// nullptr casts with comparison
+void test_nullptr_comparison(void) {
+  void *p = (void *)nullptr;
+  if (p == nullptr) {}
+  if (p == (void *)nullptr) {}
+  if ((void *)nullptr == p) {}
+}
+
+// Multiple nullptr casts in one statement
+void test_multiple_nullptr_casts(void) {
+  void *p1 = (void *)nullptr, *p2 = (void *)nullptr;
+  int *i1 = (int *)nullptr, *i2 = nullptr;
+}

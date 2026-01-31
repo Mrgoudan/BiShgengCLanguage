@@ -1,0 +1,77 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test nullptr with BSC borrow qualifiers
+
+// nullptr with borrow in function parameters
+void take_borrow(int * borrow p) {
+  (void)p;
+}
+
+void test_nullptr_borrow_args(void) {
+  take_borrow((int * borrow)nullptr);
+  take_borrow(nullptr);
+}
+
+// nullptr with const borrow
+void take_const_borrow(const int * borrow p) {
+  (void)p;
+}
+
+void test_nullptr_const_borrow(void) {
+  take_const_borrow((const int * borrow)nullptr);
+  take_const_borrow(nullptr);
+}
+
+// nullptr borrow in function return (requires borrow parameter)
+int * borrow return_borrow_nullptr(int * borrow dummy) {
+  (void)dummy;
+  return (int * borrow)nullptr;
+}
+
+void * borrow return_void_borrow_nullptr(void * borrow dummy) {
+  (void)dummy;
+  return (void * borrow)nullptr;
+}
+
+// nullptr with borrow in safe zone
+safe void test_safe_borrow_nullptr(int * borrow p) {
+  int * borrow bp = (int * borrow)nullptr;
+  (void)bp;
+  (void)p;
+}
+
+// Struct with borrow pointers initialized to nullptr
+struct BorrowPointers {
+  int * borrow bp;
+  void * borrow vb;
+};
+
+void test_struct_borrow_nullptr(void) {
+  struct BorrowPointers sb = {
+    (int * borrow)nullptr,
+    (void * borrow)nullptr
+  };
+  (void)sb;
+}
+
+// nullptr borrow in conditional
+void test_borrow_conditional(int condition) {
+  int * borrow p = condition ? (int * borrow)nullptr : nullptr;
+  (void)p;
+}
+
+// nullptr with multiple borrow pointers
+void take_multiple_borrow(int * borrow p1, void * borrow p2, char * borrow p3) {
+  (void)p1;
+  (void)p2;
+  (void)p3;
+}
+
+void test_multiple_borrow_nullptr(void) {
+  take_multiple_borrow(
+    (int * borrow)nullptr,
+    (void * borrow)nullptr,
+    (char * borrow)nullptr
+  );
+}

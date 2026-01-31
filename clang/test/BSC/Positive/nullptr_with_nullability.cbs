@@ -1,0 +1,99 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test that nullability annotations work correctly with nullptr
+
+// _Nullable allows nullptr
+void test_nullable_nullptr(void) {
+  int * _Nullable p1 = nullptr;
+  void * _Nullable p2 = (void *)nullptr;
+  char * _Nullable p3 = (char *)nullptr;
+}
+
+// _Nullable with const
+void test_nullable_const(void) {
+  const int * _Nullable cp = (const int *)nullptr;
+  const void * _Nullable cvp = nullptr;
+}
+
+// _Nullable in function parameters
+void take_nullable(int * _Nullable p) {
+  (void)p;
+}
+
+void test_nullable_args(void) {
+  take_nullable(nullptr);
+  take_nullable((int *)nullptr);
+}
+
+// _Nullable in function return
+int * _Nullable return_nullable_nullptr(void) {
+  return nullptr;
+}
+
+void * _Nullable return_void_nullable(void) {
+  return (void *)nullptr;
+}
+
+// _Nullable in safe zone
+safe void test_safe_nullable(void) {
+  int * _Nullable p = nullptr;
+  void * _Nullable vp = (void *)nullptr;
+  (void)p;
+  (void)vp;
+}
+
+// _Nullable in struct
+struct NullablePointers {
+  int * _Nullable np;
+  void * _Nullable vp;
+};
+
+void test_struct_nullable(void) {
+  struct NullablePointers s = {
+    nullptr,
+    (void *)nullptr
+  };
+  (void)s;
+}
+
+// _Nullable with typedef
+typedef int * _Nullable NullableIntPtr;
+typedef void * _Nullable NullableVoidPtr;
+
+void test_typedef_nullable(void) {
+  NullableIntPtr ip = nullptr;
+  NullableVoidPtr vp = (void *)nullptr;
+  (void)ip;
+  (void)vp;
+}
+
+// _Nullable in array
+void test_nullable_array(void) {
+  int * _Nullable arr[3] = {nullptr, nullptr, (int *)nullptr};
+  (void)arr;
+}
+
+// _Nullable with owned
+void test_nullable_owned(void) {
+  int * _Nullable owned po = (int * owned)nullptr;
+  void * _Nullable owned vo = nullptr;
+  (void)po;
+  (void)vo;
+}
+
+// _Nullable with borrow in function parameter
+void take_nullable_borrow(int * _Nullable borrow p) {
+  (void)p;
+}
+
+void test_nullable_borrow(void) {
+  take_nullable_borrow(nullptr);
+  take_nullable_borrow((int * borrow)nullptr);
+}
+
+// _Nullable in conditional
+void test_nullable_conditional(int cond) {
+  int * _Nullable p = cond ? nullptr : (int *)nullptr;
+  (void)p;
+}

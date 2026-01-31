@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test nullptr with BSC owned/borrow qualifiers
+
+// nullptr with owned pointers
+void test_nullptr_owned(void) {
+  int * owned po1 = (int * owned)nullptr;
+  void * owned po2 = (void * owned)nullptr;
+  char * owned po3 = (char * owned)nullptr;
+}
+
+// nullptr with const owned
+void test_nullptr_const_owned(void) {
+  const int * owned cpo1 = (const int * owned)nullptr;
+  const void * owned cpo2 = (const void * owned)nullptr;
+}
+
+// nullptr in safe zone with owned
+safe void test_safe_nullptr_owned(void) {
+  int * owned po = (int * owned)nullptr;
+  void * owned vo = (void * owned)nullptr;
+}
+
+// nullptr casts with owned qualifiers
+void test_nullptr_owned_casts(void) {
+  void * owned vo = (void * owned)nullptr;
+  int * owned io = (int * owned)nullptr;
+}
+
+// Struct with owned pointers initialized to nullptr
+struct OwnedPointers {
+  int * owned po;
+  void * owned vo;
+};
+
+void test_struct_owned_nullptr(void) {
+  struct OwnedPointers op = {
+    (int * owned)nullptr,
+    (void * owned)nullptr
+  };
+
+  struct OwnedPointers op2 = {
+    (int * owned)nullptr,
+    (void * owned)nullptr
+  };
+}
