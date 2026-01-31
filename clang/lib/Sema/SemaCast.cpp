@@ -2876,7 +2876,7 @@ void CastOperation::CheckCStyleCast() {
       Kind = CK_NullToPointer;
       return;
     }
-    if (!Self.IsSafeConversion(DestType, SrcExpr.get())) {
+    if (!Self.IsSafeConversion(DestType, SrcExpr.get(), /*IsExplicitCast=*/true)) {
       SrcExpr = ExprError();
       return;
     }

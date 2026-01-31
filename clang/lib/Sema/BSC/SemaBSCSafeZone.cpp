@@ -255,7 +255,7 @@ DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
   return nullptr;
 }
 
-bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
+bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   // check function pointer Type in 'IsSafeFunctionPointerTypeCast'
   if (DestType->isFunctionPointerType()) {
     return true;
@@ -289,8 +289,8 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
     return true;
   }
   if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(E)) {
-    if (IsSafeConversion(DestType, Exp->getTrueExpr())) {
-      return IsSafeConversion(DestType, Exp->getFalseExpr());
+    if (IsSafeConversion(DestType, Exp->getTrueExpr(), IsExplicitCast)) {
+      return IsSafeConversion(DestType, Exp->getFalseExpr(), IsExplicitCast);
     } else {
       return false;
     }
@@ -316,10 +316,13 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
         dyn_cast<BuiltinType>(DestType->getUnqualifiedDesugaredType());
     if (SBT && DBT) {
       if (SBT->getKind() != DBT->getKind()) {
-        // conversion from high-precision to low-precision is not allowed
-        // conversion from wide range to narrow range is not allowed
-        if (!IsSafeBuiltinTypeConversion(SBT->getKind(), DBT->getKind())) {
-          IsSafeBehavior = false;
+        // Allow explicit C-style casts, but forbid implicit conversions
+        if (!IsExplicitCast) {
+          // conversion from high-precision to low-precision is not allowed
+          // conversion from wide range to narrow range is not allowed
+          if (!IsSafeBuiltinTypeConversion(SBT->getKind(), DBT->getKind())) {
+            IsSafeBehavior = false;
+          }
         }
       }
     }
@@ -330,19 +333,23 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E) {
     }
 
     if (DestType->isEnumeralType() || SrcType->isEnumeralType()) {
-      IsSafeBehavior = false;
-      // conversion different enum type is not allowed
-      if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
-        IsSafeBehavior = true;
-        // conversion enum value type to enum variable type is allowed
-      }
-      if (auto *DRE = getDeclRefExprForEnumCoversion(E)) {
-        if (EnumConstantDecl *ECD =
-                dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
-          EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
-          SrcType = Context.getTypeDeclType(Enum);
-          if (DestType.getCanonicalType() == SrcType.getCanonicalType()) {
-            IsSafeBehavior = true;
+      if (IsExplicitCast) {
+        IsSafeBehavior = true;  // Allow explicit enum casts
+      } else {
+        IsSafeBehavior = false;
+        // conversion different enum type is not allowed
+        if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
+          IsSafeBehavior = true;
+          // conversion enum value type to enum variable type is allowed
+        }
+        if (auto *DRE = getDeclRefExprForEnumCoversion(E)) {
+          if (EnumConstantDecl *ECD =
+                  dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+            EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
+            SrcType = Context.getTypeDeclType(Enum);
+            if (DestType.getCanonicalType() == SrcType.getCanonicalType()) {
+              IsSafeBehavior = true;
+            }
           }
         }
       }

@@ -1,0 +1,106 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that C-style casts for NUMERIC and ENUM types are ALLOWED
+// Pointer casts and ownership conversions remain FORBIDDEN even with explicit casts
+
+// expected-no-diagnostics
+
+void test_numeric_casts(void) {
+  safe {
+    long a = 2;
+    int b = (int)a;                 // ok: explicit cast allowed
+    long c = (long)b;               // ok: widening conversion
+
+    // Test edge cases
+    constexpr long _a = 10;
+    int _b = (int)_a;               // ok: explicit cast
+    constexpr long _a_ = 2147483648;
+    int _b_ = (int)_a_;             // ok: explicit cast allowed
+    int d = (int)2147483647;        // ok
+    d = (int)2147483648;            // ok: explicit cast allowed
+    d = (int)(-2147483649);         // ok: explicit cast allowed
+
+    unsigned int e = (unsigned int)0;             // ok
+    e = (unsigned int)4294967296;   // ok: explicit cast allowed
+    unsigned long f = (unsigned long)1;           // ok
+    f = (unsigned long)b;           // ok: explicit cast allowed
+    f = (unsigned long)(-1);        // ok: explicit cast allowed
+  }
+
+  safe {
+    int a = 1;
+    char b = (char)a;                // ok: explicit cast allowed
+    b = (char)1;                     // ok
+    b = (char)128;                   // ok: explicit cast allowed
+    b = unsafe((char)128);           // ok
+    b = safe((char)128);             // ok: explicit cast allowed
+
+    constexpr int c = 10;
+    b = (int)c;                      // ok
+    a = (int)b;                      // ok
+    a = (int)'b';                    // ok
+    a = unsafe((int)b);              // ok
+    a = safe((int)b);                // ok
+    unsigned int d = 0;
+    d = (unsigned int)b;             // ok: explicit cast allowed
+  }
+
+  safe {
+    _Bool a = 0;
+    int b = (int)a;          // ok
+    _Bool c = (_Bool)b;      // ok: explicit cast allowed
+    c = (_Bool)1;            // ok
+    c = (_Bool)2;            // ok: explicit cast allowed
+    c = unsafe((_Bool)1);    // ok
+    c = safe((_Bool)1);      // ok
+  }
+
+  safe {
+    char a = 'A';
+    long double b = (long double)a;  // ok
+    char c = (char)b;                // ok: explicit cast allowed
+  }
+}
+
+void test_enum_casts(void) {
+  enum E { ZERO, ONE, TWO };
+  enum F { SUN, MON, TUES };
+
+  safe {
+    int a = 0;
+    enum E num = (enum E)a;     // ok: explicit cast allowed
+    num = (enum E)0;            // ok: explicit cast allowed
+    num = (enum E)ZERO;         // ok
+    num = safe((enum E)ZERO);   // ok
+    num = unsafe((enum E)ZERO); // ok
+    enum F day = SUN;
+    num = (enum E)day;          // ok: explicit cast allowed
+    num = (enum E)SUN;          // ok: explicit cast allowed
+    num = safe((enum E)day);    // ok: explicit cast allowed
+    num = safe((enum E)SUN);    // ok: explicit cast allowed
+    num = unsafe((enum E)day);  // ok
+    num = unsafe((enum E)SUN);  // ok
+    a = (int)num;               // ok: explicit cast allowed
+    a = (int)ZERO;              // ok
+  }
+}
+
+void test_float_casts(void) {
+  safe {
+    double a = 1.0;
+    float b = (float)a;      // ok: explicit cast allowed
+    a = (double)b;           // ok
+    float c = (float)1.0;    // ok
+    c = (float)1.2;          // ok: explicit cast allowed
+    c = (float)1.2f;         // ok
+  }
+}
+
+void test_signed_unsigned_casts(void) {
+  safe {
+    unsigned int a = (unsigned int)1;  // ok
+    int b = (int)a;                    // ok: explicit cast allowed
+    a = (unsigned int)b;               // ok: explicit cast allowed
+    a = (unsigned int)(-1);            // ok: explicit cast allowed
+  }
+}

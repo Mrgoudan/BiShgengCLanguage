@@ -12392,7 +12392,7 @@ public:
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);
-  bool IsSafeConversion(QualType DestType, Expr *E);
+  bool IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast = false);
   bool IsSafeConstantValueConversion(QualType DestType, Expr *E);
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   bool IsSafeFunctionPointerType(QualType Type);
