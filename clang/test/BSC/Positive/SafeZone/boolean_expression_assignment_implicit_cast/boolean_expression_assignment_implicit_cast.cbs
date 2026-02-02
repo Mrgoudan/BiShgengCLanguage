@@ -1,0 +1,99 @@
+// RUN: %clang -cc1 %s
+// expected-no-diagnostics
+
+safe void boolean_variable(_Bool b) {
+    char c = b;
+    signed char sc = b;
+    unsigned char uc = b;
+    short s = b;
+    unsigned short us = b;
+    int i = b;
+    unsigned int ui = b;
+    long l = b;
+    unsigned long ul = b;
+    long long ll = b;
+    unsigned long long ull = b;
+}
+
+safe _Bool predicate(void);
+
+safe void boolean_function_call(void) {
+    char c = predicate();
+    signed char sc = predicate();
+    unsigned char uc = predicate();
+    short s = predicate();
+    unsigned short us = predicate();
+    int i = predicate();
+    unsigned int ui = predicate();
+    long l = predicate();
+    unsigned long ul = predicate();
+    long long ll = predicate();
+    unsigned long long ull = predicate();
+}
+
+safe void boolean_expression(int x) {
+    {
+        char c = x == 0;
+        signed char sc = x == 0;
+        unsigned char uc = x == 0;
+        short s = x == 0;
+        unsigned short us = x == 0;
+        int i = x == 0;
+        unsigned int ui = x == 0;
+        long l = x == 0;
+        unsigned long ul = x == 0;
+        long long ll = x == 0;
+        unsigned long long ull = x == 0;
+    }
+    {
+        char c = !x;
+        signed char sc = !x;
+        unsigned char uc = !x;
+        short s = !x;
+        unsigned short us = !x;
+        int i = !x;
+        unsigned int ui = !x;
+        long l = !x;
+        unsigned long ul = !x;
+        long long ll = !x;
+        unsigned long long ull = !x;
+    }
+    {
+        char c = x == 0 ? 2 : 3;
+        signed char sc = x == 0 ? 2 : 3;
+        unsigned char uc = x == 0 ? 2 : 3;
+        short s = x == 0 ? 2 : 3;
+        unsigned short us = x == 0 ? 2 : 3;
+        int i = x == 0 ? 2 : 3;
+        unsigned int ui = x == 0 ? 2 : 3;
+        long l = x == 0 ? 2 : 3;
+        unsigned long ul = x == 0 ? 2 : 3;
+        long long ll = x == 0 ? 2 : 3;
+        unsigned long long ull = x == 0 ? 2 : 3;
+    }
+    int dummy = 0;
+    {
+        char c = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        signed char sc = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        unsigned char uc = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        short s = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        unsigned short us = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        int i = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        unsigned int ui = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        long l = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        unsigned long ul = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        long long ll = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+        unsigned long long ull = x == 0 ? predicate() && x <= 60 : x > 80 || (++dummy, predicate());
+    }
+}
+
+safe void accept_boolean(_Bool);
+
+safe void call_function_with_implicit_cast(_Bool b, int x) {
+    accept_boolean(b);
+    accept_boolean(!b);
+    accept_boolean(!x);
+    accept_boolean(x == 0);
+    accept_boolean(x < 1);
+    accept_boolean(x > 0 ? b : x < -3);
+}

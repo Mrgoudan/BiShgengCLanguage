@@ -228,6 +228,8 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   return true;
 }
 
+namespace {
+
 DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
   if (!E) {
     return nullptr;
@@ -254,6 +256,32 @@ DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
   }
   return nullptr;
 }
+
+/// Examine whether an expression is evaluating to a boolean value,
+/// so that implicit type casting restriction could be loosen in safezone
+bool IsBooleanEvaluation(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+
+  if (E->getType()->isBooleanType())
+    return true;
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    return UO->getOpcode() == UO_LNot;
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->getOpcode() == BO_Comma)
+      return IsBooleanEvaluation(BO->getRHS());
+    return BO->isLogicalOp() || BO->isComparisonOp();
+  }
+
+  if (const auto *CO = dyn_cast<ConditionalOperator>(E)) {
+    return IsBooleanEvaluation(CO->getTrueExpr()) &&
+           IsBooleanEvaluation(CO->getFalseExpr());
+  }
+
+  return false;
+}
+} // namespace
 
 bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   // check function pointer Type in 'IsSafeFunctionPointerTypeCast'
@@ -321,7 +349,8 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
           // conversion from high-precision to low-precision is not allowed
           // conversion from wide range to narrow range is not allowed
           if (!IsSafeBuiltinTypeConversion(SBT->getKind(), DBT->getKind())) {
-            IsSafeBehavior = false;
+            if (!DestType->isIntegerType() || !IsBooleanEvaluation(E))
+              IsSafeBehavior = false;
           }
         }
       }

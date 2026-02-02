@@ -1,0 +1,26 @@
+// RUN: %clang -cc1 %s
+// expected-no-diagnostics
+
+safe char ret_c(int x) { return x == 0; }
+safe signed char ret_sc(int x) { return x == 0; }
+safe unsigned char ret_uc(int x) { return x == 0; }
+safe short ret_s(int x) { return x == 0; }
+safe unsigned short ret_us(int x) { return x == 0; }
+safe int ret_i(int x) { return x == 0; }
+safe unsigned int ret_ui(int x) { return x == 0; }
+safe long ret_l(int x) { return x == 0; }
+safe unsigned long ret_ul(int x) { return x == 0; }
+safe long long ret_ll(int x) { return x == 0; }
+safe unsigned long long ret_ull(int x) { return x == 0; }
+
+safe char ret_complex_c(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe signed char ret_complex_sc(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe unsigned char ret_complex_uc(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe short ret_complex_s(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe unsigned short ret_complex_us(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe int ret_complex_i(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe unsigned int ret_complex_ui(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe long ret_complex_l(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe unsigned long ret_complex_ul(int x) { return !x && x > 100 ? x <= 0 || x > -10 : x > 200 && x <= 500; }
+safe long long ret_complex_ll(int x) { return !x  && x > 100? x <= 0  || x > -10 : x > 200 && x <= 500; }
+safe unsigned long long ret_complex_ull(int x) { return !x  && x > 100? x <= 0  || x > -10 : x > 200 && x <= 500; }

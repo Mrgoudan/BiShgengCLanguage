@@ -2784,7 +2784,15 @@ int main() {
 }
 ```
 
-19. 安全区内不允许表达范围从大向小的类型转换（比如从`long`转换为`int`，从`int`转换为`_Bool`，从`int`转换为`enum`）。不允许表达精度从高向低的类型转换（比如从`double`转换为`float`）。对于基础类型的常量发生类型转换，如果目标类型可以描述这个值，那么该类型转换是允许的，并且在`if/while`中也允许转换。
+19. 安全区内不允许表达范围从大向小的类型转换（比如从`long`转换为`int`，从`int`转换为`_Bool`，从`int`转换为`enum`）。不允许表达精度从高向低的类型转换（比如从`double`转换为`float`）。
+
+
+例外情况：
+
+- 基础类型的常量发生类型转换，如果常量的数值属于目标类型的值域则允许转换。
+- `if/while` 的条件中允许转换。
+- 在函数实参、返回语句和赋值语句中使用具有布尔语义的表达式时，
+允许将表达式的类型 `int` 隐式转换为任意基本整数类型，因为任何基本整数类型都可以表示 0 和 1
 
 ```c
 void test() {
@@ -2811,6 +2819,11 @@ void test() {
   }
 }
 
+safe unsigned short accept_char(char c) {
+  // ok: unsigned short 可以表示 0 和 1
+  return c < 3;
+}
+
 int main() {
   int a = 2;
   safe {
@@ -2820,11 +2833,17 @@ int main() {
     } else {
       a -= 1;
     }
+    // ok: char 可以表示 0 和 1
+    accept_char(a >= 1);
+    // ok: signed char 可以表示 0 和 1
+    signed char x = a < 3 || a >= 6;
   }
   test();
   return 0;
 }
+
 ```
+
 
 20. 安全区内不允许内嵌汇编语句。
 

@@ -1,0 +1,40 @@
+// RUN: %clang -cc1 %s
+// expected-no-diagnostics
+
+safe void fun_c(char);
+safe void fun_sc(signed char);
+safe void fun_uc(unsigned char);
+safe void fun_s(short);
+safe void fun_us(unsigned short);
+safe void fun_i(int);
+safe void fun_ui(unsigned int);
+safe void fun_l(long);
+safe void fun_ul(unsigned long);
+safe void fun_ll(long long);
+safe void fun_ull(unsigned long long);
+
+safe void boolean_expression_as_argument(int x) {
+    fun_c(x == 0);
+    fun_sc(x == 0);
+    fun_uc(x == 0);
+    fun_s(x == 0);
+    fun_us(x == 0);
+    fun_i(x == 0);
+    fun_ui(x == 0);
+    fun_l(x == 0);
+    fun_ul(x == 0);
+    fun_ll(x == 0);
+    fun_ull(x == 0);
+
+    fun_c(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_sc(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_uc(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_s(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_us(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_i(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_ui(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_l(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_ul(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_ll(!x ? x>0 && x<50 : x>100 || x<-100);
+    fun_ull(!x ? x>0 && x<50 : x>100 || x<-100);
+}
