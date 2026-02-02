@@ -4301,12 +4301,41 @@ int main() {
 ```C
 int *owned test(int *owned p) {
   // error: 应当使用 &mut *p 代替强制类型转换
-  int *borrow q = (int *borrow) p; 
+  int *borrow q = (int *borrow) p;
   // error: 不能通过强制类型转换从 T *borrow 创建一个 T *owned 副本
   int *owned r = (int *owned) q;
   return r;
 }
 ```
+
+5. 不允许在可变借用(`T *borrow`)和只读借用(`const T *borrow`)之间进行强制类型转换
+
+这种转换会破坏借用检查的安全性:
+- 将可变借用转换为只读借用会创建两个独立的借用(一个可变,一个只读)指向同一个对象,从而允许在只读借用存在的同时进行修改操作
+- 将只读借用转换为可变借用会违反const安全性,允许通过原本只读的借用进行修改
+
+```C
+#include <stdio.h>
+
+int main() {
+  int local = 10;
+  int *borrow p = &mut local;
+  // error: 不允许将可变借用强制转换为只读借用
+  const int *borrow b = (const int *borrow)p;
+  printf("%d\n", *b);  // 读取 b
+  *p = 1;              // 修改 p (如果转换被允许,这会违反借用规则)
+  printf("%d\n", *b);  // 再次读取 b
+
+  const int *borrow c = &const local;
+  // error: 不允许将只读借用强制转换为可变借用
+  int *borrow m = (int *borrow)c;
+  *m = 20;  // 如果转换被允许,这会违反const安全性
+
+  return 0;
+}
+```
+
+注意:允许同类型的借用之间的转换(可变到可变,只读到只读)。
 
 #### 10. 借用的其它规则
 

@@ -355,6 +355,15 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
     } else if (TryDesugarTrait(RHSType)) {
       return true;
     } else {
+      // Check borrow qualifier compatibility for non-void pointer casts
+      // Prevent casting between mutable and const borrows to avoid aliasing
+      if (RHSCanType.isBorrowQualified() && LHSCanType.isBorrowQualified()) {
+        bool RHSIsConst = RHSCanType.isConstBorrow();
+        bool LHSIsConst = LHSCanType.isConstBorrow();
+        if (RHSIsConst != LHSIsConst) {
+          return false;
+        }
+      }
       return CheckBorrowQualTypeCStyleCast(LHSPtrType->getPointeeType(),
                                            RHSPtrType->getPointeeType());
     }

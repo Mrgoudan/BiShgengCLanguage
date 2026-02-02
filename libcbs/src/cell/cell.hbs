@@ -26,7 +26,7 @@ safe T Cell<T>::get(const This * borrow this) {
 safe void Cell<T>::set(const This * borrow this, T val) {
     unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     unsafe {
-        Cell<T> * borrow p = (Cell<T> * borrow)this;
+        Cell<T> * borrow p = (Cell<T> * borrow)(Cell<T> *)this;
         p->value = val;
     }
 }
