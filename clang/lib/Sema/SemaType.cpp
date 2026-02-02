@@ -2477,6 +2477,19 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
 
   ExprResult R =
       S.VerifyIntegerConstantExpression(ArraySize, &SizeVal, Diagnoser);
+#if ENABLE_BSC
+  // For BSC, if strict ICE check fails due to overflow, fallback to loose C-style evaluation to salvage it as a constant.
+  if (S.getLangOpts().BSC && Diagnoser.IsVLA){
+    Expr::EvalResult LooseResult;
+    // Try loose C-style evaluation even if ICE check failed.
+    if (ArraySize->EvaluateAsInt(LooseResult, S.Context, Expr::SE_AllowSideEffects)) {
+      // Capture the overflowed value into SizeVal to trigger standard C-style negative-size diagnostics later.
+      SizeVal = LooseResult.Val.getInt(); 
+      Diagnoser.IsVLA = false;           
+      return ExprResult(ArraySize);      
+    }
+  }
+#endif
   if (Diagnoser.IsVLA)
     return ExprResult();
   return R;
