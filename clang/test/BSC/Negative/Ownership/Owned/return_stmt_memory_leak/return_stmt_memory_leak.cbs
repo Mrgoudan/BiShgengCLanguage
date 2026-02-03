@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -verify %s 
+
+int SetVersionInfo(int id, const char* name, const char* commitId);
+
+owned struct String {
+public:
+    const char *borrow as_str(const String *borrow this);
+};
+
+
+safe int SafeSetVersionInfo(int id, String name, String commitId)
+{
+    unsafe {
+         return SetVersionInfo(id, (const char*)name.as_str(), (const char*)commitId.as_str()); // expected-error {{memory leak because temporary variable 'name' is owned or indirect owned type, please fix it}}
+    }
+}
+
+int main(){
+
+    return 0;
+}

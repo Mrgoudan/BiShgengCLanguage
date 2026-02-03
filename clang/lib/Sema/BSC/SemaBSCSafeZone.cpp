@@ -459,6 +459,10 @@ bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
     return false;
   }
 
+  // forbid owned struct
+  if (CanonType->isOwnedStructureType()) { 
+      return false;
+  }
   // For struct/union types, recursively check if they contain pointer fields
   if (CanonType->isStructureType() || CanonType->isUnionType()) {
     // Check if the struct/union contains any pointer fields

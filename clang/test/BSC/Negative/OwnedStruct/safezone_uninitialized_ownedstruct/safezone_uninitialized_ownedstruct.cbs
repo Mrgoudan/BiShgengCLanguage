@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+owned struct B {
+public:
+    int x;
+};
+
+safe void test(void) {
+    B b1;   // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+
+    b1.x = 0;
+
+    B b2 = { .x = 10 };
+
+    b2.x = 1;
+}
+
+int main(){
+
+    return 0;
+}
