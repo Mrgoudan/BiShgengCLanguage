@@ -14545,6 +14545,31 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
       VD->setDefInTopLevelSwitchBlock(true);
     }
   }
+
+  // forbid uninitialized global Nonnull pointer
+  if (getLangOpts().BSC && !VD->hasInit()) {
+    // FieldDecl or VarDecl
+    auto FindNonnullDecl = [&](auto &Self, QualType T, const NamedDecl *D) -> const NamedDecl * {
+      if (auto K = T->getNullability(Context)) {
+        if (*K == NullabilityKind::NonNull) return D;
+      }
+      if (const ArrayType *AT = Context.getAsArrayType(T)) {
+        return Self(Self, AT->getElementType(), D);
+      }
+      if (const RecordDecl *RD = T->getAsRecordDecl()) {
+        for (const FieldDecl *FD : RD->fields()) {
+          if (const NamedDecl *Found = Self(Self, FD->getType(), FD))
+            return Found;
+        }
+      }
+      return nullptr;
+    };
+
+    if (const NamedDecl *BadDecl = FindNonnullDecl(FindNonnullDecl, VD->getType(), VD)) {
+      Diag(VD->getLocation(), diag::err_nonnull_init_by_default)
+          << BadDecl->getDeclName();
+    }
+  }
 #endif
 
   // Apply an implicit SectionAttr if '#pragma clang section bss|data|rodata' is active
