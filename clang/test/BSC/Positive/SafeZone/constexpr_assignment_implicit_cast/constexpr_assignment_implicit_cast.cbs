@@ -1,0 +1,50 @@
+// RUN: %clang -cc1 %s
+// expected-no-diagnostics
+
+// a literal value that can safely casting to any integral type
+#define LITERAL 42ull
+safe void integral_literal_assign(void) {
+    char c = LITERAL;
+    signed char sc = LITERAL;
+    unsigned char uc = LITERAL;
+    short s = LITERAL;
+    unsigned short us = LITERAL;
+    int i = LITERAL;
+    unsigned int ui = LITERAL;
+    long l = LITERAL;
+    unsigned long ul = LITERAL;
+    long long ll = LITERAL;
+    unsigned long long ull = LITERAL;
+}
+#undef LITERAL
+
+safe void constexpr_assign(void) {
+    constexpr int VALUE = 42;
+    char c = VALUE;
+    signed char sc = VALUE;
+    unsigned char uc = VALUE;
+    short s = VALUE;
+    unsigned short us = VALUE;
+    int i = VALUE;
+    unsigned int ui = VALUE;
+    long l = VALUE;
+    unsigned long ul = VALUE;
+    long long ll = VALUE;
+    unsigned long long ull = VALUE;
+}
+
+safe void constexpr_calculation(void) {
+    constexpr int X = 3;
+    constexpr int Y = -2;
+    char c = X + Y;
+    signed char sc = X + Y;
+    unsigned char uc = X + Y;
+    short s = X + Y;
+    unsigned short us = X + Y;
+    int i = X + Y;
+    unsigned int ui = X + Y;
+    long l = X + Y;
+    unsigned long ul = X + Y;
+    long long ll = X + Y;
+    unsigned long long ull = X + Y;
+}

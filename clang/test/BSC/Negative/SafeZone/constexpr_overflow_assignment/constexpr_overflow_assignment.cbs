@@ -1,0 +1,69 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+safe void constexpr_underflow_assignment(void) {
+    constexpr int NEGATIVE = -1;
+    char c = NEGATIVE;
+    signed char sc = NEGATIVE;
+    unsigned char uc = NEGATIVE; // expected-error {{conversion from type 'const int' to 'unsigned char' is forbidden in the safe zone}}
+    short s = NEGATIVE;
+    unsigned short us = NEGATIVE; // expected-error {{conversion from type 'const int' to 'unsigned short' is forbidden in the safe zone}}
+    int i = NEGATIVE;
+    unsigned int ui = NEGATIVE; // expected-error {{conversion from type 'const int' to 'unsigned int' is forbidden in the safe zone}}
+    long l = NEGATIVE;
+    unsigned long ul = NEGATIVE; // expected-error {{conversion from type 'const int' to 'unsigned long' is forbidden in the safe zone}}
+    long long ll = NEGATIVE;
+    unsigned long long ull = NEGATIVE; // expected-error {{conversion from type 'const int' to 'unsigned long long' is forbidden in the safe zone}}
+}
+safe void constexpr_overflow_assignment(void) {
+    constexpr unsigned long long BIG = 18446744073709551615ull;
+    char c = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'char' is forbidden in the safe zone}}
+    signed char sc = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'signed char' is forbidden in the safe zone}}
+    unsigned char uc = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'unsigned char' is forbidden in the safe zone}}
+    short s = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'short' is forbidden in the safe zone}}
+    unsigned short us = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'unsigned short' is forbidden in the safe zone}}
+    int i = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'int' is forbidden in the safe zone}}
+    unsigned int ui = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'unsigned int' is forbidden in the safe zone}}
+    long l = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'long' is forbidden in the safe zone}}
+
+    // CAUTION: in linux, sizeof(unsigned long) == 8
+    // unsigned long ul = BIG;
+
+    long long ll = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'long long' is forbidden in the safe zone}}
+    unsigned long long ull = BIG;
+}
+
+safe void constexpr_underflow_calculation_assignment(void) {
+    constexpr int X = 3;
+    constexpr int Y = 4;
+    char c = X - Y;
+    signed char sc = X - Y;
+    unsigned char uc = X - Y; // expected-error {{conversion from type 'int' to 'unsigned char' is forbidden in the safe zone}}
+    short s = X - Y;
+    unsigned short us = X - Y; // expected-error {{conversion from type 'int' to 'unsigned short' is forbidden in the safe zone}}
+    int i = X - Y;
+    unsigned int ui = X - Y; // expected-error {{conversion from type 'int' to 'unsigned int' is forbidden in the safe zone}}
+    long l = X - Y;
+    unsigned long ul = X - Y; // expected-error {{conversion from type 'int' to 'unsigned long' is forbidden in the safe zone}}
+    long long ll = X - Y;
+    unsigned long long ull = X - Y; // expected-error {{conversion from type 'int' to 'unsigned long long' is forbidden in the safe zone}}
+}
+
+safe void constexpr_overflow_calculation_assignment(void) {
+    constexpr unsigned long long X = 9223372036854775807ull;
+    constexpr unsigned long long Y = 9223372036854775808ull;
+    char c = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'char' is forbidden in the safe zone}}
+    signed char sc = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'signed char' is forbidden in the safe zone}}
+    unsigned char uc = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'unsigned char' is forbidden in the safe zone}}
+    short s = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'short' is forbidden in the safe zone}}
+    unsigned short us = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'unsigned short' is forbidden in the safe zone}}
+    int i = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'int' is forbidden in the safe zone}}
+    unsigned int ui = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'unsigned int' is forbidden in the safe zone}}
+    long l = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'long' is forbidden in the safe zone}}
+
+    // CAUTION: in linux, sizeof(unsigned long) == 8
+    // unsigned long ul = X + Y;
+
+    long long ll = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'long long' is forbidden in the safe zone}}
+    unsigned long long ull = X + Y;
+}
+
