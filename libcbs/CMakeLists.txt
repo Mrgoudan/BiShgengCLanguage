@@ -10,6 +10,12 @@ if(NOT BSC_CLANG)
   find_program(BSC_CLANG NAMES clang clang-X.Y)
 endif()
 
+option(ENABLE_BSC_LIB_FUTURE "Enable BSC Lib future features" OFF)
+
+if(ENABLE_BSC_LIB_FUTURE)
+  message(STATUS "BSC Lib future features is enabled")
+endif()
+
 set(CMAKE_EXE_LINKER_FLAGS "-lpthread")
 
 set(CMAKE_C_COMPILER ${BSC_CLANG})
