@@ -409,7 +409,10 @@ void ActionExtract::VisitBinAssign(BinaryOperator *BO) {
     Visit(BO->getLHS());
     op = RHS;
     Visit(BO->getRHS());
-    if (RNL.isInvalid() || RNR.isInvalid() || Sources.empty())
+    // ActionAssign should only be used when assigning borrow-qualified types.
+    // If the assignment type itself is not tracked, use ActionInit.
+    if (RNL.isInvalid() || RNR.isInvalid() || Sources.empty() ||
+        !IsTrackedType(BO->getType()))
       Kind = Action::Init;
   }
 }
