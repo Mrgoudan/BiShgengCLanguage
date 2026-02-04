@@ -1,0 +1,137 @@
+// RUN: %clang_cc1 -verify -verify-ignore-unexpected %s
+struct S<T> {
+  int a;
+  T b;
+};
+
+S<T> test1<T>() {
+  S<T> s; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return s;
+}
+S<T> test2<T>(T t) {
+  S<T> s; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return s;
+}
+void fun() {
+  test1<int * _Borrow>(); 
+  test2<int * _Borrow>(nullptr); 
+}
+
+S<T> test3<T>() {
+  S<T> s = {.a =1}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return s;
+}
+void fun2() {
+  test3<int *_Borrow>(); 
+}
+
+/* =========================
+ * Nested struct test cases
+ * ========================= */
+
+struct Outer1<T> {
+  int tag;
+  S<T> inner;
+};
+
+Outer1<T> nest1<T>() {
+  Outer1<T> o; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return o;
+}
+void nest1_use() {
+  nest1<int *_Borrow>();
+}
+
+Outer1<T> nest2<T>() {
+  Outer1<T> o = {.tag = 1}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return o;
+}
+void nest2_use() {
+  nest2<int *_Borrow>();
+}
+
+Outer1<T> nest3<T>() {
+  Outer1<T> o = {.tag = 1, .inner = {.a = 7}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return o;
+}
+void nest3_use() {
+  nest3<int *_Borrow>();
+}
+
+/* two nested fields, both need init when T is _Borrow */
+struct Outer2<T> {
+  S<T> left;
+  S<T> right;
+  int x;
+};
+
+Outer2<T> nest4<T>() {
+  Outer2<T> o = {.x = 0, .left = {.a = 1}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return o;
+}
+void nest4_use() {
+  nest4<int *_Borrow>();
+}
+
+/* deeper nesting: Outer3 -> Mid -> S<T> */
+struct Mid<T> {
+  int m;
+  S<T> inner;
+};
+
+struct Outer3<T> {
+  int o;
+  Mid<T> mid;
+};
+
+Outer3<T> nest5<T>() {
+  Outer3<T> x = {.o = 1, .mid = {.m = 2}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return x;
+}
+void nest5_use() {
+  nest5<int *_Borrow>();
+}
+
+/* initialization goes deep but still missing the _Borrow field */
+Outer3<T> nest6<T>() {
+  Outer3<T> x = {.o = 1, .mid = {.m = 2, .inner = {.a = 9}}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return x;
+}
+void nest6_use() {
+  nest6<int *_Borrow>();
+}
+
+/* =========================
+ * nested/edge test cases
+ * ========================= */
+
+/* Wrapper -> S<T> */
+struct Wrap1<T> {
+  S<T> s;
+};
+
+struct Outer4<T> {
+  int k;
+  Wrap1<T> w;
+};
+
+Outer4<T> nest7<T>() {
+  Outer4<T> o = {.k = 1}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return o;
+}
+void nest7_use() {
+  nest7<int *_Borrow>(); 
+}
+
+Outer4<T> nest8<T>() {
+  Outer4<T> o = {.k = 1, .w = {.s = {.a = 1}}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  return o;
+}
+void nest8_use() {
+  nest8<int *_Borrow>(); 
+}
+
+int main(){
+
+    return 0;
+}
