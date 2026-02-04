@@ -804,7 +804,16 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 #if ENABLE_BSC
 void ToolChain::AddClangBSCSystemIncludeArgs(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args) const {
-  // Each toolchain should provide the appropriate include flags.
+  // Default BSC include paths
+  // Each toolchain may provide the appropriate include flags.
+  const Driver &D = getDriver();
+  SmallString<128> ResourceDirBSCInclude(D.ResourceDir);
+  SmallString<128> ResourceDirBSCInclude2c(D.ResourceDir);
+  llvm::sys::path::append(ResourceDirBSCInclude, "include/bsc_include");
+  llvm::sys::path::append(ResourceDirBSCInclude2c,
+                          "include/bsc_include/bsc_include2c");
+  addSystemInclude(DriverArgs, CC1Args, ResourceDirBSCInclude);
+  addSystemInclude(DriverArgs, CC1Args, ResourceDirBSCInclude2c);
 }
 #endif
 
