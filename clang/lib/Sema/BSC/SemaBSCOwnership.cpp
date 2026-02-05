@@ -53,6 +53,7 @@ bool Sema::CheckOwnedDecl(SourceLocation ErrLoc, QualType T) {
 //   - Pointer types (e.g., int* owned, int** owned *)
 //   - Owned structure types
 //   - Owned template specialization types
+//   - Dependent types (template parameters - checked at instantiation)
 // Invalid examples:
 //   - owned int x           (owned on primitive type)
 //   - owned int * a[3]      (owned int inside array of pointers)
@@ -62,10 +63,11 @@ void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
     return;
 
   // Helper to check if a type can validly have owned qualifier
-  // Returns true for pointers, owned structures, and owned template types
+  // Returns true for pointers, owned structures, owned template types, and dependent types
+  // Dependent types (like template parameters) are allowed - validity checked at instantiation
   auto isValidOwnedType = [](QualType Ty) {
     return Ty->isPointerType() || Ty->isOwnedStructureType() ||
-           Ty->isOwnedTemplateSpecializationType();
+           Ty->isOwnedTemplateSpecializationType() || Ty->isDependentType();
   };
 
   // Helper to emit diagnostic with unqualified type

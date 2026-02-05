@@ -2915,6 +2915,10 @@ void safe_free(void *owned);
 ```
 可以通过`safe_malloc`申请足够存放`T`类型的堆空间，并初始化为`t`，当`owned`指针生命周期结束前，必须通过`safe_free`进行释放，在使用时，需要将`T *owned`指针转换为`void *owned`指针类型再释放，对于**多级指针，需要从内到外进行释放**；对于结构体内部有`owned`指针成员的情况，需要**先将结构体内全部`owned`指针成员释放后，才能释放结构体的`owned`指针**。
 
+**`owned` 与泛型类型参数**
+
+在泛型函数中，`owned` 修饰泛型类型参数（如 `T owned` 或 `owned T`）时，`owned` 应用于完整类型 `T`。当 `T` 实例化为 `int*` 时，`T owned` 和 `owned T` 都产生 `int* owned`（owned 指针），而非 `owned int*`。泛型定义时允许对类型参数使用 `owned`，有效性在实例化时检查。
+
 函数使用示例：
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放

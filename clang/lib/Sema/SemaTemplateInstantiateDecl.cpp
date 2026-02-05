@@ -2049,6 +2049,50 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
+#if ENABLE_BSC
+  // After template instantiation, validate that owned/borrow qualifiers
+  // are only applied to pointer types in the instantiated function signature
+  if (SemaRef.getLangOpts().BSC && TInfo) {
+    const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
+    if (FPT) {
+      // Check return type
+      QualType ReturnType = FPT->getReturnType();
+      if (ReturnType.isOwnedQualified() && !ReturnType->isPointerType() &&
+          !ReturnType->isOwnedStructureType() &&
+          !ReturnType->isOwnedTemplateSpecializationType()) {
+        QualType UnqualType = ReturnType;
+        UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
+        SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
+            << "owned" << UnqualType;
+      }
+      if (ReturnType.isBorrowQualified() && !ReturnType->isPointerType()) {
+        QualType UnqualType = ReturnType;
+        UnqualType.removeLocalFastQualifiers(Qualifiers::Borrow);
+        SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
+            << "borrow" << UnqualType;
+      }
+
+      // Check parameter types
+      for (QualType ParamType : FPT->param_types()) {
+        if (ParamType.isOwnedQualified() && !ParamType->isPointerType() &&
+            !ParamType->isOwnedStructureType() &&
+            !ParamType->isOwnedTemplateSpecializationType()) {
+          QualType UnqualType = ParamType;
+          UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
+          SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
+              << "owned" << UnqualType;
+        }
+        if (ParamType.isBorrowQualified() && !ParamType->isPointerType()) {
+          QualType UnqualType = ParamType;
+          UnqualType.removeLocalFastQualifiers(Qualifiers::Borrow);
+          SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
+              << "borrow" << UnqualType;
+        }
+      }
+    }
+  }
+#endif
+
   if (TemplateParams && TemplateParams->size()) {
     auto *LastParam =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());

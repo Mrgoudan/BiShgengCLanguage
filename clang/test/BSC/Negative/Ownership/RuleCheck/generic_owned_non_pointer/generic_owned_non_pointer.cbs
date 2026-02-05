@@ -1,0 +1,35 @@
+// RUN: %clang_cc1 -verify %s
+
+// Test that when a template with owned qualifier is instantiated with a non-pointer type,
+// the error "type of 'X' cannot be qualified by 'owned'" is reported.
+//
+// The template definition is allowed (owned can be applied to dependent types),
+// but instantiation with non-pointer types (int, float) triggers validation errors.
+
+owned T Func_1<T>(owned T t)
+// expected-note@-1 {{candidate template ignored: substitution failure [with T = int]: type of 'int' cannot be qualified by 'owned'}}
+// expected-note@-2 {{candidate template ignored: substitution failure [with T = float]: type of 'float' cannot be qualified by 'owned'}}
+{
+    T owned tmp = (owned T)t;
+    return tmp;
+}
+
+void test_int() {
+    // Attempting to instantiate with T = int
+    // The diagnostic shows: "type of 'int' cannot be qualified by 'owned'"
+    int x = 42;
+    Func_1<int>(x); // expected-error {{no matching function for call to 'Func_1'}}
+}
+
+void test_float() {
+    // Attempting to instantiate with T = float
+    // The diagnostic shows: "type of 'float' cannot be qualified by 'owned'"
+    float x = 3.14f;
+    Func_1<float>(x); // expected-error {{no matching function for call to 'Func_1'}}
+}
+
+int main() {
+    test_int();
+    test_float();
+    return 0;
+}

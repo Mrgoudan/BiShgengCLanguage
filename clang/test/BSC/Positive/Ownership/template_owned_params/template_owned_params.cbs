@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test that owned qualifiers are allowed on template type parameters
+// Validity is checked at template instantiation time
+
+// Test 1: owned_cast pattern - template function with owned qualified parameters
+static inline safe T2 owned owned_cast<T1,T2>(T1 owned p);
+
+// Test 2: Template function with owned return type
+T owned func1<T>();
+
+// Test 3: Template function with owned parameter
+void func2<T>(T owned p);
+
+// Test 4: Template function with multiple owned parameters
+void func3<T1, T2>(T1 owned a, T2 owned b);
+
+// Test 5: Mixed owned and non-owned
+T1 owned func4<T1, T2>(T1 owned input, T2 regular);

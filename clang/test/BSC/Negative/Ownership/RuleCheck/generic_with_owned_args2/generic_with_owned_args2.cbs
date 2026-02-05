@@ -1,8 +1,21 @@
 // RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
 
-owned T Func_1<T>(T t) // expected-error {{type of 'T' cannot be qualified by 'owned'}}
+// Test that owned qualifiers are allowed on template type parameters.
+// Like C++ const qualifier, both "T owned" and "owned T" apply owned to the complete type T.
+//
+// When T = int*, both forms produce: int* owned (owned pointer to int)
+// NOT: owned int* (pointer to owned int)
+//
+// The owned qualifier is applied to whatever type T is instantiated with.
+// Validity is checked at instantiation time:
+// - If T is instantiated with a pointer type (e.g., int*), then "owned T" = "int* owned" is valid
+// - If T is instantiated with a non-pointer type (e.g., int), semantic errors occur at usage
+//
+// This follows C++'s behavior where "const T" with T=int* gives "int* const", not "const int*"
+owned T Func_1<T>(T t)
 {
-    T owned tmp = (owned T)t; // expected-error {{type of 'T' cannot be qualified by 'owned'}}
+    T owned tmp = (owned T)t;
     return tmp;
 }
 
