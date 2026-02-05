@@ -44,4 +44,3 @@ int *owned own2mutable(int *owned ptr) {
     int *borrow ref = ptr; // expected-error {{incompatible owned types, cannot cast 'int *owned' to 'int *borrow'}}
     return ptr;
 }
-

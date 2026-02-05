@@ -281,6 +281,30 @@ bool IsBooleanEvaluation(const Expr *E) {
 
   return false;
 }
+
+/// Returns whether conversions from `SrcCanPtr` to `DstCanPtr` is allowed
+/// in safezone.
+/// Assumes both `SrcCanPtr` and `DstCanPtr` are canonical pointer types.
+bool IsSafePointerConversion(const QualType SrcCanPtr,
+                             const QualType DstCanPtr) {
+  const QualType SrcPointee = SrcCanPtr->getPointeeType();
+  QualType DstPointee = DstCanPtr->getPointeeType();
+  // allow `const T *borrow` <- `T *borrow`
+  // mirrors the logic in Sema::CheckBorrowQualTypeAssignment
+  if (DstPointee.isConstQualified() && DstCanPtr.isBorrowQualified() &&
+      !SrcPointee.isConstQualified() && SrcCanPtr.isBorrowQualified()) {
+    DstPointee.removeLocalConst();
+    if (SrcPointee == DstPointee)
+      return true;
+  }
+  // allow `void *owned` <- `T *owned`
+  if (SrcCanPtr.isOwnedQualified() && DstCanPtr->isVoidPointerType() &&
+      DstCanPtr.isOwnedQualified())
+    return true;
+
+  // fallback: disallow conversion between different pointer types
+  return SrcCanPtr == DstCanPtr;
+}
 } // namespace
 
 bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
@@ -308,6 +332,10 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     }
   }
 
+  if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(E)) {
+    return IsSafeConversion(DestType, Exp->getTrueExpr(), IsExplicitCast) &&
+           IsSafeConversion(DestType, Exp->getFalseExpr(), IsExplicitCast);
+  }
   bool IsSafeBehavior = true;
   QualType SrcType = E->getType();
   if (IsTraitExpr(E)) {
@@ -317,23 +345,10 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   if (DestType->isTraitPointerType() && !SrcType->isTraitPointerType()) {
     return true;
   }
-  if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(E)) {
-    if (IsSafeConversion(DestType, Exp->getTrueExpr(), IsExplicitCast)) {
-      return IsSafeConversion(DestType, Exp->getFalseExpr(), IsExplicitCast);
-    } else {
-      return false;
-    }
-  } else if (SrcType->isPointerType() && DestType->isPointerType()) {
-    // different pointer type does not allow conversion, except for conversion
-    // from owned pointer to `void* owned`
-    if (SrcType.getCanonicalType() != DestType.getCanonicalType()) {
-      if (SrcType.getCanonicalType().isOwnedQualified() &&
-          DestType.getCanonicalType()->isVoidPointerType() &&
-          DestType.getCanonicalType().isOwnedQualified())
-        IsSafeBehavior = true;
-      else
-        IsSafeBehavior = false;
-    }
+  if (SrcType->isPointerType() && DestType->isPointerType()) {
+    QualType SrcCanType = SrcType.getCanonicalType();
+    QualType DestCanType = DestType.getCanonicalType();
+    IsSafeBehavior = IsSafePointerConversion(SrcCanType, DestCanType);
   } else if (SrcType->isPointerType() || DestType->isPointerType()) {
     // conversion from pointer to non-pointer or non-pointer to pointer is not
     // allowed
