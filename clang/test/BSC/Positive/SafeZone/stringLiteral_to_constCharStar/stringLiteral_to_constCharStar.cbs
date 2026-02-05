@@ -6,7 +6,7 @@ typedef struct Msg {
     const char* content;
 } Msg;
 
-void test_string_literal_pass(void) {
+safe void test_string_literal_pass(void) {
     const char* null_ptr1 = nullptr;
 
     const char* p1 = "hello world"; 
@@ -16,6 +16,10 @@ void test_string_literal_pass(void) {
     const char* p3 = ((("deeply nested")));
 
     const char p4[] = "array decay test";
+    const char *p44 = p4;
+
+    char p5[5] = "abcde";
+    const char *p55 = p5;
 
     const char* ptr_source = "original";
     const char* ptr_copy = ptr_source;

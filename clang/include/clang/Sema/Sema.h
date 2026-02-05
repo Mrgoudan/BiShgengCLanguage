@@ -12451,6 +12451,7 @@ public:
   bool CheckNeedCastQualifiedType(QualType actualType, QualType formalType);
   bool CheckNeedReborrowPointerType(QualType actualType, QualType formalType);
   bool IsStringLiteralExpr(Expr *E);
+  bool isSafeZoneStringType(Expr *E);
   Expr *InsertConstBorrowForStringLiteral(Expr *StringLiteralExpr, SourceLocation Loc);
 #endif
 

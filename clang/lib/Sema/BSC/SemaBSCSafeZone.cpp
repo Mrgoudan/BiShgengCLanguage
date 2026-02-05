@@ -293,7 +293,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     return true;
   }
 
-  // Init any pointer (raw, owned, or borrow) by nullptr is allowed in the safe zone
+  // Init any pointer (raw, owned, or borrow) by nullptr is allowed in the safezone
   if (DestType->isPointerType()) {
     if (isa<CXXNullPtrLiteralExpr>(E))
       return true;
@@ -301,8 +301,9 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     // Allow initializing 'const char*' pointers with string literals.
     QualType Pointee = DestType->getPointeeType();
     if (Pointee->isCharType() && Pointee.isConstQualified()) {
-      // Check if E is a string literal (possibly through parens/casts/ternary)
-      if (IsStringLiteralExpr(E))
+      // Check if E is a legal string(char,const[],stringLiteral, 
+      // possibly through parens/casts/ternary)
+      if (isSafeZoneStringType(E))
         return true;
     }
   }

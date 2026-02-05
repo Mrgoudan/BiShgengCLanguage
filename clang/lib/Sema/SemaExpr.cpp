@@ -6446,6 +6446,22 @@ static bool IsConstCharPtrBorrow(QualType Ty) {
   return Pointee->isCharType() && Pointee.isConstQualified();
 }
 
+/// Check if type is char[] or const char[] or stringLiteral in safezone
+bool Sema::isSafeZoneStringType(Expr *E) {
+  QualType ETy = E->getType();
+  ETy = ETy.getCanonicalType().getUnqualifiedType();
+
+  if (const ArrayType *AT = ETy->getAsArrayTypeUnsafe()) {
+    QualType ElemTy = AT->getElementType();
+    if (ElemTy->isCharType()) {
+      return true;
+    }
+  } else if (IsStringLiteralExpr(E)) {
+    return true;
+  }
+  return false;
+}
+
 /// Check if expression is or contains only string literals.
 bool Sema::IsStringLiteralExpr(Expr *E) {
   if (!E)
