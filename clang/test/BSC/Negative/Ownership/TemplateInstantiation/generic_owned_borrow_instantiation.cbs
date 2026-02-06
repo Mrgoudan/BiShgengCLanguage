@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+// Test owned/borrow qualifiers on generic template instantiation
+// This tests CheckInstantiatedTypeOwnedQualifiers and CheckInstantiatedTypeBorrowQualifiers
+
+struct ClassOwned<T> {
+    owned T member;   // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+};
+
+void test_class_owned() {
+    struct ClassOwned<int*> obj1;   // OK: int* can be owned
+    struct ClassOwned<int> obj2;    // expected-note {{in instantiation of template class 'ClassOwned<int>' requested here}}
+}
+
+struct ClassBorrow<T> {
+    borrow T member;    // expected-error 2 {{borrow type requires a pointer or reference ('int' is invalid)}}
+};
+
+void test_class_borrow() {
+    struct ClassBorrow<int*> obj1;  // OK: int* can be borrowed
+    struct ClassBorrow<int> obj2;   // expected-note {{in instantiation of template class 'ClassBorrow<int>' requested here}}
+}
+
+int main() {
+    return 0;
+}

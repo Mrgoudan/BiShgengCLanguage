@@ -1115,6 +1115,18 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
     return nullptr;
   }
 
+#if ENABLE_BSC
+  if (SemaRef.getLangOpts().BSC && DI) {
+    QualType VarType = DI->getType();
+    // Check owned qualifiers
+    if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(VarType, D->getLocation()))
+      return nullptr;
+    // Check borrow qualifiers
+    if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(VarType, D->getLocation()))
+      return nullptr;
+  }
+#endif
+
   DeclContext *DC = Owner;
   if (D->isLocalExternDecl())
     SemaRef.adjustContextForLocalExternDecl(DC);
@@ -1213,6 +1225,20 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   } else {
     SemaRef.MarkDeclarationsReferencedInType(D->getLocation(), DI->getType());
   }
+
+#if ENABLE_BSC
+  if (SemaRef.getLangOpts().BSC && !Invalid && DI) {
+    QualType FieldType = DI->getType();
+    // Check owned qualifiers
+    if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FieldType, D->getLocation())) {
+      Invalid = true;
+    }
+    // Check borrow qualifiers
+    if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(FieldType, D->getLocation())) {
+      Invalid = true;
+    }
+  }
+#endif
 
   Expr *BitWidth = D->getBitWidth();
   if (Invalid)
@@ -2050,44 +2076,17 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
 #if ENABLE_BSC
-  // After template instantiation, validate that owned/borrow qualifiers
-  // are only applied to pointer types in the instantiated function signature
   if (SemaRef.getLangOpts().BSC && TInfo) {
     const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
     if (FPT) {
       // Check return type
-      QualType ReturnType = FPT->getReturnType();
-      if (ReturnType.isOwnedQualified() && !ReturnType->isPointerType() &&
-          !ReturnType->isOwnedStructureType() &&
-          !ReturnType->isOwnedTemplateSpecializationType()) {
-        QualType UnqualType = ReturnType;
-        UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
-        SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
-            << "owned" << UnqualType;
-      }
-      if (ReturnType.isBorrowQualified() && !ReturnType->isPointerType()) {
-        QualType UnqualType = ReturnType;
-        UnqualType.removeLocalFastQualifiers(Qualifiers::Borrow);
-        SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
-            << "borrow" << UnqualType;
-      }
+      SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(), D->getLocation());
+      SemaRef.CheckInstantiatedTypeBorrowQualifiers(FPT->getReturnType(), D->getLocation());
 
       // Check parameter types
       for (QualType ParamType : FPT->param_types()) {
-        if (ParamType.isOwnedQualified() && !ParamType->isPointerType() &&
-            !ParamType->isOwnedStructureType() &&
-            !ParamType->isOwnedTemplateSpecializationType()) {
-          QualType UnqualType = ParamType;
-          UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
-          SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
-              << "owned" << UnqualType;
-        }
-        if (ParamType.isBorrowQualified() && !ParamType->isPointerType()) {
-          QualType UnqualType = ParamType;
-          UnqualType.removeLocalFastQualifiers(Qualifiers::Borrow);
-          SemaRef.Diag(D->getLocation(), diag::err_owned_qualifier_non_pointer)
-              << "borrow" << UnqualType;
-        }
+        SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType, D->getLocation());
+        SemaRef.CheckInstantiatedTypeBorrowQualifiers(ParamType, D->getLocation());
       }
     }
   }
@@ -2459,6 +2458,37 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   if (!TInfo)
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
+
+#if ENABLE_BSC
+  if (SemaRef.getLangOpts().BSC && TInfo) {
+    const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
+    if (FPT) {
+      // Check return type for owned qualifiers
+      if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(),
+                                                         D->getLocation()))
+        return nullptr;
+
+      // Check return type for borrow qualifiers
+      if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(FPT->getReturnType(),
+                                                          D->getLocation()))
+        return nullptr;
+
+      // Check parameter types for owned qualifiers
+      for (QualType ParamType : FPT->getParamTypes()) {
+        if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType,
+                                                           D->getLocation()))
+          return nullptr;
+      }
+
+      // Check parameter types for borrow qualifiers
+      for (QualType ParamType : FPT->getParamTypes()) {
+        if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(ParamType,
+                                                            D->getLocation()))
+          return nullptr;
+      }
+    }
+  }
+#endif
 
   if (TemplateParams && TemplateParams->size()) {
     auto *LastParam =

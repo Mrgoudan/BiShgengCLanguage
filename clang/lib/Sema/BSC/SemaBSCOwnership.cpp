@@ -48,6 +48,38 @@ bool Sema::CheckOwnedDecl(SourceLocation ErrLoc, QualType T) {
   return true;
 }
 
+// Check that owned qualifiers on an instantiated type are valid.
+// This is called after template instantiation to validate that template
+// parameters which were qualified with 'owned' instantiate to pointer types
+// (or other valid owned types).
+//
+// For example:
+//   template<typename T> void f(owned T t);
+//   f<int>(x);  // Error: 'int' cannot be qualified by 'owned'
+//   f<int*>(x); // OK: 'int*' can be qualified by 'owned'
+//
+// Returns true if the type is valid, false if an error was reported.
+bool Sema::CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc) {
+  if (!getLangOpts().BSC)
+    return true;
+
+  // Helper to check if a type can validly have owned qualifier
+  auto isValidOwnedType = [](QualType Ty) {
+    return Ty->isPointerType() || Ty->isOwnedStructureType() ||
+           Ty->isOwnedTemplateSpecializationType();
+  };
+
+  // Check owned qualifier
+  if (T.isOwnedQualified() && !isValidOwnedType(T)) {
+    QualType UnqualType = T;
+    UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
+    Diag(Loc, diag::err_owned_qualifier_non_pointer) << "owned" << UnqualType;
+    return false;
+  }
+
+  return true;
+}
+
 // Check if 'owned' qualifier is applied to a non-pointer type
 // The 'owned' qualifier is only valid on:
 //   - Pointer types (e.g., int* owned, int** owned *)
@@ -536,6 +568,39 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
         << LHSType << RHSExpr->getType();
     return false;
   }
+  return true;
+}
+
+// Check that borrow qualifiers on an instantiated type are valid.
+// This is called after template instantiation to validate that template
+// parameters which were qualified with 'borrow' instantiate to pointer types
+// (or other valid borrow types).
+//
+// For example:
+//   template<typename T> void f(borrow T t);
+//   f<int>(x);  // Error: 'int' cannot be qualified by 'borrow'
+//   f<int*>(x); // OK: 'int*' can be qualified by 'borrow'
+//
+// Returns true if the type is valid, false if an error was reported.
+bool Sema::CheckInstantiatedTypeBorrowQualifiers(QualType T, SourceLocation Loc) {
+  if (!getLangOpts().BSC)
+    return true;
+
+  // Helper to check if a type can validly have borrow qualifier
+  // Borrow supports pointers and template specializations, but not owned structures
+  // (since borrowing a non-pointer owned structure doesn't align with the ownership model)
+  auto isValidBorrowType = [](QualType Ty) {
+    return Ty->isPointerType() || Ty->isOwnedTemplateSpecializationType();
+  };
+
+  // Check borrow qualifier
+  if (T.isBorrowQualified() && !isValidBorrowType(T)) {
+    QualType UnqualType = T;
+    UnqualType.removeLocalFastQualifiers(Qualifiers::Borrow);
+    Diag(Loc, diag::err_typecheck_invalid_borrow_not_pointer) << UnqualType;
+    return false;
+  }
+
   return true;
 }
 

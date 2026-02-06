@@ -12386,6 +12386,10 @@ public:
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   bool CheckOwnedDecl(SourceLocation ErrLoc, QualType T);
   void CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T);
+  /// Check that owned qualifiers on an instantiated type are valid.
+  /// Called after template instantiation to validate concrete types.
+  /// Returns true if type is valid, false if an error was reported.
+  bool CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
   void BSCDataflowAnalysis(const Decl *D, bool EnableNullabilityCheck = true);
   void BSCBorrowChecker(FunctionDecl *FD);
@@ -12435,6 +12439,10 @@ public:
   bool CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType);
   void CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
                                        StringRef Env);
+  /// Check that borrow qualifiers on an instantiated type are valid.
+  /// Called after template instantiation to validate concrete types.
+  /// Returns true if type is valid, false if an error was reported.
+  bool CheckInstantiatedTypeBorrowQualifiers(QualType T, SourceLocation Loc);
   QualType GetBorrowAddressOperandQualType(QualType resultType,
                                            ExprResult &Input,
                                            const Expr *InputExpr,
