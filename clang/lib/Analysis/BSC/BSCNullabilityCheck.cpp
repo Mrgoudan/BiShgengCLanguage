@@ -566,10 +566,13 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
   }
 }
 
-// *p, &mut *p, &const *p is not allowed when p has nullable PathNullability.
+// *p is not allowed when p has nullable PathNullability.
+// &mut *p and &const *p are allowed because no actual dereferencing happens.
+// These expressions only change the pointer type without accessing the memory,
+// so they do not violate any nullability guarantees.
 void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
   UnaryOperator::Opcode Op = UO->getOpcode();
-  if (Op == UO_Deref || Op == UO_AddrMutDeref || Op == UO_AddrConstDeref) {
+  if (Op == UO_Deref) {
     if (getExprPathNullability(UO->getSubExpr()) == NullabilityKind::Nullable && ShouldReportNullPtrError(UO)) {
       NullabilityCheckDiagInfo DI(UO->getBeginLoc(),
                                   NullablePointerDereference);

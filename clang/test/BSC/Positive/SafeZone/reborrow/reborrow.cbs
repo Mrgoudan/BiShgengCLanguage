@@ -10,11 +10,16 @@ safe void inplace_reborrow(int x) {
     const int *borrow cref = &mut x;
 }
 
+safe void nullable_reborrow(int *borrow _Nullable ref) {
+    const int *borrow _Nullable cref = ref;
+}
+
 safe void accept_immutable(const int *borrow cref) {}
 
 safe int *borrow ret_mutable(int *borrow x, int *borrow y) {
     return *x > *y ? x : y;
 }
+
 
 int main() {
     safe {
@@ -22,6 +27,9 @@ int main() {
         int x = 0;
         inplace_reborrow(x);
         mutable2immutable(&mut x);
+        int *borrow _Nullable n_ref = &mut x;
+        nullable_reborrow(n_ref);
+        nullable_reborrow(nullptr);
     
         // argument to parameter
         accept_immutable(&mut x);
