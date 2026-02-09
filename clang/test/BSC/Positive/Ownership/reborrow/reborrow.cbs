@@ -1,0 +1,34 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+void mutable2immutable(int *borrow ref) {
+    const int *borrow cref = ref; 
+}
+
+void inplace_reborrow(int x) {
+    const int *borrow cref = &mut x;
+}
+
+void accept_immutable(const int *borrow cref) {}
+
+int *borrow ret_mutable(int *borrow x, int *borrow y) {
+    return *x > *y ? x : y;
+}
+
+int main() {
+    // assignment
+    int x = 0;
+    inplace_reborrow(x);
+    mutable2immutable(&mut x);
+
+    // argument to parameter
+    accept_immutable(&mut x);
+    int *borrow ref = &mut x;
+    accept_immutable(ref);
+
+    // return value
+    int y = 2;
+    const int *borrow cref = ret_mutable(&mut x, &mut y);    
+    return 0;
+}
