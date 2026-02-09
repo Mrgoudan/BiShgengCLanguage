@@ -2549,12 +2549,33 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     if (getLangOpts().BSC && VD) {
       if (VD->getType()->getAs<RecordType>()) {
         if (const auto *ILE = dyn_cast_or_null<InitListExpr>(VD->getInit())) {
-          for (auto Init : ILE->inits()) {
-            if (dyn_cast_or_null<ImplicitValueInitExpr>(Init)) {
-              if (Init->getType().hasBorrow()) {
-                Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
-                break;
+          // Recursively check for any ImplicitValueInitExpr with borrow qualifiers
+          std::function<bool(const Expr*)> hasImplicitBorrowInit;
+          hasImplicitBorrowInit = [&](const Expr* E) -> bool {
+            if (!E) return false;
+
+            // Found an implicitly value-initialized field with borrow
+            if (dyn_cast_or_null<ImplicitValueInitExpr>(E)) {
+              return E->getType().hasBorrow();
+            }
+
+            // Recursively check nested InitListExpr for implicit inits
+            if (const auto *NestedILE = dyn_cast_or_null<InitListExpr>(E)) {
+              for (const auto *Init : NestedILE->inits()) {
+                if (hasImplicitBorrowInit(Init)) {
+                  return true;
+                }
               }
+            }
+
+            return false;
+          };
+
+          // Check all initializers
+          for (const auto *Init : ILE->inits()) {
+            if (hasImplicitBorrowInit(Init)) {
+              Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
+              break;
             }
           }
         }

@@ -1,0 +1,216 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test cases for borrow-qualified field initialization requirements
+// Borrow-qualified fields must always be initialized
+
+struct SimpleBorrow {
+    int *borrow p;
+};
+
+void test_simple_borrow() {
+    int x = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct SimpleBorrow s1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct SimpleBorrow s2 = {};
+
+    // OK: fully initialized
+    struct SimpleBorrow s3 = {.p = &mut x};
+
+    // OK: positional initialization
+    struct SimpleBorrow s4 = {&mut x};
+}
+
+struct Inner {
+    int *borrow p;
+};
+
+struct Outer {
+    int a;
+    struct Inner inner;
+};
+
+void test_nested_borrow() {
+    int x = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Outer o1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Outer o2 = {.a = 0};  // BUG CASE: inner.p not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Outer o3 = {0};  // inner not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Outer o4 = {.a = 1, .inner = {}};  // inner.p not initialized
+
+    // OK: fully initialized
+    struct Outer o5 = {.a = 0, .inner = {.p = &mut x}};
+
+    // OK: positional initialization
+    struct Outer o6 = {0, {&mut x}};
+}
+
+struct Level3 {
+    int *borrow p;
+};
+
+struct Level2 {
+    int b;
+    struct Level3 l3;
+};
+
+struct Level1 {
+    int a;
+    struct Level2 l2;
+};
+
+void test_deep_nesting() {
+    int x = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Level1 v1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Level1 v2 = {.a = 0};  // l2.l3.p not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Level1 v3 = {.a = 0, .l2 = {.b = 1}};  // l2.l3.p not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Level1 v4 = {0, {0}};  // l2.l3 not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Level1 v5 = {0, {0, {}}};  // l2.l3.p not initialized
+
+    // OK: fully initialized
+    struct Level1 v6 = {.a = 0, .l2 = {.b = 1, .l3 = {.p = &mut x}}};
+
+    // OK: positional initialization
+    struct Level1 v7 = {0, {1, {&mut x}}};
+}
+
+struct MultipleBorrow {
+    int *borrow p1;
+    int *borrow p2;
+    int regular;
+};
+
+void test_multiple_borrow() {
+    int x = 0, y = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct MultipleBorrow m1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct MultipleBorrow m2 = {.p1 = &mut x};  // p2 not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct MultipleBorrow m3 = {.p1 = &mut x, .regular = 0};  // p2 not initialized
+
+    // OK: all borrow fields initialized
+    struct MultipleBorrow m4 = {.p1 = &mut x, .p2 = &mut y};
+
+    // OK: all fields initialized
+    struct MultipleBorrow m5 = {.p1 = &mut x, .p2 = &mut y, .regular = 0};
+
+    // OK: positional
+    struct MultipleBorrow m6 = {&mut x, &mut y, 0};
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct MultipleBorrow m7 = {.regular = 0};
+}
+
+struct ConstBorrow {
+    const int *borrow p;
+};
+
+void test_const_borrow() {
+    int x = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct ConstBorrow c1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct ConstBorrow c2 = {};
+
+    // OK: initialized with const borrow
+    struct ConstBorrow c3 = {.p = &const x};
+}
+
+
+struct Mixed {
+    int a;
+    int *borrow p;
+    int b;
+};
+
+void test_mixed() {
+    int x = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Mixed m1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Mixed m2 = {.a = 1};  // p not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Mixed m3 = {.a = 1, .b = 2};  // p not initialized
+
+    // OK: borrow field initialized
+    struct Mixed m5 = {.a = 1, .p = &mut x};
+
+    // OK: all fields initialized
+    struct Mixed m6 = {.a = 1, .p = &mut x, .b = 2};
+
+    // OK: positional with borrow
+    struct Mixed m7 = {1, &mut x, 2};
+}
+
+struct ArrayTest {
+    int *borrow p;
+};
+
+void test_array() {
+    int x = 0, y = 0;
+
+    // Arrays with borrow-qualified struct elements
+    // Each element must have its borrow fields initialized
+
+    // OK: all elements fully initialized
+    struct ArrayTest arr4[2] = {{&mut x}, {&mut y}};
+}
+
+struct Complex {
+    int *borrow p1;
+    struct {
+        int *borrow p2;
+        int data;
+    } nested;
+    int *borrow p3;
+};
+
+void test_complex() {
+    int x = 0, y = 0, z = 0;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Complex c1;
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Complex c2 = {.p1 = &mut x};  // nested.p2 and p3 not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Complex c3 = {.p1 = &mut x, .p3 = &mut z};  // nested.p2 not initialized
+
+    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    struct Complex c4 = {.p1 = &mut x, .nested = {.data = 0}};  // nested.p2 not initialized
+
+    // OK: all borrow fields initialized
+    struct Complex c5 = {.p1 = &mut x, .nested = {.p2 = &mut y}, .p3 = &mut z};
+
+    // OK: with data field too
+    struct Complex c6 = {.p1 = &mut x, .nested = {.p2 = &mut y, .data = 0}, .p3 = &mut z};
+}
