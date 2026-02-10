@@ -6467,6 +6467,11 @@ bool Sema::IsStringLiteralExpr(Expr *E) {
   if (!E)
     return false;
   E = E->IgnoreParenImpCasts();
+  if (PredefinedExpr *PE = dyn_cast<PredefinedExpr>(E)) {
+    if (PE->getFunctionName())
+      return true;
+    return false;
+  }
   if (isa<StringLiteral>(E))
     return true;
   // Check ternary where both branches are string literals

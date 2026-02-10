@@ -1,0 +1,56 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+void foo(const char *borrow p) {}
+
+void test1(void) {
+  foo(__FUNCTION__);
+  foo(__func__);
+  foo(__PRETTY_FUNCTION__);
+}
+
+void test2(void) {
+  foo(&const *__FUNCTION__);
+  foo(&const *__func__);
+  foo(&const *__PRETTY_FUNCTION__);
+}
+
+void test3(void) {
+  const char *p1 = __FUNCTION__;
+  foo(&const *p1);
+  const char *p2 = __func__;
+  foo(&const *p2);
+  const char *p3 = __PRETTY_FUNCTION__;
+  foo(&const *p3);
+}
+
+void test4(void) {
+  char *p1 = __FUNCTION__;
+  foo(&const *p1);
+  char *p2 = __func__;
+  foo(&const *p2);
+  char *p3 = __PRETTY_FUNCTION__;
+  foo(&const *p3);
+}
+
+void test5(void) {
+  const char *borrow p1 = __FUNCTION__;
+  foo(p1);
+  const char *borrow p2 = __func__;
+  foo(p2);
+  const char *borrow p3 = __PRETTY_FUNCTION__;
+  foo(p3);
+}
+
+int main(void) {
+  test1();
+  test2();
+  test3();
+  test4();
+  test5();
+  return 0;
+}

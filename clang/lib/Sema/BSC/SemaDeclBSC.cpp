@@ -763,6 +763,12 @@ public:
     return PE;
   }
 
+  ExprResult TransformPredefinedExpr(PredefinedExpr *PE) {
+    Expr *E = ReplaceWithTemporaryVariableAndWrap(PE);
+    replacedNodesMap.Insert(E, PE);
+    return E;
+  }
+
   ExprResult TransformSafeExpr(SafeExpr *SE) {
     ExprResult Res = getDerived().TransformExpr(SE->getSubExpr());
     Expr *E = Res.get();
