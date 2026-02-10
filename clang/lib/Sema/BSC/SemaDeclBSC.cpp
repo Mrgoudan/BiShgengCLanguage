@@ -712,17 +712,36 @@ public:
     for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
       ExprResult Res = getDerived().TransformExpr(ILE->getInit(i));
       Expr *E = Res.get();
-      if (CallExpr *CE = dyn_cast<CallExpr>(E)) {
-        E = ReplaceWithTemporaryVariable(CE);
-        replacedNodesMap.Insert(E, CE);
+
+      // Transform CallExpr and UnaryOperator
+      // And transform struct: struct S b = { .b1 = p }; turns to-> tmp = p; b =
+      // { .b1 = tmp };
+      bool ShouldReplace = false;
+
+      if (isa<CallExpr>(E)) {
+        ShouldReplace = true;
       } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
         if (UO->getOpcode() >= UO_AddrMut &&
             UO->getOpcode() <= UO_AddrConstDeref) {
-          E = ReplaceWithTemporaryVariableAndWrap(UO);
-          replacedNodesMap.Insert(E, UO);
+          ShouldReplace = true;
         }
       }
-      ILE->setInit(i, E);
+      // Only transform decl with borrow type
+      else if (E->getType().isBorrowQualified()) {
+        // Keep initilization 0 and nullptr
+        if (!isa<CXXNullPtrLiteralExpr>(E->IgnoreParenImpCasts()) &&
+            !isa<IntegerLiteral>(E->IgnoreParenImpCasts())) {
+          ShouldReplace = true;
+        }
+      }
+
+      if (ShouldReplace) {
+        Expr *ICE = ReplaceWithTemporaryVariableAndWrap(E);
+        replacedNodesMap.Insert(ICE, E);
+        ILE->setInit(i, ICE);
+      } else {
+        ILE->setInit(i, E);
+      }
     }
     return ILE;
   }
