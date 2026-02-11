@@ -32,13 +32,13 @@ safe void test_mut_borrow_error(void) {
 }
 
 safe void test_mut_init_error(void) {
-  char *borrow p = "hello";  // expected-error {{conversion from type 'char[6]' to 'char *borrow' is forbidden in the safe zone}}
+  char *borrow p = "hello";  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
 }
 
 void test_mut_borrow_in_safe_block(void) {
   safe {
     foo_mut("hello");  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
-    char *borrow p = "hello";  // expected-error {{conversion from type 'char[6]' to 'char *borrow' is forbidden in the safe zone}}
+    char *borrow p = "hello";  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
   }
 }
 

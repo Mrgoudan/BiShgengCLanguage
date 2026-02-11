@@ -526,9 +526,9 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     if (isa<CXXNullPtrLiteralExpr>(E))
       return true;
 
-    // Allow initializing 'const char*' pointers with string literals.
+    // Allow initializing 'char*' pointers with string literals.
     QualType Pointee = DestType->getPointeeType();
-    if (Pointee->isCharType() && Pointee.isConstQualified()) {
+    if (Pointee->isCharType()) {
       // Check if E is a legal string(char,const[],stringLiteral, 
       // possibly through parens/casts/ternary)
       if (isSafeZoneStringType(E))

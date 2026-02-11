@@ -36,8 +36,39 @@ safe void test_string_literal_pass(void) {
 
     char local_char1[4]={0};
 
+    char * charP = "hello";
+
     const char local_char2[] = {"hello"}; 
     
+}
+
+typedef struct {
+  unsigned int isDir;
+  const char *fileName;
+} ClrFileRegInfo1;
+
+safe void foo1(void) {
+  const char *p = "hello";
+  ClrFileRegInfo1 initNotDeleteInfos[] = {
+    {1, "f1"},
+    {1, "f2"},
+    {0, "f3"},
+    {0, "f4"},
+  };
+}
+
+typedef struct {
+  unsigned int isDir;
+  char *fileName;
+} ClrFileRegInfo2;
+
+safe void foo2(void) {
+  ClrFileRegInfo2 initNotDeleteInfos[] = {
+    {1, "f1"},
+    {1, "f2"},
+    {0, "f3"},
+    {0, "f4"},
+  };
 }
 
 int main(){
