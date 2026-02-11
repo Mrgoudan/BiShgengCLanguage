@@ -12402,6 +12402,11 @@ public:
   bool IsSafeFunctionPointerType(QualType Type);
   bool IsUnsafeType(QualType Type);
   bool CanBeUninitializedInSafeZone(QualType Type);
+
+  /// Check if two pointer types satisfy assignment constraints.
+  /// This is used for both function calls and function pointer assignments.
+  /// Returns true if Source can be assigned to Dest considering owned/borrow/const qualifiers.
+  bool DoPointerTypesSatisfyAssignmentConstraints(QualType Dest, QualType Src);
   void DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
                                                  tok::TokenKind Kind,
                                                  QualType Type);

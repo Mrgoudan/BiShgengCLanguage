@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // UNSUPPORTED: ENABLE_BSC_FUTURE
 
-unsafe int add(int x, int y); // expected-note {{previous declaration is here}}
-safe int add(int x, int y) {  // expected-error {{conflicting types for 'add'}}
+// Now valid as mixed mode declaration
+unsafe int add(int x, int y);
+safe int add(int x, int y) {  // ok: mixed mode compatible
   return x + y;
 }
 
@@ -39,20 +40,20 @@ int main() {
                                   // expected-error@-1 {{uninitialized declarator is forbidden in the safe zone}}
 
   sapfun = safun;
-  sapfun = unfun;   // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int, int)' from 'int (int, int)'}}
-  sapfun = fun;     // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int, int)' from 'int (int, int)'}}
+  sapfun = unfun;  // expected-error {{conversion from type 'int (*)(int, int)' to 'safe int (*)(int, int)' is forbidden}}
+  sapfun = fun;    // expected-error {{conversion from type 'int (*)(int, int)' to 'safe int (*)(int, int)' is forbidden}}
 
-  unpfun = safun;   // expected-warning {{incompatible function pointer types assigning to 'int (*)(int, int)' from 'safe int (int, int)'}}
+  unpfun = safun;  
   unpfun = unfun;
   unpfun = fun;
 
-  pfun = safun;     // expected-warning {{incompatible function pointer types assigning to 'int (*)(int, int)' from 'safe int (int, int)'}}
+  pfun = safun;    
   pfun = unfun;
   pfun = fun;
 
 safe {
   // Note: Global variable modification restriction requires ENABLE_BSC_FUTURE
-  unpfun = safun;   // expected-error {{incompatible function pointer types assigning to 'int (*)(int, int)' from 'safe int (int, int)'}}
+  unpfun = safun;   
   unpfun = unfun;
   unpfun = fun;
 }

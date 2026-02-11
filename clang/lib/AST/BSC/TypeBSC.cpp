@@ -111,6 +111,149 @@ bool Type::checkFunctionProtoType(SafeZoneSpecifier SZS) const {
   return false;
 }
 
+namespace clang {
+
+/// Helper: Check if owned/borrow qualifiers are compatible between two types.
+/// Returns true if there's no owned/borrow conflict (both can coexist).
+/// Returns false if one is owned and the other is borrow (incompatible).
+static bool AreOwnedBorrowQualifiersCompatible(QualType UnsafeType, QualType SafeType) {
+  if (!UnsafeType->isPointerType() || !SafeType->isPointerType())
+    return true;  // Non-pointers don't have owned/borrow conflicts
+
+  bool UnsafeIsOwned = UnsafeType.isOwnedQualified();
+  bool UnsafeIsBorrow = UnsafeType.isBorrowQualified();
+  bool SafeIsOwned = SafeType.isOwnedQualified();
+  bool SafeIsBorrow = SafeType.isBorrowQualified();
+
+  // Owned and borrow are incompatible with each other.
+  return !((UnsafeIsOwned && SafeIsBorrow) || (UnsafeIsBorrow && SafeIsOwned));
+}
+
+/// Check if two function types are compatible for heterogeneous redeclarations
+/// where one is declared safe and the other unsafe.
+///
+/// Strategy:
+/// 1. Use Clang's typesAreCompatible (which automatically strips owned/borrow
+///    via mergeTypes, while preserving const/volatile/restrict checking)
+/// 2. Add BSC-specific check: ensure owned and borrow are not mixed
+bool areFunctionTypesCompatibleForHeterogeneousRedecl(
+    ASTContext &Ctx, QualType Type1, QualType Type2,
+    SafeZoneSpecifier SZS1, SafeZoneSpecifier SZS2) {
+  // Verify exactly one is safe and the other is unsafe (heterogeneous redeclaration).
+  // Safe: SZ_Safe
+  // Unsafe: SZ_Unsafe or SZ_None
+  bool Type1IsSafe = (SZS1 == SZ_Safe);
+  bool Type2IsSafe = (SZS2 == SZ_Safe);
+
+  // Must be heterogeneous: exactly one safe, one unsafe (XOR)
+  if (Type1IsSafe == Type2IsSafe)
+    return false;
+
+  // Determine which is unsafe and which is safe for later use.
+  bool Type1IsUnsafe = !Type1IsSafe;
+
+  const FunctionProtoType *FPT1 = Type1->getAs<FunctionProtoType>();
+  const FunctionProtoType *FPT2 = Type2->getAs<FunctionProtoType>();
+
+  if (!FPT1 || !FPT2)
+    return false;
+
+  // Verify parameter count and variadic consistency.
+  if (FPT1->getNumParams() != FPT2->getNumParams())
+    return false;
+  if (FPT1->isVariadic() != FPT2->isVariadic())
+    return false;
+
+  // Identify which FunctionProtoType is unsafe and which is safe.
+  // Reuse the FPT1/FPT2 pointers we already retrieved.
+  const FunctionProtoType *UnsafeFPT = Type1IsUnsafe ? FPT1 : FPT2;
+  const FunctionProtoType *SafeFPT = Type1IsUnsafe ? FPT2 : FPT1;
+
+  // Check return type compatibility.
+  // Step 1: Use Clang's type compatibility checker (C99 6.2.7p1).
+  // Note: typesAreCompatible -> mergeTypes already strips owned/borrow qualifiers,
+  // so this correctly checks compatibility ignoring BSC qualifiers while
+  // respecting standard C qualifiers (const, volatile, restrict).
+  // We also strip nullability for heterogeneous redeclarations to allow
+  // unsafe (no nullability) + safe (_Nullable/_Nonnull) combinations.
+  QualType UnsafeRet = UnsafeFPT->getReturnType();
+  QualType SafeRet = SafeFPT->getReturnType();
+
+  // Strip nullability from both types for compatibility checking.
+  AttributedType::stripOuterNullability(UnsafeRet);
+  AttributedType::stripOuterNullability(SafeRet);
+
+  // Fast path: check if canonical unqualified types are identical
+  if (UnsafeRet.getCanonicalType().getUnqualifiedType() !=
+      SafeRet.getCanonicalType().getUnqualifiedType()) {
+    // Types differ structurally, do full compatibility check
+    if (!Ctx.typesAreCompatible(UnsafeRet, SafeRet))
+      return false;
+  }
+
+  // Step 2: Add BSC-specific checks for owned/borrow.
+  if (!AreOwnedBorrowQualifiersCompatible(UnsafeRet, SafeRet))
+    return false;
+
+  // Check parameter type compatibility for each parameter.
+  for (unsigned i = 0; i < FPT1->getNumParams(); ++i) {
+    QualType UnsafeParam = UnsafeFPT->getParamType(i);
+    QualType SafeParam = SafeFPT->getParamType(i);
+
+    // Strip nullability from both parameter types for compatibility checking.
+    AttributedType::stripOuterNullability(UnsafeParam);
+    AttributedType::stripOuterNullability(SafeParam);
+
+    // Step 1: Fast path for identical canonical types, then full compatibility check.
+    if (UnsafeParam.getCanonicalType().getUnqualifiedType() !=
+        SafeParam.getCanonicalType().getUnqualifiedType()) {
+      if (!Ctx.typesAreCompatible(UnsafeParam, SafeParam))
+        return false;
+    }
+
+    // Step 2: Add BSC-specific checks for owned/borrow.
+    if (!AreOwnedBorrowQualifiersCompatible(UnsafeParam, SafeParam))
+      return false;
+  }
+
+  return true;
+}
+
+} // namespace clang
+
+// Check if a function type matches a required SafeZoneSpecifier
+// with compatibility checking (not just exact match)
+bool Type::isFunctionTypeCompatibleWith(SafeZoneSpecifier RequiredSZS) const {
+  const FunctionProtoType *FPT = nullptr;
+  if (isFunctionType()) {
+    FPT = getAs<FunctionProtoType>();
+  } else if (isFunctionPointerType()) {
+    FPT = getPointeeType()->getAs<FunctionProtoType>();
+  }
+
+  if (!FPT)
+    return false;
+
+  FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+  SafeZoneSpecifier ActualSZS = EPI.SafeZoneSpec;
+
+  // Exact match
+  if (ActualSZS == RequiredSZS)
+    return true;
+
+  // In safe zone, unsafe functions are not compatible
+  if (RequiredSZS == SZ_Safe &&
+      (ActualSZS == SZ_Unsafe || ActualSZS == SZ_None))
+    return false;
+
+  // In unsafe zone, safe functions are compatible
+  if ((RequiredSZS == SZ_Unsafe || RequiredSZS == SZ_None) &&
+      ActualSZS == SZ_Safe)
+    return true;
+
+  return false;
+}
+
 bool Type::isOwnedStructureType() const {
   if (const auto *RT = getAs<RecordType>())
     return RT->getDecl()->isStruct() && RT->getDecl()->isOwnedDecl();

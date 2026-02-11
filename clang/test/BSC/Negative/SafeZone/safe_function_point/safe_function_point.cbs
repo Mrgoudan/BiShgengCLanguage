@@ -20,24 +20,24 @@ int main() {
   TP tp = add;  // ok
 
   safe int (*pa)(int a);             // expected-error {{uninitialized declarator is forbidden in the safe zone}}
-  pa = add;                          // expected-error {{incompatible function pointer types assigning to 'safe int (*)(int)' from 'safe int (int, int)'}}
+  pa = add;                          // expected-error {{conversion from type 'safe int (*)(int, int)' to 'safe int (*)(int)' is forbidden}}
 
   safe int (*pp)(double a, double b) = dadd2;
-  pp = add;                          // expected-error {{incompatible function pointer types assigning to 'safe int (*)(double, double)' from 'safe int (int, int)'}}
-  pp = dadd;                         // expected-error {{incompatible function pointer types assigning to 'safe int (*)(double, double)' from 'safe double (double, double)'}}
+  pp = add;                          // expected-error {{conversion from type 'safe int (*)(int, int)' to 'safe int (*)(double, double)' is forbidden}}
+  pp = dadd;                         // expected-error {{conversion from type 'safe double (*)(double, double)' to 'safe int (*)(double, double)' is forbidden}}
 
   unsafe int (*up)(double a, double b);
-  up = add;           // expected-warning {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe int (int, int)'}}
-  up = dadd;          // expected-warning {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe double (double, double)'}}
+  up = add;           
+  up = dadd;        
   safe {
     p = &add;       // ok
     TP tp = &add;   // ok
-    up = &add;      // expected-error {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe int (*)(int, int)'}}
-    up = &dadd;     // expected-error {{incompatible function pointer types assigning to 'int (*)(double, double)' from 'safe double (*)(double, double)'}}
+    up = &add;     
+    up = &dadd;     
     p = (TP)add;
-    p = (TP)dadd;   // expected-error {{conversion from type 'safe double (double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
+    p = (TP)dadd;   // expected-error {{conversion from type 'safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
   }
   p = (TP)add;
-  p = (TP)dadd;       // expected-error {{conversion from type 'safe double (double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
+  p = (TP)dadd;     // expected-error {{conversion from type 'safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
   return 0;
 }

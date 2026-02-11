@@ -77,7 +77,7 @@ void test_9(int * p) {    // expected-error{{conflicting types for 'test_9'}}
 }
 
 unsafe void test_9_0(int * owned p);     // expected-note {{previous declaration is here}}
-void test_9_0(int * p) {       // expected-error{{conflicting types for 'test_9_0'}}
+void test_9_0(int * p) {       // expected-error{{function 'test_9_0' has incompatible safe and unsafe declarations}}
 }
 
 unsafe void test_9_1(int * owned p);// expected-note {{previous declaration is here}}
@@ -119,21 +119,22 @@ int * test_16(int * borrow p) {    // expected-error{{conflicting types for 'tes
     return 0;
 }
 
-safe int * borrow test_17(int * borrow p);  // expected-note {{previous declaration is here}}
-int * test_17(int * borrow p) {    // expected-error{{conflicting types for 'test_17'}}
+// test_17-20: Now valid as mixed mode declarations
+safe int * borrow test_17(int * borrow p);
+int * test_17(int * borrow p) {  // ok: mixed mode compatible
     return 0;
 }
 
-safe void test_18(int * borrow p);  // expected-note {{previous declaration is here}}
-void test_18(int * p) {   // expected-error{{conflicting types for 'test_18'}}
+safe void test_18(int * borrow p);
+void test_18(int * p) {  // ok: mixed mode compatible
 }
 
-safe void test_19(int * owned p);   // expected-note {{previous declaration is here}}
-void test_19(int * p) {    // expected-error{{conflicting types for 'test_19'}}
+safe void test_19(int * owned p);
+void test_19(int * p) {  // ok: mixed mode compatible
 }
 
-safe int * owned test_20(int * owned p);   // expected-note {{previous declaration is here}}
-int * test_20(int * p) {    // expected-error{{conflicting types for 'test_20'}}
+safe int * owned test_20(int * owned p);
+int * test_20(int * p) {  // ok: mixed mode compatible
     return 0;
 }
 

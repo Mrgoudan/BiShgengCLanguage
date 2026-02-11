@@ -141,6 +141,15 @@ class UsingShadowDecl;
 
 using CanQualType = CanQual<Type>;
 
+#if ENABLE_BSC
+/// Check if two function types are compatible for heterogeneous redeclarations
+/// (one safe, one unsafe). This is distinct from homogeneous redeclarations
+/// (both safe or both unsafe) which use standard type compatibility rules.
+bool areFunctionTypesCompatibleForHeterogeneousRedecl(
+    ASTContext &Ctx, QualType Type1, QualType Type2,
+    SafeZoneSpecifier SZS1, SafeZoneSpecifier SZS2);
+#endif
+
 // Provide forward declarations for all of the *Type classes.
 #define TYPE(Class, Base) class Class##Type;
 #include "clang/AST/TypeNodes.inc"
@@ -2270,6 +2279,9 @@ public:
   bool hasTraitType() const;
   bool isBSCCalculatedTypeInCompileTime() const;
   bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
+
+
+  bool isFunctionTypeCompatibleWith(SafeZoneSpecifier RequiredSZS) const;
   bool isOwnedStructureType() const;
   bool isOwnedTemplateSpecializationType() const;
   bool isMoveSemanticType() const;

@@ -36,10 +36,10 @@ int* owned int::koo(int* owned this) {
   return this;
 }
 
-impl trait F for int; // expected-warning {{incompatible function pointer types initializing 'int *owned (*)(void *owned)' with an expression of type 'safe int *owned (*)(void *owned)'}}
+impl trait F for int; 
 
-impl trait G for int; // expected-error {{incompatible function pointer types initializing 'safe int *owned (*)(void *owned)' with an expression of type 'int *owned (*)(void *owned)'}}
-                      // expected-error@-1 {{incompatible function pointer types initializing 'safe int *owned (*)(void *owned)' with an expression of type 'int *owned (*)(void *owned)'}}
+impl trait G for int; // expected-error {{conversion from type 'int *owned (*)(void *owned)' to 'safe int *owned (*)(void *owned)' is forbidden}}
+                      // expected-error@-1 {{conversion from type 'int *owned (*)(void *owned)' to 'safe int *owned (*)(void *owned)' is forbidden}}
 int main() {
   int a = 1;
   int *p = &a;

@@ -120,6 +120,9 @@ def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the s
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
 def err_safe_function : Error<"%0 is forbidden in the safe function">;
 def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;
+def err_bsc_generic_heterogeneous_redecl : Error<"generic function %0 cannot have both safe and unsafe declarations">;
+def err_bsc_incompatible_heterogeneous_redecl : Error<"function %0 has incompatible safe and unsafe declarations">;
+def err_bsc_no_matching_heterogeneous_function : Error<"no matching function for call to %0; argument types do not match any safe or unsafe declaration">;
 
 // BSC owned struct
 def err_invalid_member_use_in_class_method : Error <

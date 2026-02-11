@@ -38,8 +38,8 @@ safe void test_safe_zone_incompatible_cast(void) {
   char *pc = (int *)nullptr; // expected-error {{conversion from type 'int *' to 'char *' is forbidden in the safe zone}}
 
   // Function pointer type mismatches in safe zone
-  void (*fp1)(int) = (void (*)(void))nullptr; // expected-error {{incompatible function pointer types initializing 'void (*)(int)' with an expression of type 'void (*)(void)'}}
-  int (*fp2)(char *) = (void (*)(int))nullptr; // expected-error {{incompatible function pointer types initializing 'int (*)(char *)' with an expression of type 'void (*)(int)'}}
+  void (*fp1)(int) = (void (*)(void))nullptr; // expected-error {{conversion from type 'void (*)(void)' to 'void (*)(int)' is forbidden}}
+  int (*fp2)(char *) = (void (*)(int))nullptr; // expected-error {{conversion from type 'void (*)(int)' to 'int (*)(char *)' is forbidden}}
 }
 
 // nullptr arithmetic (should error)

@@ -2456,23 +2456,150 @@ impl trait G for int;
 int main() { return 0; }
 ```
 
-7. 多个同名函数声明必须有同样的`safe/unsafe`修饰。
+7. 函数的多声明与混合模式
 
+同一函数标识符可以有多个声明,支持`safe`和`unsafe`混合声明。
+
+#### 7.1 兼容性要求
+
+- **相同修饰符**: 多个`safe`声明之间、或多个`unsafe`声明之间,函数类型必须兼容
+- **混合模式**: `safe`和`unsafe`声明可以共存,但必须满足混合模式兼容性(见7.3)
+- **泛型函数除外**: 泛型函数不支持混合模式,同一实例化不能同时有`safe`和`unsafe`声明
+- **成员函数**: 与普通函数规则相同
+
+#### 7.2 函数类型兼容性
+
+两个函数类型兼容的条件:
+1. 返回类型兼容
+2. 参数数量相同,省略号(`...`)使用一致
+3. 对应参数类型兼容(兼容性检查时移除除`owned`、`borrow`、`_Nonnull`、`_Nullable`外的所有限定符)
+
+**指针兼容性**:
+- 指针类型需要相同限定符(`owned`、`borrow`、`_Nonnull`、`_Nullable`)且目标类型兼容
+- `owned`和`borrow`指针互不兼容
+- `owned`/`borrow`指针与裸指针不兼容(混合模式除外,见7.3)
+
+#### 7.3 混合模式兼容性(`unsafe`与`safe`共存)
+
+**返回类型兼容**:
+- `unsafe T*` ⟷ `safe T* owned`: 裸指针限定符需匹配(除`owned`外)
+- `unsafe T*` ⟷ `safe T* borrow`: 裸指针限定符需匹配(除`borrow`外)
+- `safe T* owned` ⟷ `safe T* borrow`: **不兼容**
+
+**参数类型兼容**:
+- 参数数量、省略号使用必须一致
+- 对应参数类型兼容(移除限定符后),但**`owned`参数与`borrow`参数不兼容**
+
+**示例**:
 ```c
-safe int test(int a);
-// error: 多个函数声明中 safe/unsafe 不一致
-unsafe int test(int a);
+// ok: 混合模式兼容
+unsafe int* process(int* p);
+safe int* owned process(int* owned p);
+
+// ok: 返回类型兼容
+unsafe void* get_data(void);
+safe void* owned get_data(void);
+// error: 参数owned与borrow不兼容
+unsafe int* foo(int* p);
+safe int* borrow foo(int* owned p);
+
+// ok: 相同修饰符,类型完全相同
+safe int* owned bar(int* owned p);
+safe int* owned bar(int* owned q);
 ```
 
-8. 多个同名函数声明排除`safe/unsafe`修饰后，应是完全一致的。
+#### 7.4 函数定义
+
+- 混合模式函数只能定义**一次**
+- 定义可基于`unsafe`版本或`safe`版本,但必须与所有声明兼容
 
 ```c
-safe int test(int a);
-// error: 函数声明不完全一致
-safe int test(int a, int b);
+unsafe int* process(int* p);
+safe int* owned process(int* owned p);
+
+// 定义(选择其一)
+safe int* owned process(int* owned p) { return p; }
+// 或
+unsafe int* process(int* p) { return p; }
 ```
 
-9. `safe`修饰泛型函数时，会对泛型每个实例化版本也做`safe`检查。
+8. 函数调用解析
+
+#### 8.1 安全上下文调用
+
+安全上下文(`safe`块)内只能调用`safe`函数。如果函数只有`unsafe`声明,编译错误。
+
+```c
+unsafe void foo(void);
+
+int main() {
+  safe {
+    foo();  // error: 安全区内不允许调用非安全函数
+  }
+}
+```
+
+#### 8.2 非安全上下文调用
+
+非安全上下文(`unsafe`块或默认)内执行重载解析:
+- 优先匹配`safe`声明
+- `safe`不匹配时使用`unsafe`声明
+
+```c
+unsafe int* process(int* p);
+safe int* owned process(int* owned p);
+
+int main() {
+  int* raw_p = nullptr;
+  int* owned owned_p = nullptr;
+
+  // 根据参数类型选择对应版本
+  process(raw_p);      // 调用unsafe版本
+  process(owned_p);    // 调用safe版本
+}
+```
+
+9. 函数指针赋值
+
+函数指针赋值规则:
+
+**给`safe`修饰的函数指针赋值时**:
+- 如果被用于赋值的函数标识符没有`safe`版本的声明,则报错,即不允许`unsafe`版本的声明赋值给`safe`修饰的函数指针
+- 如果被用于赋值的函数标识符有`safe`版本的声明,则要求`safe`版本的声明类型与函数指针类型是兼容的
+
+**给`unsafe`修饰的函数指针赋值时**:
+- 只要被用于赋值的函数标识符的`unsafe`版本声明类型与函数指针类型是兼容的,或`safe`版本声明类型与函数指针类型是`unsafe-safe`兼容的,即允许赋值
+- 都不满足则编译报错
+
+**示例**:
+```c
+safe void safe_func(void);
+unsafe void unsafe_func(void);
+
+// 混合模式声明
+unsafe int* process(int* p);
+safe int* owned process(int* owned p);
+
+int main() {
+  safe void (*safe_ptr)(void) = nullptr;
+  unsafe void (*unsafe_ptr)(void) = nullptr;
+
+  safe_ptr = safe_func;      // ok: safe函数赋值给safe指针
+  safe_ptr = unsafe_func;    // error: 没有safe版本的声明
+
+  unsafe_ptr = unsafe_func;  // ok: unsafe函数赋值给unsafe指针
+  unsafe_ptr = safe_func;    // ok: safe版本与unsafe-safe兼容
+
+  // 混合模式函数指针赋值
+  safe int* owned (*safe_process_ptr)(int* owned) = nullptr;
+  unsafe int* (*unsafe_process_ptr)(int*) = nullptr;
+
+  safe_process_ptr = process;   // ok: 使用safe版本
+  unsafe_process_ptr = process; // ok: 使用unsafe版本或safe版本(unsafe-safe兼容)
+}
+```
+
+10. `safe`修饰泛型函数时，会对泛型每个实例化版本也做`safe`检查。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2494,7 +2621,7 @@ int main() {
 }
 ```
 
-10. 成员函数也可以被`safe/unsafe`修饰，其规则和全局函数一样。
+11. 成员函数也可以被`safe/unsafe`修饰，其规则和全局函数一样。
 
 ```c
 struct MyStruct<T> {
@@ -2505,23 +2632,6 @@ safe T struct MyStruct<T>::foo_a(T a) {
 }
 
 int main() { return 0; }
-```
-
-11. 对于`safe`修饰的函数指针类型，与赋值的函数参数和返回值类型必须是一致的。
-
-```c
-safe void test1(int a) {}
-safe void test2(void) {}
-void test3(void) {}
-safe void (*p)(int a);
-int main() {
-  p = test1;
-  // error: 参数类型不一致，不允许赋值
-  p = test2;
-  // error: 参数类型不一致，不允许赋值
-  p = test3;
-  return 0;
-}
 ```
 
 12. 安全区内被调用的函数或函数指针必须是`safe`的函数签名，不允许调用非安全函数或函数指针。

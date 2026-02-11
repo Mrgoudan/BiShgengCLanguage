@@ -166,6 +166,196 @@ bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *E) {
   return false;
 }
 
+/// Generic heterogeneous function declaration selector.
+/// Selects the best matching function declaration from heterogeneous redeclarations
+/// (functions with both safe and unsafe declarations) based on context and constraints.
+///
+/// @param S The Sema instance
+/// @param CurrentDecl The current function declaration (any redeclaration)
+/// @param IsInSafeContext Whether we're in a safe zone
+/// @param CheckConstraints Callback to check if a FunctionDecl satisfies constraints
+/// @return The best matching FunctionDecl, or nullptr/CurrentDecl if no match
+template<typename ConstraintChecker>
+static FunctionDecl *SelectBestHeterogeneousFunctionDecl(
+    Sema &S, FunctionDecl *CurrentDecl, bool IsInSafeContext,
+    ConstraintChecker CheckConstraints) {
+
+  if (!CurrentDecl || !S.getLangOpts().BSC)
+    return CurrentDecl;
+
+  // Collect safe and unsafe declarations.
+  SmallVector<FunctionDecl *, 4> SafeDecls;
+  SmallVector<FunctionDecl *, 4> UnsafeDecls;
+
+  for (auto *Redecl : CurrentDecl->redecls()) {
+    if (auto *FD = dyn_cast<FunctionDecl>(Redecl)) {
+      SafeZoneSpecifier SZS = FD->getSafeZoneSpecifier();
+      if (SZS == SZ_Safe)
+        SafeDecls.push_back(FD);
+      else
+        UnsafeDecls.push_back(FD);
+    }
+  }
+
+  // If all declarations have the same safety level, not heterogeneous.
+  if (SafeDecls.empty() || UnsafeDecls.empty())
+    return CurrentDecl;
+
+  // Safe context: must use safe declaration that satisfies constraints.
+  if (IsInSafeContext) {
+    for (FunctionDecl *SafeFD : SafeDecls) {
+      if (CheckConstraints(SafeFD)) {
+        return SafeFD;
+      }
+    }
+    // No safe declaration satisfies constraints, return first safe decl
+    // and let subsequent checks report the error.
+    return SafeDecls.front();
+  }
+
+  // Unsafe context: prefer safe declaration if it satisfies constraints.
+  for (FunctionDecl *SafeFD : SafeDecls) {
+    if (CheckConstraints(SafeFD)) {
+      return SafeFD;
+    }
+  }
+
+  // No safe declaration matches, try unsafe declarations.
+  for (FunctionDecl *UnsafeFD : UnsafeDecls) {
+    if (CheckConstraints(UnsafeFD)) {
+      return UnsafeFD;
+    }
+  }
+
+  // No declaration satisfies constraints - return current and let normal
+  // type checking report the error.
+  return CurrentDecl;
+}
+
+/// Check if two pointer types satisfy assignment constraints.
+/// This is used for both function calls and function pointer assignments.
+/// Returns true if Source can be assigned to Dest considering owned/borrow/const qualifiers.
+/// @param AllowImplicitConversions If true, allow implicit conversions for non-pointer types
+///                                 (for function calls). If false, require strict compatibility
+///                                 (for function pointer assignments).
+static bool DoPointerTypesSatisfyAssignmentConstraintsImpl(
+    Sema &S, QualType Dest, QualType Src, bool AllowImplicitConversions) {
+  bool DestIsPtr = Dest->isPointerType();
+  bool SrcIsPtr = Src->isPointerType();
+  bool SrcIsArray = Src->isArrayType();
+
+  // Handle array-to-pointer decay for source (e.g., "string" -> const char*)
+  if (SrcIsArray && DestIsPtr) {
+    SrcIsPtr = true;  // Treat arrays as pointers for this check
+  }
+
+  if (!DestIsPtr && !SrcIsPtr) {
+    // For non-pointer types:
+    // - Function calls: allow implicit conversions (int->char, etc.)
+    // - Function pointer assignments: require strict type compatibility
+    if (AllowImplicitConversions) {
+      return true;
+    } else {
+      return S.Context.typesAreCompatible(Dest, Src);
+    }
+  }
+
+  // If only one is a pointer (after considering array decay), they're incompatible.
+  if (DestIsPtr != SrcIsPtr)
+    return false;
+
+  // Owned qualifier must match exactly.
+  if (Dest.isOwnedQualified() != Src.isOwnedQualified())
+    return false;
+
+  // Borrow qualifier must match exactly.
+  if (Dest.isBorrowQualified() != Src.isBorrowQualified())
+    return false;
+
+  // Const compatibility: mut → const is OK, const → mut is NOT OK.
+  // Dest is the target (parameter), Src is the source (argument).
+  if (!Dest.isConstQualified() && Src.isConstQualified())
+    return false;
+
+  // Check pointee type compatibility.
+  QualType DestPointee = Dest->getPointeeType();
+  QualType SrcPointee;
+
+  // Handle array-to-pointer decay: get element type for arrays
+  if (SrcIsArray) {
+    SrcPointee = Src->getAsArrayTypeUnsafe()->getElementType();
+  } else {
+    SrcPointee = Src->getPointeeType();
+  }
+
+  return DestPointee.getCanonicalType().getUnqualifiedType() ==
+         SrcPointee.getCanonicalType().getUnqualifiedType();
+}
+
+/// Public wrapper for function calls - allows implicit conversions.
+bool Sema::DoPointerTypesSatisfyAssignmentConstraints(QualType Dest, QualType Src) {
+  return DoPointerTypesSatisfyAssignmentConstraintsImpl(*this, Dest, Src,
+                                                         /*AllowImplicitConversions=*/true);
+}
+
+/// Helper function: Check if function pointer types satisfy assignment constraints.
+/// This checks owned/borrow qualifiers, const compatibility, and type compatibility.
+static bool DoesFunctionPointerSatisfyConstraints(Sema &S,
+                                                   const FunctionProtoType *DestType,
+                                                   const FunctionProtoType *SrcType,
+                                                   SourceLocation Loc) {
+  // Check return type constraints using strict checking (no implicit conversions).
+  QualType DestRetType = DestType->getReturnType();
+  QualType SrcRetType = SrcType->getReturnType();
+  if (!DoPointerTypesSatisfyAssignmentConstraintsImpl(S, DestRetType, SrcRetType,
+                                                       /*AllowImplicitConversions=*/false))
+    return false;
+
+  // Check parameter count.
+  if (DestType->getNumParams() != SrcType->getNumParams())
+    return false;
+
+  // Check each parameter's constraints using strict checking (no implicit conversions).
+  for (unsigned i = 0; i < DestType->getNumParams(); ++i) {
+    QualType DestParamType = DestType->getParamType(i);
+    QualType SrcParamType = SrcType->getParamType(i);
+    if (!DoPointerTypesSatisfyAssignmentConstraintsImpl(S, DestParamType, SrcParamType,
+                                                         /*AllowImplicitConversions=*/false))
+      return false;
+  }
+
+  return true;
+}
+
+/// Helper function: Select appropriate function declaration for pointer assignment
+/// when source is a function with heterogeneous redeclarations (safe + unsafe).
+static FunctionDecl *
+SelectFunctionDeclForPointerAssignment(Sema &S, Expr *SrcExpr,
+                                        const FunctionProtoType *DestFuncType) {
+  // Check if SrcExpr is a DeclRefExpr pointing to a FunctionDecl.
+  DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SrcExpr->IgnoreParenImpCasts());
+  if (!DRE)
+    return nullptr;
+
+  FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl());
+  if (!FD)
+    return nullptr;
+
+  // Determine if we're in a safe context based on the destination function pointer type.
+  SafeZoneSpecifier DestSZS = DestFuncType->getFunSafeZoneSpecifier();
+  bool IsInSafeContext = (DestSZS == SZ_Safe);
+
+  // Use the generic selector with a lambda to check function pointer constraints.
+  SourceLocation Loc = SrcExpr->getBeginLoc();
+  auto CheckConstraints = [&](FunctionDecl *CandidateFD) -> bool {
+    const FunctionProtoType *CandidateType =
+        CandidateFD->getType()->getAs<FunctionProtoType>();
+    return DoesFunctionPointerSatisfyConstraints(S, DestFuncType, CandidateType, Loc);
+  };
+
+  return SelectBestHeterogeneousFunctionDecl(S, FD, IsInSafeContext, CheckConstraints);
+}
+
 bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   if (!DestType->isFunctionPointerType()) {
     return true;
@@ -188,41 +378,55 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
                 ->getPointeeType()
                 ->getAs<FunctionProtoType>()
           : SrcExpr->getType()->getAs<FunctionProtoType>();
+
+  // For heterogeneous function redeclarations (functions with both safe and
+  // unsafe declarations), select the appropriate declaration based on the
+  // destination function pointer type and assignment constraints.
+  FunctionDecl *SelectedFD =
+      SelectFunctionDeclForPointerAssignment(*this, SrcExpr, LSHFuncType);
+  if (SelectedFD) {
+    // Update RSHFuncType to the selected declaration's function type.
+    RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+  }
+
   // conversion to an unsafe type is allowed in the unsafe zone
   // only need to care about the safe zone or safe type
   if (!IsInSafeZone() && LSHFuncType->getFunSafeZoneSpecifier() != SZ_Safe) {
     return true;
   }
 
-  if ((LSHFuncType->getFunSafeZoneSpecifier() !=
-       RSHFuncType->getFunSafeZoneSpecifier()) &&
-      (LSHFuncType->getFunSafeZoneSpecifier() == SZ_Safe ||
-       RSHFuncType->getFunSafeZoneSpecifier() == SZ_Safe)) {
-    Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
-        << SrcExpr->getType() << DestType;
-    return false;
-  }
+  // Function pointer assignment rules (Manual section 9):
+  // - safe -> unsafe: allowed (widening, safe functions can be used in
+  //                   unsafe contexts)
+  // - unsafe -> safe: forbidden (narrowing, loss of safety guarantee)
+  if (LSHFuncType->getFunSafeZoneSpecifier() !=
+      RSHFuncType->getFunSafeZoneSpecifier()) {
+    SafeZoneSpecifier DestSZS = LSHFuncType->getFunSafeZoneSpecifier();
+    SafeZoneSpecifier SrcSZS = RSHFuncType->getFunSafeZoneSpecifier();
 
-  if (LSHFuncType->getReturnType().getUnqualifiedType() !=
-      RSHFuncType->getReturnType().getUnqualifiedType()) {
-    Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
-        << SrcExpr->getType() << DestType;
-    return false;
-  }
-
-  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
-    Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
-        << SrcExpr->getType() << DestType;
-    return false;
-  }
-
-  for (unsigned i = 0; i < LSHFuncType->getNumParams(); i++) {
-    if (LSHFuncType->getParamType(i).getUnqualifiedType() !=
-        RSHFuncType->getParamType(i).getUnqualifiedType()) {
+    // Assigning unsafe function to safe function pointer is forbidden.
+    if (DestSZS == SZ_Safe &&
+        (SrcSZS == SZ_Unsafe || SrcSZS == SZ_None)) {
+      // Emit error with proper type strings that include safe/unsafe specifiers
       Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
-          << SrcExpr->getType() << DestType;
+          << Context.getPointerType(QualType(RSHFuncType, 0)) << DestType;
       return false;
     }
+
+    // Assigning safe function to unsafe function pointer is allowed.
+    if ((DestSZS == SZ_Unsafe || DestSZS == SZ_None) &&
+        SrcSZS == SZ_Safe) {
+      // Type compatibility is already checked below.
+    }
+  }
+
+  // Check return type constraints using the constraint-aware helper.
+  if (!DoesFunctionPointerSatisfyConstraints(*this, LSHFuncType, RSHFuncType,
+                                              SrcExpr->getBeginLoc())) {
+    // Emit error with proper type strings that include the actual function signatures
+    Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
+        << Context.getPointerType(QualType(RSHFuncType, 0)) << DestType;
+    return false;
   }
 
   return true;

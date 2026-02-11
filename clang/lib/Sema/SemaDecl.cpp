@@ -2514,6 +2514,42 @@ static void filterNonConflictingPreviousTypedefDecls(Sema &S,
   Filter.done();
 }
 
+#if ENABLE_BSC
+/// Extract the SafeZoneSpecifier from a function pointer type.
+/// Returns SZ_None if the type is not a function pointer.
+static SafeZoneSpecifier extractSafeZoneSpecFromFunctionPointer(QualType FPType) {
+  if (const PointerType *PT = FPType->getAs<PointerType>()) {
+    if (const FunctionProtoType *FPT =
+            PT->getPointeeType()->getAs<FunctionProtoType>()) {
+      return FPT->getFunSafeZoneSpecifier();
+    }
+  }
+  return SZ_None;
+}
+
+/// Check if two function pointer types are compatible for heterogeneous
+/// redeclarations (one safe, one unsafe typedef).
+static bool areFunctionPointerTypesCompatibleForHeterogeneousRedecl(
+    ASTContext &Ctx, QualType OldType, QualType NewType,
+    SafeZoneSpecifier OldSZS, SafeZoneSpecifier NewSZS) {
+
+  // Extract the pointee function types.
+  QualType OldPointee = OldType->getPointeeType();
+  QualType NewPointee = NewType->getPointeeType();
+
+  const FunctionProtoType *OldFPT = OldPointee->getAs<FunctionProtoType>();
+  const FunctionProtoType *NewFPT = NewPointee->getAs<FunctionProtoType>();
+
+  if (!OldFPT || !NewFPT)
+    return false;
+
+  // Reuse the existing heterogeneous compatibility check for the underlying
+  // function types.
+  return areFunctionTypesCompatibleForHeterogeneousRedecl(
+      Ctx, OldPointee, NewPointee, OldSZS, NewSZS);
+}
+#endif // ENABLE_BSC
+
 bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
   QualType OldType;
   if (TypedefNameDecl *OldTypedef = dyn_cast<TypedefNameDecl>(Old))
@@ -2537,6 +2573,51 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
       !OldType->isDependentType() &&
       !NewType->isDependentType() &&
       !Context.hasSameType(OldType, NewType)) {
+
+    #if ENABLE_BSC
+    // BSC: Check if this is a heterogeneous function pointer redeclaration
+    // (one safe, one unsafe) which may be compatible.
+    if (getLangOpts().BSC &&
+        OldType->isFunctionPointerType() &&
+        NewType->isFunctionPointerType()) {
+
+      SafeZoneSpecifier OldSZS = extractSafeZoneSpecFromFunctionPointer(OldType);
+      SafeZoneSpecifier NewSZS = extractSafeZoneSpecFromFunctionPointer(NewType);
+
+      // Check if this is a heterogeneous redeclaration (different safety levels).
+      if (OldSZS != NewSZS) {
+        // Generic function pointer typedefs cannot have heterogeneous
+        // redeclarations.
+        TypedefNameDecl *OldTypedef = dyn_cast<TypedefNameDecl>(Old);
+        if ((OldTypedef && OldTypedef->getDescribedTemplateParams()) ||
+            New->getDescribedTemplateParams()) {
+          Diag(New->getLocation(), diag::err_bsc_generic_heterogeneous_redecl)
+              << New->getDeclName();
+          if (Old->getLocation().isValid())
+            notePreviousDefinition(Old, New->getLocation());
+          New->setInvalidDecl();
+          return true;
+        }
+
+        // Check if the function pointer types are compatible for heterogeneous
+        // redeclarations.
+        if (areFunctionPointerTypesCompatibleForHeterogeneousRedecl(
+                Context, OldType, NewType, OldSZS, NewSZS)) {
+          // Compatible heterogeneous redeclaration.
+          return false;
+        }
+
+        // Incompatible heterogeneous redeclaration.
+        Diag(New->getLocation(), diag::err_bsc_incompatible_heterogeneous_redecl)
+            << New->getDeclName();
+        if (Old->getLocation().isValid())
+          notePreviousDefinition(Old, New->getLocation());
+        New->setInvalidDecl();
+        return true;
+      }
+    }
+    #endif // ENABLE_BSC
+
     int Kind = isa<TypeAliasDecl>(Old) ? 1 : 0;
     Diag(New->getLocation(), diag::err_redefinition_different_typedef)
       << Kind << NewType << OldType;
@@ -4073,12 +4154,56 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       }
     }
 
+    #if ENABLE_BSC
+    // BSC: Check compatibility for heterogeneous redeclarations (one safe,
+    // one unsafe). Homogeneous redeclarations (both safe or both unsafe)
+    // use standard type compatibility rules.
+    bool BSCHeterogeneousRedeclCompatible = false;
+    if (getLangOpts().BSC) {
+      SafeZoneSpecifier OldSZS = Old->getSafeZoneSpecifier();
+      SafeZoneSpecifier NewSZS = New->getSafeZoneSpecifier();
+
+      // Check if this is a heterogeneous redeclaration (safe vs. unsafe).
+      if (OldSZS != NewSZS) {
+        // Generic functions cannot have heterogeneous redeclarations.
+        if (New->getDescribedFunctionTemplate() ||
+            Old->getDescribedFunctionTemplate()) {
+          Diag(New->getLocation(), diag::err_bsc_generic_heterogeneous_redecl)
+              << New;
+          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+          return true;
+        }
+
+        // Check if the types are compatible for heterogeneous redeclarations.
+        QualType OldFuncType = Old->getType();
+        QualType NewFuncType = New->getType();
+
+        if (!areFunctionTypesCompatibleForHeterogeneousRedecl(
+                Context, OldFuncType, NewFuncType, OldSZS, NewSZS)) {
+          Diag(New->getLocation(),
+               diag::err_bsc_incompatible_heterogeneous_redecl)
+              << New;
+          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+          return true;
+        }
+        // Heterogeneous redeclaration is compatible, proceed with merge.
+        BSCHeterogeneousRedeclCompatible = true;
+      }
+    }
+    #endif
+
     // If the function types are compatible, merge the declarations. Ignore the
     // exception specifier because it was already checked above in
     // CheckEquivalentExceptionSpec, and we don't want follow-on diagnostics
     // about incompatible types under -fms-compatibility.
+    #if ENABLE_BSC
+    if (BSCHeterogeneousRedeclCompatible ||
+        Context.hasSameFunctionTypeIgnoringExceptionSpec(OldQTypeForComparison,
+                                                         NewQType))
+    #else
     if (Context.hasSameFunctionTypeIgnoringExceptionSpec(OldQTypeForComparison,
                                                          NewQType))
+    #endif
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
 
     // If the types are imprecise (due to dependent constructs in friends or
@@ -4106,11 +4231,45 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         Diag(Old->getLocation(), diag::note_previous_declaration);
         return true;
       }
-      if (HasDiffBorrowOrOwnedParamsTypeAtBothFunction(Old->getType(),
-                                                       New->getType())) {
-        Diag(New->getLocation(), diag::err_conflicting_types) << New;
-        Diag(Old->getLocation(), PrevDiag) << Old << Old->getType();
-        return true;
+
+      // BSC: Check for heterogeneous redeclarations (one safe, one unsafe).
+      SafeZoneSpecifier OldSZS = Old->getSafeZoneSpecifier();
+      SafeZoneSpecifier NewSZS = New->getSafeZoneSpecifier();
+      bool IsHeterogeneousRedecl = (OldSZS != NewSZS);
+
+      // Handle heterogeneous redeclarations with special compatibility rules.
+      if (IsHeterogeneousRedecl) {
+        // Generic functions cannot have heterogeneous redeclarations.
+        if (New->getDescribedFunctionTemplate() ||
+            Old->getDescribedFunctionTemplate()) {
+          Diag(New->getLocation(), diag::err_bsc_generic_heterogeneous_redecl)
+              << New;
+          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+          return true;
+        }
+
+        // Check if the types are compatible for heterogeneous redeclarations.
+        QualType OldFuncType = Old->getType();
+        QualType NewFuncType = New->getType();
+
+        if (!areFunctionTypesCompatibleForHeterogeneousRedecl(
+                Context, OldFuncType, NewFuncType, OldSZS, NewSZS)) {
+          Diag(New->getLocation(),
+               diag::err_bsc_incompatible_heterogeneous_redecl)
+              << New;
+          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+          return true;
+        }
+        // Heterogeneous redeclaration is compatible - merge the declarations.
+        return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
+      } else {
+        // Homogeneous redeclarations - apply standard borrow/owned checks.
+        if (HasDiffBorrowOrOwnedParamsTypeAtBothFunction(Old->getType(),
+                                                         New->getType())) {
+          Diag(New->getLocation(), diag::err_conflicting_types) << New;
+          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+          return true;
+        }
       }
       if (HasDiffNullabilityParamsTypeAtBothFunction(Old->getType(),
                                                       New->getType())) {

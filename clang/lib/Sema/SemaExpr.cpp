@@ -7136,6 +7136,109 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   return Call;
 }
 
+#if ENABLE_BSC
+/// Check if arguments satisfy assignment constraints for a function call.
+/// This implements the constraint checking from Manual section 8.2 and 4.2.
+///
+/// The constraint rule: argument type must be a superset of (or compatible with)
+/// parameter type, with exact matching required for owned/borrow/nonnull/nullable.
+static bool DoesCallSatisfyAssignmentConstraints(Sema &S, FunctionDecl *FD,
+                                                  MultiExprArg Args) {
+  // Check parameter count.
+  unsigned NumParams = FD->getNumParams();
+  if (Args.size() < NumParams)
+    return false; // Too few arguments
+
+  // Variadic functions need at least the required parameters.
+  if (!FD->isVariadic() && Args.size() > NumParams)
+    return false; // Too many arguments for non-variadic
+
+  // Check each argument against its corresponding parameter.
+  for (unsigned i = 0; i < NumParams; ++i) {
+    ParmVarDecl *Param = FD->getParamDecl(i);
+    Expr *Arg = Args[i];
+
+    QualType ParamType = Param->getType();
+    QualType ArgType = Arg->getType();
+
+    // Use the shared helper to check pointer type constraints.
+    if (!S.DoPointerTypesSatisfyAssignmentConstraints(ParamType, ArgType))
+      return false;
+  }
+
+  return true;
+}
+
+/// Select the best matching declaration for heterogeneous redeclarations
+/// where a function has both safe and unsafe declarations.
+///
+/// Selection rules (Manual section 8.2):
+/// - Safe context: Only safe declarations allowed, must satisfy constraints
+/// - Unsafe context: Prefer safe if it satisfies constraints, fallback to unsafe
+///
+/// This implements the call resolution strategy for heterogeneous
+/// redeclarations (Manual section 8.2) using a generic selection algorithm.
+static FunctionDecl *SelectBestMatchingDeclForHeterogeneousRedecl(
+    Sema &S, FunctionDecl *CurrentDecl, MultiExprArg Args, bool IsInSafeZone) {
+
+  if (!CurrentDecl || !S.getLangOpts().BSC)
+    return CurrentDecl;
+
+  // Collect safe and unsafe declarations.
+  SmallVector<FunctionDecl *, 4> SafeDecls;
+  SmallVector<FunctionDecl *, 4> UnsafeDecls;
+
+  for (auto *Redecl : CurrentDecl->redecls()) {
+    if (auto *FD = dyn_cast<FunctionDecl>(Redecl)) {
+      SafeZoneSpecifier SZS = FD->getSafeZoneSpecifier();
+      if (SZS == SZ_Safe)
+        SafeDecls.push_back(FD);
+      else
+        UnsafeDecls.push_back(FD);
+    }
+  }
+
+  // If all declarations have the same safety level, not heterogeneous.
+  if (SafeDecls.empty() || UnsafeDecls.empty())
+    return CurrentDecl;
+
+  // Lambda to check if a function declaration satisfies call constraints.
+  auto CheckCallConstraints = [&](FunctionDecl *CandidateFD) -> bool {
+    return DoesCallSatisfyAssignmentConstraints(S, CandidateFD, Args);
+  };
+
+  // Safe context: must use safe declaration that satisfies constraints.
+  if (IsInSafeZone) {
+    for (FunctionDecl *SafeFD : SafeDecls) {
+      if (CheckCallConstraints(SafeFD)) {
+        return SafeFD;
+      }
+    }
+    // No safe declaration satisfies constraints, return first safe decl
+    // and let subsequent checks report the error.
+    return SafeDecls.front();
+  }
+
+  // Unsafe context: prefer safe declaration if it satisfies constraints.
+  for (FunctionDecl *SafeFD : SafeDecls) {
+    if (CheckCallConstraints(SafeFD)) {
+      return SafeFD;
+    }
+  }
+
+  // No safe declaration matches, try unsafe declarations.
+  for (FunctionDecl *UnsafeFD : UnsafeDecls) {
+    if (CheckCallConstraints(UnsafeFD)) {
+      return UnsafeFD;
+    }
+  }
+
+  // No declaration satisfies constraints - return nullptr to signal failure.
+  // The caller will emit an appropriate diagnostic.
+  return nullptr;
+}
+#endif // ENABLE_BSC
+
 /// BuildCallExpr - Handle a call to Fn with the specified array of arguments.
 /// This provides the location of the left/right parens and a list of comma
 /// locations.
@@ -7289,6 +7392,31 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
   if (FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(NDecl)) {
     #if ENABLE_BSC
+    // Select best matching declaration for heterogeneous redeclarations
+    // (Manual section 8.2).
+    if (getLangOpts().BSC) {
+      FunctionDecl *BestMatch = SelectBestMatchingDeclForHeterogeneousRedecl(
+          *this, FD, ArgExprs, IsInSafeZone());
+      if (!BestMatch) {
+        // No matching declaration found - emit diagnostic and return error.
+        Diag(Fn->getBeginLoc(), diag::err_bsc_no_matching_heterogeneous_function)
+            << FD->getDeclName();
+        return ExprError();
+      }
+      if (BestMatch != FD) {
+        // Replace the function declaration.
+        FD = BestMatch;
+        NDecl = BestMatch;
+        // Update the Fn expression to reference the new declaration.
+        if (auto *DRE = dyn_cast<DeclRefExpr>(NakedFn)) {
+          Fn = DeclRefExpr::Create(
+              Context, BestMatch->getQualifierLoc(), SourceLocation(),
+              BestMatch, false, DRE->getLocation(), BestMatch->getType(),
+              Fn->getValueKind(), BestMatch, nullptr, DRE->isNonOdrUse());
+        }
+      }
+    }
+
     // Desugar for BSC async function call
     if (FD->isAsyncSpecified()) {
       QualType AwaitReturnTy = FD->getReturnType();
@@ -14634,6 +14762,125 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   }
 #endif
 
+#if ENABLE_BSC
+  // BSC: For function pointer assignment with heterogeneous redeclarations,
+  // select the appropriate function declaration based on the destination type.
+  if (getLangOpts().BSC && LHSExpr->getType()->isFunctionPointerType()) {
+    Expr *RHSExpr = RHS.get()->IgnoreParenImpCasts();
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(RHSExpr)) {
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
+        // Get destination function pointer type.
+        const FunctionProtoType *DestFuncType =
+            LHSExpr->getType()
+                ->getAs<PointerType>()
+                ->getPointeeType()
+                ->getAs<FunctionProtoType>();
+
+        if (DestFuncType) {
+          // Collect safe and unsafe declarations.
+          SmallVector<FunctionDecl *, 4> SafeDecls;
+          SmallVector<FunctionDecl *, 4> UnsafeDecls;
+
+          for (auto *Redecl : FD->redecls()) {
+            if (auto *RedeclFD = dyn_cast<FunctionDecl>(Redecl)) {
+              SafeZoneSpecifier SZS = RedeclFD->getSafeZoneSpecifier();
+              if (SZS == SZ_Safe)
+                SafeDecls.push_back(RedeclFD);
+              else
+                UnsafeDecls.push_back(RedeclFD);
+            }
+          }
+
+          // If heterogeneous (both safe and unsafe declarations exist),
+          // select the appropriate one.
+          if (!SafeDecls.empty() && !UnsafeDecls.empty()) {
+            FunctionDecl *SelectedFD = nullptr;
+            SafeZoneSpecifier DestSZS = DestFuncType->getFunSafeZoneSpecifier();
+
+            // Select based on destination function pointer type.
+            if (DestSZS == SZ_Safe) {
+              // Assigning to safe pointer: must select safe declaration with matching signature.
+              // Try to find a safe declaration where the signature is compatible.
+              for (FunctionDecl *SafeFD : SafeDecls) {
+                const FunctionProtoType *SafeFuncType =
+                    SafeFD->getType()->getAs<FunctionProtoType>();
+
+                // Quick check: do return type and param count match?
+                if (SafeFuncType->getReturnType().getCanonicalType().getUnqualifiedType() !=
+                    DestFuncType->getReturnType().getCanonicalType().getUnqualifiedType())
+                  continue;
+                if (SafeFuncType->getNumParams() != DestFuncType->getNumParams())
+                  continue;
+
+                // Check if parameter types match (considering owned/borrow qualifiers).
+                bool ParamsMatch = true;
+                for (unsigned i = 0; i < SafeFuncType->getNumParams(); ++i) {
+                  QualType SafeParam = SafeFuncType->getParamType(i);
+                  QualType DestParam = DestFuncType->getParamType(i);
+                  if (!DoPointerTypesSatisfyAssignmentConstraints(DestParam, SafeParam)) {
+                    ParamsMatch = false;
+                    break;
+                  }
+                }
+
+                if (ParamsMatch) {
+                  SelectedFD = SafeFD;
+                  break;
+                }
+              }
+
+              // If no matching safe declaration found, just pick the first safe one
+              // and let type checking report the error.
+              if (!SelectedFD && !SafeDecls.empty())
+                SelectedFD = SafeDecls.front();
+            } else {
+              // Assigning to unsafe pointer: prefer safe, fallback to unsafe.
+              // Try safe declarations first.
+              for (FunctionDecl *SafeFD : SafeDecls) {
+                const FunctionProtoType *SafeFuncType =
+                    SafeFD->getType()->getAs<FunctionProtoType>();
+
+                // Check if this safe declaration matches the unsafe pointer signature.
+                if (SafeFuncType->getReturnType().getCanonicalType().getUnqualifiedType() !=
+                    DestFuncType->getReturnType().getCanonicalType().getUnqualifiedType())
+                  continue;
+                if (SafeFuncType->getNumParams() != DestFuncType->getNumParams())
+                  continue;
+
+                bool ParamsMatch = true;
+                for (unsigned i = 0; i < SafeFuncType->getNumParams(); ++i) {
+                  if (SafeFuncType->getParamType(i).getCanonicalType().getUnqualifiedType() !=
+                      DestFuncType->getParamType(i).getCanonicalType().getUnqualifiedType()) {
+                    ParamsMatch = false;
+                    break;
+                  }
+                }
+
+                if (ParamsMatch) {
+                  SelectedFD = SafeFD;
+                  break;
+                }
+              }
+
+              // If no safe declaration matches, use unsafe declaration.
+              if (!SelectedFD && !UnsafeDecls.empty())
+                SelectedFD = UnsafeDecls.front();
+            }
+
+            // Replace the DeclRefExpr with the selected declaration.
+            if (SelectedFD && SelectedFD != FD) {
+              RHS = DeclRefExpr::Create(
+                  Context, SelectedFD->getQualifierLoc(), SourceLocation(),
+                  SelectedFD, false, DRE->getLocation(), SelectedFD->getType(),
+                  DRE->getValueKind());
+            }
+          }
+        }
+      }
+    }
+  }
+#endif
+
   QualType LHSType = LHSExpr->getType();
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
                                              CompoundType;
@@ -17942,7 +18189,16 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatibleFunctionPointer:
-
+#if ENABLE_BSC
+    // BSC: For function pointer assignments in BSC, we use IsSafeFunctionPointerTypeCast
+    // which handles heterogeneous selection and safe/unsafe checking.
+    // It emits BSC-specific errors when needed, so we suppress standard diagnostics.
+    if (getLangOpts().BSC) {
+      IsSafeFunctionPointerTypeCast(DstType, SrcExpr);
+      // Always return false to suppress standard diagnostic - BSC has handled it.
+      return false;
+    }
+#endif
     if (getLangOpts().CPlusPlus
 #if ENABLE_BSC
         || IsInSafeZone() || IsSafeFunctionPointerType(DstType)
