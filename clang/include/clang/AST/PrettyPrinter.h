@@ -77,7 +77,9 @@ struct PrintingPolicy {
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true)
 #if ENABLE_BSC
-        , RewriteBSC(false), FunctionDeclarationOnly(false)
+        ,
+        RewriteBSC(false), MangleWithSafeQualifier(false),
+        FunctionDeclarationOnly(false)
 #endif
         {
   }
@@ -319,6 +321,9 @@ struct PrintingPolicy {
 #if ENABLE_BSC
   /// Whether rewriting BSC source code to C source code.
   unsigned RewriteBSC : 1;
+
+  /// Whether add safe qualifiers for BSC method name mangling (e,g., 'owned', 'borrow')
+  unsigned MangleWithSafeQualifier : 1;
 
   /// Whether printing function declaration only while rewriting BSC source
   /// code.

@@ -1,0 +1,115 @@
+// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang -rewrite-bsc  %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s --check-prefix=CHECK_REWRITE
+
+void forget<T>(T t) {
+        T* forget = &t;
+        *forget = t;
+}
+
+T *owned safe_malloc<T>(T t) {
+    T *addr = (T *)malloc(sizeof(T));
+    *addr = t;
+    return (T *owned)addr;
+}
+
+void safe_free(void * _Nullable owned p) {
+	free((void *)p);
+}
+
+void foo<T1,T2>(T1 t1, T2 t2) {
+    safe_free((void *owned)t2);
+    return;
+}
+
+owned struct Bar {
+public:
+  int a;
+  int m;
+};
+
+// CHECK: call {{.*}} @foo_struct_Bar_int_Powned
+void test_owned_struct_and_owned_pointer() {
+  int *owned q = safe_malloc(1);
+  Bar bar = {.a = 1, .m = 2};
+  foo<Bar, int *owned>(bar, q);
+}
+
+// CHECK: call {{.*}} @safe_malloc_int_P
+// CHECK: call {{.*}} @safe_malloc_int_Powned
+void test_raw_and_owned_pointer(void) {
+    int a = 0;
+    int * p1 = &a;
+    int *owned p2 = safe_malloc(1);
+    int * *owned p3 = safe_malloc(p1);        // safe_malloc<int *>
+    int *owned *owned p4 = safe_malloc(p2);   // safe_malloc<int *owned>
+
+    safe_free((void *owned)p3);
+    safe_free((void *owned)*p4);
+    safe_free((void *owned)p4);
+}
+
+void test_pointers<T>(T t) {
+   free((void *)t);
+}
+
+// CHECK: call {{.*}} @test_pointers_int_P
+// CHECK: call {{.*}} @test_pointers_int_Pborrow
+// CHECK: call {{.*}} @test_pointers_int_Powned
+void test_owned_and_borrow_pointer(void) {
+    int a = 0;
+    int * p1 = &a;
+    int *borrow p2 = &mut a;
+    int *owned p3 = safe_malloc(1);
+    test_pointers<int*>(p1);
+    test_pointers<int* borrow>(p2);
+    test_pointers<int* owned>(p3);
+}
+
+// CHECK_REWRITE: static int * safe_malloc_int(int t);
+
+// CHECK_REWRITE: static int ** safe_malloc_int_P(int *t);
+
+// CHECK_REWRITE: static int * * safe_malloc_int_Powned(int * t);
+
+// CHECK_REWRITE: static void foo_struct_Bar_int_Powned( struct Bar t1, int * t2);
+
+// CHECK_REWRITE: void struct_Bar_D( struct Bar this);
+
+// CHECK_REWRITE: static void test_pointers_int_P(int *t);
+
+// CHECK_REWRITE: static void test_pointers_int_Pborrow(int * t);
+
+// CHECK_REWRITE: static void test_pointers_int_Powned(int * t);
+
+
+// CHECK_REWRITE: void test_owned_struct_and_owned_pointer(void) {
+// CHECK_REWRITE-NEXT:     int * q = safe_malloc_int(1);
+// CHECK_REWRITE-NEXT:      struct Bar bar = {.a = 1, .m = 2};
+// CHECK_REWRITE-NEXT:     _Bool bar_is_moved = 0;
+// CHECK_REWRITE-NEXT:     foo_struct_Bar_int_Powned(bar, q);
+// CHECK_REWRITE-NEXT:     bar_is_moved = 1;
+// CHECK_REWRITE-NEXT:     if (!bar_is_moved)
+// CHECK_REWRITE-NEXT:         struct_Bar_D(bar);
+// CHECK_REWRITE-NEXT: }
+
+// CHECK_REWRITE: void test_raw_and_owned_pointer(void) {
+// CHECK_REWRITE-NEXT:     int a = 0;
+// CHECK_REWRITE-NEXT:     int *p1 = &a;
+// CHECK_REWRITE-NEXT:     int * p2 = safe_malloc_int(1);
+// CHECK_REWRITE-NEXT:     int ** p3 = safe_malloc_int_P(p1);
+// CHECK_REWRITE-NEXT:     int * * p4 = safe_malloc_int_Powned(p2);
+// CHECK_REWRITE-NEXT:     safe_free((void *)p3);
+// CHECK_REWRITE-NEXT:     safe_free((void *)*p4);
+// CHECK_REWRITE-NEXT:     safe_free((void *)p4);
+// CHECK_REWRITE-NEXT: }
+
+// CHECK_REWRITE: void test_owned_and_borrow_pointer(void) {
+// CHECK_REWRITE-NEXT:     int a = 0;
+// CHECK_REWRITE-NEXT:     int *p1 = &a;
+// CHECK_REWRITE-NEXT:     int * p2 = &a;
+// CHECK_REWRITE-NEXT:     int * p3 = safe_malloc_int(1);
+// CHECK_REWRITE-NEXT:     test_pointers_int_P(p1);
+// CHECK_REWRITE-NEXT:     test_pointers_int_Pborrow(p2);
+// CHECK_REWRITE-NEXT:     test_pointers_int_Powned(p3);
+// CHECK_REWRITE-NEXT: }

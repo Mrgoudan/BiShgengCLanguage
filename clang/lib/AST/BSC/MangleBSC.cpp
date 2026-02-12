@@ -73,6 +73,7 @@ MangleBSCContext::getBSCDesturctorMangleName(const BSCMethodDecl *BMD) {
 
 std::string MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD,
                                                        PrintingPolicy &Policy) {
+  Policy.MangleWithSafeQualifier = true;
   std::string FunctionName = BFD->getNameAsString();
   if (const TemplateArgumentList *TArgs =
           BFD->getTemplateSpecializationArgs()) {
@@ -80,6 +81,7 @@ std::string MangleBSCContext::getBSCFunctionMangleName(const FunctionDecl *BFD,
     std::string TemplateArgsName = getBSCTemplateArgsName(Args, Policy);
     FunctionName += TemplateArgsName;
   }
+  Policy.MangleWithSafeQualifier = false;
   return FunctionName;
 }
 

@@ -180,7 +180,7 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
                                bool HasRestrictKeyword
 #if ENABLE_BSC
                                ,
-                               bool IsRewriteBSC
+                               bool IsRewriteBSC, bool MangleWithSafeQualifier
 #endif
                                ) {
   bool appendSpace = false;
@@ -189,12 +189,14 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
     appendSpace = true;
   }
 #if ENABLE_BSC
-  if ((TypeQuals & Qualifiers::Owned) && !IsRewriteBSC) {
+  if ((TypeQuals & Qualifiers::Owned) &&
+      (!IsRewriteBSC || MangleWithSafeQualifier)) {
     if (appendSpace) OS << ' ';
     OS << "owned";
     appendSpace = true;
   }
-  if ((TypeQuals & Qualifiers::Borrow) && !IsRewriteBSC) {
+  if ((TypeQuals & Qualifiers::Borrow) &&
+      (!IsRewriteBSC || MangleWithSafeQualifier)) {
     if (appendSpace)
       OS << ' ';
     OS << "borrow";
@@ -411,6 +413,11 @@ void TypePrinter::printBefore(const Type *T,Qualifiers Quals, raw_ostream &OS) {
   bool CanPrefixQualifiers = false;
   bool NeedARCStrongQualifier = false;
   CanPrefixQualifiers = canPrefixQualifiers(T, NeedARCStrongQualifier);
+#if ENABLE_BSC
+  if (T->isOwnedStructureType()) {
+    Policy.MangleWithSafeQualifier = false;
+  }
+#endif
 
   if (CanPrefixQualifiers && !Quals.empty()) {
     if (NeedARCStrongQualifier) {
@@ -613,7 +620,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
                        Policy.Restrict
 #if ENABLE_BSC
                        ,
-                       Policy.RewriteBSC
+                       Policy.RewriteBSC, Policy.MangleWithSafeQualifier
 #endif
     );
     OS << ' ';
@@ -651,7 +658,7 @@ void TypePrinter::printVariableArrayAfter(const VariableArrayType *T,
     AppendTypeQualList(OS, T->getIndexTypeCVRQualifiers(), Policy.Restrict
 #if ENABLE_BSC
                        ,
-                       Policy.RewriteBSC
+                       Policy.RewriteBSC, Policy.MangleWithSafeQualifier
 #endif
     );
     OS << ' ';
@@ -2438,7 +2445,7 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
     AppendTypeQualList(OS, quals, Policy.Restrict
 #if ENABLE_BSC
                        ,
-                       Policy.RewriteBSC
+                       Policy.RewriteBSC, Policy.MangleWithSafeQualifier
 #endif
     );
     addSpace = true;
