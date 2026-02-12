@@ -523,7 +523,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
 
   // Init any pointer (raw, owned, or borrow) by nullptr is allowed in the safezone
   if (DestType->isPointerType()) {
-    if (isa<CXXNullPtrLiteralExpr>(E))
+    if (isa<CXXNullPtrLiteralExpr>(E->IgnoreParens()))
       return true;
 
     // Allow initializing 'char*' pointers with string literals.
