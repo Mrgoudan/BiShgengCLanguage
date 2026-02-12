@@ -1146,6 +1146,19 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   Var->setDefInTopLevelSwitchBlock(D->isDefInTopLevelSwitchBlock());
 #endif
 
+#if ENABLE_BSC
+  QualType T = Var->getType().getCanonicalType();
+  if (T.isOwnedQualified() &&
+      T->isArrayType()) {
+    // diag::err_owned_inderictOwned_type_check uses a %select{...}0 in the .td
+    // definition, so argument #0 is required to choose (ownedQualified here).
+    enum { ownedQualified };
+    StringRef Env = "template instantiation";
+    SemaRef.Diag(Var->getBeginLoc(), diag::err_owned_inderictOwned_type_check)
+        << ownedQualified << "owned" << Env;
+  }
+#endif
+
   // In ARC, infer 'retaining' for variables of retainable type.
   if (SemaRef.getLangOpts().ObjCAutoRefCount &&
       SemaRef.inferObjCARCLifetime(Var))
