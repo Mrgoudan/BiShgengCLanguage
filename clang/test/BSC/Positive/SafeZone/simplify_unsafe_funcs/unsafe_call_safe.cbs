@@ -1,0 +1,14 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
+// expected-no-diagnostics
+
+typedef struct {
+  unsigned int bits[256];
+} bit_stream;
+
+safe void* memset(void *borrow dest,  int sizeMax, unsigned long c);
+
+bit_stream *stram = nullptr;
+safe void bar(int n) {
+  unsafe { memset(stram[n].bits, 0, 0); }
+}
+int main() { return 0; }

@@ -113,20 +113,32 @@ bool Type::checkFunctionProtoType(SafeZoneSpecifier SZS) const {
 
 namespace clang {
 
-/// Helper: Check if owned/borrow qualifiers are compatible between two types.
-/// Returns true if there's no owned/borrow conflict (both can coexist).
-/// Returns false if one is owned and the other is borrow (incompatible).
-static bool AreOwnedBorrowQualifiersCompatible(QualType UnsafeType, QualType SafeType) {
-  if (!UnsafeType->isPointerType() || !SafeType->isPointerType())
-    return true;  // Non-pointers don't have owned/borrow conflicts
+/// Helper: Check if owned/borrow qualifiers are compatible between two types
+/// for heterogeneous redeclarations.
+///
+/// Returns true unless one type has 'owned' and the other has 'borrow'.
+/// This handles:
+/// - Arrays (treated as raw pointers with no qualifiers)
+/// - Pointers with no qualifiers (raw)
+/// - Pointers with owned qualifier
+/// - Pointers with borrow qualifier
+///
+/// Compatible cases:
+///   raw ⟷ raw, raw ⟷ owned, raw ⟷ borrow, owned ⟷ owned, borrow ⟷ borrow
+///   array ⟷ any (arrays are treated as raw)
+///
+/// Incompatible case:
+///   owned ⟷ borrow
+static bool AreOwnedBorrowQualifiersCompatible(QualType Type1, QualType Type2) {
+  // Extract owned/borrow status only for pointer types.
+  // Arrays and other non-pointer types are treated as having no qualifiers.
+  bool Type1IsOwned = Type1->isPointerType() && Type1.isOwnedQualified();
+  bool Type1IsBorrow = Type1->isPointerType() && Type1.isBorrowQualified();
+  bool Type2IsOwned = Type2->isPointerType() && Type2.isOwnedQualified();
+  bool Type2IsBorrow = Type2->isPointerType() && Type2.isBorrowQualified();
 
-  bool UnsafeIsOwned = UnsafeType.isOwnedQualified();
-  bool UnsafeIsBorrow = UnsafeType.isBorrowQualified();
-  bool SafeIsOwned = SafeType.isOwnedQualified();
-  bool SafeIsBorrow = SafeType.isBorrowQualified();
-
-  // Owned and borrow are incompatible with each other.
-  return !((UnsafeIsOwned && SafeIsBorrow) || (UnsafeIsBorrow && SafeIsOwned));
+  // The ONLY incompatible combination: owned ⟷ borrow
+  return !((Type1IsOwned && Type2IsBorrow) || (Type1IsBorrow && Type2IsOwned));
 }
 
 /// Check if two function types are compatible for heterogeneous redeclarations
@@ -170,18 +182,21 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
   const FunctionProtoType *SafeFPT = Type1IsUnsafe ? FPT2 : FPT1;
 
   // Check return type compatibility.
-  // Step 1: Use Clang's type compatibility checker (C99 6.2.7p1).
-  // Note: typesAreCompatible -> mergeTypes already strips owned/borrow qualifiers,
-  // so this correctly checks compatibility ignoring BSC qualifiers while
-  // respecting standard C qualifiers (const, volatile, restrict).
-  // We also strip nullability for heterogeneous redeclarations to allow
-  // unsafe (no nullability) + safe (_Nullable/_Nonnull) combinations.
   QualType UnsafeRet = UnsafeFPT->getReturnType();
   QualType SafeRet = SafeFPT->getReturnType();
 
-  // Strip nullability from both types for compatibility checking.
+  // Save original types for owned/borrow compatibility check.
+  QualType UnsafeRetOrig = UnsafeRet;
+  QualType SafeRetOrig = SafeRet;
+
+  // Strip nullability and owned/borrow for base type compatibility checking.
+  // We check owned/borrow separately in AreOwnedBorrowQualifiersCompatible.
   AttributedType::stripOuterNullability(UnsafeRet);
   AttributedType::stripOuterNullability(SafeRet);
+  UnsafeRet.removeLocalOwned();
+  UnsafeRet.removeLocalBorrow();
+  SafeRet.removeLocalOwned();
+  SafeRet.removeLocalBorrow();
 
   // Fast path: check if canonical unqualified types are identical
   if (UnsafeRet.getCanonicalType().getUnqualifiedType() !=
@@ -191,8 +206,8 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
       return false;
   }
 
-  // Step 2: Add BSC-specific checks for owned/borrow.
-  if (!AreOwnedBorrowQualifiersCompatible(UnsafeRet, SafeRet))
+  // Step 2: Add BSC-specific checks for owned/borrow using original types.
+  if (!AreOwnedBorrowQualifiersCompatible(UnsafeRetOrig, SafeRetOrig))
     return false;
 
   // Check parameter type compatibility for each parameter.
@@ -200,9 +215,17 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
     QualType UnsafeParam = UnsafeFPT->getParamType(i);
     QualType SafeParam = SafeFPT->getParamType(i);
 
-    // Strip nullability from both parameter types for compatibility checking.
+    // Save original types for owned/borrow compatibility check.
+    QualType UnsafeParamOrig = UnsafeParam;
+    QualType SafeParamOrig = SafeParam;
+
+    // Strip nullability and owned/borrow for base type compatibility checking.
     AttributedType::stripOuterNullability(UnsafeParam);
     AttributedType::stripOuterNullability(SafeParam);
+    UnsafeParam.removeLocalOwned();
+    UnsafeParam.removeLocalBorrow();
+    SafeParam.removeLocalOwned();
+    SafeParam.removeLocalBorrow();
 
     // Step 1: Fast path for identical canonical types, then full compatibility check.
     if (UnsafeParam.getCanonicalType().getUnqualifiedType() !=
@@ -211,8 +234,8 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
         return false;
     }
 
-    // Step 2: Add BSC-specific checks for owned/borrow.
-    if (!AreOwnedBorrowQualifiersCompatible(UnsafeParam, SafeParam))
+    // Step 2: Add BSC-specific checks for owned/borrow using original types.
+    if (!AreOwnedBorrowQualifiersCompatible(UnsafeParamOrig, SafeParamOrig))
       return false;
   }
 

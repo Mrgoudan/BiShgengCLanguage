@@ -6625,20 +6625,17 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
           ProtoArgType.isBorrowQualified()) {
         // Check if parameter is a pointer to char (const char * borrow or char * borrow)
         QualType PointeeType = ProtoArgType->getPointeeType();
-        if (PointeeType->isCharType()) {
-          Expr *ArgIgnored = Arg->IgnoreParenImpCasts();
-
-          if (isa<StringLiteral>(ArgIgnored)) {
-            // Check if it's a const borrow (OK) or mut borrow (ERROR)
-            if (PointeeType.isConstQualified()) {
-              // Auto-insert &const * for const char * borrow
-              Arg = InsertConstBorrowForStringLiteral(Arg, Arg->getBeginLoc());
-            } else {
-              // Error: cannot mutably borrow string literal
-              Diag(Arg->getBeginLoc(), diag::err_pass_string_literal_to_mut_borrow)
-                << ProtoArgType;
-              return true;
-            }
+        if (PointeeType.getUnqualifiedType()->isCharType() &&
+            IsStringLiteralExpr(Arg)) {
+          // Check if it's a const borrow (OK) or mut borrow (ERROR)
+          if (PointeeType.isConstQualified()) {
+            // Auto-insert &const * for const char * borrow
+            Arg = InsertConstBorrowForStringLiteral(Arg, Arg->getBeginLoc());
+          } else {
+            // Error: cannot mutably borrow string literal or __FUNCTION__
+            Diag(Arg->getBeginLoc(), diag::err_pass_string_literal_to_mut_borrow)
+              << ProtoArgType;
+            return true;
           }
         }
       }
@@ -7161,6 +7158,18 @@ static bool DoesCallSatisfyAssignmentConstraints(Sema &S, FunctionDecl *FD,
     QualType ParamType = Param->getType();
     QualType ArgType = Arg->getType();
 
+    // Special case: String literals (including __FUNCTION__ and ternary string
+    // expressions) can auto-borrow to borrow pointers.
+    if (ArgType->isArrayType() && ParamType->isPointerType() &&
+        ParamType.isBorrowQualified()) {
+      if (!S.IsStringLiteralExpr(Arg)) {
+        // Not a string literal - regular arrays cannot match borrow pointers.
+        return false;
+      }
+      // String literal can auto-borrow - skip the constraint check and allow it.
+      continue;
+    }
+
     // Use the shared helper to check pointer type constraints.
     if (!S.DoPointerTypesSatisfyAssignmentConstraints(ParamType, ArgType))
       return false;
@@ -7214,9 +7223,9 @@ static FunctionDecl *SelectBestMatchingDeclForHeterogeneousRedecl(
         return SafeFD;
       }
     }
-    // No safe declaration satisfies constraints, return first safe decl
-    // and let subsequent checks report the error.
-    return SafeDecls.front();
+    // No safe declaration satisfies constraints - return nullptr to signal failure.
+    // Unsafe declarations cannot be used in safe context.
+    return nullptr;
   }
 
   // Unsafe context: prefer safe declaration if it satisfies constraints.

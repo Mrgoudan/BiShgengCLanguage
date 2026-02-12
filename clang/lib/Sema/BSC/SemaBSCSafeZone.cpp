@@ -232,6 +232,29 @@ static FunctionDecl *SelectBestHeterogeneousFunctionDecl(
   return CurrentDecl;
 }
 
+/// Check if BSC pointer qualifiers (owned/borrow) are compatible between Dest and Src.
+/// For array sources (which decay to raw pointers), owned/borrow dest is rejected.
+/// For pointer sources, owned and borrow must match exactly.
+static bool AreBSCPointerQualifiersCompatible(QualType Dest, QualType Src,
+                                              bool SrcIsArray) {
+  if (SrcIsArray) {
+    // Arrays decay to raw pointers (no owned/borrow qualifiers).
+    // Only raw pointer parameters (no owned/borrow) can match.
+    // Exception: String literals CAN match borrow pointers via auto-borrow,
+    // but that check is done earlier with access to the Expr*.
+    if (Dest.isOwnedQualified() || Dest.isBorrowQualified())
+      return false;
+    return true;
+  }
+
+  // For pointer-to-pointer, owned and borrow must match exactly.
+  if (Dest.isOwnedQualified() != Src.isOwnedQualified())
+    return false;
+  if (Dest.isBorrowQualified() != Src.isBorrowQualified())
+    return false;
+  return true;
+}
+
 /// Check if two pointer types satisfy assignment constraints.
 /// This is used for both function calls and function pointer assignments.
 /// Returns true if Source can be assigned to Dest considering owned/borrow/const qualifiers.
@@ -264,12 +287,59 @@ static bool DoPointerTypesSatisfyAssignmentConstraintsImpl(
   if (DestIsPtr != SrcIsPtr)
     return false;
 
-  // Owned qualifier must match exactly.
-  if (Dest.isOwnedQualified() != Src.isOwnedQualified())
+  // Check BSC-specific qualifiers (owned/borrow) - shared between both modes.
+  if (!AreBSCPointerQualifiersCompatible(Dest, Src, SrcIsArray))
     return false;
 
-  // Borrow qualifier must match exactly.
-  if (Dest.isBorrowQualified() != Src.isBorrowQualified())
+  // For array sources, pointee compatibility depends on mode.
+  if (SrcIsArray) {
+    if (AllowImplicitConversions) {
+      // Function call context: Clang's normal type checking will handle
+      // whether array element type is compatible with destination pointee type.
+      return true;
+    }
+    // Function pointer assignment context: require exact pointee match.
+    QualType DestPointee = Dest->getPointeeType();
+    QualType SrcPointee = Src->getAsArrayTypeUnsafe()->getElementType();
+    return DestPointee.getCanonicalType().getUnqualifiedType() ==
+           SrcPointee.getCanonicalType().getUnqualifiedType();
+  }
+
+  // For function calls (AllowImplicitConversions=true), we rely on Clang's
+  // standard type checking for base type compatibility and only check BSC qualifiers.
+  // For function pointer assignments (AllowImplicitConversions=false), we require
+  // strict type matching including pointee types.
+
+  if (AllowImplicitConversions) {
+    // Function call context: Allow standard C implicit pointer conversions.
+    QualType DestPointee = Dest->getPointeeType();
+    QualType SrcPointee = Src->getPointeeType();
+
+    // Allow any pointer to void*.
+    if (Dest->isVoidPointerType())
+      return true;
+
+    // Allow void* to any pointer.
+    if (Src->isVoidPointerType())
+      return true;
+
+    // Check if pointee types are compatible, ignoring const/volatile qualifiers.
+    // Standard C allows const conversions (char* -> const char*), so we check
+    // unqualified type compatibility and let Clang handle const checking later.
+    if (!S.Context.typesAreCompatible(DestPointee.getUnqualifiedType(),
+                                       SrcPointee.getUnqualifiedType()))
+      return false;
+
+    return true;
+  }
+
+  // Function pointer assignment context: Require strict type matching.
+  QualType DestPointee = Dest->getPointeeType();
+  QualType SrcPointee = Src->getPointeeType();
+
+  // Pointee types must match exactly.
+  if (DestPointee.getCanonicalType().getUnqualifiedType() !=
+      SrcPointee.getCanonicalType().getUnqualifiedType())
     return false;
 
   // Const compatibility: mut → const is OK, const → mut is NOT OK.
@@ -277,19 +347,7 @@ static bool DoPointerTypesSatisfyAssignmentConstraintsImpl(
   if (!Dest.isConstQualified() && Src.isConstQualified())
     return false;
 
-  // Check pointee type compatibility.
-  QualType DestPointee = Dest->getPointeeType();
-  QualType SrcPointee;
-
-  // Handle array-to-pointer decay: get element type for arrays
-  if (SrcIsArray) {
-    SrcPointee = Src->getAsArrayTypeUnsafe()->getElementType();
-  } else {
-    SrcPointee = Src->getPointeeType();
-  }
-
-  return DestPointee.getCanonicalType().getUnqualifiedType() ==
-         SrcPointee.getCanonicalType().getUnqualifiedType();
+  return true;
 }
 
 /// Public wrapper for function calls - allows implicit conversions.
@@ -553,6 +611,10 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     QualType SrcCanType = SrcType.getCanonicalType();
     QualType DestCanType = DestType.getCanonicalType();
     IsSafeBehavior = IsSafePointerConversion(SrcCanType, DestCanType);
+  } else if (SrcType->isArrayType() && DestType->isPointerType()) {
+    // Array-to-pointer decay: Allow for string literals, __FUNCTION__, and
+    // ternary expressions containing only string literals.
+    IsSafeBehavior = IsStringLiteralExpr(E);
   } else if (SrcType->isPointerType() || DestType->isPointerType()) {
     // conversion from pointer to non-pointer or non-pointer to pointer is not
     // allowed
@@ -799,16 +861,9 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
     if (!T.isNull() && T->isPointerType() &&
         !T.getCanonicalType().isOwnedQualified() &&
         !T.getCanonicalType().isBorrowQualified()) {
-      // Allow dereferencing string literals for borrow conversion
-      // Check if we're dereferencing a pointer that came from a string literal
-      bool IsStringLiteralDeref = false;
-      if (InputExpr) {
-        Expr *Stripped = InputExpr->IgnoreParenImpCasts();
-        if (isa<StringLiteral>(Stripped)) {
-          IsStringLiteralDeref = true;
-        }
-      }
-      if (!IsStringLiteralDeref) {
+      // Allow dereferencing string literals, __FUNCTION__, and ternary string
+      // expressions for borrow conversion.
+      if (!IsStringLiteralExpr(InputExpr)) {
         Diag(OpLoc, diag::err_unsafe_action) << "'*' operator";
       }
     }

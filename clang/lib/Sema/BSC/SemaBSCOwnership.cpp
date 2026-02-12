@@ -474,10 +474,23 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
       return true;
 
     if (LHSCanType->isVoidPointerType()) {
-      if (RHSCanType->isPointerType() &&
-          LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified() &&
-          LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified())
-        return true;
+      // Handle array-to-pointer decay: arrays decay to raw pointers (no borrow).
+      if (RHSCanType->isArrayType()) {
+        // Arrays cannot match borrow pointers (they decay to raw pointers).
+        if (LHSCanType.isBorrowQualified()) {
+          Res = false;
+        } else {
+          // Check const compatibility between void* and array element type.
+          QualType RHSElementType = RHSCanType->getAsArrayTypeUnsafe()->getElementType();
+          if (LHSCanType->getPointeeType().isConstQualified() == RHSElementType.isConstQualified())
+            return true;
+        }
+      } else if (RHSCanType->isPointerType()) {
+        // Pointer-to-pointer: check const and borrow qualifiers.
+        if (LHSCanType->getPointeeType().isConstQualified() == RHSCanType->getPointeeType().isConstQualified() &&
+            LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified())
+          return true;
+      }
     }
 
     // Allow mutable borrow downgrading to immutable borrow (re-borrow)

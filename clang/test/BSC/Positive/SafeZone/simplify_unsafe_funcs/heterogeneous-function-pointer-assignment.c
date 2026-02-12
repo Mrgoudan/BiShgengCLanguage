@@ -96,3 +96,51 @@ void test9_unsafe(void) {
         unsafe_ptr = process;  // Can use unsafe or safe version
     }
 }
+
+// Test 10: void* owned parameter and return - hot fix scenario
+unsafe void* process_void(void* p);
+safe void* owned process_void(void* owned p);
+
+void test10_void_owned(void) {
+    safe void* owned (*safe_ptr)(void* owned) = 0;
+    unsafe void* (*unsafe_ptr)(void*) = 0;
+
+    safe_ptr = process_void;    // Assigns safe version
+    unsafe_ptr = process_void;  // Assigns unsafe or safe version
+}
+
+// Test 11: const char* borrow parameter - hot fix scenario
+unsafe void log_msg(const char* msg);
+safe void log_msg(const char* borrow msg);
+
+void test11_const_char_borrow(void) {
+    safe void (*safe_ptr)(const char* borrow) = 0;
+    unsafe void (*unsafe_ptr)(const char*) = 0;
+
+    safe_ptr = log_msg;    // Assigns safe version (borrow constraint matches)
+    unsafe_ptr = log_msg;  // Assigns unsafe or safe version
+}
+
+// Test 12: const char* borrow return with borrow parameter
+unsafe const char* lookup(const char* key);
+safe const char* borrow lookup(const char* borrow key);
+
+void test12_const_borrow_return(void) {
+    safe const char* borrow (*safe_ptr)(const char* borrow) = 0;
+    unsafe const char* (*unsafe_ptr)(const char*) = 0;
+
+    safe_ptr = lookup;    // Assigns safe version
+    unsafe_ptr = lookup;  // Assigns unsafe or safe version
+}
+
+// Test 13: Mixed owned/borrow with const qualifiers
+unsafe void process_mixed_const(int* p1, const char* p2);
+safe void process_mixed_const(int* owned p1, const char* borrow p2);
+
+void test13_mixed_const(void) {
+    safe void (*safe_ptr)(int* owned, const char* borrow) = 0;
+    unsafe void (*unsafe_ptr)(int*, const char*) = 0;
+
+    safe_ptr = process_mixed_const;    // Assigns safe version
+    unsafe_ptr = process_mixed_const;  // Assigns unsafe or safe version
+}

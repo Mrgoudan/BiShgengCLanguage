@@ -26,6 +26,14 @@ typedef safe  void (*FuncPtr5)(int* owned p, float* owned q);
 typedef unsafe  int** (*FuncPtr8)(int** p);
 typedef safe  int** owned (*FuncPtr8)(int** owned p);
 
+// Test 6: void* owned parameter and return
+typedef unsafe  void* (*FuncPtr6)(void* p);
+typedef safe  void* owned (*FuncPtr6)(void* owned p);
+
+// Test 7: const char* borrow parameter
+typedef unsafe  void (*FuncPtr7)(const char* msg);
+typedef safe  void (*FuncPtr7)(const char* borrow msg);
+
 // Test 9: Homogeneous redeclaration (both safe) - should work
 typedef safe  void (*FuncPtr9)(int* owned p);
 typedef safe  void (*FuncPtr9)(int* owned p);
@@ -41,6 +49,8 @@ void test_usage(void) {
     FuncPtr3 fp3 = 0;
     FuncPtr4 fp4 = 0;
     FuncPtr5 fp5 = 0;
+    FuncPtr6 fp6 = 0;
+    FuncPtr7 fp7 = 0;
     FuncPtr8 fp8 = 0;
     FuncPtr9 fp9 = 0;
     FuncPtr10 fp10 = 0;

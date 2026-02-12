@@ -1,0 +1,135 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test const conversions with heterogeneous function declarations
+// Standard C allows adding const (char* -> const char*) and removing const with warning
+
+typedef struct{
+    char * fileName;
+    const char * constName;
+    int * data;
+    const int * constData;
+} Info;
+
+// Test 1: strlen - the original failing case
+unsigned int strlen(const char *  a); // expected-warning {{incompatible redeclaration of library function 'strlen'}} \
+                                       // expected-note {{'strlen' is a builtin with type 'unsigned long (const char *)'}}
+safe unsigned int strlen(const char * borrow a);
+
+safe void test1(Info* borrow refInfo){
+    unsafe {
+        strlen(refInfo->fileName);      // char* -> const char* (adding const)
+        strlen(refInfo->constName);     // const char* -> const char* (exact match)
+    }
+}
+
+// Test 2: Non-const to const pointer conversion
+int process(const int * p);
+safe int process(const int * borrow p);
+
+safe void test2(Info* borrow refInfo){
+    unsafe {
+        process(refInfo->data);         // int* -> const int* (adding const)
+        process(refInfo->constData);    // const int* -> const int* (exact match)
+    }
+}
+
+// Test 3: Const to non-const pointer conversion (should also work per C semantics)
+void modify(char * p);
+safe void modify(char * borrow p);
+
+safe void test3(Info* borrow refInfo){
+    unsafe {
+        modify(refInfo->fileName);      // char* -> char* (exact match)
+        // Note: const char* -> char* would generate a warning in normal C compilation
+        // but should still select a matching function in constraint checking
+    }
+}
+
+// Test 4: Mixed const with void*
+void* get_ptr(const void* p);
+safe void* get_ptr(const void* borrow p);
+
+safe void test4(Info* borrow refInfo){
+    unsafe {
+        get_ptr(refInfo->fileName);     // char* -> const void* (adding const + type conversion)
+        get_ptr(refInfo->constName);    // const char* -> const void* (type conversion)
+        get_ptr(refInfo->data);         // int* -> const void* (adding const + type conversion)
+        get_ptr(refInfo->constData);    // const int* -> const void* (type conversion)
+    }
+}
+
+// Test 5: Multiple parameters with const conversions
+int compare(const char* a, const char* b);
+safe int compare(const char* borrow a, const char* borrow b);
+
+safe void test5(char* str1, const char* str2, char* str3){
+    unsafe {
+        compare(str1, str2);  // char*, const char* -> both to const char*
+        compare(str1, str3);  // char*, char* -> both to const char*
+        compare(str2, str2);  // const char*, const char* -> exact match
+    }
+}
+
+// Test 6: Const with owned/borrow qualifiers
+void owned_func(const int* p);
+safe void owned_func(const int* borrow p);
+
+safe void test6(int* p1, const int* p2){
+    unsafe {
+        owned_func(p1);   // int* -> const int* (adding const)
+        owned_func(p2);   // const int* -> const int* (exact match)
+    }
+}
+
+// Test 7: Typedef'd types with const
+typedef char* string_t;
+typedef const char* const_string_t;
+
+void string_func(const_string_t s);
+safe void string_func(const_string_t borrow s);
+
+safe void test7(string_t s1, const_string_t s2){
+    unsafe {
+        string_func(s1);  // char* -> const char* (adding const)
+        string_func(s2);  // const char* -> const char* (exact match)
+    }
+}
+
+// Test 8: Multi-level const conversions
+void multi_const(const char* const * p);
+safe void multi_const(const char* const * borrow p);
+
+safe void test8(char** pp1, const char** pp2){
+    unsafe {
+        // Note: C doesn't allow char** -> const char** implicitly due to const safety rules
+        // but char** -> const char* const* should work
+        multi_const((const char* const *)pp1);
+        multi_const((const char* const *)pp2);
+    }
+}
+
+// Test 9: Const volatile qualifiers
+void volatile_func(const volatile int* p);
+safe void volatile_func(const volatile int* borrow p);
+
+safe void test9(int* p1, const int* p2, volatile int* p3){
+    unsafe {
+        volatile_func((const volatile int*)p1);  // int* -> const volatile int*
+        volatile_func((const volatile int*)p2);  // const int* -> const volatile int*
+        volatile_func((const volatile int*)p3);  // volatile int* -> const volatile int*
+    }
+}
+
+// Test 10: Array with const elements
+void process_const_array(const int* arr, int size);
+safe void process_const_array(const int* borrow arr, int size);
+
+safe void test10(void){
+    int arr1[10];
+    const int arr2[10] = {0};
+
+    unsafe {
+        process_const_array(arr1, 10);  // int[10] -> const int* (array decay + adding const)
+        process_const_array(arr2, 10);  // const int[10] -> const int* (array decay, exact match)
+    }
+}

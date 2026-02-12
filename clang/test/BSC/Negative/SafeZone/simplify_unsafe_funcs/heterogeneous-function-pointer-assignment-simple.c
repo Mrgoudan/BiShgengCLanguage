@@ -34,5 +34,23 @@ safe void int_param(int* owned p);
 
 void test4(void) {
     safe void (*ptr_float)(float* owned) = 0;
-    ptr_float = int_param;  // expected-error {{conversion from type 'safe void (*)(int *owned)' to 'safe void (*)(float *owned)' is forbidden}} 
+    ptr_float = int_param;  // expected-error {{conversion from type 'safe void (*)(int *owned)' to 'safe void (*)(float *owned)' is forbidden}}
+}
+
+// Test 5: void* owned/borrow mismatch in function pointer
+unsafe void void_owned(void* p);
+safe void void_owned(void* owned p);
+
+void test5(void) {
+    safe void (*ptr_borrow)(void* borrow) = 0;
+    ptr_borrow = void_owned;  // expected-error {{cannot cast}}
+}
+
+// Test 6: Const mismatch - char* borrow vs const char* borrow
+unsafe void mut_char(char* p);
+safe void mut_char(char* borrow p);
+
+void test6(void) {
+    safe void (*ptr_const)(const char* borrow) = 0;
+    ptr_const = mut_char;  // expected-error {{cannot cast}}
 }
