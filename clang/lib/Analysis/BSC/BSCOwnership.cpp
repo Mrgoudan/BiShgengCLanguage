@@ -1128,8 +1128,17 @@ Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
   if (OPSAllOwnedFields[VD].size() != OPSOwnedOwnedFields[VD].size()) {
     if (!is(VD, Ownership::Status::Owned) &&
         !is(VD, Ownership::Status::Moved)) {
-      resetAll(VD);
-      set(VD, Ownership::Status::PartialMoved);
+      // When OPSOwnedOwnedFields is empty, all owned fields have been moved.
+      // This can happen when assigning to a non-owned field (e.g. an int field)
+      // after moving out owned fields. Set AllMoved, not PartialMoved.
+      if (!OPSAllOwnedFields[VD].empty() && OPSOwnedOwnedFields[VD].empty() &&
+          !VD->getType()->getPointeeType()->isOwnedStructureType()) {
+        resetAll(VD);
+        set(VD, Ownership::Status::AllMoved);
+      } else {
+        resetAll(VD);
+        set(VD, Ownership::Status::PartialMoved);
+      }
     }
   }
 

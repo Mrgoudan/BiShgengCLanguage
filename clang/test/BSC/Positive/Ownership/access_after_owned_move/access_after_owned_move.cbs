@@ -1,0 +1,126 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+void *malloc(unsigned long size);
+void free(void *ptr);
+
+T* owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc(sizeof(T));
+  *p = value;
+  return (T* owned)p;
+}
+
+void safe_free(void* owned p) {
+  free((void*)p);
+}
+
+struct S1 {
+  int a[2];
+  int *owned p3;
+};
+
+void test_array_access_after_owned_move() {
+  struct S1 s1 = {};
+  struct S1 *owned p1 = safe_malloc(s1);
+  int *owned tmp = p1->p3;
+  safe_free((void *owned)tmp);
+  p1->a[0] = 0;
+  safe_free((void *owned)p1);
+}
+
+struct S2 {
+  int arr[10];
+  int *owned ptr;
+};
+
+void test_multiple_array_indices() {
+  struct S2 s2 = {};
+  struct S2 *owned p2 = safe_malloc(s2);
+  int *owned inner = p2->ptr;
+  safe_free((void *owned)inner);
+  p2->arr[0] = 1;
+  p2->arr[5] = 2;
+  p2->arr[9] = 3;
+  safe_free((void *owned)p2);
+}
+
+struct S3 {
+  int *owned ptr;
+  int *borrow p2;
+};
+
+void test_assign_borrow_after_owned_move() {
+  int a = 0;
+  int b = 1;
+  struct S3 s3 = {.p2 = &mut a};
+  struct S3 *owned p3 = safe_malloc(s3);
+  safe_free((void *owned)p3->ptr);
+  p3->p2 = &mut b;
+  safe_free((void *owned)p3);
+}
+
+struct S4 {
+  int *owned ptr;
+  int a;
+};
+
+void test_assign_after_owned_move() {
+  int a = 0;
+  struct S4 s4 = {};
+  struct S4 *owned p4 = safe_malloc(s4);
+  safe_free((void *owned)p4->ptr);
+  p4->a = 1;
+  safe_free((void *owned)p4);
+}
+
+struct Inner {
+  int arr[2];
+  int *owned p;
+};
+struct Outer {
+  struct Inner i;
+};
+
+void test_nested_struct_array_access() {
+  struct Inner inner = {.p = safe_malloc(1)};
+  struct Outer outer = {.i = inner};
+  struct Outer *owned p = safe_malloc(outer);
+  int *owned tmp = p->i.p;
+  safe_free((void *owned)tmp);
+  p->i.arr[0] = 0;
+  safe_free((void *owned)p);
+}
+
+void test_array_read_after_owned_move() {
+  struct S1 s1 = {};
+  s1.a[0] = 42;
+  struct S1 *owned p1 = safe_malloc(s1);
+  int *owned tmp = p1->p3;
+  safe_free((void *owned)tmp);
+  int x = p1->a[0];
+  (void)x;
+  safe_free((void *owned)p1);
+}
+
+void test_cast_field_then_array_access() {
+  struct S1 s1 = {.p3 = safe_malloc(1)};
+  struct S1 *owned p1 = safe_malloc(s1);
+  safe_free((void *owned)p1->p3);
+  p1->a[0] = 0;
+  safe_free((void *owned)p1);
+}
+
+int main() {
+  test_array_access_after_owned_move();
+  test_multiple_array_indices();
+  test_assign_borrow_after_owned_move();
+  test_assign_after_owned_move();
+  test_nested_struct_array_access();
+  test_array_read_after_owned_move();
+  test_cast_field_then_array_access();
+  return 0;
+}
