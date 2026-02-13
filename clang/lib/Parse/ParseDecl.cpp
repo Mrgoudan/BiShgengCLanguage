@@ -2670,8 +2670,30 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       }
     }
     if (getLangOpts().BSC && VD) {
-      if (VD->getType().hasBorrow())
-        Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
+      QualType T = VD->getType();
+      bool IsSafeToCheckBorrow = true;
+
+      if (T->isIncompleteType()) {
+        IsSafeToCheckBorrow = false; 
+        // Identify non-dependent class template specializations.
+        auto *Spec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(T->getAsRecordDecl());
+        if (Spec && !T->isDependentType() && T->getAs<TemplateSpecializationType>()) {
+          if (!Spec->hasDefinition()) {
+            // Force implicit instantiation.
+            Actions.InstantiateClassTemplateSpecialization(
+                VD->getLocation(), Spec, TSK_ImplicitInstantiation, /*Complain=*/false);
+          }
+          if (Spec->hasDefinition() && !Spec->isInvalidDecl()) {
+            IsSafeToCheckBorrow = true; 
+          }
+        }
+      }
+      // Ensure the RecordDecl is fully defined before querying borrow.
+      if (IsSafeToCheckBorrow) {
+          if (T.hasBorrow()) { 
+            Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
+          }
+      }
     }
 #endif
     Actions.ActOnUninitializedDecl(ThisDecl);

@@ -17,7 +17,8 @@ struct ClassBorrow<T> {
 };
 
 void test_class_borrow() {
-    struct ClassBorrow<int*> obj1;  // OK: int* can be borrowed
+    int x;
+    struct ClassBorrow<int*> obj1={&mut x};  // OK: int* can be borrowed
     struct ClassBorrow<int> obj2;   // expected-note {{in instantiation of template class 'ClassBorrow<int>' requested here}}
 }
 
