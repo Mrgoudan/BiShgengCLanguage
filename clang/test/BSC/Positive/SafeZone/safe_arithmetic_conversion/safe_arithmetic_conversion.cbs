@@ -1,0 +1,119 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Manual 2897-3017: Safe zone arithmetic and type conversion rules.
+
+// Rule 1: Arithmetic to _Bool (zero -> 0, non-zero -> 1)
+safe void rule1_bool(void) {
+  int b = 0;
+  _Bool c = (_Bool)b;
+  c = (_Bool)1;
+  c = (_Bool)2;
+}
+
+// Rule 2: Larger unsigned integer to smaller unsigned (wrap modulo 2^N)
+safe void rule2_unsigned(void) {
+  unsigned long a = 2;
+  unsigned b = (unsigned)a;
+  int c = -1;
+  unsigned d = (unsigned)c;
+  unsigned long e = (unsigned long)c;
+}
+
+// Rule 3: Larger integer to smaller signed (truncate in implementation)
+safe void rule3_signed(void) {
+  long a = 2;
+  int b = (int)a;
+  unsigned c = 4294967295;
+  int d = (int)c;
+}
+
+// Rule 4: Enum - E2 contains E1 allows explicit cast; enum -> int implicit
+safe void rule4_enum(void) {
+  enum E { ZERO, ONE, TWO };
+  enum F { SUN, MON, TUES };
+  enum F day = SUN;
+  enum E num = (enum E)day;
+  num = (enum E)SUN;
+  int a = num;
+  a = ZERO;
+}
+
+// Rule 5: double -> float explicit allowed; float -> double implicit
+safe void rule5_float_precision(void) {
+  double a = 1.0;
+  float b = 0.0f;
+  b = (float)a;
+  a = b;
+}
+
+// Rule 6: int -> double explicit allowed
+safe void rule6_int_to_float(void) {
+  int a = -1;
+  double b = (double)a;
+}
+
+// Rule 7: Comparison/logical result (0/1) -> integer implicit
+safe void rule7_comparison_result(void) {
+  int a = 0, b = 1, x = 5, y = 10;
+  _Bool c = (a == 0) || (b == 0);
+  char eq = (x == y);
+  unsigned char ne = (x != y);
+  short lt = (x < y);
+  unsigned short le = (x <= y);
+  int gt = (x > y);
+  unsigned int ge = (x >= y);
+  long land = (x > 0) && (y > 0);
+  unsigned long lor = (x == 0) || (y == 0);
+  long long llnot = !(x == 0);
+  unsigned long long ulleq = (x == y);
+  unsigned u_ne = (x != y);
+  unsigned u_and = (a != 0) && (b != 0);
+  unsigned u_or = (a == 0) || (b == 0);
+}
+
+// Rule 8: Compile-time constants - fit in target allows implicit
+safe void rule8_constants(void) {
+  int a = 10l;
+  unsigned long b = 2 * 2;
+  int e = 2147483647;
+  int d = (int)2147483648;
+  unsigned int f = 0;
+  f = (unsigned int)4294967296;
+  unsigned long g = (unsigned long)-1;
+  float k = 1.0;
+  float l = 1;
+}
+
+// Rule 9: Literals and literal-only expression results that fit (implicit allowed)
+safe void rule9_literals_and_literal_expressions(void) {
+  int a = 1;
+  int b = 0;
+  long c = 1;
+  double d = 1;
+  float e = 1;
+  float f = 1.0f;
+  unsigned u = 0;
+  unsigned v = 1;
+  char ch = 0;
+  char ch2 = 127;
+  int x = 1 + 2;
+  long y = 1 + 2;
+  double z = 1 + 2;
+  unsigned w = 2 * 2;
+  int r = 100 / 10;
+  float fl = 1.0f + 2.0f;
+}
+
+int main(void) {
+  rule1_bool();
+  rule2_unsigned();
+  rule3_signed();
+  rule4_enum();
+  rule5_float_precision();
+  rule6_int_to_float();
+  rule7_comparison_result();
+  rule8_constants();
+  rule9_literals_and_literal_expressions();
+  return 0;
+}

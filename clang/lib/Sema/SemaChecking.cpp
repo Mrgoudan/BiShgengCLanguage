@@ -14019,8 +14019,29 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
   // In C, we pretend that the type of an EnumConstantDecl is its enumeration
   // type, to give us better diagnostics.
   QualType SourceType = E->getType();
+#if ENABLE_BSC
+  Expr *InnerE = E;
+  // Look through SafeExpr/ImplicitCastExpr
+  // so wrapped enum constants get the right type in the message.
+  while (true) {
+    if (auto *SE = dyn_cast<SafeExpr>(InnerE)) {
+      InnerE = SE->getSubExpr();
+      continue;
+    }
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(InnerE)) {
+      InnerE = ICE->getSubExpr();
+      continue;
+    }
+    break;
+  }
+  SourceType = InnerE->getType();
+#endif
   if (!S.getLangOpts().CPlusPlus) {
+#if ENABLE_BSC
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(InnerE))
+#else
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E))
+#endif
       if (EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
         EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
         SourceType = S.Context.getTypeDeclType(Enum);
@@ -14036,6 +14057,13 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
         if (S.SourceMgr.isInSystemMacro(CC))
           return;
 
+#if ENABLE_BSC
+        // In BSC safe zone, implicit enum-to-enum is an error (not just a warning).
+        if (S.getLangOpts().BSC && S.IsInSafeZone()) {
+          S.Diag(CC, diag::err_unsafe_implicit_cast) << SourceType << T;
+          return;
+        }
+#endif
         return DiagnoseImpCast(S, E, SourceType, T, CC,
                                diag::warn_impcast_different_enum_types);
       }

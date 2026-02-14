@@ -2874,58 +2874,138 @@ int main() {
 }
 ```
 
-19. 安全区内不允许表达范围从大向小的类型转换（比如从`long`转换为`int`，从`int`转换为`_Bool`，从`int`转换为`enum`）。不允许表达精度从高向低的类型转换（比如从`double`转换为`float`）。
+19. 安全区内不允许**隐式执行**表达范围从大向小的类型转换（比如从`long`转换为`int`，从`int`转换为`_Bool`，从`int`转换为`enum`），不允许**隐式执行**表达精度从高向低的类型转换（比如从`double`转换为`float`）。安全区内不允许将一个算术类型转换为一个枚举类型，除非是从一个枚举类型显式转换为一个表达范围更大或相等的枚举类型。安全区内不允许从浮点类型转换到整数类型。对于**编译期能确定值的常量**发生类型转换，如果目标类型可以描述这个值，那么在安全区内该类型转换可以隐式执行，否则此类转换必须显式执行且需符合上述规则。
 
+    **语义规则与具体说明：**
+    排除枚举类型时，安全区允许执行的类型转换如下图所示：（若同方向支持隐式转换则一定支持显式转换；只写需显式转换则说明不允许隐式转换。表示允许转换的边有一头连着子图时，等效于连接该子图的所有结点，比如 `_Bool` 有条边指向整数，表示允许 `_Bool` 以相同规则转换为任一整数类型。）
 
-例外情况：
+    ``` mermaid
+    graph TB
+      bool["_Bool"]
+      subgraph int["整数"]
+        direction LR
+        subgraph signedint["有符号整数"]
+          direction TB
+          signedint_s["小类型"]
+          signedint_l["大类型"]
+          signedint_s -- 正向隐式，反向显式 --> signedint_l
+        end
+        subgraph unsignedint["无符号整数"]
+          direction TB
+          unsignedint_s["小类型"]
+          unsignedint_l["大类型"]
+          unsignedint_s -- 正向隐式，反向显式 --> unsignedint_l
+        end
+        signedint <-- 需显式互转 --> unsignedint
+      end
+      bool -- 正向隐式，反向显式 --> int
+      subgraph fp["浮点数"]
+      direction TB
+        fp_s["小类型"]
+        fp_l["大类型"]
+        fp_s -- 正向隐式，反向显式 --> fp_l
+      end
+      int -- 正向显式，反向不允许 --> fp
+    ```
 
-- 基础类型的常量发生类型转换，如果常量的数值属于目标类型的值域则允许转换。
-- `if/while` 的条件中允许转换。
-- 在函数实参、返回语句和赋值语句中使用具有布尔语义的表达式时，
-允许将表达式的类型 `int` 隐式转换为任意基本整数类型，因为任何基本整数类型都可以表示 0 和 1
-
-```c
-void test() {
-  long l_val;
-  int i_val;
-  _Bool b_val;
-  double d_val;
-  float f_val;
-  safe {
-    l_val = 1; // ok: 字面量 1 的类型是 int
-    l_val = i_val; // ok: 允许表达范围从小向大的类型转换
-    i_val = l_val; // error: 不允许表达范围从大向小的类型转换
-
-    b_val = 1; // ok: _Bool可以描述1
-    b_val = 2; // error: 目标类型不可以描述这个值，不允许转换
-
-    d_val = f_val; // ok: 允许精度从低向高转换
-    f_val = d_val; // error：不允许精度从高向低转换
-    f_val = 1.0;
-    f_val = 1.2f; // ok: 显式声明字面量的类型为 float
-  }
-}
-
-safe unsigned short foo(char c) {
-  return c < 3; // ok: unsigned short 可以表示 0 和 1
-}
-
-int main() {
-  int a = 2;
-  safe {
-    if (a) { // ok: if 可以接受 int
-      a += 1;
-    } else {
-      a -= 1;
+    19.1. 当将一个算术类型转换为 `_Bool` 时，当原类型的值为零，则转换后值为 0；否则，转换后值为 1 （与C一致）。
+    ```c
+    int b = 0;
+    _Bool c = (_Bool)b; // ok: int -> _Bool; c = 0
+    c = (_Bool)1;       // ok: int -> _Bool; c = 1
+    c = (_Bool)2;       // ok: int -> _Bool; c = 1
+    ```
+    19.2. 将一个有符号整数类型或一个表达范围更大的无符号整数类型转换为一个**无符号**整数类型时，如果原类型的值的大小在目标类型的范围内，则转换后值的大小不变；否则，转换后值的大小为"不断对原值加或减(1+目标类型的最大值)直到结果落在目标类型的范围内的值" （与C一致）。如果目标无符号整数类型的表达范围是从 0 到 $2^N-1$ 且原类型的值为 $X$，那么转换后值的大小为 $X$ 不断加或减 $2^N$ 直到结果 $Y$ 落入 0 到 $2^N-1$ 之间，转换后的值即为 $Y$。上述表示等效于将大的整数类型截断为小的无符号整数类型，或是将小的有符号整数类型通过符号位拓展转为无符号整数类型。
+    ```c
+    unsigned long a = 2;
+    unsigned b = (unsigned) a; // ok: unsigned long -> unsigned int
+    int c = -1;
+    unsigned d = (unsigned) c; // ok: int -> unsigned int; d = 2^32 - 1
+    unsigned long e = (unsigned long) c; // ok: int -> unsigned long; e = 2^64 - 1
+    ```
+    19.3. 将一个表达范围更大的整数类型转换为表达范围更小的**有符号**整数类型（不包括枚举类型）时，如果原类型的值的大小在目标类型的范围内，则转换后值的大小不变；否则，转换后值的大小由实现定义。在当前毕昇C编译器的实现中，原值超过目标类型的表示范围时，大的整数类型会截断为小的有符号整数类型。
+    ```c
+    long a = 2;
+    int b = (int) a; // ok: long -> int
+    unsigned c = 4294967295; // c = 2^32 - 1
+    int d = (int) c; // ok: unsigned int -> int; d = -1
+    ```
+    19.4. 关于枚举类型：安全区只允许从一个枚举类型显式转换为另一个枚举类型（有限定条件），其他任何类型都不能转换为枚举类型。可以从枚举类型隐式转换为其对应的整数类型（比如有 `enum E : unsigned {...}` 就可以把 `enum E` 隐式转换为 `unsigned`）。使用显式转换将枚举类型 `E1` 转换为另一个枚举类型 `E2` 时，当且仅当 `E2` 中包含 `E1` 所有枚举值时允许这样的显式转换，转换后的值不变，否则会在编译时报错。安全区内不能隐式执行这样的转换。其他任何表达范围更大的类型转换到枚举类型的操作在安全区都不允许。在非安全区则与 C 一致，不对枚举类型的转换做额外检查。
+    ```c
+    safe void foo(void) {
+      enum E {ZERO, ONE, TWO}; // represented by int
+      enum F {SUN, MON, TUES}; // represented by int
+      enum F day = SUN;
+      enum E num = (enum E)day; // ok: enum F -> enum E
+      num = (enum E)SUN;        // ok: enum F -> enum E
+      int a = num; // ok: enum E -> int
+      a = ZERO;    // ok: enum E -> int
+      num = 0; // error: cannot cast int to enum E in safe zone
+      enum G {G1, G2};
+      enum G g1 = (enum G) num; // error: cannot cast enum E to enum G in safe zone
+      g1 = (enum G) ZERO; // error: cannot cast enum E to enum G in safe zone
     }
-    foo(a >= 1); // ok: char 可以表示 0 和 1
-    signed char x = a < 3 || a >= 6; // ok: signed char 可以表示 0 和 1
-  }
-  test();
-  return 0;
-}
+    ```
+    19.5. 在安全区使用显式转换将一个浮点类型转换为精度更低的另一个浮点类型时，如果原值能在目标类型中精确表示，则转换后的值不变。如果原值在目标类型的表示范围内但是无法精确表示，则转换后的结果是最近的向上或向下近似的值，取决于具体实现。如果原值在目标类型的表示范围外，则具体值取决于具体实现。当前毕昇C编译器的实现应符合 IEEE 754 规范。安全区内不能隐式执行这样的类型转换。在非安全区则行为与 C 一致，语义相同且支持隐式执行这样的类型转换。
+    ```c
+    safe {
+      double a = 1.0;
+      float b = 0.0f;
+      b = (float)a; // ok: double -> float
+      b = a; // error: cannot implicitly cast double to float
+      a = b; // ok
+    }
+    ```
+    19.6. 在安全区使用显式转换将一个整数类型转换为浮点类型时，如果原值能在目标类型中精确表示，则转换后的值不变。如果原值在目标类型的表示范围内但无法精确表示，则转换后的结果是最近的向上或向下近似的值，取决于具体实现。当前毕昇C编译器的实现应符合 IEEE 754 规范、使用 IEEE 754 中的默认舍入规则。安全区内不能隐式执行这样的类型转换。安全区内不允许从浮点类型转换为整数类型。在非安全区则行为与 C 一致，语义相同且支持隐式执行这样的类型转换。
+    ```c
+    safe {
+      int a = -1;
+      double b = a; // error: cannot implicitly cast int to double in safe zone
+      b = (double) a; // ok: int -> double
+      a = (int) b; // error: cannot cast double to int in safe zone
+    }
+    ```
+    19.7. 比较运算符（`==`, `!=`, `>=`, `<=`, `>`, `<`）、逻辑运算符（`&&`, `||`, `!`）的运算结果为 `int` 类型的 0 或 1，这些值允许在安全区隐式转换到其他整数类型（因为任何基本整数类型都可以表示 0 和 1）。
+    ```c
+    safe {
+      int a = 0, b = 1;
+      _Bool c = (a == 0) || (b == 0); // ok: int (0/1) -> _Bool
+      char x = a < 3 || a >= 6; // ok: int (0/1) -> char
+    }
+    ```
+    19.8. 对于**编译期能确定值的常量**发生类型转换，若目标类型可精确表示该值，则允许隐式转换；否则需显式转换并符合上述规则。
+    ```c
+    safe {
+      int a = 10l; // ok: long -> int
+      unsigned long b = 2*2; // ok: int -> unsigned long
 
-```
+      // int -2147483648~2147483647
+      int c = 2147483648; // error: 2147483648 out of range for int
+      int d = (int)2147483648; // ok: long -> int; d = -2147483648
+      int e = 2147483647; // ok
+
+      // unsigned int 0~4294967295
+      unsigned int f = 0;
+      f = 4294967296; // error: 4294967296 out of range for unsigned int
+      f = (unsigned int) 4294967296; // ok: long -> unsigned int; f = 0
+
+      unsigned long g = (unsigned long)-1; // ok: int -> unsigned long; g = 2^64-1
+      int h = (int) 1.2; // error: cannot cast double to int in safe zone
+      float k = 1.0; // ok: double -> float
+      float l = 1; // ok: int -> float
+    }
+    ```
+    19.9.  `if/while` 的条件对类型的要求目前与C一致，任何算术类型都可以作为条件。
+    ```c
+    int a = 2;
+    safe {
+      if (a) { // ok: if 可以接受 int
+        a += 1;
+      } else {
+        a -= 1;
+      }
+    }
+    ```
 
 20. 安全区内不允许内嵌汇编语句。
 

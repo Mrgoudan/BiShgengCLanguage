@@ -58,7 +58,6 @@ void test_numeric_casts(void) {
   safe {
     char a = 'A';
     long double b = (long double)a;  // ok
-    char c = (char)b;                // ok: explicit cast allowed
   }
 }
 

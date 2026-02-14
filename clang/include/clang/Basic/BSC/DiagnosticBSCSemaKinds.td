@@ -117,6 +117,7 @@ def err_constexpr_if_cond_expr_unsupported_type : Error<
 
 // BSC safe scope warnings and errors.
 def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
+def err_unsafe_implicit_cast : Error<"implicit conversion from type %0 to %1 is forbidden in the safe zone; please use explicit cast or other means instead">;
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
 def err_safe_function : Error<"%0 is forbidden in the safe function">;
 def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;

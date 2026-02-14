@@ -161,6 +161,24 @@ bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *E) {
           return true;
       }
     }
+    // Integral constant to float: allow if value is exactly representable.
+    if (SrcType->isIntegralType(Context) && !E->isValueDependent()) {
+      Expr::EvalResult EVResult;
+      if (E->EvaluateAsInt(EVResult, Context)) {
+        llvm::APSInt IntVal = EVResult.Val.getInt();
+        llvm::APFloat FloatVal(Context.getFloatTypeSemantics(DestType));
+        FloatVal.convertFromAPInt(
+            IntVal, SrcType->hasSignedIntegerRepresentation(),
+            llvm::APFloat::rmTowardZero);
+        llvm::APSInt ConvertBack(IntVal.getBitWidth(),
+                                 !SrcType->hasSignedIntegerRepresentation());
+        bool Ignored = false;
+        FloatVal.convertToInteger(ConvertBack,
+                                 llvm::APFloat::rmNearestTiesToEven, &Ignored);
+        if (IntVal == ConvertBack)
+          return true;
+      }
+    }
   }
 
   return false;
@@ -342,7 +360,7 @@ static bool DoPointerTypesSatisfyAssignmentConstraintsImpl(
       SrcPointee.getCanonicalType().getUnqualifiedType())
     return false;
 
-  // Const compatibility: mut → const is OK, const → mut is NOT OK.
+  // Const compatibility: mut -> const is OK, const -> mut is NOT OK.
   // Dest is the target (parameter), Src is the source (argument).
   if (!Dest.isConstQualified() && Src.isConstQualified())
     return false;
@@ -492,6 +510,78 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
 
 namespace {
 
+/// Check whether the destination enum E2 contains all enumerator values of
+/// source enum E1. Only then is explicit cast from E1 to E2 allowed in safe zone.
+static bool EnumDestContainsAllValuesOfSource(const EnumDecl *DestED,
+                                              const EnumDecl *SrcED,
+                                              ASTContext &Context) {
+  const EnumDecl *SrcDef = SrcED->getDefinition();
+  const EnumDecl *DestDef = DestED->getDefinition();
+  if (!SrcDef || !DestDef)
+    return false;
+  // Collect all values of the destination enum.
+  llvm::SmallVector<llvm::APSInt, 8> DestValues;
+  for (const auto *D : DestDef->enumerators()) {
+    const auto *ECD = dyn_cast<EnumConstantDecl>(D);
+    if (ECD)
+      DestValues.push_back(ECD->getInitVal());
+  }
+  // Check every source enumerator value is in the destination set.
+  for (const auto *D : SrcDef->enumerators()) {
+    const auto *ECD = dyn_cast<EnumConstantDecl>(D);
+    if (!ECD)
+      continue;
+    const llvm::APSInt &Val = ECD->getInitVal();
+    bool Found = false;
+    for (const llvm::APSInt &DestVal : DestValues) {
+      if (Val == DestVal) {
+        Found = true;
+        break;
+      }
+    }
+    if (!Found)
+      return false;
+  }
+  return true;
+}
+
+/// Get the type to use in diagnostics for a source expression. Looks through
+/// SafeExpr, ImplicitCastExpr, ParenExpr; for enum constants and enum-typed
+/// variables returns the enum type so the message shows "enum X" instead of "int".
+static QualType getDiagnosticSourceType(Expr *E, ASTContext &Context) {
+  if (!E)
+    return QualType();
+  E = E->IgnoreParens();
+  while (true) {
+    if (auto *SE = dyn_cast<SafeExpr>(E)) {
+      E = SE->getSubExpr();
+      continue;
+    }
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      E = ICE->getSubExpr();
+      continue;
+    }
+    if (auto *PE = dyn_cast<ParenExpr>(E)) {
+      E = PE->getSubExpr();
+      continue;
+    }
+    break;
+  }
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (EnumConstantDecl *ECD =
+            dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+      EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
+      return Context.getTypeDeclType(Enum);
+    }
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      QualType T = VD->getType();
+      if (T->isEnumeralType())
+        return T;
+    }
+  }
+  return E->getType();
+}
+
 DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
   if (!E) {
     return nullptr;
@@ -504,6 +594,9 @@ DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
   case Expr::ImplicitCastExprClass:
     return getDeclRefExprForEnumCoversion(
         cast<ImplicitCastExpr>(E)->getSubExpr());
+  case Expr::CStyleCastExprClass:
+    return getDeclRefExprForEnumCoversion(
+        cast<CStyleCastExpr>(E)->getSubExpr());
   case Expr::DeclRefExprClass:
     return dyn_cast<DeclRefExpr>(E);
   case Expr::BinaryOperatorClass: {
@@ -567,6 +660,7 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
   // fallback: disallow conversion between different pointer types
   return SrcCanPtr == DstCanPtr;
 }
+
 } // namespace
 
 bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
@@ -587,7 +681,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     // Allow initializing 'char*' pointers with string literals.
     QualType Pointee = DestType->getPointeeType();
     if (Pointee->isCharType()) {
-      // Check if E is a legal string(char,const[],stringLiteral, 
+      // Check if E is a legal string(char,const[],stringLiteral,
       // possibly through parens/casts/ternary)
       if (isSafeZoneStringType(E))
         return true;
@@ -599,6 +693,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
            IsSafeConversion(DestType, Exp->getFalseExpr(), IsExplicitCast);
   }
   bool IsSafeBehavior = true;
+  bool IsExplicitConversionAllowed = false;
   QualType SrcType = E->getType();
   if (IsTraitExpr(E)) {
     SrcType = CompleteTraitType(SrcType);
@@ -620,6 +715,10 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     // allowed
     IsSafeBehavior = false;
   } else {
+    // Forbid float to integer conversion in safe zone (even with explicit cast).
+    if (DestType->isIntegerType() && SrcType->isRealFloatingType()) {
+      IsSafeBehavior = false;
+    }
     const auto *SBT =
         dyn_cast<BuiltinType>(SrcType->getUnqualifiedDesugaredType());
     const auto *DBT =
@@ -631,11 +730,20 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
           // conversion from high-precision to low-precision is not allowed
           // conversion from wide range to narrow range is not allowed
           if (!IsSafeBuiltinTypeConversion(SBT->getKind(), DBT->getKind())) {
-            if (!DestType->isIntegerType() || !IsBooleanEvaluation(E))
+            if (!DestType->isIntegerType() || !IsBooleanEvaluation(E)) {
               IsSafeBehavior = false;
+              IsExplicitConversionAllowed = true; // arithmetic explicit cast OK
+            }
           }
         }
       }
+    }
+    // Implicit integer to floating is forbidden unless constant fits (manual rule 6).
+    if (!IsExplicitCast && SrcType->isIntegerType() &&
+        DestType->isRealFloatingType() &&
+        !IsSafeConstantValueConversion(DestType, E)) {
+      IsSafeBehavior = false;
+      IsExplicitConversionAllowed = true; // arithmetic explicit cast OK
     }
     // conversion const value is allowed, if the destination type can embrace it
     if (!DestType->isEnumeralType() && !SrcType->isEnumeralType() &&
@@ -645,20 +753,93 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
 
     if (DestType->isEnumeralType() || SrcType->isEnumeralType()) {
       if (IsExplicitCast) {
-        IsSafeBehavior = true;  // Allow explicit enum casts
+        // Explicit enum to enum: only allow when E2 contains all values of E1.
+        if (SrcType->isEnumeralType() && DestType->isEnumeralType()) {
+          if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
+            IsSafeBehavior = true;
+          } else {
+            const EnumType *SrcET = SrcType->getAs<EnumType>();
+            const EnumType *DestET = DestType->getAs<EnumType>();
+            if (SrcET && DestET &&
+                EnumDestContainsAllValuesOfSource(DestET->getDecl(),
+                                                  SrcET->getDecl(), Context)) {
+              IsSafeBehavior = true;
+            } else {
+              IsSafeBehavior = false;
+            }
+          }
+        } else if (DestType->isEnumeralType() && !SrcType->isEnumeralType()) {
+          // In C, enum constants and sometimes enum variables have type int.
+          // Allow (enum E)x when x is an enum constant or variable and dest
+          // enum contains all values of the source enum.
+          const EnumType *DestET = DestType->getAs<EnumType>();
+          if (DestET && SrcType->isIntegerType()) {
+            EnumDecl *SrcED = nullptr;
+            if (auto *DRE = getDeclRefExprForEnumCoversion(E)) {
+              if (EnumConstantDecl *ECD =
+                      dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+                SrcED = cast<EnumDecl>(ECD->getDeclContext());
+              } else if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+                QualType VarTy = VD->getType();
+                if (const EnumType *VarET = VarTy->getAs<EnumType>())
+                  SrcED = VarET->getDecl();
+              }
+            }
+            if (SrcED &&
+                EnumDestContainsAllValuesOfSource(DestET->getDecl(), SrcED,
+                                                  Context)) {
+              IsSafeBehavior = true;
+            }
+          }
+          if (!IsSafeBehavior) {
+            // Arithmetic to enum (e.g. literal int to enum) is forbidden.
+            IsSafeBehavior = false;
+          }
+        }
       } else {
         IsSafeBehavior = false;
-        // conversion different enum type is not allowed
+        // Explicit cast would be allowed for enum-to-enum (E1 -> E2)
+        // when E2 contains all values of E1 (or same).
+        if (SrcType->isEnumeralType() && DestType->isEnumeralType()) {
+          const EnumType *SrcET = SrcType->getAs<EnumType>();
+          const EnumType *DestET = DestType->getAs<EnumType>();
+          if (SrcET && DestET &&
+              (SrcType.getCanonicalType() == DestType.getCanonicalType() ||
+               EnumDestContainsAllValuesOfSource(DestET->getDecl(),
+                                                SrcET->getDecl(), Context)))
+            IsExplicitConversionAllowed = true;
+        }
+        // Same enum type: allowed.
         if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
           IsSafeBehavior = true;
-          // conversion enum value type to enum variable type is allowed
         }
+        // Enum constant to same enum type: allowed.
         if (auto *DRE = getDeclRefExprForEnumCoversion(E)) {
           if (EnumConstantDecl *ECD =
                   dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
             EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
-            SrcType = Context.getTypeDeclType(Enum);
-            if (DestType.getCanonicalType() == SrcType.getCanonicalType()) {
+            QualType EnumTy = Context.getTypeDeclType(Enum);
+            if (DestType.getCanonicalType() == EnumTy.getCanonicalType()) {
+              IsSafeBehavior = true;
+            }
+          }
+        }
+        // Enum to underlying integer type: implicit conversion allowed.
+        if (SrcType->isEnumeralType() && DestType->isIntegerType()) {
+          const EnumType *SrcET = SrcType->getAs<EnumType>();
+          if (SrcET) {
+            EnumDecl *ED = SrcET->getDecl();
+            QualType Underlying = ED->getIntegerType();
+            QualType DestCanon = DestType.getUnqualifiedType().getCanonicalType();
+            if (!Underlying.isNull()) {
+              QualType UnderCanon =
+                  Underlying.getUnqualifiedType().getCanonicalType();
+              if (DestCanon == UnderCanon)
+                IsSafeBehavior = true;
+              else if (Context.getTypeSize(DestType) >=
+                       Context.getTypeSize(Underlying))
+                IsSafeBehavior = true;
+            } else if (Context.hasSameUnqualifiedType(DestType, Context.IntTy)) {
               IsSafeBehavior = true;
             }
           }
@@ -668,7 +849,18 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   }
 
   if (!IsSafeBehavior) {
-    Diag(E->getExprLoc(), diag::err_unsafe_cast) << SrcType << DestType;
+    QualType DiagSrcType = SrcType;
+    if (SrcType->isIntegerType() || SrcType->isEnumeralType()) {
+      QualType Preferred = getDiagnosticSourceType(E, Context);
+      if (Preferred->isEnumeralType())
+        DiagSrcType = Preferred;
+    }
+    if (!IsExplicitCast && IsExplicitConversionAllowed) {
+      Diag(E->getExprLoc(), diag::err_unsafe_implicit_cast) << DiagSrcType
+                                                            << DestType;
+    } else {
+      Diag(E->getExprLoc(), diag::err_unsafe_cast) << DiagSrcType << DestType;
+    }
   }
   return IsSafeBehavior;
 }
@@ -742,7 +934,7 @@ bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
   }
 
   // forbid owned struct
-  if (CanonType->isOwnedStructureType()) { 
+  if (CanonType->isOwnedStructureType()) {
       return false;
   }
   // For struct/union types, recursively check if they contain pointer fields
