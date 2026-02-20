@@ -39,6 +39,19 @@ bool Sema::IsInSafeZone() {
   }
 }
 
+bool Sema::IsSafeZoneIncDecVoidExpr(Expr *E) {
+  if (!E || !E->getType()->isVoidType())
+    return false;
+  const Expr *Stripped = E->IgnoreParenImpCasts();
+  // Look through safe(expr) so that safe(a++) is recognized.
+  if (const SafeExpr *SE = dyn_cast<SafeExpr>(Stripped))
+    Stripped = SE->getSubExpr()->IgnoreParenImpCasts();
+  const UnaryOperator *UO = dyn_cast<UnaryOperator>(Stripped);
+  if (!UO)
+    return false;
+  return UnaryOperator::isIncrementDecrementOp(UO->getOpcode());
+}
+
 bool Sema::IsSafeFunctionPointerType(QualType Type) {
   if (Type->isFunctionPointerType()) {
     const FunctionProtoType *LSHFuncType =
@@ -861,6 +874,8 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
                                                             << DestType;
     } else {
       Diag(E->getExprLoc(), diag::err_unsafe_cast) << DiagSrcType << DestType;
+      if (DiagSrcType->isVoidType() && IsSafeZoneIncDecVoidExpr(E))
+        Diag(E->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
     }
   }
   return IsSafeBehavior;

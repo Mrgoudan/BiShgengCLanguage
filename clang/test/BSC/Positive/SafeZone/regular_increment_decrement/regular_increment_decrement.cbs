@@ -63,61 +63,61 @@ safe void do_while_loop(void) {
 safe void altered_while_loop(void) {
   int arr[5] = {1, 2, 3, 4, 5};
   int i = 5;
-  while (i-- > 0) {
+  while ((i--, i+1) > 0) {
     read(unsafe(arr[i]));
   }
 
   i = 5;
-  while (--i >= 0) {
+  while ((--i, i) >= 0) {
     read(unsafe(arr[i]));
   }
 
   i = -1;
-  while (++i < 5) {
+  while ((++i, i) < 5) {
     read(unsafe(arr[i]));
   }
 
   i = 0;
   while (i < 5) {
-    read(unsafe(arr[i++]));
+    read(unsafe(arr[(i++, i-1)]));
   }
 
   i = -1;
   while (i < 4) {
-    read(unsafe(arr[++i]));
+    read(unsafe(arr[(++i, i)]));
   }
 
   i = 5;
   while (i > 0) {
-    read(unsafe(arr[--i]));
+    read(unsafe(arr[(--i, i)]));
   }
 
   i = 4;
   while (i >= 0) {
-    read(unsafe(arr[i--]));
+    read(unsafe(arr[(i--, i+1)]));
   }
 }
 
 safe void altered_for_loop(void) {
   int arr[5] = {1, 2, 3, 4, 5};
-  for (int j = 5; j-- > 0;) {
+  for (int j = 5; (j--, j+1) > 0;) {
     read(unsafe(arr[j]));
   }
 
-  for (int j = 5; --j >=0;) {
+  for (int j = 5; (--j, j) >=0;) {
     read(unsafe(arr[j]));
   }
 
-  for (int j = -1; ++j < 5;) {
+  for (int j = -1; (++j, j) < 5;) {
     read(unsafe(arr[j]));
   }
 
   for (int j = 0; j < 5;) {
-    read(unsafe(arr[j++]));
+    read(unsafe(arr[(j++, j-1)]));
   }
 
   for (int j = -1; j < 4;) {
-    read(unsafe(arr[++j]));
+    read(unsafe(arr[(++j, j)]));
   }
 }
 
@@ -126,25 +126,25 @@ safe void altered_do_while_loop(void) {
   int i = 0;
   do {
     read(unsafe(arr[i]));
-  } while (++i < 5);
+  } while ((++i, i) < 5);
 
   i = 5;
   do {
     read(unsafe(arr[i-1]));
-  } while (--i > 0);
+  } while ((--i, i) > 0);
 
   i = 4;
   do {
     read(unsafe(arr[i]));
-  } while (i-- > 0);
+  } while ((i--, i+1) > 0);
 
   i = 0;
   do {
-    read(unsafe(arr[i++]));
+    read(unsafe(arr[(i++, i-1)]));
   } while (i < 5);
 
   i = -1;
   do {
-    read(unsafe(arr[++i]));
+    read(unsafe(arr[(++i, i)]));
   } while (i < 4);
 }

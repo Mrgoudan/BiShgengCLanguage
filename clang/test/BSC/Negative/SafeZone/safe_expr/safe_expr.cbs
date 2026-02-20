@@ -15,7 +15,7 @@ safe void test_safe_expr1(void){
 void test_safe_expr2() {
     int a = 0;
     a++;                             // ok
-    int a1 = safe(a++);              // allowed
+    int a1 = safe(a++);              // expected-error {{initializing 'int' with an expression of incompatible type 'void'}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
     int *b = &a;                     // ok
     int *c = safe(&a);               // expected-error {{'&' operator is forbidden in the safe zone}}
     safe {

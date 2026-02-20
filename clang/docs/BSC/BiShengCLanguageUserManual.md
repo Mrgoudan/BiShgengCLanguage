@@ -3033,6 +3033,28 @@ void test() {
 int main() { return 0; }
 ```
 
+21. 安全区内，前缀/后缀自增（`++`）和自减（`--`）表达式的结果类型为 `void`，即仅允许使用其副作用（自增或自减1），不得使用 `++`/`--` 表达式的值。在返回类型为 `void` 的安全函数中，不得将 `++`/`--` 的结果直接作为 return 语句的返回值。
+
+```c
+safe void take_int(int x);
+safe void foo(void) {
+  int a = 0;
+  a++; // ok: 安全区允许自增自减（仅副作用，表达式结果为 void）
+  a--;
+  int x = a++; // error: 自增自减的结果为 void 类型，不能使用其值初始化 int 变量
+  int arr[5] = {1, 2, 3, 4, 5};
+  arr[a++] = 0; // error: 自增自减的结果为 void 类型，不能使用其值做为 arr[] 下标
+  take_int(a++); // error: 自增自减的结果为 void 类型，不能使用其值做为 take_int() 入参
+  unsafe {take_int(a++);} // ok: 非安全区不受影响
+  for (int i = 0; i < 10; i++) {} // ok: for 循环的迭代部分可以使用 ++/--
+  int y = 0;
+  y = (a++, a); // ok: a++ 先求值、完成自增，再对逗号右侧的 a 求值
+  return a++; // error: 不得将 ++/-- 的结果直接作为返回值
+  return (void)a++; // ok
+}
+
+```
+
 ### 所有权
 
 #### 0. 前言

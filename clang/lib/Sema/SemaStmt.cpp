@@ -4132,6 +4132,15 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
           RetValExp = ImpCastExprToType(RetValExp,
                                         Context.VoidTy, CK_ToVoid).get();
         }
+#if ENABLE_BSC
+        // BSC: reject "return a++;" in safe void functions; require explicit (void) cast.
+        if (getLangOpts().BSC && RetValExp->getType()->isVoidType() &&
+            IsInSafeZone() && IsSafeZoneIncDecVoidExpr(RetValExp)) {
+          Diag(RetValExp->getBeginLoc(), diag::err_return_inc_dec_void_in_safe_zone);
+          Diag(RetValExp->getBeginLoc(), diag::note_inc_dec_void_in_safe_zone);
+          return StmtError();
+        }
+#endif
         // return of void in constructor/destructor is illegal in C++.
         if (D == diag::err_ctor_dtor_returns_void) {
           NamedDecl *CurDecl = getCurFunctionOrMethodDecl();

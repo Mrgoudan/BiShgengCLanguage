@@ -12397,6 +12397,7 @@ public:
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
                                    BuiltinType::Kind DestType);
   bool IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast = false);
+  bool IsSafeZoneIncDecVoidExpr(Expr *E);
   bool IsSafeConstantValueConversion(QualType DestType, Expr *E);
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   FunctionDecl *SelectFunctionDeclForPointerAssignment(

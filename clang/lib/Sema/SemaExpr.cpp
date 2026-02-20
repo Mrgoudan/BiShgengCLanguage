@@ -6003,9 +6003,21 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   #endif
 
   // C99 6.5.2.1p1
+#if ENABLE_BSC
+  if (!IndexExpr->getType()->isIntegerType() && !IndexExpr->isTypeDependent()) {
+    Diag(LLoc, diag::err_typecheck_subscript_not_integer)
+         << IndexExpr->getSourceRange();
+    if (getLangOpts().BSC && IndexExpr->getType()->isVoidType() &&
+        IsSafeZoneIncDecVoidExpr(IndexExpr)) {
+      Diag(IndexExpr->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
+    }
+    return ExprError();
+  }
+#else
   if (!IndexExpr->getType()->isIntegerType() && !IndexExpr->isTypeDependent())
     return ExprError(Diag(LLoc, diag::err_typecheck_subscript_not_integer)
                      << IndexExpr->getSourceRange());
+#endif
 
   if ((IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
        IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_U))
@@ -10920,6 +10932,17 @@ QualType Sema::InvalidOperands(SourceLocation Loc, ExprResult &LHS,
          diag::note_typecheck_invalid_operands_converted)
       << 1 << RHS.get()->getType();
   }
+
+#if ENABLE_BSC
+  if (getLangOpts().BSC && IsInSafeZone()) {
+    if (OrigLHS.getType()->isVoidType() &&
+        IsSafeZoneIncDecVoidExpr(LHS.get()))
+      Diag(LHS.get()->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
+    else if (OrigRHS.getType()->isVoidType() &&
+             IsSafeZoneIncDecVoidExpr(RHS.get()))
+      Diag(RHS.get()->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
+  }
+#endif
 
   return QualType();
 }
@@ -16877,6 +16900,17 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                    "building operator co_await");
     return Input;
   }
+
+#if ENABLE_BSC
+  // In safe zone, prefix/postfix ++/-- have void type so only side effect is used.
+  if (getLangOpts().BSC && IsInSafeZone() &&
+      (Opc == UO_PreInc || Opc == UO_PostInc || Opc == UO_PreDec ||
+       Opc == UO_PostDec)) {
+    resultType = Context.VoidTy;
+    VK = VK_PRValue;
+  }
+#endif
+
   if (resultType.isNull() || Input.isInvalid())
     return ExprError();
 
@@ -18349,6 +18383,12 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     HandleFunctionTypeMismatch(FDiag, SecondType, FirstType);
 
   Diag(Loc, FDiag);
+#if ENABLE_BSC
+  if (getLangOpts().BSC && DiagKind == diag::err_typecheck_convert_incompatible &&
+      Action == AA_Initializing && SrcType->isVoidType() &&
+      IsSafeZoneIncDecVoidExpr(SrcExpr))
+    Diag(SrcExpr->getBeginLoc(), diag::note_inc_dec_void_in_safe_zone);
+#endif
   if ((DiagKind == diag::warn_incompatible_qualified_id ||
        DiagKind == diag::err_incompatible_qualified_id) &&
       PDecl && IFace && !IFace->hasDefinition())
@@ -21246,6 +21286,10 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
     if (!T->isScalarType()) { // C99 6.8.4.1p1
       Diag(Loc, diag::err_typecheck_statement_requires_scalar)
         << T << E->getSourceRange();
+#if ENABLE_BSC
+      if (getLangOpts().BSC && T->isVoidType() && IsSafeZoneIncDecVoidExpr(E))
+        Diag(E->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
+#endif
       return ExprError();
     }
     CheckBoolLikeConversion(E, Loc);
