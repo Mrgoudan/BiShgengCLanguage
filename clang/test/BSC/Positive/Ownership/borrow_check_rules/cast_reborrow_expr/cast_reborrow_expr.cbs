@@ -1,0 +1,38 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include <stdlib.h>
+
+void safe_free(void *owned ptr) {
+  free((void *)ptr);
+}
+
+void test1(int *owned p) {
+  int *borrow p1 = (int *borrow)(int *)((&mut *p));
+  *p1 = 2;
+  safe_free((void *owned)p);
+}
+
+// Use after free, but as expected.
+// Borrow checker should not track that p1 borrows *p
+void test2(int *owned p) {
+  int *borrow p1 = (int *borrow)(int *)(&mut *p);
+  safe_free((void *owned)p);
+  *p1 = 2;
+}
+
+void test3(double *owned p) {
+  int *borrow p1 = ((int *borrow)((int *)(double *)(&mut *p)));
+  *p1 = 2;
+  safe_free((void *owned)p);
+}
+
+int main(void) {
+  int *owned p = (int *owned)malloc(sizeof(int));
+  test1(p);
+  return 0;
+}
