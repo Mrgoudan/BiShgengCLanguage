@@ -19,9 +19,24 @@
 using namespace clang;
 using namespace clang::borrow;
 
-static bool IsTrackedType(QualType type) {
-  return type.isBorrowQualified() || type->withBorrowFields();
+namespace {
+bool IsTrackedType(QualType type) {
+  type = type.getCanonicalType();
+  if (type->isPointerType() && type.isOwnedQualified()) {
+    return IsTrackedType(type->getPointeeType());
+  }
+  if (type.isBorrowQualified())
+    return true;
+  if (const RecordType *RT = type->getAs<RecordType>()) {
+    for (const FieldDecl *FD : RT->getDecl()->fields()) {
+      if (IsTrackedType(FD->getType())) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
+} // namespace
 
 namespace {
 /// Given a statement, returns the corresponding (defs, uses).
@@ -306,7 +321,7 @@ class ActionExtract : public clang::StmtVisitor<ActionExtract> {
         RegionName SourceRN = rc.getRegionName(Source->D);
         assert(!SourceRN.isInvalid() && "expected valid region name");
         std::vector<std::unique_ptr<Path>> DerefSources =
-            ProcessDeref(DestCopy->ty, Source);
+            ProcessDeref(SourceCopy->ty, Source);
         actions.emplace_back(std::make_unique<ActionAssign>(
             std::move(DestCopy), RNL, SourceRN, std::move(SourceCopy), DerefRN,
             std::move(DerefSources)));
@@ -1537,7 +1552,7 @@ void RegionCheck::PopulateInference(Liveness &liveness) {
     // Next, walk the actions and establish any additional constraints that may
     // arise from subtyping.
     ActionExtract AE(const_cast<Stmt *>(S), VD, LifetimeEndsLoc, *this);
-    actionMap[point] = std::move(AE.GetAction());
+    actionMap[point] = AE.GetAction();
     const auto &actions = actionMap[point];
     for (const std::unique_ptr<Action> &action : actions) {
 #if DEBUG_PRINT

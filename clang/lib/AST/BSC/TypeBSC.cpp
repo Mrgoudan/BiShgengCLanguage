@@ -413,6 +413,8 @@ bool RecordType::withBorrowFields() const {
     for (FieldDecl *FD :
          RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
       QualType FieldTy = FD->getType();
+      if (FieldTy->isPointerType() && FieldTy.isOwnedQualified())
+        return FieldTy->getPointeeType()->withBorrowFields();
       if (FieldTy.isBorrowQualified())
         return true;
       FieldTy = FieldTy.getCanonicalType();
