@@ -531,7 +531,8 @@ void ActionExtract::VisitDeclStmt(DeclStmt *DS) {
   for (Decl *D : DS->decls()) {
     if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
       if ((VD->getType()->isStructureType() || VD->getType()->isArrayType()) &&
-          IsTrackedType(VD->getType()) && isa<InitListExpr>(VD->getInit())) {
+          IsTrackedType(VD->getType()) &&
+          isa<InitListExpr, CompoundLiteralExpr>(VD->getInit())) {
         BuildOnGet = false;
         Dest = std::make_unique<Path>(VD->getName().str(), VD->getType(),
                                       VD->getLocation());
@@ -709,6 +710,10 @@ void ActionExtract::VisitUnaryAddrConstDeref(UnaryOperator *UO) {
   BK = borrow::BorrowKind::Shared;
   Kind = Action::Borrow;
   Visit(UO->getSubExpr());
+  if (Sources.empty()) {
+    Kind = Action::Init;
+    return;
+  }
   if (Sources[0]->ty->isPointerType()) {
     std::unique_ptr<Path> Deref = std::make_unique<Path>(
         std::move(Sources[0]), "*", UO->getType(), UO->getEndLoc());

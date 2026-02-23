@@ -5,6 +5,11 @@ struct S {
     int *_Borrow b2;
 };
 
+struct T {
+    struct S *sp;
+    int *_Borrow p;
+};
+
 void use_borrow(int *_Borrow b) {}
 
 void test() {
@@ -31,6 +36,41 @@ void test2(){
     // expected-error@-1 {{cannot use `p` because it was mutably borrowed}}
     // expected-error@-2 {{cannot borrow `*p` as mutable more than once at a time}}
     use_borrow(arr[0]);
+}
+
+void test3(struct S s) {
+    int a = 0;
+    s.b1 = &_Mut a;
+    struct T t = {.sp = &s, .p = &_Mut a};
+    use_borrow(t.p);
+}
+
+void test4(struct S s) {
+    int a = 0;
+    s.b1 = &_Mut a;
+    struct T t = {.sp = &s, .p = &_Mut a}; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+    *(s.b1) = 2;
+    use_borrow(t.p);
+}
+
+void test5(struct S s) {
+    int a = 0;
+    int b = 1;
+    s.b1 = &_Mut a;
+    struct T t = {.sp = &s, .p = &_Mut a}; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+    s.b1 = &_Mut b;
+    *(s.b2) = 2;
+    use_borrow(t.p);
+}
+
+void test6(struct S s) {
+    int a = 0;
+    int b = 1;
+    s.b1 = &_Mut b;
+    struct T t = {.sp = &s, .p = &_Mut a};
+    s.b1 = &_Mut b; // expected-error {{cannot borrow `b` as mutable more than once at a time}}
+    *(s.b2) = 2;
+    use_borrow(t.p);
 }
 
 int main() { return 0; }

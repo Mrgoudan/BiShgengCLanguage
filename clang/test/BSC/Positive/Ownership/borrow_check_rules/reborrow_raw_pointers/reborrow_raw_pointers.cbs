@@ -13,6 +13,38 @@ void call2(const int *_Borrow q, int x) {
     q = &_Const x;
 }
 
+int *_Borrow call3(int *_Borrow p) {
+  int *raw = (int *)p;
+  raw = raw + 2;
+  int *_Borrow q = &_Mut *raw;
+  return q;
+}
+
+int *_Borrow call4(int *_Borrow p) {
+  int *raw = (int *)p;
+  raw = raw + 2;
+  int *_Borrow q = (int *_Borrow)raw;
+  return q;
+}
+
+void call5() {
+  int a[10] = {1};
+  int *p = a;
+  int *_Borrow p1 = &_Mut *(p + 4);
+  int *_Borrow p2 = &_Mut *(p + 5);
+  *p1 = 2;
+  *p2 = 3;
+}
+
+void call6() {
+  int a[10] = {1};
+  int *p = a;
+  int *_Borrow p1 = &_Mut *_Unsafe(((_Unsafe(p) + (4))));
+  int *_Borrow p2 = &_Mut *_Unsafe((_Unsafe(p) + 5));
+  *p1 = 2;
+  *p2 = 3;
+}
+
 int main() {
     int a = 1, b = 2;
     int *raw = &a;

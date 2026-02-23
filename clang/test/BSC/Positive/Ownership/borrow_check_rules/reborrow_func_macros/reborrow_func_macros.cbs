@@ -46,11 +46,22 @@ void test5(void) {
   foo(p3);
 }
 
+const char *_Borrow test6(int *_Borrow dummy) {
+  const char *_Borrow p = __FUNCTION__;
+  return p;
+}
+
+const char *_Borrow test7(int *_Borrow dummy) {
+  return &_Const *__FUNCTION__;
+}
+
 int main(void) {
   test1();
   test2();
   test3();
   test4();
   test5();
+  const char *_Borrow p1 = test6(&_Mut (int){0});
+  const char *_Borrow p2 = test7(&_Mut (int){0});
   return 0;
 }

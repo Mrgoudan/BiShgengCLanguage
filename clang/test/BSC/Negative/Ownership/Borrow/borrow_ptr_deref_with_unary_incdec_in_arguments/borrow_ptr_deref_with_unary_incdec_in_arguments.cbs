@@ -37,35 +37,35 @@ void read_with_predec(int x, int y) {
 }
 
 void read_with_postinc2(int x, int y) {
-    const int *_Borrow p = &_Const x; // expected-note {{`x` is borrowed here}}
+    const int *_Borrow p = &_Const x;
     if (x < y) {
         p = &_Const y;
     }
-    read(*p, x++); // expected-error {{cannot assign to `x` because it is borrowed}}
+    read(*p, x++);
 }
 
 void read_with_postdec2(int x, int y) {
-    const int *_Borrow p = &_Const x; // expected-note {{`x` is borrowed here}}
+    const int *_Borrow p = &_Const x;
     if (x < y) {
         p = &_Const y;
     }
-    read(*p, x--); // expected-error {{cannot assign to `x` because it is borrowed}}
+    read(*p, x--);
 }
 
 void read_with_preinc2(int x, int y) {
-    const int *_Borrow p = &_Const x; // expected-note {{`x` is borrowed here}}
+    const int *_Borrow p = &_Const x;
     if (x < y) {
         p = &_Const y;
     }
-    read(*p, ++x); // expected-error {{cannot assign to `x` because it is borrowed}}
+    read(*p, ++x);
 }
 
 void read_with_predec2(int x, int y) {
-    const int *_Borrow p = &_Const x; // expected-note {{`x` is borrowed here}}
+    const int *_Borrow p = &_Const x;
     if (x < y) {
         p = &_Const y;
     }
-    read(*p, --x); // expected-error {{cannot assign to `x` because it is borrowed}}
+    read(*p, --x);
 }
 
 void read_with_alternative_borrow(int x, int y) {

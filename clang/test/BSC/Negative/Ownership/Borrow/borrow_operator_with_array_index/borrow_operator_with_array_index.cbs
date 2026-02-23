@@ -17,6 +17,14 @@ void test() {
     *(*borrow_ptr_arr2)[1][1] = 1;
 }
 
+void call5() {
+  int a[10] = {1};
+  int *_Borrow p1 = &_Mut a[4];
+  int *_Borrow p2 = &_Mut a[5]; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+  *p1 = 2;
+  *p2 = 3;
+}
+
 int main() {
     test();
 }

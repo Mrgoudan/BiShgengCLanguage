@@ -67,38 +67,44 @@ void safe_free(void *_Owned p);
 void test() {
     int x = 0;
     float y = 0.0f;
+    float z = 0.0f;
     int *_Borrow a = &_Mut x;
+    int *_Borrow a1 = &_Mut (int){1};
+    int *_Borrow a2 = &_Mut (int){2};
     float *_Borrow b = &_Mut y;
+    float *_Borrow c = &_Mut z;
 
     // --- Scalar type params ---
 
     // Different types: errors at instantiation.
     test_two_params<int, float>(a, b);             // expected-note {{in instantiation of function template specialization 'test_two_params<int, float>' requested here}}
     test_two_params_const<int, float>(a, b);       // expected-note {{in instantiation of function template specialization 'test_two_params_const<int, float>' requested here}}
-    test_three_params<int, float, float>(a, b, b); // expected-note {{in instantiation of function template specialization 'test_three_params<int, float, float>' requested here}}
+    test_three_params<int, float, float>(a, b, c); // expected-note {{in instantiation of function template specialization 'test_three_params<int, float, float>' requested here}}
     test_const_mutable_mismatch<int, float>(a, b); // expected-note {{in instantiation of function template specialization 'test_const_mutable_mismatch<int, float>' requested here}}
     test_concrete_vs_generic<float>(a, b);         // expected-note {{in instantiation of function template specialization 'test_concrete_vs_generic<float>' requested here}}
 
     // Same type: all ok.
-    test_two_params<int, int>(a, a);
-    test_two_params_const<int, int>(a, a);
+    test_two_params<int, int>(a, a1);
+    test_two_params_const<int, int>(a, a1);
     test_same_param<int>(a);
-    test_three_params<int, int, int>(a, a, a);
-    test_concrete_vs_generic<int>(a, a);
+    test_three_params<int, int, int>(a, a1, a2);
+    test_concrete_vs_generic<int>(a, a1);
 
     // --- Pointer type params (T=int*, B=float*): borrow of pointer-to-T ---
     int x1 = 0;
     float y1 = 0.0f;
     int *p = &x1;
+    int *p1 = &x1;
     float *q = &y1;
     int **_Borrow pa = &_Mut p;
+    int **_Borrow pa1 = &_Mut p1;
     float **_Borrow pb = &_Mut q;
 
     // T *_Borrow where T=int* vs B=float*: error (int** borrow vs float** borrow).
     test_two_ptr_params<int *, float *>(pa, pb);   // expected-note {{in instantiation of function template specialization 'test_two_ptr_params<int *, float *>' requested here}}
     // Same pointer type: ok.
     test_same_param<int *>(pa);
-    test_two_ptr_params<int *, int *>(pa, pa);
+    test_two_ptr_params<int *, int *>(pa, pa1);
 
     // --- Owned pointer type params ---
     int *_Owned op = safe_malloc(1);

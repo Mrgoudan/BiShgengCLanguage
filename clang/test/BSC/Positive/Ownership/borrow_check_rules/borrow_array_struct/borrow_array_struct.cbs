@@ -11,6 +11,21 @@ _Safe void foo1(void) {
   ptrarray[2].p = &_Mut a;
 }
 
+typedef struct {
+  int len;
+  int *ptr;
+  int cap;
+} vec;
+
+int vec::length(const vec *_Borrow this);
+void vec::push(vec *_Borrow this, int);
+
+void test(vec v) {
+  for (int i = 0; i < v.length(); i++) {
+    v.push(2);
+  }
+}
+
 int main() {
   foo1();
   return 0;

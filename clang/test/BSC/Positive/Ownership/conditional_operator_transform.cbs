@@ -212,3 +212,11 @@ void test_with_parens() {
   int *_Borrow result = cond ? (&_Mut (a)) : (&_Mut (b));
   use_mut(result);
 }
+
+void test_nested() {
+  int a = 1, b = 2, c = 3;
+  int cond1 = 1;
+  int cond2 = 1;
+  int *_Borrow result = cond1 ? (cond2 ? &_Mut a : &_Mut b) : &_Mut c;
+  use_mut(result);
+}

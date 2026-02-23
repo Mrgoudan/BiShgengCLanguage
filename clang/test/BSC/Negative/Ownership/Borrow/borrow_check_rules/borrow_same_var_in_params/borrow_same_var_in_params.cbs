@@ -26,8 +26,7 @@ void test4(int local) {
 }
 
 void test5(int local) {
-  foo2(local, &_Mut local); // expected-error {{cannot use `local` because it was mutably borrowed}}
-                           // expected-note@-1 {{`local` is borrowed here}}
+  foo2(local, &_Mut local);
 }
 
 void test6(int local) {

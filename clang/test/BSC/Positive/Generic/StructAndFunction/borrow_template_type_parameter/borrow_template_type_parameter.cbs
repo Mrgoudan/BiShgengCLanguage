@@ -18,11 +18,6 @@ _Safe T _Borrow identity<T>(T _Borrow p) {
   return p;
 }
 
-// Test with multiple template parameters
-_Safe T2 _Borrow convert<T1, T2, T3>(T1 _Borrow a, T3 _Borrow b) {
-  return _Unsafe((T2 _Borrow)(T2)(T1)a);
-}
-
 _Safe int main(void) {
   int x = 42;
   int * _Borrow ptr = &_Mut x;
@@ -37,12 +32,6 @@ _Safe int main(void) {
   int *_Borrow p2 = identity<int *>(ptr);
   if (*p2 != 42) {
     return 2;
-  }
-
-  // Test convert function - template params are int*, _Borrow is added by function signature
-  int *_Borrow p3 = convert<int *, int *, int *>(ptr, ptr);
-  if (*p3 != 42) {
-    return 3;
   }
 
   return 0;

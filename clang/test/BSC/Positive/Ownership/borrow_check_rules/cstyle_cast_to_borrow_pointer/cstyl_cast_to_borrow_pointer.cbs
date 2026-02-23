@@ -5,21 +5,66 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
+#define GET_BORROW_FROM_PTR(T, p) _Unsafe((T _Borrow)(T)(p))
+
 typedef struct {
   int a;
 } S;
 
+typedef struct {
+  char arr[20];
+} T;
+
 static S *g = 0;
+int g_list[10];
 
 void memory_set(void *_Borrow p) {
 }
 
-void foo() {
+void foo(void *_Borrow p, void *_Borrow q) {
+}
+
+void check_free(void *_Owned p) {
+  void *q = (void *)p;
+}
+
+void test1() {
   memory_set((void *_Borrow)(void *)g);
   memory_set((void *_Borrow)(void *)&*g);
 }
 
+void test2() {
+  int *_Borrow last = GET_BORROW_FROM_PTR(int *, &g_list[1 + 2]);
+  int *_Borrow next = GET_BORROW_FROM_PTR(int *, &g_list[1 + 1]);
+  *last = 2;
+  *next = 3;
+}
+
+void test3(int x) {
+  int *_Borrow last = GET_BORROW_FROM_PTR(int *, &*&g_list[x]);
+  int *_Borrow next = GET_BORROW_FROM_PTR(int *, &g_list[7]);
+  *last = 2;
+  *next = 3;
+}
+
+void test4() {
+  T t = { .arr = "hello" };
+  T *tp = &t;
+  foo(GET_BORROW_FROM_PTR(void *, tp), GET_BORROW_FROM_PTR(void *, &tp->arr[0]));
+}
+
+void test5(int *_Owned para) {
+  S *_Borrow ptr1 = _Unsafe((S *_Borrow)(S *)(int *)(&_Mut *para));
+  S *_Borrow ptr2 = _Unsafe((S *_Borrow)(S *)((S *)ptr1 + 1));
+  check_free((void *_Owned)para);
+  ptr1->a = 1;
+  ptr2->a = 2;
+}
+
 int main(void) {
-  foo();
+  test1();
+  test2();
+  test3(7);
+  test4();
   return 0;
 }
