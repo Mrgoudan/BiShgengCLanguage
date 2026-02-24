@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+int bar(void* borrow ptr);
+
+void foo(void) {
+  int array[10];
+  bar(array); // expected-error {{incompatible borrow types, cannot cast 'int[10]' to 'void *borrow'}}
+}
