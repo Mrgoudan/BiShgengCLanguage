@@ -2045,61 +2045,68 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
 void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
   if (CSCE->getType()->isVoidPointerType() &&
       CSCE->getType().isOwnedQualified()) {
-    if (const ImplicitCastExpr *ICE =
-            dyn_cast<ImplicitCastExpr>(CSCE->getSubExpr())) {
-      // @code
-      // (void * owned)s
-      // @endcode
-      if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ICE->getSubExpr()->IgnoreParens())) {
-        const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
-        if (stat.OPSStatus.count(VD)) {
-          SmallVector<OwnershipDiagInfo> diags =
-              stat.checkCastOPS(VD, DRE->getLocation());
-          reporter.addDiags(diags);
-        }
-        if (stat.BOPStatus.count(VD)) {
-          SmallVector<OwnershipDiagInfo> diags =
-              stat.checkCastBOP(VD, DRE->getLocation());
-          reporter.addDiags(diags);
-        }
+
+    // ignore explicit/implicit casts, get canonicial expr
+    const Expr *InnerE = CSCE->getSubExpr()->IgnoreParenCasts();
+
+    // @code
+    // (void * owned)s
+    // @endcode
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(InnerE)) {
+      const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      if (stat.OPSStatus.count(VD)) {
+        SmallVector<OwnershipDiagInfo> diags =
+            stat.checkCastOPS(VD, DRE->getLocation());
+        reporter.addDiags(diags);
       }
-      // @code
-      // (void * owned)s->p
-      // (void * owned)s.p
-      // @endcode
-      if (const MemberExpr *ME = dyn_cast<MemberExpr>(ICE->getSubExpr()->IgnoreParens())) {
-        auto memberField = getMemberFullField(ME);
-        if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
-          SmallVector<OwnershipDiagInfo> diags =
-              stat.checkCastField(dyn_cast<VarDecl>(DRE->getDecl()),
-                                  DRE->getLocation(), memberField.second);
-          reporter.addDiags(diags);
-        }
-      }
-      // @code
-      // (void * owned)*outer
-      // (void * owned)**ultraout
-      // @endcode
-      if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(ICE->getSubExpr()->IgnoreParens())) {
-        // Count dereferences and find the base DeclRefExpr
-        string fieldName;
-        const Expr *E = UO;
-        while (const UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
-          if (U->getOpcode() == UO_Deref) {
-            fieldName += "*";
-            E = U->getSubExpr()->IgnoreParenImpCasts();
-          } else {
-            break;
-          }
-        }
-        if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
-          const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
-          SmallVector<OwnershipDiagInfo> diags =
-              stat.checkCastField(VD, DRE->getLocation(), fieldName);
-          reporter.addDiags(diags);
-        }
+      if (stat.BOPStatus.count(VD)) {
+        SmallVector<OwnershipDiagInfo> diags =
+            stat.checkCastBOP(VD, DRE->getLocation());
+        reporter.addDiags(diags);
       }
     }
+    // @code
+    // (void * owned)s->p
+    // (void * owned)s.p
+    // @endcode
+    else if (const MemberExpr *ME = dyn_cast<MemberExpr>(InnerE)) {
+      auto memberField = getMemberFullField(ME);
+      if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
+        SmallVector<OwnershipDiagInfo> diags =
+            stat.checkCastField(dyn_cast<VarDecl>(DRE->getDecl()),
+                                DRE->getLocation(), memberField.second);
+        reporter.addDiags(diags);
+      }
+    }
+    // @code
+    // (void * owned)*outer
+    // (void * owned)**ultraout
+    // @endcode
+    else if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(InnerE)) {
+      // Count dereferences and find the base DeclRefExpr
+      string fieldName;
+      const Expr *E = UO;
+      while (const UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
+        if (U->getOpcode() == UO_Deref) {
+          fieldName += "*";
+          E = U->getSubExpr()->IgnoreParenImpCasts();
+        } else {
+          break;
+        }
+      }
+      if (const DeclRefExpr *DRE =
+              dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+        const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+        SmallVector<OwnershipDiagInfo> diags =
+            stat.checkCastField(VD, DRE->getLocation(), fieldName);
+        reporter.addDiags(diags);
+      }
+    }
+    // if the canonical node is not handled, continue traverse to avoid breaking visit
+    else {
+      Visit(CSCE->getSubExpr());
+    }
+
   } else {
     Visit(CSCE->getSubExpr());
   }
