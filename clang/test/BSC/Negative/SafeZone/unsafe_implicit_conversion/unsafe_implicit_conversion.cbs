@@ -190,3 +190,8 @@ void baseTypeCastConver() {
     a = -1;              // expected-error{{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
   }
 }
+
+safe void returns_void(void);
+safe void test_void_conversion(void) {
+  int x = returns_void();  // expected-error{{conversion from type 'void' to 'int' is forbidden in the safe zone}}
+}

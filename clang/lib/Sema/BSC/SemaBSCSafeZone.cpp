@@ -732,7 +732,8 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
           if (!IsSafeBuiltinTypeConversion(SBT->getKind(), DBT->getKind())) {
             if (!DestType->isIntegerType() || !IsBooleanEvaluation(E)) {
               IsSafeBehavior = false;
-              IsExplicitConversionAllowed = true; // arithmetic explicit cast OK
+              if (!SrcType->isVoidType())
+                IsExplicitConversionAllowed = true; // arithmetic explicit cast OK
             }
           }
         }
