@@ -16227,24 +16227,20 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (LangOpts.BSC) {
     if (auto FD = dyn_cast_or_null<FunctionDecl>(dcl)) {
       BSCDataflowAnalysisFlag = true;
-      // If NullabilityCheck is in Mode: {SafeOnly, All}, we should build CFG.
-      bool EnableNullabilityCheck = getLangOpts().getNullabilityCheck() != LangOptions::NC_NONE;
-      if (EnableNullabilityCheck) {
-        if (getDiagnostics().getNumErrors() ==
-                getDiagnostics().getNumOwnershipErrors() +
-                getDiagnostics().getNumBorrowCheckErrors() +
-                getDiagnostics().getNumNullabilityCheckErrors()) {
-          bool DoAnalysis = true;
-          // Skip function template and class template
-          if (const auto *RD = dyn_cast<RecordDecl>(FD->getParent())) {
-            if (RD->getDescribedClassTemplate() != nullptr)
-              DoAnalysis = false;
-          }
-          auto md = dyn_cast_or_null<BSCMethodDecl>(FD);
-          // Don't check ownership rules of destructor parameters
-          if (DoAnalysis && (!md || !md->isDestructor()))
-            BSCDataflowAnalysis(FD, EnableNullabilityCheck);
+      if (getDiagnostics().getNumErrors() ==
+              getDiagnostics().getNumOwnershipErrors() +
+              getDiagnostics().getNumBorrowCheckErrors() +
+              getDiagnostics().getNumNullabilityCheckErrors()) {
+        bool DoAnalysis = true;
+        // Skip function template and class template
+        if (const auto *RD = dyn_cast<RecordDecl>(FD->getParent())) {
+          if (RD->getDescribedClassTemplate() != nullptr)
+            DoAnalysis = false;
         }
+        auto md = dyn_cast_or_null<BSCMethodDecl>(FD);
+        // Don't check ownership rules of destructor parameters
+        if (DoAnalysis && (!md || !md->isDestructor()))
+          BSCDataflowAnalysis(FD);
       }
       // Desugar BSC Function.
       DesugarDestructorCall(FD);

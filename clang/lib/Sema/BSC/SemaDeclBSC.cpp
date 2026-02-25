@@ -255,7 +255,7 @@ bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
 ///  --> |   BorrowCheck    | -->  FuncDecl  --> CodeGen
 ///      |__________________|
 /// ====================================================================
-void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableNullabilityCheck) {
+void Sema::BSCDataflowAnalysis(const Decl *D) {
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
 
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
@@ -270,10 +270,10 @@ void Sema::BSCDataflowAnalysis(const Decl *D, bool EnableNullabilityCheck) {
   bool RequireBorrowCheck = FindSafeFeatures(FD);
   // nullability-check happens in mode: {SafeOnly, All}.
   // For SafeOnly, do not build cfg when there is no SafeZone in Function.
-  bool RequireNullabilityCheck = EnableNullabilityCheck;
+  bool RequireNullabilityCheck = true;
   if (getLangOpts().getNullabilityCheck() == LangOptions::NC_SAFE) {
     if(HasSafeZoneInFunction(FD)) {
-      RequireNullabilityCheck = EnableNullabilityCheck;
+      RequireNullabilityCheck = true;
     } else {
       RequireNullabilityCheck = false;
     }

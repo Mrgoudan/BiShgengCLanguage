@@ -5371,11 +5371,10 @@ int main() {
 
 非空指针检查是一项强大的功能，能帮助开发者在编译期识别出潜在的危险行为。同时，这会带来一定的编译性能开销和编码行为限制。**默认情况下，对非空指针的检查仅在安全区生效**，安全区的定义详见[内存安全-安全区](#安全区)章节。
 
-在非安全区，我们将是否开启非空指针检查的选择权交给开发者，即通过编译选项`-nullability-check=value`来控制该项检查的作用域。其中`value`是一个枚举值，有3种选项`none`, `onlysafe`, `all`：
+在非安全区，我们将是否开启非空指针检查的选择权交给开发者，即通过编译选项`-nullability-check=value`来控制该项检查的作用域。其中`value`是一个枚举值，有2种选项`safeonly`, `all`：
 
 1. `value`的默认值为`safeonly`，控制着检查只在安全区生效；无该编译选项时，等同`-nullability-check=safeonly`。
-2. `value`值为`none`时，将整体禁用非空指针检查，安全区与非安全区均不做检查。
-3. `value`值为`all`时，将整体使能非空指针检查，安全区与非安全区均开启检查。
+2. `value`值为`all`时，将整体使能非空指针检查，安全区与非安全区均开启检查。
 
 提供一个示例说明：
 
@@ -5393,7 +5392,7 @@ int main() {
   return 0;
 }
 ```
-对于上面这个示例，当编译选项`-nullability-check`不存在或者`-nullability-check=safeonly`时，只有在`safe`区的`error2`会被报告；当`-nullability-check=none`时，`error1`和`error2`均不会被报告；当`-nullability-check=all`时，非安全区的`error1`和安全区`error2`均会被报告。
+对于上面这个示例，当编译选项`-nullability-check`不存在或者`-nullability-check=safeonly`时，只有在`safe`区的`error2`会被报告；当`-nullability-check=all`时，非安全区的`error1`和安全区`error2`均会被报告。
 
 ## 标准库
 

@@ -4,8 +4,8 @@ def rewrite_bsc_line : Flag<["-"], "line">, Flags<[CC1Option]>,
   HelpText<"Insert line info when rewrite BSC">;
 def nullability_check : Joined<["-"], "nullability-check=">, Flags<[CC1Option]>,
   HelpText<"Select Nullability Check Enable Zone">,
-  Values<"none,safeonly,all">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["NC_NONE", "NC_SAFE", "NC_ALL"]>,
+  Values<"safeonly,all">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["NC_SAFE", "NC_ALL"]>,
   MarshallingInfoEnum<LangOpts<"NullabilityCheck">, "NC_SAFE">;
 def E_Group : OptionGroup<"<E group>">, Group<Diag_Group>, DocFlatten;
 def E_value_Group : OptionGroup<"<E (with value) group>">, Group<E_Group>,

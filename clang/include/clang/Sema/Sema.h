@@ -12391,7 +12391,7 @@ public:
   /// Returns true if type is valid, false if an error was reported.
   bool CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
-  void BSCDataflowAnalysis(const Decl *D, bool EnableNullabilityCheck = true);
+  void BSCDataflowAnalysis(const Decl *D);
   void BSCBorrowChecker(FunctionDecl *FD);
   bool IsInSafeZone();
   bool IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
