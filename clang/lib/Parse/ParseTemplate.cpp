@@ -1923,7 +1923,9 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
 #if ENABLE_BSC
     if (getLangOpts().BSC && !Tok.isOneOf(tok::kw_struct,
                                           tok::kw_enum,
-                                          tok::kw_union)) {
+                                          tok::kw_union,
+                                          tok::kw_const,
+                                          tok::kw_volatile)) {
       // if template argument list like <T, int N> or <T, MyInt N>
       // we should only parse <T, N>, ignore the type of constant template
       // so we will consume builtin type 'int' or typedef type 'MyInt'
