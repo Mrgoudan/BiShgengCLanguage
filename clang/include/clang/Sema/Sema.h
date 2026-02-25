@@ -12399,6 +12399,8 @@ public:
   bool IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast = false);
   bool IsSafeConstantValueConversion(QualType DestType, Expr *E);
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
+  FunctionDecl *SelectFunctionDeclForPointerAssignment(
+      Expr *SrcExpr, const FunctionProtoType *DestFuncType);
   bool IsSafeFunctionPointerType(QualType Type);
   bool IsUnsafeType(QualType Type);
   bool CanBeUninitializedInSafeZone(QualType Type);

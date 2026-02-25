@@ -2843,7 +2843,7 @@ public:
 #if ENABLE_BSC
     auto res = SemaRef.BuildInitList(LBraceLoc, Inits, RBraceLoc);
     if (res.isUsable() && isa<InitListExpr>(res.get())) {
-      res.getAs<InitListExpr>()->setDesugaredIndex(DesugaredIndex);
+      res.template getAs<InitListExpr>()->setDesugaredIndex(DesugaredIndex);
     }
     return res;
 #else

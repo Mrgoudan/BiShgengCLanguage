@@ -14778,111 +14778,19 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     Expr *RHSExpr = RHS.get()->IgnoreParenImpCasts();
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(RHSExpr)) {
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-        // Get destination function pointer type.
         const FunctionProtoType *DestFuncType =
             LHSExpr->getType()
                 ->getAs<PointerType>()
                 ->getPointeeType()
                 ->getAs<FunctionProtoType>();
-
         if (DestFuncType) {
-          // Collect safe and unsafe declarations.
-          SmallVector<FunctionDecl *, 4> SafeDecls;
-          SmallVector<FunctionDecl *, 4> UnsafeDecls;
-
-          for (auto *Redecl : FD->redecls()) {
-            if (auto *RedeclFD = dyn_cast<FunctionDecl>(Redecl)) {
-              SafeZoneSpecifier SZS = RedeclFD->getSafeZoneSpecifier();
-              if (SZS == SZ_Safe)
-                SafeDecls.push_back(RedeclFD);
-              else
-                UnsafeDecls.push_back(RedeclFD);
-            }
-          }
-
-          // If heterogeneous (both safe and unsafe declarations exist),
-          // select the appropriate one.
-          if (!SafeDecls.empty() && !UnsafeDecls.empty()) {
-            FunctionDecl *SelectedFD = nullptr;
-            SafeZoneSpecifier DestSZS = DestFuncType->getFunSafeZoneSpecifier();
-
-            // Select based on destination function pointer type.
-            if (DestSZS == SZ_Safe) {
-              // Assigning to safe pointer: must select safe declaration with matching signature.
-              // Try to find a safe declaration where the signature is compatible.
-              for (FunctionDecl *SafeFD : SafeDecls) {
-                const FunctionProtoType *SafeFuncType =
-                    SafeFD->getType()->getAs<FunctionProtoType>();
-
-                // Quick check: do return type and param count match?
-                if (SafeFuncType->getReturnType().getCanonicalType().getUnqualifiedType() !=
-                    DestFuncType->getReturnType().getCanonicalType().getUnqualifiedType())
-                  continue;
-                if (SafeFuncType->getNumParams() != DestFuncType->getNumParams())
-                  continue;
-
-                // Check if parameter types match (considering owned/borrow qualifiers).
-                bool ParamsMatch = true;
-                for (unsigned i = 0; i < SafeFuncType->getNumParams(); ++i) {
-                  QualType SafeParam = SafeFuncType->getParamType(i);
-                  QualType DestParam = DestFuncType->getParamType(i);
-                  if (!DoPointerTypesSatisfyAssignmentConstraints(DestParam, SafeParam)) {
-                    ParamsMatch = false;
-                    break;
-                  }
-                }
-
-                if (ParamsMatch) {
-                  SelectedFD = SafeFD;
-                  break;
-                }
-              }
-
-              // If no matching safe declaration found, just pick the first safe one
-              // and let type checking report the error.
-              if (!SelectedFD && !SafeDecls.empty())
-                SelectedFD = SafeDecls.front();
-            } else {
-              // Assigning to unsafe pointer: prefer safe, fallback to unsafe.
-              // Try safe declarations first.
-              for (FunctionDecl *SafeFD : SafeDecls) {
-                const FunctionProtoType *SafeFuncType =
-                    SafeFD->getType()->getAs<FunctionProtoType>();
-
-                // Check if this safe declaration matches the unsafe pointer signature.
-                if (SafeFuncType->getReturnType().getCanonicalType().getUnqualifiedType() !=
-                    DestFuncType->getReturnType().getCanonicalType().getUnqualifiedType())
-                  continue;
-                if (SafeFuncType->getNumParams() != DestFuncType->getNumParams())
-                  continue;
-
-                bool ParamsMatch = true;
-                for (unsigned i = 0; i < SafeFuncType->getNumParams(); ++i) {
-                  if (SafeFuncType->getParamType(i).getCanonicalType().getUnqualifiedType() !=
-                      DestFuncType->getParamType(i).getCanonicalType().getUnqualifiedType()) {
-                    ParamsMatch = false;
-                    break;
-                  }
-                }
-
-                if (ParamsMatch) {
-                  SelectedFD = SafeFD;
-                  break;
-                }
-              }
-
-              // If no safe declaration matches, use unsafe declaration.
-              if (!SelectedFD && !UnsafeDecls.empty())
-                SelectedFD = UnsafeDecls.front();
-            }
-
-            // Replace the DeclRefExpr with the selected declaration.
-            if (SelectedFD && SelectedFD != FD) {
-              RHS = DeclRefExpr::Create(
-                  Context, SelectedFD->getQualifierLoc(), SourceLocation(),
-                  SelectedFD, false, DRE->getLocation(), SelectedFD->getType(),
-                  DRE->getValueKind());
-            }
+          FunctionDecl *SelectedFD =
+              SelectFunctionDeclForPointerAssignment(RHS.get(), DestFuncType);
+          if (SelectedFD && SelectedFD != FD) {
+            RHS = DeclRefExpr::Create(
+                Context, SelectedFD->getQualifierLoc(), SourceLocation(),
+                SelectedFD, false, DRE->getLocation(), SelectedFD->getType(),
+                DRE->getValueKind());
           }
         }
       }

@@ -405,9 +405,9 @@ static bool DoesFunctionPointerSatisfyConstraints(Sema &S,
 
 /// Helper function: Select appropriate function declaration for pointer assignment
 /// when source is a function with heterogeneous redeclarations (safe + unsafe).
-static FunctionDecl *
-SelectFunctionDeclForPointerAssignment(Sema &S, Expr *SrcExpr,
-                                        const FunctionProtoType *DestFuncType) {
+FunctionDecl *
+Sema::SelectFunctionDeclForPointerAssignment(Expr *SrcExpr,
+                                              const FunctionProtoType *DestFuncType) {
   // Check if SrcExpr is a DeclRefExpr pointing to a FunctionDecl.
   DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SrcExpr->IgnoreParenImpCasts());
   if (!DRE)
@@ -426,10 +426,10 @@ SelectFunctionDeclForPointerAssignment(Sema &S, Expr *SrcExpr,
   auto CheckConstraints = [&](FunctionDecl *CandidateFD) -> bool {
     const FunctionProtoType *CandidateType =
         CandidateFD->getType()->getAs<FunctionProtoType>();
-    return DoesFunctionPointerSatisfyConstraints(S, DestFuncType, CandidateType, Loc);
+    return DoesFunctionPointerSatisfyConstraints(*this, DestFuncType, CandidateType, Loc);
   };
 
-  return SelectBestHeterogeneousFunctionDecl(S, FD, IsInSafeContext, CheckConstraints);
+  return SelectBestHeterogeneousFunctionDecl(*this, FD, IsInSafeContext, CheckConstraints);
 }
 
 bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
@@ -459,7 +459,7 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   // unsafe declarations), select the appropriate declaration based on the
   // destination function pointer type and assignment constraints.
   FunctionDecl *SelectedFD =
-      SelectFunctionDeclForPointerAssignment(*this, SrcExpr, LSHFuncType);
+      SelectFunctionDeclForPointerAssignment(SrcExpr, LSHFuncType);
   if (SelectedFD) {
     // Update RSHFuncType to the selected declaration's function type.
     RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();

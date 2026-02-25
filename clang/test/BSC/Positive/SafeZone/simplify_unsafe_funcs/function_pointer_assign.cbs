@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+typedef unsigned int (*HOOK)(unsigned int a, unsigned int b, unsigned char * const c);
+
+unsigned int naked(unsigned int a, unsigned int b, unsigned char * const c){
+    return 0;
+}
+safe unsigned int naked(unsigned int a, unsigned int b, unsigned char * borrow const c);
+safe void test(void){
+         unsafe HOOK readhook = naked;
+}
+safe void test1(void){
+          HOOK readhook = naked;
+}
+int mian(){
+    return 0;
+}

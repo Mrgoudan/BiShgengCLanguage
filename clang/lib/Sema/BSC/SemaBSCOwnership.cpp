@@ -304,6 +304,11 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
     RHSExpr->getType()->getAs<FunctionProtoType>();
   SourceLocation ExprLoc = RHSExpr->getBeginLoc();
 
+  // For heterogeneous redeclarations, select the best matching declaration.
+  if (FunctionDecl *SelectedFD =
+          SelectFunctionDeclForPointerAssignment(RHSExpr, LSHFuncType))
+    RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+
   // return if no 'owned' in both side
   if (!LSHFuncType->hasOwnedRetOrParams() && !RSHFuncType->hasOwnedRetOrParams()) {
     return true;
@@ -571,6 +576,11 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
                 ->getAs<FunctionProtoType>()
           : RHSExpr->getType()->getAs<FunctionProtoType>();
   SourceLocation ExprLoc = RHSExpr->getBeginLoc();
+
+  // For heterogeneous redeclarations, select the best matching declaration.
+  if (FunctionDecl *SelectedFD =
+          SelectFunctionDeclForPointerAssignment(RHSExpr, LSHFuncType))
+    RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
 
   // return if no 'borrow' in both side
   if (!LSHFuncType->hasBorrowRetOrParams() &&
