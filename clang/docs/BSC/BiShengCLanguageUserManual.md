@@ -2467,104 +2467,117 @@ int main() { return 0; }
 
 同一函数标识符可以有多个声明,支持`safe`和`unsafe`混合声明。
 
-#### 7.1 兼容性要求
+- 7.1 兼容性要求
 
-- **相同修饰符**: 多个`safe`声明之间、或多个`unsafe`声明之间,函数类型必须兼容
-- **混合模式**: `safe`和`unsafe`声明可以共存,但必须满足混合模式兼容性(见7.3)
-- **泛型函数除外**: 泛型函数不支持混合模式,同一实例化不能同时有`safe`和`unsafe`声明
-- **成员函数**: 与普通函数规则相同
+   **相同修饰符**: 多个`safe`声明之间、或多个`unsafe`声明之间,函数类型必须兼容
 
-#### 7.2 函数类型兼容性
+   **混合模式**: `safe`和`unsafe`声明可以共存,但必须满足混合模式兼容性(见7.3)
+   
+   **泛型函数除外**: 泛型函数不支持混合模式,同一实例化不能同时有`safe`和`unsafe`声明
+   
+   **成员函数**: 与普通函数规则相同
 
-两个函数类型兼容的条件:
-1. 返回类型兼容
-2. 参数数量相同,省略号(`...`)使用一致
-3. 对应参数类型兼容(兼容性检查时移除除`owned`、`borrow`、`_Nonnull`、`_Nullable`外的所有限定符)
+- 7.2 函数类型兼容性
 
-**指针兼容性**:
-- 指针类型需要相同限定符(`owned`、`borrow`、`_Nonnull`、`_Nullable`)且目标类型兼容
-- `owned`和`borrow`指针互不兼容
-- `owned`/`borrow`指针与裸指针不兼容(混合模式除外,见7.3)
+   **两个函数类型兼容的条件**:
+   - 返回类型兼容
+   - 参数数量相同,省略号(`...`)使用一致
+   - 对应参数类型兼容(兼容性检查时移除除`owned`、`borrow`、`_Nonnull`、`_Nullable`外的所有限定符)
 
-#### 7.3 混合模式兼容性(`unsafe`与`safe`共存)
+  **指针兼容性**:
 
-**返回类型兼容**:
-- `unsafe T*` ⟷ `safe T* owned`: 裸指针限定符需匹配(除`owned`外)
-- `unsafe T*` ⟷ `safe T* borrow`: 裸指针限定符需匹配(除`borrow`外)
-- `safe T* owned` ⟷ `safe T* borrow`: **不兼容**
+   - 指针类型需要相同限定符(`owned`、`borrow`、`_Nonnull`、`_Nullable`)且目标类型兼容
 
-**参数类型兼容**:
-- 参数数量、省略号使用必须一致
-- 对应参数类型兼容(移除限定符后),但**`owned`参数与`borrow`参数不兼容**
+   - `owned`和`borrow`指针互不兼容
 
-**示例**:
-```c
-// ok: 混合模式兼容
-unsafe int* foo(int* p);
-safe int* owned foo(int* owned p);
+   - `owned`/`borrow`指针与裸指针不兼容(混合模式除外,见7.3)
 
-// ok: 返回类型兼容
-unsafe void* bar(void);
-safe void* owned bar(void);
-// error: 参数owned与borrow不兼容
-unsafe int* baz(int* p);
-safe int* borrow baz(int* owned p);
+- 7.3 混合模式兼容性(`unsafe`与`safe`共存)
 
-// ok: 相同修饰符,类型完全相同
-safe int* owned fiz(int* owned p);
-safe int* owned fiz(int* owned q);
-```
+   **返回类型兼容**:
 
-#### 7.4 函数定义
+   - `unsafe T*` ⟷ `safe T* owned`: 裸指针限定符需匹配(除`owned`外)
 
-- 混合模式函数只能定义**一次**
-- 定义可基于`unsafe`版本或`safe`版本,但必须与所有声明兼容
+   - `unsafe T*` ⟷ `safe T* borrow`: 裸指针限定符需匹配(除`borrow`外)
 
-```c
-unsafe int* foo(int* p);
-safe int* owned foo(int* owned p);
+   - `safe T* owned` ⟷ `safe T* borrow`: **不兼容**
 
-// 定义(选择其一)
-safe int* owned foo(int* owned p) { return p; }
-// 或
-unsafe int* foo(int* p) { return p; }
-```
+   **参数类型兼容**:
+
+   - 参数数量、省略号使用必须一致
+
+   - 对应参数类型兼容(移除限定符后),但**`owned`参数与`borrow`参数不兼容**
+
+   **示例**:
+   ```c
+   // ok: 混合模式兼容
+   unsafe int* foo(int* p);
+   safe int* owned foo(int* owned p);
+   
+   // ok: 返回类型兼容
+   unsafe void* bar(void);
+   safe void* owned bar(void);
+   // error: 参数owned与borrow不兼容
+   unsafe int* baz(int* p);
+   safe int* borrow baz(int* owned p);
+   
+   // ok: 相同修饰符,类型完全相同
+   safe int* owned fiz(int* owned p);
+   safe int* owned fiz(int* owned q);
+   ```
+
+- 7.4 函数定义
+
+   混合模式函数只能定义**一次**
+
+   定义可基于`unsafe`版本或`safe`版本,但必须与所有声明兼容
+
+   ```c
+   unsafe int* foo(int* p);
+   safe int* owned foo(int* owned p);
+   
+   // 定义(选择其一)
+   safe int* owned foo(int* owned p) { return p; }
+   // 或
+   unsafe int* foo(int* p) { return p; }
+   ```
 
 8. 函数调用解析
 
-#### 8.1 安全上下文调用
+- 8.1 安全上下文调用
 
-安全上下文(`safe`块)内只能调用`safe`函数。如果函数只有`unsafe`声明,编译错误。
+   安全上下文(`safe`块)内只能调用`safe`函数。如果函数只有`unsafe`声明,编译错误。
+   
+   ```c
+   unsafe void foo(void);
+   
+   int main() {
+     safe {
+       foo();  // error: 安全区内不允许调用非安全函数
+     }
+   }
+   ```
 
-```c
-unsafe void foo(void);
+- 8.2 非安全上下文调用
 
-int main() {
-  safe {
-    foo();  // error: 安全区内不允许调用非安全函数
-  }
-}
-```
+   非安全上下文(`unsafe`块或默认)内执行重载解析:
 
-#### 8.2 非安全上下文调用
-
-非安全上下文(`unsafe`块或默认)内执行重载解析:
-- 优先匹配`safe`声明
-- `safe`不匹配时使用`unsafe`声明
-
-```c
-unsafe int* foo(int* p);
-safe int* owned foo(int* owned p);
-
-int *owned bar() {
-  int* raw_p = nullptr;
-  int* owned owned_p = nullptr;
-
-  // 根据参数类型选择对应版本
-  foo(raw_p);      // 调用unsafe版本
-  return foo(owned_p);    // 调用safe版本
-}
-```
+   - 优先匹配`safe`声明
+   - `safe`不匹配时使用`unsafe`声明
+   
+   ```c
+   unsafe int* foo(int* p);
+   safe int* owned foo(int* owned p);
+   
+   int *owned bar() {
+     int* raw_p = nullptr;
+     int* owned owned_p = nullptr;
+   
+     // 根据参数类型选择对应版本
+     foo(raw_p);      // 调用unsafe版本
+     return foo(owned_p);    // 调用safe版本
+   }
+   ```
 
 9. 函数指针赋值
 
