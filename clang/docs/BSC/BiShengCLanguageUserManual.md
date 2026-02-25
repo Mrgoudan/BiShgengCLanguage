@@ -5265,6 +5265,38 @@ int main() {
 }
 ```
 
+### 指针的强制类型转换
+在开启编译选项`-nullability-check=all`后，在非安全区中不允许将 Nullable 指针强制类型转换为 Nonnull 类型：
+```C
+void foo() {
+  int *p1 = nullptr;
+  int *p2 = (int *_Nonnull)p1; // error: cannot cast nullable pointer to nonnull type
+  int *owned p3 = (int *owned)p1; // error: cannot cast nullable pointer to nonnull type
+  int *borrow p4 = (int *borrow)p1; // error: cannot cast nullable pointer to nonnull type
+}
+
+int main() {
+  foo();
+}
+```
+
+对 Nullable 指针进行判空，那么在非空的分支中，可以强制类型转换为 Nonnull 类型：
+```C
+void foo() {
+  int *p1 = nullptr;
+  if (p1 != nullptr) {
+    int *p2 = (int *_Nonnull)p1;
+    int *owned p3 = (int *owned)p1;
+    int *borrow p4 = (int *borrow)p1;
+    safe_free((void *owned)p3);
+  }
+}
+
+int main() {
+  foo();
+}
+```
+
 ### 指针的解引用、成员访问
 被定义为 Nullable 的指针的 Nullability 会随赋值和控制流发生变化，BSC 编译器会跟踪这些变换，保证指针解引用、成员访问等操作的安全性。
 ```C

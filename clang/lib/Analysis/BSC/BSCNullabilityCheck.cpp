@@ -235,8 +235,8 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
       break;
     }
     case Expr::BinaryOperatorClass: {
-      auto *BO = cast<BinaryOperator>(E);
-      if (BO->getOpcode() == BO_Comma) {
+      BinaryOperator::Opcode Op = cast<BinaryOperator>(E)->getOpcode();
+      if (Op == BO_Comma || Op == BO_Assign) {
         return getExprPathNullability(cast<BinaryOperator>(E)->getRHS(), true);
       }
       break;
