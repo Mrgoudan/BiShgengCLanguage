@@ -1869,6 +1869,7 @@ public:
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitAbstractConditionalOperator(AbstractConditionalOperator *ACO);
 
+  void HandleNullInitListExpr(VarDecl *VD, RecordDecl *RD, InitListExpr *ILE, std::string fullFieldName = "");
   void HandleDREAssign(const DeclRefExpr *DRE, std::string fullFieldName = "");
   void HandleDREUse(const DeclRefExpr *DRE, std::string fullFieldName = "");
 
@@ -2107,23 +2108,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
             // we reset the status of s.p.
             RecordDecl *RD = dyn_cast<RecordType>(VQT)->getDecl();
             InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
-            Expr **Inits = ILE->getInits();
-            for (const auto &FD : RD->fields()) {
-              Expr *FieldInit = Inits[FD->getFieldIndex()];
-              if (FieldInit->isNullExpr(OS.ctx)) {
-                auto memberField = FD->getNameAsString();
-                if (stat.SAllOwnedFields[VD].count(memberField)) {
-                  stat.SOwnedOwnedFields[VD].erase(memberField);
-                  stat.SNullOwnedFields[VD].insert(memberField);
-                  auto allPrefixStrs =
-                      findPrefixStrings(stat.SAllOwnedFields[VD], memberField + ".");
-                  for (const string &str : allPrefixStrs) {
-                    stat.SOwnedOwnedFields[VD].erase(str);
-                    stat.SNullOwnedFields[VD].insert(str);
-                  }
-                }
-              }
-            }
+            HandleNullInitListExpr(VD, RD, ILE);
             if (stat.SOwnedOwnedFields[VD].size() == 0) {
               stat.set(VD, Ownership::Status::AllMoved);
             } else if (stat.SAllOwnedFields[VD].size() != stat.SOwnedOwnedFields[VD].size()) {
@@ -2137,6 +2122,34 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
         op = Move;
         Visit(Init);
         op = None;
+      }
+    }
+  }
+}
+
+void TransferFunctions::HandleNullInitListExpr(VarDecl *VD, RecordDecl *RD, InitListExpr *ILE, std::string fullFieldName) {
+  // unexplicitly initialized fields are implicitly initialized automatically
+  Expr **Inits = ILE->getInits();
+  for (const auto &FD : RD->fields()) {
+    Expr *FieldInit = Inits[FD->getFieldIndex()];
+    std::string memberField = FD->getNameAsString();
+    std::string newFullFieldName = fullFieldName.empty() ? memberField : fullFieldName + "." + memberField;
+    if (FieldInit->isNullExpr(OS.ctx)) {
+      if (stat.SAllOwnedFields[VD].count(newFullFieldName)) {
+        stat.SOwnedOwnedFields[VD].erase(newFullFieldName);
+        stat.SNullOwnedFields[VD].insert(newFullFieldName);
+        auto allPrefixStrs =
+            findPrefixStrings(stat.SAllOwnedFields[VD], newFullFieldName + ".");
+        for (const string &str : allPrefixStrs) {
+          stat.SOwnedOwnedFields[VD].erase(str);
+          stat.SNullOwnedFields[VD].insert(str);
+        }
+      }
+    } else if (InitListExpr *FieldILE = dyn_cast<InitListExpr>(FieldInit)) {
+      QualType QT = FieldInit->getType().getCanonicalType();
+      if (QT->isRecordType() && QT->hasOwnedFields()) {
+        RecordDecl *FieldRD = dyn_cast<RecordType>(QT)->getDecl();
+        HandleNullInitListExpr(VD, FieldRD, FieldILE, newFullFieldName);
       }
     }
   }

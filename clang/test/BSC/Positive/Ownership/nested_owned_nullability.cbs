@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+struct S3 {
+  int *owned _Nullable p;
+};
+
+struct S2 {
+  int *owned _Nullable p;
+  struct S3 s3;
+};
+
+struct S1 {
+  int *owned _Nullable p;
+  struct S2 s2;
+};
+
+void test1() {
+  struct S3 s3 = {
+    .p = nullptr
+  };
+}
+
+void test2() {
+  struct S2 s2 = {
+    .p = nullptr,
+    .s3.p = nullptr
+  };
+}
+
+void test3() {
+  struct S1 s1 = {
+    .p = nullptr,
+    .s2.p = nullptr,
+    .s2.s3.p = nullptr
+  };
+}
