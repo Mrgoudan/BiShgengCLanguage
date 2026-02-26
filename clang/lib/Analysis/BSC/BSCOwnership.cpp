@@ -1867,6 +1867,7 @@ public:
   void VisitLifetimeEnds(VarDecl *VD, SourceLocation SL, bool isDestructor);
   void VisitStmt(Stmt *S);
   void VisitUnaryOperator(UnaryOperator *UO);
+  void VisitAbstractConditionalOperator(AbstractConditionalOperator *ACO);
 
   void HandleDREAssign(const DeclRefExpr *DRE, std::string fullFieldName = "");
   void HandleDREUse(const DeclRefExpr *DRE, std::string fullFieldName = "");
@@ -1985,6 +1986,25 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     Visit(BO->getLHS());
     Visit(BO->getRHS());
   }
+}
+
+void TransferFunctions::VisitAbstractConditionalOperator(AbstractConditionalOperator* ACO) {
+  Operation Inherited = op;
+  
+  op = None;
+  Visit(ACO->getCond());
+  Ownership::OwnershipStatus StatAfterCond = stat;
+  
+  op = Inherited;
+  Visit(ACO->getTrueExpr());
+  Ownership::OwnershipStatus StatAfterTrue = stat;
+
+  stat = StatAfterCond;
+  op = Inherited;
+  Visit(ACO->getFalseExpr());
+
+  stat = OS.merge(StatAfterTrue, stat);
+  op = None;
 }
 
 void TransferFunctions::VisitCallExpr(CallExpr *CE) {

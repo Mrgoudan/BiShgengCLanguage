@@ -7,9 +7,9 @@ safe T max_a<T>(T a, T b) {
 }
 
 safe T max_b<T>(T a, T b) {
-  return a > b ? a : b; // expected-error {{use of moved value: `a`}}
-                        // expected-error@-1 {{use of moved value: `b`}}
-}
+  return a > b ? a : b;
+} // expected-error {{memory leak of value: `a`}} 
+// expected-error@-1 {{memory leak of value: `b`}}
 
 safe T max_c<T>(T a, T b) {
   return a > b ? a : b;

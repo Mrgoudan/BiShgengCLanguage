@@ -1,0 +1,24 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+
+safe void consume(int *owned _Nullable);
+
+safe void reference(_Bool flag, int *owned _Nullable p, int *owned _Nullable q) {
+    if (flag) {
+        consume(p);
+    } else {
+        consume(q);
+    }
+} // expected-error {{memory leak of value: `p`}} 
+// expected-error@-1 {{memory leak of value: `q`}}
+
+safe void branch_consume(_Bool flag, int *owned _Nullable p, int *owned _Nullable q) {
+    consume(flag ? p : q);
+} // expected-error {{memory leak of value: `p`}} 
+// expected-error@-1 {{memory leak of value: `q`}}
+
+safe void differently_treated_subexpressions(int *owned _Nullable p, int *owned _Nullable q, int *owned _Nullable r) {
+    consume(p ? q : r);
+    // p is certainly not consumed
+    consume(p);
+}  // expected-error {{memory leak of value: `q`}} 
+// expected-error@-1 {{memory leak of value: `r`}}
