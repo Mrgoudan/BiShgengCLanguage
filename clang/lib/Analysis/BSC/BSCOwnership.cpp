@@ -1623,7 +1623,7 @@ Ownership::OwnershipStatus::checkCastOPS(const VarDecl *VD,
 }
 
 // if cast a `int * owned` variable to `void * owned`, we must ensure:
-// 1. it is not moved
+// 1. it is not moved or uninit
 // 2. its owned fields are all moved
 SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkCastBOP(const VarDecl *VD,
@@ -1634,6 +1634,10 @@ Ownership::OwnershipStatus::checkCastBOP(const VarDecl *VD,
   if ((has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) &&
       !is(VD, Ownership::Status::AllMoved)) {
     diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidCastMoved,
+                                      VD->getNameAsString()));
+  }
+  if (has(VD, Uninitialized) || is(VD, Uninitialized)) {
+    diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidCastUninit,
                                       VD->getNameAsString()));
   }
   if (!BOPOwnedOwnedFields[VD].empty() && diags.empty()) {
