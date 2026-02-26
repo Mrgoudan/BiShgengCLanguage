@@ -65,6 +65,11 @@ _Safe void test_literal_expression_conversions_forbidden(void) {
   float f = 1e40 + 2e40;     // expected-error {{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
+_Safe void test_flag_or_exceeds_range(void) {
+  unsigned char flag = 0;
+  flag = flag | 0x100;  // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+}
+
 int main(void) {
   test_float_to_int_forbidden();
   test_implicit_int_to_double_forbidden();
@@ -75,5 +80,6 @@ int main(void) {
   test_constant_out_of_range_implicit();
   test_literal_conversions_forbidden();
   test_literal_expression_conversions_forbidden();
+  test_flag_or_exceeds_range();
   return 0;
 }

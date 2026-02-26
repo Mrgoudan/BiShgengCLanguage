@@ -12658,6 +12658,33 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E,
                       Approximate);
 }
 
+#if ENABLE_BSC
+bool Sema::DoesExprValueRangeFitInType(Expr *E, QualType DestType) {
+  if (!E->getType()->isIntegerType() || !DestType->isIntegerType())
+    return false;
+
+  IntRange SourceRange =
+      GetExprRange(Context, E, isConstantEvaluated(), /*Approximate*/ false);
+  IntRange TargetRange = IntRange::forTargetOfCanonicalType(
+      Context, DestType->getCanonicalTypeInternal().getTypePtr());
+
+  // Source range too wide for target.
+  if (SourceRange.Width > TargetRange.Width)
+    return false;
+
+  // Unsigned target cannot hold negative values.
+  if (TargetRange.NonNegative && !SourceRange.NonNegative)
+    return false;
+
+  // Signed target with non-negative source: value 2^(w-1) would become negative
+  // when stored, so require strict inequality.
+  if (!TargetRange.NonNegative && SourceRange.NonNegative)
+    return SourceRange.Width < TargetRange.Width;
+
+  return SourceRange.Width <= TargetRange.Width;
+}
+#endif
+
 /// Checks whether the given value, which currently has the given
 /// source semantics, has the same value when coerced through the
 /// target semantics.

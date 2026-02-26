@@ -841,17 +841,19 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
         }
       }
     }
-    // Implicit integer to floating is forbidden unless constant fits (manual rule 6).
-    if (!IsExplicitCast && SrcType->isIntegerType() &&
-        DestType->isRealFloatingType() &&
-        !IsSafeConstantValueConversion(DestType, E)) {
-      IsSafeBehavior = false;
-      IsExplicitConversionAllowed = true; // arithmetic explicit cast OK
-    }
-    // conversion const value is allowed, if the destination type can embrace it
-    if (!DestType->isEnumeralType() && !SrcType->isEnumeralType() &&
-        IsSafeConstantValueConversion(DestType, E)) {
-      IsSafeBehavior = true;
+
+    if (!DestType->isEnumeralType() && !SrcType->isEnumeralType()) {
+      // conversion const value is allowed if the destination type can embrace it
+      // Also allow when value range analysis shows the expression fits in target
+      if (IsSafeConstantValueConversion(DestType, E) ||
+          DoesExprValueRangeFitInType(E, DestType)) {
+        IsSafeBehavior = true;
+      } else if (!IsExplicitCast && SrcType->isIntegerType() &&
+                 DestType->isRealFloatingType()) {
+        // Implicit integer to floating is forbidden unless constant fits.
+        IsSafeBehavior = false;
+        IsExplicitConversionAllowed = true; // arithmetic explicit cast OK
+      }
     }
 
     if (DestType->isEnumeralType() || SrcType->isEnumeralType()) {

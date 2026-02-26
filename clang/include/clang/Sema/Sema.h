@@ -12391,6 +12391,10 @@ public:
   bool IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast = false);
   bool IsSafeZoneIncDecVoidExpr(Expr *E);
   bool IsSafeConstantValueConversion(QualType DestType, Expr *E);
+  /// Returns true if the value range of expression E (from range analysis)
+  /// fits in DestType. Used by BSC safe zone for implicit conversion checks.
+  /// Only applicable for integral types.
+  bool DoesExprValueRangeFitInType(Expr *E, QualType DestType);
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   FunctionDecl *SelectFunctionDeclForPointerAssignment(
       Expr *SrcExpr, const FunctionProtoType *DestFuncType);

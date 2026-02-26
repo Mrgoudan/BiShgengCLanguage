@@ -119,6 +119,14 @@ _Safe void rule9_literals_and_literal_expressions(void) {
   float fl = 1.0f + 2.0f;
 }
 
+// Rule 10: Value range analysis - flag | small_constant fits in unsigned char
+_Safe void rule10_value_range_flag_ops(void) {
+  unsigned char flag = 0;
+  flag = flag | 0x10;   // ok: 0x10 fits, result in [0,255]
+  flag = flag | 0x01;   // ok
+  flag = flag & 0xFF;   // ok: result in [0,255]
+}
+
 int main(void) {
   rule1_bool();
   rule2_unsigned();
@@ -130,5 +138,6 @@ int main(void) {
   rule7_comparison_result();
   rule8_constants();
   rule9_literals_and_literal_expressions();
+  rule10_value_range_flag_ops();
   return 0;
 }
