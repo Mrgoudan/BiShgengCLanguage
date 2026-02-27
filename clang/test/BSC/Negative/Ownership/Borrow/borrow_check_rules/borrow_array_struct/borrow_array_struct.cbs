@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -verify %s
+
+struct T {
+  int * _Borrow _Nullable p;
+};
+
+_Safe void foo(void) {
+  struct T ptrarray[10] = {};
+  int a = 0;
+  {
+    int b = 0;
+    ptrarray[2].p = &_Mut a;
+    ptrarray[4].p = &_Mut b; // expected-error {{`b` does not live long enough}}
+  } // expected-note {{`b` dropped here while still borrowed}}
+  int r = *ptrarray[4].p;
+}

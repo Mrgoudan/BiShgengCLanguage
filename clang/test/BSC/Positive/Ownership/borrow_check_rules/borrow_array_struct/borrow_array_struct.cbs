@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+struct T {
+  int * _Borrow _Nullable p;
+};
+
+_Safe void foo1(void) {
+  struct T ptrarray[10] = {{.p=nullptr}};
+  int a = 0;
+  ptrarray[2].p = &_Mut a;
+}
+
+int main() {
+  foo1();
+  return 0;
+}

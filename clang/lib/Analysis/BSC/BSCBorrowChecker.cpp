@@ -25,6 +25,11 @@ bool IsTrackedType(QualType type) {
   if (type->isPointerType() && type.isOwnedQualified()) {
     return IsTrackedType(type->getPointeeType());
   }
+  if (type->isArrayType()) {
+    if (const ArrayType *AT = type->getAsArrayTypeUnsafe()) {
+      return IsTrackedType(AT->getElementType());
+    }
+  }
   if (type.isBorrowQualified())
     return true;
   if (const RecordType *RT = type->getAs<RecordType>()) {
