@@ -3,144 +3,144 @@
 // Positive tests for constraint-based heterogeneous function pointer assignment
 
 // Declarations from bishengc_safety.hbs
-safe T *owned safe_malloc<T>(T t);
-safe void safe_free(void * _Nullable owned p);
+_Safe T *owned safe_malloc<T>(T t);
+_Safe void safe_free(void * _Nullable owned p);
 
 // Test 1: Basic assignment - owned constraint matching
-unsafe int* process(int* p);
-safe int* owned process(int* owned p);
+_Unsafe int* process(int* p);
+_Safe int* owned process(int* owned p);
 
 void test1(void) {
-    safe int* owned (*safe_ptr)(int* owned) = 0;
-    unsafe int* (*unsafe_ptr)(int*) = 0;
+    _Safe int* owned (*safe_ptr)(int* owned) = 0;
+    _Unsafe int* (*unsafe_ptr)(int*) = 0;
 
-    safe_ptr = process;    // Assigns safe version (constraints match)
-    unsafe_ptr = process;  // Assigns unsafe or safe version
+    safe_ptr = process;    // Assigns _Safe version (constraints match)
+    unsafe_ptr = process;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 2: Borrow constraint matching
-unsafe void consume(int* p);
-safe void consume(int* borrow p);
+_Unsafe void consume(int* p);
+_Safe void consume(int* borrow p);
 
 void test2(void) {
-    safe void (*safe_ptr)(int* borrow) = 0;
-    unsafe void (*unsafe_ptr)(int*) = 0;
+    _Safe void (*safe_ptr)(int* borrow) = 0;
+    _Unsafe void (*unsafe_ptr)(int*) = 0;
 
-    safe_ptr = consume;    // Assigns safe version (borrow constraint matches)
-    unsafe_ptr = consume;  // Assigns unsafe or safe version
+    safe_ptr = consume;    // Assigns _Safe version (borrow constraint matches)
+    unsafe_ptr = consume;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 4: Multiple parameters with matching constraints
-unsafe void process_pair(int* p1, float* p2);
-safe void process_pair(int* owned p1, float* owned p2);
+_Unsafe void process_pair(int* p1, float* p2);
+_Safe void process_pair(int* owned p1, float* owned p2);
 
 void test4(void) {
-    safe void (*safe_ptr)(int* owned, float* owned) = 0;
-    unsafe void (*unsafe_ptr)(int*, float*) = 0;
+    _Safe void (*safe_ptr)(int* owned, float* owned) = 0;
+    _Unsafe void (*unsafe_ptr)(int*, float*) = 0;
 
-    safe_ptr = process_pair;    // Assigns safe version
-    unsafe_ptr = process_pair;  // Assigns unsafe or safe version
+    safe_ptr = process_pair;    // Assigns _Safe version
+    unsafe_ptr = process_pair;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 5: Return type with ownership qualifiers
-unsafe int* get_int(int* p);
-safe int* owned get_int(int* owned p);
+_Unsafe int* get_int(int* p);
+_Safe int* owned get_int(int* owned p);
 
 void test5(void) {
-    safe int* owned (*safe_ptr)(int* owned) = 0;
-    unsafe int* (*unsafe_ptr)(int*) = 0;
+    _Safe int* owned (*safe_ptr)(int* owned) = 0;
+    _Unsafe int* (*unsafe_ptr)(int*) = 0;
 
-    safe_ptr = get_int;    // Assigns safe version
-    unsafe_ptr = get_int;  // Assigns unsafe or safe version
+    safe_ptr = get_int;    // Assigns _Safe version
+    unsafe_ptr = get_int;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 6: Nested pointer with ownership qualifiers
-unsafe void process_nested(int** pp);
-safe void process_nested(int** owned pp);
+_Unsafe void process_nested(int** pp);
+_Safe void process_nested(int** owned pp);
 
 void test6(void) {
-    safe void (*safe_ptr)(int** owned) = 0;
-    unsafe void (*unsafe_ptr)(int**) = 0;
+    _Safe void (*safe_ptr)(int** owned) = 0;
+    _Unsafe void (*unsafe_ptr)(int**) = 0;
 
-    safe_ptr = process_nested;    // Assigns safe version
-    unsafe_ptr = process_nested;  // Assigns unsafe or safe version
+    safe_ptr = process_nested;    // Assigns _Safe version
+    unsafe_ptr = process_nested;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 7: Mixed owned and borrow parameters
-unsafe void mixed_func(int* p1, int* p2);
-safe void mixed_func(int* owned p1, int* borrow p2);
+_Unsafe void mixed_func(int* p1, int* p2);
+_Safe void mixed_func(int* owned p1, int* borrow p2);
 
 void test7(void) {
-    safe void (*safe_ptr)(int* owned, int* borrow) = 0;
-    unsafe void (*unsafe_ptr)(int*, int*) = 0;
+    _Safe void (*safe_ptr)(int* owned, int* borrow) = 0;
+    _Unsafe void (*unsafe_ptr)(int*, int*) = 0;
 
-    safe_ptr = mixed_func;    // Assigns safe version
-    unsafe_ptr = mixed_func;  // Assigns unsafe or safe version
+    safe_ptr = mixed_func;    // Assigns _Safe version
+    unsafe_ptr = mixed_func;  // Assigns _Unsafe or _Safe version
 }
 
-// Test 8: Safe pointer assignment in safe context
+// Test 8: Safe pointer assignment in _Safe context
 void test8_safe(void) {
-    safe {
-        safe int* owned (*safe_ptr)(int* owned) = 0;
-        safe_ptr = process;  // Must assign safe version (only safe allowed in safe context)
+    _Safe {
+        _Safe int* owned (*safe_ptr)(int* owned) = 0;
+        safe_ptr = process;  // Must assign _Safe version (only _Safe allowed in _Safe context)
     }
 }
 
-// Test 9: Unsafe pointer assignment in unsafe context (prefers safe)
+// Test 9: Unsafe pointer assignment in _Unsafe context (prefers _Safe)
 void test9_unsafe(void) {
-    unsafe {
-        safe int* owned (*safe_ptr)(int* owned) = 0;
-        unsafe int* (*unsafe_ptr)(int*) = 0;
+    _Unsafe {
+        _Safe int* owned (*safe_ptr)(int* owned) = 0;
+        _Unsafe int* (*unsafe_ptr)(int*) = 0;
 
-        safe_ptr = process;    // Prefers safe version (constraints match)
-        unsafe_ptr = process;  // Can use unsafe or safe version
+        safe_ptr = process;    // Prefers _Safe version (constraints match)
+        unsafe_ptr = process;  // Can use _Unsafe or _Safe version
     }
 }
 
 // Test 10: void* owned parameter and return - hot fix scenario
-unsafe void* process_void(void* p);
-safe void* owned process_void(void* owned p);
+_Unsafe void* process_void(void* p);
+_Safe void* owned process_void(void* owned p);
 
 void test10_void_owned(void) {
-    safe void* owned (*safe_ptr)(void* owned) = 0;
-    unsafe void* (*unsafe_ptr)(void*) = 0;
+    _Safe void* owned (*safe_ptr)(void* owned) = 0;
+    _Unsafe void* (*unsafe_ptr)(void*) = 0;
 
-    safe_ptr = process_void;    // Assigns safe version
-    unsafe_ptr = process_void;  // Assigns unsafe or safe version
+    safe_ptr = process_void;    // Assigns _Safe version
+    unsafe_ptr = process_void;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 11: const char* borrow parameter - hot fix scenario
-unsafe void log_msg(const char* msg);
-safe void log_msg(const char* borrow msg);
+_Unsafe void log_msg(const char* msg);
+_Safe void log_msg(const char* borrow msg);
 
 void test11_const_char_borrow(void) {
-    safe void (*safe_ptr)(const char* borrow) = 0;
-    unsafe void (*unsafe_ptr)(const char*) = 0;
+    _Safe void (*safe_ptr)(const char* borrow) = 0;
+    _Unsafe void (*unsafe_ptr)(const char*) = 0;
 
-    safe_ptr = log_msg;    // Assigns safe version (borrow constraint matches)
-    unsafe_ptr = log_msg;  // Assigns unsafe or safe version
+    safe_ptr = log_msg;    // Assigns _Safe version (borrow constraint matches)
+    unsafe_ptr = log_msg;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 12: const char* borrow return with borrow parameter
-unsafe const char* lookup(const char* key);
-safe const char* borrow lookup(const char* borrow key);
+_Unsafe const char* lookup(const char* key);
+_Safe const char* borrow lookup(const char* borrow key);
 
 void test12_const_borrow_return(void) {
-    safe const char* borrow (*safe_ptr)(const char* borrow) = 0;
-    unsafe const char* (*unsafe_ptr)(const char*) = 0;
+    _Safe const char* borrow (*safe_ptr)(const char* borrow) = 0;
+    _Unsafe const char* (*unsafe_ptr)(const char*) = 0;
 
-    safe_ptr = lookup;    // Assigns safe version
-    unsafe_ptr = lookup;  // Assigns unsafe or safe version
+    safe_ptr = lookup;    // Assigns _Safe version
+    unsafe_ptr = lookup;  // Assigns _Unsafe or _Safe version
 }
 
 // Test 13: Mixed owned/borrow with const qualifiers
-unsafe void process_mixed_const(int* p1, const char* p2);
-safe void process_mixed_const(int* owned p1, const char* borrow p2);
+_Unsafe void process_mixed_const(int* p1, const char* p2);
+_Safe void process_mixed_const(int* owned p1, const char* borrow p2);
 
 void test13_mixed_const(void) {
-    safe void (*safe_ptr)(int* owned, const char* borrow) = 0;
-    unsafe void (*unsafe_ptr)(int*, const char*) = 0;
+    _Safe void (*safe_ptr)(int* owned, const char* borrow) = 0;
+    _Unsafe void (*unsafe_ptr)(int*, const char*) = 0;
 
-    safe_ptr = process_mixed_const;    // Assigns safe version
-    unsafe_ptr = process_mixed_const;  // Assigns unsafe or safe version
+    safe_ptr = process_mixed_const;    // Assigns _Safe version
+    unsafe_ptr = process_mixed_const;  // Assigns _Unsafe or _Safe version
 }

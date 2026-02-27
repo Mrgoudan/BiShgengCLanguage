@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -verify %s
 
-safe void check_dereferenced_test1(void) {
+_Safe void check_dereferenced_test1(void) {
   int *borrow _Nullable p = nullptr;
   {
     *p = 10; // expected-error {{nullable pointer cannot be dereferenced}}
-    unsafe {
+    _Unsafe {
       int a = 2;
       *p = a;
-      safe *p = a; // expected-error {{nullable pointer cannot be dereferenced}}
+      _Safe *p = a; // expected-error {{nullable pointer cannot be dereferenced}}
     }
   }
   *p = 5;         // expected-error {{nullable pointer cannot be dereferenced}}
-  unsafe *p = 5;  // ok
+  _Unsafe *p = 5;  // ok
 }
 void check_dereferenced_test2() {
   int *borrow _Nullable p = nullptr;
@@ -22,11 +22,11 @@ void check_dereferenced_test2() {
 }
 
 void check_dereferenced_test3() {
-  safe {
+  _Safe {
     int *borrow _Nullable p = nullptr;
-    unsafe {
+    _Unsafe {
       *p = 5;
-      safe {
+      _Safe {
         if (p != nullptr) {
           *p = 10;
         }
@@ -40,17 +40,17 @@ void check_dereferenced_test3() {
 void check_dereferenced_test4() {
   int *borrow _Nullable p = nullptr;
   if (p != nullptr) {
-    safe *p = 5;
+    _Safe *p = 5;
   }
-  safe *p = 10;            // expected-error {{nullable pointer cannot be dereferenced}}
+  _Safe *p = 10;            // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
 void check_dereferenced_test5<T>() {
-  safe {
+  _Safe {
     int *borrow _Nullable p = nullptr;
-    unsafe {
+    _Unsafe {
       *p = 5;
-      safe {
+      _Safe {
         if (p != nullptr) {
           *p = 10;
         }
@@ -64,27 +64,27 @@ void check_dereferenced_test5<T>() {
 void check_dereferenced_test6<T>() {
   int *borrow _Nullable p = nullptr;
   if (p != nullptr) {
-    safe *p = 5;
+    _Safe *p = 5;
   }
-  safe *p = 10;            // expected-error {{nullable pointer cannot be dereferenced}}
+  _Safe *p = 10;            // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void check_assigned_test(void) {
+_Safe void check_assigned_test(void) {
   int *borrow p = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-  unsafe {
+  _Unsafe {
     int *borrow p2 = nullptr;
   }
 }
 
-safe int* borrow _Nonnull check_returned_test(int *borrow _Nonnull ptr ) {
+_Safe int* borrow _Nonnull check_returned_test(int *borrow _Nonnull ptr ) {
   int *borrow _Nullable p = nullptr;
   return p; // expected-error {{cannot return nullable pointer type}}
 }
 
-safe void check_param_pass_test(int *borrow ptr) {
+_Safe void check_param_pass_test(int *borrow ptr) {
   int *borrow _Nullable p = nullptr;
   int *borrow p2 = check_returned_test(p); // expected-error {{cannot pass nullable pointer argument}}
-  unsafe {
+  _Unsafe {
     int *borrow p3 = check_returned_test(p);
   }
 }

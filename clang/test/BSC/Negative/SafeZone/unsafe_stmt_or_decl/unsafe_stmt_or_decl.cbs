@@ -20,7 +20,7 @@ union UnionWithoutPointer {
   float f;
 };
 
-safe int main(void) {
+_Safe int main(void) {
   int a;  // ok: basic types can be uninitialized
   _Bool b;  // ok: bool type can be uninitialized
   struct StructWithoutPointer s;  // ok: struct without pointer fields can be uninitialized

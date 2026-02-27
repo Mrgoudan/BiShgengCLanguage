@@ -51,9 +51,9 @@ typedef struct {
   int b;
 } Time;
 
-safe unsigned int foo(S *borrow);
+_Safe unsigned int foo(S *borrow);
 
-safe unsigned int test(Date *borrow date, Time *borrow time, unsigned int *borrow pui) {
+_Safe unsigned int test(Date *borrow date, Time *borrow time, unsigned int *borrow pui) {
   S s = {0};
   GET(&mut s, date, time, pui);
   return 1;

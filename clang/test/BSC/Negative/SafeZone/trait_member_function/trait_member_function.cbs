@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 trait F {
-  unsafe int foo(This* this);
-  unsafe int goo(This* this);
-  unsafe int* owned hoo(This* owned this);
+  _Unsafe int foo(This* this);
+  _Unsafe int goo(This* this);
+  _Unsafe int* owned hoo(This* owned this);
 };
 
 trait G {
-  safe int* owned ioo(This* owned this);
-  safe int* owned joo(This* owned this);
-  safe int* owned koo(This* owned this);
+  _Safe int* owned ioo(This* owned this);
+  _Safe int* owned joo(This* owned this);
+  _Safe int* owned koo(This* owned this);
 };
 
-unsafe int int::foo(int* this) { 
+_Unsafe int int::foo(int* this) { 
   return 1;
 }
 
@@ -20,15 +20,15 @@ int int::goo(int* this) {   // OK
   return 1;
 }
 
-safe int* owned int::hoo(int* owned this) {   // OK
+_Safe int* owned int::hoo(int* owned this) {   // OK
   return this;
 }
 
-safe int* owned int::ioo(int* owned this) {  // OK
+_Safe int* owned int::ioo(int* owned this) {  // OK
   return this;
 }
 
-unsafe int* owned int::joo(int* owned this) {
+_Unsafe int* owned int::joo(int* owned this) {
   return this;
 }
 
@@ -38,13 +38,13 @@ int* owned int::koo(int* owned this) {
 
 impl trait F for int; 
 
-impl trait G for int; // expected-error {{conversion from type 'int *owned (*)(void *owned)' to 'safe int *owned (*)(void *owned)' is forbidden}}
-                      // expected-error@-1 {{conversion from type 'int *owned (*)(void *owned)' to 'safe int *owned (*)(void *owned)' is forbidden}}
+impl trait G for int; // expected-error {{conversion from type 'int *owned (*)(void *owned)' to '_Safe int *owned (*)(void *owned)' is forbidden}}
+                      // expected-error@-1 {{conversion from type 'int *owned (*)(void *owned)' to '_Safe int *owned (*)(void *owned)' is forbidden}}
 int main() {
   int a = 1;
   int *p = &a;
   trait F* f = p;
-  safe {
+  _Safe {
     f->goo();    // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
                     // expected-error@-1 {{unsafe function call is forbidden in the safe zone}}
     int::foo(p); // expected-error {{unsafe function call is forbidden in the safe zone}}

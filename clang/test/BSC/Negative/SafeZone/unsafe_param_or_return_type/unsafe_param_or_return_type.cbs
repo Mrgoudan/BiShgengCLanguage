@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe int* funa(int *a);
+_Safe int* funa(int *a);
 
-safe int* funa(int *a) {
+_Safe int* funa(int *a) {
   return a;
 }
 
-safe int* (*p)(int *a);
+_Safe int* (*p)(int *a);
 
-safe int funb(int arr[10]) {
+_Safe int funb(int arr[10]) {
   return 10;
 }
 
@@ -17,7 +17,7 @@ union data {
   char b;
 };
 
-safe union data func(union data a) { 
+_Safe union data func(union data a) { 
   return a;                         
 }
 
@@ -25,15 +25,15 @@ struct SA {
   int a;
 };
 
-safe struct SA fund(struct SA f) {
+_Safe struct SA fund(struct SA f) {
   return f;
 }
 
-safe struct SA fund1(struct SA *owned fp) {
+_Safe struct SA fund1(struct SA *owned fp) {
   return *fp;
 }// expected-error {{memory leak of value: `fp`}}
 
-safe struct SA fund2(struct SA *borrow fp) {
+_Safe struct SA fund2(struct SA *borrow fp) {
   return *fp;
 }
 
@@ -41,7 +41,7 @@ struct SB {
   int *a;
 };
 
-safe struct SB fune(struct SB f) {
+_Safe struct SB fune(struct SB f) {
   return f;
 }
 
@@ -49,7 +49,7 @@ struct SC {
   union data a;
 };
 
-safe struct SC funf(struct SC f) {  
+_Safe struct SC funf(struct SC f) {  
   return f;                      
 }
 
@@ -57,7 +57,7 @@ struct SD {
   int arr[10];
 };
 
-safe struct SD fung(struct SD f) {
+_Safe struct SD fung(struct SD f) {
   return f;
 }
 
@@ -65,7 +65,7 @@ struct SE {
   int (*arr)[10];
 };
 
-safe struct SE funh(struct SE f) {
+_Safe struct SE funh(struct SE f) {
   return f;
 }
 
@@ -73,11 +73,11 @@ struct SF {
   int *arr[10];
 };
 
-safe struct SF funi(struct SF f) {
+_Safe struct SF funi(struct SF f) {
   return f;
 }
 
-safe int* owned funj(int* owned a) {
+_Safe int* owned funj(int* owned a) {
   return a;
 }
 
@@ -85,6 +85,6 @@ struct SG {
   int* owned a;
 };
 
-safe struct SG funk(struct SG f) {
+_Safe struct SG funk(struct SG f) {
   return f;
 }

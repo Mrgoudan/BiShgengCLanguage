@@ -2,10 +2,10 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-safe T *owned safe_malloc<T>(T t);
-safe void safe_free(void *owned p);
+_Safe T *owned safe_malloc<T>(T t);
+_Safe void safe_free(void *owned p);
 
-safe void test1(void) {
+_Safe void test1(void) {
     int *owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {

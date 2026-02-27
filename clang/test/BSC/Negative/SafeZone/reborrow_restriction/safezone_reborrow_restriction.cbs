@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-safe void read_by_value(int);
-safe void read_by_borrow(const int *borrow);
+_Safe void read_by_value(int);
+_Safe void read_by_borrow(const int *borrow);
 
-safe void non_lexical_lifetime(int x) {
+_Safe void non_lexical_lifetime(int x) {
     int *borrow ref = &mut x;
     const int *borrow cref = ref; // expected-note {{`*ref` is borrowed here}}
     ++*ref; // expected-error {{cannot assign to `*ref` because it is borrowed}}
     read_by_value(*cref); 
 }
 
-safe void non_lexical_lifetime_limitation(int x) {
+_Safe void non_lexical_lifetime_limitation(int x) {
     int *borrow ref = &mut x; // expected-note {{`x` is borrowed here}}
     // explicitly define an immutable reference
     const int *borrow cref = ref;
@@ -20,41 +20,41 @@ safe void non_lexical_lifetime_limitation(int x) {
 }
 
 // re-borrow in function arguments
-safe void accept_immutable(const int *borrow); // expected-note 2 {{passing argument to parameter here}}
-safe void accept_mutable(int *borrow); // expected-note 3 {{passing argument to parameter here}}
+_Safe void accept_immutable(const int *borrow); // expected-note 2 {{passing argument to parameter here}}
+_Safe void accept_mutable(int *borrow); // expected-note 3 {{passing argument to parameter here}}
 
 // re-borrow when return value
-safe int *ret_raw(void);
-safe const int *borrow ret_immutable(const int *borrow);
-safe int *owned ret_own(void);
+_Safe int *ret_raw(void);
+_Safe const int *borrow ret_immutable(const int *borrow);
+_Safe int *owned ret_own(void);
 
-safe void raw2immutable(int *ptr) {
+_Safe void raw2immutable(int *ptr) {
     const int *borrow cref = ptr; // expected-error {{conversion from type 'int *' to 'const int *borrow' is forbidden in the safe zone}}
     accept_immutable(ptr); // expected-error {{conversion from type 'int *' to 'const int *borrow' is forbidden in the safe zone}}
     const int *borrow cref2 = ret_raw(); // expected-error {{conversion from type 'int *' to 'const int *borrow' is forbidden in the safe zone}}
 }
 
-safe int *owned own2immutable(int *owned ptr) {
+_Safe int *owned own2immutable(int *owned ptr) {
     const int *borrow cref = ptr; // expected-error {{conversion from type 'int *owned' to 'const int *borrow' is forbidden in the safe zone}}
     accept_immutable(ptr); // expected-error {{conversion from type 'int *owned' to 'const int *borrow' is forbidden in the safe zone}}
     const int *borrow cref2 = ret_own(); // expected-error {{conversion from type 'int *owned' to 'const int *borrow' is forbidden in the safe zone}}
     return ptr;
 }
 
-safe void immutable2mutable(const int *borrow cref) {
+_Safe void immutable2mutable(const int *borrow cref) {
     int *borrow ref = cref; // expected-error {{conversion from type 'const int *borrow' to 'int *borrow' is forbidden in the safe zone}}
     accept_mutable(cref); // expected-error {{conversion from type 'const int *borrow' to 'int *borrow' is forbidden in the safe zone}}
     int dummy = 0;
     int *borrow ref2 = ret_immutable(&const dummy); // expected-error {{conversion from type 'const int *borrow' to 'int *borrow' is forbidden in the safe zone}}
 }
 
-safe void raw2mutable(int *ptr) {
+_Safe void raw2mutable(int *ptr) {
     int *borrow ref = ptr; // expected-error {{conversion from type 'int *' to 'int *borrow' is forbidden in the safe zone}}
     accept_mutable(ptr); // expected-error {{conversion from type 'int *' to 'int *borrow' is forbidden in the safe zone}}
     int *borrow ref2 = ret_raw(); // expected-error {{conversion from type 'int *' to 'int *borrow' is forbidden in the safe zone}}
 }
 
-safe int *owned own2mutable(int *owned ptr) {
+_Safe int *owned own2mutable(int *owned ptr) {
     int *borrow ref = ptr; // expected-error {{conversion from type 'int *owned' to 'int *borrow' is forbidden in the safe zone}}
     accept_mutable(ptr); // expected-error {{conversion from type 'int *owned' to 'int *borrow' is forbidden in the safe zone}}
     int *borrow ref2 = ret_own(); // expected-error {{conversion from type 'int *owned' to 'int *borrow' is forbidden in the safe zone}}

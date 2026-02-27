@@ -346,7 +346,7 @@ ConvertTypeToDiagnosticString(ASTContext &Context, QualType Ty,
 
 #if ENABLE_BSC
   if (Ty->checkFunctionProtoType(SZ_Safe)) {
-    S = "safe " + S;
+    S = "_Safe " + S;
   }
 #endif
 

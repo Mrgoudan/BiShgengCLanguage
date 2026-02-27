@@ -10,10 +10,10 @@ struct S4;  // expected-note{{forward declaration of 'struct S4'}}
 struct S5 { struct S4 s4; }; // expected-error{{field has incomplete type 'struct S4'}}
 struct S4 { struct S5 s5; };  
 
-safe struct S1 unsafeReturnFunc(void) {} 
+_Safe struct S1 unsafeReturnFunc(void) {} 
 
-safe void unsafeParamFunc(struct S1 s1) {} 
+_Safe void unsafeParamFunc(struct S1 s1) {} 
 
-safe struct S4 safeReturnFunc(void) {}
+_Safe struct S4 safeReturnFunc(void) {}
 
-safe void safeParamFunc(struct S4 s4) {}
+_Safe void safeParamFunc(struct S4 s4) {}

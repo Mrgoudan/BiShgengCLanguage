@@ -16,7 +16,7 @@ void UnsafeOperator() {
   struct F *pc = &pb;
   struct F* owned po = (struct F * owned)&pb;
 
-  safe {
+  _Safe {
     int a = 0;
     a++;     // allowed
     a--;     // allowed
@@ -38,7 +38,7 @@ void IncomInitList() {
     int x2;
   };
 
-  safe {
+  _Safe {
     struct F a = {};             // ok
     struct F b = {0};            // ok
     struct F c = {10};           
@@ -55,7 +55,7 @@ void IncomInitList() {
     struct S n = {0};
   }
 
-  safe {
+  _Safe {
     int arr1[4] = {0};          // ok
     int arr2[4] = {0, 1, 2};    // ok
     int arr3[4] = {0, 1, 2, 3};

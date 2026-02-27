@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe void constexpr_underflow_assignment(void) {
+_Safe void constexpr_underflow_assignment(void) {
     constexpr int NEGATIVE = -1;
     char c = NEGATIVE;
     signed char sc = NEGATIVE;
@@ -14,7 +14,7 @@ safe void constexpr_underflow_assignment(void) {
     long long ll = NEGATIVE;
     unsigned long long ull = NEGATIVE; // expected-error {{conversion from type 'const int' to 'unsigned long long' is forbidden in the safe zone}}
 }
-safe void constexpr_overflow_assignment(void) {
+_Safe void constexpr_overflow_assignment(void) {
     constexpr unsigned long long BIG = 18446744073709551615ull;
     char c = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'char' is forbidden in the safe zone}}
     signed char sc = BIG; // expected-error {{conversion from type 'const unsigned long long' to 'signed char' is forbidden in the safe zone}}
@@ -32,7 +32,7 @@ safe void constexpr_overflow_assignment(void) {
     unsigned long long ull = BIG;
 }
 
-safe void constexpr_underflow_calculation_assignment(void) {
+_Safe void constexpr_underflow_calculation_assignment(void) {
     constexpr int X = 3;
     constexpr int Y = 4;
     char c = X - Y;
@@ -48,7 +48,7 @@ safe void constexpr_underflow_calculation_assignment(void) {
     unsigned long long ull = X - Y; // expected-error {{conversion from type 'int' to 'unsigned long long' is forbidden in the safe zone}}
 }
 
-safe void constexpr_overflow_calculation_assignment(void) {
+_Safe void constexpr_overflow_calculation_assignment(void) {
     constexpr unsigned long long X = 9223372036854775807ull;
     constexpr unsigned long long Y = 9223372036854775808ull;
     char c = X + Y; // expected-error {{conversion from type 'unsigned long long' to 'char' is forbidden in the safe zone}}

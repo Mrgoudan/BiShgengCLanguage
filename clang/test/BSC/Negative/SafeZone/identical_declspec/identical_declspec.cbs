@@ -2,46 +2,46 @@
 // UNSUPPORTED: ENABLE_BSC_FUTURE
 
 // Now valid as mixed mode declaration
-unsafe int add(int x, int y);
-safe int add(int x, int y) {  // ok: mixed mode compatible
+_Unsafe int add(int x, int y);
+_Safe int add(int x, int y) {  // ok: mixed mode compatible
   return x + y;
 }
 
-safe int g_a;   // expected-error {{'safe' can only appear before on function or statement or parenthesized expression}}
-safe struct b {  // expected-error {{'safe' can only appear before on function or statement or parenthesized expression}}
+_Safe int g_a;   // expected-error {{'_Safe' can only appear before on function or statement or parenthesized expression}}
+_Safe struct b {  // expected-error {{'_Safe' can only appear before on function or statement or parenthesized expression}}
   int a;
 };
-safe enum c {   // expected-error {{'safe' can only appear before on function or statement or parenthesized expression}}
+_Safe enum c {   // expected-error {{'_Safe' can only appear before on function or statement or parenthesized expression}}
   TA,
   TB,
   TC
 };
 
-unsafe int (*pp)(int x, int y); // expected-note {{previous definition is here}}
-safe int (*pp)(int x, int y);  // expected-error {{redefinition of 'pp' with a different type: 'safe int (*)(int, int)' vs 'int (*)(int, int)'}}
+_Unsafe int (*pp)(int x, int y); // expected-note {{previous definition is here}}
+_Safe int (*pp)(int x, int y);  // expected-error {{redefinition of 'pp' with a different type: '_Safe int (*)(int, int)' vs 'int (*)(int, int)'}}
 
-safe int safun(int x, int y) {
+_Safe int safun(int x, int y) {
   return 0;
 }
-unsafe int unfun(int x, int y) {
+_Unsafe int unfun(int x, int y) {
   return 0;
 }
 int fun(int x, int y) {
   return 0;
 }
 
-safe int (*sapfun)(int x, int y);
-unsafe int (*unpfun)(int x, int y);
+_Safe int (*sapfun)(int x, int y);
+_Unsafe int (*unpfun)(int x, int y);
 int (*pfun)(int x, int y);
 
 int main() {
-  unsafe int (*qq)(int x, int y); // expected-note {{previous definition is here}}
-  safe int (*qq)(int x, int y);   // expected-error {{redefinition of 'qq' with a different type: 'safe int (*)(int, int)' vs 'int (*)(int, int)'}}
+  _Unsafe int (*qq)(int x, int y); // expected-note {{previous definition is here}}
+  _Safe int (*qq)(int x, int y);   // expected-error {{redefinition of 'qq' with a different type: '_Safe int (*)(int, int)' vs 'int (*)(int, int)'}}
                                   // expected-error@-1 {{uninitialized declarator is forbidden in the safe zone}}
 
   sapfun = safun;
-  sapfun = unfun;  // expected-error {{conversion from type 'int (*)(int, int)' to 'safe int (*)(int, int)' is forbidden}}
-  sapfun = fun;    // expected-error {{conversion from type 'int (*)(int, int)' to 'safe int (*)(int, int)' is forbidden}}
+  sapfun = unfun;  // expected-error {{conversion from type 'int (*)(int, int)' to '_Safe int (*)(int, int)' is forbidden}}
+  sapfun = fun;    // expected-error {{conversion from type 'int (*)(int, int)' to '_Safe int (*)(int, int)' is forbidden}}
 
   unpfun = safun;  
   unpfun = unfun;
@@ -51,7 +51,7 @@ int main() {
   pfun = unfun;
   pfun = fun;
 
-safe {
+_Safe {
   // Note: Global variable modification restriction requires ENABLE_BSC_FUTURE
   unpfun = safun;   
   unpfun = unfun;

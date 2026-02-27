@@ -6,8 +6,8 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
-safe T *owned safe_malloc<T>(T t) {
-    unsafe {
+_Safe T *owned safe_malloc<T>(T t) {
+    _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
             addr = &t;
@@ -21,13 +21,13 @@ safe T *owned safe_malloc<T>(T t) {
 	}
 }
 
-safe void safe_free(void *owned p) {
-    unsafe {
+_Safe void safe_free(void *owned p) {
+    _Unsafe {
         free((void *)p);
     }
 }
 
-safe void test1(void) {
+_Safe void test1(void) {
     int *owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
@@ -40,7 +40,7 @@ safe void test1(void) {
     }
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     int *owned _Nullable p = nullptr;
     p = nullptr;
 }
@@ -48,7 +48,7 @@ safe void test2(void) {
 struct S {
     int *owned _Nullable p;
 };
-safe void test3(void) {
+_Safe void test3(void) {
     struct S s = { nullptr };
     int cond = 1;
     if (cond) {
@@ -60,7 +60,7 @@ safe void test3(void) {
     }
 }
 
-safe void test4(void) {
+_Safe void test4(void) {
     struct S s = { nullptr };
     struct S *owned _Nullable p = safe_malloc<struct S>(s);
     if (p->p != nullptr)
@@ -73,8 +73,8 @@ long * owned return_nonnull() {
     return p;
 }
 
-safe int test6(void) {
-    unsafe {
+_Safe int test6(void) {
+    _Unsafe {
         const long * owned a = return_nonnull();
         if (a != 0) {
             free((void *)(void * owned)a);
@@ -93,7 +93,7 @@ public:
         }
     }
 };
-safe void test7(void) {
+_Safe void test7(void) {
     K k = { nullptr };
     int cond = 1;
     if (cond) {
@@ -109,16 +109,16 @@ struct S2 {
     int *borrow _Nullable q;
 };
 
-safe void test8(void) {
+_Safe void test8(void) {
     int a = 1;
     struct S2 s = {
-        .p = unsafe(safe_malloc<int>(a)),
-        .q = unsafe(&mut a)
+        .p = _Unsafe(safe_malloc<int>(a)),
+        .q = _Unsafe(&mut a)
     };
     safe_free((void *owned)s.p);
 }
 
-safe void test9(void) {
+_Safe void test9(void) {
     int a = 1;
     struct S2 s = {
         .p = (safe_malloc<int>(a)),

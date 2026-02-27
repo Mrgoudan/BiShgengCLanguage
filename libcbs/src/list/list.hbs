@@ -11,7 +11,7 @@ struct _BSC_ListNode<T> {
     T element;
 };
 
-unsafe _BSC_ListNode<T>* _BSC_ListNode<T>::new(T el){
+_Unsafe _BSC_ListNode<T>* _BSC_ListNode<T>::new(T el){
     _BSC_ListNode<T> *rv = (_BSC_ListNode<T> *)malloc(sizeof(_BSC_ListNode<T>));
     if (!rv) {
         bsc_bad_alloc_handler(sizeof(_BSC_ListNode<T>));
@@ -65,20 +65,20 @@ static void LinkedList<T>::unlink_node(LinkedList<T> * borrow this, _BSC_ListNod
 }
 
 
-safe LinkedList<T> LinkedList<T>::new(void){
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe LinkedList<T> LinkedList<T>::new(void){
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate LinkedList with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 				    "Fix: You can wrap T with an owned struct.");
-    unsafe {
+    _Unsafe {
         LinkedList<T> rv = {NULL, NULL, 0};
         return rv;
     }
 }
 
 // Adds a new element at the end of the list.
-safe void LinkedList<T>::push_back(LinkedList<T> * borrow this, T el){
-    unsafe {
+_Safe void LinkedList<T>::push_back(LinkedList<T> * borrow this, T el){
+    _Unsafe {
         _BSC_ListNode<T> *node = _BSC_ListNode<T>::new(el);
         node->prev = this->tail;
         if (this->tail == NULL) {
@@ -92,8 +92,8 @@ safe void LinkedList<T>::push_back(LinkedList<T> * borrow this, T el){
 }
 
 // Adds a new element at the beginning of the list.
-safe void LinkedList<T>::push_front(LinkedList<T> * borrow this, T el){
-    unsafe {
+_Safe void LinkedList<T>::push_front(LinkedList<T> * borrow this, T el){
+    _Unsafe {
         _BSC_ListNode<T> *node = _BSC_ListNode<T>::new(el);
         node->next = this->head;
         if (this->head == NULL) {
@@ -107,8 +107,8 @@ safe void LinkedList<T>::push_front(LinkedList<T> * borrow this, T el){
 }
 
 // Removes the first element of the list, and reduces the size of the list by 1.
-safe T LinkedList<T>::pop_front(LinkedList<T> * borrow this){
-    unsafe {
+_Safe T LinkedList<T>::pop_front(LinkedList<T> * borrow this){
+    _Unsafe {
         if (this->len == 0) {
             bsc_out_of_bound_handler(0, 0);
         }
@@ -128,8 +128,8 @@ safe T LinkedList<T>::pop_front(LinkedList<T> * borrow this){
 }
 
 // Removes the last element of the list, and reduces the size of the list by 1.
-safe T LinkedList<T>::pop_back(LinkedList<T> * borrow this){
-    unsafe {
+_Safe T LinkedList<T>::pop_back(LinkedList<T> * borrow this){
+    _Unsafe {
         if (this->len == 0) {
             bsc_out_of_bound_handler(0, 0);
         }
@@ -150,8 +150,8 @@ safe T LinkedList<T>::pop_back(LinkedList<T> * borrow this){
 
 // Splits the list into two at the given index. Returns everything after the given index,
 // including the index.
-safe LinkedList<T> LinkedList<T>::split_off(LinkedList<T> * borrow this, size_t index) {
-    unsafe {
+_Safe LinkedList<T> LinkedList<T>::split_off(LinkedList<T> * borrow this, size_t index) {
+    _Unsafe {
         if (this->len < index) {
             bsc_out_of_bound_handler(this->len, index);
         }
@@ -197,8 +197,8 @@ safe LinkedList<T> LinkedList<T>::split_off(LinkedList<T> * borrow this, size_t 
 }
 
 // Removes all the elements from the list, which are equal to a given element.
-safe void LinkedList<T>::remove(LinkedList<T> * borrow this, T el){
-    unsafe {
+_Safe void LinkedList<T>::remove(LinkedList<T> * borrow this, T el){
+    _Unsafe {
         _BSC_ListNode<T> *h = this->head;
         while(h != NULL) {
             _BSC_ListNode<T> *n = h->next;
@@ -211,8 +211,8 @@ safe void LinkedList<T>::remove(LinkedList<T> * borrow this, T el){
 }
 
 // Remove all the elements of the list container, thus making it size 0.
-safe void LinkedList<T>::clear(LinkedList<T> * borrow this){
-    unsafe {
+_Safe void LinkedList<T>::clear(LinkedList<T> * borrow this){
+    _Unsafe {
         _BSC_ListNode<T> *h = this->head;
         while(h != NULL) {
             _BSC_ListNode<T> *n = h->next;
@@ -223,13 +223,13 @@ safe void LinkedList<T>::clear(LinkedList<T> * borrow this){
 }
 
 // Returns the number of elements in the list.
-safe size_t LinkedList<T>::length(const LinkedList<T> * borrow this){
+_Safe size_t LinkedList<T>::length(const LinkedList<T> * borrow this){
     return this->len;
 }
 
 // Returns the value of the first element in the list.
-safe T LinkedList<T>::front(const LinkedList<T> * borrow this){
-    unsafe {
+_Safe T LinkedList<T>::front(const LinkedList<T> * borrow this){
+    _Unsafe {
         if (this->len == 0) {
             bsc_out_of_bound_handler(0, 0);
         }
@@ -238,8 +238,8 @@ safe T LinkedList<T>::front(const LinkedList<T> * borrow this){
 }
 
 // Returns the value of the last element in the list.
-safe T LinkedList<T>::back(const LinkedList<T> * borrow this){
-    unsafe {
+_Safe T LinkedList<T>::back(const LinkedList<T> * borrow this){
+    _Unsafe {
         if (this->len == 0) {
             bsc_out_of_bound_handler(0, 0);
         }
@@ -248,7 +248,7 @@ safe T LinkedList<T>::back(const LinkedList<T> * borrow this){
 }
 
 // Returns the number of elements in the list.
-safe _Bool LinkedList<T>::is_empty(const LinkedList<T> * borrow this){
+_Safe _Bool LinkedList<T>::is_empty(const LinkedList<T> * borrow this){
     if (this->len == 0) {
         return 1;
     } else {
@@ -256,8 +256,8 @@ safe _Bool LinkedList<T>::is_empty(const LinkedList<T> * borrow this){
     }
 }
 
-safe _Bool LinkedList<T>::contains(const LinkedList<T> * borrow this, T el){
-    unsafe {
+_Safe _Bool LinkedList<T>::contains(const LinkedList<T> * borrow this, T el){
+    _Unsafe {
         _BSC_ListNode<T> *h = this->head;
         while(h != NULL) {
             _BSC_ListNode<T> *n = h->next;

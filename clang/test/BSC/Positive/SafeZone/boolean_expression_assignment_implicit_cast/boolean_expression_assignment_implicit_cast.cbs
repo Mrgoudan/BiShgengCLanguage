@@ -1,7 +1,7 @@
 // RUN: %clang -cc1 %s
 // expected-no-diagnostics
 
-safe void boolean_variable(_Bool b) {
+_Safe void boolean_variable(_Bool b) {
     char c = b;
     signed char sc = b;
     unsigned char uc = b;
@@ -15,9 +15,9 @@ safe void boolean_variable(_Bool b) {
     unsigned long long ull = b;
 }
 
-safe _Bool predicate(void);
+_Safe _Bool predicate(void);
 
-safe void boolean_function_call(void) {
+_Safe void boolean_function_call(void) {
     char c = predicate();
     signed char sc = predicate();
     unsigned char uc = predicate();
@@ -31,7 +31,7 @@ safe void boolean_function_call(void) {
     unsigned long long ull = predicate();
 }
 
-safe void boolean_expression(int x) {
+_Safe void boolean_expression(int x) {
     {
         char c = x == 0;
         signed char sc = x == 0;
@@ -87,9 +87,9 @@ safe void boolean_expression(int x) {
     }
 }
 
-safe void accept_boolean(_Bool);
+_Safe void accept_boolean(_Bool);
 
-safe void call_function_with_implicit_cast(_Bool b, int x) {
+_Safe void call_function_with_implicit_cast(_Bool b, int x) {
     accept_boolean(b);
     accept_boolean(!b);
     accept_boolean(!x);

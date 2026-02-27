@@ -3,9 +3,9 @@
 // RUN: %clang %t-rw.c -I %S -o %t-rw.output
 // RUN: %t-rw.output
 
-safe int* owned hack_malloc(void) {
+_Safe int* owned hack_malloc(void) {
   int x = 1;
-  unsafe {
+  _Unsafe {
     int* owned p = (int* owned)&x;
     return p;
   }
@@ -22,7 +22,7 @@ owned struct T {
 typedef __attribute__((unused)) int unusedInt;
 
 void test2(){
-  safe {
+  _Safe {
     __attribute__((unused)) int a = 1;
   }
   __attribute__((unused)) int a = 1;

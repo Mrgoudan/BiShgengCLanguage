@@ -2,8 +2,8 @@
 
 #define NULL ((void *)0)
 
-safe T* owned safe_malloc<T>(T);
-safe void safe_free(void* owned);
+_Safe T* owned safe_malloc<T>(T);
+_Safe void safe_free(void* owned);
 
 struct U { 
   int a;

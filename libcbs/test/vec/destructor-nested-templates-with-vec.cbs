@@ -9,11 +9,11 @@ struct Matrix<T> {
     Vec<Vec<T>> data;
 };
 
-static safe Matrix<T>* owned create_matrix<T>(size_t rows, size_t cols) {
+static _Safe Matrix<T>* owned create_matrix<T>(size_t rows, size_t cols) {
     Vec<Vec<T>> vec = Vec<Vec<T>>::with_capacity(rows);
     Matrix<T> m = {rows, cols, vec};
     Matrix<T>* owned mat = safe_malloc(m);
-    unsafe {
+    _Unsafe {
         if (mat == NULL) {
             printf("Error: Failed to allocate memory for matrix.\n");
             exit(1);

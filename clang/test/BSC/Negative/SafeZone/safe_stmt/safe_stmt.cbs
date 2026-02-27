@@ -1,26 +1,26 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe void test_safe_stmt1(void){
+_Safe void test_safe_stmt1(void){
     int a = 0;
     a++;                             // allowed
-    unsafe a++;                      // ok
+    _Unsafe a++;                      // ok
     int *b = &a;                     // expected-error {{'&' operator is forbidden in the safe zone}}
-    unsafe int *c = &a;              // ok
-    unsafe {
+    _Unsafe int *c = &a;              // ok
+    _Unsafe {
         int *d = &a;                 // ok
-        safe int *e = &a;            // expected-error {{'&' operator is forbidden in the safe zone}}
+        _Safe int *e = &a;            // expected-error {{'&' operator is forbidden in the safe zone}}
     }
 }
 
 void test_safe_stmt2() {
     int a = 0;
     a++;                             // ok
-    safe a++;                        // allowed
+    _Safe a++;                        // allowed
     int *b = &a;                     // ok
-    safe int *c = &a;                // expected-error {{'&' operator is forbidden in the safe zone}}
-    safe {
+    _Safe int *c = &a;                // expected-error {{'&' operator is forbidden in the safe zone}}
+    _Safe {
         int *d = &a;                 // expected-error {{'&' operator is forbidden in the safe zone}}
-        unsafe int *e = &a;           // ok
+        _Unsafe int *e = &a;           // ok
     }
 }
 
@@ -28,34 +28,34 @@ T add<T>(T a, T b) {
     return a + b;
 }
 
-safe void foo<T>(T* owned p) {
+_Safe void foo<T>(T* owned p) {
     T * a = (T*)p                      // expected-error {{conversion from type 'T *owned' to 'T *' is forbidden in the safe zone}}
-    unsafe T * b = (T*)p;              // ok
+    _Unsafe T * b = (T*)p;              // ok
     T * c = (T*)p;                     // expected-error {{conversion from type 'T *owned' to 'T *' is forbidden in the safe zone}}
 }
 
-safe void test_safe_stmt3(void) {
+_Safe void test_safe_stmt3(void) {
     int a = 0;
     for (int i = 0; i < 10; i++) {      // allowed
         a++;                            // allowed
     }
-    unsafe for (int i = 0; i < 10; i++) {   // ok
+    _Unsafe for (int i = 0; i < 10; i++) {   // ok
         a++;                                // ok
     }
     while(a > 0) {
         a--;                            // allowed
     }
-    unsafe while(a < 10) {
+    _Unsafe while(a < 10) {
         a++;                            // ok
     }
     test_safe_stmt2();                  // expected-error {{unsafe function call is forbidden in the safe zone}}
-    unsafe test_safe_stmt2();           // ok
-    unsafe switch(a) {
+    _Unsafe test_safe_stmt2();           // ok
+    _Unsafe switch(a) {
         case 1: a++;                    // ok
         case 2: a = a +5;
-        safe default: a--;               // allowed
+        _Safe default: a--;               // allowed
     }
     add<int>(1, 2);                      // expected-error {{unsafe function call is forbidden in the safe zone}}
-    unsafe int *owned p = (int *owned)&a;
+    _Unsafe int *owned p = (int *owned)&a;
     foo<int>(p);
 }

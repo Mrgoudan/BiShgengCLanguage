@@ -8,9 +8,9 @@ public:
 };
 
 
-safe int SafeSetVersionInfo(int id, String name, String commitId)
+_Safe int SafeSetVersionInfo(int id, String name, String commitId)
 {
-    unsafe {
+    _Unsafe {
          return SetVersionInfo(id, (const char*)name.as_str(), (const char*)commitId.as_str()); // expected-error {{memory leak because temporary variable 'name' is owned or indirect owned type, please fix it}}
     }
 }

@@ -4,25 +4,25 @@
 // Explicit casts are allowed, but implicit conversions remain forbidden
 
 void test_implicit_numeric_conversion(void) {
-  safe {
+  _Safe {
     long a = 2;
     // Implicit narrowing conversion is forbidden
     int b = a;  // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
   }
 
-  safe {
+  _Safe {
     double x = 1.0;
     // Implicit high-precision to low-precision conversion is forbidden
     float y = x;  // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
   }
 
-  safe {
+  _Safe {
     int val = 1;
     // Implicit char conversion is forbidden
     char c = val;  // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
   }
 
-  safe {
+  _Safe {
     unsigned int a = 1;
     // Implicit signed/unsigned conversion is forbidden
     int b = a;  // expected-error{{implicit conversion from type 'unsigned int' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
@@ -33,7 +33,7 @@ void test_implicit_enum_conversion(void) {
   enum E { ZERO, ONE, TWO };
   enum F { SUN, MON, TUES };
 
-  safe {
+  _Safe {
     int a = 0;
     // Implicit int to enum conversion is forbidden
     enum E num = a;  // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}

@@ -38,23 +38,23 @@ int Bar::getB_2(const This* this) {
   return this->a;
 }
 
-safe int Bar::getC(This* borrow this) {
+_Safe int Bar::getC(This* borrow this) {
   this->a = 2;
-  unsafe {
+  _Unsafe {
     printf("this->a in getC: %d\n", this->a);
   }
   return this->a;
 }
 
-safe int Bar::getC_2(const This* borrow this) {
-  unsafe {
+_Safe int Bar::getC_2(const This* borrow this) {
+  _Unsafe {
     printf("this->a in getC_2: %d\n", this->a);
   }
   return this->a;
 }
 
-safe void Bar::getD(This* owned this) {
-  unsafe free_owned<Bar>(this);
+_Safe void Bar::getD(This* owned this) {
+  _Unsafe free_owned<Bar>(this);
 }
 
 void test_non_pointer_This_call_reborrow() {
@@ -62,7 +62,7 @@ void test_non_pointer_This_call_reborrow() {
   Bar foo = {.a = 1};
   int b = foo.getB();
   int b_2 = foo.getB_2();
-  safe {
+  _Safe {
     int c = foo.getC();
     int c_2 = foo.getC_2();
   }
@@ -95,7 +95,7 @@ void test_owned_pointer_call_reborrow() {
   Bar * owned foo_owned = safe_malloc<Bar>(foo);
   int b = foo_owned->getB();
   int b_2 = foo_owned->getB_2();
-  safe {
+  _Safe {
     int c = foo_owned->getC();
     int c_2 = foo_owned->getC_2();
     foo_owned->getD();

@@ -58,12 +58,12 @@ void test4() {
     assert(slice.get(1) == sub_slice.get(0));
 }
 
-safe void test5(void) {
+_Safe void test5(void) {
     int arr[5] = {1, 2, 3, 4, 5};
-    unsafe Slice<int> slice = Slice<int>::new(&const arr[0], 10);
-    unsafe assert(*slice.get(4) == 5);
-    unsafe const int *p = slice.as_ptr();
-    unsafe assert(p[2] == 3);
+    _Unsafe Slice<int> slice = Slice<int>::new(&const arr[0], 10);
+    _Unsafe assert(*slice.get(4) == 5);
+    _Unsafe const int *p = slice.as_ptr();
+    _Unsafe assert(p[2] == 3);
 }
 
 void test6() {
@@ -91,16 +91,16 @@ void test7() {
     assert(ptr[3] == 'r');
 }
 
-safe void test8(void) {
+_Safe void test8(void) {
     char arr[] = "hello, bisheng c";
-    unsafe SliceMut<char> slice = SliceMut<char>::new(&mut *arr, 17);
-    unsafe assert(slice.is_empty() == false);
-    unsafe assert(slice.length() == 17);
-    unsafe char *ptr_mut = slice.as_mut_ptr();
-    unsafe ptr_mut[7] = 'B';
-    unsafe assert(*slice.get(7) == 'B');
+    _Unsafe SliceMut<char> slice = SliceMut<char>::new(&mut *arr, 17);
+    _Unsafe assert(slice.is_empty() == false);
+    _Unsafe assert(slice.length() == 17);
+    _Unsafe char *ptr_mut = slice.as_mut_ptr();
+    _Unsafe ptr_mut[7] = 'B';
+    _Unsafe assert(*slice.get(7) == 'B');
     *slice.get_mut(9) = 'S';
-    unsafe assert(ptr_mut[9] == 'S');
+    _Unsafe assert(ptr_mut[9] == 'S');
 }
 
 void test9() {

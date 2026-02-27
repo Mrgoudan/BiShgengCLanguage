@@ -7,7 +7,7 @@
 int *g;
 static int *s;
 
-safe void foo(void) {
+_Safe void foo(void) {
   // expected-error@+1{{modifying global variable is forbidden in the safe zone}}
   g = nullptr;
 
@@ -30,7 +30,7 @@ safe void foo(void) {
 void test_static_in_function() {
   static int *local_static = nullptr;
 
-  safe {
+  _Safe {
     // ok: reading static variable is allowed
     int *read_static = local_static;
 
@@ -39,7 +39,7 @@ void test_static_in_function() {
   }
 }
 
-safe void test_multiple_assignments(void) {
+_Safe void test_multiple_assignments(void) {
   int *local1 = nullptr;  // ok: local variable
   int *local2 = nullptr;  // ok: local variable
 

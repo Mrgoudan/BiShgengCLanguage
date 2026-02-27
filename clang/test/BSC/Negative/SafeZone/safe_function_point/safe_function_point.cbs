@@ -1,43 +1,43 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe int add(int a, int b) {
+_Safe int add(int a, int b) {
   return a + b;
 }
 
-safe double dadd(double a, double b) {
+_Safe double dadd(double a, double b) {
   return a + b;
 }
 
-safe int dadd2(double a, double b) {
+_Safe int dadd2(double a, double b) {
   return 1;
 }
 
-typedef safe int (*TP)(int a, int b);
+typedef _Safe int (*TP)(int a, int b);
 
 int main() {
-  safe int (*p)(int a, int b) = add;
+  _Safe int (*p)(int a, int b) = add;
   p = add;      //ok
   TP tp = add;  // ok
 
-  safe int (*pa)(int a);             // expected-error {{uninitialized declarator is forbidden in the safe zone}}
-  pa = add;                          // expected-error {{conversion from type 'safe int (*)(int, int)' to 'safe int (*)(int)' is forbidden}}
+  _Safe int (*pa)(int a);             // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  pa = add;                          // expected-error {{conversion from type '_Safe int (*)(int, int)' to '_Safe int (*)(int)' is forbidden}}
 
-  safe int (*pp)(double a, double b) = dadd2;
-  pp = add;                          // expected-error {{conversion from type 'safe int (*)(int, int)' to 'safe int (*)(double, double)' is forbidden}}
-  pp = dadd;                         // expected-error {{conversion from type 'safe double (*)(double, double)' to 'safe int (*)(double, double)' is forbidden}}
+  _Safe int (*pp)(double a, double b) = dadd2;
+  pp = add;                          // expected-error {{conversion from type '_Safe int (*)(int, int)' to '_Safe int (*)(double, double)' is forbidden}}
+  pp = dadd;                         // expected-error {{conversion from type '_Safe double (*)(double, double)' to '_Safe int (*)(double, double)' is forbidden}}
 
-  unsafe int (*up)(double a, double b);
+  _Unsafe int (*up)(double a, double b);
   up = add;           
   up = dadd;        
-  safe {
+  _Safe {
     p = &add;       // ok
     TP tp = &add;   // ok
     up = &add;     
     up = &dadd;     
     p = (TP)add;
-    p = (TP)dadd;   // expected-error {{conversion from type 'safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
+    p = (TP)dadd;   // expected-error {{conversion from type '_Safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
   }
   p = (TP)add;
-  p = (TP)dadd;     // expected-error {{conversion from type 'safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
+  p = (TP)dadd;     // expected-error {{conversion from type '_Safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
   return 0;
 }

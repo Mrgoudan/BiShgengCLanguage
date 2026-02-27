@@ -20,7 +20,7 @@ void test() {
   p3 = (int *)&mut a; // legal
   p4 = (const int *)&const a; // legal
 
-  safe {
+  _Safe {
     // T * --> T * borrow
     int * borrow p1 = (int * borrow)p; // expected-error {{conversion from type 'int *' to 'int *borrow' is forbidden in the safe zone}}
     const int * borrow p2 = (const int * borrow)p; // expected-error {{conversion from type 'int *' to 'const int *borrow' is forbidden in the safe zone}}

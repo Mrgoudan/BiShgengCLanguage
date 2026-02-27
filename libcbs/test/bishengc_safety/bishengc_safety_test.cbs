@@ -27,7 +27,7 @@ public:
     }
 };
 
-safe void test2(void) {
+_Safe void test2(void) {
     Resource r = { .value = safe_malloc(1) };
     forget<Resource>(r);
 

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s 
 
-safe void safe_free(void * owned p);
+_Safe void safe_free(void * owned p);
 
 int *owned _Nullable init();
 void tinker(int *borrow);
@@ -69,7 +69,7 @@ int assign_to_field_after_free() {
     (p->value)--; // expected-error {{assign to part of moved value: `p`}}
     tinker(&mut p->value); // expected-error {{use of moved value: `p.value`}}
   }
-  unsafe {
+  _Unsafe {
     return p->value; // expected-error {{use of moved value: `p.value`}}
   }
 }

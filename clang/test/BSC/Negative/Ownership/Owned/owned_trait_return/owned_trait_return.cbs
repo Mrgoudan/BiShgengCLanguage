@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -verify %s
 
 trait T {
-  safe void do_it(This* owned this);
+  _Safe void do_it(This* owned this);
   void do_that(This* this);
-  safe void do_this(This* borrow this);
+  _Safe void do_this(This* borrow this);
 };
 
-safe void int::do_it(int* owned this) {
-  unsafe { int* x = (int*)this; }
+_Safe void int::do_it(int* owned this) {
+  _Unsafe { int* x = (int*)this; }
 }
 
 void int::do_that(int* this) {
 }
 
-safe void int::do_this(int* borrow this) {
+_Safe void int::do_this(int* borrow this) {
 }
 
 impl trait T for int;
@@ -23,8 +23,8 @@ struct S {
   int* owned b;
 };
 
-safe void struct S::do_it(struct S* owned this) {
-  unsafe {
+_Safe void struct S::do_it(struct S* owned this) {
+  _Unsafe {
     int* a = (int *)this->a;
     int* b = (int *)this->b;
     void* s = (void *)(void* owned)this;
@@ -34,15 +34,15 @@ safe void struct S::do_it(struct S* owned this) {
 void struct S::do_that(struct S* this) {
 }
 
-safe void struct S::do_this(struct S* borrow this) {
+_Safe void struct S::do_this(struct S* borrow this) {
 }
 
 impl trait T for struct S;
 
-safe int* owned initI(void);
-safe struct S initS(void);
+_Safe int* owned initI(void);
+_Safe struct S initS(void);
 struct S* initSP();
-safe struct S* owned convertToOwned(struct S);
+_Safe struct S* owned convertToOwned(struct S);
 
 trait T* cond1(int flag) {
   if (flag == 1) {

@@ -5,7 +5,7 @@
 // Only union member access is forbidden
 
 void unionDef1(){
-    safe {
+    _Safe {
         // ok: union definition in safe zone
         union UIn {
           int x;
@@ -30,7 +30,7 @@ void unionDef2(){
     struct SMid {
         union UIn u;
     };
-    safe {
+    _Safe {
         // ok: struct definition in safe zone
         struct SOut {
           struct SMid s2;
@@ -49,7 +49,7 @@ void unionDecl(){
         struct SMid s2;
     };
 
-    safe {
+    _Safe {
         // ok: union variable declaration in safe zone
         union UIn u1 = {};
         union UIn u1_other = {};
@@ -66,7 +66,7 @@ void unionTypedef(){
     typedef union UIn {
         int x;
     } UTypedef;
-    safe {
+    _Safe {
         // ok: typedef union declaration in safe zone
         UTypedef u = {};
         UTypedef u_other = {};
@@ -79,7 +79,7 @@ void unionArray() {
         int x;
     };
 
-    safe {
+    _Safe {
         // ok: union array declaration in safe zone
         union UArr arr[2] = {};
         union UArr *parr[2] = {};

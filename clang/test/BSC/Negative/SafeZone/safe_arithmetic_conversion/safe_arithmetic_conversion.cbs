@@ -2,7 +2,7 @@
 
 // Manual 2897-3017: Safe zone arithmetic conversion errors.
 
-safe void test_float_to_int_forbidden(void) {
+_Safe void test_float_to_int_forbidden(void) {
   double a = 1.2;
   int b = (int)a;       // expected-error {{conversion from type 'double' to 'int' is forbidden in the safe zone}}
   int c = (int)1.2;    // expected-error {{conversion from type 'double' to 'int' is forbidden in the safe zone}}
@@ -10,23 +10,23 @@ safe void test_float_to_int_forbidden(void) {
   int d = (int)f;      // expected-error {{conversion from type 'float' to 'int' is forbidden in the safe zone}}
 }
 
-safe void test_implicit_int_to_double_forbidden(void) {
+_Safe void test_implicit_int_to_double_forbidden(void) {
   int a = -1;
   double b = a;        // expected-error {{implicit conversion from type 'int' to 'double' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
-safe void test_implicit_double_to_float_forbidden(void) {
+_Safe void test_implicit_double_to_float_forbidden(void) {
   double a = 1.0;
   float b = a;         // expected-error {{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
-safe void test_int_to_enum_forbidden(void) {
+_Safe void test_int_to_enum_forbidden(void) {
   enum E { ZERO, ONE, TWO };
   enum E num = ZERO;
   num = 0;             // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
 }
 
-safe void test_enum_to_enum_when_dest_does_not_contain_source(void) {
+_Safe void test_enum_to_enum_when_dest_does_not_contain_source(void) {
   enum E { ZERO, ONE, TWO };
   enum G { G1, G2 };
   enum E num = ZERO;
@@ -34,20 +34,20 @@ safe void test_enum_to_enum_when_dest_does_not_contain_source(void) {
   g1 = (enum G)ZERO;         // same conversion; one diagnostic emitted for the first cast
 }
 
-safe void test_constant_out_of_range_implicit(void) {
+_Safe void test_constant_out_of_range_implicit(void) {
   int c = 2147483648;        // expected-error {{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
   unsigned int f = 0;
   f = 4294967296;            // expected-error {{implicit conversion from type 'long' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
-safe void test_literal_conversions_forbidden(void) {
+_Safe void test_literal_conversions_forbidden(void) {
   char c = 128;              // expected-error {{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
   unsigned u = -1;           // expected-error {{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
   float f = 1e40;            // expected-error {{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
   float g = 1e40 + 1e40;     // expected-error {{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
-safe void test_literal_expression_conversions_forbidden(void) {
+_Safe void test_literal_expression_conversions_forbidden(void) {
   int x = 2147483648l + 0l;  // expected-error {{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
   char c = 1 + 127;          // expected-error {{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
   int big = 2147483647 + 1;  // expected-warning {{overflow in expression; result is -2147483648 with type 'int'}}

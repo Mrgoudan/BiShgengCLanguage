@@ -4,8 +4,8 @@ typedef NonnullBorrowInt = int *borrow _Nonnull;
 typedef NullableOwnedInt = int *owned _Nullable;
 typedef NonnullOwnedInt = int *owned _Nonnull;
 
-safe void foo1(NonnullBorrowInt a);
-safe void test1(void) {
+_Safe void foo1(NonnullBorrowInt a);
+_Safe void test1(void) {
     int a = 10;
     NonnullBorrowInt p1 = &mut a;
     foo1(p1);
@@ -17,9 +17,9 @@ safe void test1(void) {
     foo1(nullptr); // expected-error {{cannot pass nullable pointer argument}} expected-warning {{null passed to a callee that requires a non-null argument}}
 }
 
-safe NonnullOwnedInt safe_malloc(int a);
-safe void foo2(NonnullOwnedInt a);  
-safe void test2(void) {
+_Safe NonnullOwnedInt safe_malloc(int a);
+_Safe void foo2(NonnullOwnedInt a);  
+_Safe void test2(void) {
     NonnullOwnedInt p1 = safe_malloc(5);
     foo2(p1);
     NullableOwnedInt p2 = safe_malloc(5); 
@@ -30,8 +30,8 @@ safe void test2(void) {
     foo2(nullptr); // expected-error {{cannot pass nullable pointer argument}} expected-warning {{null passed to a callee that requires a non-null argument}}
 }
 
-safe void foo3(NullableBorrowInt a);   
-safe void test3(void) {
+_Safe void foo3(NullableBorrowInt a);   
+_Safe void test3(void) {
     int a = 10;
     NonnullBorrowInt p1 = &mut a;
     foo3(p1);
@@ -42,8 +42,8 @@ safe void test3(void) {
     foo3(nullptr);
 }
 
-safe void foo4(NullableOwnedInt a);  
-safe void test4(void) {
+_Safe void foo4(NullableOwnedInt a);  
+_Safe void test4(void) {
     NonnullOwnedInt p1 = safe_malloc(5);
     foo4(p1);
     NullableOwnedInt p2 = safe_malloc(5);
@@ -53,7 +53,7 @@ safe void test4(void) {
     foo4(nullptr);
 }
 
-safe void test5(void) {
+_Safe void test5(void) {
     NullableBorrowInt p = nullptr;
     if (p != nullptr) {
         *p = 10;

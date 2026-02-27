@@ -1,21 +1,21 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 // expected-no-diagnostics
 
-safe void consume(int *owned _Nullable);
+_Safe void consume(int *owned _Nullable);
 
-safe int *owned _Nullable ternary_condition_is_not_move(int *owned _Nullable p) {
+_Safe int *owned _Nullable ternary_condition_is_not_move(int *owned _Nullable p) {
     int x = p ? 2 : 3;
     return p;
 }
 
-safe int *owned _Nullable nested_ternary_condition_is_not_move(int *owned _Nullable p,
+_Safe int *owned _Nullable nested_ternary_condition_is_not_move(int *owned _Nullable p,
                                                                _Bool b1,
                                                                _Bool b2) {
     int x = b1 ? (b2 ? 1 : (p ? 2 : 3)) : (b2 ? 4 : 5);
     return p;
 }
 
-safe void ternary_borrow(_Bool flag, int *owned _Nullable p, int *owned _Nullable q) {
+_Safe void ternary_borrow(_Bool flag, int *owned _Nullable p, int *owned _Nullable q) {
     int *borrow ref = &mut*(flag ? p : q);
     consume(p);
     consume(q);

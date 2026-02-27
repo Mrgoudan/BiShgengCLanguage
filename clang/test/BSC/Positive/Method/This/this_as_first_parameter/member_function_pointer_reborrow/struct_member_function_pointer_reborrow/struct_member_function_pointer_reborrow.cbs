@@ -14,7 +14,7 @@ struct Foo {
 };
 
 T* owned safe_malloc<T>(T value);
-safe void free_owned<T>(T* owned p);
+_Safe void free_owned<T>(T* owned p);
 
 T* owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
@@ -22,8 +22,8 @@ T* owned safe_malloc<T>(T value) {
   return (T* owned)p;
 }
 
-safe void free_owned<T>(T* owned p) {
-  unsafe free( (void *)p );
+_Safe void free_owned<T>(T* owned p) {
+  _Unsafe free( (void *)p );
 }
 
 int struct Foo::getB(This* this) {
@@ -37,22 +37,22 @@ int struct Foo::getB_2(const This* this) {
   return this->a;
 }
 
-safe int struct Foo::getC(This* borrow this) {
+_Safe int struct Foo::getC(This* borrow this) {
   this->a = 2;
-  unsafe {
+  _Unsafe {
     printf("this->a in getC: %d\n", this->a);
   }
   return this->a;
 }
 
-safe int struct Foo::getC_2(const This* borrow this) {
-  unsafe {
+_Safe int struct Foo::getC_2(const This* borrow this) {
+  _Unsafe {
     printf("this->a in getC_2: %d\n", this->a);
   }
   return this->a;
 }
 
-safe void struct Foo::getD(This* owned this) {
+_Safe void struct Foo::getD(This* owned this) {
   free_owned<struct Foo>(this);
 }
 
@@ -61,7 +61,7 @@ void test_non_pointer_This_call_reborrow() {
   struct Foo foo = {.a = 1};
   int b = foo.getB();
   int b_2 = foo.getB_2();
-  safe {
+  _Safe {
     int c = foo.getC();
     int c_2 = foo.getC_2();
   }
@@ -103,7 +103,7 @@ void test_owned_pointer_call_reborrow() {
   struct Foo * owned foo_owned = safe_malloc<struct Foo>(foo);
   int b = foo_owned->getB();
   int b_2 = foo_owned->getB_2();
-  safe {
+  _Safe {
     int c = foo_owned->getC();
     int c_2 = foo_owned->getC_2();
     foo_owned->getD();

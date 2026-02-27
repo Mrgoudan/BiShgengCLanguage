@@ -20,16 +20,16 @@ void test_basic_nullptr_cast(void) {
 }
 
 // nullptr casts in safe zone
-safe void test_safe_nullptr_cast(void) {
+_Safe void test_safe_nullptr_cast(void) {
   void *p1 = (void *)nullptr;
   int *p2 = (int *)nullptr;
   const char *p3 = (const char *)nullptr;
 }
 
-// nullptr casts in unsafe expression
-safe void test_unsafe_nullptr_cast(void) {
-  void *p1 = unsafe((void *)nullptr);
-  int *p2 = unsafe((int *)nullptr);
+// nullptr casts in _Unsafe expression
+_Safe void test_unsafe_nullptr_cast(void) {
+  void *p1 = _Unsafe((void *)nullptr);
+  int *p2 = _Unsafe((int *)nullptr);
 }
 
 // Direct nullptr assignments (without cast)
@@ -39,7 +39,7 @@ void test_direct_nullptr_assignment(void) {
   char *p3 = nullptr;
 }
 
-safe void test_safe_direct_nullptr(void) {
+_Safe void test_safe_direct_nullptr(void) {
   void *p = nullptr;
   const char *cp = nullptr;
 }

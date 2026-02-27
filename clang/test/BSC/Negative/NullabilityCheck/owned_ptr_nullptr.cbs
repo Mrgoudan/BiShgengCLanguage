@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
-safe T *owned safe_malloc<T>(T t);
-safe void safe_free(void *owned p);
+_Safe T *owned safe_malloc<T>(T t);
+_Safe void safe_free(void *owned p);
 
-safe void test1(void) {
+_Safe void test1(void) {
     int *owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
@@ -13,7 +13,7 @@ safe void test1(void) {
     safe_free((void *owned)p); // expected-error {{cannot cast nullable pointer to nonnull type}}
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     int *owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
@@ -23,14 +23,14 @@ safe void test2(void) {
     p = nullptr; // expected-error {{assign to owned value: `p`}}
 }
 
-safe int *owned _Nullable get_owned(int cond) {
+_Safe int *owned _Nullable get_owned(int cond) {
     int *owned _Nullable p = nullptr;
     if (cond) {
         p = safe_malloc<int>(10);
     }
     return p;
 }
-safe void test3(void) {
+_Safe void test3(void) {
     int *owned _Nullable p = get_owned(5);
     if (p != nullptr) {
         *p = 10;

@@ -4,7 +4,7 @@
 
 void mutualNestedUnionDef() {
     union U {};
-    safe {
+    _Safe {
         // ok: struct containing union is allowed in safe zone
         struct S4 { // expected-note{{definition of 'struct S4' is not complete until the closing '}'}}
             struct S3 {
@@ -26,7 +26,7 @@ void mutalNestedUnionDecl() {
     struct S3 { struct S2 s2; };
     struct S4 { struct S3 s3; };
     struct S1 { struct S4 s4; union U u; };
-    safe {
+    _Safe {
         // ok: declaring structs containing unions is allowed in safe zone
         struct S1 s1 = {};
         struct S2 s2 = {};

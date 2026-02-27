@@ -6,8 +6,8 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
-safe T *owned safe_malloc<T>(T t) {
-    unsafe {
+_Safe T *owned safe_malloc<T>(T t) {
+    _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
             addr = &t;
@@ -21,19 +21,19 @@ safe T *owned safe_malloc<T>(T t) {
 	}
 }
 
-safe int get_current_status(void) {
+_Safe int get_current_status(void) {
     return 1;
 }
 
-safe int *owned get_nonnull(int a) {
+_Safe int *owned get_nonnull(int a) {
     int *owned p = safe_malloc<int>(5);
     *p = a;
     return p;
 }
 
-safe int *owned _Nullable get_nullable(int a) {
+_Safe int *owned _Nullable get_nullable(int a) {
     if (get_current_status > 0) {
-        unsafe {
+        _Unsafe {
             int *owned p = safe_malloc<int>(5);
             *p = a;
             return p;
@@ -42,7 +42,7 @@ safe int *owned _Nullable get_nullable(int a) {
         return nullptr;
 }
 
-safe void use(int *borrow p) { }
+_Safe void use(int *borrow p) { }
 
 owned struct Data {
 public:
@@ -55,14 +55,14 @@ public:
     }
 };
 
-safe Data Data::init(int a) {
+_Safe Data Data::init(int a) {
     int *owned _Nullable data1 = get_nullable(a);
     int *owned data2 = get_nonnull(a);
     Data data = { .p1 = data1, .p2 = data2 };
     return data;
 }
 
-safe int main(void) {
+_Safe int main(void) {
     Data data1 = Data::init(5);
     Data data2 = Data::init(10);
     Data *borrow _Nullable p = nullptr;

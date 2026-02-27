@@ -1,38 +1,38 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe void test_safe_expr1(void){
+_Safe void test_safe_expr1(void){
     int a = 0;
     a++;                              // allowed
-    int a1 = unsafe(a++);              // ok
+    int a1 = _Unsafe(a++);              // ok
     int *b = &a;                      // expected-error {{'&' operator is forbidden in the safe zone}}
-    int *c = unsafe(&a);              // ok
-    unsafe {
+    int *c = _Unsafe(&a);              // ok
+    _Unsafe {
         int *d = &a;                  // ok
-        int *e = safe(&a);            // expected-error {{'&' operator is forbidden in the safe zone}}
+        int *e = _Safe(&a);            // expected-error {{'&' operator is forbidden in the safe zone}}
     }
 }
 
 void test_safe_expr2() {
     int a = 0;
     a++;                             // ok
-    int a1 = safe(a++);              // expected-error {{initializing 'int' with an expression of incompatible type 'void'}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
+    int a1 = _Safe(a++);              // expected-error {{initializing 'int' with an expression of incompatible type 'void'}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
     int *b = &a;                     // ok
-    int *c = safe(&a);               // expected-error {{'&' operator is forbidden in the safe zone}}
-    safe {
+    int *c = _Safe(&a);               // expected-error {{'&' operator is forbidden in the safe zone}}
+    _Safe {
         int *d = &a;                 // expected-error {{'&' operator is forbidden in the safe zone}}
-        int *e = unsafe(&a);         // ok
+        int *e = _Unsafe(&a);         // ok
     }
 }
 
-safe void foo<T>(T* owned p) {
+_Safe void foo<T>(T* owned p) {
     T * a = (T*)p                       // expected-error {{conversion from type 'T *owned' to 'T *' is forbidden in the safe zone}}
-    T * b = unsafe((T*)p);              // ok
+    T * b = _Unsafe((T*)p);              // ok
     T * c = (T*)p;                      // expected-error {{conversion from type 'T *owned' to 'T *' is forbidden in the safe zone}}
 }
 
-safe void test_safe_expr3(void) {
+_Safe void test_safe_expr3(void) {
     int a = 0;
-    int *owned p = unsafe((int *owned)&a);
+    int *owned p = _Unsafe((int *owned)&a);
     foo<int>(p);
 }
 
@@ -40,16 +40,16 @@ int getNum() {
     return 1;
 }
 
-safe void setNum(int b) {
+_Safe void setNum(int b) {
     int a = b;
     return;
 }
 
-safe void test_safe_expr4(void) {
+_Safe void test_safe_expr4(void) {
     setNum(getNum());                       // expected-error {{unsafe function call is forbidden in the safe zone}}
-    setNum(unsafe(getNum()));               // ok
-    unsafe {
+    setNum(_Unsafe(getNum()));               // ok
+    _Unsafe {
         setNum(getNum());                   // ok
-        setNum(safe(getNum()));             // expected-error {{unsafe function call is forbidden in the safe zone}}
+        setNum(_Safe(getNum()));             // expected-error {{unsafe function call is forbidden in the safe zone}}
     }
 }

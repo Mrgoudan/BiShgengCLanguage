@@ -1,41 +1,41 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
-// Demonstrates realistic API pattern: unsafe declarations in header, safe in implementation
+// Demonstrates realistic API pattern: _Unsafe declarations in header, _Safe in implementation
 
 #include "api_header.h"
 
 // Safe implementations for all API functions
-safe int* owned create_object(int value);
-safe void destroy_object(int* owned obj);
-safe int* owned clone_object(int* p);
+_Safe int* owned create_object(int value);
+_Safe void destroy_object(int* owned obj);
+_Safe int* owned clone_object(int* p);
 
-safe int process_data(int* owned p, int size);
-safe void transform_data(int* owned data, int size);
+_Safe int process_data(int* owned p, int size);
+_Safe void transform_data(int* owned data, int size);
 
-safe char* owned allocate_string(int length);
-safe void free_string(char* owned str);
-safe char* owned duplicate_string(const char* src);
-safe int string_length(const char* str);
+_Safe char* owned allocate_string(int length);
+_Safe void free_string(char* owned str);
+_Safe char* owned duplicate_string(const char* src);
+_Safe int string_length(const char* str);
 
-safe void* owned allocate_buffer(int size);
-safe void free_buffer(void* owned buf);
-safe void* owned resize_buffer(void* owned buf, int old_size, int new_size);
+_Safe void* owned allocate_buffer(int size);
+_Safe void free_buffer(void* owned buf);
+_Safe void* owned resize_buffer(void* owned buf, int old_size, int new_size);
 
-safe struct ListNode* owned list_create(void);
-safe void list_append(struct ListNode* owned list, int value);
-safe struct ListNode* list_find(struct ListNode* owned list, int value);
-safe void list_destroy(struct ListNode* owned list);
+_Safe struct ListNode* owned list_create(void);
+_Safe void list_append(struct ListNode* owned list, int value);
+_Safe struct ListNode* list_find(struct ListNode* owned list, int value);
+_Safe void list_destroy(struct ListNode* owned list);
 
-safe void set_config(const char* key, const char* value);
-safe char* owned get_config(const char* key);
+_Safe void set_config(const char* key, const char* value);
+_Safe char* owned get_config(const char* key);
 
-// Calls from unsafe context
+// Calls from _Unsafe context
 void test_from_unsafe(void) {
   int* owned obj = create_object(42);
   destroy_object(obj);
 }
 
-// Calls from safe context
-safe void test_from_safe(void) {
+// Calls from _Safe context
+_Safe void test_from_safe(void) {
   int* owned obj = create_object(100);
   destroy_object(obj);
 }
@@ -77,7 +77,7 @@ void test_chained(void) {
 }
 
 // Safe context with ownership
-safe void test_safe_ownership(void) {
+_Safe void test_safe_ownership(void) {
   int* owned obj = create_object(99);
   destroy_object(obj);
 }
@@ -119,8 +119,8 @@ void test_buffer_chain(void) {
   free_buffer(buf);
 }
 
-// Config in safe context
-safe void test_config_safe(void) {
+// Config in _Safe context
+_Safe void test_config_safe(void) {
   set_config("timeout", "30");
   char* owned timeout_val = get_config("timeout");
   free_string(timeout_val);
@@ -160,7 +160,7 @@ void test_multi_create(void) {
 }
 
 // Safe context with buffer
-safe void test_safe_buffer(void) {
+_Safe void test_safe_buffer(void) {
   void* owned buf = allocate_buffer(512);
   free_buffer(buf);
 }

@@ -30,22 +30,22 @@ public:
   int len;
 };
 
-safe LinkedList<T> LinkedList<T>::new(void){
-  unsafe {
+_Safe LinkedList<T> LinkedList<T>::new(void){
+  _Unsafe {
     LinkedList<T> rv = {NULL, NULL, 0};
     return rv;
   }
 }
 
-safe RawVec<T> RawVec<T>::new(void) {
-  unsafe {
+_Safe RawVec<T> RawVec<T>::new(void) {
+  _Unsafe {
     RawVec<T> rv = { .ptr = NULL, .cap = 0 };
     return rv;
   }
 }
 
-safe Vec<T> Vec<T>::new(void) {
-  unsafe {
+_Safe Vec<T> Vec<T>::new(void) {
+  _Unsafe {
     RawVec<T> buf = RawVec<T>::new();
     Vec<T> v = { .buf = buf, .len = 0 };
     return v;

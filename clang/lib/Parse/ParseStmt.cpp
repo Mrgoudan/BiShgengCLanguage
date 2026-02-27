@@ -320,14 +320,14 @@ Default:
       return ParseCompoundStatement();
     goto Default;
   }
-  case tok::kw_safe:
-  case tok::kw_unsafe: {
+  case tok::kw__Safe:
+  case tok::kw__Unsafe: {
     Token Next = NextToken();
     if (Next.is(tok::l_brace))
       return ParseCompoundStatement();
     if (Next.is(tok::l_paren))
       return ParseExprStatement(StmtCtx);
-    if (Next.is(tok::kw_safe) || Next.is(tok::kw_unsafe)) {
+    if (Next.is(tok::kw__Safe) || Next.is(tok::kw__Unsafe)) {
       Diag(Next.getLocation(), diag::err_duplicate_declspec) << Tok.getKind();
       ConsumeToken();
       return StmtError();
@@ -1084,10 +1084,10 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
 
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   SourceLocation SafeZoneLoc;
-  if (Tok.is(tok::kw_safe)) {
+  if (Tok.is(tok::kw__Safe)) {
     SafeZoneSpec = SZ_Safe;
     SafeZoneLoc = ConsumeToken();
-  } else if (Tok.is(tok::kw_unsafe)) {
+  } else if (Tok.is(tok::kw__Unsafe)) {
     SafeZoneSpec = SZ_Unsafe;
     SafeZoneLoc = ConsumeToken();
   }

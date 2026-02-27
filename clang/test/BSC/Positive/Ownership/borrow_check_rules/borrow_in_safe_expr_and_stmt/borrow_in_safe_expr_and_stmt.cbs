@@ -5,12 +5,12 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-safe void use(int *borrow p) {
+_Safe void use(int *borrow p) {
     *p = 5;
 }
 
 void test1(int a, int b, char c) {
-    safe switch (a) {
+    _Safe switch (a) {
     case 5: {
         int *borrow pb = &mut b;
         use(pb);
@@ -22,7 +22,7 @@ void test1(int a, int b, char c) {
 }
 
 void test2(int a, int b, char c) {
-    safe switch (a) {
+    _Safe switch (a) {
     case 0:
         a += 1;
         break;
@@ -41,10 +41,10 @@ void test2(int a, int b, char c) {
         break;
     }
     case 6:
-        unsafe {
-            safe {
-                unsafe {
-                    safe switch (c) {
+        _Unsafe {
+            _Safe {
+                _Unsafe {
+                    _Safe switch (c) {
                     case 0:
                         a+=1;
                         break;
@@ -70,7 +70,7 @@ void test2(int a, int b, char c) {
             }
         }
     case 7:
-    unsafe {
+    _Unsafe {
         a++;
         break;
     }
@@ -91,7 +91,7 @@ void rre_memset(void *borrow p) {
 
 void foo() {
   if (g != nullptr) {
-    rre_memset(unsafe((void *borrow)(void *)(g[index].bits)));
+    rre_memset(_Unsafe((void *borrow)(void *)(g[index].bits)));
   }
 }
 

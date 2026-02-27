@@ -2,24 +2,24 @@
 // Positive tests for mixed mode function calls (Manual sections 8.1-8.2)
 
 // Mixed mode declarations
-unsafe void func1(void);
-safe void func1(void);
+_Unsafe void func1(void);
+_Safe void func1(void);
 
-unsafe int add(int a, int b);
-safe int add(int a, int b);
+_Unsafe int add(int a, int b);
+_Safe int add(int a, int b);
 
-// Manual 2531-2541: Safe context can call if safe declaration exists
-safe void test_safe_context1(void) {
-  // ok: safe version exists
+// Manual 2531-2541: Safe context can call if _Safe declaration exists
+_Safe void test_safe_context1(void) {
+  // ok: _Safe version exists
   func1();
 
   int x = add(1, 2);
   (void)x;
 }
 
-// Manual 2543-2561: Non-safe context with overload resolution
-unsafe void multi_param(int a, int b);
-safe void multi_param(int a, int b);
+// Manual 2543-2561: Non-_Safe context with overload resolution
+_Unsafe void multi_param(int a, int b);
+_Safe void multi_param(int a, int b);
 
 void test_unsafe_context(void) {
   // ok: can call either version
@@ -27,44 +27,44 @@ void test_unsafe_context(void) {
   multi_param(1, 2);
 }
 
-// Within explicit unsafe block
-safe void test_explicit_unsafe_block(void) {
-  unsafe {
-    // ok: unsafe context can call functions
+// Within explicit _Unsafe block
+_Safe void test_explicit_unsafe_block(void) {
+  _Unsafe {
+    // ok: _Unsafe context can call functions
     func1();
     multi_param(3, 4);
   }
 }
 
 // Non-pointer parameters
-unsafe float compute(float x);
-safe float compute(float x);
+_Unsafe float compute(float x);
+_Safe float compute(float x);
 
-safe void test_non_pointer(void) {
+_Safe void test_non_pointer(void) {
   float result = compute(3.14f);
   (void)result;
 }
 
 // Multiple declarations, multiple calls
-unsafe void process(int x);
-safe void process(int x);
+_Unsafe void process(int x);
+_Safe void process(int x);
 
-safe void test_multiple_calls(void) {
+_Safe void test_multiple_calls(void) {
   process(1);
   process(2);
   process(3);
 }
 
 // Nested contexts
-safe void test_nested(void) {
+_Safe void test_nested(void) {
   // Safe context
   func1();  // ok
 
-  unsafe {
-    // Unsafe context within safe
+  _Unsafe {
+    // Unsafe context within _Safe
     func1();  // ok
 
-    safe {
+    _Safe {
       // Safe context again
       func1();  // ok
     }

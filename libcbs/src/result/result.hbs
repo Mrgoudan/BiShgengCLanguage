@@ -36,30 +36,30 @@ public:
 };
 
 // Returns `true` if the result is a `Err` value.
-safe _Bool Result<T, E>::is_err(const Result<T, E>* borrow this) {
-    unsafe {
+_Safe _Bool Result<T, E>::is_err(const Result<T, E>* borrow this) {
+    _Unsafe {
         return this->state == Err;
     }
 }
 
 // Returns `true` if the result is a `Ok` value.
-safe _Bool Result<T, E>::is_ok(const Result<T, E>* borrow this) {
-    unsafe {
+_Safe _Bool Result<T, E>::is_ok(const Result<T, E>* borrow this) {
+    _Unsafe {
         return this->state == Ok;
     }
 }
 
 // Creates an `Ok` value.
-safe Result<T, E> Result<T, E>::Ok(T t) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Result<T, E> Result<T, E>::Ok(T t) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-    unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
+    _Unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap E with an owned struct.");
-    unsafe {
+    _Unsafe {
         Result<T, E> r = {
             .state = Ok,
             .t = {0},
@@ -72,16 +72,16 @@ safe Result<T, E> Result<T, E>::Ok(T t) {
 }
 
 // Creates an `Err` value.
-safe Result<T, E> Result<T, E>::Err(E e) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Result<T, E> Result<T, E>::Err(E e) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-    unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
+    _Unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
                     "Can only instantiate Result with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap E with an owned struct.");
-    unsafe {
+    _Unsafe {
         Result<T, E> r = {
             .state = Err,
             .t = {0},
@@ -96,11 +96,11 @@ safe Result<T, E> Result<T, E>::Err(E e) {
 // Returns the contained `Ok` value, consuming the `result` value.
 //
 // Aborts if the `result` value equals `Err`.
-safe T result_unwrap<T, E>(Result<T, E> result) {
+_Safe T result_unwrap<T, E>(Result<T, E> result) {
     if (result.is_err()) {
         bsc_unwrap_failed();
     }
-    unsafe {
+    _Unsafe {
         T* ptr = (T *_Nonnull)result.t;
         T t = *ptr;
         forget<Result<T, E>>(result); // forget value `result` to avoid calling its destructor
@@ -111,11 +111,11 @@ safe T result_unwrap<T, E>(Result<T, E> result) {
 // Returns the contained `Err` value, consuming the `result` value.
 //
 // Aborts if the `result` value equals `Ok`.
-safe E result_unwrap_err<T, E>(Result<T, E> result) {
+_Safe E result_unwrap_err<T, E>(Result<T, E> result) {
     if (result.is_ok()) {
         bsc_unwrap_failed();
     }
-    unsafe {
+    _Unsafe {
         E* ptr = (E *_Nonnull)result.e;
         E e = *ptr;
         forget<Result<T, E>>(result); // forget value `result` to avoid calling its destructor

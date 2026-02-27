@@ -4,7 +4,7 @@ struct S {
     int *borrow _Nullable p;
 };
 
-safe void test1(void) {
+_Safe void test1(void) {
     struct S s = { .p = nullptr };
     if (s.p != nullptr) {
         *s.p = 10;
@@ -14,7 +14,7 @@ safe void test1(void) {
     *s.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     int a = 10;
     struct S s = { .p = nullptr };
     if (s.p != nullptr) {
@@ -25,7 +25,7 @@ safe void test2(void) {
     *s.p = 30;
 }
 
-safe void test3(void) {
+_Safe void test3(void) {
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
     if (s1.p != nullptr && s2.p != nullptr) {
@@ -39,7 +39,7 @@ safe void test3(void) {
     *s2.p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test4(void) {
+_Safe void test4(void) {
     int a = 10;
     int b = 10;
     struct S s1 = { .p = nullptr };
@@ -55,7 +55,7 @@ safe void test4(void) {
     *s2.p = 30;
 }
 
-safe void test5(void) {
+_Safe void test5(void) {
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
     if (s1.p != nullptr || s2.p != nullptr) {
@@ -69,7 +69,7 @@ safe void test5(void) {
     *s2.p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test6(void) {
+_Safe void test6(void) {
     int a = 10;
     int b = 10;
     struct S s1 = { .p = nullptr };
@@ -91,7 +91,7 @@ safe void test6(void) {
     *s2.p = 30;
 }
 
-safe void test7(void) {
+_Safe void test7(void) {
     int a = 10;
     int b = 10;
     int c = 10;
@@ -112,7 +112,7 @@ safe void test7(void) {
     *s3.p = 30;
 }
 
-safe void test8(void) {
+_Safe void test8(void) {
     int a = 10;
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
@@ -131,7 +131,7 @@ safe void test8(void) {
     *s3.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test9(void) {
+_Safe void test9(void) {
     int a = 10;
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
@@ -150,7 +150,7 @@ safe void test9(void) {
     *s3.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test10(void) {
+_Safe void test10(void) {
     int a = 0;
     struct S s = { .p = nullptr };
     if (s.p != nullptr) {
@@ -162,7 +162,7 @@ safe void test10(void) {
     *s.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test11(void) {
+_Safe void test11(void) {
     int a = 0;
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
@@ -177,7 +177,7 @@ safe void test11(void) {
     *s2.p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test12(void) {
+_Safe void test12(void) {
     int a = 0;
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
@@ -192,7 +192,7 @@ safe void test12(void) {
     *s2.p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test13(void) {
+_Safe void test13(void) {
     int a = 10;
     int b = 10;
     struct S s1 = { .p = nullptr };
@@ -208,7 +208,7 @@ safe void test13(void) {
     *s2.p = 30;
 }
 
-safe void test14(void) {
+_Safe void test14(void) {
     struct S s = { .p = nullptr };
     if (s.p) {
         *s.p = 10;
@@ -218,7 +218,7 @@ safe void test14(void) {
     *s.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test15(void) {
+_Safe void test15(void) {
     struct S s = { .p = nullptr };
     if (!s.p) {
         *s.p = 10; // expected-error {{nullable pointer cannot be dereferenced}}
@@ -228,7 +228,7 @@ safe void test15(void) {
     *s.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test16(void) {
+_Safe void test16(void) {
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };
     if (s1.p && s2.p) {
@@ -246,10 +246,10 @@ struct S1 {
     int *owned _Nullable p;
 };
 
-safe T *owned safe_malloc<T>(T t);
-safe void safe_free(void *owned p);
+_Safe T *owned safe_malloc<T>(T t);
+_Safe void safe_free(void *owned p);
 
-safe void test17(void) {
+_Safe void test17(void) {
     struct S1 s = { nullptr };
     struct S1 *owned _Nullable p = nullptr;
     int cond = 1;

@@ -8,23 +8,23 @@ impl trait F for int;
 impl trait G for int;
 
 void diffPointCastConver(void) {
-  unsafe {
+  _Unsafe {
     // int * <-> void *
     int *a = NULL;
-    safe {
+    _Safe {
       void *b = a;  // expected-error{{conversion from type 'int *' to 'void *' is forbidden in the safe zone}}
       int *c = b;   // expected-error{{conversion from type 'void *' to 'int *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // int * <-> double *
     double *a = NULL;
-    safe {
+    _Safe {
       int *b = a;       // expected-error{{conversion from type 'double *' to 'int *' is forbidden in the safe zone}}
       double *c = b; // expected-error{{conversion from type 'int *' to 'double *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // struct1 * -> struct2*
     struct S1
     {
@@ -36,24 +36,24 @@ void diffPointCastConver(void) {
     };
     struct S1 *s1 = NULL;
     struct S2 *s2 = NULL;
-    safe {
+    _Safe {
       struct S1* s1_1 = s2;  // expected-error{{conversion from type 'struct S2 *' to 'struct S1 *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // trait1* -> trait2*
     int m = 0;
     int *p = &m;
     trait F *f = &m;
-    safe {
+    _Safe {
       trait G *h = (trait G*)p; //ok
       trait G *g = f; // expected-error{{conversion from type 'trait F *' to 'trait G *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // owned *<-> raw *
     int *pa = NULL;
-    safe {
+    _Safe {
       int *owned p1 = pa;   // expected-error{{conversion from type 'int *' to 'int *owned' is forbidden in the safe zone}}
       pa = p1;                    // expected-error{{conversion from type 'int *owned' to 'int *' is forbidden in the safe zone}}
     }
@@ -63,19 +63,19 @@ void diffPointCastConver(void) {
 
 void pointCastConver() {
   // int * <-> int
-  safe {
+  _Safe {
     int a = 1;
     int *b = a;       // expected-error{{conversion from type 'int' to 'int *' is forbidden in the safe zone}}
     int c = b;          // expected-error{{conversion from type 'int *' to 'int' is forbidden in the safe zone}}
   }
   // void * <-> int
-  safe {
+  _Safe {
     int a = 1;
     void *b = a;     // expected-error{{conversion from type 'int' to 'void *' is forbidden in the safe zone}}
     int c = b;          // expected-error{{conversion from type 'void *' to 'int' is forbidden in the safe zone}}
   }
   // owned int * <-> int
-  safe {
+  _Safe {
     int a = 1;
     int *owned p1 = a;   // expected-error{{conversion from type 'int' to 'int *owned' is forbidden in the safe zone}}
     a = p1;                      // expected-error{{conversion from type 'int *owned' to 'int' is forbidden in the safe zone}}
@@ -85,7 +85,7 @@ void pointCastConver() {
 
 void baseTypeCastConver() {
   // long <-> int,
-  safe {
+  _Safe {
     long a = 2;
     int b = a;                 // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
     long c = b;               // int->long ok
@@ -105,38 +105,38 @@ void baseTypeCastConver() {
     f = -1;          // expected-error{{implicit conversion from type 'int' to 'unsigned long' is forbidden in the safe zone; please use explicit cast or other means instead}}
   }
   // int <-> char
-  safe {
+  _Safe {
     int a = 1;
     // char -128~127
     char b = a;                // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
     b = 1;                     // ok
     b = 128;                   // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    b = unsafe(1);             // ok
-    b = safe(1);               // ok
-    b = unsafe(128);           // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    b = safe(128);             // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    b = _Unsafe(1);             // ok
+    b = _Safe(1);               // ok
+    b = _Unsafe(128);           // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    b = _Safe(128);             // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
 
     constexpr int c = 10;
     b = c;
     a = b;                      // char->int ok
     a = 'b';                    // char->int ok
-    a = unsafe(b);              // ok
-    a = safe(b);                // ok
+    a = _Unsafe(b);              // ok
+    a = _Safe(b);                // ok
     unsigned int d = 0;
     d = b;             // expected-error{{implicit conversion from type 'char' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
   }
   // int <-> bool
-  safe {
+  _Safe {
     _Bool a = 0;
     int b = a;          // ok
     _Bool c = b;      // expected-error{{implicit conversion from type 'int' to '_Bool' is forbidden in the safe zone; please use explicit cast or other means instead}}
     c = 1;
     c = 2;            // expected-error{{implicit conversion from type 'int' to '_Bool' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    c = unsafe(1);
-    c = safe(1);
+    c = _Unsafe(1);
+    c = _Safe(1);
   }
   // char <-> long double
-  safe {
+  _Safe {
     char a = 'A';
     long double b = a;  // expected-error{{implicit conversion from type 'char' to 'long double' is forbidden in the safe zone; please use explicit cast or other means instead}}
     char c = b;         // expected-error{{conversion from type 'long double' to 'char' is forbidden in the safe zone}}
@@ -152,29 +152,29 @@ void baseTypeCastConver() {
     MON,
     TUES,
   };
-  safe {
+  _Safe {
     int a = 0;
     enum E num = a;     // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
     num = 0;            // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
     num = ZERO;         // ok
-    num = safe(ZERO);   // ok
-    num = unsafe(ZERO); // ok
+    num = _Safe(ZERO);   // ok
+    num = _Unsafe(ZERO); // ok
     enum F day = SUN;
     num = day;          // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
     num = SUN;          // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
     a = num;            // ok: enum E -> int implicit allowed
     a = ZERO;
-    num = safe(day);    // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    num = safe(SUN);    // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
-    num = unsafe(day);  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    num = unsafe(SUN);  // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
+    num = _Safe(day);    // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = _Safe(SUN);    // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
+    num = _Unsafe(day);  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = _Unsafe(SUN);  // expected-error{{conversion from type 'enum F' to 'enum E' is forbidden in the safe zone}}
     enum F f1 = a > 0 ? SUN : MON;   // ok
     enum F f2 = a == 0 ? SUN : MON;  // ok
     enum F f3 = a > 0 ? SUN : ZERO;  // expected-error{{conversion from type 'enum E' to 'enum F' is forbidden in the safe zone}}
     enum F f4 = a > 0 ? ZERO : SUN;  // expected-error{{conversion from type 'enum E' to 'enum F' is forbidden in the safe zone}}
   }
   // double <-> float
-  safe {
+  _Safe {
     double a = 1.0;
     float b = a;      // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
     a = b;            // ok
@@ -183,7 +183,7 @@ void baseTypeCastConver() {
     c = 1.2f;         // ok
   }
   // int <-> unsigned int
-  safe {
+  _Safe {
     unsigned int a = 1;  // ok
     int b = a;           // expected-error{{implicit conversion from type 'unsigned int' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
     a = b;               // expected-error{{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
@@ -191,7 +191,7 @@ void baseTypeCastConver() {
   }
 }
 
-safe void returns_void(void);
-safe void test_void_conversion(void) {
+_Safe void returns_void(void);
+_Safe void test_void_conversion(void) {
   int x = returns_void();  // expected-error{{conversion from type 'void' to 'int' is forbidden in the safe zone}}
 }

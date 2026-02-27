@@ -146,8 +146,8 @@ public:
   RcData<T> * ptr;
 };
 
-safe Rc<T> Rc<T>::new(T data) {
-    unsafe {
+_Safe Rc<T> Rc<T>::new(T data) {
+    _Unsafe {
         struct RcData<T> * RcDataPtr = (struct RcData<T> *)malloc(sizeof(struct RcData<T>));
         RcDataPtr->data = data;
         Rc<T> rc = { .ptr = RcDataPtr };

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-safe int read(int a, int b);
+_Safe int read(int a, int b);
 
 void read_with_postinc(int x, int y) {
     // a pointer whose pointee is undetermined in compile time

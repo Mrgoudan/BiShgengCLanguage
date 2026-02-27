@@ -41,30 +41,30 @@ void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler) {
 	bsc_bad_alloc_handler = handler;
 }
 
-safe void bsc_unwrap_failed(void) {
-    unsafe {
+_Safe void bsc_unwrap_failed(void) {
+    _Unsafe {
         fprintf(stderr, "Error: called `unwrap()` on an illegal value\n");
 
         bsc_stack_dump_and_exit();
     }
 }
 
-safe void bsc_refcell_mut_borrow_failed(void) {
-    unsafe {
+_Safe void bsc_refcell_mut_borrow_failed(void) {
+    _Unsafe {
         fprintf(stderr, "Error: Failed to mut borrow because has been borrowed\n");
         bsc_stack_dump_and_exit();
     }
 }
 
-safe void bsc_refcell_immut_borrow_failed(void) {
-    unsafe {
+_Safe void bsc_refcell_immut_borrow_failed(void) {
+    _Unsafe {
         fprintf(stderr, "Error: Failed to immut borrow because has been mut borrowed\n");
         bsc_stack_dump_and_exit();
     }
 }
 
-safe void safe_free(void * _Nullable owned p) {
-	unsafe {
+_Safe void safe_free(void * _Nullable owned p) {
+	_Unsafe {
 		free((void *)p);
 	}
 }

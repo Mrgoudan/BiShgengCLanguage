@@ -3,9 +3,9 @@
 // In BSC safe zone, prefix/postfix ++/-- have void type. Using their value
 // (e.g. in assignment, condition, subscript, return) must be rejected.
 
-safe void take_int(int x); // expected-note@6 {{passing argument to parameter 'x' here}}
+_Safe void take_int(int x); // expected-note@6 {{passing argument to parameter 'x' here}}
 
-safe int test_assign_from_inc_dec(void) {
+_Safe int test_assign_from_inc_dec(void) {
   int i = 0;
   int x = i++;   // expected-error {{conversion from type 'void' to 'int' is forbidden in the safe zone}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
   int y = ++i;   // expected-error {{conversion from type 'void' to 'int' is forbidden in the safe zone}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
@@ -16,14 +16,14 @@ safe int test_assign_from_inc_dec(void) {
   return 0;
 }
 
-safe void test_condition(void) {
+_Safe void test_condition(void) {
   int i = 0;
   if (i++) { }   // expected-error {{statement requires expression of scalar type ('void' invalid)}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
   if (++i) { }   // expected-error {{statement requires expression of scalar type ('void' invalid)}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
   while (i--) { }  // expected-error {{statement requires expression of scalar type ('void' invalid)}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
 }
 
-safe void test_binary_expr(void) {
+_Safe void test_binary_expr(void) {
   int i = 0;
   // Inc/dec on left side of binary op
   if (i-- > 0) { }   // expected-error {{invalid operands to binary expression ('void' and 'int')}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
@@ -33,21 +33,21 @@ safe void test_binary_expr(void) {
   while (5 > ++i) { } // expected-error {{invalid operands to binary expression ('int' and 'void')}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
 }
 
-safe void test_subscript(void) {
+_Safe void test_subscript(void) {
   int arr[5] = {1, 2, 3, 4, 5};
   int i = 0;
   // Subscript in safe zone: index i++ has void type, so subscript is rejected.
   int x = arr[i++];  // expected-error {{array subscript is not an integer}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
-  take_int(unsafe(arr[i++])); // ok: unsafe zone should still accept i++ and use the value
+  take_int(_Unsafe(arr[i++])); // ok: unsafe zone should still accept i++ and use the value
 }
 
-safe int test_return(void) {
+_Safe int test_return(void) {
   int i = 0;
   return i--;    // expected-error {{conversion from type 'void' to 'int' is forbidden in the safe zone}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
 }
 
 // In safe void functions, result of ++/-- cannot be used as return value directly.
-safe void test_return_void_inc_dec(void) {
+_Safe void test_return_void_inc_dec(void) {
   int a = 0;
   return a++;    // expected-error {{result of '++' or '--' cannot be used as return value in safe zone; move the increment/decrement out of the return statement (or add an explicit cast to void to suppress)}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
   return ++a;    // expected-error {{result of '++' or '--' cannot be used as return value in safe zone; move the increment/decrement out of the return statement (or add an explicit cast to void to suppress)}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
@@ -56,12 +56,12 @@ safe void test_return_void_inc_dec(void) {
 }
 
 // Explicit cast to void is allowed (alternative to moving inc/dec out of return).
-safe void test_return_void_cast_ok(void) {
+_Safe void test_return_void_cast_ok(void) {
   int a = 0;
   return (void)a++;
 }
 
-safe void test_argument(void) {
+_Safe void test_argument(void) {
   int i = 0;
   take_int(i++); // expected-error {{conversion from type 'void' to 'int' is forbidden in the safe zone}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
 }

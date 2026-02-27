@@ -57,9 +57,9 @@ bool DeclSpec::setFunctionSafeZoneSpecifier(SourceLocation Loc,
     FS_safe_zone_loc = Loc;
     return false;
   } else if (FS_safe_zone_specified == SZ_Safe) {
-    PrevSpec = "safe";
+    PrevSpec = "_Safe";
   } else if (FS_safe_zone_specified == SZ_Unsafe) {
-    PrevSpec = "unsafe";
+    PrevSpec = "_Unsafe";
   } else {
     PrevSpec = "";
   }

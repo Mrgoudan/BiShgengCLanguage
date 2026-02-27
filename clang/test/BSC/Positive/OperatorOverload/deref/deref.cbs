@@ -46,14 +46,14 @@ struct H {
 };
 
 __attribute__((operator *))
-safe int * borrow deref2(struct H * borrow h) {
+_Safe int * borrow deref2(struct H * borrow h) {
     return &mut(h->g.a);
 }
 
 int test2() {
     struct G g1 = {1};
     struct H h1 = {g1, 11};
-    safe {
+    _Safe {
         int t2 = *h1;
         if (t2 != 1) {
             return -1;
@@ -78,14 +78,14 @@ struct J {
 };
 
 __attribute__((operator *))
-safe const int * borrow deref4(const struct J * borrow j) {
+_Safe const int * borrow deref4(const struct J * borrow j) {
     return &const(j->i.a);
 }
 
 int test3() {
     struct I i1 = {1};
     struct J j1 = {i1, 11};
-    safe {
+    _Safe {
         int t2 = *j1;
         if (t2 != 1) {
             return -1;
@@ -102,8 +102,8 @@ public:
   RcData<T> * ptr;
 };
 
-safe Rc<T> Rc<T>::new(T data) {
-    unsafe {
+_Safe Rc<T> Rc<T>::new(T data) {
+    _Unsafe {
         struct RcData<T> * RcDataPtr = (struct RcData<T> *)malloc(sizeof(struct RcData<T>));
         RcDataPtr->data = data;
         Rc<T> rc = { .ptr = RcDataPtr };

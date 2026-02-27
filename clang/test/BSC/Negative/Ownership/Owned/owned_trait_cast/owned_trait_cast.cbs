@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -verify %s
 
 trait T {
-  safe void do_it(This* owned this);
+  _Safe void do_it(This* owned this);
   void do_that(This* this);
-  safe void do_this(This* borrow this);
+  _Safe void do_this(This* borrow this);
 };
 
-safe void int::do_it(int* owned this) {
-  unsafe { int* x = (int*)this; }
+_Safe void int::do_it(int* owned this) {
+  _Unsafe { int* x = (int*)this; }
 }
 
 void int::do_that(int* this) {
 }
 
-safe void int::do_this(int* borrow this) {
+_Safe void int::do_this(int* borrow this) {
 }
 
 impl trait T for int;

@@ -12,7 +12,7 @@ void safe_free<T>(T* owned p) {
   free( (T*)p );
 }
 
-safe int foo(int *borrow x) { return *x; }
+_Safe int foo(int *borrow x) { return *x; }
 typedef struct S {
   int *owned p;
 } S;

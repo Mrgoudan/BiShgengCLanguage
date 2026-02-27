@@ -6,7 +6,7 @@
 // expected-no-diagnostics
 
 void test_numeric_casts(void) {
-  safe {
+  _Safe {
     long a = 2;
     int b = (int)a;                 // ok: explicit cast allowed
     long c = (long)b;               // ok: widening conversion
@@ -27,35 +27,35 @@ void test_numeric_casts(void) {
     f = (unsigned long)(-1);        // ok: explicit cast allowed
   }
 
-  safe {
+  _Safe {
     int a = 1;
     char b = (char)a;                // ok: explicit cast allowed
     b = (char)1;                     // ok
     b = (char)128;                   // ok: explicit cast allowed
-    b = unsafe((char)128);           // ok
-    b = safe((char)128);             // ok: explicit cast allowed
+    b = _Unsafe((char)128);           // ok
+    b = _Safe((char)128);             // ok: explicit cast allowed
 
     constexpr int c = 10;
     b = (int)c;                      // ok
     a = (int)b;                      // ok
     a = (int)'b';                    // ok
-    a = unsafe((int)b);              // ok
-    a = safe((int)b);                // ok
+    a = _Unsafe((int)b);              // ok
+    a = _Safe((int)b);                // ok
     unsigned int d = 0;
     d = (unsigned int)b;             // ok: explicit cast allowed
   }
 
-  safe {
+  _Safe {
     _Bool a = 0;
     int b = (int)a;          // ok
     _Bool c = (_Bool)b;      // ok: explicit cast allowed
     c = (_Bool)1;            // ok
     c = (_Bool)2;            // ok: explicit cast allowed
-    c = unsafe((_Bool)1);    // ok
-    c = safe((_Bool)1);      // ok
+    c = _Unsafe((_Bool)1);    // ok
+    c = _Safe((_Bool)1);      // ok
   }
 
-  safe {
+  _Safe {
     char a = 'A';
     long double b = (long double)a;  // ok
   }
@@ -65,27 +65,27 @@ void test_enum_casts(void) {
   enum E { ZERO, ONE, TWO };
   enum F { SUN, MON, TUES };
 
-  safe {
+  _Safe {
     int a = 0;
     enum E num = (enum E)a;     // ok: explicit cast allowed
     num = (enum E)0;            // ok: explicit cast allowed
     num = (enum E)ZERO;         // ok
-    num = safe((enum E)ZERO);   // ok
-    num = unsafe((enum E)ZERO); // ok
+    num = _Safe((enum E)ZERO);   // ok
+    num = _Unsafe((enum E)ZERO); // ok
     enum F day = SUN;
     num = (enum E)day;          // ok: explicit cast allowed
     num = (enum E)SUN;          // ok: explicit cast allowed
-    num = safe((enum E)day);    // ok: explicit cast allowed
-    num = safe((enum E)SUN);    // ok: explicit cast allowed
-    num = unsafe((enum E)day);  // ok
-    num = unsafe((enum E)SUN);  // ok
+    num = _Safe((enum E)day);    // ok: explicit cast allowed
+    num = _Safe((enum E)SUN);    // ok: explicit cast allowed
+    num = _Unsafe((enum E)day);  // ok
+    num = _Unsafe((enum E)SUN);  // ok
     a = (int)num;               // ok: explicit cast allowed
     a = (int)ZERO;              // ok
   }
 }
 
 void test_float_casts(void) {
-  safe {
+  _Safe {
     double a = 1.0;
     float b = (float)a;      // ok: explicit cast allowed
     a = (double)b;           // ok
@@ -96,7 +96,7 @@ void test_float_casts(void) {
 }
 
 void test_signed_unsigned_casts(void) {
-  safe {
+  _Safe {
     unsigned int a = (unsigned int)1;  // ok
     int b = (int)a;                    // ok: explicit cast allowed
     a = (unsigned int)b;               // ok: explicit cast allowed

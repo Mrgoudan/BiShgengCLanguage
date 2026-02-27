@@ -479,8 +479,8 @@ KEYWORD(owned                       , KEYBSC)
 KEYWORD(borrow                      , KEYBSC)
 KEYWORD(trait                       , KEYBSC)
 KEYWORD(impl                        , KEYBSC)
-KEYWORD(safe                        , KEYBSC)
-KEYWORD(unsafe                      , KEYBSC)
+KEYWORD(_Safe                       , KEYBSC)
+KEYWORD(_Unsafe                     , KEYBSC)
 KEYWORD(__conditional               , KEYBSC)
 #endif
 

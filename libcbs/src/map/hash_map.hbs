@@ -37,12 +37,12 @@ public:
 //
 // This number is a lower bound; the `HashMap<K, V, S>` might be able to hold
 // more, but is guaranteed to be able to hold at least this many.
-safe size_t HashMap<K, V, S>::capacity(const HashMap<K, V, S>* borrow this) {
+_Safe size_t HashMap<K, V, S>::capacity(const HashMap<K, V, S>* borrow this) {
     return this->table.capacity();
 }
 
 // Removes all elements from the table without freeing the backing memory.
-safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* borrow this) {
+_Safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* borrow this) {
     if (this->table.is_empty()) {
         return;
     }
@@ -50,12 +50,12 @@ safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* borrow this) {
     return;
 }
 
-safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, const K* borrow k) {
+_Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, const K* borrow k) {
     if (this->table.is_empty()) {
         return 0;
     }
 
-    unsafe {
+    _Unsafe {
         S hash_builder = this->hash_builder;
         uint64_t hash = k->hash(&mut hash_builder);
         Option<size_t> option = this->table.find(hash, k);
@@ -70,8 +70,8 @@ safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, c
 //
 // The key may be any borrowed form of the map's key type,
 // but `hash` and `equals` on the borrowed form must match those for the key type.
-// safe Option<const V* borrow> HashMap<K, V, S>::get(const HashMap<K, V, S>* borrow this, const K* borrow k) {
-//     unsafe {
+// _Safe Option<const V* borrow> HashMap<K, V, S>::get(const HashMap<K, V, S>* borrow this, const K* borrow k) {
+//     _Unsafe {
 //         S hash_builder = this->hash_builder;
 //         uint64_t hash = k->hash(&mut hash_builder);
 //         Option<size_t> option = this->table.find(hash, k);
@@ -90,8 +90,8 @@ safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, c
 //
 // The key may be any borrowed form of the map's key type,
 // but `hash` and `equals` on the borrowed form must match those for the key type.
-safe Option<V* borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* borrow this, const K* borrow k) {
-    unsafe {
+_Safe Option<V* borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* borrow this, const K* borrow k) {
+    _Unsafe {
         S hash_builder = this->hash_builder;
         uint64_t hash = k->hash(&mut hash_builder);
         Option<size_t> option = this->table.find(hash, k);
@@ -113,13 +113,13 @@ safe Option<V* borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* borrow this, 
 // avoid frequent reallocations. After calling `reserve`,
 // capacity will be greater than or equal to `this.length() + additional`.
 // Does nothing if capacity is already sufficient.
-safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t additional) {
+_Safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t additional) {
     if (additional > this->table.growth_left) {
         // Conservatively resize to at least the next size up
         // to avoid churning deletes into frequent rehashes.
 
         if (additional > SIZE_MAX - this->table.items) {
-            unsafe {
+            _Unsafe {
                 bsc_overflow_handler();
             }
         }
@@ -138,7 +138,7 @@ safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t additi
 
         // traverse the origin hashmap and insert entries into the new hashmap
         if (this->table.bucket_mask != 0) {
-            unsafe {
+            _Unsafe {
                 for (size_t index = 0; index < this->table.bucket_mask + 1; index += 1) {
                     if (*(this->table.ctrl + index) != EMPTY &&
                         *(this->table.ctrl + index) != DELETED) {
@@ -174,16 +174,16 @@ safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t additi
 //
 // This function may resize the table if additional space is required for
 // inserting an element.
-safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* borrow this, K k, V v) {
+_Safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* borrow this, K k, V v) {
     this->reserve(1);
 
     S hash_builder = this->hash_builder;
-    unsafe {
+    _Unsafe {
         uint64_t hash = k.hash(&mut hash_builder);
         Result<size_t, size_t> result = this->table.find_or_find_insert_slot(hash, &const k);
         if (result.is_ok()) {
             size_t index = result_unwrap<size_t, size_t>(result);
-            unsafe {
+            _Unsafe {
                 V old = *(this->table.values + index);
                 *(this->table.values + index) = v;
                 // IF(`K` isa owned struct type) AUTO INSERT: ~K(k)
@@ -198,19 +198,19 @@ safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* borrow this, K k, V v)
 }
 
 // Returns `true` if the map contains no elements.
-safe _Bool HashMap<K, V, S>::is_empty(const HashMap<K, V, S>* borrow this) {
+_Safe _Bool HashMap<K, V, S>::is_empty(const HashMap<K, V, S>* borrow this) {
     return this->table.is_empty();
 }
 
 // Returns the number of elements in the map.
-safe size_t HashMap<K, V, S>::length(const HashMap<K, V, S>* borrow this) {
+_Safe size_t HashMap<K, V, S>::length(const HashMap<K, V, S>* borrow this) {
     return this->table.length();
 }
 
 // Removes a key from the map, returning the value at the key if the key
 // was previously in the map. Keeps the allocated memory for reuse.
-safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* borrow this, const K* borrow k) {
-    unsafe {
+_Safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* borrow this, const K* borrow k) {
+    _Unsafe {
         S hash_builder = this->hash_builder;
         uint64_t hash = k->hash(&mut hash_builder);
         Option<V> result = this->table.remove_entry(hash, k);
@@ -223,12 +223,12 @@ safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* borrow this, const K* 
 //
 // The hash map will be able to hold at least `cap` elements without
 // reallocating. If `cap` is 0, the hash map will not allocate.
-safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S hash_builder) {
-    unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
+_Safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S hash_builder) {
+    _Unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap K with an owned struct.");
-    unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
+    _Unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap V with an owned struct.");
@@ -244,12 +244,12 @@ safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S h
 //
 // The hash map is initially created with a capacity of 0,
 // so it will not allocate until it is first inserted into.
-safe HashMap<K, V, S> HashMap<K, V, S>::with_hasher(S hash_builder) {
-    unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
+_Safe HashMap<K, V, S> HashMap<K, V, S>::with_hasher(S hash_builder) {
+    _Unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap K with an owned struct.");
-    unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
+    _Unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
                     "Can only instantiate HashMap with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap V with an owned struct.");

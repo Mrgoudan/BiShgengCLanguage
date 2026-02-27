@@ -5,7 +5,7 @@ public:
     int x;
 };
 
-safe void test(void) {
+_Safe void test(void) {
     B b1;   // expected-error {{uninitialized declarator is forbidden in the safe zone}}
 
     b1.x = 0;

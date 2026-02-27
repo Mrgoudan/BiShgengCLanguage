@@ -6,7 +6,7 @@ struct S {
     int *borrow _Nullable p;
 };
 
-safe void test1(void) {
+_Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ederef-nullable"
     struct S s = { .p = nullptr };

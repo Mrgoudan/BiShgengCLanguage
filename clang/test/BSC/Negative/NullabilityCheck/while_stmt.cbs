@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
-safe int *borrow _Nullable get_random_ptr(int* borrow p);
-safe void test1(void) {
+_Safe int *borrow _Nullable get_random_ptr(int* borrow p);
+_Safe void test1(void) {
     int a = 10;
     int *borrow _Nullable p = nullptr;
     while (p == nullptr) {
@@ -10,7 +10,7 @@ safe void test1(void) {
     *p = 20;
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     int a = 10;
     int *borrow _Nullable p = get_random_ptr(&mut a);
     while (p != nullptr) {
@@ -20,7 +20,7 @@ safe void test2(void) {
     *p = 20;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test3(void) {
+_Safe void test3(void) {
     int a = 10;
     int *borrow _Nullable p = get_random_ptr(&mut a);
     if (p != nullptr) {
@@ -32,7 +32,7 @@ safe void test3(void) {
     }
 }
 
-safe void test4(void) {
+_Safe void test4(void) {
     int a = 10;
     int b = 10;
     int *borrow _Nullable p = nullptr;
@@ -45,7 +45,7 @@ safe void test4(void) {
     *q = 20;
 }
 
-safe void test5(void) {
+_Safe void test5(void) {
     int a = 10;
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
@@ -62,8 +62,8 @@ safe void test5(void) {
 struct S {
     int a;
 };
-safe struct S *borrow _Nullable get_random_ptr_S(int* borrow p);
-safe void test6(void) {
+_Safe struct S *borrow _Nullable get_random_ptr_S(int* borrow p);
+_Safe void test6(void) {
     int a = 10;
     struct S *borrow _Nullable p = nullptr;
     while (p == nullptr) {
@@ -72,7 +72,7 @@ safe void test6(void) {
     p->a = 20;
 }
 
-safe void test7(void) {
+_Safe void test7(void) {
     int a = 10;
     struct S *borrow _Nullable p = get_random_ptr_S(&mut a);
     while (p != nullptr) {

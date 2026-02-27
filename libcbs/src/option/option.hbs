@@ -30,26 +30,26 @@ public:
 };
 
 // Returns `true` if the option is a `None` value.
-safe _Bool Option<T>::is_none(const Option<T>* borrow this) {
-    unsafe {
+_Safe _Bool Option<T>::is_none(const Option<T>* borrow this) {
+    _Unsafe {
         return this->state == None;
     }
 }
 
 // Returns `true` if the option is a `Some` value.
-safe _Bool Option<T>::is_some(const Option<T>* borrow this) {
-    unsafe {
+_Safe _Bool Option<T>::is_some(const Option<T>* borrow this) {
+    _Unsafe {
         return this->state == Some;
     }
 }
 
 // Creates a `Some` value.
-safe Option<T> Option<T>::Some(T t) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Option<T> Option<T>::Some(T t) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Option with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-    unsafe {
+    _Unsafe {
         Option<T> o = {
             .state = Some,
             .val = {0}
@@ -61,12 +61,12 @@ safe Option<T> Option<T>::Some(T t) {
 }
 
 // Creates a `None` value.
-safe Option<T> Option<T>::None(void) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Option<T> Option<T>::None(void) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Option with owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
 				    "Fix: You can wrap T with an owned struct.");
-    unsafe {
+    _Unsafe {
         Option<T> o = {
             .state = None,
             .val = {0}
@@ -78,11 +78,11 @@ safe Option<T> Option<T>::None(void) {
 // Returns the contained `Some` value, consuming the `option` value.
 //
 // Aborts if the `option` value equals `None`.
-safe T option_unwrap<T>(Option<T> option) {
+_Safe T option_unwrap<T>(Option<T> option) {
     if (option.is_none()) {
         bsc_unwrap_failed();
     }
-    unsafe {
+    _Unsafe {
         T* ptr = (T *_Nonnull)option.val;
         T t = *ptr;
         forget<Option<T>>(option); // forget value `option` to avoid calling its destructor

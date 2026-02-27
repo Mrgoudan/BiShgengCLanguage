@@ -17,22 +17,22 @@ public:
     }
 };
 
-safe char* borrow String::as_mut_str(String* borrow this);
-safe const char* borrow String::as_str(const String* borrow this);
-safe char String::at(const String* borrow this, size_t index);
-safe size_t String::capacity(const String* borrow this);
-safe _Bool String::equals(const String* borrow this, const String* borrow other);
-safe size_t String::find(const String* borrow this, char c);
-unsafe String String::from(const char* str);
-safe const char* borrow String::get(const String* borrow this, size_t index);
-safe char* borrow String::get_mut(String* borrow this, size_t index);
-safe _Bool String::is_empty(const String* borrow this);
-safe size_t String::length(const String* borrow this);
-safe String String::new(void);
-safe void String::push(String* borrow this, char value);
-safe void String::set(String* borrow this, size_t index, char value);
-safe void String::shrink_to_fit(String* borrow this);
-safe String String::slice(const String* borrow this, size_t start, size_t length);
-safe String String::with_capacity(size_t cap);
+_Safe char* borrow String::as_mut_str(String* borrow this);
+_Safe const char* borrow String::as_str(const String* borrow this);
+_Safe char String::at(const String* borrow this, size_t index);
+_Safe size_t String::capacity(const String* borrow this);
+_Safe _Bool String::equals(const String* borrow this, const String* borrow other);
+_Safe size_t String::find(const String* borrow this, char c);
+_Unsafe String String::from(const char* str);
+_Safe const char* borrow String::get(const String* borrow this, size_t index);
+_Safe char* borrow String::get_mut(String* borrow this, size_t index);
+_Safe _Bool String::is_empty(const String* borrow this);
+_Safe size_t String::length(const String* borrow this);
+_Safe String String::new(void);
+_Safe void String::push(String* borrow this, char value);
+_Safe void String::set(String* borrow this, size_t index, char value);
+_Safe void String::shrink_to_fit(String* borrow this);
+_Safe String String::slice(const String* borrow this, size_t start, size_t length);
+_Safe String String::with_capacity(size_t cap);
 
 #endif

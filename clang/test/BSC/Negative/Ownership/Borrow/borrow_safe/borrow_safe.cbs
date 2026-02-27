@@ -8,7 +8,7 @@ struct R {
 };
 struct R g_r;
 
-safe void foo1(int p) {
+_Safe void foo1(int p) {
   extern int num;
   static int num1 = 0; // expected-error {{defining mutable global variables is not allowed within the safe zone}}
   static const int c1 = 0; // legal
@@ -22,7 +22,7 @@ safe void foo1(int p) {
             // expected-warning@-1{{expression result unused}}
   &const num1; // legal
                // expected-warning@-1{{expression result unused}}
-  unsafe {
+  _Unsafe {
    static int num2 = 0; // legal
    &mut a; // expected-warning{{expression result unused}}
    &mut num2; // expected-warning{{expression result unused}}
@@ -31,8 +31,8 @@ safe void foo1(int p) {
   }
 }
 
-unsafe void foo2(int p) {
-  safe {
+_Unsafe void foo2(int p) {
+  _Safe {
     extern int num;
     static int num3 = 0; // expected-error {{defining mutable global variables is not allowed within the safe zone}}
     static const int c2 = 0; // legal

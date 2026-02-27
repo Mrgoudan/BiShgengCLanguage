@@ -8,7 +8,7 @@ struct N {
     struct M *borrow _Nullable b;
 };
 
-safe void test1(void) {
+_Safe void test1(void) {
     struct N n1 = { .b = nullptr };
     if (n1.b->a != nullptr)   // expected-error {{cannot access member through nullable pointer}}
         *n1.b->a = 10;  // expected-error {{cannot access member through nullable pointer}}
@@ -18,29 +18,29 @@ safe void test1(void) {
         *n2.b->a = 10;
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     struct N n1 = { .b = nullptr };
     if (n1.b != nullptr && n1.b->a != nullptr)
         *n1.b->a = 10;
 }
 
-safe void test3(void) {
+_Safe void test3(void) {
     struct N n1 = { .b = nullptr };
     if (n1.b->a != nullptr && n1.b != nullptr)  // expected-error {{cannot access member through nullable pointer}}
         *n1.b->a = 10;
 }
 
-safe void test4(void) {
+_Safe void test4(void) {
     struct N n1 = { .b = nullptr };
     if (n1.b != nullptr)
         if (n1.b->a != nullptr)
             *n1.b->a = 10;
 }
 
-safe void safe_free (struct N *owned _Nullable p);
-safe struct N *owned _Nullable safe_malloc(struct N n);
+_Safe void safe_free (struct N *owned _Nullable p);
+_Safe struct N *owned _Nullable safe_malloc(struct N n);
 
-safe void test5(void) {
+_Safe void test5(void) {
     struct N n = { .b = nullptr };
     struct N *owned _Nullable p = safe_malloc(n);
     if (p->b->a != nullptr)   // expected-error {{cannot access member through nullable pointer}}
@@ -48,7 +48,7 @@ safe void test5(void) {
     safe_free(p);
 }
 
-safe void test6(void) {
+_Safe void test6(void) {
     struct N n = { .b = nullptr };
     struct N *owned _Nullable p = safe_malloc(n);
     if (p->b != nullptr && p->b->a != nullptr)  // expected-error {{cannot access member through nullable pointer}} expected-error {{cannot access member through nullable pointer}}
@@ -57,7 +57,7 @@ safe void test6(void) {
 }
 
 
-safe void test7(void) {
+_Safe void test7(void) {
     struct N n = { .b = nullptr };
     struct N *owned _Nullable p = safe_malloc(n);
     if (p != nullptr) {
@@ -68,7 +68,7 @@ safe void test7(void) {
     }
 }
 
-safe void test8(void) {
+_Safe void test8(void) {
     struct N n = { .b = nullptr };
     struct N *owned _Nullable p = safe_malloc(n);
     if (p != nullptr && p->b != nullptr && p->b->a != nullptr)
@@ -76,7 +76,7 @@ safe void test8(void) {
     safe_free(p);
 }
 
-safe void test9(void) {
+_Safe void test9(void) {
     struct N n = { .b = nullptr };
     struct N *owned _Nullable p = safe_malloc(n);
     if (p != nullptr && p->b != nullptr)

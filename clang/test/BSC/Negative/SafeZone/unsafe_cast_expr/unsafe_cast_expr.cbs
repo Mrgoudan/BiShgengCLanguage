@@ -8,23 +8,23 @@ impl trait F for int;
 impl trait G for int;
 
 void diffPointCastConver(void) {
-  unsafe {
+  _Unsafe {
     // int * <-> void *
     int *a = NULL;
-    safe {
+    _Safe {
       void *b = (void*)a;  // expected-error{{conversion from type 'int *' to 'void *' is forbidden in the safe zone}}
       int *c = (int *)b;   // expected-error{{conversion from type 'void *' to 'int *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // int * <-> double *
     double *a = NULL;
-    safe {
+    _Safe {
       int *b = (int *)a;       // expected-error{{conversion from type 'double *' to 'int *' is forbidden in the safe zone}}
       double *c = (double *)b; // expected-error{{conversion from type 'int *' to 'double *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // struct1 * -> struct2*
     struct S1
     {
@@ -36,24 +36,24 @@ void diffPointCastConver(void) {
     };
     struct S1 *s1 = NULL;
     struct S2 *s2 = NULL;
-    safe {
+    _Safe {
       struct S1* s1_1 = (struct S1*)s2;  // expected-error{{conversion from type 'struct S2 *' to 'struct S1 *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // trait1* -> trait2*
     int m = 0;
     int *p = &m;
     trait F *f = &m;
-    safe {
+    _Safe {
       trait G *h = (trait G*)p; //ok
       trait G *g = (trait G*)f; // expected-error{{conversion from type 'trait F *' to 'trait G *' is forbidden in the safe zone}}
     }
   }
-  unsafe {
+  _Unsafe {
     // owned *<-> raw *
     int *pa = NULL;
-    safe {
+    _Safe {
       int *owned p1 = (int * owned)pa;   // expected-error{{conversion from type 'int *' to 'int *owned' is forbidden in the safe zone}}
       pa = (int *)p1;                    // expected-error{{conversion from type 'int *owned' to 'int *' is forbidden in the safe zone}}
     }
@@ -63,19 +63,19 @@ void diffPointCastConver(void) {
 
 void pointCastConver() {
   // int * <-> int
-  safe {
+  _Safe {
     int a = 1;
     int *b = (int *)a;       // expected-error{{conversion from type 'int' to 'int *' is forbidden in the safe zone}}
     int c = (int)b;          // expected-error{{conversion from type 'int *' to 'int' is forbidden in the safe zone}}
   }
   // void * <-> int
-  safe {
+  _Safe {
     int a = 1;
     void *b = (void *)a;     // expected-error{{conversion from type 'int' to 'void *' is forbidden in the safe zone}}
     int c = (int)b;          // expected-error{{conversion from type 'void *' to 'int' is forbidden in the safe zone}}
   }
   // owned int * <-> int
-  safe {
+  _Safe {
     int a = 1;
     int *owned p1 = (int * owned)a;   // expected-error{{conversion from type 'int' to 'int *owned' is forbidden in the safe zone}}
     a = (int)p1;                      // expected-error{{conversion from type 'int *owned' to 'int' is forbidden in the safe zone}}
@@ -85,7 +85,7 @@ void pointCastConver() {
 
 void baseTypeCastConver() {
   // long <-> int,
-  safe {
+  _Safe {
     long a = 2;
     int b = (int)a;                 // ok: explicit cast allowed
     long c = (long)b;               // int->long ok
@@ -105,39 +105,39 @@ void baseTypeCastConver() {
     f = (unsigned long)-1;          // ok: explicit cast allowed
   }
   // int <-> char
-  safe {
+  _Safe {
     int a = 1;
     // char -128~127
     char b = (char)a;                // ok: explicit cast allowed
     b = (char)1;                     // ok
-    b = unsafe((char)1);             // ok
-    b = safe((char)1);               // ok
+    b = _Unsafe((char)1);             // ok
+    b = _Safe((char)1);               // ok
     b = (char)128;                   // ok: explicit cast allowed
-    b = unsafe((char)128);           // ok
-    b = safe((char)128);             // ok: explicit cast allowed
+    b = _Unsafe((char)128);           // ok
+    b = _Safe((char)128);             // ok: explicit cast allowed
 
     constexpr int c = 10;
     b = (int)c;
     a = (int)b;                      // char->int ok
     a = (int)'b';                    // char->int ok
-    a = unsafe((int)b);              // ok
-    a = safe((int)b);                // ok
-    a = (int)(unsafe(b));            // ok
-    a = (int)(safe(b));              // ok
+    a = _Unsafe((int)b);              // ok
+    a = _Safe((int)b);                // ok
+    a = (int)(_Unsafe(b));            // ok
+    a = (int)(_Safe(b));              // ok
     unsigned int d = 0;
     d = (unsigned int)b;             // ok: explicit cast allowed
   }
   // int <-> bool
-  safe {
+  _Safe {
     _Bool a = 0;
     int b = (int)a;          // ok
     _Bool c = (_Bool)b;      // ok: explicit cast allowed
     c = (_Bool)1;
     c = (_Bool)2;            // ok: explicit cast allowed
-    c = unsafe((_Bool)1);
-    c = safe((_Bool)1);
-    c = (_Bool)(safe(1));
-    c = (_Bool)(unsafe(1));
+    c = _Unsafe((_Bool)1);
+    c = _Safe((_Bool)1);
+    c = (_Bool)(_Safe(1));
+    c = (_Bool)(_Unsafe(1));
   }
   // int <-> enum
   enum E {
@@ -150,25 +150,25 @@ void baseTypeCastConver() {
     MON,
     TUES,
   };
-  safe {
+  _Safe {
     int a = 0;
     enum E num = (enum E)a;     // ok: explicit cast allowed
     num = (enum E)0;            // ok: explicit cast allowed
     num = (enum E)ZERO;         // ok
-    num = safe((enum E)ZERO);
-    num = unsafe((enum E)ZERO);
+    num = _Safe((enum E)ZERO);
+    num = _Unsafe((enum E)ZERO);
     enum F day = SUN;
     num = (enum E)day;          // ok: explicit cast allowed
     num = (enum E)SUN;          // ok: explicit cast allowed
-    num = safe((enum E)day);    // ok: explicit cast allowed
-    num = safe((enum E)SUN);    // ok: explicit cast allowed
-    num = unsafe((enum E)day);  // ok
-    num = unsafe((enum E)SUN);  // ok
+    num = _Safe((enum E)day);    // ok: explicit cast allowed
+    num = _Safe((enum E)SUN);    // ok: explicit cast allowed
+    num = _Unsafe((enum E)day);  // ok
+    num = _Unsafe((enum E)SUN);  // ok
     a = (int)num;               // ok: explicit cast allowed
     a = (int)ZERO;
   }
   // double <-> float
-  safe {
+  _Safe {
     double a = 1.0;
     float b = (float)a;      // ok: explicit cast allowed
     a = (double)b;           // ok
@@ -177,7 +177,7 @@ void baseTypeCastConver() {
     c = (float)1.2f;         // ok
   }
   // int <-> unsigned int
-  safe {
+  _Safe {
     unsigned int a = (unsigned int)1;  // ok
     int b = (int)a;                    // ok: explicit cast allowed
     a = (unsigned int)b;               // ok: explicit cast allowed

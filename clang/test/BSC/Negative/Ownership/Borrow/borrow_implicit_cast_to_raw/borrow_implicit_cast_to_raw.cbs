@@ -5,10 +5,10 @@ void *malloc(unsigned long);
 void log_print(void *msg, const char *pcFormat, ...){}
 
 #define bsc_log_print(msg, pcFormat, ...) \
-  unsafe {log_print(msg, pcFormat, ##__VA_ARGS__);}
+  _Unsafe {log_print(msg, pcFormat, ##__VA_ARGS__);}
 
-safe T* owned _Nullable bsc_malloc<T>(int  size) {
-  unsafe {return (T* owned _Nullable )malloc(size);}
+_Safe T* owned _Nullable bsc_malloc<T>(int  size) {
+  _Unsafe {return (T* owned _Nullable )malloc(size);}
 }
 
 int main() {

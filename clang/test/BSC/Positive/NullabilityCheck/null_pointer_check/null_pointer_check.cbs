@@ -13,8 +13,8 @@
       return ret;            \
     }
 
-safe T *owned safe_malloc<T>(T t) {
-    unsafe {
+_Safe T *owned safe_malloc<T>(T t) {
+    _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
             addr = &t;
@@ -28,13 +28,13 @@ safe T *owned safe_malloc<T>(T t) {
 	}
 }
 
-safe void safe_free<T>(T *owned p) {
-    unsafe {
+_Safe void safe_free<T>(T *owned p) {
+    _Unsafe {
         free((void *)p);
     }
 }
 
-safe int test(void) {
+_Safe int test(void) {
   int * owned _Nullable p = nullptr;
   RETURN_IF(nullptr == p, 1);
   int a = 1;

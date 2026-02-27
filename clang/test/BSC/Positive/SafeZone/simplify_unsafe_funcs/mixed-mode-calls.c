@@ -2,39 +2,39 @@
 // Tests for mixed mode function calls in various contexts
 
 // Basic calls
-unsafe int compute(int x);
-safe int compute(int x);
+_Unsafe int compute(int x);
+_Safe int compute(int x);
 
 void test_basic(void) {
   int result = compute(42);
   (void)result;
 }
 
-safe void test_from_safe_context(void) {
+_Safe void test_from_safe_context(void) {
   int result = compute(42);
   (void)result;
 }
 
 // Multiple parameters
-unsafe void multi_param(int a, char b, float c);
-safe void multi_param(int a, char b, float c);
+_Unsafe void multi_param(int a, char b, float c);
+_Safe void multi_param(int a, char b, float c);
 
 void test_multi_params(void) {
   multi_param(1, 'a', 3.14f);
 }
 
 // Return types
-unsafe float get_float(void);
-safe float get_float(void);
+_Unsafe float get_float(void);
+_Safe float get_float(void);
 
 void test_return_type(void) {
   float f = get_float();
   (void)f;
 }
 
-// Safe-only and unsafe-only functions
-safe void safe_only(void);
-unsafe void unsafe_only(void);
+// Safe-only and _Unsafe-only functions
+_Safe void safe_only(void);
+_Unsafe void unsafe_only(void);
 
 void test_safe_from_unsafe(void) {
   safe_only();
@@ -44,23 +44,23 @@ void test_unsafe_from_unsafe(void) {
   unsafe_only();
 }
 
-// Calls in unsafe blocks
-safe void test_in_unsafe_block(void) {
-  unsafe {
+// Calls in _Unsafe blocks
+_Safe void test_in_unsafe_block(void) {
+  _Unsafe {
     compute(10);
   }
 }
 
 // Recursive calls
-unsafe int factorial_unsafe(int n);
-safe int factorial_safe(int n);
+_Unsafe int factorial_unsafe(int n);
+_Safe int factorial_safe(int n);
 
-unsafe int factorial_unsafe(int n) {
+_Unsafe int factorial_unsafe(int n) {
   if (n <= 1) return 1;
   return n * factorial_unsafe(n - 1);
 }
 
-safe int factorial_safe(int n) {
+_Safe int factorial_safe(int n) {
   if (n <= 1) return 1;
   return n * factorial_safe(n - 1);
 }
@@ -73,17 +73,17 @@ void test_recursive(void) {
 }
 
 // Mutually recursive
-unsafe int even(int n);
-unsafe int odd(int n);
-safe int even(int n);
-safe int odd(int n);
+_Unsafe int even(int n);
+_Unsafe int odd(int n);
+_Safe int even(int n);
+_Safe int odd(int n);
 
-unsafe int even(int n) {
+_Unsafe int even(int n) {
   if (n == 0) return 1;
   return odd(n - 1);
 }
 
-unsafe int odd(int n) {
+_Unsafe int odd(int n) {
   if (n == 0) return 0;
   return even(n - 1);
 }
@@ -96,14 +96,14 @@ void test_mutual_recursion(void) {
 }
 
 // Chained calls
-unsafe int step1(int x);
-safe int step1(int x);
+_Unsafe int step1(int x);
+_Safe int step1(int x);
 
-unsafe int step2(int x);
-safe int step2(int x);
+_Unsafe int step2(int x);
+_Safe int step2(int x);
 
-unsafe int step3(int x);
-safe int step3(int x);
+_Unsafe int step3(int x);
+_Safe int step3(int x);
 
 void test_chained(void) {
   int result = step3(step2(step1(10)));
@@ -111,14 +111,14 @@ void test_chained(void) {
 }
 
 // Conditional expressions
-unsafe int check_condition(void);
-safe int check_condition(void);
+_Unsafe int check_condition(void);
+_Safe int check_condition(void);
 
-unsafe int action_a(void);
-safe int action_a(void);
+_Unsafe int action_a(void);
+_Safe int action_a(void);
 
-unsafe int action_b(void);
-safe int action_b(void);
+_Unsafe int action_b(void);
+_Safe int action_b(void);
 
 void test_conditional(void) {
   int result = check_condition() ? action_a() : action_b();
@@ -126,11 +126,11 @@ void test_conditional(void) {
 }
 
 // Loop conditions
-unsafe int has_more(void);
-safe int has_more(void);
+_Unsafe int has_more(void);
+_Safe int has_more(void);
 
-unsafe void process_next(void);
-safe void process_next(void);
+_Unsafe void process_next(void);
+_Safe void process_next(void);
 
 void test_loops(void) {
   while (has_more()) {
@@ -147,8 +147,8 @@ void test_loops(void) {
 }
 
 // Switch statements
-unsafe int get_code(void);
-safe int get_code(void);
+_Unsafe int get_code(void);
+_Safe int get_code(void);
 
 void test_switch(void) {
   switch (get_code()) {
@@ -165,8 +165,8 @@ void test_switch(void) {
 }
 
 // Casts
-unsafe long get_long(void);
-safe long get_long(void);
+_Unsafe long get_long(void);
+_Safe long get_long(void);
 
 void test_cast(void) {
   int x = (int)get_long();
@@ -174,8 +174,8 @@ void test_cast(void) {
 }
 
 // Compound assignments
-unsafe int increment(void);
-safe int increment(void);
+_Unsafe int increment(void);
+_Safe int increment(void);
 
 void test_compound_assignment(void) {
   int counter = 0;
@@ -187,20 +187,20 @@ void test_compound_assignment(void) {
 }
 
 // Forward declarations
-unsafe int forward_declared(int x);
-safe int forward_declared(int x);
+_Unsafe int forward_declared(int x);
+_Safe int forward_declared(int x);
 
 void test_forward(void) {
   int result = forward_declared(40);
   (void)result;
 }
 
-unsafe int forward_declared(int x) { return x; }
+_Unsafe int forward_declared(int x) { return x; }
 
 // Static functions
-static unsafe int static_func(int x);
-static safe int static_func(int x);
-static unsafe int static_func(int x) { return x + 1; }
+static _Unsafe int static_func(int x);
+static _Safe int static_func(int x);
+static _Unsafe int static_func(int x) { return x + 1; }
 
 void test_static(void) {
   int result = static_func(50);
@@ -208,7 +208,7 @@ void test_static(void) {
 }
 
 // Inline functions
-unsafe inline int inline_compute(int x) { return x * 2; }
+_Unsafe inline int inline_compute(int x) { return x * 2; }
 
 void test_inline(void) {
   int result = inline_compute(25);
@@ -216,14 +216,14 @@ void test_inline(void) {
 }
 
 // Comma expressions
-unsafe int comma1(void);
-safe int comma1(void);
+_Unsafe int comma1(void);
+_Safe int comma1(void);
 
-unsafe int comma2(void);
-safe int comma2(void);
+_Unsafe int comma2(void);
+_Safe int comma2(void);
 
-unsafe int comma3(void);
-safe int comma3(void);
+_Unsafe int comma3(void);
+_Safe int comma3(void);
 
 void test_comma(void) {
   int result = (comma1(), comma2(), comma3());
@@ -231,11 +231,11 @@ void test_comma(void) {
 }
 
 // Ternary operator
-unsafe int ternary_a(void);
-safe int ternary_a(void);
+_Unsafe int ternary_a(void);
+_Safe int ternary_a(void);
 
-unsafe int ternary_b(void);
-safe int ternary_b(void);
+_Unsafe int ternary_b(void);
+_Safe int ternary_b(void);
 
 void test_ternary(int condition) {
   int result = condition ? ternary_a() : ternary_b();
@@ -243,14 +243,14 @@ void test_ternary(int condition) {
 }
 
 // Complex nested expressions
-unsafe int op1(int x);
-safe int op1(int x);
+_Unsafe int op1(int x);
+_Safe int op1(int x);
 
-unsafe int op2(int x);
-safe int op2(int x);
+_Unsafe int op2(int x);
+_Safe int op2(int x);
 
-unsafe int op3(int x);
-safe int op3(int x);
+_Unsafe int op3(int x);
+_Safe int op3(int x);
 
 void test_complex(void) {
   int result = op1(op2(10) + op3(20)) * op2(op1(5));
@@ -258,8 +258,8 @@ void test_complex(void) {
 }
 
 // Array subscripts
-unsafe int get_index(void);
-safe int get_index(void);
+_Unsafe int get_index(void);
+_Safe int get_index(void);
 
 void test_array_subscript(void) {
   int arr[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -272,8 +272,8 @@ struct Container {
   int value;
 };
 
-unsafe struct Container get_container(void);
-safe struct Container get_container(void);
+_Unsafe struct Container get_container(void);
+_Safe struct Container get_container(void);
 
 void test_member_access(void) {
   int val = get_container().value;
@@ -281,27 +281,27 @@ void test_member_access(void) {
 }
 
 // Function arguments
-unsafe int producer(void);
-safe int producer(void);
+_Unsafe int producer(void);
+_Safe int producer(void);
 
-unsafe void consumer(int x);
-safe void consumer(int x);
+_Unsafe void consumer(int x);
+_Safe void consumer(int x);
 
 void test_as_argument(void) {
   consumer(producer());
 }
 
 // Return statements
-unsafe int get_return_value(void);
-safe int get_return_value(void);
+_Unsafe int get_return_value(void);
+_Safe int get_return_value(void);
 
 int test_return(void) {
   return get_return_value();
 }
 
 // Initializers
-unsafe int get_init_value(void);
-safe int get_init_value(void);
+_Unsafe int get_init_value(void);
+_Safe int get_init_value(void);
 
 void test_initializer(void) {
   int x = get_init_value();
@@ -310,27 +310,27 @@ void test_initializer(void) {
   (void)arr;
 }
 
-// Calls within safe/unsafe blocks
-unsafe int block_func(void);
-safe int block_func(void);
+// Calls within _Safe/_Unsafe blocks
+_Unsafe int block_func(void);
+_Safe int block_func(void);
 
 void test_nested_blocks(void) {
-  safe {
-    unsafe {
+  _Safe {
+    _Unsafe {
       int x = block_func();
       (void)x;
     }
   }
 }
 
-safe void test_in_safe(void) {
+_Safe void test_in_safe(void) {
   int x = block_func();
   (void)x;
 }
 
 // Extern declarations
-extern unsafe int external_func(int x);
-extern safe int external_func(int x);
+extern _Unsafe int external_func(int x);
+extern _Safe int external_func(int x);
 
 void test_extern(void) {
   int result = external_func(100);
@@ -338,8 +338,8 @@ void test_extern(void) {
 }
 
 // Macro expansions
-unsafe int macro_func(int x);
-safe int macro_func(int x);
+_Unsafe int macro_func(int x);
+_Safe int macro_func(int x);
 
 #define CALL_MACRO_FUNC(x) macro_func(x)
 
@@ -349,14 +349,14 @@ void test_macro(void) {
 }
 
 // Multiple calls in one statement
-unsafe int multi_call_1(void);
-safe int multi_call_1(void);
+_Unsafe int multi_call_1(void);
+_Safe int multi_call_1(void);
 
-unsafe int multi_call_2(void);
-safe int multi_call_2(void);
+_Unsafe int multi_call_2(void);
+_Safe int multi_call_2(void);
 
-unsafe int multi_call_3(void);
-safe int multi_call_3(void);
+_Unsafe int multi_call_3(void);
+_Safe int multi_call_3(void);
 
 void test_multiple_calls(void) {
   int result = multi_call_1() + multi_call_2() + multi_call_3();

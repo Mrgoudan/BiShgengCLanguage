@@ -47,19 +47,19 @@ void Parser::setCurScopeSafeZoneInfo(struct ScopeSafeZoneInfo SZ) {
   }
 }
 
-/// ParseSafeExpression:In BSC grammar, use of the 'safe' or 'unsafe' keyword to
-/// modify statement is permitted, such as `safe int a = funcall()`.
+/// ParseSafeExpression:In BSC grammar, use of the '_Safe' or '_Unsafe' keyword to
+/// modify statement is permitted, such as `_Safe int a = funcall()`.
 ///
 /// safe-statement
-///   'safe' statement
-///   'unsafe' statement
+///   '_Safe' statement
+///   '_Unsafe' statement
 StmtResult Parser::ParseSafeStatement(ParsedStmtContext StmtCtx) {
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   SourceLocation SafeLoc;
-  if (Tok.is(tok::kw_safe)) {
+  if (Tok.is(tok::kw__Safe)) {
     SafeZoneSpec = SZ_Safe;
     SafeLoc = ConsumeToken();
-  } else if (Tok.is(tok::kw_unsafe)) {
+  } else if (Tok.is(tok::kw__Unsafe)) {
     SafeZoneSpec = SZ_Unsafe;
     SafeLoc = ConsumeToken();
   }

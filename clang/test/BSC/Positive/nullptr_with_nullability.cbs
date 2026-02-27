@@ -36,7 +36,7 @@ void * _Nullable return_void_nullable(void) {
 }
 
 // _Nullable in safe zone
-safe void test_safe_nullable(void) {
+_Safe void test_safe_nullable(void) {
   int * _Nullable p = nullptr;
   void * _Nullable vp = (void *)nullptr;
   (void)p;

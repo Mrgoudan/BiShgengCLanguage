@@ -1,56 +1,56 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
 // Simplified negative tests for heterogeneous function pointer assignment
 
-// Test 1: Owned/borrow mismatch - no matching safe declaration
-unsafe void take_owned(int* p);
-safe void take_owned(int* owned p);
+// Test 1: Owned/borrow mismatch - no matching _Safe declaration
+_Unsafe void take_owned(int* p);
+_Safe void take_owned(int* owned p);
 
 void test1(void) {
-    safe void (*ptr_borrow)(int* borrow) = 0;
+    _Safe void (*ptr_borrow)(int* borrow) = 0;
     ptr_borrow = take_owned;  // expected-error {{cannot cast}}
 }
 
-// Test 2: Borrow/owned mismatch - no matching safe declaration
-unsafe void take_borrow(int* p);
-safe void take_borrow(int* borrow p);
+// Test 2: Borrow/owned mismatch - no matching _Safe declaration
+_Unsafe void take_borrow(int* p);
+_Safe void take_borrow(int* borrow p);
 
 void test2(void) {
-    safe void (*ptr_owned)(int* owned) = 0;
+    _Safe void (*ptr_owned)(int* owned) = 0;
     ptr_owned = take_borrow;  // expected-error {{cannot cast}}
 }
 
 // Test 3: Parameter count mismatch
-unsafe void two_params(int* p1, int* p2);
-safe void two_params(int* owned p1, int* owned p2);
+_Unsafe void two_params(int* p1, int* p2);
+_Safe void two_params(int* owned p1, int* owned p2);
 
 void test3(void) {
-    safe void (*ptr_one)(int* owned) = 0;
+    _Safe void (*ptr_one)(int* owned) = 0;
     ptr_one = two_params;  // expected-error {{cannot cast}}
 }
 
 // Test 4: Type mismatch in parameters
-unsafe void int_param(int* p);
-safe void int_param(int* owned p);
+_Unsafe void int_param(int* p);
+_Safe void int_param(int* owned p);
 
 void test4(void) {
-    safe void (*ptr_float)(float* owned) = 0;
-    ptr_float = int_param;  // expected-error {{conversion from type 'safe void (*)(int *owned)' to 'safe void (*)(float *owned)' is forbidden}}
+    _Safe void (*ptr_float)(float* owned) = 0;
+    ptr_float = int_param;  // expected-error {{conversion from type '_Safe void (*)(int *owned)' to '_Safe void (*)(float *owned)' is forbidden}}
 }
 
 // Test 5: void* owned/borrow mismatch in function pointer
-unsafe void void_owned(void* p);
-safe void void_owned(void* owned p);
+_Unsafe void void_owned(void* p);
+_Safe void void_owned(void* owned p);
 
 void test5(void) {
-    safe void (*ptr_borrow)(void* borrow) = 0;
+    _Safe void (*ptr_borrow)(void* borrow) = 0;
     ptr_borrow = void_owned;  // expected-error {{cannot cast}}
 }
 
 // Test 6: Const mismatch - char* borrow vs const char* borrow
-unsafe void mut_char(char* p);
-safe void mut_char(char* borrow p);
+_Unsafe void mut_char(char* p);
+_Safe void mut_char(char* borrow p);
 
 void test6(void) {
-    safe void (*ptr_const)(const char* borrow) = 0;
+    _Safe void (*ptr_const)(const char* borrow) = 0;
     ptr_const = mut_char;  // expected-error {{cannot cast}}
 }

@@ -32,7 +32,7 @@ void test_nullptr_to_aggregate(void) {
 }
 
 // nullptr in safe zone with incompatible pointer types
-safe void test_safe_zone_incompatible_cast(void) {
+_Safe void test_safe_zone_incompatible_cast(void) {
   // Safe zone forbids implicit conversions between different pointer types
   int *pi = (void *)nullptr; // expected-error {{conversion from type 'void *' to 'int *' is forbidden in the safe zone}}
   char *pc = (int *)nullptr; // expected-error {{conversion from type 'int *' to 'char *' is forbidden in the safe zone}}
@@ -56,13 +56,13 @@ void test_nullptr_array_assignment(void) {
 }
 
 // Safe zone: owned/borrow qualifier mismatches
-safe void test_safe_owned_borrow_mismatch(void) {
+_Safe void test_safe_owned_borrow_mismatch(void) {
   int * owned po = (int * borrow)nullptr; // expected-error {{conversion from type 'int *borrow' to 'int *owned' is forbidden in the safe zone}}
   int * borrow pb = (int * owned)nullptr; // expected-error {{conversion from type 'int *owned' to 'int *borrow' is forbidden in the safe zone}}
 }
 
 // Safe zone: pointer to different qualifiers
-safe void test_safe_cv_qualifier_mismatch(void) {
+_Safe void test_safe_cv_qualifier_mismatch(void) {
   int *p = (const int *)nullptr; // expected-error {{conversion from type 'const int *' to 'int *' is forbidden in the safe zone}}
   volatile int *vp = (const int *)nullptr; // expected-error {{conversion from type 'const int *' to 'volatile int *' is forbidden in the safe zone}}
 }

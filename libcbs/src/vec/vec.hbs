@@ -21,12 +21,12 @@ public:
 	}
 };
 
-safe size_t Vec<T>::capacity(const Vec<T>* borrow this) {
+_Safe size_t Vec<T>::capacity(const Vec<T>* borrow this) {
 	return this->buf.cap;
 }
 
-safe void Vec<T>::clear(Vec<T>* borrow this) {
-	unsafe {
+_Safe void Vec<T>::clear(Vec<T>* borrow this) {
+	_Unsafe {
 		for (size_t index = 0; index < this->len; index++) {
 			_BSC_UNUSED T tmp = this->buf.ptr[index];
 			// IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
@@ -35,70 +35,70 @@ safe void Vec<T>::clear(Vec<T>* borrow this) {
 	}
 }
 
-safe const T* borrow Vec<T>::get(const Vec<T>* borrow this, size_t index) {
-	unsafe {
+_Safe const T* borrow Vec<T>::get(const Vec<T>* borrow this, size_t index) {
+	_Unsafe {
 		if (this->len <= index) {
 			bsc_out_of_bound_handler(this->len, index);
 		}
 	}
-	unsafe return &const this->buf.ptr[index];
+	_Unsafe return &const this->buf.ptr[index];
 }
 
-safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
-	unsafe {
+_Safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
+	_Unsafe {
 		if (this->len <= index) {
 			bsc_out_of_bound_handler(this->len, index);
 		}
 	}
-	unsafe return &mut this->buf.ptr[index];
+	_Unsafe return &mut this->buf.ptr[index];
 }
 
-safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this) {
-	unsafe {
+_Safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this) {
+	_Unsafe {
 		return this->len == 0;
 	}
 }
 
-safe size_t Vec<T>::length(const Vec<T>* borrow this) {
+_Safe size_t Vec<T>::length(const Vec<T>* borrow this) {
 	return this->len;
 }
 
-safe Vec<T> Vec<T>::new(void) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Vec<T> Vec<T>::new(void) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                 	"Can only instantiate Vec with owned struct or copyable type, "
 					"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-	unsafe {
+	_Unsafe {
 		RawVec<T> buf = RawVec<T>::new();
 		Vec<T> v = { .buf = buf, .len = 0 };
 		return v;
 	}
 }
 
-safe T Vec<T>::pop(Vec<T>* borrow this) {
-	unsafe {
+_Safe T Vec<T>::pop(Vec<T>* borrow this) {
+	_Unsafe {
 		if (this->len == 0) {
 			bsc_out_of_bound_handler(0, 0);
 		}
 	}
 	this->len -= 1;
-	unsafe T ret = this->buf.ptr[this->len];
+	_Unsafe T ret = this->buf.ptr[this->len];
 	return ret;
 }
 
-safe void Vec<T>::push(Vec<T>* borrow this, T value) {
+_Safe void Vec<T>::push(Vec<T>* borrow this, T value) {
 	if (this->len == this->capacity()) {
 		this->buf.grow_one();
 	}
-	unsafe {
+	_Unsafe {
 		T* ptr = this->buf.ptr + this->len;
 		*ptr = value;
 	}
 	this->len += 1;
 }
 
-safe T Vec<T>::remove(Vec<T>* borrow this, size_t index) {
-	unsafe {
+_Safe T Vec<T>::remove(Vec<T>* borrow this, size_t index) {
+	_Unsafe {
 		if (this->len <= index) {
 			bsc_out_of_bound_handler(this->len, index);
 		}
@@ -111,14 +111,14 @@ safe T Vec<T>::remove(Vec<T>* borrow this, size_t index) {
 	}
 }
 
-safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value) {
-	unsafe {
+_Safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value) {
+	_Unsafe {
 		if (this->len < index) {
 			bsc_out_of_bound_handler(this->len, index);
 		}
 	}
 	if (index < this->len) {
-		unsafe {
+		_Unsafe {
 			_BSC_UNUSED T tmp = this->buf.ptr[index];
 			T* ptr = this->buf.ptr + index;
 			*ptr = value;
@@ -129,14 +129,14 @@ safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value) {
 	}
 }
 
-safe void Vec<T>::shrink_to_fit(Vec<T>* borrow this) {
+_Safe void Vec<T>::shrink_to_fit(Vec<T>* borrow this) {
 	if (this->capacity() > this->len) {
 		this->buf.shrink_to_fit(this->len);
 	}
 }
 
-safe Vec<T> Vec<T>::with_capacity(size_t cap) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Vec<T> Vec<T>::with_capacity(size_t cap) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
 					"Can only instantiate Vec with owned struct or copyable type, "
 					"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");

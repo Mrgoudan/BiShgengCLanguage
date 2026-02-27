@@ -3,8 +3,8 @@
 struct S {
     int *borrow _Nullable p;
 };
-safe int *borrow _Nullable get_random_ptr(int *borrow p);
-safe void test1(void) {
+_Safe int *borrow _Nullable get_random_ptr(int *borrow p);
+_Safe void test1(void) {
     int a = 10;
     struct S s = { .p = nullptr };
     while (s.p == nullptr) {
@@ -14,7 +14,7 @@ safe void test1(void) {
     *s.p = 20;
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     int a = 10;
     struct S s = { .p = nullptr };
     while (s.p != nullptr) {
@@ -24,7 +24,7 @@ safe void test2(void) {
     *s.p = 20;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test3(void) {
+_Safe void test3(void) {
     int a = 10;
     struct S s = { .p = nullptr };
     if (s.p != nullptr) {
@@ -36,7 +36,7 @@ safe void test3(void) {
     }
 }
 
-safe void test4(void) {
+_Safe void test4(void) {
     int a = 10;
     int b = 10;
     struct S s1 = { .p = nullptr };
@@ -51,7 +51,7 @@ safe void test4(void) {
     *s2.p = 20;
 }
 
-safe void test5(void) {
+_Safe void test5(void) {
     int a = 10;
     struct S s1 = { .p = nullptr };
     struct S s2 = { .p = nullptr };

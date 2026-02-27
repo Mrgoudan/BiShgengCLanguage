@@ -20,8 +20,8 @@ static size_t h1(uint64_t hash) {
 }
 
 // Secondary hash function, saved in the low 7 bits of the control byte.
-static safe uint8_t h2(uint64_t hash) {
-    unsafe {
+static _Safe uint8_t h2(uint64_t hash) {
+    _Unsafe {
         uint64_t top7 = hash >> (MIN_HASH_LEN * 8 - 7);
         return top7 & 0x7f;
     }
@@ -92,21 +92,21 @@ public:
 
 // Returns the maximum effective capacity for the given bucket mask, taking
 // the maximum load factor into account.
-safe size_t bucket_mask_to_capacity(size_t bucket_mask);
+_Safe size_t bucket_mask_to_capacity(size_t bucket_mask);
 
 // Returns the number of buckets needed to hold the given number of items,
 // taking the maximum load factor into account.
 //
 // The function aborts if an overflow occurs.
-safe size_t capacity_to_buckets(size_t cap);
+_Safe size_t capacity_to_buckets(size_t cap);
 
 // Returns a `_Bool` indicating whether the byte is `EMPTY`.
-safe _Bool match_empty(uint8_t group);
+_Safe _Bool match_empty(uint8_t group);
 
 /* -------------- Member function implementations of RawTable -------------- */
 
 // Returns the number of buckets in the table.
-safe size_t RawTable<K, V>::buckets(const RawTable<K, V>* borrow this) {
+_Safe size_t RawTable<K, V>::buckets(const RawTable<K, V>* borrow this) {
     return this->bucket_mask + 1;
 }
 
@@ -114,17 +114,17 @@ safe size_t RawTable<K, V>::buckets(const RawTable<K, V>* borrow this) {
 //
 // This number is a lower bound; the table might be able to hold
 // more, but is guaranteed to be able to hold at least this many.
-safe size_t RawTable<K, V>::capacity(const RawTable<K, V>* borrow this) {
+_Safe size_t RawTable<K, V>::capacity(const RawTable<K, V>* borrow this) {
     return this->items + this->growth_left;
 }
 
 // Removes all elements from the table without freeing the backing memory.
 //
 // This function marks all table buckets as empty and frees every existing elements.
-safe void RawTable<K, V>::clear(RawTable<K, V>* borrow this) {
+_Safe void RawTable<K, V>::clear(RawTable<K, V>* borrow this) {
     if (this->bucket_mask == 0) return;
 
-    unsafe {
+    _Unsafe {
         for (size_t index = 0; index < this->bucket_mask + 1; index += 1) {
             // if not EMPTY or DELETED, get the corresponding key and value
             if (*(this->ctrl + index) != EMPTY &&
@@ -148,14 +148,14 @@ safe void RawTable<K, V>::clear(RawTable<K, V>* borrow this) {
 //
 // This function does not make any changes to the `data` part of the table, or any
 // changes to the `items` or `growth_left` field of the table.
-safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
+_Safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
     if (this->items == 0) {
         return Option<size_t>::None();
     }
 
     uint8_t h2_hash = h2(hash);
 
-    unsafe {
+    _Unsafe {
         ProbeSeq probe_seq = this->probe_seq(hash);
 
         while (probe_seq.count <= this->bucket_mask) {
@@ -191,11 +191,11 @@ safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* borrow this, uint
 // Searches for an element in the table. If the element is not found,
 // returns `Err` with the position of a slot where an element with the
 // same hash could be inserted.
-safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
+_Safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
     // We know for sure that there is at least one empty or deleted `bucket` in the table.
     uint8_t h2_hash = h2(hash);
 
-    unsafe {
+    _Unsafe {
         ProbeSeq probe_seq = this->probe_seq(hash);
         _Bool find_deleted = 0;
         size_t deleted_pos = 0;
@@ -243,9 +243,9 @@ safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K,
 }
 
 // Insert a new element into the table in the given slot.
-safe void RawTable<K, V>::insert_in_slot(RawTable<K, V>* borrow this, size_t slot, uint64_t hash, K k, V v) {
+_Safe void RawTable<K, V>::insert_in_slot(RawTable<K, V>* borrow this, size_t slot, uint64_t hash, K k, V v) {
     uint8_t h2_hash = h2(hash);
-    unsafe {
+    _Unsafe {
         *(this->ctrl + slot) = h2_hash;
         *(this->keys + slot) = k;
         *(this->values + slot) = v;
@@ -256,14 +256,14 @@ safe void RawTable<K, V>::insert_in_slot(RawTable<K, V>* borrow this, size_t slo
 }
 
 // Returns `true` if the table contains no elements.
-safe _Bool RawTable<K, V>::is_empty(const RawTable<K, V>* borrow this) {
-    unsafe {
+_Safe _Bool RawTable<K, V>::is_empty(const RawTable<K, V>* borrow this) {
+    _Unsafe {
         return this->items == 0;
     }
 }
 
 // Returns the number of elements in the table.
-safe size_t RawTable<K, V>::length(const RawTable<K, V>* borrow this) {
+_Safe size_t RawTable<K, V>::length(const RawTable<K, V>* borrow this) {
     return this->items;
 }
 
@@ -274,8 +274,8 @@ safe size_t RawTable<K, V>::length(const RawTable<K, V>* borrow this) {
 // due to our load factor forcing us to always have at least 1 free bucket.
 //
 // FIXME: maybe incorrect! After implementing `insert`, we will review it.
-safe RawTable<K, V> RawTable<K, V>::new(void) {
-    unsafe {
+_Safe RawTable<K, V> RawTable<K, V>::new(void) {
+    _Unsafe {
         RawTable<K, V> rt = {
             .bucket_mask = 0,
             .ctrl        = NULL,
@@ -303,10 +303,10 @@ ProbeSeq RawTable<K, V>::probe_seq(const RawTable<K, V>* borrow this, uint64_t h
 }
 
 // Finds and removes an element from the table, returning the value.
-safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
+_Safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
     Option<size_t> result = this->find(hash, k);
     if (result.is_some()) {
-        unsafe {
+        _Unsafe {
             size_t index = option_unwrap<size_t>(result);
 
             *(this->ctrl + index) = DELETED;
@@ -328,11 +328,11 @@ safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* borrow this, uint64_
 // capacity for inserting the given number of elements without reallocating.
 //
 // All the control bytes are initialized with the `EMPTY` bytes.
-safe RawTable<K, V> RawTable<K, V>::with_capacity(size_t cap) {
+_Safe RawTable<K, V> RawTable<K, V>::with_capacity(size_t cap) {
     if (cap == 0) {
         return RawTable<K, V>::new();
     }
-    unsafe {
+    _Unsafe {
         size_t buckets = capacity_to_buckets(cap);
         uint8_t* ctrl = malloc(sizeof(uint8_t) * buckets);
         if (!ctrl) {

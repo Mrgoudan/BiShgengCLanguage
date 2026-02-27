@@ -7,10 +7,10 @@
 // expected-no-diagnostics
 
 int main() {
-    safe {
+    _Safe {
         int a = 0;
     }
-    unsafe {
+    _Unsafe {
         int b = 0;
     }
     return 0;

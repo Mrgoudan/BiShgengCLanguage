@@ -1,28 +1,28 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-safe void test_raw_nullable(void) {
+_Safe void test_raw_nullable(void) {
   void * _Nullable ptr = ((nullptr));
   int * _Nullable ip = (nullptr);
   (void)ptr;
   (void)ip;
 }
 
-safe void test_owned_nullable(void) {
+_Safe void test_owned_nullable(void) {
   void * owned _Nullable ptr = (nullptr);
   int * owned _Nullable ip = (((nullptr)));
   (void)ptr;
   (void)ip;
 }
 
-safe void test_borrow_nullable(void) {
+_Safe void test_borrow_nullable(void) {
   int * borrow _Nullable bp = ((((nullptr))));
   void * borrow _Nullable vbp = (((nullptr)));
   (void)bp;
   (void)vbp;
 }
 
-safe void test_const_borrow_nullable(void) {
+_Safe void test_const_borrow_nullable(void) {
   const int * borrow _Nullable cbp = (((nullptr)));
   const void * borrow _Nullable cvbp = (nullptr);
   (void)cbp;

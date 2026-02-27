@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-safe int *owned _Nonnull safe_malloc(int a);
-safe void test1(void) {
+_Safe int *owned _Nonnull safe_malloc(int a);
+_Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-safety-check"
     int *owned _Nullable p1 = nullptr;

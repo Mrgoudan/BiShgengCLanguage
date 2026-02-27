@@ -7,45 +7,45 @@ typedef __builtin_va_list va_list;
 
 // va_list type, va_start, va_arg, and va_end are all forbidden in safe zones
 
-// va_list parameter in safe function
-safe int test_va_list_param(va_list args) {
+// va_list parameter in _Safe function
+_Safe int test_va_list_param(va_list args) {
     return 0;
 }
 
-// va_list variable in safe block - triggers uninitialized error (arrays cannot be initialized)
+// va_list variable in _Safe block - triggers uninitialized error (arrays cannot be initialized)
 void test_va_list_variable_in_safe_block(void) {
-    safe {
+    _Safe {
         va_list args;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
     }
 }
 
-// va_start in safe expression - triggers both unsafe function call and va_start forbidden
+// va_start in _Safe expression - triggers both unsafe function call and va_start forbidden
 int test_va_start_in_safe_expr(const char *fmt, ...) {
     va_list args;
-    unsafe {
+    _Unsafe {
         va_start(args, fmt);
     }
-    safe {
+    _Safe {
         va_start(args, fmt);  // expected-error {{unsafe function call is forbidden in the safe zone}} expected-error {{va_start is forbidden in the safe zone}}
     }
     va_end(args);
     return 0;
 }
 
-// va_arg in safe expression
+// va_arg in _Safe expression
 int test_va_arg_in_safe_expr(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    int val = safe(va_arg(args, int));  // expected-error {{va_arg is forbidden in the safe zone}}
+    int val = _Safe(va_arg(args, int));  // expected-error {{va_arg is forbidden in the safe zone}}
     va_end(args);
     return val;
 }
 
-// va_end in safe expression - triggers unsafe function call and conversion errors
+// va_end in _Safe expression - triggers unsafe function call and conversion errors
 void test_va_end_in_safe_expr(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    safe {
+    _Safe {
         va_end(args);  // expected-error {{unsafe function call is forbidden in the safe zone}} expected-error {{conversion from type 'va_list' (aka '__builtin_va_list') to 'struct __va_list_tag *' is forbidden in the safe zone}}
     }
 }

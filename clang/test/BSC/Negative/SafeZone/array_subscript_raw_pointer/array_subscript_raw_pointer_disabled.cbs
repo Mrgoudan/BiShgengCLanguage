@@ -4,9 +4,9 @@
 // Test that [] operator on raw pointers is ALLOWED when ENABLE_BSC_FUTURE is disabled
 // This verifies that the feature is properly disabled by default
 
-safe void test(void) {
+_Safe void test(void) {
     int a = 0;
-    int* ptr = unsafe(&a);
+    int* ptr = _Unsafe(&a);
 
     // Both of these should be allowed when feature is disabled
     *ptr = 1;   // expected-error {{'*' operator is forbidden in the safe zone}}
@@ -14,9 +14,9 @@ safe void test(void) {
 }
 
 // Test that array access syntax is also allowed for reading
-safe void test2(void) {
+_Safe void test2(void) {
     int arr[10] = {0};
-    int* ptr = unsafe(&arr[0]);
+    int* ptr = _Unsafe(&arr[0]);
 
     int val1 = *ptr;   // expected-error {{'*' operator is forbidden in the safe zone}}
     int val2 = ptr[0]; // ok: [] operator restriction is disabled

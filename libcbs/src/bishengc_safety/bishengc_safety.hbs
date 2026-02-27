@@ -18,23 +18,23 @@ void default_out_of_bound_handler(size_t len, size_t index);
 void default_overflow_handler();
 void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
 
-safe void bsc_unwrap_failed(void);
+_Safe void bsc_unwrap_failed(void);
 
-safe void bsc_refcell_mut_borrow_failed(void);
-safe void bsc_refcell_immut_borrow_failed(void);
+_Safe void bsc_refcell_mut_borrow_failed(void);
+_Safe void bsc_refcell_immut_borrow_failed(void);
 
-safe void safe_free(void * _Nullable owned p);
+_Safe void safe_free(void * _Nullable owned p);
 
 // Takes ownership and “forgets” about the value without running its destructor.
-safe void forget<T>(T t) {
-    unsafe {
+_Safe void forget<T>(T t) {
+    _Unsafe {
         T* forget = &t;
         *forget = t;
     }
 }
 
-safe T *owned safe_malloc<T>(T t) {
-    unsafe {
+_Safe T *owned safe_malloc<T>(T t) {
+    _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
             addr = &t;
@@ -47,8 +47,8 @@ safe T *owned safe_malloc<T>(T t) {
     }
 }
 
-safe void safe_swap<T>(T* borrow left, T* borrow right) {
-    unsafe {
+_Safe void safe_swap<T>(T* borrow left, T* borrow right) {
+    _Unsafe {
         T tmp = *(T *_Nonnull)left;
         *left = *(T *_Nonnull)right;
         *right = tmp;

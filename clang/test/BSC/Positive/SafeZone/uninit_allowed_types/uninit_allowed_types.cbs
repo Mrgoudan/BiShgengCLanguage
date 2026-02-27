@@ -24,7 +24,7 @@ union NestedUnion {
   struct SimpleStruct s;
 };
 
-safe int main(void) {
+_Safe int main(void) {
   // Basic types can be uninitialized
   int a;
   char c;

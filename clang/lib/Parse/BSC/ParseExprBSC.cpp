@@ -158,25 +158,25 @@ bool Parser::IsSupportedOverloadType(OverloadedOperatorKind Op) {
   }
 }
 
-/// ParseSafeExpression:In BSC grammar, use of the 'safe' or 'unsafe' keyword to
-/// modify parenthetical expressions is permitted, such as `int a = safe
+/// ParseSafeExpression:In BSC grammar, use of the '_Safe' or '_Unsafe' keyword to
+/// modify parenthetical expressions is permitted, such as `int a = _Safe
 /// (funcall())`.
 ///
 /// safe-expression
-///   'safe' ParenExpression
-///   'unsafe' ParenExpression
+///   '_Safe' ParenExpression
+///   '_Unsafe' ParenExpression
 ExprResult Parser::ParseSafeExpression() {
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   SourceLocation SafeLoc;
-  if (Tok.is(tok::kw_safe)) {
+  if (Tok.is(tok::kw__Safe)) {
     SafeZoneSpec = SZ_Safe;
     SafeLoc = ConsumeToken();
-  } else if (Tok.is(tok::kw_unsafe)) {
+  } else if (Tok.is(tok::kw__Unsafe)) {
     SafeZoneSpec = SZ_Unsafe;
     SafeLoc = ConsumeToken();
   }
   if (Tok.isNot(tok::l_paren)) {
-    Diag(Tok, diag::err_expected_lparen_after) << "safe";
+    Diag(Tok, diag::err_expected_lparen_after) << "_Safe";
     return ExprError();
   }
   struct ScopeSafeZoneInfo newInfo = {SafeZoneSpec, SZS_SafeStmt, SafeLoc};

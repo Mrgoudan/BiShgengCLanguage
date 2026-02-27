@@ -2,16 +2,16 @@
 
 #define NULL ((void*)0)
 
-safe T max_a<T>(T a, T b) {
+_Safe T max_a<T>(T a, T b) {
   return a > b ? a : b;
 }
 
-safe T max_b<T>(T a, T b) {
+_Safe T max_b<T>(T a, T b) {
   return a > b ? a : b;
 } // expected-error {{memory leak of value: `a`}} 
 // expected-error@-1 {{memory leak of value: `b`}}
 
-safe T max_c<T>(T a, T b) {
+_Safe T max_c<T>(T a, T b) {
   return a > b ? a : b;
 }
 
@@ -26,41 +26,41 @@ void genericFun(){
 
 }// expected-error {{memory leak of value: `m`}}
 
-safe int* foo_a<T>(int* a, T b) {
+_Safe int* foo_a<T>(int* a, T b) {
   return a > b ? a : b;
 }
 
-safe int* foo_b<T>(int* a, T b) {
+_Safe int* foo_b<T>(int* a, T b) {
   return a > b ? a : b;
 }
 
-safe T moo_a<T>(T a) {
+_Safe T moo_a<T>(T a) {
   a();       // expected-error{{unsafe function call is forbidden in the safe zone}}
   return a;
 }
 
-safe T moo_b<T>(T a) {
+_Safe T moo_b<T>(T a) {
   a();
   return a;
 }
 
-safe T moo_c<T>(T a) {
+_Safe T moo_c<T>(T a) {
   a();         // expected-error{{unsafe function call is forbidden in the safe zone}}
-  unsafe {
+  _Unsafe {
     a();       // ok
-    safe {
+    _Safe {
       a();     // expected-error{{unsafe function call is forbidden in the safe zone}}
     }
-    unsafe {
+    _Unsafe {
       a();     // ok
     }
   }
-  safe {
+  _Safe {
     a();       // expected-error{{unsafe function call is forbidden in the safe zone}}
-    unsafe {
+    _Unsafe {
       a();     // ok
     }
-    safe {
+    _Safe {
       a();     // expected-error{{unsafe function call is forbidden in the safe zone}}
     }
   }
@@ -69,7 +69,7 @@ safe T moo_c<T>(T a) {
 
 
 void unsafeFun() {};
-safe void safeFun(void) {};
+_Safe void safeFun(void) {};
 void (*unsafeFunPoint)();
 
 int test_generic_type_fun() {
@@ -79,21 +79,21 @@ int test_generic_type_fun() {
 
 }
 
-safe T poo_a<T>(T a) {
+_Safe T poo_a<T>(T a) {
   if (*a) {
     return a;
   }
   return a;
 }
 
-safe T poo_b<T>(T a) {
+_Safe T poo_b<T>(T a) {
   if (*a) {               // expected-error{{'*' operator is forbidden in the safe zone}}
     return a;
   }
   return a;
 }
 
-safe T poo_c<T>(T a) {
+_Safe T poo_c<T>(T a) {
   if (*a) {
     return a;
   }
@@ -110,23 +110,23 @@ int test_generic_type_point() {
 }
 
 void diffPointCastConver<T>(void) {
-  unsafe {
+  _Unsafe {
     T *a = NULL;
-    safe {
+    _Safe {
       void *b = a;  // expected-error{{conversion from type 'int *' to 'void *' is forbidden in the safe zone}}
       T *c = b;   // expected-error{{conversion from type 'void *' to 'int *' is forbidden in the safe zone}}
     }
   }
 }
 
-safe T qoo_a<T>(void)
+_Safe T qoo_a<T>(void)
 {
   T a = 1.0;
   float b = a;  // expected-error{{conversion from type 'double' to 'float' is forbidden in the safe zone}}
   return a;
 }
 
-safe T qoo_b<T>(void)
+_Safe T qoo_b<T>(void)
 {
   T a = 1.0;
   float b = a;

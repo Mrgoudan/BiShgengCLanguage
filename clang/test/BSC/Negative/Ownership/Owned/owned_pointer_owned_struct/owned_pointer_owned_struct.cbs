@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
-safe T* owned safe_malloc<T>(T);
-safe void safe_free(void* owned);
+_Safe T* owned safe_malloc<T>(T);
+_Safe void safe_free(void* owned);
 
 owned struct Test {
 public:
@@ -12,17 +12,17 @@ public:
     }
 };
 
-safe void test_normal_struct_move1(Test* owned pt) {
+_Safe void test_normal_struct_move1(Test* owned pt) {
     safe_free((void *owned)pt->t);
     safe_free((void *owned)pt); // expected-error {{invalid cast to `void * owned` of not all moved value: `pt`, *pt is owned}}
 }
 
-safe void test_normal_struct_move2(Test* owned pt) {
+_Safe void test_normal_struct_move2(Test* owned pt) {
     Test tmp = *pt;
     safe_free((void *owned)pt);
 }
 
-safe void test_normal_struct(void) {
+_Safe void test_normal_struct(void) {
     Test t = {.t = safe_malloc(1)};
     Test *owned pt = safe_malloc(t);
 

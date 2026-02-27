@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-safe void foo1(int *borrow a);
-safe void test1(void) {
+_Safe void foo1(int *borrow a);
+_Safe void test1(void) {
     int a = 10;
     int *borrow p1 = &mut a;
     foo1(p1);

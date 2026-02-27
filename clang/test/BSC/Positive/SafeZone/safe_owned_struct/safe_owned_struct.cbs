@@ -19,8 +19,8 @@ public:
     }
 };
 
-safe Vec<T> Vec<T>::new(void) {
-	unsafe {
+_Safe Vec<T> Vec<T>::new(void) {
+	_Unsafe {
 		Vec<T> v = { .ptr = NULL, .len = 0 };
 		return v;
 	}

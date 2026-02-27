@@ -3,7 +3,7 @@
 
 // a literal value that can safely casting to any integral type
 #define LITERAL 42ull
-safe void integral_literal_assign(void) {
+_Safe void integral_literal_assign(void) {
     char c = LITERAL;
     signed char sc = LITERAL;
     unsigned char uc = LITERAL;
@@ -18,7 +18,7 @@ safe void integral_literal_assign(void) {
 }
 #undef LITERAL
 
-safe void constexpr_assign(void) {
+_Safe void constexpr_assign(void) {
     constexpr int VALUE = 42;
     char c = VALUE;
     signed char sc = VALUE;
@@ -33,7 +33,7 @@ safe void constexpr_assign(void) {
     unsigned long long ull = VALUE;
 }
 
-safe void constexpr_calculation(void) {
+_Safe void constexpr_calculation(void) {
     constexpr int X = 3;
     constexpr int Y = -2;
     char c = X + Y;

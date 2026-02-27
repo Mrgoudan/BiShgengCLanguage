@@ -3,12 +3,12 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-safe void foo<T1, T2>(T1 a, T2 b)
+_Safe void foo<T1, T2>(T1 a, T2 b)
 {
     int c = a + b;
 }
 
-safe void foo<T1, T2>(T1 a, T2 b);
+_Safe void foo<T1, T2>(T1 a, T2 b);
 
 int main()
 {

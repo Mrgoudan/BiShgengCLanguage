@@ -5,8 +5,8 @@ owned struct Bar {
 public:
   int a;
 };
-safe T* owned safe_malloc<T>(T value);
-safe void free_owned<T>(T* owned p);
+_Safe T* owned safe_malloc<T>(T value);
+_Safe void free_owned<T>(T* owned p);
 
 // T* owned safe_malloc<T>(T value) {
 //   T * p = (T *) malloc( sizeof(T) );
@@ -18,32 +18,32 @@ safe void free_owned<T>(T* owned p);
 //   free( (T*)p );
 // }
 
-safe int Bar::getA(This this) {
+_Safe int Bar::getA(This this) {
   return this.a; // expected-error {{memory leak because temporary variable 'this' is owned or indirect owned type, please fix it}}
 }
 
-safe int Bar::getB(This* this) {
+_Safe int Bar::getB(This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 
-safe int Bar::getB_2(const This* this) {
+_Safe int Bar::getB_2(const This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 
-safe int Bar::getC(This* borrow this) {
+_Safe int Bar::getC(This* borrow this) {
   this->a = 2;
   return this->a;
 }
 
-safe int Bar::getC_2(const This* borrow this) {
+_Safe int Bar::getC_2(const This* borrow this) {
   return this->a;
 }
 
-safe void Bar::getD(This* owned this) {
+_Safe void Bar::getD(This* owned this) {
   free_owned<Bar>(this);
 }
 
-safe void test_This_actual_param(void) {
+_Safe void test_This_actual_param(void) {
   Bar bar = {.a = 1};
   int s_a = bar.getA();  // expect ok, run ok
   int s_b = bar.getB();  // expect error, function getB is error
@@ -56,7 +56,7 @@ safe void test_This_actual_param(void) {
 void test_This_pointer_actual_param() {
   Bar bar = {.a = 1};
   Bar * bar_p = &bar;
-  safe {
+  _Safe {
     // expected-error@+1 {{'->' operator used by raw pointer type is forbidden in the safe zone}}
     int s_a = bar_p->getA(); // expected-error {{incompatible conversion from pointer type 'owned struct Bar *' to non-pointer type 'owned struct Bar' in member function call}}
     int s_b = bar_p->getB(); // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
@@ -71,7 +71,7 @@ void test_This_pointer_actual_param() {
 void test_const_This_pointer_actual_param() {
   Bar bar = {.a = 1};
   const Bar * c_bar_p = &bar;
-  safe {
+  _Safe {
     // expected-error@+1 {{'->' operator used by raw pointer type is forbidden in the safe zone}}
     int s_a = c_bar_p->getA();  // expected-error {{incompatible conversion from pointer type 'const owned struct Bar *' to non-pointer type 'owned struct Bar' in member function call}}
     // expected-error@+1 {{'->' operator used by raw pointer type is forbidden in the safe zone}}
@@ -86,7 +86,7 @@ void test_const_This_pointer_actual_param() {
   }
 }
 
-safe void test_This_pointer_borrow_actual_param(void) {
+_Safe void test_This_pointer_borrow_actual_param(void) {
   Bar bar = {.a = 1};
   Bar * borrow bar_mut = &mut bar;
   int s_a = bar_mut->getA();  // expected-error {{incompatible conversion from pointer type 'owned struct Bar *borrow' to non-pointer type 'owned struct Bar' in member function call}}
@@ -97,7 +97,7 @@ safe void test_This_pointer_borrow_actual_param(void) {
   bar_mut->getD();  // expected-error {{incompatible conversion from non owned type 'owned struct Bar *borrow' to owned type 'owned struct Bar *owned' in member function call}}
 }
 
-safe void test_const_This_pointer_borrow_actual_param(void) {
+_Safe void test_const_This_pointer_borrow_actual_param(void) {
   Bar bar = {.a = 1};
   const Bar *borrow c_bar_mut = &const bar; // incompatible borrow types, cannot cast 'const owned struct Bar *borrow'
   int a = c_bar_mut->getA();  // expected-error {{incompatible conversion from pointer type 'const owned struct Bar *borrow' to non-pointer type 'owned struct Bar' in member function call}}
@@ -108,7 +108,7 @@ safe void test_const_This_pointer_borrow_actual_param(void) {
   c_bar_mut->getD();  // expected-error {{incompatible conversion from non owned type 'const owned struct Bar *borrow' to owned type 'owned struct Bar *owned' in member function call}}
 }
 
-safe void test_This_pointer_owned_actual_param(void) {
+_Safe void test_This_pointer_owned_actual_param(void) {
   Bar bar = {.a = 1};
   Bar * owned bar_owned = safe_malloc<Bar>(bar);
   int s_a = bar_owned->getA();  // expected-error {{incompatible conversion from pointer type 'owned struct Bar *owned' to non-pointer type 'owned struct Bar' in member function call}}

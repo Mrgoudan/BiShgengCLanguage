@@ -25,12 +25,12 @@ public:
     }
 };
 
-safe Rc<T> Rc<T>::new(T data) {
-    unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
+_Safe Rc<T> Rc<T>::new(T data) {
+    _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
                     "Can only instantiate Rc with owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
 					"Fix: You can wrap T with an owned struct.");
-    unsafe {
+    _Unsafe {
         struct RcData<T> * RcDataPtr = (struct RcData<T> *)malloc(sizeof(struct RcData<T>));
         RcDataPtr->data = data;
         RcDataPtr->strong_count = 1;
@@ -40,28 +40,28 @@ safe Rc<T> Rc<T>::new(T data) {
     }
 }
 
-safe Rc<T> Rc<T>::clone(const This * borrow this) {
-    unsafe {
+_Safe Rc<T> Rc<T>::clone(const This * borrow this) {
+    _Unsafe {
         Rc<T> rc = { .ptr = this->ptr };
         rc.ptr->strong_count++;
         return rc;
     }
 }
 
-safe unsigned Rc<T>::strong_ref_count(const This * borrow this) {
-    unsafe {
+_Safe unsigned Rc<T>::strong_ref_count(const This * borrow this) {
+    _Unsafe {
         return this->ptr->strong_count;
     }
 }
 
-safe unsigned Rc<T>::weak_ref_count(const This * borrow this) {
-    unsafe {
+_Safe unsigned Rc<T>::weak_ref_count(const This * borrow this) {
+    _Unsafe {
         return this->ptr->weak_count;
     }
 }
 
-safe const T * borrow Rc<T>::deref(const This * borrow this) {
-    unsafe {
+_Safe const T * borrow Rc<T>::deref(const This * borrow this) {
+    _Unsafe {
         return &const this->ptr->data;
     }
 }
@@ -80,8 +80,8 @@ public:
 };
 
 // Create a Weak ptr from a Rc.
-safe Weak<T> Weak<T>::new(const Rc<T> * borrow rc) {
-    unsafe {
+_Safe Weak<T> Weak<T>::new(const Rc<T> * borrow rc) {
+    _Unsafe {
         Weak<T> weak = { .ptr = rc->ptr };
         weak.ptr->weak_count++;
         return weak;
@@ -89,35 +89,35 @@ safe Weak<T> Weak<T>::new(const Rc<T> * borrow rc) {
 }
 
 // Clone a Weak ptr. 
-safe Weak<T> Weak<T>::clone(const This * borrow this) {
-    unsafe {
+_Safe Weak<T> Weak<T>::clone(const This * borrow this) {
+    _Unsafe {
         Weak<T> weak = { .ptr = this->ptr };
         weak.ptr->weak_count++;
         return weak;
     }
 }
 
-safe unsigned Weak<T>::strong_ref_count(const This * borrow this) {
-    unsafe {
+_Safe unsigned Weak<T>::strong_ref_count(const This * borrow this) {
+    _Unsafe {
         return this->ptr->strong_count;
     }
 }
 
-safe unsigned Weak<T>::weak_ref_count(const This * borrow this) {
-    unsafe {
+_Safe unsigned Weak<T>::weak_ref_count(const This * borrow this) {
+    _Unsafe {
         if (this->ptr->strong_count > 0)
             return this->ptr->weak_count;
         return 0;
     }
 }
 
-safe Option<Rc<T>> Weak<T>::upgrade(const This * borrow this) {
+_Safe Option<Rc<T>> Weak<T>::upgrade(const This * borrow this) {
     // If `strong_count == 0`, this Weak cannot upgrade to a Rc, return None.
     if (this->strong_ref_count() == 0) {
         Option<Rc<T>> option_rc_none = Option<Rc<T> >::None();
         return option_rc_none;
     } else {
-        unsafe {
+        _Unsafe {
             Rc<T> rc = { .ptr = this->ptr };
             rc.ptr->strong_count++;
             Option<Rc<T>> option_rc_some = Option<Rc<T> >::Some(rc);

@@ -5,7 +5,7 @@
 struct S {
     int a;
 };
-safe void test1(void) {
+_Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Eassign-nullable"
     struct S *borrow _Nullable p = nullptr;

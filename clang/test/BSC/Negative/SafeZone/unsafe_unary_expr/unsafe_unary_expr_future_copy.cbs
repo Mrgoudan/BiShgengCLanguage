@@ -6,7 +6,7 @@
 int main(void) {
   int a = 0;
   int *b = &a;
-  safe {
+  _Safe {
     ++a;          // ok: ++ on integers is allowed
     --a;          // ok: -- on integers is allowed
     int c = *b;   // expected-error {{'*' operator is forbidden in the safe zone}}

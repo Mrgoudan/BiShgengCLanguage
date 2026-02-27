@@ -28,7 +28,7 @@ void test() {
   p4 = (const int * borrow)v3; // legal
 
 
-  safe {
+  _Safe {
      // T --> void
      void * borrow v5 = (void * borrow)p1; // expected-error {{conversion from type 'int *borrow' to 'void *borrow' is forbidden in the safe zone}}
      const void * borrow v6 = (const void * borrow)p2; // expected-error {{conversion from type 'const int *borrow' to 'const void *borrow' is forbidden in the safe zone}}

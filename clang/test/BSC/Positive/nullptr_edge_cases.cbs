@@ -86,7 +86,7 @@ void test_nullptr_union_pointer(void) {
   union TestUnion *up = (union TestUnion *)nullptr;
 }
 
-// nullptr in array subscript context (should be safe to cast, though deref would fail at runtime)
+// nullptr in array subscript context (should be _Safe to cast, though deref would fail at runtime)
 void test_nullptr_array_context(void) {
   int *arr = (int *)nullptr;
   // Just the cast, not dereferencing - use to avoid unused warning
@@ -145,12 +145,12 @@ void test_nullptr_designated_init(void) {
   };
 }
 
-// nullptr in nested safe/unsafe blocks
-safe void test_nested_safe_unsafe(void) {
+// nullptr in nested _Safe/_Unsafe blocks
+_Safe void test_nested_safe_unsafe(void) {
   void *p1 = (void *)nullptr;
-  unsafe {
+  _Unsafe {
     void *p2 = (void *)nullptr;
-    safe {
+    _Safe {
       void *p3 = (void *)nullptr;
     }
   }

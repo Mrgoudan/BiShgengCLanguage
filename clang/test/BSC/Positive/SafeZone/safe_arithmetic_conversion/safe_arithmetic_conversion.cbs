@@ -4,7 +4,7 @@
 // Manual 2897-3017: Safe zone arithmetic and type conversion rules.
 
 // Rule 1: Arithmetic to _Bool (zero -> 0, non-zero -> 1)
-safe void rule1_bool(void) {
+_Safe void rule1_bool(void) {
   int b = 0;
   _Bool c = (_Bool)b;
   c = (_Bool)1;
@@ -12,7 +12,7 @@ safe void rule1_bool(void) {
 }
 
 // Rule 2: Larger unsigned integer to smaller unsigned (wrap modulo 2^N)
-safe void rule2_unsigned(void) {
+_Safe void rule2_unsigned(void) {
   unsigned long a = 2;
   unsigned b = (unsigned)a;
   int c = -1;
@@ -21,7 +21,7 @@ safe void rule2_unsigned(void) {
 }
 
 // Rule 3: Larger integer to smaller signed (truncate in implementation)
-safe void rule3_signed(void) {
+_Safe void rule3_signed(void) {
   long a = 2;
   int b = (int)a;
   unsigned c = 4294967295;
@@ -29,7 +29,7 @@ safe void rule3_signed(void) {
 }
 
 // Rule 4: Enum - E2 contains E1 allows explicit cast; enum -> int implicit
-safe void rule4_enum(void) {
+_Safe void rule4_enum(void) {
   enum E { ZERO, ONE, TWO };
   enum F { SUN, MON, TUES };
   enum F day = SUN;
@@ -40,7 +40,7 @@ safe void rule4_enum(void) {
 }
 
 // Rule 5: double -> float explicit allowed; float -> double implicit
-safe void rule5_float_precision(void) {
+_Safe void rule5_float_precision(void) {
   double a = 1.0;
   float b = 0.0f;
   b = (float)a;
@@ -48,13 +48,13 @@ safe void rule5_float_precision(void) {
 }
 
 // Rule 6: int -> double explicit allowed
-safe void rule6_int_to_float(void) {
+_Safe void rule6_int_to_float(void) {
   int a = -1;
   double b = (double)a;
 }
 
 // Rule 7: Comparison/logical result (0/1) -> integer implicit
-safe void rule7_comparison_result(void) {
+_Safe void rule7_comparison_result(void) {
   int a = 0, b = 1, x = 5, y = 10;
   _Bool c = (a == 0) || (b == 0);
   char eq = (x == y);
@@ -73,7 +73,7 @@ safe void rule7_comparison_result(void) {
 }
 
 // Rule 8: Compile-time constants - fit in target allows implicit
-safe void rule8_constants(void) {
+_Safe void rule8_constants(void) {
   int a = 10l;
   unsigned long b = 2 * 2;
   int e = 2147483647;
@@ -86,7 +86,7 @@ safe void rule8_constants(void) {
 }
 
 // Rule 9: Literals and literal-only expression results that fit (implicit allowed)
-safe void rule9_literals_and_literal_expressions(void) {
+_Safe void rule9_literals_and_literal_expressions(void) {
   int a = 1;
   int b = 0;
   long c = 1;

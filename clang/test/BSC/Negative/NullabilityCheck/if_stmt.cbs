@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-safe void test1(void) {
+_Safe void test1(void) {
     int *borrow _Nullable p = nullptr;
     if (p != nullptr) {
         *p = 10;
@@ -10,7 +10,7 @@ safe void test1(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test2(void) {
+_Safe void test2(void) {
     int a = 10;
     int *borrow _Nullable p = nullptr;
     if (p != nullptr) {
@@ -21,7 +21,7 @@ safe void test2(void) {
     *p = 30;
 }
 
-safe void test3(void) {
+_Safe void test3(void) {
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
     if (p != nullptr && q != nullptr) {
@@ -35,7 +35,7 @@ safe void test3(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test4(void) {
+_Safe void test4(void) {
     int a = 10;
     int b = 10;
     int *borrow _Nullable p = nullptr;
@@ -51,7 +51,7 @@ safe void test4(void) {
     *q = 30;
 }
 
-safe void test5(void) {
+_Safe void test5(void) {
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
     if (p != nullptr || q != nullptr) {
@@ -65,7 +65,7 @@ safe void test5(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test6(void) {
+_Safe void test6(void) {
     int a = 10;
     int b = 10;
     int *borrow _Nullable p = nullptr;
@@ -87,7 +87,7 @@ safe void test6(void) {
     *q = 30;
 }
 
-safe void test7(void) {
+_Safe void test7(void) {
     int a = 10;
     int b = 10;
     int c = 10;
@@ -108,7 +108,7 @@ safe void test7(void) {
     *m = 30;
 }
 
-safe void test8(void) {
+_Safe void test8(void) {
     int a = 10;
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
@@ -127,7 +127,7 @@ safe void test8(void) {
     *m = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test9(void) {
+_Safe void test9(void) {
     int a = 10;
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
@@ -146,7 +146,7 @@ safe void test9(void) {
     *m = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test10(void) {
+_Safe void test10(void) {
     int a = 0;
     int *borrow _Nullable p = nullptr;
     if (p != nullptr) {
@@ -158,7 +158,7 @@ safe void test10(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test11(void) {
+_Safe void test11(void) {
     int a = 0;
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
@@ -173,7 +173,7 @@ safe void test11(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test12(void) {
+_Safe void test12(void) {
     int a = 0;
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
@@ -188,7 +188,7 @@ safe void test12(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test13(void) {
+_Safe void test13(void) {
     int a = 0;
     int b = 0;
     int *borrow _Nullable p = nullptr;
@@ -204,7 +204,7 @@ safe void test13(void) {
     *q = 30;
 }
 
-safe void test14(void) {
+_Safe void test14(void) {
     int *borrow _Nullable p = nullptr;
     if (p) {
         *p = 10;
@@ -214,7 +214,7 @@ safe void test14(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test15(void) {
+_Safe void test15(void) {
     int *borrow _Nullable p = nullptr;
     if (!p) {
         *p = 10; // expected-error {{nullable pointer cannot be dereferenced}}
@@ -224,7 +224,7 @@ safe void test15(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-safe void test16(void) {
+_Safe void test16(void) {
     int *borrow _Nullable p = nullptr;
     int *borrow _Nullable q = nullptr;
     if (p && q) {
@@ -241,7 +241,7 @@ safe void test16(void) {
 struct S {
     int a;
 };
-safe void test17(void) {
+_Safe void test17(void) {
     struct S *borrow _Nullable p = nullptr;
     if (p != nullptr) {
         p->a = 10;

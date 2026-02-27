@@ -1,36 +1,36 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-safe void fun1() {}  // expected-error {{need void parameter declaration, empty parameter is forbidden in the safe function}}
-unsafe void fun2() {} 
+_Safe void fun1() {}  // expected-error {{need void parameter declaration, empty parameter is forbidden in the _Safe function}}
+_Unsafe void fun2() {} 
 
-safe void fun1();    // expected-error {{need void parameter declaration, empty parameter is forbidden in the safe function}}
-unsafe void fun2();
+_Safe void fun1();    // expected-error {{need void parameter declaration, empty parameter is forbidden in the _Safe function}}
+_Unsafe void fun2();
 
-safe void (*p)();    // expected-error {{need void parameter declaration, empty parameter is forbidden in the safe function}}
-unsafe void (*q)();
+_Safe void (*p)();    // expected-error {{need void parameter declaration, empty parameter is forbidden in the _Safe function}}
+_Unsafe void (*q)();
 
-safe void fun3(void) {}
-safe void fun4(void);
-safe void (*p)(void); 
+_Safe void fun3(void) {}
+_Safe void fun4(void);
+_Safe void (*p)(void); 
 
-safe void fun5(int a, ...) {}  // expected-error {{variadic parameter is forbidden in the safe function}}
-unsafe void fun6(int a, ...) {}
+_Safe void fun5(int a, ...) {}  // expected-error {{variadic parameter is forbidden in the _Safe function}}
+_Unsafe void fun6(int a, ...) {}
 
-safe void fun5(int a, ...);    // expected-error {{variadic parameter is forbidden in the safe function}}
-unsafe void fun6(int a, ...);
+_Safe void fun5(int a, ...);    // expected-error {{variadic parameter is forbidden in the _Safe function}}
+_Unsafe void fun6(int a, ...);
 
-safe void (*m)(int a, ...);   // expected-error {{variadic parameter is forbidden in the safe function}}
-unsafe void (*n)(int a, ...);
+_Safe void (*m)(int a, ...);   // expected-error {{variadic parameter is forbidden in the _Safe function}}
+_Unsafe void (*n)(int a, ...);
 
 // Variadic WITH format attribute - should be allowed (no error expected)
 __attribute__((format(printf, 1, 2)))
-safe void fun7(const char * borrow fmt, ...) {}
+_Safe void fun7(const char * borrow fmt, ...) {}
 
 __attribute__((format(printf, 1, 2)))
-safe void fun7(const char * borrow fmt, ...);
+_Safe void fun7(const char * borrow fmt, ...);
 
 __attribute__((format(printf, 1, 2)))
-safe void (*o)(const char * borrow fmt, ...);
+_Safe void (*o)(const char * borrow fmt, ...);
 
 // Variadic WITHOUT format attribute - should still error
-safe void fun8(int a, const char * borrow fmt, ...) {}  // expected-error {{variadic parameter is forbidden in the safe function}}
+_Safe void fun8(int a, const char * borrow fmt, ...) {}  // expected-error {{variadic parameter is forbidden in the _Safe function}}

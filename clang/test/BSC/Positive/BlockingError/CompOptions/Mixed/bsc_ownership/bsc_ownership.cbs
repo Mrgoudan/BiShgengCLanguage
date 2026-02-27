@@ -17,8 +17,8 @@ int * owned test2() {
 	return a;        // use of uninitialized value: `a`
 }
 
-safe T *owned safe_malloc<T>(T t);
-safe void test3(void) {
+_Safe T *owned safe_malloc<T>(T t);
+_Safe void test3(void) {
     int *owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {

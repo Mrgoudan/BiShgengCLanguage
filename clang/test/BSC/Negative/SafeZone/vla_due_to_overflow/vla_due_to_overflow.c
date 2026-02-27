@@ -52,7 +52,7 @@ struct UseTypedef {
 int global_array[OVERFLOW_MUL_2]; // expected-error {{declared as an array with a negative size}}
 
 // Test Group 5: Function Local Variables (Safe Function Context)
-safe void test_stack_allocation(void) {
+_Safe void test_stack_allocation(void) {
   int local_arr[OVERFLOW_MUL]; // expected-error {{declared as an array with a negative size}}
 }
 

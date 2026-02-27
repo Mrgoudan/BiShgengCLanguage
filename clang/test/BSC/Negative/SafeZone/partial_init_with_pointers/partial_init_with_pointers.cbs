@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-safe T *owned safe_malloc<T>(T t);
+_Safe T *owned safe_malloc<T>(T t);
 void *malloc(unsigned long);
 
 struct StructWithPointer {
@@ -13,7 +13,7 @@ union UnionWithPointer {
   int value;
 };
 
-safe int main(void) {
+_Safe int main(void) {
   // error: struct with pointer fields cannot be partially initialized
   // int * owned ptr= safe_malloc(4);
   struct StructWithPointer s1 = {.ptr=safe_malloc(4)};  // expected-error {{incomplete initialization is forbidden in the safe zone}}
@@ -25,7 +25,7 @@ safe int main(void) {
   struct StructWithPointer s2 = {safe_malloc(4), 0, "test"};
   
   // ok: union will never be partially initialized
-  int *a  = unsafe((int*)malloc(sizeof(int)));
+  int *a  = _Unsafe((int*)malloc(sizeof(int)));
   union UnionWithPointer u2 = {.ptr=a};
 
   return 0;

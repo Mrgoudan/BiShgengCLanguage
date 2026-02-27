@@ -17,7 +17,7 @@ void test_nullptr_const_owned(void) {
 }
 
 // nullptr in safe zone with owned
-safe void test_safe_nullptr_owned(void) {
+_Safe void test_safe_nullptr_owned(void) {
   int * owned po = (int * owned)nullptr;
   void * owned vo = (void * owned)nullptr;
 }

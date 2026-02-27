@@ -4,17 +4,17 @@ struct MyStruct<T> {
   T res;
 };
 
-safe T struct MyStruct<T>::foo_a(T a) {
+_Safe T struct MyStruct<T>::foo_a(T a) {
   return a;
 }
 
-safe T struct MyStruct<T>::foo_b(T a) {
+_Safe T struct MyStruct<T>::foo_b(T a) {
   return a;
 }
 
-safe void struct MyStruct<T>::foo_c(T a) {
+_Safe void struct MyStruct<T>::foo_c(T a) {
   a();                                       // expected-error{{unsafe function call is forbidden in the safe zone}}
-  unsafe {
+  _Unsafe {
     a();
   }
 }
@@ -33,10 +33,10 @@ void genericMemberFun() {
 }// expected-error {{memory leak of value: `m`}}
 
 trait F<T> {
-  safe int foo(This* owned this, T b);
+  _Safe int foo(This* owned this, T b);
 };
 
-safe int int::foo(int* owned this, int *b) {
+_Safe int int::foo(int* owned this, int *b) {
   return 0;
 } // expected-error {{memory leak of value: `this`}}
 

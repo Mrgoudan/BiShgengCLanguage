@@ -2,27 +2,27 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
-safe void mutable2immutable(int *borrow ref) {
+_Safe void mutable2immutable(int *borrow ref) {
     const int *borrow cref = ref; 
 }
 
-safe void inplace_reborrow(int x) {
+_Safe void inplace_reborrow(int x) {
     const int *borrow cref = &mut x;
 }
 
-safe void nullable_reborrow(int *borrow _Nullable ref) {
+_Safe void nullable_reborrow(int *borrow _Nullable ref) {
     const int *borrow _Nullable cref = ref;
 }
 
-safe void accept_immutable(const int *borrow cref) {}
+_Safe void accept_immutable(const int *borrow cref) {}
 
-safe int *borrow ret_mutable(int *borrow x, int *borrow y) {
+_Safe int *borrow ret_mutable(int *borrow x, int *borrow y) {
     return *x > *y ? x : y;
 }
 
 
 int main() {
-    safe {
+    _Safe {
         // assignment
         int x = 0;
         inplace_reborrow(x);

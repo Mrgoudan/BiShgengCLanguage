@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-safe int *borrow _Nullable foo1(int* borrow a);
-safe void test1(void) {
+_Safe int *borrow _Nullable foo1(int* borrow a);
+_Safe void test1(void) {
     int a = 10;
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-nullability"
@@ -14,7 +14,7 @@ safe void test1(void) {
 
 void test2(void) {
   int *borrow p = nullptr;
-  unsafe {
+  _Unsafe {
     int *borrow p2 = nullptr;
   }
 }
@@ -22,7 +22,7 @@ void test2(void) {
 struct S {
     int a;
 };
-safe void test3(void) {
+_Safe void test3(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-nullability"
     struct S *borrow _Nullable p = nullptr;

@@ -5,10 +5,10 @@ typedef struct {
   unsigned int bits[256];
 } bit_stream;
 
-safe void* memset(void *borrow dest,  int sizeMax, unsigned long c);
+_Safe void* memset(void *borrow dest,  int sizeMax, unsigned long c);
 
 bit_stream *stram = nullptr;
-safe void bar(int n) {
-  unsafe { memset(stram[n].bits, 0, 0); }
+_Safe void bar(int n) {
+  _Unsafe { memset(stram[n].bits, 0, 0); }
 }
 int main() { return 0; }

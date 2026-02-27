@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-safe void foo1(int *borrow a);
-safe void test1(void) {
+_Safe void foo1(int *borrow a);
+_Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Epass-nullable"
     int a = 10;

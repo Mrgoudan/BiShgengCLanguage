@@ -20,12 +20,12 @@ FileID* owned consume_and_return(FileID* owned p) {
   return p;
 }
 
-safe void safe_free(FileID* owned p) {
+_Safe void safe_free(FileID* owned p) {
   int x = 2;
   if (x > 1) {
-    unsafe {free((FileID*)p);}
+    _Unsafe {free((FileID*)p);}
   } else {
-    unsafe {free((FileID*)p);}
+    _Unsafe {free((FileID*)p);}
   }
 }
 

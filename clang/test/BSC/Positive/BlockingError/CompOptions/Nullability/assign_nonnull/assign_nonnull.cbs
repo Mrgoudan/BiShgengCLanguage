@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-safe int *borrow _Nullable foo1(int* borrow a);  
-safe void test1(void) {
+_Safe int *borrow _Nullable foo1(int* borrow a);  
+_Safe void test1(void) {
     int a = 10;
     int *borrow p1 = foo1(&mut a);             // nonnull pointer cannot be assigned by nullable pointer
     int *borrow _Nullable p2 = foo1(&mut a);
@@ -11,7 +11,7 @@ safe void test1(void) {
 
 void test2(void) {
   int *borrow p = nullptr;                     // nonnull pointer cannot be assigned by nullable pointer
-  unsafe {
+  _Unsafe {
     int *borrow p2 = nullptr;                  // nonnull pointer cannot be assigned by nullable pointer
   }
 }

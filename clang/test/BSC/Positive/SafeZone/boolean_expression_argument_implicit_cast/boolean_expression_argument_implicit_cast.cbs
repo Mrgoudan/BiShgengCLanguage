@@ -1,19 +1,19 @@
 // RUN: %clang -cc1 %s
 // expected-no-diagnostics
 
-safe void fun_c(char);
-safe void fun_sc(signed char);
-safe void fun_uc(unsigned char);
-safe void fun_s(short);
-safe void fun_us(unsigned short);
-safe void fun_i(int);
-safe void fun_ui(unsigned int);
-safe void fun_l(long);
-safe void fun_ul(unsigned long);
-safe void fun_ll(long long);
-safe void fun_ull(unsigned long long);
+_Safe void fun_c(char);
+_Safe void fun_sc(signed char);
+_Safe void fun_uc(unsigned char);
+_Safe void fun_s(short);
+_Safe void fun_us(unsigned short);
+_Safe void fun_i(int);
+_Safe void fun_ui(unsigned int);
+_Safe void fun_l(long);
+_Safe void fun_ul(unsigned long);
+_Safe void fun_ll(long long);
+_Safe void fun_ull(unsigned long long);
 
-safe void boolean_expression_as_argument(int x) {
+_Safe void boolean_expression_as_argument(int x) {
     fun_c(x == 0);
     fun_sc(x == 0);
     fun_uc(x == 0);

@@ -5,7 +5,7 @@
 // Validity is checked at template instantiation time
 
 // Test 1: owned_cast pattern - template function with owned qualified parameters
-static inline safe T2 owned owned_cast<T1,T2>(T1 owned p);
+static inline _Safe T2 owned owned_cast<T1,T2>(T1 owned p);
 
 // Test 2: Template function with owned return type
 T owned func1<T>();

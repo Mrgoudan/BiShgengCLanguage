@@ -6,8 +6,8 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
-safe T *owned safe_malloc<T>(T t) {
-    unsafe {
+_Safe T *owned safe_malloc<T>(T t) {
+    _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
             addr = &t;
@@ -20,7 +20,7 @@ safe T *owned safe_malloc<T>(T t) {
         return (T *owned)addr;
     }
 }
-safe void use<T>(T *borrow p) {}
+_Safe void use<T>(T *borrow p) {}
 
 owned struct Data<T> {
 public:
@@ -33,7 +33,7 @@ public:
     }
 };
 
-safe Data<T> Data<T>::init(T a) {
+_Safe Data<T> Data<T>::init(T a) {
     T *owned _Nullable data1 = nullptr;
     T *owned data2 = safe_malloc<T>(a);
     Data<T> data = { .p1 = data1, .p2 = data2 };
@@ -46,7 +46,7 @@ public:
     Data<T> *borrow p2;
 };
 
-safe int main(void) {
+_Safe int main(void) {
     Data<int> data1 = Data<int>::init(5);
     if (data1.p1 != nullptr) {
         use(&mut *(data1.p1));

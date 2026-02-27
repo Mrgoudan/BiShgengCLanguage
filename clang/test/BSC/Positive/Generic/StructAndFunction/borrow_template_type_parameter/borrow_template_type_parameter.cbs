@@ -5,8 +5,8 @@
 // Test that borrow qualifier on template type parameters is allowed
 // The borrow validation should be deferred until template instantiation
 
-safe T2 borrow cast<T1, T2>(T1 borrow p) {
-  return unsafe((T2 borrow)(T2)(T1)p);
+_Safe T2 borrow cast<T1, T2>(T1 borrow p) {
+  return _Unsafe((T2 borrow)(T2)(T1)p);
 }
 
 void foo(int *borrow p) {
@@ -14,16 +14,16 @@ void foo(int *borrow p) {
 }
 
 // Test with function returning borrow-qualified template type
-safe T borrow identity<T>(T borrow p) {
+_Safe T borrow identity<T>(T borrow p) {
   return p;
 }
 
 // Test with multiple template parameters
-safe T2 borrow convert<T1, T2, T3>(T1 borrow a, T3 borrow b) {
-  return unsafe((T2 borrow)(T2)(T1)a);
+_Safe T2 borrow convert<T1, T2, T3>(T1 borrow a, T3 borrow b) {
+  return _Unsafe((T2 borrow)(T2)(T1)a);
 }
 
-safe int main(void) {
+_Safe int main(void) {
   int x = 42;
   int * borrow ptr = &mut x;
 

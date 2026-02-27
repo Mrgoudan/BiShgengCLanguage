@@ -4482,10 +4482,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::kw_async:
       isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
       break;
-    case tok::kw_safe:
-    case tok::kw_unsafe: {
+    case tok::kw__Safe:
+    case tok::kw__Unsafe: {
       SafeZoneSpecifier SafeZoneSpec = SZ_Unsafe;
-      if (Tok.is(tok::kw_safe)) {
+      if (Tok.is(tok::kw__Safe)) {
         SafeZoneSpec = SZ_Safe;
       }
       isInvalid =
@@ -4699,7 +4699,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
 #if ENABLE_BSC
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : SwitchTok.getLocation());
-    // Handle the case where the "safe" keyword modifies the function pointer
+    // Handle the case where the "_Safe" keyword modifies the function pointer
     if (getCurScope() &&
         getCurScope()->getScopeSafeZoneSource() == SZS_SafeStmt) {
       DS.SetSafeZoneSpecifier(getCurScope()->getScopeSafeZoneSpecifier());
@@ -5854,8 +5854,8 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_inline:
 #if ENABLE_BSC
   case tok::kw_async:
-  case tok::kw_safe:
-  case tok::kw_unsafe:
+  case tok::kw__Safe:
+  case tok::kw__Unsafe:
   // BSC conditional support.
   case tok::kw___conditional:
 #endif

@@ -6,7 +6,7 @@ struct _BSC_ListNode<T> {
     T element;
 };
 
-unsafe _BSC_ListNode<T>* _BSC_ListNode<T>::new(T el){
+_Unsafe _BSC_ListNode<T>* _BSC_ListNode<T>::new(T el){
     _BSC_ListNode<T> *rv = (_BSC_ListNode<T> *)malloc(sizeof(_BSC_ListNode<T>));
     if (!rv) {
         
@@ -39,16 +39,16 @@ private:
     }
 };
 
-safe LinkedList<T> LinkedList<T>::new(void){
-    unsafe {
+_Safe LinkedList<T> LinkedList<T>::new(void){
+    _Unsafe {
         LinkedList<T> rv = {NULL, NULL, 0};
         return rv;
     }
 }
 
 // Adds a new element at the end of the list.
-safe void LinkedList<T>::push_back(LinkedList<T> * borrow this, T el){
-    unsafe {
+_Safe void LinkedList<T>::push_back(LinkedList<T> * borrow this, T el){
+    _Unsafe {
         _BSC_ListNode<T> *node = _BSC_ListNode<T>::new(el);
         node->prev = this->tail;
         if (this->tail == NULL) {

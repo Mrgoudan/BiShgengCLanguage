@@ -23,8 +23,8 @@ int * owned test2() {
     #pragma GCC diagnostic pop
 }
 
-safe T *owned safe_malloc<T>(T t);
-safe void test3(void) {
+_Safe T *owned safe_malloc<T>(T t);
+_Safe void test3(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-ownership"
     int *owned _Nullable p = nullptr;

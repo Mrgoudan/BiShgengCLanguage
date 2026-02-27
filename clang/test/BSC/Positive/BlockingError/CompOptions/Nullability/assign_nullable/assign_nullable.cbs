@@ -5,7 +5,7 @@
 struct S {
     int a;
 };
-safe void test1(void) {
+_Safe void test1(void) {
     struct S *borrow _Nullable p = nullptr;
     if (p != nullptr) {
         p->a = 10;

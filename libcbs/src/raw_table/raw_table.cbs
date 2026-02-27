@@ -1,10 +1,10 @@
 #include "raw_table.hbs"
 
-safe size_t one_less_than_next_power_of_two(size_t num);
+_Safe size_t one_less_than_next_power_of_two(size_t num);
 
 // Returns the maximum effective capacity for the given bucket mask, taking
 // the maximum load factor into account.
-safe size_t bucket_mask_to_capacity(size_t bucket_mask) {
+_Safe size_t bucket_mask_to_capacity(size_t bucket_mask) {
     if (bucket_mask < 8) {
         // For tables with 1/2/4/8 buckets, we always reserve one empty slot.
         // Keep in mind that the bucket mask is one less than the bucket count.
@@ -19,15 +19,15 @@ safe size_t bucket_mask_to_capacity(size_t bucket_mask) {
 // taking the maximum load factor into account.
 //
 // The function aborts if an overflow occurs.
-safe size_t capacity_to_buckets(size_t cap) {
+_Safe size_t capacity_to_buckets(size_t cap) {
     if (cap < 8) {
-        unsafe {
+        _Unsafe {
             return cap < 4 ? 4 : 8;
         }
     }
 
     if (cap > SIZE_MAX / 8) {
-        unsafe {
+        _Unsafe {
             bsc_overflow_handler();
         }
     }
@@ -37,22 +37,22 @@ safe size_t capacity_to_buckets(size_t cap) {
 }
 
 // Returns a `_Bool` indicating whether the byte is `EMPTY`.
-safe _Bool match_empty(uint8_t group) {
+_Safe _Bool match_empty(uint8_t group) {
     // If the high bit is set, then the byte must be either:
     // 1111_1111 (EMPTY) or 1000_0000 (DELETED).
     // So we can just check if the top two bits are 1 by ANDing them.
-    unsafe {
+    _Unsafe {
         return group & (group << 1) & 0x80;
     }
 }
 
 // Returns one less than next power of two.
-safe size_t one_less_than_next_power_of_two(size_t num) {
+_Safe size_t one_less_than_next_power_of_two(size_t num) {
     if (num <= 1) {
         return 0;
     }
     size_t p = num - 1;
-    unsafe {
+    _Unsafe {
         int z = __builtin_clzll(p);
 
         return SIZE_MAX >> z;

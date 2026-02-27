@@ -679,7 +679,7 @@ void TextNodeDumper::dumpType(QualType T) {
   dumpBareType(T);
 #if ENABLE_BSC
   if (!T.isNull() && T->checkFunctionProtoType(SZ_Safe)) {
-    OS << " safe";
+    OS << " _Safe";
   }
 #endif
 }
@@ -2422,18 +2422,18 @@ void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
 void TextNodeDumper::VisitSafeStmt(const SafeStmt *SS) {
   SafeZoneSpecifier SafeZoneSpec = SS->getSafeZoneSpecifier();
   if (SafeZoneSpec == SZ_Safe) {
-    OS << " safe";
+    OS << " _Safe";
   } else if (SafeZoneSpec == SZ_Unsafe) {
-    OS << " unsafe";
+    OS << " _Unsafe";
   }
 }
 
 void TextNodeDumper::VisitSafeExpr(const SafeExpr *SE) {
   SafeZoneSpecifier SafeZoneSpec = SE->getSafeZoneSpecifier();
   if (SafeZoneSpec == SZ_Safe) {
-    OS << " safe";
+    OS << " _Safe";
   } else if (SafeZoneSpec == SZ_Unsafe) {
-    OS << " unsafe";
+    OS << " _Unsafe";
   }
 }
 #endif

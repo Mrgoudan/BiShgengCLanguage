@@ -35,7 +35,7 @@ void * borrow return_void_borrow_nullptr(void * borrow dummy) {
 }
 
 // nullptr with borrow in safe zone
-safe void test_safe_borrow_nullptr(int * borrow p) {
+_Safe void test_safe_borrow_nullptr(int * borrow p) {
   int * borrow bp = (int * borrow)nullptr;
   (void)bp;
   (void)p;

@@ -7,36 +7,36 @@
 // expected-no-diagnostics
 
 int *g_a;
-safe void test_safe_stmt1(void) {
+_Safe void test_safe_stmt1(void) {
     int v = 1;
-    unsafe g_a = &v;
-    unsafe int *borrow a = &mut *g_a;
+    _Unsafe g_a = &v;
+    _Unsafe int *borrow a = &mut *g_a;
     int b = *a;
 }
 
-safe void test_safe_stmt2(void) {
+_Safe void test_safe_stmt2(void) {
     int v = 1;
-    unsafe g_a = &v;
+    _Unsafe g_a = &v;
     int b = 0;
-    unsafe b = *g_a;
+    _Unsafe b = *g_a;
 }
 
-safe void test_safe_stmt3(void){
+_Safe void test_safe_stmt3(void){
     int v = 1;
-    unsafe g_a = &v;
-    unsafe for(int i = 0; i < 10; i++) {
+    _Unsafe g_a = &v;
+    _Unsafe for(int i = 0; i < 10; i++) {
         int b = *g_a;
     }
 }
 
-safe void test_safe_stmt4(void){
+_Safe void test_safe_stmt4(void){
     int v = 1;
-    unsafe g_a = &v;
-    unsafe for(int i = 0; i < 10; i++) {
+    _Unsafe g_a = &v;
+    _Unsafe for(int i = 0; i < 10; i++) {
         int b = *g_a;
-        safe {
+        _Safe {
             b = b + 1;
-            unsafe b++;
+            _Unsafe b++;
         }
     }
 }

@@ -1,14 +1,14 @@
 #include "net.hbs"
 
-safe struct Ipv4Addr struct Ipv4Addr::new(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+_Safe struct Ipv4Addr struct Ipv4Addr::new(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
     struct Ipv4Addr ip = { .octets = { a, b, c, d } };
     return ip;
 }
 
-safe uint32_t struct Ipv4Addr::to_bits(This this) {
+_Safe uint32_t struct Ipv4Addr::to_bits(This this) {
     uint32_t result = 0;
     for (int i = 0; i < 4; i += 1) {
-        unsafe result |= this.octets[3 - i] << (i * 8);
+        _Unsafe result |= this.octets[3 - i] << (i * 8);
     }
     return result;
 }

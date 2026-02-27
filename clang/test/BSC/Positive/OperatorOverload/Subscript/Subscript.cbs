@@ -56,14 +56,14 @@ struct H {
 };
 
 __attribute__((operator []))
-safe int * borrow deref2(struct H * borrow h, int i) {
-    return unsafe(&mut(h->g[i].a));
+_Safe int * borrow deref2(struct H * borrow h, int i) {
+    return _Unsafe(&mut(h->g[i].a));
 }
 
 int test2() {
     struct G g1 = {3};
     struct H h1 = {g1, 11};
-    safe {
+    _Safe {
         int t2 = h1[0];
         if (t2 != 3) {
             return -1;
@@ -87,14 +87,14 @@ struct J {
 };
 
 __attribute__((operator []))
-safe const int * borrow deref3(const struct J * borrow j, int n) {
-    return unsafe(&const(j->i[n].a));
+_Safe const int * borrow deref3(const struct J * borrow j, int n) {
+    return _Unsafe(&const(j->i[n].a));
 }
 
 int test3() {
     struct I i1 = {1};
     struct J j1 = {i1, 11};
-    safe {
+    _Safe {
         int t2 = j1[0];
         if (t2 != 1) {
             return -1;
@@ -113,14 +113,14 @@ struct L {
 };
 
 __attribute__((operator []))
-safe struct K * borrow deref4(struct L * borrow h, int i) {
-    return unsafe(&mut(h->g[i]));
+_Safe struct K * borrow deref4(struct L * borrow h, int i) {
+    return _Unsafe(&mut(h->g[i]));
 }
 
 int test4() {
     struct K k1 = {3};
     struct L l1 = {k1, 11};
-    safe {
+    _Safe {
         int t2 = l1[0].a;
         if (t2 != 3) {
             return -1;

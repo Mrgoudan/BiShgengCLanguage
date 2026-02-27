@@ -3,22 +3,22 @@
 
 const size_t bsc_string_no_pos = SIZE_MAX;
 
-safe char* borrow String::as_mut_str(String* borrow this) {
-    unsafe {
+_Safe char* borrow String::as_mut_str(String* borrow this) {
+    _Unsafe {
         if (this->vec.buf.ptr != nullptr)
             return &mut *this->vec.buf.ptr;
     }
 }
 
-safe const char* borrow String::as_str(const String* borrow this) {
-    unsafe {
+_Safe const char* borrow String::as_str(const String* borrow this) {
+    _Unsafe {
         if (this->vec.buf.ptr != nullptr)
             return &const *this->vec.buf.ptr;
     }
 }
 
-safe char String::at(const String* borrow this, size_t index) {
-    unsafe {
+_Safe char String::at(const String* borrow this, size_t index) {
+    _Unsafe {
         if (this->length() <= index) {
             bsc_out_of_bound_handler(this->length(), index);
         }
@@ -27,11 +27,11 @@ safe char String::at(const String* borrow this, size_t index) {
     }
 }
 
-safe size_t String::capacity(const String* borrow this) {
+_Safe size_t String::capacity(const String* borrow this) {
     return this->vec.capacity();
 }
 
-safe _Bool String::equals(const String* borrow this, const String* borrow other) {
+_Safe _Bool String::equals(const String* borrow this, const String* borrow other) {
     if (this->length() != other->length()) {
         return 0;
     }
@@ -43,8 +43,8 @@ safe _Bool String::equals(const String* borrow this, const String* borrow other)
     return 1;
 }
 
-safe size_t String::find(const String* borrow this, char c) {
-    unsafe {
+_Safe size_t String::find(const String* borrow this, char c) {
+    _Unsafe {
         for (size_t index = 0; index < this->length(); index++) {
             if (this->at(index) == c) {
                 return index;
@@ -54,7 +54,7 @@ safe size_t String::find(const String* borrow this, char c) {
     return bsc_string_no_pos;
 }
 
-unsafe String String::from(const char* str) {
+_Unsafe String String::from(const char* str) {
     size_t cap = strlen(str) + 1;
     Vec<char> vec = Vec<char>::with_capacity(cap);
     strcpy(vec.buf.ptr, str);
@@ -63,43 +63,43 @@ unsafe String String::from(const char* str) {
     return string;
 }
 
-safe const char* borrow String::get(const String* borrow this, size_t index) {
+_Safe const char* borrow String::get(const String* borrow this, size_t index) {
     return this->vec.get(index);
 }
 
-safe char* borrow String::get_mut(String* borrow this, size_t index) {
+_Safe char* borrow String::get_mut(String* borrow this, size_t index) {
     return this->vec.get_mut(index);
 }
 
-safe _Bool String::is_empty(const String* borrow this) {
+_Safe _Bool String::is_empty(const String* borrow this) {
     return this->vec.is_empty();
 }
 
-safe size_t String::length(const String* borrow this) {
+_Safe size_t String::length(const String* borrow this) {
     return this->vec.length();
 }
 
-safe String String::new(void) {
+_Safe String String::new(void) {
 	Vec<char> vec = Vec<char>::new();
 	String string = { .vec = vec };
 	return string;
 }
 
-safe void String::push(String* borrow this, char value) {
+_Safe void String::push(String* borrow this, char value) {
     this->vec.push(value);
 }
 
-safe void String::set(String* borrow this, size_t index, char value) {
+_Safe void String::set(String* borrow this, size_t index, char value) {
     this->vec.set(index, value);
     return;
 }
 
-safe void String::shrink_to_fit(String* borrow this) {
+_Safe void String::shrink_to_fit(String* borrow this) {
     this->vec.shrink_to_fit();
 }
 
-safe String String::slice(const String* borrow this, size_t start, size_t length) {
-    unsafe {
+_Safe String String::slice(const String* borrow this, size_t start, size_t length) {
+    _Unsafe {
         if (start >= this->length()) {
             bsc_out_of_bound_handler(this->length(), start);
         }
@@ -115,7 +115,7 @@ safe String String::slice(const String* borrow this, size_t start, size_t length
     return string;
 }
 
-safe String String::with_capacity(size_t cap) {
+_Safe String String::with_capacity(size_t cap) {
     Vec<char> vec = Vec<char>::with_capacity(cap);
     String s = { .vec = vec };
     return s;

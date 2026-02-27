@@ -3,29 +3,29 @@
 // Tests the VALID cases that should compile without errors
 
 // Mixed mode declarations
-unsafe void func1(void);
-safe void func1(void);
+_Unsafe void func1(void);
+_Safe void func1(void);
 
-unsafe int compute(int x);
-safe int compute(int x);
+_Unsafe int compute(int x);
+_Safe int compute(int x);
 
-safe void safe_only_func(void);
-unsafe void unsafe_only_func(void);
+_Safe void safe_only_func(void);
+_Unsafe void unsafe_only_func(void);
 
 void test_valid_assignments(void) {
-  // Valid: unqualified pointers accept both safe and unsafe functions
-  void (*ptr1)(void) = safe_only_func;    // OK: safe -> unqualified (widening)
-  void (*ptr2)(void) = unsafe_only_func;  // OK: unsafe -> unqualified
-  ptr2 = safe_only_func;                  // OK: safe -> unqualified (widening)
+  // Valid: unqualified pointers accept both _Safe and _Unsafe functions
+  void (*ptr1)(void) = safe_only_func;    // OK: _Safe -> unqualified (widening)
+  void (*ptr2)(void) = unsafe_only_func;  // OK: _Unsafe -> unqualified
+  ptr2 = safe_only_func;                  // OK: _Safe -> unqualified (widening)
 
-  // Valid: unsafe pointers accept both safe and unsafe functions
-  unsafe void (*unsafe_ptr)(void) = nullptr;
-  unsafe_ptr = unsafe_only_func;          // OK: unsafe -> unsafe
-  unsafe_ptr = safe_only_func;            // OK: safe -> unsafe (widening)
+  // Valid: _Unsafe pointers accept both _Safe and _Unsafe functions
+  _Unsafe void (*unsafe_ptr)(void) = nullptr;
+  unsafe_ptr = unsafe_only_func;          // OK: _Unsafe -> _Unsafe
+  unsafe_ptr = safe_only_func;            // OK: _Safe -> _Unsafe (widening)
 
-  // Valid: safe pointers accept safe functions
-  safe void (*safe_ptr)(void) = nullptr;
-  safe_ptr = safe_only_func;              // OK: safe -> safe
+  // Valid: _Safe pointers accept _Safe functions
+  _Safe void (*safe_ptr)(void) = nullptr;
+  safe_ptr = safe_only_func;              // OK: _Safe -> _Safe
 
   (void)ptr1;
   (void)ptr2;

@@ -10,7 +10,7 @@ void inplace_reborrow(int x) {
     const int *borrow cref = &mut x;
 }
 
-safe void nullable_reborrow(int *borrow _Nullable ref) {
+_Safe void nullable_reborrow(int *borrow _Nullable ref) {
     const int *borrow _Nullable cref = ref;
 }
 
