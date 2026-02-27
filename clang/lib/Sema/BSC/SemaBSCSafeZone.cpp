@@ -127,6 +127,11 @@ bool Sema::IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
 }
 
 bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *E) {
+  // Dependent expressions cannot be fully evaluated at template definition
+  // time. Defer the safety check until instantiation when the expression
+  // becomes non-dependent.
+  if (E->isValueDependent() || E->isInstantiationDependent())
+    return true;
   QualType SrcType = E->getType();
   if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context)) {
     QualType IntTy = E->getType().getUnqualifiedType();

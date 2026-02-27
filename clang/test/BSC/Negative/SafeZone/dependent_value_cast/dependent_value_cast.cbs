@@ -1,0 +1,30 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+void *malloc(unsigned long);
+
+_Safe void test1<T>(void) {
+  int a = sizeof(T);
+}
+
+_Safe void test2<T>(void) {
+  _Bool a = sizeof(T); // expected-error {{implicit conversion from type 'unsigned long' to '_Bool' is forbidden in the safe zone; please use explicit cast or other means instead}}
+}
+
+_Safe void test3<T>(void) {
+  T * addr = (T *)malloc(sizeof(T));  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  // expected-error@-1 {{conversion from type 'void *' to 'T *' is forbidden in the safe zone}}
+}
+
+
+_Safe void test4<T>(void) {
+  _Unsafe T * addr = (T *)malloc(sizeof(T));
+}
+
+
+int main(){
+  test1<int>();
+  test2<int>();  // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}
+  test3<int>();
+  test4<int>();
+}
+
