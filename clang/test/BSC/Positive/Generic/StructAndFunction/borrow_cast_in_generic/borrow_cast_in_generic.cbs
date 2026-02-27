@@ -5,13 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Test that borrow casts work with template-dependent types
+// Test that _Borrow casts work with template-dependent types
 _Safe T *_Nullable owned malloc_obj_zero<T>(void) {
   _Unsafe {
     T *_Nullable owned destPtr = (T * _Nullable owned)(T *)malloc(sizeof(T));
     if (nullptr != destPtr) {
-      // This cast should work: T *mut borrow -> void *borrow
-      _Unsafe { memset((void *)(void *borrow) & mut * destPtr, 0, sizeof(T)); }
+      // This cast should work: T *mut _Borrow -> void *_Borrow
+      _Unsafe { memset((void *)(void *_Borrow) & mut * destPtr, 0, sizeof(T)); }
     }
     return destPtr;
   }

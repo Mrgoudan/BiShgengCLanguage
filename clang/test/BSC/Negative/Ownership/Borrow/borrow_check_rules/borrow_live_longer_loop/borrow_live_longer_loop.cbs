@@ -5,14 +5,14 @@ struct S2 { int *owned b; };
 struct S3 { struct S1 c; };
 
 int rand();
-void use_mut(int *borrow p);
+void use_mut(int *_Borrow p);
 T *owned safe_malloc<T>(T value);
 void free_owned<T>(T *owned p);
 void free(void*);
 
 void test1() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     int local1 = 42;
     p = &mut local1; // expected-error {{`local1` does not live long enough}}
@@ -22,7 +22,7 @@ void test1() {
 
 void test2() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   for (int i = 0; i < 5; ++i) {
     int local1 = 42;
     p = &mut local1; // expected-error {{`local1` does not live long enough}}
@@ -30,7 +30,7 @@ void test2() {
   use_mut(p);
 }
 
-void test3(int *borrow p) {
+void test3(int *_Borrow p) {
   while (rand()) {
     int local1 = 42;
     p = &mut local1; // expected-error {{`local1` does not live long enough}}
@@ -40,7 +40,7 @@ void test3(int *borrow p) {
 
 void test4() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     if (rand()) {
       int local1 = 42;
@@ -55,7 +55,7 @@ void test4() {
 
 void test5() {
   int *owned oriPtr = safe_malloc<int>(0);
-  int *borrow p = &mut *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
+  int *_Borrow p = &mut *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
   while (rand()) {
     if (rand()) {
       free_owned<int>(oriPtr); // expected-error {{cannot move out of `oriPtr` because it is borrowed}}
@@ -70,7 +70,7 @@ void test5() {
 
 void test6() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     while (rand()) {
       for (int i = 0; i < 5; ++i) {
@@ -84,7 +84,7 @@ void test6() {
 
 void test7() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     if (rand()) {
       for (int i = 0; i < 5; ++i) {
@@ -103,7 +103,7 @@ void test7() {
 
 void test8() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     struct S1 s = { .a = 42 };
     p = &mut s.a; // expected-error {{`s.a` does not live long enough}}
@@ -113,7 +113,7 @@ void test8() {
 
 void test9() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     struct S2 s = { .b = safe_malloc<int>(5) };
     p = &mut *s.b; // expected-error {{`*s.b` does not live long enough}} expected-note {{`*s.b` is borrowed here}}
@@ -124,7 +124,7 @@ void test9() {
 
 void test10() {
   int local = 42;
-  int *borrow p = &mut local;
+  int *_Borrow p = &mut local;
   while (rand()) {
     struct S1 s1 = { .a = 42 };
     struct S3 s2 = { .c = s1 };

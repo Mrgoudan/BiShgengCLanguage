@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify %s
 
-int *borrow foo(int *borrow p, int *borrow q);
+int *_Borrow foo(int *_Borrow p, int *_Borrow q);
 
 void test(int *p) {
-  int *borrow m = foo((int *borrow)p, (int *borrow)p); // expected-error {{cannot borrow `*p` as mutable more than once at a time}} // expected-note {{first mut borrow occurs here}}                              
+  int *_Borrow m = foo((int *_Borrow)p, (int *_Borrow)p); // expected-error {{cannot borrow `*p` as mutable more than once at a time}} // expected-note {{first mut borrow occurs here}}                              
   *m = 2;
 } 

@@ -3,12 +3,12 @@
 _Safe int *owned _Nonnull safe_malloc(int a);
 
 _Safe void test1(void) {
-    int *borrow _Nullable p1 = nullptr;
-    int *borrow _Nonnull p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow _Nullable p1 = nullptr;
+    int *_Borrow _Nonnull p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     int a = 10;
-    int *borrow _Nullable p3 = &mut a;
-    int *borrow _Nonnull p4 = p3;
-    int *borrow _Nonnull p5 = &mut a;
+    int *_Borrow _Nullable p3 = &mut a;
+    int *_Borrow _Nonnull p4 = p3;
+    int *_Borrow _Nonnull p5 = &mut a;
     p5 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     p5 = p3;
 }
@@ -24,12 +24,12 @@ _Safe void test2(void) {
 }
 
 _Safe void test3(void) {
-    int *borrow _Nullable p1 = nullptr;
-    int *borrow p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow _Nullable p1 = nullptr;
+    int *_Borrow p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     int a = 10;
-    int *borrow _Nullable p3 = &mut a;
-    int *borrow p4 = p3;
-    int *borrow p5 = &mut a;
+    int *_Borrow _Nullable p3 = &mut a;
+    int *_Borrow p4 = p3;
+    int *_Borrow p5 = &mut a;
     p5 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     p5 = p3;
 }
@@ -46,11 +46,11 @@ _Safe void test4(void) {
 
 _Safe void test5(void) {
     int a = 10;
-    int *borrow _Nonnull p1 = a == 1 ? nullptr : &mut a; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    int *borrow _Nullable p2 = a == 1 ? nullptr : &mut a;
+    int *_Borrow _Nonnull p1 = a == 1 ? nullptr : &mut a; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow _Nullable p2 = a == 1 ? nullptr : &mut a;
     *p2 = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
     int b = 10;
-    int *borrow _Nullable p3 = a == 1 && b == 10 ? &mut b : &mut a;
+    int *_Borrow _Nullable p3 = a == 1 && b == 10 ? &mut b : &mut a;
     *p3 = 10;
 
     p1 = a == 1 ? nullptr : &mut a;  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}

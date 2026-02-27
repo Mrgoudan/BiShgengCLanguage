@@ -8,23 +8,23 @@ struct K<T> {
     T a;
 };
 
-void struct K<T>::foo1(const This *borrow this) {
+void struct K<T>::foo1(const This *_Borrow this) {
     struct K<T> ret = *this;    
 }
 
-void struct K<T>::foo2(This *borrow this) {
+void struct K<T>::foo2(This *_Borrow this) {
     struct K<T> ret = *this;
 }
 
 struct M<T> {
-    struct K<T>*borrow a;
+    struct K<T>*_Borrow a;
 };
 
 void struct M<T>::foo3(This *this) {
     struct K<T> ret = *(this->a);
 }
 
-void foo<T>(struct K<T> *borrow p) {
+void foo<T>(struct K<T> *_Borrow p) {
     struct K<T> ret = *p;
     T *a = (T*)ret.a;    
 }

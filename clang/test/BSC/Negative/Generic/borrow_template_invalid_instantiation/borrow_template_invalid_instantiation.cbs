@@ -1,25 +1,25 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test that borrow qualifier on template type parameters is validated at instantiation
+// Test that _Borrow qualifier on template type parameters is validated at instantiation
 // When instantiated with non-pointer types, it should produce an error
 
-T2 borrow cast<T1, T2>(T1 borrow p) { // expected-note {{candidate template ignored: substitution failure [with T1 = int, T2 = int]: borrow type requires a pointer or reference ('int' is invalid)}}
+T2 _Borrow cast<T1, T2>(T1 _Borrow p) { // expected-note {{candidate template ignored: substitution failure [with T1 = int, T2 = int]: _Borrow type requires a pointer or reference ('int' is invalid)}}
 
-  return (T2 borrow)(T2)(T1)p;
+  return (T2 _Borrow)(T2)(T1)p;
 }
 
 void test_valid() {
   int x = 42;
-  int * borrow ptr = &mut x;
+  int * _Borrow ptr = &mut x;
 
-  // This should work - T1 and T2 are pointer types, borrow added by function signature
-  int *borrow p1 = cast<int *, int *>(ptr);
+  // This should work - T1 and T2 are pointer types, _Borrow added by function signature
+  int *_Borrow p1 = cast<int *, int *>(ptr);
 }
 
 void test_invalid() {
   int x = 42;
 
   // This should fail - int is not a pointer type
-  int borrow p2 = cast<int, int>(x); // expected-error {{borrow type requires a pointer or reference ('int' is invalid)}} // expected-error {{no matching function for call to 'cast'}}
+  int _Borrow p2 = cast<int, int>(x); // expected-error {{_Borrow type requires a pointer or reference ('int' is invalid)}} // expected-error {{no matching function for call to 'cast'}}
 
 }

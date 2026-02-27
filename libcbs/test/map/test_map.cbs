@@ -23,9 +23,9 @@ void test1() {
     assert(2 == option_unwrap(i2));
     Option<int> i3 = map.insert(2, 3);
     assert(1 == i3.is_none());
-    Option<int* borrow> res2 = map.get_mut(&const x);
+    Option<int* _Borrow> res2 = map.get_mut(&const x);
     assert(1 == res2.is_some());
-    int* borrow unwrap = option_unwrap(res2);
+    int* _Borrow unwrap = option_unwrap(res2);
     *unwrap = *unwrap + 1;
     assert(5 == *unwrap);
     Option<int> removed2 = map.remove(&const x);

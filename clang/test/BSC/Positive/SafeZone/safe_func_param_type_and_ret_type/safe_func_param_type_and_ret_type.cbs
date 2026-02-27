@@ -48,11 +48,11 @@ _Safe struct T *owned f7(struct T *owned tp) {
   return tp;
 }
 
-_Safe struct S *borrow f8(struct S *borrow sp) {
+_Safe struct S *_Borrow f8(struct S *_Borrow sp) {
   return sp;
 }
 
-_Safe struct T *borrow f9(struct T *borrow tp) {
+_Safe struct T *_Borrow f9(struct T *_Borrow tp) {
   return tp;
 }
 
@@ -64,7 +64,7 @@ _Safe union U *owned f11(union U *owned up) {
   return up;
 }
 
-_Safe union U *borrow f12(union U *borrow up) {
+_Safe union U *_Borrow f12(union U *_Borrow up) {
   return up;
 }
 

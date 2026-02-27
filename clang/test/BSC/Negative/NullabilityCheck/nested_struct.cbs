@@ -5,7 +5,7 @@ struct M {
 };
 
 struct N {
-    struct M *borrow _Nullable b;
+    struct M *_Borrow _Nullable b;
 };
 
 _Safe void test1(void) {

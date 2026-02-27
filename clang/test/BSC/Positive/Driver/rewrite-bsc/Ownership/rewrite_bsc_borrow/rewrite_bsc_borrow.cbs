@@ -5,29 +5,29 @@
 // RUN: %clang -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK_MANGLE
 
 struct R {
-    int * borrow p1;
-    const int * borrow p2;
+    int * _Borrow p1;
+    const int * _Borrow p2;
 };
 
 // CHECK_MANGLE: define {{.*}} @int_foo
-void int::foo(This * borrow this) {}
+void int::foo(This * _Borrow this) {}
 
-typedef int * borrow myInt;
-typedef int* borrow (*PF2)(struct R);
+typedef int * _Borrow myInt;
+typedef int* _Borrow (*PF2)(struct R);
 
 void test1() {
     int x1 = 0;
     int x = 0;
     float y = 1.0;
-    const int * borrow p2 = &const x;
-    const int * borrow p4= (const int * borrow)&x;
-    int * borrow p7 = &mut *(&x);
-    int * borrow p = &mut x;
-    float * borrow p1 = &mut y;
+    const int * _Borrow p2 = &const x;
+    const int * _Borrow p4= (const int * _Borrow)&x;
+    int * _Borrow p7 = &mut *(&x);
+    int * _Borrow p = &mut x;
+    float * _Borrow p1 = &mut y;
     myInt p3 = p;
 
     int * owned p5 = (int * owned)&x1;
-    const int * borrow b6 = &const *p3;
+    const int * _Borrow b6 = &const *p3;
     p7 = &mut *p;
     int * p8 = (int *)p5;
 }

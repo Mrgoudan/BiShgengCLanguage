@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 struct S {
-  int *borrow p;
+  int *_Borrow p;
 };
 
 struct G {
@@ -13,7 +13,7 @@ T *owned safe_malloc<T>(T value);
 void free_owned<T>(T *owned p);
 void free(void *);
 
-int *borrow test1(int *borrow p) {
+int *_Borrow test1(int *_Borrow p) {
   int local = 42;
   while (rand())
     return &mut local; // expected-error {{`local` does not live long enough}}
@@ -22,7 +22,7 @@ int *borrow test1(int *borrow p) {
                      // expected-note@-1 {{`local` dropped here while still borrowed}}
 }
 
-int *borrow test2(int *borrow p) {
+int *_Borrow test2(int *_Borrow p) {
   int local = 42;
   while (0)
     return &mut local; // expected-error {{`local` does not live long enough}}
@@ -31,14 +31,14 @@ int *borrow test2(int *borrow p) {
                      // expected-note@-1 {{`local` dropped here while still borrowed}}
 }
 
-int *borrow test3(int *borrow p) {
+int *_Borrow test3(int *_Borrow p) {
   int local = 42;
   while (rand())
     p = &mut local; // expected-error {{`local` does not live long enough}}
   return p; // expected-note {{`local` dropped here while still borrowed}}
 }
 
-int *borrow test4(int *borrow p) {
+int *_Borrow test4(int *_Borrow p) {
   while (rand()) {
     for (int i = 0; i < 5; i++) {
       if (rand()) {

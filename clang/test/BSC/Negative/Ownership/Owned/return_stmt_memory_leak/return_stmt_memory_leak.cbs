@@ -4,7 +4,7 @@ int SetVersionInfo(int id, const char* name, const char* commitId);
 
 owned struct String {
 public:
-    const char *borrow as_str(const String *borrow this);
+    const char *_Borrow as_str(const String *_Borrow this);
 };
 
 

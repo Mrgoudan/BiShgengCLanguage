@@ -3,26 +3,26 @@
 // expected-no-diagnostics
 
 struct Slice<T> {
-    const T *borrow _Nullable ptr;
+    const T *_Borrow _Nullable ptr;
     int len;
 };
 
-Slice<T> Slice<T>::new(const T *borrow ptr, int len) {
+Slice<T> Slice<T>::new(const T *_Borrow ptr, int len) {
     Slice<T> slice = { .ptr = ptr, .len = len };
     return slice;
 }
 
-const T *borrow Slice<T>::get(This this, int index) {
+const T *_Borrow Slice<T>::get(This this, int index) {
     const T *raw = (const T *)this.ptr;
     raw += index;
-    return (const T *borrow)raw;
+    return (const T *_Borrow)raw;
 }
 
 int test() {
     int arr[5] = { 1, 2, 3, 4, 5 };
     Slice<int> s = Slice<int>::new(&const arr[1], 4); 
-    const int *borrow temp = s.ptr;
-    const int *borrow second = s.get(1);
+    const int *_Borrow temp = s.ptr;
+    const int *_Borrow second = s.get(1);
     int b = *temp;
     if (b == 2) return 0;
     return 1;

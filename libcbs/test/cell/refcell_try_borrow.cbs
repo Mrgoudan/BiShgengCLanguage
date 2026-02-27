@@ -19,7 +19,7 @@ void test_borrow1() {
     assert(option_rm1.is_some());
 
     Option<RefImmut<A>> option_rm2 = refcell.try_borrow_immut();
-    assert(option_rm2.is_none());  //borrow failed
+    assert(option_rm2.is_none());  //_Borrow failed
 }
 
 void test_borrow2() {
@@ -30,7 +30,7 @@ void test_borrow2() {
     assert(option_rm1.is_some());
 
     Option<RefMut<A>> option_rm2 = refcell.try_borrow_mut();
-    assert(option_rm2.is_none());   //borrow failed
+    assert(option_rm2.is_none());   //_Borrow failed
 }
 
 void test_borrow3() {
@@ -41,7 +41,7 @@ void test_borrow3() {
     assert(option_rm1.is_some());
 
     Option<RefMut<A>> option_rm2 = refcell.try_borrow_mut();
-    assert(option_rm2.is_none());    //borrow failed
+    assert(option_rm2.is_none());    //_Borrow failed
 }
 
 void test_borrow4() {
@@ -126,7 +126,7 @@ void test_borrow10() {
         rm1.deref()->a = 10;
 
         Option<RefMut<A>> option_rm2 = refcell.try_borrow_mut();
-        assert(option_rm2.is_none());  //borrow failed
+        assert(option_rm2.is_none());  //_Borrow failed
     }
 }
 int main() {

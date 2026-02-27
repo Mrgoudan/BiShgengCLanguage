@@ -199,7 +199,7 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
       (!IsRewriteBSC || MangleWithSafeQualifier)) {
     if (appendSpace)
       OS << ' ';
-    OS << "borrow";
+    OS << "_Borrow";
     appendSpace = true;
   }
 #endif

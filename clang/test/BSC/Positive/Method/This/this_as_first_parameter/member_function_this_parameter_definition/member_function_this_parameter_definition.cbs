@@ -28,16 +28,16 @@ int struct Foo::getC(const This* this) {
 int struct Foo::getC_2(const struct Foo* this) {
   return this->a;
 }
-int struct Foo::getD(This* borrow this) {
+int struct Foo::getD(This* _Borrow this) {
   return this->a;
 }
-int struct Foo::getD_2(struct Foo* borrow this) {
+int struct Foo::getD_2(struct Foo* _Borrow this) {
   return this->a;
 }
-int struct Foo::getE(const This* borrow this) {
+int struct Foo::getE(const This* _Borrow this) {
   return this->a;
 }
-int struct Foo::getE_2(const struct Foo* borrow this) {
+int struct Foo::getE_2(const struct Foo* _Borrow this) {
   return this->a;
 }
 struct Foo* owned struct Foo::getF(This* owned this) {
@@ -87,16 +87,16 @@ int Bar::getC(const This* this) {
 int Bar::getC_2(const Bar* this) {
   return this->a;
 }
-int Bar::getD(This* borrow this) {
+int Bar::getD(This* _Borrow this) {
   return this->a;
 }
-int Bar::getD_2(Bar* borrow this) {
+int Bar::getD_2(Bar* _Borrow this) {
   return this->a;
 }
-int Bar::getE(const This* borrow this) {
+int Bar::getE(const This* _Borrow this) {
   return this->a;
 }
-int Bar::getE_2(const Bar* borrow this) {
+int Bar::getE_2(const Bar* _Borrow this) {
   return this->a;
 }
 Bar* owned Bar::getF(This* owned this) {

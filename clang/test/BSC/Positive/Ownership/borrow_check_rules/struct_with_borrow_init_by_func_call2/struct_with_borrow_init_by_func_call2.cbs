@@ -17,20 +17,20 @@ public:
 
 owned struct OptionRefMut<T> {
 public:
-  T *borrow p;
+  T *_Borrow p;
 };
 
-_Safe OptionRefMut<T> OptionRefMut<T>::Some(T *borrow p) {
+_Safe OptionRefMut<T> OptionRefMut<T>::Some(T *_Borrow p) {
   OptionRefMut<T> rm = { .p = p };
   return rm;
 };
 
-_Safe OptionRefMut<T> Option<T>::as_mut_1(Option<T> *borrow this) {
+_Safe OptionRefMut<T> Option<T>::as_mut_1(Option<T> *_Borrow this) {
   OptionRefMut<T> r = OptionRefMut<T>::Some(&mut *this->inner);
   return r;
 }
 
-_Safe OptionRefMut<T> Option<T>::as_mut_2(Option<T> *borrow this) {
+_Safe OptionRefMut<T> Option<T>::as_mut_2(Option<T> *_Borrow this) {
   return OptionRefMut<T>::Some(&mut *this->inner);
 }
 

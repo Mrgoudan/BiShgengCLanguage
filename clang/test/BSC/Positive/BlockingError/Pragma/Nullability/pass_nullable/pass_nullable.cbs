@@ -2,16 +2,16 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-_Safe void foo1(int *borrow a);
+_Safe void foo1(int *_Borrow a);
 _Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Epass-nullable"
     int a = 10;
-    int *borrow p1 = &mut a;
+    int *_Borrow p1 = &mut a;
     foo1(p1);
-    int *borrow _Nullable p2 = &mut a;
+    int *_Borrow _Nullable p2 = &mut a;
     foo1(p2);
-    int *borrow _Nullable p3 = nullptr;
+    int *_Borrow _Nullable p3 = nullptr;
     foo1(p3);            // cannot pass nullable pointer argument
     foo1(&mut a);
     foo1(nullptr);       // cannot pass nullable pointer argument

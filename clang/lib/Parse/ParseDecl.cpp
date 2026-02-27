@@ -4571,7 +4571,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       break;
 
     // borrow-qualifier:
-    case tok::kw_borrow:
+    case tok::kw__Borrow:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_borrow, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
@@ -5671,7 +5671,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw__Sat:
 #if ENABLE_BSC
   case tok::kw_owned:
-  case tok::kw_borrow:
+  case tok::kw__Borrow:
 #endif
 
     // Debugger support.
@@ -5846,7 +5846,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
   case tok::kw_restrict:
 #if ENABLE_BSC
   case tok::kw_owned:
-  case tok::kw_borrow:
+  case tok::kw__Borrow:
 #endif
   case tok::kw__Sat:
 
@@ -6166,7 +6166,7 @@ void Parser::ParseTypeQualifierListOpt(
                                  getLangOpts());
       break;
     // borrow-qualifier:
-    case tok::kw_borrow:
+    case tok::kw__Borrow:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_borrow, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;

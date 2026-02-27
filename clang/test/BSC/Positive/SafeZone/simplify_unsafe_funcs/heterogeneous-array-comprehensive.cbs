@@ -2,21 +2,21 @@
 // expected-no-diagnostics
 
 // Comprehensive tests for heterogeneous function declarations with array arguments
-// Key: _Unsafe versions have NO borrow/owned qualifiers, _Safe versions DO
+// Key: _Unsafe versions have NO _Borrow/owned qualifiers, _Safe versions DO
 
 // Test 1: Array with const elements to const void*
-_Safe int const_process(const void* borrow src, unsigned int size);
+_Safe int const_process(const void* _Borrow src, unsigned int size);
 int const_process(const void* src, unsigned int size);
 
 _Safe void test1(void) {
     const int arr[20];
     _Unsafe {
-        const_process(arr, sizeof(arr));  // Matches _Unsafe: const void* (no borrow)
+        const_process(arr, sizeof(arr));  // Matches _Unsafe: const void* (no _Borrow)
     }
 }
 
-// Test 2: String literal to const char* borrow in _Safe context
-_Safe const char* borrow get_message(const char* borrow msg);
+// Test 2: String literal to const char* _Borrow in _Safe context
+_Safe const char* _Borrow get_message(const char* _Borrow msg);
 
 _Safe void test2(void) {
     get_message("hello world");  // String literal auto-borrows in _Safe context
@@ -39,13 +39,13 @@ typedef struct {
     int values[32];
 } DataBuffer;
 
-_Safe void process_buffer(void* borrow buf, int size);
+_Safe void process_buffer(void* _Borrow buf, int size);
 void process_buffer(void* buf, int size);
 
 _Safe void test4(void) {
     DataBuffer db;
     _Unsafe {
-        process_buffer(db.buffer, 128);  // Matches _Unsafe: void* (no borrow)
+        process_buffer(db.buffer, 128);  // Matches _Unsafe: void* (no _Borrow)
         process_buffer(db.values, 32);
     }
 }
@@ -74,13 +74,13 @@ typedef struct {
     } inner;
 } NestedStruct;
 
-_Safe void nested_func(int* borrow data);
+_Safe void nested_func(int* _Borrow data);
 void nested_func(int* data);
 
 _Safe void test6(void) {
     NestedStruct ns;
     _Unsafe {
-        nested_func(ns.inner.nested);  // Matches _Unsafe: int* (no borrow)
+        nested_func(ns.inner.nested);  // Matches _Unsafe: int* (no _Borrow)
     }
 }
 
@@ -163,8 +163,8 @@ _Safe void test12(void) {
     }
 }
 
-// Test 13: String literals with _Safe borrow function
-_Safe void str_func(const char* borrow msg);
+// Test 13: String literals with _Safe _Borrow function
+_Safe void str_func(const char* _Borrow msg);
 
 _Safe void test13(void) {
     str_func("simple");
@@ -182,7 +182,7 @@ _Safe void test14(void) {
 }
 
 // Test 15: Arrays with heterogeneous void* functions
-_Safe void* borrow alloc_safe(void* borrow hint, unsigned long size);
+_Safe void* _Borrow alloc_safe(void* _Borrow hint, unsigned long size);
 void* alloc_unsafe(void* hint, unsigned long size);
 
 _Safe void test15(void) {

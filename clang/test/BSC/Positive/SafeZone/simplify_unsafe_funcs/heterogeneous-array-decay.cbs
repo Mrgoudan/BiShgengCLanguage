@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test 1: printf with borrow and auto-borrow from string literal
+// Test 1: printf with _Borrow and auto-_Borrow from string literal
 #define BSC_ATTR(a, b) __attribute__((format(printf,(a),(b))))
-_Safe int printf (const char* borrow __restrict _format,...) BSC_ATTR(1,2);
+_Safe int printf (const char* _Borrow __restrict _format,...) BSC_ATTR(1,2);
 
 _Safe void test1(void){
      printf("test string\r\n"); // expected-warning {{format string is not a string literal (potentially insecure)}} expected-note {{treat the string as an argument to avoid this}}
@@ -34,13 +34,13 @@ typedef struct{
     unsigned int bits[256];
 }bit_stream;
 
-_Safe int memset_s(void* borrow dest, unsigned int sizeMax,int c,unsigned int count);
+_Safe int memset_s(void* _Borrow dest, unsigned int sizeMax,int c,unsigned int count);
 int memset_s(void*  dest, unsigned int sizeMax,int c,unsigned int count);
 
 bit_stream* stram=nullptr;
 
 _Safe void test4(int n){
     _Unsafe{
-        memset_s(stram[n].bits,0,0,0);  // Should select _Unsafe version (array cannot match borrow)
+        memset_s(stram[n].bits,0,0,0);  // Should select _Unsafe version (array cannot match _Borrow)
     }
 }

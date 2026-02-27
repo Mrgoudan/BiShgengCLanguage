@@ -5,12 +5,12 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-int *borrow foo(int *borrow a, int *borrow b){
+int *_Borrow foo(int *_Borrow a, int *_Borrow b){
     return a;
 }
 
 void test(int *p, int *q) {
-  int *borrow m = foo((int *borrow)p, (int *borrow)q);
+  int *_Borrow m = foo((int *_Borrow)p, (int *_Borrow)q);
 }
 
 int main(){

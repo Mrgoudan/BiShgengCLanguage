@@ -31,9 +31,9 @@ void test3() {
     int *p1, *p2;
     p1 = p2 = nullptr;
     if (p1 != nullptr) {
-        int *borrow p3 = (int *borrow)p1;
+        int *_Borrow p3 = (int *_Borrow)p1;
     }
     if (p2 != nullptr) {
-        int *borrow p4 = (int *borrow)p2;
+        int *_Borrow p4 = (int *_Borrow)p2;
     }
 }

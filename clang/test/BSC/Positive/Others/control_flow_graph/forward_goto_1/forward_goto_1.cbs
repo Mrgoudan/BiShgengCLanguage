@@ -6,7 +6,7 @@ int g_a = 0;
 
 int test1(int arg) {
   int temp = 1;
-  int *borrow p = &mut temp;
+  int *_Borrow p = &mut temp;
   int x;
   if (g_a) {
     int y;
@@ -20,7 +20,7 @@ next:
 
 void test2() {
   int temp = 1;
-  int *borrow p = &mut temp;
+  int *_Borrow p = &mut temp;
   int x = 2;
   for (int i = 0; i < 2; i++) {
     if (x == 2)

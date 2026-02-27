@@ -51,14 +51,14 @@ _Safe void bsc_unwrap_failed(void) {
 
 _Safe void bsc_refcell_mut_borrow_failed(void) {
     _Unsafe {
-        fprintf(stderr, "Error: Failed to mut borrow because has been borrowed\n");
+        fprintf(stderr, "Error: Failed to mut _Borrow because has been borrowed\n");
         bsc_stack_dump_and_exit();
     }
 }
 
 _Safe void bsc_refcell_immut_borrow_failed(void) {
     _Unsafe {
-        fprintf(stderr, "Error: Failed to immut borrow because has been mut borrowed\n");
+        fprintf(stderr, "Error: Failed to immut _Borrow because has been mut borrowed\n");
         bsc_stack_dump_and_exit();
     }
 }

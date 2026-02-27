@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
-typedef NullableBorrowInt = int *borrow _Nullable;
-typedef NonnullBorrowInt = int *borrow _Nonnull;
+typedef NullableBorrowInt = int *_Borrow _Nullable;
+typedef NonnullBorrowInt = int *_Borrow _Nonnull;
 typedef NullableOwnedInt = int *owned _Nullable;
 typedef NonnullOwnedInt = int *owned _Nonnull;
 

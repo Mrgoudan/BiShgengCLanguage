@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
-// Tests for mixed mode with owned/borrow pointer parameters and returns
+// Tests for mixed mode with owned/_Borrow pointer parameters and returns
 
 _Safe void drop(int* owned p);
 _Safe void drop_buffer(void* owned p);

@@ -9,15 +9,15 @@ int * owned foo(int * owned a) {
 }
 int owned foo1() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int owned a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned * borrow b = &mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    return *b; // expected-error {{borrow type does not allow move ownership}}
+    int owned * _Borrow b = &mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    return *b; // expected-error {{_Borrow type does not allow move ownership}}
 }
 
 void foo2() {
-    int * borrow b = &mut a;              // expected-error {{use of undeclared identifier 'a'}}
-    int * borrow c = &mut *p;             // expected-error {{use of undeclared identifier 'p'}}
-    const int * borrow d = &const q;      // expected-error {{use of undeclared identifier 'q'}}
-    const int * borrow e = &const *s;     // expected-error {{use of undeclared identifier 's'}}
+    int * _Borrow b = &mut a;              // expected-error {{use of undeclared identifier 'a'}}
+    int * _Borrow c = &mut *p;             // expected-error {{use of undeclared identifier 'p'}}
+    const int * _Borrow d = &const q;      // expected-error {{use of undeclared identifier 'q'}}
+    const int * _Borrow e = &const *s;     // expected-error {{use of undeclared identifier 's'}}
     return;
 }
 
@@ -26,21 +26,21 @@ int owned test_use(int owned a){ // expected-error {{type of 'int' cannot be qua
 }
 int foo3() {
     int owned a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned * borrow b = &mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned c = test_use(*b);     // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{borrow type does not allow move ownership}}
+    int owned * _Borrow b = &mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned c = test_use(*b);     // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{_Borrow type does not allow move ownership}}
     int d = (int)a;
     return 0;
 }
 
 struct S1 {
-    int owned * borrow a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int owned * _Borrow a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int * b;
 };
 int foo4() {
     int owned m = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
     int n = 1;
     struct S1 k = {&mut m, &n};
-    int owned a = *(k.a);          // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{borrow type does not allow move ownership}}
+    int owned a = *(k.a);          // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{_Borrow type does not allow move ownership}}
     int b = *(k.b);
 }
 
@@ -51,30 +51,30 @@ struct S2 {
 int foo5() {
     int m = 1;
     int n = 1;
-    struct S2 owned * borrow k = &mut(struct S2 owned){&m, &n};  // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}}
-    struct S2 owned a = *(k);   // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}} expected-error {{borrow type does not allow move ownership}}
+    struct S2 owned * _Borrow k = &mut(struct S2 owned){&m, &n};  // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}}
+    struct S2 owned a = *(k);   // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}} expected-error {{_Borrow type does not allow move ownership}}
 }
 
 
 struct s<T> {};
 void test1<T>(){
     struct s<T> *a;
-    struct s<T> * borrow g = &mut *a;
+    struct s<T> * _Borrow g = &mut *a;
 }
 
 void test2<T>(){
     struct s<T> *a;
-    int * borrow g = &mut *a; // expected-error {{incompatible borrow types, cannot cast 's<int> *borrow' to 'int *borrow'}}
+    int * _Borrow g = &mut *a; // expected-error {{incompatible borrow types, cannot cast 's<int> *_Borrow' to 'int *_Borrow'}}
 }
 
 void test3<T>(){
     struct s<T> *a;
-    const struct s<T> * borrow g = &const *a;
+    const struct s<T> * _Borrow g = &const *a;
 }
 
 void test4<T>(){
     struct s<T> *a;
-    const int * borrow g = &const *a; // expected-error {{incompatible borrow types, cannot cast 'const s<int> *borrow' to 'const int *borrow'}}
+    const int * _Borrow g = &const *a; // expected-error {{incompatible borrow types, cannot cast 'const s<int> *_Borrow' to 'const int *_Borrow'}}
 }
 
 void test() {
@@ -83,15 +83,15 @@ void test() {
 	const int* p2 = &a;
 	int * owned p3 = (int * owned)&a;
 
-	int * borrow b1 = &mut *p1; // legal
-    const int * borrow b2 = &mut *p2; // expected-error {{the expression after '&mut' must be modifiable}}
-    int * borrow b3 = &mut *p3; // legal
-    const int * borrow b4 = &const *p1; // legal
-    const int * borrow b5 = &const *p2; // legal
-    const int * borrow b6 = &const *p3; // legal
+	int * _Borrow b1 = &mut *p1; // legal
+    const int * _Borrow b2 = &mut *p2; // expected-error {{the expression after '&mut' must be modifiable}}
+    int * _Borrow b3 = &mut *p3; // legal
+    const int * _Borrow b4 = &const *p1; // legal
+    const int * _Borrow b5 = &const *p2; // legal
+    const int * _Borrow b6 = &const *p3; // legal
 
-	int *owned * borrow b7 =&mut p3; // legal
-	const int *owned * borrow b8 =&const p3; // legal
+	int *owned * _Borrow b7 =&mut p3; // legal
+	const int *owned * _Borrow b8 =&const p3; // legal
 
     // T 是 copy 语义，p 是 immut 借用
 	int a1 = *b4; // legal
@@ -100,23 +100,23 @@ void test() {
     int a2 = *b1; // legal
     *b1 = a2; // legal
     // T 是 move 语义，p 是 immut 借用
-    int * owned a3 = *b8; // expected-error {{borrow type does not allow move ownership}}
-    int * owned a4 = ((int * owned)*b8); // expected-error {{borrow type does not allow move ownership}}
+    int * owned a3 = *b8; // expected-error {{_Borrow type does not allow move ownership}}
+    int * owned a4 = ((int * owned)*b8); // expected-error {{_Borrow type does not allow move ownership}}
     *b8 = p3; // expected-error {{read-only variable is not assignable}}
     // T 是 move 语义，p 是 mut 借用
-    a3 = *b7; // expected-error {{borrow type does not allow move ownership}}
-    a3 = ((int * owned)*b7); // expected-error {{borrow type does not allow move ownership}}
+    a3 = *b7; // expected-error {{_Borrow type does not allow move ownership}}
+    a3 = ((int * owned)*b7); // expected-error {{_Borrow type does not allow move ownership}}
     *b7; // expected-warning {{expression result unused}}
     *b7 = a3; // legal
 
     struct R r = {p3};
-    struct R * borrow b9 = &mut r;
+    struct R * _Borrow b9 = &mut r;
     struct R r1 = *b9; // legal
-    int * owned *borrow b10 = &mut r.p;
-    a4 = *b10; // expected-error {{borrow type does not allow move ownership}}
+    int * owned *_Borrow b10 = &mut r.p;
+    a4 = *b10; // expected-error {{_Borrow type does not allow move ownership}}
 
     foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is owned or indirect owned type, please fix it}}
-              // expected-error@-1 {{borrow type does not allow move ownership}}
+              // expected-error@-1 {{_Borrow type does not allow move ownership}}
     test1<int>();
     test2<int>(); // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}
     test3<int>();

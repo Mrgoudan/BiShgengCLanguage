@@ -1,23 +1,23 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected %s -verify-ignore-unexpected=note
 
 struct S {
-    int *borrow b1;
-    int *borrow b2;
+    int *_Borrow b1;
+    int *_Borrow b2;
 };
 
-void use_borrow(int *borrow b) {}
+void use_borrow(int *_Borrow b) {}
 
 void test() {
     int a = 0;
-    int *borrow p = &mut a;
+    int *_Borrow p = &mut a;
 
     struct S b = {.b1 = p, .b2 = p};
     // expected-error@-1 {{cannot use `p` because it was mutably borrowed}}
     // expected-error@-2 {{cannot borrow `*p` as mutable more than once at a time}}
     use_borrow(b.b1);
 
-    int *borrow p1 = p;
-    int *borrow p2 = p;
+    int *_Borrow p1 = p;
+    int *_Borrow p2 = p;
     // expected-error@-1 {{cannot use `p` because it was mutably borrowed}}
     // expected-error@-2 {{cannot borrow `*p` as mutable more than once at a time}}
     struct S b2 = {.b1 = p1, .b2 = p2};
@@ -26,8 +26,8 @@ void test() {
 
 void test2(){
     int a = 0;
-    int *borrow p = &mut a;
-    int *borrow arr[2] = {p, p};
+    int *_Borrow p = &mut a;
+    int *_Borrow arr[2] = {p, p};
     // expected-error@-1 {{cannot use `p` because it was mutably borrowed}}
     // expected-error@-2 {{cannot borrow `*p` as mutable more than once at a time}}
     use_borrow(arr[0]);

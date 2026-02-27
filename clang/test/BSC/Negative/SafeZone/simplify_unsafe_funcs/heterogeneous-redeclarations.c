@@ -15,10 +15,10 @@ _Unsafe void* test_return_type2(void); // expected-note {{previous declaration i
 _Safe int* owned test_return_type2(void); // expected-error {{function 'test_return_type2' has incompatible _Safe and _Unsafe declarations}}
 
 _Safe void test_owned_borrow(int* owned p); // expected-note {{previous declaration is here}}
-_Safe void test_owned_borrow(int* borrow p); // expected-error {{conflicting types for 'test_owned_borrow'}}
+_Safe void test_owned_borrow(int* _Borrow p); // expected-error {{conflicting types for 'test_owned_borrow'}}
 
 _Safe int* owned test_owned_vs_borrow(int* owned p); // expected-note {{previous declaration is here}}
-_Safe int* borrow test_owned_vs_borrow(int* borrow p); // expected-error {{conflicting types for 'test_owned_vs_borrow'}}
+_Safe int* _Borrow test_owned_vs_borrow(int* _Borrow p); // expected-error {{conflicting types for 'test_owned_vs_borrow'}}
 
 _Unsafe const int* test_const_compat1(int* p); // expected-note {{previous declaration is here}}
 _Safe const int* owned test_const_compat1(const int* owned p); // expected-error {{function 'test_const_compat1' has incompatible _Safe and _Unsafe declarations}} 

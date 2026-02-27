@@ -1019,7 +1019,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
     ConsumeToken();
 
 #if ENABLE_BSC
-  if (Tok.isOneOf(tok::kw_borrow, tok::kw_owned))
+  if (Tok.isOneOf(tok::kw__Borrow, tok::kw_owned))
     ConsumeToken();
 #endif
 

@@ -30,14 +30,14 @@ public:
 };
 
 // Returns `true` if the option is a `None` value.
-_Safe _Bool Option<T>::is_none(const Option<T>* borrow this) {
+_Safe _Bool Option<T>::is_none(const Option<T>* _Borrow this) {
     _Unsafe {
         return this->state == None;
     }
 }
 
 // Returns `true` if the option is a `Some` value.
-_Safe _Bool Option<T>::is_some(const Option<T>* borrow this) {
+_Safe _Bool Option<T>::is_some(const Option<T>* _Borrow this) {
     _Unsafe {
         return this->state == Some;
     }

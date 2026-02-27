@@ -6,11 +6,11 @@ owned struct S<T> {
 private:
   T *ptr;
 public:
-  _Unsafe T *pointer(const This *borrow this);
+  _Unsafe T *pointer(const This *_Borrow this);
 };
 
 
-inline _Unsafe T *S<T>::pointer(const This *borrow this) {
+inline _Unsafe T *S<T>::pointer(const This *_Borrow this) {
   return this->ptr;
 }
 
@@ -18,10 +18,10 @@ owned struct B<T> {
 private:
   T val; 
 public:
-  _Safe T value(const This *borrow this);
+  _Safe T value(const This *_Borrow this);
 };
 
-inline _Safe T B<T>::value(const This *borrow this) {
+inline _Safe T B<T>::value(const This *_Borrow this) {
   return this->val;
 }
 

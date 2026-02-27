@@ -64,7 +64,7 @@ void test_deref5() {
     RefCell<A> refcell = RefCell<A>::new(a);
     {
         RefImmut<A> rm1 = refcell.borrow_immut();
-        _BSC_UNUSED const A *borrow p1 = rm1.deref();
+        _BSC_UNUSED const A *_Borrow p1 = rm1.deref();
     }
     {
         RefMut<A> rm = refcell.borrow_mut();

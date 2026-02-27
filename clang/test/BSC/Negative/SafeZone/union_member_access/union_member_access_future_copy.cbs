@@ -39,12 +39,12 @@ _Safe void test_nested_union_access(void) {
   int val = s.u.x; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}
 }
 
-_Safe void test_union_take_addr(union U *borrow p) {
+_Safe void test_union_take_addr(union U *_Borrow p) {
   // error: accessing union member to take its address
-  int *borrow s = &mut p->x; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}
+  int *_Borrow s = &mut p->x; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}
 }
 
-_Safe void test_union_pointer_access(union U *borrow p) {
+_Safe void test_union_pointer_access(union U *_Borrow p) {
   // error: accessing union member through pointer
   p->x = 5; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}
 
@@ -88,13 +88,13 @@ _Safe void test_unsafe_block(union U u) {
   }
 }
 
-// Test: borrow pointer created in _Unsafe, but member access in safe zone is still forbidden
+// Test: _Borrow pointer created in _Unsafe, but member access in safe zone is still forbidden
 _Safe void test_borrow_in_unsafe_block(union U u) {
-  union U *borrow bu = _Unsafe(&mut u);
-  _Unsafe const union U *borrow bu2 = &const u; // expected-note{{variable 'bu2' declared const here}}
+  union U *_Borrow bu = _Unsafe(&mut u);
+  _Unsafe const union U *_Borrow bu2 = &const u; // expected-note{{variable 'bu2' declared const here}}
   // error: even though bu was created in _Unsafe expression, accessing union member is forbidden in safe zone
   bu->x = 1; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}
-  bu2->x = 1; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}  // expected-error{{cannot assign to variable 'bu2' with const-qualified type 'const union U *borrow'}}
+  bu2->x = 1; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}  // expected-error{{cannot assign to variable 'bu2' with const-qualified type 'const union U *_Borrow'}}
 }
 
 int main(void) {

@@ -3,7 +3,7 @@
 trait T {
   _Safe void do_it(This* owned this);
   void do_that(This* this);
-  _Safe void do_this(This* borrow this);
+  _Safe void do_this(This* _Borrow this);
 };
 
 _Safe void int::do_it(int* owned this) {
@@ -13,7 +13,7 @@ _Safe void int::do_it(int* owned this) {
 void int::do_that(int* this) {
 }
 
-_Safe void int::do_this(int* borrow this) {
+_Safe void int::do_this(int* _Borrow this) {
 }
 
 impl trait T for int;
@@ -32,6 +32,6 @@ void cast2() {
 
 void cast3() {
   int x = 1;
-  trait T* borrow t1 = &mut x;
-  trait T* borrow t2 = t1;
+  trait T* _Borrow t1 = &mut x;
+  trait T* _Borrow t2 = t1;
 }

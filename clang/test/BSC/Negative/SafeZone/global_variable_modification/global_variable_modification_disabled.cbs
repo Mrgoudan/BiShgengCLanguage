@@ -23,8 +23,8 @@ _Safe void foo(void) {
   // ok: local pointer variable can be assigned nullptr
   int *p = nullptr;
 
-  // ok: borrow pointer variable can be assigned nullptr
-  int *borrow _Nullable b = nullptr;
+  // ok: _Borrow pointer variable can be assigned nullptr
+  int *_Borrow _Nullable b = nullptr;
 }
 
 void test_static_in_function() {

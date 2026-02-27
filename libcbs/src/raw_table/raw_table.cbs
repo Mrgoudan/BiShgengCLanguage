@@ -60,7 +60,7 @@ _Safe size_t one_less_than_next_power_of_two(size_t num) {
 }
 
 // Moves to the next position.
-void ProbeSeq::move_next(ProbeSeq* borrow this, size_t bucket_mask) {
+void ProbeSeq::move_next(ProbeSeq* _Borrow this, size_t bucket_mask) {
     this->count += 1;
     this->pos += this->stride;
     this->pos &= bucket_mask;

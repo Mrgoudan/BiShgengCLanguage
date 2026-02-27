@@ -5,8 +5,8 @@
 void test1() {
   int local = 42;
   int temp = 2;
-  int *borrow p1 = &mut local;
-  int *borrow p2 = &mut temp;
+  int *_Borrow p1 = &mut local;
+  int *_Borrow p2 = &mut temp;
   p2 = p1;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Eassign-borrowed"

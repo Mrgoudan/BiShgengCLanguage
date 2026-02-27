@@ -7,7 +7,7 @@
 
 ## 对标准 C 语法扩展的概述
 
-本提案新增了一个关键字，即`borrow`。
+本提案新增了一个关键字，即`_Borrow`。
 
 新增 2 个运算符，为`_punctuator`（见 C11 Spec 的附录 A.1.7 节）新增 4 条产生式：
 
@@ -32,14 +32,14 @@ _unary-operator: one of
 ```
 _type-qualifier:
     ....
-    borrow
+    _Borrow
 ```
 
 ## 语法规则
 
-1. 本提案新增了一个关键字`borrow`，是一个类型说明符，仅可用于修饰指针类型，表示这个指针是借用指针。
+1. 本提案新增了一个关键字`_Borrow`，是一个类型说明符，仅可用于修饰指针类型，表示这个指针是借用指针。
 
-2. `owned`和`borrow`不能同时用于修饰同一个指针类型，最多只允许同时存在其中一个，即`int *owned borrow`是不允许的。
+2. `owned`和`_Borrow`不能同时用于修饰同一个指针类型，最多只允许同时存在其中一个，即`int *owned _Borrow`是不允许的。
 
 3. 本提案新增了两个一元运算符`&const`和`&mut`，区别于标准 C 语言的取地址运算符`&`。`&const`和`&mut`运算符只能用于可寻址的左值。按照标准 C 的定义，可寻址的左值的定义为：
 
@@ -52,23 +52,23 @@ _type-qualifier:
     7. the result of the indirection (unary *) operator applied to a pointer to object;
     8. the result of the subscription operator ([]).
 
-    > 注：对于毕昇 C 语言，第 7 条应扩充为：the result of the indirection (unary *) operator applied to a "owned pointer or borrow pointer or raw pointer" to object。
+    > 注：对于毕昇 C 语言，第 7 条应扩充为：the result of the indirection (unary *) operator applied to a "owned pointer or _Borrow pointer or raw pointer" to object。
 
 ## 语义规则
 
 1. 本提案在毕昇 C 所有权提案引入移动语义的基础上，对指针类型新引入了借用语义。具体而言，对于任意类型`T`，其借用指针类型有只读借用类型和可变借用类型：
 
-    - `const T *borrow`，代表只读借用类型，对于被指向的`T`类型只有读权限，这种类型也成为不可变借用类型;
-    - `T *borrow`，代表可变借用类型，对被指向的`T`类型有读写权限。
+    - `const T *_Borrow`，代表只读借用类型，对于被指向的`T`类型只有读权限，这种类型也成为不可变借用类型;
+    - `T *_Borrow`，代表可变借用类型，对被指向的`T`类型有读写权限。
 
-2. 不允许对借用类型再取借用，即对于一个类型`T`，如果`T`本身是借用指针类型或`T`有借用指针类型的成员，则不能再创建对`T`类型的不可变借用`const T *borrow`及可变借用`T *borrow`，即`int *borrow *borrow`是不允许的。
+2. 不允许对借用类型再取借用，即对于一个类型`T`，如果`T`本身是借用指针类型或`T`有借用指针类型的成员，则不能再创建对`T`类型的不可变借用`const T *_Borrow`及可变借用`T *_Borrow`，即`int *_Borrow *_Borrow`是不允许的。
 
 3. 可变借用类型是移动语义，不可变借用类型是拷贝语义，以下给出一个例子：
 
     ```c
-    void test(int *borrow x, const int *borrow y) {
-        int *borrow x1 = x; // x 的所有权被转移给了 x1，后续不能再直接使用 x
-        int *borrow y1 = y; // y1 是 y 的一份拷贝，后续可继续使用 y
+    void test(int *_Borrow x, const int *_Borrow y) {
+        int *_Borrow x1 = x; // x 的所有权被转移给了 x1，后续不能再直接使用 x
+        int *_Borrow y1 = y; // y1 是 y 的一份拷贝，后续可继续使用 y
     }
     ```
 
@@ -78,10 +78,10 @@ _type-qualifier:
 
 6. 通过`&const`和`&mut`，可以创建相应的借用指针类型，即对于一个可寻址的左值`e`，如果其类型为`T`，那么：
 
-    - `&const e`，代表对`e`取地址，获得其不可变借用，类型为`const T *borrow`；
-    - `&mut e`，代表对`e`取地址，获得其可变借用，类型为`T *borrow`。
+    - `&const e`，代表对`e`取地址，获得其不可变借用，类型为`const T *_Borrow`；
+    - `&mut e`，代表对`e`取地址，获得其可变借用，类型为`T *_Borrow`。
 
-7. 与标准 C 中一样，对一个指针（包括裸指针、`owned`指针和`borrow`指针）做解引用然后再取借用，获得的值与指针本身的值是一样的，具体而言：
+7. 与标准 C 中一样，对一个指针（包括裸指针、`owned`指针和`_Borrow`指针）做解引用然后再取借用，获得的值与指针本身的值是一样的，具体而言：
 
     - 对于`&const *e`，可以看作是对`*e`的值取不可变借用，但不为`*e`产生临时变量，取得的借用指针的值与`e`的值相同；
     - 对于`&mut *e`，可以看作是对`*e`的值取可变借用，但不为`*e`产生临时变量，取得的借用指针的值与`e`的值相同。 
@@ -92,7 +92,7 @@ _type-qualifier:
 
 10. `owned`修饰的类型及含有`owned`修饰的类型的成员的类型允许作为数组元素的类型。
 
-11. 作为类型说明符，`borrow`也是类型的一部分，在做类型检查时，需要保证严格匹配，该规则与所有权提案中`owned`相关的规则一致。
+11. 作为类型说明符，`_Borrow`也是类型的一部分，在做类型检查时，需要保证严格匹配，该规则与所有权提案中`owned`相关的规则一致。
 
 12. 通过`&mut e`创建可变借用类型的指针时，对于表达式`e`，要求`e`是可修改的，具体而言：
 
@@ -117,7 +117,7 @@ _type-qualifier:
     }
 
     void test() {
-        int (*borrow p)() = &const f;
+        int (*_Borrow p)() = &const f;
         p();
     }
     ```
@@ -126,19 +126,19 @@ _type-qualifier:
 
     - 对于二元运算符，仅支持比较运算符，即`>`、`>`、`>=`、`<=`、`==`和`!=`；
     - 对于一元运算符，仅支持`&`取址运算符、`*`解引用运算符、`!`逻辑非运算符、`->`箭头运算符，不允许对`owned`修饰的指针类型取索引和做偏移操作；
-    - 允许对借用指针类型使用`sizeof`和`_Alignof`，且`sizeof(T* borrow) == sizeof(T*)`，`_Alignof(T* borrow) == _Alignof(T*)`；
+    - 允许对借用指针类型使用`sizeof`和`_Alignof`，且`sizeof(T* _Borrow) == sizeof(T*)`，`_Alignof(T* _Borrow) == _Alignof(T*)`；
     - 对于`->`箭头运算符，借用指针类型可以用来访问成员字段，且访问成员字段得到的类型取决于成员字段本身的类型，这与标准 C 是一致的；
     - 对于`*`解引用运算符，借用指针类型可以解引用，且解引用得到的类型与借用指针类型指向的类型一致，这与标准 C 是一致的。
 
 16. 对于借用指针类型，类型转换规则为：
 
-    - 允许将指向具体类型`T`的借用类型转换为`void *borrow`类型；
-    - 不允许将`void *borrow`类型转换为指向具体类型`T`的借用类型；
+    - 允许将指向具体类型`T`的借用类型转换为`void *_Borrow`类型；
+    - 不允许将`void *_Borrow`类型转换为指向具体类型`T`的借用类型；
     - 借用类型和裸指针类型的转换是不安全的，只允许在非安全区通过强制类型转换完成，一个例子如下：
 
     ```c
     unsafe void test() {
-        int *borrow p = (int *borrow)NULL;
+        int *_Borrow p = (int *_Borrow)NULL;
     }
     ```
 
@@ -163,11 +163,11 @@ _type-qualifier:
     ```c
     struct S {
         int m;
-        const int *borrow p;
+        const int *_Borrow p;
     };
 
     void test() {
-        struct S s = { .m = 0; .p = (const int *borrow)NULL };
+        struct S s = { .m = 0; .p = (const int *_Borrow)NULL };
         s.p = &const s.m; // Error，借用了结构体自身的其他成员字段
     }
     ```
@@ -208,8 +208,8 @@ _type-qualifier:
     };
 
     struct R {
-        struct S *borrow m1;
-        struct S *borrow m2;
+        struct S *_Borrow m1;
+        struct S *_Borrow m2;
     };
 
     void test1() {
@@ -221,13 +221,13 @@ _type-qualifier:
     }
 
     struct Z {
-        const int *borrow p;
+        const int *_Borrow p;
     };
 
     void test2() {
         int x = 10;
         struct Z z = { &const x };
-        struct Z *borrow zp = &mut z; // Error，不允许对包含借用的表达式类型再取借用
+        struct Z *_Borrow zp = &mut z; // Error，不允许对包含借用的表达式类型再取借用
     }
     ```
 
@@ -237,11 +237,11 @@ _type-qualifier:
     - 如果函数的参数中有一个借用类型，且函数的返回值类型为借用类型，则我们直接认为返回值类型的借用是来自于这个借用类型的参数，即返回的借用的借用值与这个借用类型参数的借用值是一样的，一个例子如下：
 
     ```c
-    int *borrow f(struct S *borrow arg) { ... }
+    int *_Borrow f(struct S *_Borrow arg) { ... }
 
     void test() {
         struct S x = { ... };
-        int *borrow p = f(&mut x);
+        int *_Borrow p = f(&mut x);
         // 在 p 的生命周期结束之前，x 一直被冻结
         // 因为函数 f 的参数创建了一个对 x 的可变借用，这个借用被传递给了返回值 p，
         // 导致 p 相当于是对 x 的一个可变借用
@@ -251,12 +251,12 @@ _type-qualifier:
     - 如果函数的参数中有多个借用类型，且函数的返回值类型为借用类型，则我们直接认为返回值类型的借用同时来自于这多个借用类型的参数，一个例子如下：
 
     ```c
-    int *borrow f(struct S *borrow arg1， struct S *borrow arg2) { ... }
+    int *_Borrow f(struct S *_Borrow arg1， struct S *_Borrow arg2) { ... }
 
     void test() {
         struct S x1 = { ... };
         struct S x2 = { ... };
-        int *borrow p = f(&mut x1, &mut x2);
+        int *_Borrow p = f(&mut x1, &mut x2);
         // 在 p 的生命周期结束之前，x1 和 x2 一直被冻结
         // 因为函数 f 的参数创建了一个对 x1 和 x2 的可变借用，返回值是 p
         // 导致 p 可能是对 x1 的一个可变借用，也可能是 x2 的可变借用
@@ -282,6 +282,6 @@ _type-qualifier:
     > 注：表格中的赋值操作仅为示例，同样适用于函数的传参和返回。\
     > 注：`field`的修改权限还跟`field`本身的类型有关，如果`field`为`const`类型，则它也不能被修改，此处规则与标准 C 保持一致。\
     > 注：当`field`的类型为移动语义类型时，`p->field = expr`的情况存在内存泄漏的问题，因为`p`没有释放权限，所以不能先释放`p->field`，再赋值，这种情况会编译报错。因此为了既不导致泄漏，也不破坏借用的权限，建议使用`swap`函数来解决。\
-    > 注：`swap`函数的签名为`safe void swap(T *borrow, T *borrow)`。
+    > 注：`swap`函数的签名为`safe void swap(T *_Borrow, T *_Borrow)`。
 
 24. 不允许从不可变借用指针`p`中创建可变借用，即`&mut *p`是不允许的；允许从可变借用指针`p`中创建可变借用或不可变借用，即`&const *p`和`&mut *p`是允许的。

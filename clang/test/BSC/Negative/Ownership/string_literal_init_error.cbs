@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-// Test error case for mutable borrow of string literal in variable initialization
+// Test error case for mutable _Borrow of string literal in variable initialization
 
 void test_mut_init() {
-  char * borrow d = "invalid";  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
+  char * _Borrow d = "invalid";  // expected-error {{cannot pass string literal to parameter of type 'char *_Borrow'; string literals are immutable}}
 }
 
 int main() {

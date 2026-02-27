@@ -33,7 +33,7 @@ _Safe struct SA fund1(struct SA *owned fp) {
   return *fp;
 }// expected-error {{memory leak of value: `fp`}}
 
-_Safe struct SA fund2(struct SA *borrow fp) {
+_Safe struct SA fund2(struct SA *_Borrow fp) {
   return *fp;
 }
 

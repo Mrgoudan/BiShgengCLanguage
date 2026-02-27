@@ -12,9 +12,9 @@ public:
     } 
 };
 
-void borrow_p(int* borrow p);
+void borrow_p(int* _Borrow p);
 
-void modify(S* borrow s) {
+void modify(S* _Borrow s) {
     s->data = 1024;
 }
 

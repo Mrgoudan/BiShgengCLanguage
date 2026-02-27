@@ -2,45 +2,45 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
-// Test that borrow qualifier on template type parameters is allowed
-// The borrow validation should be deferred until template instantiation
+// Test that _Borrow qualifier on template type parameters is allowed
+// The _Borrow validation should be deferred until template instantiation
 
-_Safe T2 borrow cast<T1, T2>(T1 borrow p) {
-  return _Unsafe((T2 borrow)(T2)(T1)p);
+_Safe T2 _Borrow cast<T1, T2>(T1 _Borrow p) {
+  return _Unsafe((T2 _Borrow)(T2)(T1)p);
 }
 
-void foo(int *borrow p) {
-  int *borrow q = cast<int *, int *>(p);
+void foo(int *_Borrow p) {
+  int *_Borrow q = cast<int *, int *>(p);
 }
 
-// Test with function returning borrow-qualified template type
-_Safe T borrow identity<T>(T borrow p) {
+// Test with function returning _Borrow-qualified template type
+_Safe T _Borrow identity<T>(T _Borrow p) {
   return p;
 }
 
 // Test with multiple template parameters
-_Safe T2 borrow convert<T1, T2, T3>(T1 borrow a, T3 borrow b) {
-  return _Unsafe((T2 borrow)(T2)(T1)a);
+_Safe T2 _Borrow convert<T1, T2, T3>(T1 _Borrow a, T3 _Borrow b) {
+  return _Unsafe((T2 _Borrow)(T2)(T1)a);
 }
 
 _Safe int main(void) {
   int x = 42;
-  int * borrow ptr = &mut x;
+  int * _Borrow ptr = &mut x;
 
-  // Test cast function - T1 and T2 are int*, borrow is added by function signature
-  int *borrow p1 = cast<int *, int *>(ptr);
+  // Test cast function - T1 and T2 are int*, _Borrow is added by function signature
+  int *_Borrow p1 = cast<int *, int *>(ptr);
   if (*p1 != 42) {
     return 1;
   }
 
-  // Test identity function - T is int*, borrow is added by function signature
-  int *borrow p2 = identity<int *>(ptr);
+  // Test identity function - T is int*, _Borrow is added by function signature
+  int *_Borrow p2 = identity<int *>(ptr);
   if (*p2 != 42) {
     return 2;
   }
 
-  // Test convert function - template params are int*, borrow is added by function signature
-  int *borrow p3 = convert<int *, int *, int *>(ptr, ptr);
+  // Test convert function - template params are int*, _Borrow is added by function signature
+  int *_Borrow p3 = convert<int *, int *, int *>(ptr, ptr);
   if (*p3 != 42) {
     return 3;
   }

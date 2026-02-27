@@ -5,19 +5,19 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-void call1(int *borrow p, int *raw) {
+void call1(int *_Borrow p, int *raw) {
     p = &mut *raw;
 }
 
-void call2(const int *borrow q, int x) {
+void call2(const int *_Borrow q, int x) {
     q = &const x;
 }
 
 int main() {
     int a = 1, b = 2;
     int *raw = &a;
-    int *borrow p = &mut a;
-    const int *borrow q = &const b;
+    int *_Borrow p = &mut a;
+    const int *_Borrow q = &const b;
     call1(p, raw);
     call2(q, 2);
     return 0;

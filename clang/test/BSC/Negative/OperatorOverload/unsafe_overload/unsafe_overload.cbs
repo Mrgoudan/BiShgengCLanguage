@@ -67,7 +67,7 @@ struct H {
 };
 
 __attribute__((operator *))
-int * borrow deref2(struct H * borrow h) {
+int * _Borrow deref2(struct H * _Borrow h) {
     return &mut(h->g.a);
 }
 

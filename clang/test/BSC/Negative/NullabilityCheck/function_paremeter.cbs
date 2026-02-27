@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -verify %s
 
-_Safe void foo1(int *borrow a);
+_Safe void foo1(int *_Borrow a);
 _Safe void test1(void) {
     int a = 10;
-    int *borrow p1 = &mut a;
+    int *_Borrow p1 = &mut a;
     foo1(p1);
-    int *borrow _Nullable p2 = &mut a;
+    int *_Borrow _Nullable p2 = &mut a;
     foo1(p2);
-    int *borrow _Nullable p3 = nullptr;
+    int *_Borrow _Nullable p3 = nullptr;
     foo1(p3);  // expected-error {{cannot pass nullable pointer argument}}
     foo1(&mut a);
     foo1(nullptr); // expected-error {{cannot pass nullable pointer argument}}
@@ -26,14 +26,14 @@ _Safe void test2(void) {
     foo2(nullptr); // expected-error {{cannot pass nullable pointer argument}}
 }
 
-_Safe void foo3(int *borrow _Nullable a);
+_Safe void foo3(int *_Borrow _Nullable a);
 _Safe void test3(void) {
     int a = 10;
-    int *borrow p1 = &mut a;
+    int *_Borrow p1 = &mut a;
     foo3(p1);
-    int *borrow _Nullable p2 = &mut a;
+    int *_Borrow _Nullable p2 = &mut a;
     foo3(p2);
-    int *borrow _Nullable p3 = nullptr;
+    int *_Borrow _Nullable p3 = nullptr;
     foo3(p3);
     foo3(nullptr);
 }
@@ -51,12 +51,12 @@ _Safe void test4(void) {
 
 _Safe void test5(void) {
     int a = 10;
-    int *borrow _Nullable p1 = a == 1 ? nullptr : &mut a;
+    int *_Borrow _Nullable p1 = a == 1 ? nullptr : &mut a;
     foo1(p1); // expected-error {{cannot pass nullable pointer argument}}
     foo1(a == 1 ? nullptr : &mut a); // expected-error {{cannot pass nullable pointer argument}}
 
     int b = 10;
-    int *borrow _Nullable p2 = a == 1 && b == 10 ? &mut b : &mut a;
+    int *_Borrow _Nullable p2 = a == 1 && b == 10 ? &mut b : &mut a;
     foo1(p2);
     foo1(a == 1 && b == 10 ? &mut b : &mut a);
 }

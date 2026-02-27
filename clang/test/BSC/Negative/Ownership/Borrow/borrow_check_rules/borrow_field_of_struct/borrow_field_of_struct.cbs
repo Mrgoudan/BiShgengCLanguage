@@ -13,16 +13,16 @@ struct K {
 };
 
 struct M {
-  struct S *borrow ps;
-  struct K *borrow pk;
+  struct S *_Borrow ps;
+  struct K *_Borrow pk;
 };
 
-void use(int *borrow p) {}
+void use(int *_Borrow p) {}
 void useM(struct M m) {}
 
 void test1() {
   G g = { .a = 1 };
-  int *borrow p1 = &mut g.a; // expected-note {{`g.a` is borrowed here}}
+  int *_Borrow p1 = &mut g.a; // expected-note {{`g.a` is borrowed here}}
   g.a = 5; // expected-error {{cannot assign to `g.a` because it is borrowed}}
   use(p1);
 }
@@ -30,7 +30,7 @@ void test1() {
 void test2() {
   G g;
   G *pg = &g;
-  int *borrow p2 = &mut pg->a; // expected-note {{`(*pg).a` is borrowed here}}
+  int *_Borrow p2 = &mut pg->a; // expected-note {{`(*pg).a` is borrowed here}}
   pg->a = 5; // expected-error {{cannot assign to `(*pg).a` because it is borrowed}}
   use(p2); 
 }
@@ -38,8 +38,8 @@ void test2() {
 void test3() {
   G g;
   G *pg = &g;
-  int *borrow p1 = &mut g.a; // expected-note {{`g.a` is borrowed here}}
-  int *borrow p2 = &mut pg->a; // expected-note {{`(*pg).a` is borrowed here}}
+  int *_Borrow p1 = &mut g.a; // expected-note {{`g.a` is borrowed here}}
+  int *_Borrow p2 = &mut pg->a; // expected-note {{`(*pg).a` is borrowed here}}
   g.a = 5; // expected-error {{cannot assign to `g.a` because it is borrowed}}
   pg->a = 5; // expected-error {{cannot assign to `(*pg).a` because it is borrowed}}
   use(p1);
@@ -49,8 +49,8 @@ void test3() {
 void test4() {
   struct S s1;
   struct S* s = &s1;
-  int *borrow p1 = &mut s->g.a; // expected-note {{`(*s).g.a` is borrowed here}}
-  int *borrow p2 = &mut s1.g.a; // expected-note {{`s1.g.a` is borrowed here}}
+  int *_Borrow p1 = &mut s->g.a; // expected-note {{`(*s).g.a` is borrowed here}}
+  int *_Borrow p2 = &mut s1.g.a; // expected-note {{`s1.g.a` is borrowed here}}
   s->g.a = 5; // expected-error {{cannot assign to `(*s).g.a` because it is borrowed}}
   s1.g.a = 5; // expected-error {{cannot assign to `s1.g.a` because it is borrowed}}
   use(p1);
@@ -58,8 +58,8 @@ void test4() {
 
   struct K k1;
   struct K *k = &k1;
-  int *borrow q1 = &mut k->g->a; // expected-note {{`(*(*k).g).a` is borrowed here}}
-  int *borrow q2 = &mut k1.g->a; // expected-note {{`(*k1.g).a` is borrowed here}}
+  int *_Borrow q1 = &mut k->g->a; // expected-note {{`(*(*k).g).a` is borrowed here}}
+  int *_Borrow q2 = &mut k1.g->a; // expected-note {{`(*k1.g).a` is borrowed here}}
   k->g->a = 5; // expected-error {{cannot assign to `(*(*k).g).a` because it is borrowed}}
   k1.g->a = 5; // expected-error {{cannot assign to `(*k1.g).a` because it is borrowed}}
   use(q1);

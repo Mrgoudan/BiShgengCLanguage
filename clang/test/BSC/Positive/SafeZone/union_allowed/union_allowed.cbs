@@ -54,10 +54,10 @@ _Safe void test_struct_with_union(void) {
 }
 
 // Union pointer types in safe zone
-_Safe union U *owned test_union_pointers(union U *owned p2_param, union U *borrow p3_param) {
+_Safe union U *owned test_union_pointers(union U *owned p2_param, union U *_Borrow p3_param) {
   // ok: owned pointer to union as parameter and return type
-  // ok: borrow pointer to union (from parameter)
-  union U *borrow p3 = p3_param;
+  // ok: _Borrow pointer to union (from parameter)
+  union U *_Borrow p3 = p3_param;
   return p2_param;
 }
 

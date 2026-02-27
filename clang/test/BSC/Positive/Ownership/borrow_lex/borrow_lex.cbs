@@ -6,12 +6,12 @@ void test() {
     int* xp = &x;
     float y = 1.0;
     float* yp = &y;
-    int *borrow p1 = &mut x;            // legal
-    int *borrow p2 = & mut x;
-    int *borrow p3 = &mut *xp;          // legal
-    int *borrow p4 = & mut *xp;
-    const float * borrow p5 = &const y;   // legal
-    const float * borrow p6 = & const y;
-    const float * borrow p7 = &const *yp; // legal
-    const float * borrow p8 = & const *yp;
+    int *_Borrow p1 = &mut x;            // legal
+    int *_Borrow p2 = & mut x;
+    int *_Borrow p3 = &mut *xp;          // legal
+    int *_Borrow p4 = & mut *xp;
+    const float * _Borrow p5 = &const y;   // legal
+    const float * _Borrow p6 = & const y;
+    const float * _Borrow p7 = &const *yp; // legal
+    const float * _Borrow p8 = & const *yp;
 }

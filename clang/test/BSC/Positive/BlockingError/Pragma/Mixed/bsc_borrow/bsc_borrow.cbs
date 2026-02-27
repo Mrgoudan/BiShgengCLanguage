@@ -5,8 +5,8 @@
 void test1() {
   int local = 42;
   int temp = 2;
-  int *borrow p1 = &mut local;
-  int *borrow p2 = &mut temp;
+  int *_Borrow p1 = &mut local;
+  int *_Borrow p2 = &mut temp;
   p2 = p1;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Ebsc-borrow"
@@ -15,10 +15,10 @@ void test1() {
   #pragma GCC diagnostic pop
 }
 
-void use_mut(int *borrow p);
+void use_mut(int *_Borrow p);
 void free_owned<T>(T* owned p);
 void test2(int* owned oriPtr) {
-  int *borrow p = &mut *oriPtr;
+  int *_Borrow p = &mut *oriPtr;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Ebsc-borrow"
   free_owned<int>(oriPtr); // cannot move out of `oriPtr` because it is borrowed

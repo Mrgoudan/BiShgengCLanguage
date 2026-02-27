@@ -21,11 +21,11 @@ public:
 	}
 };
 
-_Safe size_t Vec<T>::capacity(const Vec<T>* borrow this) {
+_Safe size_t Vec<T>::capacity(const Vec<T>* _Borrow this) {
 	return this->buf.cap;
 }
 
-_Safe void Vec<T>::clear(Vec<T>* borrow this) {
+_Safe void Vec<T>::clear(Vec<T>* _Borrow this) {
 	_Unsafe {
 		for (size_t index = 0; index < this->len; index++) {
 			_BSC_UNUSED T tmp = this->buf.ptr[index];
@@ -35,7 +35,7 @@ _Safe void Vec<T>::clear(Vec<T>* borrow this) {
 	}
 }
 
-_Safe const T* borrow Vec<T>::get(const Vec<T>* borrow this, size_t index) {
+_Safe const T* _Borrow Vec<T>::get(const Vec<T>* _Borrow this, size_t index) {
 	_Unsafe {
 		if (this->len <= index) {
 			bsc_out_of_bound_handler(this->len, index);
@@ -44,7 +44,7 @@ _Safe const T* borrow Vec<T>::get(const Vec<T>* borrow this, size_t index) {
 	_Unsafe return &const this->buf.ptr[index];
 }
 
-_Safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
+_Safe T* _Borrow Vec<T>::get_mut(Vec<T>* _Borrow this, size_t index) {
 	_Unsafe {
 		if (this->len <= index) {
 			bsc_out_of_bound_handler(this->len, index);
@@ -53,13 +53,13 @@ _Safe T* borrow Vec<T>::get_mut(Vec<T>* borrow this, size_t index) {
 	_Unsafe return &mut this->buf.ptr[index];
 }
 
-_Safe _Bool Vec<T>::is_empty(const Vec<T>* borrow this) {
+_Safe _Bool Vec<T>::is_empty(const Vec<T>* _Borrow this) {
 	_Unsafe {
 		return this->len == 0;
 	}
 }
 
-_Safe size_t Vec<T>::length(const Vec<T>* borrow this) {
+_Safe size_t Vec<T>::length(const Vec<T>* _Borrow this) {
 	return this->len;
 }
 
@@ -75,7 +75,7 @@ _Safe Vec<T> Vec<T>::new(void) {
 	}
 }
 
-_Safe T Vec<T>::pop(Vec<T>* borrow this) {
+_Safe T Vec<T>::pop(Vec<T>* _Borrow this) {
 	_Unsafe {
 		if (this->len == 0) {
 			bsc_out_of_bound_handler(0, 0);
@@ -86,7 +86,7 @@ _Safe T Vec<T>::pop(Vec<T>* borrow this) {
 	return ret;
 }
 
-_Safe void Vec<T>::push(Vec<T>* borrow this, T value) {
+_Safe void Vec<T>::push(Vec<T>* _Borrow this, T value) {
 	if (this->len == this->capacity()) {
 		this->buf.grow_one();
 	}
@@ -97,7 +97,7 @@ _Safe void Vec<T>::push(Vec<T>* borrow this, T value) {
 	this->len += 1;
 }
 
-_Safe T Vec<T>::remove(Vec<T>* borrow this, size_t index) {
+_Safe T Vec<T>::remove(Vec<T>* _Borrow this, size_t index) {
 	_Unsafe {
 		if (this->len <= index) {
 			bsc_out_of_bound_handler(this->len, index);
@@ -111,7 +111,7 @@ _Safe T Vec<T>::remove(Vec<T>* borrow this, size_t index) {
 	}
 }
 
-_Safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value) {
+_Safe void Vec<T>::set(Vec<T>* _Borrow this, size_t index, T value) {
 	_Unsafe {
 		if (this->len < index) {
 			bsc_out_of_bound_handler(this->len, index);
@@ -129,7 +129,7 @@ _Safe void Vec<T>::set(Vec<T>* borrow this, size_t index, T value) {
 	}
 }
 
-_Safe void Vec<T>::shrink_to_fit(Vec<T>* borrow this) {
+_Safe void Vec<T>::shrink_to_fit(Vec<T>* _Borrow this) {
 	if (this->capacity() > this->len) {
 		this->buf.shrink_to_fit(this->len);
 	}

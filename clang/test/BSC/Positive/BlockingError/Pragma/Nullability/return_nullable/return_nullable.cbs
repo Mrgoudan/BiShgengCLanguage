@@ -3,7 +3,7 @@
 // expected-no-diagnostics
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Ereturn-nullable"
-_Safe int *borrow foo1(int *borrow _Nullable a) {
+_Safe int *_Borrow foo1(int *_Borrow _Nullable a) {
     return a;             // cannot return nullable pointer type
 }
 #pragma GCC diagnostic pop

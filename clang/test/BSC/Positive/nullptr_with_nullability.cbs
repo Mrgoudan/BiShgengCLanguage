@@ -82,14 +82,14 @@ void test_nullable_owned(void) {
   (void)vo;
 }
 
-// _Nullable with borrow in function parameter
-void take_nullable_borrow(int * _Nullable borrow p) {
+// _Nullable with _Borrow in function parameter
+void take_nullable_borrow(int * _Nullable _Borrow p) {
   (void)p;
 }
 
 void test_nullable_borrow(void) {
   take_nullable_borrow(nullptr);
-  take_nullable_borrow((int * borrow)nullptr);
+  take_nullable_borrow((int * _Borrow)nullptr);
 }
 
 // _Nullable in conditional

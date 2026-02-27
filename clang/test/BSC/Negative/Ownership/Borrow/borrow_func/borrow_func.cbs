@@ -1,37 +1,37 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-int *borrow f(); // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
-int *borrow f1(int a) { // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
+int *_Borrow f(); // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
+int *_Borrow f1(int a) { // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
     static int b = 1;
     return &mut b;
 }
-int *borrow f2(int a, int *borrow p); // legal
+int *_Borrow f2(int a, int *_Borrow p); // legal
 
 struct R {
-    int * borrow p1;
+    int * _Borrow p1;
 };
 
-int *borrow f3(struct R); // legal
-struct R f4 () {} // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
+int *_Borrow f3(struct R); // legal
+struct R f4 () {} // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
 
-int *borrow struct R::foo(int a); // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
-int *borrow struct R::foo(int a) { // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
+int *_Borrow struct R::foo(int a); // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
+int *_Borrow struct R::foo(int a) { // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
     static int b = 1;
     return &mut b;
 }
 
 struct MyStruct<T> {};
-struct MyStruct<int * borrow> s;
-struct MyStruct<int borrow> s1;  //expected-error {{borrow type requires a pointer or reference ('int' is invalid)}}
+struct MyStruct<int * _Borrow> s;
+struct MyStruct<int _Borrow> s1;  //expected-error {{_Borrow type requires a pointer or reference ('int' is invalid)}}
 
-typedef int* borrow (*PF)(); // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
-int *borrow (*PF1)(int a);   // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
-typedef int* borrow (*PF2)(struct R); // legal
-typedef int* borrow (*PF3)(int a);  // expected-error {{no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified}}
+typedef int* _Borrow (*PF)(); // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
+int *_Borrow (*PF1)(int a);   // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
+typedef int* _Borrow (*PF2)(struct R); // legal
+typedef int* _Borrow (*PF3)(int a);  // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
 typedef int* (*PF4)(struct R); // legal
-typedef float* borrow (*PF5)(struct R); // legal
+typedef float* _Borrow (*PF5)(struct R); // legal
 void test() {
   PF2 p1 = f3; // legal
-  PF4 p2 = f3; // expected-error {{incompatible borrow function pointer types, cannot cast 'PF4' (aka 'int *(*)(struct R)') to 'int *borrow (struct R)'}}
-  PF5 p3 = f3; // expected-error {{incompatible borrow function pointer types, cannot cast 'PF5' (aka 'float *borrow (*)(struct R)') to 'int *borrow (struct R)'}}
+  PF4 p2 = f3; // expected-error {{incompatible _Borrow function pointer types, cannot cast 'PF4' (aka 'int *(*)(struct R)') to 'int *_Borrow (struct R)'}}
+  PF5 p3 = f3; // expected-error {{incompatible _Borrow function pointer types, cannot cast 'PF5' (aka 'float *_Borrow (*)(struct R)') to 'int *_Borrow (struct R)'}}
 }

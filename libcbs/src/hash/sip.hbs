@@ -5,16 +5,16 @@
 #include <stdint.h>
 
 // The default `equals` function implementation for each built-in type
-_Bool int::equals(const int* borrow this, const int* borrow other);
-_Bool unsigned int::equals(const unsigned int* borrow this, const unsigned int* borrow other);
-_Bool long::equals(const long* borrow this, const long* borrow other);
-_Bool unsigned long::equals(const unsigned long* borrow this, const unsigned long* borrow other);
-_Bool short::equals(const short* borrow this, const short* borrow other);
-_Bool unsigned short::equals(const unsigned short* borrow this, const unsigned short* borrow other);
-_Bool char::equals(const char* borrow this, const char* borrow other);
-_Bool unsigned char::equals(const unsigned char* borrow this, const unsigned char* borrow other);
-_Bool long long::equals(const long long* borrow this, const long long* borrow other);
-_Bool unsigned long long::equals(const unsigned long long* borrow this, const unsigned long long* borrow other);
+_Bool int::equals(const int* _Borrow this, const int* _Borrow other);
+_Bool unsigned int::equals(const unsigned int* _Borrow this, const unsigned int* _Borrow other);
+_Bool long::equals(const long* _Borrow this, const long* _Borrow other);
+_Bool unsigned long::equals(const unsigned long* _Borrow this, const unsigned long* _Borrow other);
+_Bool short::equals(const short* _Borrow this, const short* _Borrow other);
+_Bool unsigned short::equals(const unsigned short* _Borrow this, const unsigned short* _Borrow other);
+_Bool char::equals(const char* _Borrow this, const char* _Borrow other);
+_Bool unsigned char::equals(const unsigned char* _Borrow this, const unsigned char* _Borrow other);
+_Bool long long::equals(const long long* _Borrow this, const long long* _Borrow other);
+_Bool unsigned long long::equals(const unsigned long long* _Borrow this, const unsigned long long* _Borrow other);
 
 // `RandomState` is the default state for `HashMap` types.
 //
@@ -54,15 +54,15 @@ SipHasher13 SipHasher13::new();
 SipHasher13 SipHasher13::new_with_keys(uint64_t key0, uint64_t key1);
 
 // Calculates the hash of a single value.
-uint64_t int::hash(const int* borrow this, SipHasher13* borrow sh);
-uint64_t unsigned int::hash(const unsigned int* borrow this, SipHasher13* borrow sh);
-uint64_t long::hash(const long* borrow this, SipHasher13* borrow sh);
-uint64_t unsigned long::hash(const unsigned long* borrow this, SipHasher13* borrow sh);
-uint64_t short::hash(const short* borrow this, SipHasher13* borrow sh);
-uint64_t unsigned short::hash(const unsigned short* borrow this, SipHasher13* borrow sh);
-uint64_t char::hash(const char* borrow this, SipHasher13* borrow sh);
-uint64_t unsigned char::hash(const unsigned char* borrow this, SipHasher13* borrow sh);
-uint64_t long long::hash(const long long* borrow this, SipHasher13* borrow sh);
-uint64_t unsigned long long::hash(const unsigned long long* borrow this, SipHasher13* borrow sh);
+uint64_t int::hash(const int* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t unsigned int::hash(const unsigned int* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t long::hash(const long* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t unsigned long::hash(const unsigned long* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t short::hash(const short* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t unsigned short::hash(const unsigned short* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t char::hash(const char* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t unsigned char::hash(const unsigned char* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t long long::hash(const long long* _Borrow this, SipHasher13* _Borrow sh);
+uint64_t unsigned long long::hash(const unsigned long long* _Borrow this, SipHasher13* _Borrow sh);
 
 #endif

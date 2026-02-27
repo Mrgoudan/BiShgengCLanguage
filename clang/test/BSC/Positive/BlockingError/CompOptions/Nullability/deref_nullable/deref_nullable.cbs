@@ -3,7 +3,7 @@
 // expected-no-diagnostics
 
 struct S {
-    int *borrow _Nullable p;
+    int *_Borrow _Nullable p;
 };
 
 _Safe void test1(void) {

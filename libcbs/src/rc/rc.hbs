@@ -40,7 +40,7 @@ _Safe Rc<T> Rc<T>::new(T data) {
     }
 }
 
-_Safe Rc<T> Rc<T>::clone(const This * borrow this) {
+_Safe Rc<T> Rc<T>::clone(const This * _Borrow this) {
     _Unsafe {
         Rc<T> rc = { .ptr = this->ptr };
         rc.ptr->strong_count++;
@@ -48,19 +48,19 @@ _Safe Rc<T> Rc<T>::clone(const This * borrow this) {
     }
 }
 
-_Safe unsigned Rc<T>::strong_ref_count(const This * borrow this) {
+_Safe unsigned Rc<T>::strong_ref_count(const This * _Borrow this) {
     _Unsafe {
         return this->ptr->strong_count;
     }
 }
 
-_Safe unsigned Rc<T>::weak_ref_count(const This * borrow this) {
+_Safe unsigned Rc<T>::weak_ref_count(const This * _Borrow this) {
     _Unsafe {
         return this->ptr->weak_count;
     }
 }
 
-_Safe const T * borrow Rc<T>::deref(const This * borrow this) {
+_Safe const T * _Borrow Rc<T>::deref(const This * _Borrow this) {
     _Unsafe {
         return &const this->ptr->data;
     }
@@ -80,7 +80,7 @@ public:
 };
 
 // Create a Weak ptr from a Rc.
-_Safe Weak<T> Weak<T>::new(const Rc<T> * borrow rc) {
+_Safe Weak<T> Weak<T>::new(const Rc<T> * _Borrow rc) {
     _Unsafe {
         Weak<T> weak = { .ptr = rc->ptr };
         weak.ptr->weak_count++;
@@ -89,7 +89,7 @@ _Safe Weak<T> Weak<T>::new(const Rc<T> * borrow rc) {
 }
 
 // Clone a Weak ptr. 
-_Safe Weak<T> Weak<T>::clone(const This * borrow this) {
+_Safe Weak<T> Weak<T>::clone(const This * _Borrow this) {
     _Unsafe {
         Weak<T> weak = { .ptr = this->ptr };
         weak.ptr->weak_count++;
@@ -97,13 +97,13 @@ _Safe Weak<T> Weak<T>::clone(const This * borrow this) {
     }
 }
 
-_Safe unsigned Weak<T>::strong_ref_count(const This * borrow this) {
+_Safe unsigned Weak<T>::strong_ref_count(const This * _Borrow this) {
     _Unsafe {
         return this->ptr->strong_count;
     }
 }
 
-_Safe unsigned Weak<T>::weak_ref_count(const This * borrow this) {
+_Safe unsigned Weak<T>::weak_ref_count(const This * _Borrow this) {
     _Unsafe {
         if (this->ptr->strong_count > 0)
             return this->ptr->weak_count;
@@ -111,7 +111,7 @@ _Safe unsigned Weak<T>::weak_ref_count(const This * borrow this) {
     }
 }
 
-_Safe Option<Rc<T>> Weak<T>::upgrade(const This * borrow this) {
+_Safe Option<Rc<T>> Weak<T>::upgrade(const This * _Borrow this) {
     // If `strong_count == 0`, this Weak cannot upgrade to a Rc, return None.
     if (this->strong_ref_count() == 0) {
         Option<Rc<T>> option_rc_none = Option<Rc<T> >::None();

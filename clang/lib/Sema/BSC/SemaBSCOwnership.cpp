@@ -635,14 +635,14 @@ void Sema::CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
   if (T.getCanonicalType().isBorrowQualified() &&
       !T.getTypePtr()->getAs<TypedefType>()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
-        << BorrowQualified << "borrow" << Env;
+        << BorrowQualified << "_Borrow" << Env;
   } else if (T.getCanonicalType().isBorrowQualified() &&
              T.getTypePtr()->getAs<TypedefType>()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
-        << BorrowTypedef << "borrow" << Env << T;
+        << BorrowTypedef << "_Borrow" << Env << T;
   } else if (T.getCanonicalType().getTypePtr()->hasBorrowFields()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
-        << BorrowFields << "borrow" << Env << T;
+        << BorrowFields << "_Borrow" << Env << T;
   }
 }
 #endif

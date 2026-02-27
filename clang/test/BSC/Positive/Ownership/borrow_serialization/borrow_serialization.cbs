@@ -13,28 +13,28 @@
 // RUN: | FileCheck --strict-whitespace %s
 
 struct R {
-  int *borrow p1;
-  const int *borrow p2;
+  int *_Borrow p1;
+  const int *_Borrow p2;
 };
 
-void int::foo(This *borrow this) {}
+void int::foo(This *_Borrow this) {}
 
-typedef int *borrow myInt;
-typedef int *borrow (*PF2)(struct R);
+typedef int *_Borrow myInt;
+typedef int *_Borrow (*PF2)(struct R);
 
 void test() {
   int x1 = 0;
   int x = 0;
   float y = 1.0;
-  const int *borrow p4= (const int *borrow)&x;
-  const int *borrow p2 = &const x;
-  int *borrow p7 = &mut *(&x);
-  int *borrow p = &mut x;
-  float *borrow p1 = &mut y;
+  const int *_Borrow p4= (const int *_Borrow)&x;
+  const int *_Borrow p2 = &const x;
+  int *_Borrow p7 = &mut *(&x);
+  int *_Borrow p = &mut x;
+  float *_Borrow p1 = &mut y;
   myInt p3 = p;
 
   int *owned p5 = (int *owned)&x1;
-  const int *borrow b6 = &const *p3;
+  const int *_Borrow b6 = &const *p3;
   p7 = &mut *p;
   int *p8 = (int *)p5;
 }
@@ -55,42 +55,42 @@ int main() {
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:13> col:9 used y 'float' cinit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:13> 'float' <FloatingCast>
 // CHECK-NEXT: FloatingLiteral 0x{{[^ ]*}} <col:13> 'double' 1.000000e+00
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-29]]:3, col:46>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:45> col:21 p4 'const int *borrow' cinit
-// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:25, col:45> 'const int *borrow' <NoOp>
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:44, col:45> 'int *' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:45> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-33]]:3, col:34>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:33> col:21 p2 'const int *borrow' cinit
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:26, col:33> 'const int *borrow' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:33> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-36]]:3, col:30>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:29> col:15 used p7 'int *borrow' cinit
-// CHECK-NEXT: ParenExpr 0x{{[^ ]*}} <col:26, col:29> 'int *'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:27, col:28> 'int *' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:28> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-40]]:3, col:25>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:24> col:15 used p 'int *borrow' cinit
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:19, col:24> 'int *borrow' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:24> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-43]]:3, col:28>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:27> col:17 p1 'float *borrow' cinit
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:22, col:27> 'float *borrow' prefix '&' cannot overflow
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:27> 'float' lvalue Var 0x{{[^ ]*}} 'y' 'float'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-29]]:3, col:48>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:47> col:22 p4 'const int *_Borrow' cinit
+// CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:26, col:47> 'const int *_Borrow' <NoOp>
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:46, col:47> 'int *' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:47> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-33]]:3, col:35>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:34> col:22 p2 'const int *_Borrow' cinit
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:27, col:34> 'const int *_Borrow' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:34> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-36]]:3, col:31>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:30> col:16 used p7 'int *_Borrow' cinit
+// CHECK-NEXT: ParenExpr 0x{{[^ ]*}} <col:27, col:30> 'int *'
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:28, col:29> 'int *' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:29> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-40]]:3, col:26>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:25> col:16 used p 'int *_Borrow' cinit
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:20, col:25> 'int *_Borrow' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:25> 'int' lvalue Var 0x{{[^ ]*}} 'x' 'int'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-43]]:3, col:29>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:28> col:18 p1 'float *_Borrow' cinit
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:23, col:28> 'float *_Borrow' prefix '&' cannot overflow
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:28> 'float' lvalue Var 0x{{[^ ]*}} 'y' 'float'
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-46]]:3, col:15>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:14> col:9 used p3 'myInt':'int *borrow' cinit
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:14> 'int *borrow' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'p' 'int *borrow'
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:14> col:9 used p3 'myInt':'int *_Borrow' cinit
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:14> 'int *_Borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *_Borrow' lvalue Var 0x{{[^ ]*}} 'p' 'int *_Borrow'
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-48]]:3, col:34>
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:32> col:14 used p5 'int *owned' cinit
 // CHECK-NEXT: CStyleCastExpr 0x{{[^ ]*}} <col:19, col:32> 'int *owned' <NoOp>
 // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:31, col:32> 'int *' prefix '&' cannot overflow
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:32> 'int' lvalue Var 0x{{[^ ]*}} 'x1' 'int'
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-52]]:3, col:36>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:34> col:21 b6 'const int *borrow' cinit
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:34> 'int *borrow' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:34> 'myInt':'int *borrow' lvalue Var 0x{{[^ ]*}} 'p3' 'myInt':'int *borrow'
-// CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <line:[[@LINE-55]]:3, col:14> 'int *borrow' '='
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'p7' 'int *borrow'
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:14> 'int *borrow' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'p' 'int *borrow'
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-52]]:3, col:37>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:35> col:22 b6 'const int *_Borrow' cinit
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:35> 'int *_Borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:35> 'myInt':'int *_Borrow' lvalue Var 0x{{[^ ]*}} 'p3' 'myInt':'int *_Borrow'
+// CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <line:[[@LINE-55]]:3, col:14> 'int *_Borrow' '='
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'int *_Borrow' lvalue Var 0x{{[^ ]*}} 'p7' 'int *_Borrow'
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:14> 'int *_Borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int *_Borrow' lvalue Var 0x{{[^ ]*}} 'p' 'int *_Borrow'

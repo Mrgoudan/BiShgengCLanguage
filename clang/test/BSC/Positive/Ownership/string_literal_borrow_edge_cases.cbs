@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 // expected-no-diagnostics
 
-// Test edge cases for string literal borrow auto-insertion
+// Test edge cases for string literal _Borrow auto-insertion
 
 // Test 1: Parenthesized string literals
 void test_parens() {
-  const char* borrow a = ("hello");
-  const char* borrow b = (("world"));
+  const char* _Borrow a = ("hello");
+  const char* _Borrow b = (("world"));
 }
 
 // Test 2: Struct field initialization
 struct Config {
-  const char* borrow name;
-  const char* borrow desc;
+  const char* _Borrow name;
+  const char* _Borrow desc;
 };
 
 void test_struct_init() {
@@ -20,27 +20,27 @@ void test_struct_init() {
   struct Config cfg2 = { .name = "test", .desc = "test desc" };
 }
 
-// Test 3: Array of borrow pointers
+// Test 3: Array of _Borrow pointers
 void test_array() {
-  const char* borrow arr[] = { "one", "two", "three" };
+  const char* _Borrow arr[] = { "one", "two", "three" };
 }
 
 // Test 4: Assignment after initialization
 void test_assignment() {
-  const char* borrow p = "init";
+  const char* _Borrow p = "init";
   p = "assigned";
 }
 
 // Test 5: Reassignment
 void test_reassignment() {
-  const char* borrow msg = "first";
+  const char* _Borrow msg = "first";
   msg = "second";
   msg = "third";
 }
 
 // Test 6: Conditional expression
 void test_conditional(int flag) {
-  const char* borrow msg = flag ? "yes" : "no";
+  const char* _Borrow msg = flag ? "yes" : "no";
 }
 
 // Test 7: Nested struct initialization
@@ -59,29 +59,29 @@ void test_compound() {
 
 // Test 9: Multiple levels of const
 void test_const_levels() {
-  const char* borrow p1 = "test1";
-  const char* const borrow p2 = "test2";
+  const char* _Borrow p1 = "test1";
+  const char* const _Borrow p2 = "test2";
 }
 
 // Test 10: Function return
-const char* borrow get_message(int* borrow b) {
+const char* _Borrow get_message(int* _Borrow b) {
   return "hello";
 }
 
 // Test 11: Nested ternary
 void test_ternary(int x) {
-  const char* borrow result = (x > 0) ? "positive" : (x < 0) ? "negative" : "zero";
+  const char* _Borrow result = (x > 0) ? "positive" : (x < 0) ? "negative" : "zero";
 }
 
 // Test 12: Multiple variables in one declaration
 void test_multiple_vars() {
-  const char* borrow p1 = "first", *borrow p2 = "second";
+  const char* _Borrow p1 = "first", *_Borrow p2 = "second";
 }
 
 // Test 13: Pointer to pointer
 void test_ptr_to_ptr() {
-  const char* borrow p = "test";
-  const char* borrow * pp = &p;
+  const char* _Borrow p = "test";
+  const char* _Borrow * pp = &p;
 }
 
 int main() {
@@ -94,7 +94,7 @@ int main() {
   test_nested();
   test_compound();
   test_const_levels();
-  int *borrow b = nullptr;
+  int *_Borrow b = nullptr;
   get_message(b);
   test_ternary(5);
   test_multiple_vars();

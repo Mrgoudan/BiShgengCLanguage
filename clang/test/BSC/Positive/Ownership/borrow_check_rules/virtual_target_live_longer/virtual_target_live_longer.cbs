@@ -9,11 +9,11 @@
 
 struct S {
   int a;
-  int *borrow p1;
+  int *_Borrow p1;
   int *owned p2;
 };
 
-void use_mut(int *borrow p) {}
+void use_mut(int *_Borrow p) {}
 
 T *owned safe_malloc<T>(T value) {
   T *p = (T *) malloc( sizeof(T) );
@@ -27,28 +27,28 @@ void free_owned<T>(T *owned p) {
 
 void test1() {
   int *a = (int *)malloc(sizeof(int));
-  int *borrow p = &mut *a;
+  int *_Borrow p = &mut *a;
   use_mut(p);
   free(a);
 }
 
 void test2(int *a) {
-  int *borrow p = &mut *a;
+  int *_Borrow p = &mut *a;
   use_mut(p);
   free(a);
 }
 
-void test3(int *borrow p) {
-  int *borrow p1 = &mut *p;
+void test3(int *_Borrow p) {
+  int *_Borrow p1 = &mut *p;
   use_mut(p1);
 }
 
 void test4(struct S s) {
-  int *borrow p3 = &mut s.a;
+  int *_Borrow p3 = &mut s.a;
   use_mut(p3);
-  int *borrow p4 = s.p1;
+  int *_Borrow p4 = s.p1;
   use_mut(p4);
-  int *borrow p5 = &mut *s.p2;
+  int *_Borrow p5 = &mut *s.p2;
   use_mut(p5); 
   free_owned<int>(s.p2);
 }

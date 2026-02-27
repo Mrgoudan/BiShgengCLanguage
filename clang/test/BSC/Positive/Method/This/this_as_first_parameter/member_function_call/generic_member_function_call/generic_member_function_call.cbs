@@ -43,11 +43,11 @@ T struct Foo<T>::getB_2(const This* this) {
   return this->a;
 }
 
-T struct Foo<T>::getC(This* borrow this) {
+T struct Foo<T>::getC(This* _Borrow this) {
   return this->a;
 }
 
-T struct Foo<T>::getC_2(const This* borrow this) {
+T struct Foo<T>::getC_2(const This* _Borrow this) {
   return this->a;
 }
 
@@ -86,7 +86,7 @@ void test_const_This_pointer_actual_param() {
 
 void test_This_pointer_borrow_actual_param(void) {
   struct Foo<int> foo = {.a = 1};
-  struct Foo<int> *borrow foo_mut = &mut foo;
+  struct Foo<int> *_Borrow foo_mut = &mut foo;
   int b = foo_mut->getB();
   int b2 = foo_mut->getB_2();
   int c = foo_mut->getC();
@@ -95,7 +95,7 @@ void test_This_pointer_borrow_actual_param(void) {
 
 void test_const_This_pointer_borrow_actual_param(void) {
   struct Foo<long> foo = {.a = 1};
-  const struct Foo<long> *borrow c_foo_mut = &const foo;
+  const struct Foo<long> *_Borrow c_foo_mut = &const foo;
   long b2 = c_foo_mut->getB_2();
   long c2 = c_foo_mut->getC_2();
 }

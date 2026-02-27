@@ -8,19 +8,19 @@ public:
   int a;
 };
 
-int struct Foo::getA(This borrow this) { // expected-error {{borrow type requires a pointer or reference ('This' is invalid)}}
+int struct Foo::getA(This _Borrow this) { // expected-error {{_Borrow type requires a pointer or reference ('This' is invalid)}}
   return 0;
 }
 
-int struct Foo::getB(struct Foo borrow this) { // expected-error {{borrow type requires a pointer or reference ('struct Foo' is invalid)}}
+int struct Foo::getB(struct Foo _Borrow this) { // expected-error {{_Borrow type requires a pointer or reference ('struct Foo' is invalid)}}
   return 0;
 }
 
-int struct Foo::getC(const This borrow this) { // expected-error {{borrow type requires a pointer or reference ('This' is invalid)}}
+int struct Foo::getC(const This _Borrow this) { // expected-error {{_Borrow type requires a pointer or reference ('This' is invalid)}}
   return 0;
 }
 
-int struct Foo::getC_2(const struct Foo borrow this) { // expected-error {{borrow type requires a pointer or reference ('struct Foo' is invalid)}}
+int struct Foo::getC_2(const struct Foo _Borrow this) { // expected-error {{_Borrow type requires a pointer or reference ('struct Foo' is invalid)}}
   return 0;
 }
 int struct Foo::getD(This owned this) { // expected-error {{type of 'This' cannot be qualified by 'owned'}} 

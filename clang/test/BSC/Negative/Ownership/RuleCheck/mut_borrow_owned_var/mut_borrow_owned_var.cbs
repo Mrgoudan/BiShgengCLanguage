@@ -10,11 +10,11 @@ typedef struct {
   int b;
 } U;
 
-void foo1(int *owned *borrow p);
-void foo2(S *owned *borrow p);
-void foo3(S *borrow p);
-void foo4(U *owned *borrow p);
-void foo5(U *borrow p);
+void foo1(int *owned *_Borrow p);
+void foo2(S *owned *_Borrow p);
+void foo3(S *_Borrow p);
+void foo4(U *owned *_Borrow p);
+void foo5(U *_Borrow p);
 
 void consume(int *owned p);
 
@@ -25,7 +25,7 @@ void test1() {
 
 void test2() {
   int *owned p = nullptr;
-  int *owned *borrow q = &mut p;
+  int *owned *_Borrow q = &mut p;
   foo1(q);
 } // expected-error {{memory leak of value: `p`}}
 

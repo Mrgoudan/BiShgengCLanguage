@@ -2,17 +2,17 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-_Safe int *borrow _Nullable foo1(int* borrow a);
+_Safe int *_Borrow _Nullable foo1(int* _Borrow a);
 _Safe void test1(void) {
     int a = 10;
-    int *borrow p1 = foo1(&mut a);
-    int *borrow _Nullable p2 = foo1(&mut a);
+    int *_Borrow p1 = foo1(&mut a);
+    int *_Borrow _Nullable p2 = foo1(&mut a);
 }
 
 void test2(void) {
-  int *borrow p = nullptr;
+  int *_Borrow p = nullptr;
   _Unsafe {
-    int *borrow p2 = nullptr;
+    int *_Borrow p2 = nullptr;
   }
 }
 
@@ -20,7 +20,7 @@ struct S {
     int a;
 };
 _Safe void test3(void) {
-    struct S *borrow _Nullable p = nullptr;
+    struct S *_Borrow _Nullable p = nullptr;
     if (p != nullptr) {
         p->a = 10;
     } else {

@@ -13,9 +13,9 @@ typedef struct{
 // Test 1: strlen - the original failing case
 unsigned int strlen(const char *  a); // expected-warning {{incompatible redeclaration of library function 'strlen'}} \
                                        // expected-note {{'strlen' is a builtin with type 'unsigned long (const char *)'}}
-_Safe unsigned int strlen(const char * borrow a);
+_Safe unsigned int strlen(const char * _Borrow a);
 
-_Safe void test1(Info* borrow refInfo){
+_Safe void test1(Info* _Borrow refInfo){
     _Unsafe {
         strlen(refInfo->fileName);      // char* -> const char* (adding const)
         strlen(refInfo->constName);     // const char* -> const char* (exact match)
@@ -24,9 +24,9 @@ _Safe void test1(Info* borrow refInfo){
 
 // Test 2: Non-const to const pointer conversion
 int process(const int * p);
-_Safe int process(const int * borrow p);
+_Safe int process(const int * _Borrow p);
 
-_Safe void test2(Info* borrow refInfo){
+_Safe void test2(Info* _Borrow refInfo){
     _Unsafe {
         process(refInfo->data);         // int* -> const int* (adding const)
         process(refInfo->constData);    // const int* -> const int* (exact match)
@@ -35,9 +35,9 @@ _Safe void test2(Info* borrow refInfo){
 
 // Test 3: Const to non-const pointer conversion (should also work per C semantics)
 void modify(char * p);
-_Safe void modify(char * borrow p);
+_Safe void modify(char * _Borrow p);
 
-_Safe void test3(Info* borrow refInfo){
+_Safe void test3(Info* _Borrow refInfo){
     _Unsafe {
         modify(refInfo->fileName);      // char* -> char* (exact match)
         // Note: const char* -> char* would generate a warning in normal C compilation
@@ -47,9 +47,9 @@ _Safe void test3(Info* borrow refInfo){
 
 // Test 4: Mixed const with void*
 void* get_ptr(const void* p);
-_Safe void* get_ptr(const void* borrow p);
+_Safe void* get_ptr(const void* _Borrow p);
 
-_Safe void test4(Info* borrow refInfo){
+_Safe void test4(Info* _Borrow refInfo){
     _Unsafe {
         get_ptr(refInfo->fileName);     // char* -> const void* (adding const + type conversion)
         get_ptr(refInfo->constName);    // const char* -> const void* (type conversion)
@@ -60,7 +60,7 @@ _Safe void test4(Info* borrow refInfo){
 
 // Test 5: Multiple parameters with const conversions
 int compare(const char* a, const char* b);
-_Safe int compare(const char* borrow a, const char* borrow b);
+_Safe int compare(const char* _Borrow a, const char* _Borrow b);
 
 _Safe void test5(char* str1, const char* str2, char* str3){
     _Unsafe {
@@ -70,9 +70,9 @@ _Safe void test5(char* str1, const char* str2, char* str3){
     }
 }
 
-// Test 6: Const with owned/borrow qualifiers
+// Test 6: Const with owned/_Borrow qualifiers
 void owned_func(const int* p);
-_Safe void owned_func(const int* borrow p);
+_Safe void owned_func(const int* _Borrow p);
 
 _Safe void test6(int* p1, const int* p2){
     _Unsafe {
@@ -86,7 +86,7 @@ typedef char* string_t;
 typedef const char* const_string_t;
 
 void string_func(const_string_t s);
-_Safe void string_func(const_string_t borrow s);
+_Safe void string_func(const_string_t _Borrow s);
 
 _Safe void test7(string_t s1, const_string_t s2){
     _Unsafe {
@@ -97,7 +97,7 @@ _Safe void test7(string_t s1, const_string_t s2){
 
 // Test 8: Multi-level const conversions
 void multi_const(const char* const * p);
-_Safe void multi_const(const char* const * borrow p);
+_Safe void multi_const(const char* const * _Borrow p);
 
 _Safe void test8(char** pp1, const char** pp2){
     _Unsafe {
@@ -110,7 +110,7 @@ _Safe void test8(char** pp1, const char** pp2){
 
 // Test 9: Const volatile qualifiers
 void volatile_func(const volatile int* p);
-_Safe void volatile_func(const volatile int* borrow p);
+_Safe void volatile_func(const volatile int* _Borrow p);
 
 _Safe void test9(int* p1, const int* p2, volatile int* p3){
     _Unsafe {
@@ -122,7 +122,7 @@ _Safe void test9(int* p1, const int* p2, volatile int* p3){
 
 // Test 10: Array with const elements
 void process_const_array(const int* arr, int size);
-_Safe void process_const_array(const int* borrow arr, int size);
+_Safe void process_const_array(const int* _Borrow arr, int size);
 
 _Safe void test10(void){
     int arr1[10];

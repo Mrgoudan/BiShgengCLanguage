@@ -26,7 +26,7 @@ public:
   ~C(C<T> this) {}
 };
 
-int C<T>::f(C<T>* borrow this, B<T> x) {
+int C<T>::f(C<T>* _Borrow this, B<T> x) {
   B<T> z = x;
   return 1;
 }

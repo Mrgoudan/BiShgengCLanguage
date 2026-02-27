@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 typedef struct A {
-  int *borrow p;
+  int *_Borrow p;
 } A;
 
 typedef struct B {
@@ -11,22 +11,22 @@ typedef struct B {
 
 typedef struct C {
   B b;
-  int *borrow p;
+  int *_Borrow p;
 } C;
 
 typedef struct D {
   B b;
-  int *borrow p;
-  int *borrow q;
+  int *_Borrow p;
+  int *_Borrow q;
 } D;
 
 typedef struct E {
   C c;
   int x;
-  int *borrow p;
+  int *_Borrow p;
 } E;
 
-void use_mut(int *borrow);
+void use_mut(int *_Borrow);
 void useE(E);
 void useC(C);
 
@@ -112,7 +112,7 @@ void test10() {
 void test11() {
   int local = 42;
   C c = { .p = &mut local };
-  int *borrow q = c.p; // expected-note {{`*c.p` is borrowed here}}
+  int *_Borrow q = c.p; // expected-note {{`*c.p` is borrowed here}}
   int temp = *c.p; // expected-error {{cannot use `*c.p` because it was mutably borrowed}}
   use_mut(q);
 }
@@ -160,7 +160,7 @@ void test16() {
   int local1 = 42;
   int local2 = 42;
   E e1 = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
-  int *borrow p = e1.p;
+  int *_Borrow p = e1.p;
   useE(e1);
 }
 
@@ -170,9 +170,9 @@ void test17() {
   E e = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
   C c = e.c; // expected-note {{`*e.c.p` is borrowed here}}
              // expected-note@-1 {{first mut borrow occurs here}}
-  int *borrow p1 = e.p; // expected-note {{`*e.p` is borrowed here}}
+  int *_Borrow p1 = e.p; // expected-note {{`*e.p` is borrowed here}}
                         // expected-note@-1 {{first mut borrow occurs here}}
-  int *borrow p2 = e.p; // expected-error {{cannot use `e.p` because it was mutably borrowed}}
+  int *_Borrow p2 = e.p; // expected-error {{cannot use `e.p` because it was mutably borrowed}}
                         // expected-error@-1 {{cannot borrow `*e.p` as mutable more than once at a time}}
   use_mut(p1);
   useE(e); // expected-error {{cannot use `e` because it was mutably borrowed}}

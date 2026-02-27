@@ -3,7 +3,7 @@
 trait T {
   _Safe void do_it(This* owned this);
   void do_that(This* this);
-  _Safe void do_this(This* borrow this);
+  _Safe void do_this(This* _Borrow this);
 };
 
 _Safe void int::do_it(int* owned this) {
@@ -13,7 +13,7 @@ _Safe void int::do_it(int* owned this) {
 void int::do_that(int* this) {
 }
 
-_Safe void int::do_this(int* borrow this) {
+_Safe void int::do_this(int* _Borrow this) {
 }
 
 impl trait T for int;
@@ -34,7 +34,7 @@ _Safe void struct S::do_it(struct S* owned this) {
 void struct S::do_that(struct S* this) {
 }
 
-_Safe void struct S::do_this(struct S* borrow this) {
+_Safe void struct S::do_this(struct S* _Borrow this) {
 }
 
 impl trait T for struct S;
@@ -74,7 +74,7 @@ trait T* owned cond2(int flag) {
   }
 }
 
-trait T* borrow cond3(int flag, int* borrow x) {
+trait T* _Borrow cond3(int flag, int* _Borrow x) {
   if (flag == 1) {
     return x;
   } else if (flag == 2) {

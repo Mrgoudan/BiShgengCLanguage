@@ -36,14 +36,14 @@ public:
 };
 
 // Returns `true` if the result is a `Err` value.
-_Safe _Bool Result<T, E>::is_err(const Result<T, E>* borrow this) {
+_Safe _Bool Result<T, E>::is_err(const Result<T, E>* _Borrow this) {
     _Unsafe {
         return this->state == Err;
     }
 }
 
 // Returns `true` if the result is a `Ok` value.
-_Safe _Bool Result<T, E>::is_ok(const Result<T, E>* borrow this) {
+_Safe _Bool Result<T, E>::is_ok(const Result<T, E>* _Borrow this) {
     _Unsafe {
         return this->state == Ok;
     }

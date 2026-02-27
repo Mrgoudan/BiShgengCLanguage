@@ -22,12 +22,12 @@ _Safe volatile int* owned get_volatile(void);
 _Unsafe const volatile int* get_cv(void);
 _Safe const volatile int* owned get_cv(void);
 
-// Manual 2486: _Unsafe T* ⟷ _Safe T* borrow
+// Manual 2486: _Unsafe T* ⟷ _Safe T* _Borrow
 _Unsafe void process_borrow(int* p);
-_Safe void process_borrow(int* borrow p);
+_Safe void process_borrow(int* _Borrow p);
 
 _Unsafe void take_borrow(void* p);
-_Safe void take_borrow(void* borrow p);
+_Safe void take_borrow(void* _Borrow p);
 
 // Manual 2474: Parameter count must be same
 _Unsafe void multi_param(int a, int b, int c);

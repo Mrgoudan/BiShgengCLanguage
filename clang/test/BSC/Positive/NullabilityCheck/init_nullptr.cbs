@@ -42,7 +42,7 @@ _Safe int *owned _Nullable get_nullable(int a) {
         return nullptr;
 }
 
-_Safe void use(int *borrow p) { }
+_Safe void use(int *_Borrow p) { }
 
 owned struct Data {
 public:
@@ -65,7 +65,7 @@ _Safe Data Data::init(int a) {
 _Safe int main(void) {
     Data data1 = Data::init(5);
     Data data2 = Data::init(10);
-    Data *borrow _Nullable p = nullptr;
+    Data *_Borrow _Nullable p = nullptr;
     if (get_current_status() == 1) {
         p = &mut data1;
     } else if (get_current_status() == 2){

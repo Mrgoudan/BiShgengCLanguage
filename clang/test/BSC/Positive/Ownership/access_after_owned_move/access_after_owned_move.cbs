@@ -50,7 +50,7 @@ void test_multiple_array_indices() {
 
 struct S3 {
   int *owned ptr;
-  int *borrow p2;
+  int *_Borrow p2;
 };
 
 void test_assign_borrow_after_owned_move() {

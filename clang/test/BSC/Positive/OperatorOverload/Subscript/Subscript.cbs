@@ -45,7 +45,7 @@ int test1() {
     return 0;
 }
 
-// borrow point parameter
+// _Borrow point parameter
 struct G {
     int a;
 };
@@ -56,7 +56,7 @@ struct H {
 };
 
 __attribute__((operator []))
-_Safe int * borrow deref2(struct H * borrow h, int i) {
+_Safe int * _Borrow deref2(struct H * _Borrow h, int i) {
     return _Unsafe(&mut(h->g[i].a));
 }
 
@@ -76,7 +76,7 @@ int test2() {
     return 0;
 }
 
-// const borrow point parameter
+// const _Borrow point parameter
 struct I {
     int a;
 };
@@ -87,7 +87,7 @@ struct J {
 };
 
 __attribute__((operator []))
-_Safe const int * borrow deref3(const struct J * borrow j, int n) {
+_Safe const int * _Borrow deref3(const struct J * _Borrow j, int n) {
     return _Unsafe(&const(j->i[n].a));
 }
 
@@ -113,7 +113,7 @@ struct L {
 };
 
 __attribute__((operator []))
-_Safe struct K * borrow deref4(struct L * borrow h, int i) {
+_Safe struct K * _Borrow deref4(struct L * _Borrow h, int i) {
     return _Unsafe(&mut(h->g[i]));
 }
 
@@ -141,7 +141,7 @@ struct DataArray<T> {
   Data<T> array[10];
 };
 __attribute__((operator []))
-struct Data<T> * borrow deref5<T>(struct DataArray<T> * borrow da, int i) {
+struct Data<T> * _Borrow deref5<T>(struct DataArray<T> * _Borrow da, int i) {
     return &mut(da->array[i]);
 }
 

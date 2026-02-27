@@ -9,12 +9,12 @@ typedef struct {
   int b;
 } B;
 
-B *borrow borrow_bak_offset(A *owned *borrow, int);
-void use(B *borrow header);
+B *_Borrow borrow_bak_offset(A *owned *_Borrow, int);
+void use(B *_Borrow header);
 
 A *owned test1() {
   A *owned block = nullptr;
-  B *borrow header = nullptr;
+  B *_Borrow header = nullptr;
   header = borrow_bak_offset((&mut block), sizeof(B)); // expected-note {{`block` is borrowed here}}
   A *owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
   use(header);
@@ -23,7 +23,7 @@ A *owned test1() {
 
 A *owned test2() {
   A *owned block = nullptr;
-  B *borrow header = nullptr;
+  B *_Borrow header = nullptr;
   header = borrow_bak_offset(((&mut block)), sizeof(B)); // expected-note {{`block` is borrowed here}}
   A *owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
   use(header);
@@ -51,9 +51,9 @@ typedef struct {
   int b;
 } Time;
 
-_Safe unsigned int foo(S *borrow);
+_Safe unsigned int foo(S *_Borrow);
 
-_Safe unsigned int test(Date *borrow date, Time *borrow time, unsigned int *borrow pui) {
+_Safe unsigned int test(Date *_Borrow date, Time *_Borrow time, unsigned int *_Borrow pui) {
   S s = {0};
   GET(&mut s, date, time, pui);
   return 1;

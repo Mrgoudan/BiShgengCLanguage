@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -verify %s
-// Using `&const` or `&mut` to convert a raw ptr to borrow ptr is disallowed
+// Using `&const` or `&mut` to convert a raw ptr to _Borrow ptr is disallowed
 
 _Safe void explicit_reborrow(int* ptr) {
-    const int *borrow _Nullable cbp = &const *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
-    int *borrow _Nullable mbp = &mut *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
+    const int *_Borrow _Nullable cbp = &const *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
+    int *_Borrow _Nullable mbp = &mut *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
 }
 
 void explicit_reborrow2(void) {
     int *ptr = nullptr;
     _Safe {
-        const int *borrow _Nullable cbp = &const *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
-        int *borrow _Nullable mbp = &mut *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
+        const int *_Borrow _Nullable cbp = &const *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
+        int *_Borrow _Nullable mbp = &mut *ptr; // expected-error {{'*' operator is forbidden in the safe zone}}
     }
 }

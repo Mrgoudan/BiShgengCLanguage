@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-void bsc_strcpy_s(char* borrow strDest, int destMax, const char* borrow strSrc) {
+void bsc_strcpy_s(char* _Borrow strDest, int destMax, const char* _Borrow strSrc) {
   *strDest = *strSrc;
 }
 

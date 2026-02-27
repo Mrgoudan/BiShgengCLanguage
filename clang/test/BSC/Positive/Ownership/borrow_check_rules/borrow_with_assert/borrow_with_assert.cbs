@@ -9,7 +9,7 @@
 
 void test() {
   int x = 1;
-  int* borrow p = &mut x;
+  int* _Borrow p = &mut x;
   *p = 2;
   assert(*p == 2); 
 }

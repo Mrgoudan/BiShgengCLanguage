@@ -38,7 +38,7 @@ int Bar::getB_2(const This* this) {
   return this->a;
 }
 
-_Safe int Bar::getC(This* borrow this) {
+_Safe int Bar::getC(This* _Borrow this) {
   this->a = 2;
   _Unsafe {
     printf("this->a in getC: %d\n", this->a);
@@ -46,7 +46,7 @@ _Safe int Bar::getC(This* borrow this) {
   return this->a;
 }
 
-_Safe int Bar::getC_2(const This* borrow this) {
+_Safe int Bar::getC_2(const This* _Borrow this) {
   _Unsafe {
     printf("this->a in getC_2: %d\n", this->a);
   }

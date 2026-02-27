@@ -2,21 +2,21 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
-_Safe void mutable2immutable(int *borrow ref) {
-    const int *borrow cref = ref; 
+_Safe void mutable2immutable(int *_Borrow ref) {
+    const int *_Borrow cref = ref; 
 }
 
 _Safe void inplace_reborrow(int x) {
-    const int *borrow cref = &mut x;
+    const int *_Borrow cref = &mut x;
 }
 
-_Safe void nullable_reborrow(int *borrow _Nullable ref) {
-    const int *borrow _Nullable cref = ref;
+_Safe void nullable_reborrow(int *_Borrow _Nullable ref) {
+    const int *_Borrow _Nullable cref = ref;
 }
 
-_Safe void accept_immutable(const int *borrow cref) {}
+_Safe void accept_immutable(const int *_Borrow cref) {}
 
-_Safe int *borrow ret_mutable(int *borrow x, int *borrow y) {
+_Safe int *_Borrow ret_mutable(int *_Borrow x, int *_Borrow y) {
     return *x > *y ? x : y;
 }
 
@@ -27,18 +27,18 @@ int main() {
         int x = 0;
         inplace_reborrow(x);
         mutable2immutable(&mut x);
-        int *borrow _Nullable n_ref = &mut x;
+        int *_Borrow _Nullable n_ref = &mut x;
         nullable_reborrow(n_ref);
         nullable_reborrow(nullptr);
     
         // argument to parameter
         accept_immutable(&mut x);
-        int *borrow ref = &mut x;
+        int *_Borrow ref = &mut x;
         accept_immutable(ref);
     
         // return value
         int y = 2;
-        const int *borrow cref = ret_mutable(&mut x, &mut y);    
+        const int *_Borrow cref = ret_mutable(&mut x, &mut y);    
     }
     return 0;
 }

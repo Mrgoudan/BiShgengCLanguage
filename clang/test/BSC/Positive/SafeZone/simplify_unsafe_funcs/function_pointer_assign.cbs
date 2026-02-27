@@ -6,7 +6,7 @@ typedef unsigned int (*HOOK)(unsigned int a, unsigned int b, unsigned char * con
 unsigned int naked(unsigned int a, unsigned int b, unsigned char * const c){
     return 0;
 }
-_Safe unsigned int naked(unsigned int a, unsigned int b, unsigned char * borrow const c);
+_Safe unsigned int naked(unsigned int a, unsigned int b, unsigned char * _Borrow const c);
 _Safe void test(void){
          _Unsafe HOOK readhook = naked;
 }

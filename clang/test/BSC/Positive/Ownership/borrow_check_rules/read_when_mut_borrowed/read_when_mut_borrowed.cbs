@@ -11,13 +11,13 @@ struct Foo {
   int a;
 };
 
-void use_immut(const struct Foo *borrow p) {
+void use_immut(const struct Foo *_Borrow p) {
   int b = p->a;
 }
 
 int main() {
   struct Foo foo = {.a = 1};
-  const struct Foo *borrow foo_const_mut = &const foo;
+  const struct Foo *_Borrow foo_const_mut = &const foo;
   printf("%d\n", foo.a);
   use_immut(foo_const_mut);
   return 0;

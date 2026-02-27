@@ -2,25 +2,25 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
-void use(int *borrow p) {
+void use(int *_Borrow p) {
     *p = 2;
 }
 
-void use_immut(const int *borrow p) {
+void use_immut(const int *_Borrow p) {
     int x = *p;
 }
 
 void test1<T>() {
   int a = 1;
-  int *borrow p = &mut a;
-  int *borrow q = &mut *p;
+  int *_Borrow p = &mut a;
+  int *_Borrow q = &mut *p;
   use(q);
 }
 
 void test2<T>() {
     int a = 1;
-    int *borrow p = &mut a;
-    const int *borrow q = &const *p;
+    int *_Borrow p = &mut a;
+    const int *_Borrow q = &const *p;
     use_immut(q);
 }
 

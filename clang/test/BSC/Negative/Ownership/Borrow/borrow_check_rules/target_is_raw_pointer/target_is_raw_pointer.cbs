@@ -11,15 +11,15 @@ struct M {
 };
 
 struct K {
-  int *borrow p;
+  int *_Borrow p;
 };
 
-void use_mut(int *borrow p) {}
+void use_mut(int *_Borrow p) {}
 
 void test() {
   int a = 5;
-  int *borrow p1 = &mut a;
-  int *borrow p2 = &mut a;
+  int *_Borrow p1 = &mut a;
+  int *_Borrow p2 = &mut a;
   struct K k = { .p = &mut a }; // expected-note {{`a` is borrowed here}}
                                 // expected-note@-1 {{`a` is borrowed here}}
   int *owned o = (int* owned)&a; // expected-error {{cannot use `a` because it was mutably borrowed}}

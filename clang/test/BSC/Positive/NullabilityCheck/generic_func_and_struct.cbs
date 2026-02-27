@@ -20,7 +20,7 @@ _Safe T *owned safe_malloc<T>(T t) {
         return (T *owned)addr;
     }
 }
-_Safe void use<T>(T *borrow p) {}
+_Safe void use<T>(T *_Borrow p) {}
 
 owned struct Data<T> {
 public:
@@ -42,8 +42,8 @@ _Safe Data<T> Data<T>::init(T a) {
 
 owned struct BorrowData<T> {
 public:
-    Data<T> *borrow _Nullable p1;
-    Data<T> *borrow p2;
+    Data<T> *_Borrow _Nullable p1;
+    Data<T> *_Borrow p2;
 };
 
 _Safe int main(void) {

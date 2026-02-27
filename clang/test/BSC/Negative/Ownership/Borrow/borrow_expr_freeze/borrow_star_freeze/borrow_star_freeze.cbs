@@ -6,7 +6,7 @@ void test1(int *p) {}
 void test_freeze_star_var1() {
     int a = 1;
     int * b = &a;
-    int * borrow c = &mut *b;
+    int * _Borrow c = &mut *b;
     a = 2; // ok；
     b = &a;
     int m = *c;
@@ -15,7 +15,7 @@ void test_freeze_star_var1() {
 void test_freeze_star_var2() {
     int a = 1;
     int * b = &a;
-    int * borrow c = &mut *b;
+    int * _Borrow c = &mut *b;
     a = 2; // ok；
     b = &a; // ok
 }
@@ -23,7 +23,7 @@ void test_freeze_star_var2() {
 void test_freeze_star_var3() {
     int a = 1;
     int * b = &a;
-    int * borrow c = &mut *b;
+    int * _Borrow c = &mut *b;
     a = 2; // ok；
     int m = *c;
     b = &a; // ok

@@ -1,26 +1,26 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test cases for structs with both borrow and owned fields
-// Rule: borrow fields MUST be initialized, owned fields CAN be uninitialized
+// Test cases for structs with both _Borrow and owned fields
+// Rule: _Borrow fields MUST be initialized, owned fields CAN be uninitialized
 
 struct BorrowAndOwned {
-    int *borrow b;
+    int *_Borrow b;
     int *owned o;
 };
 
 void test_basic_mixed() {
     int x = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct BorrowAndOwned m1;  // borrow field not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct BorrowAndOwned m1;  // _Borrow field not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct BorrowAndOwned m2 = {};  // borrow field not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct BorrowAndOwned m2 = {};  // _Borrow field not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct BorrowAndOwned m3 = {.o = nullptr};  // borrow field not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct BorrowAndOwned m3 = {.o = nullptr};  // _Borrow field not initialized
 
-    // OK: borrow initialized, owned can be uninitialized
+    // OK: _Borrow initialized, owned can be uninitialized
     struct BorrowAndOwned m4 = {.b = &mut x};
 
     // OK: both initialized
@@ -31,28 +31,28 @@ void test_basic_mixed() {
 }
 
 struct MultipleMixed {
-    int *borrow b1;
+    int *_Borrow b1;
     int *owned o1;
-    int *borrow b2;
+    int *_Borrow b2;
     int *owned o2;
 };
 
 void test_multiple_mixed() {
     int x = 0, y = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct MultipleMixed m1;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct MultipleMixed m2 = {.b1 = &mut x};  // b2 not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct MultipleMixed m3 = {.b1 = &mut x, .o1 = nullptr};  // b2 not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct MultipleMixed m4 = {.o1 = nullptr, .o2 = nullptr};  // both borrow not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct MultipleMixed m4 = {.o1 = nullptr, .o2 = nullptr};  // both _Borrow not initialized
 
-    // OK: all borrow initialized, owned can be left out
+    // OK: all _Borrow initialized, owned can be left out
     struct MultipleMixed m5 = {.b1 = &mut x, .b2 = &mut y};
 
     // OK: all initialized
@@ -60,7 +60,7 @@ void test_multiple_mixed() {
 }
 
 struct InnerMixed {
-    int *borrow b;
+    int *_Borrow b;
     int *owned o;
 };
 
@@ -73,19 +73,19 @@ struct OuterMixed {
 void test_nested_mixed() {
     int x = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct OuterMixed o1;  // inner.b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct OuterMixed o2 = {.a = 1};  // inner.b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct OuterMixed o3 = {.a = 1, .outer_o = nullptr};  // inner.b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct OuterMixed o4 = {.a = 1, .inner = {.o = nullptr}};  // inner.b not initialized
 
-    // OK: borrow initialized, owned fields can be omitted
+    // OK: _Borrow initialized, owned fields can be omitted
     struct OuterMixed o5 = {.a = 1, .inner = {.b = &mut x}};
 
     // OK: all initialized
@@ -96,7 +96,7 @@ void test_nested_mixed() {
 }
 
 struct Level3Mixed {
-    int *borrow b;
+    int *_Borrow b;
     int *owned o;
 };
 
@@ -106,26 +106,26 @@ struct Level2Mixed {
 };
 
 struct Level1Mixed {
-    int *borrow b;
+    int *_Borrow b;
     struct Level2Mixed l2;
 };
 
 void test_deep_mixed() {
     int x = 0, y = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Level1Mixed v1;  // l1.b and l2.l3.b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Level1Mixed v2 = {.b = &mut x};  // l2.l3.b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Level1Mixed v3 = {.b = &mut x, .l2 = {.o = nullptr}};  // l2.l3.b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Level1Mixed v4 = {.l2 = {.l3 = {.b = &mut y}}};  // l1.b not initialized
 
-    // OK: all borrow fields initialized
+    // OK: all _Borrow fields initialized
     struct Level1Mixed v5 = {.b = &mut x, .l2 = {.l3 = {.b = &mut y}}};
 
     // OK: all fields initialized
@@ -134,26 +134,26 @@ void test_deep_mixed() {
 
 struct Interleaved {
     int *owned o1;
-    int *borrow b1;
+    int *_Borrow b1;
     int regular;
     int *owned o2;
-    int *borrow b2;
+    int *_Borrow b2;
     int *owned o3;
 };
 
 void test_interleaved() {
     int x = 0, y = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Interleaved i1;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct Interleaved i2 = {.o1 = nullptr, .regular = 0};  // borrow fields not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct Interleaved i2 = {.o1 = nullptr, .regular = 0};  // _Borrow fields not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Interleaved i3 = {.b1 = &mut x};  // b2 not initialized
 
-    // OK: all borrow initialized, owned can be omitted
+    // OK: all _Borrow initialized, owned can be omitted
     struct Interleaved i4 = {.b1 = &mut x, .b2 = &mut y};
 
     // OK: all initialized
@@ -165,24 +165,24 @@ void test_interleaved() {
 }
 
 struct ConstBorrowOwned {
-    const int *borrow cb;
-    int *borrow b;
+    const int *_Borrow cb;
+    int *_Borrow b;
     int *owned o;
 };
 
 void test_const_borrow_owned() {
     int x = 0, y = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct ConstBorrowOwned c1;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct ConstBorrowOwned c2 = {.cb = &const x};  // b not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct ConstBorrowOwned c3 = {.b = &mut y};  // cb not initialized
 
-    // OK: both borrow initialized
+    // OK: both _Borrow initialized
     struct ConstBorrowOwned c4 = {.cb = &const x, .b = &mut y};
 
     // OK: all initialized
@@ -191,29 +191,29 @@ void test_const_borrow_owned() {
 
 struct Node {
     int *owned data;
-    int *borrow parent;
+    int *_Borrow parent;
     struct {
-        int *borrow left;
-        int *borrow right;
+        int *_Borrow left;
+        int *_Borrow right;
     } children;
 };
 
 void test_tree_node() {
     int p = 0, l = 0, r = 0;
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct Node n1;  // borrow fields not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct Node n1;  // _Borrow fields not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
-    struct Node n2 = {.data = nullptr};  // borrow fields not initialized
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
+    struct Node n2 = {.data = nullptr};  // _Borrow fields not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Node n3 = {.parent = &mut p};  // children not initialized
 
-    // expected-error@+1 {{variable declarations of borrow qualified must be initialized}}
+    // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Node n4 = {.parent = &mut p, .children = {.left = &mut l}};  // right not initialized
 
-    // OK: all borrow initialized
+    // OK: all _Borrow initialized
     struct Node n5 = {.parent = &mut p, .children = {.left = &mut l, .right = &mut r}};
 
     // OK: with owned field too

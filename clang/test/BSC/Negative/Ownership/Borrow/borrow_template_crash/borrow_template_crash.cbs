@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -xbsc -fsyntax-only -verify %s
 
 struct Simple {
-    int *borrow p;
+    int *_Borrow p;
 };
 
 struct Pair<T, U> {
     T *owned first;
-    U *borrow second;
+    U *_Borrow second;
 };
 
 struct Container<T> {
@@ -18,9 +18,9 @@ struct Nested {
 };
 
 void test_crash() {
-    struct Simple s; // expected-error {{variable declarations of borrow qualified must be initialized}}
-    struct Pair<int, char> p; // expected-error {{variable declarations of borrow qualified must be initialized}}
-    struct Nested n; // expected-error {{variable declarations of borrow qualified must be initialized}}
-    struct Container<struct Simple> c; // expected-error {{variable declarations of borrow qualified must be initialized}}
-    struct Container<struct Pair<int, int>> cp; // expected-error {{variable declarations of borrow qualified must be initialized}}
+    struct Simple s; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+    struct Pair<int, char> p; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+    struct Nested n; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+    struct Container<struct Simple> c; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+    struct Container<struct Pair<int, int>> cp; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
 }

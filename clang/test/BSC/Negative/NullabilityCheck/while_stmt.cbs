@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
-_Safe int *borrow _Nullable get_random_ptr(int* borrow p);
+_Safe int *_Borrow _Nullable get_random_ptr(int* _Borrow p);
 _Safe void test1(void) {
     int a = 10;
-    int *borrow _Nullable p = nullptr;
+    int *_Borrow _Nullable p = nullptr;
     while (p == nullptr) {
         p = get_random_ptr(&mut a);
     }
@@ -12,7 +12,7 @@ _Safe void test1(void) {
 
 _Safe void test2(void) {
     int a = 10;
-    int *borrow _Nullable p = get_random_ptr(&mut a);
+    int *_Borrow _Nullable p = get_random_ptr(&mut a);
     while (p != nullptr) {
         *p = 10;
         p = get_random_ptr(&mut a);
@@ -22,7 +22,7 @@ _Safe void test2(void) {
 
 _Safe void test3(void) {
     int a = 10;
-    int *borrow _Nullable p = get_random_ptr(&mut a);
+    int *_Borrow _Nullable p = get_random_ptr(&mut a);
     if (p != nullptr) {
         do {
             *p = 10;
@@ -35,8 +35,8 @@ _Safe void test3(void) {
 _Safe void test4(void) {
     int a = 10;
     int b = 10;
-    int *borrow _Nullable p = nullptr;
-    int *borrow _Nullable q = nullptr;
+    int *_Borrow _Nullable p = nullptr;
+    int *_Borrow _Nullable q = nullptr;
     while (p == nullptr || q == nullptr) {
         p = get_random_ptr(&mut a);
         q = get_random_ptr(&mut b);
@@ -47,8 +47,8 @@ _Safe void test4(void) {
 
 _Safe void test5(void) {
     int a = 10;
-    int *borrow _Nullable p = nullptr;
-    int *borrow _Nullable q = nullptr;
+    int *_Borrow _Nullable p = nullptr;
+    int *_Borrow _Nullable q = nullptr;
     while (p != nullptr && q != nullptr) {
         *p = 10;
         *q = 10;
@@ -62,10 +62,10 @@ _Safe void test5(void) {
 struct S {
     int a;
 };
-_Safe struct S *borrow _Nullable get_random_ptr_S(int* borrow p);
+_Safe struct S *_Borrow _Nullable get_random_ptr_S(int* _Borrow p);
 _Safe void test6(void) {
     int a = 10;
-    struct S *borrow _Nullable p = nullptr;
+    struct S *_Borrow _Nullable p = nullptr;
     while (p == nullptr) {
         p = get_random_ptr_S(&mut a);
     }
@@ -74,7 +74,7 @@ _Safe void test6(void) {
 
 _Safe void test7(void) {
     int a = 10;
-    struct S *borrow _Nullable p = get_random_ptr_S(&mut a);
+    struct S *_Borrow _Nullable p = get_random_ptr_S(&mut a);
     while (p != nullptr) {
         p->a = 10;
         p = get_random_ptr_S(&mut a);

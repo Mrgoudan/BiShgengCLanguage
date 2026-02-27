@@ -2,7 +2,7 @@
 
 int test3() {
     int temp = 1;
-    int *borrow p = &mut temp;
+    int *_Borrow p = &mut temp;
     int x = 0;
   
     if (x == 0)

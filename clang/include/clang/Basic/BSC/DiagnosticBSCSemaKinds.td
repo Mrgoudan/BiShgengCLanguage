@@ -62,20 +62,20 @@ def err_typecheck_invalid_owned_arrsub : Error<
 def err_owned_temporary_memLeak : Error<
   "memory leak because temporary variable '%0' is owned or indirect owned type, please fix it">;
 def err_funcPtr_incompatible : Error<
-  "incompatible borrow function pointer types, cannot cast %0 to %1">;
-def err_borrow_on_borrow : Error<"%0 on a 'borrow' qualified type is not allowed">;
+  "incompatible _Borrow function pointer types, cannot cast %0 to %1">;
+def err_borrow_on_borrow : Error<"%0 on a '_Borrow' qualified type is not allowed">;
 def err_mut_expr_unmodifiable  : Error<"the expression after '&mut' must be modifiable">;
 def err_mut_expr_func : Error<"'&mut' for function pointer is not allowed">;
 def err_safe_mut : Error<"global or static variables are not allowed to be mutably borrowed within the safe zone">;
-def err_move_borrow : Error<"borrow type does not allow move ownership">;
-def err_typecheck_invalid_borrow_not_pointer : Error<"borrow type requires a pointer or reference (%0 is invalid)">;
+def err_move_borrow : Error<"_Borrow type does not allow move ownership">;
+def err_typecheck_invalid_borrow_not_pointer : Error<"_Borrow type requires a pointer or reference (%0 is invalid)">;
 def err_borrow_qualcheck_incompatible : Error<
   "incompatible borrow types, cannot cast %0 to %1">;
 def err_borrow_qualcheck_compare : Error<
   "incompatible borrow types, %0 and %1 cannot be compared">;
-def err_typecheck_borrow_func : Error<"no borrow qualified type found in the function parameters, the return type is not allowed to be borrow qualified">;
-def err_typecheck_borrow_subscript : Error<"subscript of borrow pointer is not allowed">;
-def err_owned_and_borrow_conflict : Error<"cannot combine 'owned' and 'borrow' qualifiers on the same type">;
+def err_typecheck_borrow_func : Error<"no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified">;
+def err_typecheck_borrow_subscript : Error<"subscript of _Borrow pointer is not allowed">;
+def err_owned_and_borrow_conflict : Error<"cannot combine 'owned' and '_Borrow' qualifiers on the same type">;
 def err_owned_qualifier_non_pointer : Error<
   "type of %1 cannot be qualified by '%0'">,
   InGroup<OwnedQualifierType>;

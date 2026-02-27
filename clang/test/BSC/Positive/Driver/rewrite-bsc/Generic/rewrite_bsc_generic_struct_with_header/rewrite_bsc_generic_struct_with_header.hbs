@@ -47,7 +47,7 @@ _Safe LinkedList<T> LinkedList<T>::new(void){
 }
 
 // Adds a new element at the end of the list.
-_Safe void LinkedList<T>::push_back(LinkedList<T> * borrow this, T el){
+_Safe void LinkedList<T>::push_back(LinkedList<T> * _Borrow this, T el){
     _Unsafe {
         _BSC_ListNode<T> *node = _BSC_ListNode<T>::new(el);
         node->prev = this->tail;

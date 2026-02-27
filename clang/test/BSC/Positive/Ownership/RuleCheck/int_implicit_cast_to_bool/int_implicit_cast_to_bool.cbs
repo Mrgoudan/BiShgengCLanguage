@@ -24,7 +24,7 @@ _Safe Vec<T> Vec<T>::new(void) {
 	}
 }
 
-_Safe int Vec<T>::is_empty(const Vec<T>* borrow this) {
+_Safe int Vec<T>::is_empty(const Vec<T>* _Borrow this) {
     return this->len == 0;
 }
 

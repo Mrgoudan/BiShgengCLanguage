@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 // expected-no-diagnostics
 
-// Test that nullptr can be used with parentheses for owned and borrow pointers
+// Test that nullptr can be used with parentheses for owned and _Borrow pointers
 
 // Owned pointer tests
 int *owned foo_owned() {
@@ -11,11 +11,11 @@ int *owned foo_owned() {
 int *owned bar_owned() {
   return nullptr;
 }
-int *borrow foo_borrow(int * borrow a) {
+int *_Borrow foo_borrow(int * _Borrow a) {
   return (nullptr);
 }
 
-int *borrow bar_borrow(int * borrow a) {
+int *_Borrow bar_borrow(int * _Borrow a) {
   return nullptr;
 }
 
@@ -27,9 +27,9 @@ void test_owned_nullptr() {
 
 // Borrow pointer tests
 void test_borrow_nullptr() {
-  int *borrow b1 = nullptr;
-  int *borrow b2 = (nullptr);
-  int *borrow b3 = ((nullptr));  // Double parentheses also work
+  int *_Borrow b1 = nullptr;
+  int *_Borrow b2 = (nullptr);
+  int *_Borrow b3 = ((nullptr));  // Double parentheses also work
 }
 
 // Test assignment
@@ -38,7 +38,7 @@ void test_assignment() {
   o = (nullptr);
   o = ((nullptr));
 
-  int *borrow b = nullptr;
+  int *_Borrow b = nullptr;
   b = (nullptr);
   b = ((nullptr));
 }

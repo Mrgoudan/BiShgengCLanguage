@@ -45,31 +45,31 @@ _Safe int test_4(void) {                     // expected-error {{conflicting typ
 }
 
 _Safe void test_5(int *owned p);             // expected-note {{previous declaration is here}}
-_Safe void test_5(int *borrow p) {           // expected-error {{conflicting types for 'test_5'}}
+_Safe void test_5(int *_Borrow p) {           // expected-error {{conflicting types for 'test_5'}}
 }
 
 _Safe int * owned test_6(int *owned p);      // expected-note {{previous declaration is here}}
-_Safe int * borrow test_6(int *borrow p) {   // expected-error {{conflicting types for 'test_6'}}
+_Safe int * _Borrow test_6(int *_Borrow p) {   // expected-error {{conflicting types for 'test_6'}}
     return p;
 }
 
-_Safe void test_7(int * borrow p);           // expected-note {{previous declaration is here}}
+_Safe void test_7(int * _Borrow p);           // expected-note {{previous declaration is here}}
 _Safe void test_7(int * p) {
 }                                           // expected-error@-1 {{conflicting types for 'test_7'}}
 
 int * a;
-_Safe int * borrow test_8(int * borrow p);   // expected-note {{previous declaration is here}}
-_Safe int * test_8(int * borrow p) {
+_Safe int * _Borrow test_8(int * _Borrow p);   // expected-note {{previous declaration is here}}
+_Safe int * test_8(int * _Borrow p) {
                                             // expected-error@-1{{conflicting types for 'test_8'}}
     return a;
 }
 
-_Safe void test_80(int *borrow p);           // expected-note {{previous declaration is here}}
-_Safe void test_80(const int *borrow p) {    // expected-error{{conflicting types for 'test_80'}}
+_Safe void test_80(int *_Borrow p);           // expected-note {{previous declaration is here}}
+_Safe void test_80(const int *_Borrow p) {    // expected-error{{conflicting types for 'test_80'}}
 }
 
-_Safe int *borrow test_81(int *borrow p);                // expected-note {{previous declaration is here}}
-_Safe const int *borrow test_81(const int *borrow p) {   // expected-error{{conflicting types for 'test_81'}}
+_Safe int *_Borrow test_81(int *_Borrow p);                // expected-note {{previous declaration is here}}
+_Safe const int *_Borrow test_81(const int *_Borrow p) {   // expected-error{{conflicting types for 'test_81'}}
 }
 
 void test_9(int * owned p);   // expected-note {{previous declaration is here}}
@@ -103,29 +103,29 @@ int owned test_12(void) {   // expected-error {{type of 'int' cannot be qualifie
 }
 
 void test_13(int *owned p);// expected-note {{previous declaration is here}}
-void test_13(int *borrow p) {  // expected-error{{conflicting types for 'test_13'}}
+void test_13(int *_Borrow p) {  // expected-error{{conflicting types for 'test_13'}}
 }
 
 int * owned test_14(int *owned p);  // expected-note {{previous declaration is here}}
-int * borrow test_14(int *borrow p) {   // expected-error{{conflicting types for 'test_14'}}
+int * _Borrow test_14(int *_Borrow p) {   // expected-error{{conflicting types for 'test_14'}}
 }
 
-void test_15(int * borrow p);  // expected-note {{previous declaration is here}}
+void test_15(int * _Borrow p);  // expected-note {{previous declaration is here}}
 void test_15(int * p) {   // expected-error{{conflicting types for 'test_15'}}
 }
 
-int * borrow test_16(int * borrow p);  // expected-note {{previous declaration is here}}
-int * test_16(int * borrow p) {    // expected-error{{conflicting types for 'test_16'}}
+int * _Borrow test_16(int * _Borrow p);  // expected-note {{previous declaration is here}}
+int * test_16(int * _Borrow p) {    // expected-error{{conflicting types for 'test_16'}}
     return 0;
 }
 
 // test_17-20: Now valid as mixed mode declarations
-_Safe int * borrow test_17(int * borrow p);
-int * test_17(int * borrow p) {  // ok: mixed mode compatible
+_Safe int * _Borrow test_17(int * _Borrow p);
+int * test_17(int * _Borrow p) {  // ok: mixed mode compatible
     return 0;
 }
 
-_Safe void test_18(int * borrow p);
+_Safe void test_18(int * _Borrow p);
 void test_18(int * p) {  // ok: mixed mode compatible
 }
 
@@ -138,11 +138,11 @@ int * test_20(int * p) {  // ok: mixed mode compatible
     return 0;
 }
 
-int * borrow test_21(const int * borrow p);  // expected-note {{previous declaration is here}}
-int * borrow test_21(int * borrow p) {    // expected-error{{conflicting types for 'test_21'}}
+int * _Borrow test_21(const int * _Borrow p);  // expected-note {{previous declaration is here}}
+int * _Borrow test_21(int * _Borrow p) {    // expected-error{{conflicting types for 'test_21'}}
     return p;
 }
 
-void test_22(const int * borrow p);  // expected-note {{previous declaration is here}}
+void test_22(const int * _Borrow p);  // expected-note {{previous declaration is here}}
 void test_22(const int * p) {    // expected-error{{conflicting types for 'test_22'}}
 }

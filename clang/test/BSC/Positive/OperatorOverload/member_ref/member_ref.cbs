@@ -70,13 +70,13 @@ int test2() {
     return 0;
 }
 
-// borrow point parameter
+// _Borrow point parameter
 struct CP {
-  struct A *borrow a;
+  struct A *_Borrow a;
 };
 
 __attribute__((operator ->))
-struct A *borrow memberDerefC(struct CP * borrow s) {
+struct A *_Borrow memberDerefC(struct CP * _Borrow s) {
     return s->a;
 }
 
@@ -94,13 +94,13 @@ int test3() {
     return 0;
 }
 
-// const borrow point parameter
+// const _Borrow point parameter
 struct DP {
-   struct A *borrow a;
+   struct A *_Borrow a;
 };
 
 __attribute__((operator ->))
- struct A *borrow memberDerefD(const struct DP * borrow s) {
+ struct A *_Borrow memberDerefD(const struct DP * _Borrow s) {
     return s->a;
 }
 
@@ -156,7 +156,7 @@ _Safe Rc<T> Rc<T>::new(T data) {
 }
 
 __attribute__((operator ->))
-RcData<T> * memberDerefH<T>(Rc<T> * borrow rc) {
+RcData<T> * memberDerefH<T>(Rc<T> * _Borrow rc) {
 	return rc->ptr;
 }
 

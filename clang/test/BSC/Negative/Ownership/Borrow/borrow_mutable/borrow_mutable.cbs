@@ -16,10 +16,10 @@ void test() {
   const int a = 1;
   struct R2_wrap r2;
   struct R2_wrap *pr2;
-  struct R2_wrap * borrow b1 = &mut r2; // legal
-  struct R2_wrap ** borrow b2 = &mut pr2; // legal
-  struct R2 * borrow b3 = &mut r2.r; // legal
-  const int * borrow b4 = &mut r2.r.a; // expected-error {{the expression after '&mut' must be modifiable}}
+  struct R2_wrap * _Borrow b1 = &mut r2; // legal
+  struct R2_wrap ** _Borrow b2 = &mut pr2; // legal
+  struct R2 * _Borrow b3 = &mut r2.r; // legal
+  const int * _Borrow b4 = &mut r2.r.a; // expected-error {{the expression after '&mut' must be modifiable}}
   b3 = &mut pr2->r; // legal
   b4 = &mut pr2->r.a; // expected-error {{the expression after '&mut' must be modifiable}}
   b4 = &mut a; // expected-error {{the expression after '&mut' must be modifiable}}
@@ -28,7 +28,7 @@ void test() {
   int arr1[] = {1, 2, 3};
   const int arr2[] = {1, 2, 3};
   &mut arr1; // expected-warning {{expression result unused}}
-  int * borrow b5 = &mut arr1[1]; // legal
+  int * _Borrow b5 = &mut arr1[1]; // legal
   &mut arr2; // expected-error {{the expression after '&mut' must be modifiable}}
              // expected-warning@-1 {{expression result unused}}
   b4 = &mut arr2[1]; // expected-error {{the expression after '&mut' must be modifiable}}

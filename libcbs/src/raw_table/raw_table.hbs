@@ -38,7 +38,7 @@ typedef struct ProbeSeq {
     size_t count;
 } ProbeSeq;
 
-void ProbeSeq::move_next(ProbeSeq* borrow this, size_t bucket_mask);
+void ProbeSeq::move_next(ProbeSeq* _Borrow this, size_t bucket_mask);
 
 // A raw hash table which holds data for `HashMap`.
 owned struct RawTable<K, V> {
@@ -106,7 +106,7 @@ _Safe _Bool match_empty(uint8_t group);
 /* -------------- Member function implementations of RawTable -------------- */
 
 // Returns the number of buckets in the table.
-_Safe size_t RawTable<K, V>::buckets(const RawTable<K, V>* borrow this) {
+_Safe size_t RawTable<K, V>::buckets(const RawTable<K, V>* _Borrow this) {
     return this->bucket_mask + 1;
 }
 
@@ -114,14 +114,14 @@ _Safe size_t RawTable<K, V>::buckets(const RawTable<K, V>* borrow this) {
 //
 // This number is a lower bound; the table might be able to hold
 // more, but is guaranteed to be able to hold at least this many.
-_Safe size_t RawTable<K, V>::capacity(const RawTable<K, V>* borrow this) {
+_Safe size_t RawTable<K, V>::capacity(const RawTable<K, V>* _Borrow this) {
     return this->items + this->growth_left;
 }
 
 // Removes all elements from the table without freeing the backing memory.
 //
 // This function marks all table buckets as empty and frees every existing elements.
-_Safe void RawTable<K, V>::clear(RawTable<K, V>* borrow this) {
+_Safe void RawTable<K, V>::clear(RawTable<K, V>* _Borrow this) {
     if (this->bucket_mask == 0) return;
 
     _Unsafe {
@@ -148,7 +148,7 @@ _Safe void RawTable<K, V>::clear(RawTable<K, V>* borrow this) {
 //
 // This function does not make any changes to the `data` part of the table, or any
 // changes to the `items` or `growth_left` field of the table.
-_Safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
+_Safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* _Borrow this, uint64_t hash, const K* _Borrow k) {
     if (this->items == 0) {
         return Option<size_t>::None();
     }
@@ -168,7 +168,7 @@ _Safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* borrow this, uin
 
                 // check the equivalence of `k`
                 K* key_index = this->keys + index;
-                const K* borrow key = &const *key_index;
+                const K* _Borrow key = &const *key_index;
                 // NOTE: maybe we can use `==` after supporting BiShengC operator overloading
                 if (key->equals(k)) {
                     return Option<size_t>::Some(index);
@@ -191,7 +191,7 @@ _Safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* borrow this, uin
 // Searches for an element in the table. If the element is not found,
 // returns `Err` with the position of a slot where an element with the
 // same hash could be inserted.
-_Safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
+_Safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K, V>* _Borrow this, uint64_t hash, const K* _Borrow k) {
     // We know for sure that there is at least one empty or deleted `bucket` in the table.
     uint8_t h2_hash = h2(hash);
 
@@ -210,7 +210,7 @@ _Safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K
 
                 // check the equivalence of `k`
                 K* key_index = this->keys + index;
-                const K* borrow key = &const *key_index;
+                const K* _Borrow key = &const *key_index;
                 // NOTE: maybe we can use `==` after supporting BiShengC operator overloading
                 if (key->equals(k)) {
                     return Result<size_t, size_t>::Ok(index);
@@ -243,7 +243,7 @@ _Safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K
 }
 
 // Insert a new element into the table in the given slot.
-_Safe void RawTable<K, V>::insert_in_slot(RawTable<K, V>* borrow this, size_t slot, uint64_t hash, K k, V v) {
+_Safe void RawTable<K, V>::insert_in_slot(RawTable<K, V>* _Borrow this, size_t slot, uint64_t hash, K k, V v) {
     uint8_t h2_hash = h2(hash);
     _Unsafe {
         *(this->ctrl + slot) = h2_hash;
@@ -256,14 +256,14 @@ _Safe void RawTable<K, V>::insert_in_slot(RawTable<K, V>* borrow this, size_t sl
 }
 
 // Returns `true` if the table contains no elements.
-_Safe _Bool RawTable<K, V>::is_empty(const RawTable<K, V>* borrow this) {
+_Safe _Bool RawTable<K, V>::is_empty(const RawTable<K, V>* _Borrow this) {
     _Unsafe {
         return this->items == 0;
     }
 }
 
 // Returns the number of elements in the table.
-_Safe size_t RawTable<K, V>::length(const RawTable<K, V>* borrow this) {
+_Safe size_t RawTable<K, V>::length(const RawTable<K, V>* _Borrow this) {
     return this->items;
 }
 
@@ -293,7 +293,7 @@ _Safe RawTable<K, V> RawTable<K, V>::new(void) {
 // This iterator never terminates, but is guaranteed to visit each bucket
 // group exactly once. The loop using `probe_seq` must terminate upon
 // reaching a group containing an empty bucket.
-ProbeSeq RawTable<K, V>::probe_seq(const RawTable<K, V>* borrow this, uint64_t hash) {
+ProbeSeq RawTable<K, V>::probe_seq(const RawTable<K, V>* _Borrow this, uint64_t hash) {
     ProbeSeq ps = {
         .pos = h1(hash) & this->bucket_mask,
         .stride = 1,
@@ -303,7 +303,7 @@ ProbeSeq RawTable<K, V>::probe_seq(const RawTable<K, V>* borrow this, uint64_t h
 }
 
 // Finds and removes an element from the table, returning the value.
-_Safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* borrow this, uint64_t hash, const K* borrow k) {
+_Safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* _Borrow this, uint64_t hash, const K* _Borrow k) {
     Option<size_t> result = this->find(hash, k);
     if (result.is_some()) {
         _Unsafe {

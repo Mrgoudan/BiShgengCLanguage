@@ -21,12 +21,12 @@ void test1(void) {
 
 // Test 2: Borrow argument selection
 _Unsafe void consume(int* p);
-_Safe void consume(int* borrow p);
+_Safe void consume(int* _Borrow p);
 
 void test2(void) {
     int local = 5;
     int* raw_p = &local;
-    int* borrow borrow_p = &mut local;
+    int* _Borrow borrow_p = &mut local;
 
     consume(raw_p);      // Calls _Unsafe version
     consume(borrow_p);   // Calls _Safe version
@@ -89,14 +89,14 @@ void test8_unsafe(void) {
     }
 }
 
-// Test 9: Mixed owned and borrow
+// Test 9: Mixed owned and _Borrow
 _Unsafe void mixed_func(int* p1, int* p2);
-_Safe void mixed_func(int* owned p1, int* borrow p2);
+_Safe void mixed_func(int* owned p1, int* _Borrow p2);
 
 void test9(void) {
     int local = 5;
     int* owned owned_p = safe_malloc<int>(9);
-    int* borrow borrow_p = &mut local;
+    int* _Borrow borrow_p = &mut local;
     int* raw1 = (int*)0;
     int* raw2 = (int*)0;
 

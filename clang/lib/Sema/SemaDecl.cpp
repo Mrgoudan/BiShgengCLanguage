@@ -5503,7 +5503,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
     #if ENABLE_BSC
     if (DS.getTypeQualifiers() & DeclSpec::TQ_borrow)
-      Diag(DS.getBorrowSpecLoc(), DiagID) << "borrow";
+      Diag(DS.getBorrowSpecLoc(), DiagID) << "_Borrow";
     #endif
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
@@ -15092,7 +15092,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
         
     if (T.getTypePtr()->hasBorrowFields()) {
       Diag(D.getBeginLoc(), diag::err_owned_inderictOwned_type_check)
-            << 2 /* BorrowFields */ << "borrow" << "this_pointer" << T;                   
+            << 2 /* BorrowFields */ << "_Borrow" << "this_pointer" << T;                   
     }   
   }
   

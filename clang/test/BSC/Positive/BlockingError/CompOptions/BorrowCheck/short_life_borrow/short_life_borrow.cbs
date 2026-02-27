@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-void use_mut(int *borrow p);
-void test1(int *borrow p) {
+void use_mut(int *_Borrow p);
+void test1(int *_Borrow p) {
   {
     int local1 = 42;
     p = &mut local1; // `local1` does not live long enough

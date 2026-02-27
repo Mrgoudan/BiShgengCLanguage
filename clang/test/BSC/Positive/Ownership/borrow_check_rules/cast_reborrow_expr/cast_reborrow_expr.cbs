@@ -12,7 +12,7 @@ void safe_free(void *owned ptr) {
 }
 
 void test1(int *owned p) {
-  int *borrow p1 = (int *borrow)(int *)((&mut *p));
+  int *_Borrow p1 = (int *_Borrow)(int *)((&mut *p));
   *p1 = 2;
   safe_free((void *owned)p);
 }
@@ -20,13 +20,13 @@ void test1(int *owned p) {
 // Use after free, but as expected.
 // Borrow checker should not track that p1 borrows *p
 void test2(int *owned p) {
-  int *borrow p1 = (int *borrow)(int *)(&mut *p);
+  int *_Borrow p1 = (int *_Borrow)(int *)(&mut *p);
   safe_free((void *owned)p);
   *p1 = 2;
 }
 
 void test3(double *owned p) {
-  int *borrow p1 = ((int *borrow)((int *)(double *)(&mut *p)));
+  int *_Borrow p1 = ((int *_Borrow)((int *)(double *)(&mut *p)));
   *p1 = 2;
   safe_free((void *owned)p);
 }

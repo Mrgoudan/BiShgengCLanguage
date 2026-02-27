@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-_Safe int *borrow foo1(int *borrow _Nullable a) {
+_Safe int *_Borrow foo1(int *_Borrow _Nullable a) {
     return a;             // cannot return nullable pointer type
 }
 

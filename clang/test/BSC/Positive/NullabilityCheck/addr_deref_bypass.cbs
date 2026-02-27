@@ -1,27 +1,27 @@
 // RUN: %clang -cc1 %s
 // expected-no-diagnostics
 
-_Safe void explicit_reborrow(int *borrow _Nullable ptr) {
-    const int *borrow _Nullable cbp = &const *ptr;
-    int *borrow _Nullable mbp = &mut *ptr;
+_Safe void explicit_reborrow(int *_Borrow _Nullable ptr) {
+    const int *_Borrow _Nullable cbp = &const *ptr;
+    int *_Borrow _Nullable mbp = &mut *ptr;
 }
 
 _Safe void explicit_reborrow2(void) {
-    int *borrow _Nullable ptr = nullptr;
-    const int *borrow _Nullable cbp = &const *ptr;
-    int *borrow _Nullable mbp = &mut *ptr;
+    int *_Borrow _Nullable ptr = nullptr;
+    const int *_Borrow _Nullable cbp = &const *ptr;
+    int *_Borrow _Nullable mbp = &mut *ptr;
 }
 
 _Safe int *owned _Nullable explicit_reborrow3(int *owned _Nullable ptr) {
-    const int *borrow _Nullable cbp = &const *ptr;
-    int *borrow _Nullable mbp = &mut *ptr;
+    const int *_Borrow _Nullable cbp = &const *ptr;
+    int *_Borrow _Nullable mbp = &mut *ptr;
     return ptr;
 }
 
 _Safe int *owned _Nullable explicit_reborrow4(void) {
     int *owned _Nullable ptr = nullptr;
-    const int *borrow _Nullable cbp = &const *ptr;
-    int *borrow _Nullable mbp = &mut *ptr;
+    const int *_Borrow _Nullable cbp = &const *ptr;
+    int *_Borrow _Nullable mbp = &mut *ptr;
     return ptr;
 }
 

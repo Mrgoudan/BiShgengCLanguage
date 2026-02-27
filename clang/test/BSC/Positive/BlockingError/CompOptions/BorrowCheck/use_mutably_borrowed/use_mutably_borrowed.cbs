@@ -4,8 +4,8 @@
 
 void test1() {
   int local = 42;
-  int *borrow p = &mut local;
-  int *borrow q = p;
+  int *_Borrow p = &mut local;
+  int *_Borrow q = p;
   p = q;
   int temp = *q;  // cannot use `*q` because it was mutably borrowed
 }

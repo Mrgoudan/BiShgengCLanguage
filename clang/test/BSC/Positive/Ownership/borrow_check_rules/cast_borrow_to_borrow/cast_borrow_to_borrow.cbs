@@ -5,13 +5,13 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-int *borrow return_and_take_nonnull(int *borrow a) {
+int *_Borrow return_and_take_nonnull(int *_Borrow a) {
   return a;
 }
 
 int main(void) {
   int a = 10; 
-  int *borrow p = &mut a;
-  return_and_take_nonnull((int *borrow)p);
+  int *_Borrow p = &mut a;
+  return_and_take_nonnull((int *_Borrow)p);
   return 0;
 }

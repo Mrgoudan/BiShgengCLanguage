@@ -16,15 +16,15 @@ _Safe void test_owned_nullable(void) {
 }
 
 _Safe void test_borrow_nullable(void) {
-  int * borrow _Nullable bp = ((((nullptr))));
-  void * borrow _Nullable vbp = (((nullptr)));
+  int * _Borrow _Nullable bp = ((((nullptr))));
+  void * _Borrow _Nullable vbp = (((nullptr)));
   (void)bp;
   (void)vbp;
 }
 
 _Safe void test_const_borrow_nullable(void) {
-  const int * borrow _Nullable cbp = (((nullptr)));
-  const void * borrow _Nullable cvbp = (nullptr);
+  const int * _Borrow _Nullable cbp = (((nullptr)));
+  const void * _Borrow _Nullable cvbp = (nullptr);
   (void)cbp;
   (void)cvbp;
 }

@@ -3,21 +3,21 @@
 
 const size_t bsc_string_no_pos = SIZE_MAX;
 
-_Safe char* borrow String::as_mut_str(String* borrow this) {
+_Safe char* _Borrow String::as_mut_str(String* _Borrow this) {
     _Unsafe {
         if (this->vec.buf.ptr != nullptr)
             return &mut *this->vec.buf.ptr;
     }
 }
 
-_Safe const char* borrow String::as_str(const String* borrow this) {
+_Safe const char* _Borrow String::as_str(const String* _Borrow this) {
     _Unsafe {
         if (this->vec.buf.ptr != nullptr)
             return &const *this->vec.buf.ptr;
     }
 }
 
-_Safe char String::at(const String* borrow this, size_t index) {
+_Safe char String::at(const String* _Borrow this, size_t index) {
     _Unsafe {
         if (this->length() <= index) {
             bsc_out_of_bound_handler(this->length(), index);
@@ -27,11 +27,11 @@ _Safe char String::at(const String* borrow this, size_t index) {
     }
 }
 
-_Safe size_t String::capacity(const String* borrow this) {
+_Safe size_t String::capacity(const String* _Borrow this) {
     return this->vec.capacity();
 }
 
-_Safe _Bool String::equals(const String* borrow this, const String* borrow other) {
+_Safe _Bool String::equals(const String* _Borrow this, const String* _Borrow other) {
     if (this->length() != other->length()) {
         return 0;
     }
@@ -43,7 +43,7 @@ _Safe _Bool String::equals(const String* borrow this, const String* borrow other
     return 1;
 }
 
-_Safe size_t String::find(const String* borrow this, char c) {
+_Safe size_t String::find(const String* _Borrow this, char c) {
     _Unsafe {
         for (size_t index = 0; index < this->length(); index++) {
             if (this->at(index) == c) {
@@ -63,19 +63,19 @@ _Unsafe String String::from(const char* str) {
     return string;
 }
 
-_Safe const char* borrow String::get(const String* borrow this, size_t index) {
+_Safe const char* _Borrow String::get(const String* _Borrow this, size_t index) {
     return this->vec.get(index);
 }
 
-_Safe char* borrow String::get_mut(String* borrow this, size_t index) {
+_Safe char* _Borrow String::get_mut(String* _Borrow this, size_t index) {
     return this->vec.get_mut(index);
 }
 
-_Safe _Bool String::is_empty(const String* borrow this) {
+_Safe _Bool String::is_empty(const String* _Borrow this) {
     return this->vec.is_empty();
 }
 
-_Safe size_t String::length(const String* borrow this) {
+_Safe size_t String::length(const String* _Borrow this) {
     return this->vec.length();
 }
 
@@ -85,20 +85,20 @@ _Safe String String::new(void) {
 	return string;
 }
 
-_Safe void String::push(String* borrow this, char value) {
+_Safe void String::push(String* _Borrow this, char value) {
     this->vec.push(value);
 }
 
-_Safe void String::set(String* borrow this, size_t index, char value) {
+_Safe void String::set(String* _Borrow this, size_t index, char value) {
     this->vec.set(index, value);
     return;
 }
 
-_Safe void String::shrink_to_fit(String* borrow this) {
+_Safe void String::shrink_to_fit(String* _Borrow this) {
     this->vec.shrink_to_fit();
 }
 
-_Safe String String::slice(const String* borrow this, size_t start, size_t length) {
+_Safe String String::slice(const String* _Borrow this, size_t start, size_t length) {
     _Unsafe {
         if (start >= this->length()) {
             bsc_out_of_bound_handler(this->length(), start);

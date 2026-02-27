@@ -17,7 +17,7 @@ public:
 	}
 };
 
-_Safe void RawVec<T>::grow_one(RawVec<T>* borrow this) {
+_Safe void RawVec<T>::grow_one(RawVec<T>* _Borrow this) {
     size_t required_cap = this->cap + 1;
     size_t cap = (this->cap * 2 > required_cap) ? (this->cap * 2) : required_cap;
     _Unsafe {
@@ -36,7 +36,7 @@ _Safe RawVec<T> RawVec<T>::new(void) {
     }
 }
 
-_Safe void RawVec<T>::shrink_to_fit(RawVec<T>* borrow this, size_t cap) {
+_Safe void RawVec<T>::shrink_to_fit(RawVec<T>* _Borrow this, size_t cap) {
     _Unsafe {
         assert(cap <= this->cap);
 

@@ -8,7 +8,7 @@
 // Test that multiple sequential reads of scalar fields through mutable borrows
 // are allowed, since each read only borrows momentarily to copy the value.
 // This tests the fix for incorrect ActionAssign classification of scalar
-// assignments accessed through borrow derefs.
+// assignments accessed through _Borrow derefs.
 
 typedef struct System {
   unsigned short usYear;
@@ -32,27 +32,27 @@ typedef struct Date {
     *(pulMillSecs) = (pstGmtTime)->uiMillSec; \
   } while (0)
 
-// This function should compile without "cannot borrow as mutable more than once" errors
-void GmTmGet(DATE_T *borrow pDate, unsigned int *borrow puiMillSecs) {
+// This function should compile without "cannot _Borrow as mutable more than once" errors
+void GmTmGet(DATE_T *_Borrow pDate, unsigned int *_Borrow puiMillSecs) {
   SYSTEM_S stGmtTime = {2024, 1, 15, 1000};
   GET(&mut stGmtTime, pDate, puiMillSecs);
 }
 
 // Direct version without macro - should also work
-void DirectRead(DATE_T *borrow pDate, unsigned int *borrow puiMillSecs) {
+void DirectRead(DATE_T *_Borrow pDate, unsigned int *_Borrow puiMillSecs) {
   SYSTEM_S stGmtTime = {2024, 1, 15, 1000};
 
-  // Each borrow is independent and ends immediately after reading the scalar value
-  SYSTEM_S *borrow tmp0 = &mut stGmtTime;
+  // Each _Borrow is independent and ends immediately after reading the scalar value
+  SYSTEM_S *_Borrow tmp0 = &mut stGmtTime;
   pDate->uwYear = tmp0->usYear;
 
-  SYSTEM_S *borrow tmp1 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp1 = &mut stGmtTime;
   pDate->uwMonth = tmp1->ucMonth;
 
-  SYSTEM_S *borrow tmp2 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp2 = &mut stGmtTime;
   pDate->ucDate = tmp2->ucDate;
 
-  SYSTEM_S *borrow tmp3 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp3 = &mut stGmtTime;
   *puiMillSecs = tmp3->uiMillSec;
 }
 

@@ -6,7 +6,7 @@
 
 int test1() {
   int tmp = 0;
-  int *borrow p = &mut tmp;
+  int *_Borrow p = &mut tmp;
 	int a = 1;
 	int *b = &a;
   if (b == NULL) {
@@ -21,7 +21,7 @@ FAIL:
 int g_a = 1;
 int test2() {
   int tmp = 0;
-  int *borrow p = &mut tmp;
+  int *_Borrow p = &mut tmp;
   if (g_a) {
     goto next;
   }

@@ -9,7 +9,7 @@ int b = 1;
 owned struct A {
     public:
         int a;
-        int f(A* borrow this) { return b; }
+        int f(A* _Borrow this) { return b; }
 };
 
 int main() {

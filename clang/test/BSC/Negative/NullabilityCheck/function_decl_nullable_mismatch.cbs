@@ -11,9 +11,9 @@ _Safe int *owned _Nullable foo1(void) {  // expected-error {{conflicting types f
 }
 
 // Test 2: Declaration with _Nullable, definition without _Nullable
-_Safe int *borrow _Nullable foo2(int *borrow p);  // expected-note {{previous declaration is here}}
+_Safe int *_Borrow _Nullable foo2(int *_Borrow p);  // expected-note {{previous declaration is here}}
 
-_Safe int *borrow foo2(int *borrow p) {  // expected-error {{conflicting types for 'foo2'}}
+_Safe int *_Borrow foo2(int *_Borrow p) {  // expected-error {{conflicting types for 'foo2'}}
   return p;
 }
 

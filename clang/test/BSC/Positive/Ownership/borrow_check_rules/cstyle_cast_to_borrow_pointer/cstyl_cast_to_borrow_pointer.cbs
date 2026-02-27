@@ -11,12 +11,12 @@ typedef struct {
 
 static S *g = 0;
 
-void memory_set(void *borrow p) {
+void memory_set(void *_Borrow p) {
 }
 
 void foo() {
-  memory_set((void *borrow)(void *)g);
-  memory_set((void *borrow)(void *)&*g);
+  memory_set((void *_Borrow)(void *)g);
+  memory_set((void *_Borrow)(void *)&*g);
 }
 
 int main(void) {

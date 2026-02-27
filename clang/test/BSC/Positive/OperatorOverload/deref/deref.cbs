@@ -35,7 +35,7 @@ int test1() {
     return 0;
 }
 
-// borrow point parameter
+// _Borrow point parameter
 struct G {
     int a;
 };
@@ -46,7 +46,7 @@ struct H {
 };
 
 __attribute__((operator *))
-_Safe int * borrow deref2(struct H * borrow h) {
+_Safe int * _Borrow deref2(struct H * _Borrow h) {
     return &mut(h->g.a);
 }
 
@@ -67,7 +67,7 @@ int test2() {
     return 0;
 }
 
-// const borrow point parameter
+// const _Borrow point parameter
 struct I {
     int a;
 };
@@ -78,7 +78,7 @@ struct J {
 };
 
 __attribute__((operator *))
-_Safe const int * borrow deref4(const struct J * borrow j) {
+_Safe const int * _Borrow deref4(const struct J * _Borrow j) {
     return &const(j->i.a);
 }
 
@@ -112,7 +112,7 @@ _Safe Rc<T> Rc<T>::new(T data) {
 }
 
 __attribute__((operator *))
-T* borrow deref<T>(Rc<T> * borrow rc) {
+T* _Borrow deref<T>(Rc<T> * _Borrow rc) {
 	return &mut(rc->ptr->data);
 }
 

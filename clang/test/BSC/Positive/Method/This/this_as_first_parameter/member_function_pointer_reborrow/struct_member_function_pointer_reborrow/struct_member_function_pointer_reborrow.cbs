@@ -37,7 +37,7 @@ int struct Foo::getB_2(const This* this) {
   return this->a;
 }
 
-_Safe int struct Foo::getC(This* borrow this) {
+_Safe int struct Foo::getC(This* _Borrow this) {
   this->a = 2;
   _Unsafe {
     printf("this->a in getC: %d\n", this->a);
@@ -45,7 +45,7 @@ _Safe int struct Foo::getC(This* borrow this) {
   return this->a;
 }
 
-_Safe int struct Foo::getC_2(const This* borrow this) {
+_Safe int struct Foo::getC_2(const This* _Borrow this) {
   _Unsafe {
     printf("this->a in getC_2: %d\n", this->a);
   }
@@ -91,7 +91,7 @@ void test_const_raw_pointer_call_reborrow() {
 void test_borrow_pointer_call_reborrow() {
   printf("test_borrow_pointer_call_reborrow:\n");
   struct Foo foo = {.a = 1};
-  struct Foo* borrow c_foo_mut = &mut foo;
+  struct Foo* _Borrow c_foo_mut = &mut foo;
   int b_2 = c_foo_mut->getB();
   int c_2 = c_foo_mut->getC();
   printf("this->a in test: %d\n", foo.a);

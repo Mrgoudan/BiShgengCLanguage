@@ -17,65 +17,65 @@ void free_owned<T>(T* owned p) {
 }
 
 int g = 5;
-const int *borrow test1(const int *borrow p) {
+const int *_Borrow test1(const int *_Borrow p) {
   return &const g;
 }
 
-int *borrow test2(int *borrow p) {
+int *_Borrow test2(int *_Borrow p) {
   return p;
 }
 
-const int *borrow test3(const int *borrow p) {
+const int *_Borrow test3(const int *_Borrow p) {
   p = &const g;
   return p;
 }
 
-int *borrow test4(int *borrow p) {
+int *_Borrow test4(int *_Borrow p) {
   int local = 5;
   int *oriPtr = &local;
   return &mut * oriPtr;
 }
 
-int *borrow test5(int *borrow p) {
+int *_Borrow test5(int *_Borrow p) {
   int local = 5;
   int *oriPtr = &local;
   p = &mut * oriPtr;
   return p;
 }
 
-int *borrow test6(int *borrow p, int* a) {
+int *_Borrow test6(int *_Borrow p, int* a) {
   return &mut * a;
 }
 
-int *borrow test7(int *borrow p, int* a) {
+int *_Borrow test7(int *_Borrow p, int* a) {
   p = &mut * a;
   return p;
 }
 
-int *borrow test8(int *borrow p) {
-  int* borrow p1 = &mut * p;
+int *_Borrow test8(int *_Borrow p) {
+  int* _Borrow p1 = &mut * p;
   return p1;
 }
 
-int *borrow test9(int *borrow p) {
+int *_Borrow test9(int *_Borrow p) {
   return &mut * p;
 }
 
-int* borrow test10(int *borrow p, int* a) {
+int* _Borrow test10(int *_Borrow p, int* a) {
   if (a) {
     return &mut * a;
   }
   return p;
 }
 
-int* borrow test11(int *borrow p, int a) {
+int* _Borrow test11(int *_Borrow p, int a) {
   if (1) {
     return p;
   }
   // return &mut a;  // Dead Code, this ReturnStmt is unreachable.
 }
 
-int* borrow test12(int* borrow p) {
+int* _Borrow test12(int* _Borrow p) {
   int *owned oriPtr = safe_malloc<int>(0);
   if (1) {
     free_owned<int>(oriPtr);
@@ -84,18 +84,18 @@ int* borrow test12(int* borrow p) {
 //   return &mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
 }
 
-struct S { int * borrow p; };
+struct S { int * _Borrow p; };
 struct S test13(struct S s) {
   return s;
 }
 
-struct S test14(struct S s, int* borrow p) {
+struct S test14(struct S s, int* _Borrow p) {
   s.p = p;
   return s; 
 }
 
 typedef struct {
-    int* borrow data;
+    int* _Borrow data;
 } Holder;
 
 int test15() {
@@ -104,7 +104,7 @@ int test15() {
     return *res.data;
 }
 
-Holder test16(int* borrow dummy) {
+Holder test16(int* _Borrow dummy) {
     return (Holder){ .data = &mut *dummy };
 }
 

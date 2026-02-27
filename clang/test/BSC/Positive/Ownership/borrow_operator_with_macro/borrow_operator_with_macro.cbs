@@ -7,7 +7,7 @@
 #ifdef __bishengc
 #define CONST const
 #define MUT mut
-#define BORROW borrow
+#define BORROW _Borrow
 #else
 #define CONST
 #define MUT

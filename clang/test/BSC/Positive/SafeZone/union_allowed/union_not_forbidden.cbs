@@ -53,12 +53,12 @@ void unionDecl(){
         // ok: union variable declaration in safe zone
         union UIn u1 = {};
         union UIn u1_other = {};
-        union UIn *borrow p2 = &mut u1;
+        union UIn *_Borrow p2 = &mut u1;
 
         // ok: struct containing union declaration in safe zone
         struct SOut s1 = {};
         struct SOut s1_other = {};
-        struct SOut *borrow p4 = &mut s1;
+        struct SOut *_Borrow p4 = &mut s1;
     }
 }
 
@@ -70,7 +70,7 @@ void unionTypedef(){
         // ok: typedef union declaration in safe zone
         UTypedef u = {};
         UTypedef u_other = {};
-        UTypedef *borrow p2 = &mut u;
+        UTypedef *_Borrow p2 = &mut u;
     }
 }
 

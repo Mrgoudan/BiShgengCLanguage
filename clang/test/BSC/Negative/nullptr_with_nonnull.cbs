@@ -23,14 +23,14 @@ void * _Nonnull return_void_nonnull_nullptr(void) {
   return (void *)nullptr; // expected-warning {{null returned from function that requires a non-null return value}}
 }
 
-// _Nonnull with borrow parameter
-void take_nonnull_borrow(int * _Nonnull borrow p) {
+// _Nonnull with _Borrow parameter
+void take_nonnull_borrow(int * _Nonnull _Borrow p) {
   (void)p;
 }
 
 void test_nonnull_borrow_args(void) {
   take_nonnull_borrow(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  take_nonnull_borrow((int * borrow)nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  take_nonnull_borrow((int * _Borrow)nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
 }
 
 // _Nonnull in safe zone - produces ERROR not warning

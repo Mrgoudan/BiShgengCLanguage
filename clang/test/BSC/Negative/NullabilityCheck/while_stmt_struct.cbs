@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
 struct S {
-    int *borrow _Nullable p;
+    int *_Borrow _Nullable p;
 };
-_Safe int *borrow _Nullable get_random_ptr(int *borrow p);
+_Safe int *_Borrow _Nullable get_random_ptr(int *_Borrow p);
 _Safe void test1(void) {
     int a = 10;
     struct S s = { .p = nullptr };

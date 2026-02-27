@@ -7,16 +7,16 @@ typedef _Unsafe  int (*FuncPtr1)(int* p);
 typedef _Safe  int (*FuncPtr1)(int* owned p);
 
 // Test 2: Heterogeneous typedef redeclaration (_Safe -> _Unsafe)
-typedef _Safe  void (*FuncPtr2)(int* borrow p);
+typedef _Safe  void (*FuncPtr2)(int* _Borrow p);
 typedef _Unsafe  void (*FuncPtr2)(int* p);
 
 // Test 3: Return type compatibility (_Unsafe T* <-> _Safe T* owned)
 typedef _Unsafe  int* (*FuncPtr3)(void);
 typedef _Safe  int* owned (*FuncPtr3)(void);
 
-// Test 4: Return type compatibility (_Unsafe T* <-> _Safe T* borrow)
+// Test 4: Return type compatibility (_Unsafe T* <-> _Safe T* _Borrow)
 typedef _Unsafe  char* (*FuncPtr4)(char* p);
-typedef _Safe  char* borrow (*FuncPtr4)(char* borrow p);
+typedef _Safe  char* _Borrow (*FuncPtr4)(char* _Borrow p);
 
 // Test 5: Multiple parameters with heterogeneous redeclaration
 typedef _Unsafe  void (*FuncPtr5)(int* p, float* q);
@@ -30,9 +30,9 @@ typedef _Safe  int** owned (*FuncPtr8)(int** owned p);
 typedef _Unsafe  void* (*FuncPtr6)(void* p);
 typedef _Safe  void* owned (*FuncPtr6)(void* owned p);
 
-// Test 7: const char* borrow parameter
+// Test 7: const char* _Borrow parameter
 typedef _Unsafe  void (*FuncPtr7)(const char* msg);
-typedef _Safe  void (*FuncPtr7)(const char* borrow msg);
+typedef _Safe  void (*FuncPtr7)(const char* _Borrow msg);
 
 // Test 9: Homogeneous redeclaration (both _Safe) - should work
 typedef _Safe  void (*FuncPtr9)(int* owned p);

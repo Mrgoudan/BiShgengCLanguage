@@ -1,21 +1,21 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 
-_Safe int *borrow return_and_take_nonnull(int *borrow a) {
+_Safe int *_Borrow return_and_take_nonnull(int *_Borrow a) {
     _Unsafe {
-        int *borrow _Nullable p = nullptr;
-        return (int *borrow)p;  // expected-error {{cannot cast nullable pointer to nonnull type}}
+        int *_Borrow _Nullable p = nullptr;
+        return (int *_Borrow)p;  // expected-error {{cannot cast nullable pointer to nonnull type}}
     }
 }
 
 _Safe void test1(void) {
     _Unsafe {
         int a = 10;
-        int *borrow _Nullable p = &mut a;
-        return_and_take_nonnull((int *borrow)p);
-        int *borrow k1 = (int *borrow)p;
+        int *_Borrow _Nullable p = &mut a;
+        return_and_take_nonnull((int *_Borrow)p);
+        int *_Borrow k1 = (int *_Borrow)p;
         p = nullptr;
-        return_and_take_nonnull((int *borrow)p); // expected-error {{cannot cast nullable pointer to nonnull type}}
-        int *borrow k2 = (int *borrow)p;  // expected-error {{cannot cast nullable pointer to nonnull type}}
+        return_and_take_nonnull((int *_Borrow)p); // expected-error {{cannot cast nullable pointer to nonnull type}}
+        int *_Borrow k2 = (int *_Borrow)p;  // expected-error {{cannot cast nullable pointer to nonnull type}}
     }
 }
 

@@ -6,10 +6,10 @@ int *global_ptr_arr1[2];
 int *global_ptr_arr2[2][2];
 
 void test() {
-    int *borrow borrow_ptr1 = (int *borrow)global_ptr1;
-    int **borrow borrow_ptr2 = (int **borrow)global_ptr2;
-    int *borrow borrow_ptr_arr1[2] = {(int *borrow)global_ptr_arr1[0], (int *borrow)global_ptr_arr1[1]};
-    int *(*borrow borrow_ptr_arr2)[2][2] = &mut global_ptr_arr2;    // expected-error@-1 {{cannot borrow `*global_ptr_arr1` as mutable more than once at a time}}
+    int *_Borrow borrow_ptr1 = (int *_Borrow)global_ptr1;
+    int **_Borrow borrow_ptr2 = (int **_Borrow)global_ptr2;
+    int *_Borrow borrow_ptr_arr1[2] = {(int *_Borrow)global_ptr_arr1[0], (int *_Borrow)global_ptr_arr1[1]};
+    int *(*_Borrow borrow_ptr_arr2)[2][2] = &mut global_ptr_arr2;    // expected-error@-1 {{cannot borrow `*global_ptr_arr1` as mutable more than once at a time}}
 
     *borrow_ptr1 = 1;
     **borrow_ptr2 = 1;

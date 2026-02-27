@@ -7,8 +7,8 @@
 
 #define NULL (void *)0
 
-void bug(const int *borrow p) {
-  if (p == (const int *borrow)NULL) {
+void bug(const int *_Borrow p) {
+  if (p == (const int *_Borrow)NULL) {
     return;
   }
 }

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test string literal borrow behavior in safe zone
+// Test string literal _Borrow behavior in safe zone
 
-_Safe void foo(const char *borrow str) {
+_Safe void foo(const char *_Borrow str) {
 }
 
 _Safe void test_safe_function_param(void) {
@@ -12,87 +12,87 @@ _Safe void test_safe_function_param(void) {
 
 _Safe void test_safe_function_init(void) {
   // Automatic &const * insertion for variable initialization in _Safe function
-  const char *borrow p = "hello";
+  const char *_Borrow p = "hello";
 }
 
 void test_safe_block(void) {
   _Safe {
     // Automatic &const * insertion in _Safe block
-    const char *borrow p = "hello";
+    const char *_Borrow p = "hello";
     foo("world");
   }
 }
 
-// Test error: mutable borrow in _Safe function
-_Safe void foo_mut(char *borrow str) {
+// Test error: mutable _Borrow in _Safe function
+_Safe void foo_mut(char *_Borrow str) {
 }
 
 _Safe void test_mut_borrow_error(void) {
-  foo_mut("hello");  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
+  foo_mut("hello");  // expected-error {{cannot pass string literal to parameter of type 'char *_Borrow'; string literals are immutable}}
 }
 
 _Safe void test_mut_init_error(void) {
-  char *borrow p = "hello";  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
+  char *_Borrow p = "hello";  // expected-error {{cannot pass string literal to parameter of type 'char *_Borrow'; string literals are immutable}}
 }
 
 void test_mut_borrow_in_safe_block(void) {
   _Safe {
-    foo_mut("hello");  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
-    char *borrow p = "hello";  // expected-error {{cannot pass string literal to parameter of type 'char *borrow'; string literals are immutable}}
+    foo_mut("hello");  // expected-error {{cannot pass string literal to parameter of type 'char *_Borrow'; string literals are immutable}}
+    char *_Borrow p = "hello";  // expected-error {{cannot pass string literal to parameter of type 'char *_Borrow'; string literals are immutable}}
   }
 }
 
 // Test error: direct &mut on string literal in safe zone
 _Safe void test_direct_mut_error(void) {
-  const char *borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+  const char *_Borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
 }
 
 void test_direct_mut_in_safe_block(void) {
   _Safe {
-    const char *borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+    const char *_Borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
   }
 }
 
 // Test error: indirect &mut * on string literal in safe zone
 _Safe void test_indirect_mut_error(void) {
-  const char *borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
+  const char *_Borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
 }
 
 void test_indirect_mut_in_safe_block(void) {
   _Safe {
-    const char *borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
+    const char *_Borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
   }
 }
 
 // Test mixed _Safe and _Unsafe contexts
 void test_mixed_context(void) {
   // Outside _Safe zone - automatic conversion should still work
-  const char *borrow p1 = "hello";
+  const char *_Borrow p1 = "hello";
 
   _Safe {
     // Inside _Safe zone - automatic conversion should work
-    const char *borrow p2 = "world";
+    const char *_Borrow p2 = "world";
     foo("test");
   }
 
   // Outside again - automatic conversion should work
-  const char *borrow p3 = "end";
+  const char *_Borrow p3 = "end";
 }
 
 _Safe void test_nested_safe(void) {
-  const char *borrow p1 = "outer";
+  const char *_Borrow p1 = "outer";
 
   _Safe {
-    const char *borrow p2 = "inner";
+    const char *_Borrow p2 = "inner";
     foo("nested");
   }
 }
 
 // Test with const qualifiers
 _Safe void test_const_variations(void) {
-  const char *borrow p1 = "test1";
-  const char * borrow p2 = "test2";
-  const char* borrow p3 = "test3";
+  const char *_Borrow p1 = "test1";
+  const char * _Borrow p2 = "test2";
+  const char* _Borrow p3 = "test3";
 }
 
 int main(void) {

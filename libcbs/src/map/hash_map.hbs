@@ -37,12 +37,12 @@ public:
 //
 // This number is a lower bound; the `HashMap<K, V, S>` might be able to hold
 // more, but is guaranteed to be able to hold at least this many.
-_Safe size_t HashMap<K, V, S>::capacity(const HashMap<K, V, S>* borrow this) {
+_Safe size_t HashMap<K, V, S>::capacity(const HashMap<K, V, S>* _Borrow this) {
     return this->table.capacity();
 }
 
 // Removes all elements from the table without freeing the backing memory.
-_Safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* borrow this) {
+_Safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* _Borrow this) {
     if (this->table.is_empty()) {
         return;
     }
@@ -50,7 +50,7 @@ _Safe void HashMap<K, V, S>::clear(HashMap<K, V, S>* borrow this) {
     return;
 }
 
-_Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, const K* borrow k) {
+_Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
     if (this->table.is_empty()) {
         return 0;
     }
@@ -70,18 +70,18 @@ _Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, 
 //
 // The key may be any borrowed form of the map's key type,
 // but `hash` and `equals` on the borrowed form must match those for the key type.
-// _Safe Option<const V* borrow> HashMap<K, V, S>::get(const HashMap<K, V, S>* borrow this, const K* borrow k) {
+// _Safe Option<const V* _Borrow> HashMap<K, V, S>::get(const HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
 //     _Unsafe {
 //         S hash_builder = this->hash_builder;
 //         uint64_t hash = k->hash(&mut hash_builder);
 //         Option<size_t> option = this->table.find(hash, k);
 //         if (option.is_some()) {
 //             size_t index = option_unwrap<size_t>(option);
-//             const V* borrow val = &const *(this->table.values + index);
-//             return Option<const V* borrow>::Some(val);
+//             const V* _Borrow val = &const *(this->table.values + index);
+//             return Option<const V* _Borrow>::Some(val);
 //         } else {
 //             // AUTO INSERT: ~Option(option)
-//             return Option<const V* borrow>::None();
+//             return Option<const V* _Borrow>::None();
 //         }
 //     }
 // }
@@ -90,18 +90,18 @@ _Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* borrow this, 
 //
 // The key may be any borrowed form of the map's key type,
 // but `hash` and `equals` on the borrowed form must match those for the key type.
-_Safe Option<V* borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* borrow this, const K* borrow k) {
+_Safe Option<V* _Borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
     _Unsafe {
         S hash_builder = this->hash_builder;
         uint64_t hash = k->hash(&mut hash_builder);
         Option<size_t> option = this->table.find(hash, k);
         if (option.is_some()) {
             size_t index = option_unwrap<size_t>(option);
-            V* borrow val = &mut *(this->table.values + index);
-            return Option<V* borrow>::Some(val);
+            V* _Borrow val = &mut *(this->table.values + index);
+            return Option<V* _Borrow>::Some(val);
         } else {
             // AUTO INSERT: ~Option(option)
-            return Option<V* borrow>::None();
+            return Option<V* _Borrow>::None();
         }
     }
 }
@@ -113,7 +113,7 @@ _Safe Option<V* borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* borrow this,
 // avoid frequent reallocations. After calling `reserve`,
 // capacity will be greater than or equal to `this.length() + additional`.
 // Does nothing if capacity is already sufficient.
-_Safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t additional) {
+_Safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* _Borrow this, size_t additional) {
     if (additional > this->table.growth_left) {
         // Conservatively resize to at least the next size up
         // to avoid churning deletes into frequent rehashes.
@@ -174,7 +174,7 @@ _Safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* borrow this, size_t addit
 //
 // This function may resize the table if additional space is required for
 // inserting an element.
-_Safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* borrow this, K k, V v) {
+_Safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* _Borrow this, K k, V v) {
     this->reserve(1);
 
     S hash_builder = this->hash_builder;
@@ -198,18 +198,18 @@ _Safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* borrow this, K k, V v
 }
 
 // Returns `true` if the map contains no elements.
-_Safe _Bool HashMap<K, V, S>::is_empty(const HashMap<K, V, S>* borrow this) {
+_Safe _Bool HashMap<K, V, S>::is_empty(const HashMap<K, V, S>* _Borrow this) {
     return this->table.is_empty();
 }
 
 // Returns the number of elements in the map.
-_Safe size_t HashMap<K, V, S>::length(const HashMap<K, V, S>* borrow this) {
+_Safe size_t HashMap<K, V, S>::length(const HashMap<K, V, S>* _Borrow this) {
     return this->table.length();
 }
 
 // Removes a key from the map, returning the value at the key if the key
 // was previously in the map. Keeps the allocated memory for reuse.
-_Safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* borrow this, const K* borrow k) {
+_Safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
     _Unsafe {
         S hash_builder = this->hash_builder;
         uint64_t hash = k->hash(&mut hash_builder);

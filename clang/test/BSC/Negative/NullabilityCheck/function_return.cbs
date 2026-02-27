@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify %s
 
-_Safe int *borrow foo1(int *borrow a);
+_Safe int *_Borrow foo1(int *_Borrow a);
 _Safe void test1(void) {
     int a = 10;
-    int *borrow p1 = foo1(&mut a);
-    int *borrow _Nullable p2 = foo1(&mut a);
+    int *_Borrow p1 = foo1(&mut a);
+    int *_Borrow _Nullable p2 = foo1(&mut a);
 }
 
 _Safe void safe_free(int *owned _Nullable p);
@@ -17,11 +17,11 @@ _Safe void test2(void) {
     safe_free(p2);
 }
 
-_Safe int *borrow _Nullable foo3(int* borrow a);  
+_Safe int *_Borrow _Nullable foo3(int* _Borrow a);  
 _Safe void test3(void) {
     int a = 10;
-    int *borrow p1 = foo3(&mut a);  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    int *borrow _Nullable p2 = foo3(&mut a);
+    int *_Borrow p1 = foo3(&mut a);  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow _Nullable p2 = foo3(&mut a);
 }
 
 _Safe int *owned _Nullable foo4(void);  
@@ -32,15 +32,15 @@ _Safe void test4(void) {
     safe_free(p2);
 }
 
-_Safe int *borrow foo5(int *borrow _Nullable a) {
+_Safe int *_Borrow foo5(int *_Borrow _Nullable a) {
     return a;  // expected-error {{cannot return nullable pointer type}}
 }
 
-_Safe int *borrow foo6(int *borrow _Nullable a, int* borrow p) {
+_Safe int *_Borrow foo6(int *_Borrow _Nullable a, int* _Borrow p) {
     a = p;
     return a;
 }
 
-_Safe int *borrow foo7(int *borrow _Nullable a, int* borrow p) {
+_Safe int *_Borrow foo7(int *_Borrow _Nullable a, int* _Borrow p) {
     return foo6(a, p);
 }

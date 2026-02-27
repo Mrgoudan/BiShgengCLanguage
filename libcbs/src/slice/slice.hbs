@@ -8,7 +8,7 @@
 ///
 /// Slice provides _Safe, read-only access to a contiguous sequence of elements
 /// without owning the underlying memory. Indeed, slice is a view into a block
-/// of memory represented as an immutable borrow pointer and a length.
+/// of memory represented as an immutable _Borrow pointer and a length.
 ///
 /// When accessing elements, the slice enforces bounds checking. If an out of
 /// bounds access occurs, the program will abort.
@@ -19,7 +19,7 @@
 /// - Given a valid `len`, all slice operations are _Safe as long as proper
 ///   bounds checking is performed.
 struct Slice<T>  {
-    const T *borrow _Nonnull ptr;
+    const T *_Borrow _Nonnull ptr;
     size_t len;
 };
 
@@ -30,7 +30,7 @@ struct Slice<T>  {
 ///
 /// SAFETY:
 /// - It's an _Unsafe function, the caller must ensure that `len` is correct.
-_Unsafe Slice<T> Slice<T>::new(const T *borrow _Nonnull ptr, size_t len) {
+_Unsafe Slice<T> Slice<T>::new(const T *_Borrow _Nonnull ptr, size_t len) {
     Slice<T> slice = { .ptr = ptr, .len = len };
     return slice;
 }
@@ -50,24 +50,24 @@ _Safe Slice<T> Slice<T>::sub(This this, size_t start, size_t end) {
     _Unsafe {
         const T *raw = (const T *)this.ptr;
         raw += start;
-        return Slice<T>::new((const T *borrow)raw, end - start);
+        return Slice<T>::new((const T *_Borrow)raw, end - start);
     }
 }
 
-/// Get an immutable borrow to the element at the specified index.
+/// Get an immutable _Borrow to the element at the specified index.
 ///
-/// This function returns an immutable borrow to the element at the specified
+/// This function returns an immutable _Borrow to the element at the specified
 /// `index` in the slice.
 ///
 /// Bounds checking is performed. If an out of bounds access occurs, it aborts.
-_Safe const T *borrow _Nonnull Slice<T>::get(This this, size_t index) {
+_Safe const T *_Borrow _Nonnull Slice<T>::get(This this, size_t index) {
     if (index >= this.len) {
         _Unsafe bsc_out_of_bound_handler(this.len, index);
     }
     _Unsafe {
         const T *raw = (const T *)this.ptr;
         raw += index;
-        return (const T *borrow)raw;
+        return (const T *_Borrow)raw;
     }
 }
 
@@ -97,7 +97,7 @@ _Unsafe const T *_Nonnull Slice<T>::as_ptr(This this) {
 ///
 /// SliceMut provides _Safe, mutable access to a contiguous sequence of elements
 /// without owning the underlying memory. Indeed, slice is a view into a block
-/// of memory represented as an mutable borrow pointer and a length.
+/// of memory represented as an mutable _Borrow pointer and a length.
 ///
 /// When accessing elements, the slice enforces bounds checking. If an out of
 /// bounds access occurs, the program will abort.
@@ -108,7 +108,7 @@ _Unsafe const T *_Nonnull Slice<T>::as_ptr(This this) {
 /// - Given a valid `len`, all slice operations are _Safe as long as proper
 ///   bounds checking is performed.
 struct SliceMut<T> {
-    T *borrow _Nonnull ptr;
+    T *_Borrow _Nonnull ptr;
     size_t len;
 };
 
@@ -119,7 +119,7 @@ struct SliceMut<T> {
 ///
 /// SAFETY:
 /// - It's an _Unsafe function, the caller must ensure that `len` is correct.
-_Unsafe SliceMut<T> SliceMut<T>::new(T *borrow _Nonnull ptr, size_t len) {
+_Unsafe SliceMut<T> SliceMut<T>::new(T *_Borrow _Nonnull ptr, size_t len) {
     SliceMut<T> slice = { .ptr = ptr, .len = len };
     return slice;
 }
@@ -139,7 +139,7 @@ _Safe Slice<T> SliceMut<T>::sub(This this, size_t start, size_t end) {
     _Unsafe {
         const T *raw = (const T *)this.ptr;
         raw += start;
-        return Slice<T>::new((const T *borrow)raw, end - start);
+        return Slice<T>::new((const T *_Borrow)raw, end - start);
     }
 }
 
@@ -158,41 +158,41 @@ _Safe SliceMut<T> SliceMut<T>::sub_mut(This this, size_t start, size_t end) {
     _Unsafe {
         T *raw = (T *)this.ptr;
         raw += start;
-        return SliceMut<T>::new((T *borrow)raw, end - start);
+        return SliceMut<T>::new((T *_Borrow)raw, end - start);
     }
 }
 
-/// Get an immutable borrow to the element at the specified index.
+/// Get an immutable _Borrow to the element at the specified index.
 ///
-/// This function returns an immutable borrow to the element at the specified
+/// This function returns an immutable _Borrow to the element at the specified
 /// `index` in the slice.
 ///
 /// Bounds checking is performed. If an out of bounds access occurs, it aborts.
-_Safe const T *borrow _Nonnull SliceMut<T>::get(This this, size_t index) {
+_Safe const T *_Borrow _Nonnull SliceMut<T>::get(This this, size_t index) {
     if (index >= this.len) {
         _Unsafe bsc_out_of_bound_handler(this.len, index);
     }
     _Unsafe {
         const T *raw = (const T *)this.ptr;
         raw += index;
-        return (const T *borrow)raw;
+        return (const T *_Borrow)raw;
     }
 }
 
-/// Get a mutable borrow to the element at the specified index.
+/// Get a mutable _Borrow to the element at the specified index.
 ///
-/// This function returns a mutable borrow to the element at the specified
+/// This function returns a mutable _Borrow to the element at the specified
 /// `index` in the slice.
 ///
 /// Bounds checking is performed. If an out of bounds access occurs, it aborts.
-_Safe T *borrow _Nonnull SliceMut<T>::get_mut(This this, size_t index) {
+_Safe T *_Borrow _Nonnull SliceMut<T>::get_mut(This this, size_t index) {
     if (index >= this.len) {
         _Unsafe bsc_out_of_bound_handler(this.len, index);
     }
     _Unsafe {
         T *raw = (T *)this.ptr;
         raw += index;
-        return (T *borrow)raw;
+        return (T *_Borrow)raw;
     }
 }
 

@@ -10,25 +10,25 @@ void test1(void) {
     }
 }
 
-// Test 2: Const to mut borrow is not allowed
+// Test 2: Const to mut _Borrow is not allowed
 _Unsafe void modify_data(int* p);
-_Safe void modify_data(int* borrow p);
+_Safe void modify_data(int* _Borrow p);
 
-void test2(const int* borrow const_borrow) {
-    modify_data(const_borrow);  // expected-error {{incompatible borrow types, cannot cast 'const int *borrow' to 'int *borrow'}}
+void test2(const int* _Borrow const_borrow) {
+    modify_data(const_borrow);  // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
 }
 
-// Test 3: Owned/borrow mismatch
+// Test 3: Owned/_Borrow mismatch
 _Unsafe void take_owned(int* p);
 _Safe void take_owned(int* owned p);
 
-void test3(int* borrow borrow_p) {
+void test3(int* _Borrow borrow_p) {
     take_owned(borrow_p);  // expected-error {{no matching function for call to 'take_owned'; argument types do not match any _Safe or _Unsafe declaration}}
 }
 
 // Test 4: Borrow/owned mismatch
 _Unsafe void take_borrow(int* p);
-_Safe void take_borrow(int* borrow p);
+_Safe void take_borrow(int* _Borrow p);
 
 void test4(int* owned owned_p) {
     take_borrow(owned_p);  // expected-error {{no matching function for call to 'take_borrow'; argument types do not match any _Safe or _Unsafe declaration}}
@@ -64,15 +64,15 @@ void test7(int* raw_p) {
 _Unsafe void nested_func(int** pp);
 _Safe void nested_func(int** owned pp);
 
-void test8(int** borrow pp) {
+void test8(int** _Borrow pp) {
     nested_func(pp);  // expected-error {{no matching function for call to 'nested_func'; argument types do not match any _Safe or _Unsafe declaration}}
 }
 
-// Test 9: Mixed owned and borrow with wrong combination
+// Test 9: Mixed owned and _Borrow with wrong combination
 _Unsafe void mixed_wrong(int* p1, int* p2);
-_Safe void mixed_wrong(int* owned p1, int* borrow p2);
+_Safe void mixed_wrong(int* owned p1, int* _Borrow p2);
 
-void test9(int* borrow borrow_p, int* owned owned_p) {
-    // First parameter doesn't match (borrow vs owned), so error on first param
+void test9(int* _Borrow borrow_p, int* owned owned_p) {
+    // First parameter doesn't match (_Borrow vs owned), so error on first param
     mixed_wrong(borrow_p, owned_p);  // expected-error {{no matching function for call to 'mixed_wrong'; argument types do not match any _Safe or _Unsafe declaration}}
 }

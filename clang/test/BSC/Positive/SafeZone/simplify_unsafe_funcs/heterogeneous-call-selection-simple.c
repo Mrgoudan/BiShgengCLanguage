@@ -13,9 +13,9 @@ void test1(int* raw_p, int* owned owned_p) {
 
 // Test 2: Borrow argument selection
 _Unsafe void consume_unsafe(int* p);
-_Safe void consume_safe(int* borrow p);
+_Safe void consume_safe(int* _Borrow p);
 
-void test2(int* raw_p, int* borrow borrow_p) {
+void test2(int* raw_p, int* _Borrow borrow_p) {
     consume_unsafe(raw_p);       // Calls _Unsafe version
     consume_safe(borrow_p);      // Calls _Safe version
 }

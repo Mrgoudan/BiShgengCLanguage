@@ -8,7 +8,7 @@ struct S {
 _Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Eassign-nullable"
-    struct S *borrow _Nullable p = nullptr;
+    struct S *_Borrow _Nullable p = nullptr;
     if (p != nullptr) {
         p->a = 10;
     } else {

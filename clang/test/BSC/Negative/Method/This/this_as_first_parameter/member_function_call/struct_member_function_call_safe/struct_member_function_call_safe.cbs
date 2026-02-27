@@ -19,12 +19,12 @@ _Safe int struct Foo::getB_2(const This* this) {
   return this->a; // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
 }
 
-_Safe int struct Foo::getC(This* borrow this) {
+_Safe int struct Foo::getC(This* _Borrow this) {
   this->a = 2;
   return this->a;
 }
 
-_Safe int struct Foo::getC_2(const This* borrow this) {
+_Safe int struct Foo::getC_2(const This* _Borrow this) {
   return this->a;
 }
 
@@ -67,7 +67,7 @@ void test_const_This_pointer_actual_param() {
     int s_b = c_foo_p->getB(); // expected-error {{incompatible conversion from const type 'const struct Foo *' to non-const type 'struct Foo *' in member function call}}
     int s_b2 = c_foo_p->getB_2(); // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
     // expected-error@+1 {{'->' operator used by raw pointer type is forbidden in the safe zone}}
-    int s_c = c_foo_p->getC();  // expected-error {{incompatible conversion from const type 'const struct Foo *' to non-const type 'struct Foo *borrow' in member function call}}
+    int s_c = c_foo_p->getC();  // expected-error {{incompatible conversion from const type 'const struct Foo *' to non-const type 'struct Foo *_Borrow' in member function call}}
     // expected-error@+1 {{'->' operator used by raw pointer type is forbidden in the safe zone}}
     int s_c2 = c_foo_p->getC_2();  // expect error, run error
     // expected-error@+1 {{'->' operator used by raw pointer type is forbidden in the safe zone}}
@@ -77,24 +77,24 @@ void test_const_This_pointer_actual_param() {
 
 _Safe void test_This_pointer_borrow_actual_param(void) {
   struct Foo foo = {.a = 1};
-  struct Foo * borrow foo_mut = &mut foo;
-  int s_a = foo_mut->getA();  // expected-error {{incompatible conversion from pointer type 'struct Foo *borrow' to non-pointer type 'struct Foo' in member function call}}
+  struct Foo * _Borrow foo_mut = &mut foo;
+  int s_a = foo_mut->getA();  // expected-error {{incompatible conversion from pointer type 'struct Foo *_Borrow' to non-pointer type 'struct Foo' in member function call}}
   int s_b = foo_mut->getB();  // expect error, function getB is error
   int s_b2 = foo_mut->getB_2(); // expect error, function getB_2 is error
   int s_c = foo_mut->getC();  // expect ok, run ok
   int s_c2 = foo_mut->getC_2();  // expect ok, run ok
-  foo_mut->getD();  // expected-error {{incompatible conversion from non owned type 'struct Foo *borrow' to owned type 'struct Foo *owned' in member function call}}
+  foo_mut->getD();  // expected-error {{incompatible conversion from non owned type 'struct Foo *_Borrow' to owned type 'struct Foo *owned' in member function call}}
 }
 
 _Safe void test_const_This_pointer_borrow_actual_param(void) {
   struct Foo foo = {.a = 1};
-  const struct Foo *borrow c_foo_mut = &const foo; // incompatible borrow types, cannot cast 'const struct Foo *borrow'
-  int a = c_foo_mut->getA();  // expected-error {{incompatible conversion from pointer type 'const struct Foo *borrow' to non-pointer type 'struct Foo' in member function call}}
-  int b = c_foo_mut->getB();  // expected-error {{incompatible conversion from const type 'const struct Foo *borrow' to non-const type 'struct Foo *' in member function call}}
+  const struct Foo *_Borrow c_foo_mut = &const foo; // incompatible borrow types, cannot cast 'const struct Foo *_Borrow'
+  int a = c_foo_mut->getA();  // expected-error {{incompatible conversion from pointer type 'const struct Foo *_Borrow' to non-pointer type 'struct Foo' in member function call}}
+  int b = c_foo_mut->getB();  // expected-error {{incompatible conversion from const type 'const struct Foo *_Borrow' to non-const type 'struct Foo *' in member function call}}
   int b2 = c_foo_mut->getB_2(); // expect error, function getB_2 is error
-  int c = c_foo_mut->getC();  // expected-error {{incompatible conversion from const type 'const struct Foo *borrow' to non-const type 'struct Foo *borrow' in member function call}}
+  int c = c_foo_mut->getC();  // expected-error {{incompatible conversion from const type 'const struct Foo *_Borrow' to non-const type 'struct Foo *_Borrow' in member function call}}
   int c2 = c_foo_mut->getC_2();  // expect ok, run ok
-  c_foo_mut->getD();  // expected-error {{incompatible conversion from non owned type 'const struct Foo *borrow' to owned type 'struct Foo *owned' in member function call}}
+  c_foo_mut->getD();  // expected-error {{incompatible conversion from non owned type 'const struct Foo *_Borrow' to owned type 'struct Foo *owned' in member function call}}
 }
 
 _Safe void test_This_pointer_owned_actual_param(void) {

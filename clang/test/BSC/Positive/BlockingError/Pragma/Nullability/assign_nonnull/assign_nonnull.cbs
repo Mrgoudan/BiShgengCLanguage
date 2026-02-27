@@ -2,22 +2,22 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-_Safe int *borrow _Nullable foo1(int* borrow a);  
+_Safe int *_Borrow _Nullable foo1(int* _Borrow a);  
 _Safe void test1(void) {
     int a = 10;
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Eassign-nonnull"
-    int *borrow p1 = foo1(&mut a);             // nonnull pointer cannot be assigned by nullable pointer
-    int *borrow _Nullable p2 = foo1(&mut a);
+    int *_Borrow p1 = foo1(&mut a);             // nonnull pointer cannot be assigned by nullable pointer
+    int *_Borrow _Nullable p2 = foo1(&mut a);
     #pragma GCC diagnostic pop
 }
 
 void test2(void) {
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Eassign-nonnull"
-  int *borrow p = nullptr;                     // nonnull pointer cannot be assigned by nullable pointer
+  int *_Borrow p = nullptr;                     // nonnull pointer cannot be assigned by nullable pointer
   _Unsafe {
-    int *borrow p2 = nullptr;                  // nonnull pointer cannot be assigned by nullable pointer
+    int *_Borrow p2 = nullptr;                  // nonnull pointer cannot be assigned by nullable pointer
   }
   #pragma GCC diagnostic pop
 }

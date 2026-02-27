@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-void foo(const char *borrow p) {}
+void foo(const char *_Borrow p) {}
 
 void test1(void) {
   foo(__FUNCTION__);
@@ -38,11 +38,11 @@ void test4(void) {
 }
 
 void test5(void) {
-  const char *borrow p1 = __FUNCTION__;
+  const char *_Borrow p1 = __FUNCTION__;
   foo(p1);
-  const char *borrow p2 = __func__;
+  const char *_Borrow p2 = __func__;
   foo(p2);
-  const char *borrow p3 = __PRETTY_FUNCTION__;
+  const char *_Borrow p3 = __PRETTY_FUNCTION__;
   foo(p3);
 }
 

@@ -17,7 +17,7 @@ int *g_a;
 _Safe void test_safe_stmt1(void) {
     int v = 1;
     _Unsafe g_a = &v;
-    _Unsafe int *borrow a = &mut *g_a;
+    _Unsafe int *_Borrow a = &mut *g_a;
     _Safe int b = *a;
     _Safe {
         int c = *a;
@@ -38,25 +38,25 @@ int main() {
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'int *' lvalue Var 0x{{[^ ]*}} 'g_a' 'int *'
 // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:19, col:20> 'int *' prefix '&' cannot overflow
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:20> 'int' lvalue Var 0x{{[^ ]*}} 'v' 'int'
-// CHECK-NEXT: SafeStmt 0x{{[^ ]*}} <line:[[@LINE-21]]:5, col:38> _Unsafe
-// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <col:13, col:38>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:13, col:35> col:25 used a 'int *borrow' cinit
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:35> 'int *' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:35> 'int *' lvalue Var 0x{{[^ ]*}} 'g_a' 'int *'
+// CHECK-NEXT: SafeStmt 0x{{[^ ]*}} <line:[[@LINE-21]]:5, col:39> _Unsafe
+// CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <col:13, col:39>
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:13, col:36> col:26 used a 'int *_Borrow' cinit
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:36> 'int *' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:36> 'int *' lvalue Var 0x{{[^ ]*}} 'g_a' 'int *'
 // CHECK-NEXT: SafeStmt 0x{{[^ ]*}} <line:[[@LINE-25]]:5, col:21> _Safe
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <col:11, col:21>
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:11, col:20> col:15 b 'int' cinit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:19, col:20> 'int' <LValueToRValue>
 // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:19, col:20> 'int' lvalue prefix '*' cannot overflow
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:20> 'int *borrow' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:20> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'a' 'int *borrow'
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:20> 'int *_Borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:20> 'int *_Borrow' lvalue Var 0x{{[^ ]*}} 'a' 'int *_Borrow'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <line:[[@LINE-31]]:11, line:[[@LINE-29]]:5> _Safe
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-31]]:9, col:19>
 // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:9, col:18> col:13 c 'int' cinit
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:17, col:18> 'int' <LValueToRValue>
 // CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <col:17, col:18> 'int' lvalue prefix '*' cannot overflow
-// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:18> 'int *borrow' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:18> 'int *borrow' lvalue Var 0x{{[^ ]*}} 'a' 'int *borrow'
+// CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:18> 'int *_Borrow' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:18> 'int *_Borrow' lvalue Var 0x{{[^ ]*}} 'a' 'int *_Borrow'
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-33]]:1, line:[[@LINE-31]]:1> line:[[@LINE-33]]:5 main 'int (void)'
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:12, line:[[@LINE-32]]:1>
 // CHECK-NEXT: CallExpr 0x{{[^ ]*}} <line:[[@LINE-34]]:5, col:21> 'void'

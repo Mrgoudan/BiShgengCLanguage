@@ -5,35 +5,35 @@ struct S {
   int *owned b;
 };
 
-void use_mut(int *borrow p);
-void use_immut(const int *borrow p);
+void use_mut(int *_Borrow p);
+void use_immut(const int *_Borrow p);
 T *owned safe_malloc<T>(T value);
 void free_owned<T>(T *owned p);
 
 void test1() {
   int e = 1;
-  const int *borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
   e = 2; // expected-error {{cannot assign to `e` because it is borrowed}}
   if (*p1 == 2) {
     e = 5;
   }
 
   int f = 1;
-  const int  *borrow p2 = &const f; // expected-note {{`f` is borrowed here}}
+  const int  *_Borrow p2 = &const f; // expected-note {{`f` is borrowed here}}
   f = 2; // expected-error {{cannot assign to `f` because it is borrowed}}
   if (*p2) {
     f = 5;
   }
 
   int g = 1;
-  const int *borrow p3 = &const g; // expected-note {{`g` is borrowed here}}
+  const int *_Borrow p3 = &const g; // expected-note {{`g` is borrowed here}}
   g = 2; // expected-error {{cannot assign to `g` because it is borrowed}}
   if (*p3 < 0 || *p3 > 5 || *p3 + *p3 > 10) {
     g = 5;
   }
 
   int h = 1;
-  int *borrow p4 = &mut h; // expected-note {{`h` is borrowed here}}
+  int *_Borrow p4 = &mut h; // expected-note {{`h` is borrowed here}}
   int k = h; // expected-error {{cannot use `h` because it was mutably borrowed}}
   if (*p4) {
     h = 5;
@@ -43,7 +43,7 @@ void test1() {
 void test2() {
   int local = 5;
   struct S s = { .a = 1, .b = safe_malloc<int>(1) };
-  const struct S *borrow p = &const s; // expected-note {{`s.a` is borrowed here}}
+  const struct S *_Borrow p = &const s; // expected-note {{`s.a` is borrowed here}}
                                        // expected-note@-1 {{`s` is borrowed here}}
   s.a = 2; // expected-error {{cannot assign to `s.a` because it is borrowed}}
   free_owned<int>(s.b); // expected-error {{cannot move out of `s.b` because it is borrowed}}
@@ -54,7 +54,7 @@ void test2() {
 
 void test3() {
   int e = 1;
-  int *borrow p = &mut e; // expected-note {{`e` is borrowed here}}
+  int *_Borrow p = &mut e; // expected-note {{`e` is borrowed here}}
                           // expected-note@-1 {{`e` is borrowed here}}
   while (*p > 0) {
     --e; // expected-error {{cannot assign to `e` because it is borrowed}}
@@ -64,7 +64,7 @@ void test3() {
 
 void test4() {
   int e = 1;
-  const int *borrow p = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p = &const e; // expected-note {{`e` is borrowed here}}
   for (int i = 0; i < *p; ++i) {
     --e; // expected-error {{cannot assign to `e` because it is borrowed}}
   }
@@ -72,7 +72,7 @@ void test4() {
 
 void test5() {
   int e = 1;
-  const int *borrow p = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p = &const e; // expected-note {{`e` is borrowed here}}
   e = 2; // expected-error {{cannot assign to `e` because it is borrowed}}
   do {
       --e;
@@ -82,8 +82,8 @@ void test5() {
 void test6() {
   int e = 1;
   int f = 2;
-  const int *borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
-  const int *borrow p2 = &const f;
+  const int *_Borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p2 = &const f;
   e = 2; // expected-error {{cannot assign to `e` because it is borrowed}}
   for ( ; ; ) {
     while (p2 == p1)
@@ -93,7 +93,7 @@ void test6() {
 
 void test7() {
   int e = 1;
-  const int *borrow p = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p = &const e; // expected-note {{`e` is borrowed here}}
   e = 2; // expected-error {{cannot assign to `e` because it is borrowed}}
   while (*p > 0) {
     --e;
@@ -103,8 +103,8 @@ void test7() {
 void test8() {
   int e = 1;
   int f = 2;
-  const int *borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
-  const int *borrow p2 = &const f;
+  const int *_Borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p2 = &const f;
   for (p2 = p1; *p2 > 0; ) {
     --e; // expected-error {{cannot assign to `e` because it is borrowed}}
   }
@@ -113,8 +113,8 @@ void test8() {
 void test9() {
   int e = 1;
   int f = 2;
-  const int *borrow p1 = &const e;
-  const int *borrow p2 = &const f; // expected-note {{`f` is borrowed here}}
+  const int *_Borrow p1 = &const e;
+  const int *_Borrow p2 = &const f; // expected-note {{`f` is borrowed here}}
   for ( ; e = 2, f = 2; ) { // expected-error {{cannot assign to `f` because it is borrowed}}
     if (e) {
       return;
@@ -127,8 +127,8 @@ void test9() {
 void test10() {
   int e = 1;
   int f = 2;
-  const int *borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
-  const int *borrow p2 = &const f; // expected-note {{`f` is borrowed here}}
+  const int *_Borrow p1 = &const e; // expected-note {{`e` is borrowed here}}
+  const int *_Borrow p2 = &const f; // expected-note {{`f` is borrowed here}}
   for ( ; e = 2, f = 2; ) { // expected-error {{cannot assign to `e` because it is borrowed}}
                             // expected-error@-1 {{cannot assign to `f` because it is borrowed}}
     if (p1 == p2) {
@@ -141,8 +141,8 @@ void test10() {
 
 void test11() {
   int local = 42;
-  int *borrow p = &mut local;
-  int *borrow q = &mut *p;
+  int *_Borrow p = &mut local;
+  int *_Borrow q = &mut *p;
   while (1) {
     use_mut(p);
   }

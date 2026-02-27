@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify %s
 
-void test(int *owned borrow p) { // expected-error {{cannot combine 'owned' and 'borrow' qualifiers on the same type}}
-  int *owned borrow q = p; // expected-error {{cannot combine 'owned' and 'borrow' qualifiers on the same type}}
-  int *owned borrow *pp =p; //#1
+void test(int *owned _Borrow p) { // expected-error {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+  int *owned _Borrow q = p; // expected-error {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+  int *owned _Borrow *pp =p; //#1
 }
-// expected-error@#1 {{cannot combine 'owned' and 'borrow' qualifiers on the same type}}
-// expected-error@#1 {{incompatible owned types, cannot cast 'int *owned borrow' to 'int *owned borrow *'}}
+// expected-error@#1 {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+// expected-error@#1 {{incompatible owned types, cannot cast 'int *owned _Borrow' to 'int *owned _Borrow *'}}

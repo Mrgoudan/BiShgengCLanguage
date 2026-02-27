@@ -16,17 +16,17 @@ _Safe Cell<T> Cell<T>::new(T value) {
 }
 
 // Return a copy of the contained value,
-// Here T should not be owned type, because borrow type cannot move ownership.
-_Safe T Cell<T>::get(const This * borrow this) {
+// Here T should not be owned type, because _Borrow type cannot move ownership.
+_Safe T Cell<T>::get(const This * _Borrow this) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     return this->value;
 }
 
 // Replace the contained value by val.
-_Safe void Cell<T>::set(const This * borrow this, T val) {
+_Safe void Cell<T>::set(const This * _Borrow this, T val) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     _Unsafe {
-        Cell<T> * borrow p = (Cell<T> * borrow)(Cell<T> *)this;
+        Cell<T> * _Borrow p = (Cell<T> * _Borrow)(Cell<T> *)this;
         p->value = val;
     }
 }
@@ -53,7 +53,7 @@ public:
     }
 };
 
-_Safe const T* borrow RefImmut<T>::deref(const This* borrow this) {
+_Safe const T* _Borrow RefImmut<T>::deref(const This* _Borrow this) {
     _Unsafe {
         return &const this->ptr->value;
     }
@@ -69,13 +69,13 @@ public:
     }
 };
 
-_Safe T* borrow RefMut<T>::deref(This* borrow this) {
+_Safe T* _Borrow RefMut<T>::deref(This* _Borrow this) {
     _Unsafe {
         return &mut this->ptr->value;
     }
 }
 
-_Safe Option<RefImmut<T>> RefCell<T>::try_borrow_immut(const This* borrow this) {
+_Safe Option<RefImmut<T>> RefCell<T>::try_borrow_immut(const This* _Borrow this) {
     _Unsafe {
         int b = this->borrow_count.get();
         if (b >= 0) {
@@ -90,7 +90,7 @@ _Safe Option<RefImmut<T>> RefCell<T>::try_borrow_immut(const This* borrow this) 
     }
 }
 
-_Safe RefImmut<T> RefCell<T>::borrow_immut(const This* borrow this) {
+_Safe RefImmut<T> RefCell<T>::borrow_immut(const This* _Borrow this) {
     Option<RefImmut<T>> option_ref = this->try_borrow_immut();
     if (option_ref.is_none())
         bsc_refcell_immut_borrow_failed();
@@ -98,7 +98,7 @@ _Safe RefImmut<T> RefCell<T>::borrow_immut(const This* borrow this) {
     return ref;
 }
 
-_Safe Option<RefMut<T>> RefCell<T>::try_borrow_mut(const This* borrow this) {
+_Safe Option<RefMut<T>> RefCell<T>::try_borrow_mut(const This* _Borrow this) {
     _Unsafe {
         int b = this->borrow_count.get();
         if (b == 0) {
@@ -113,7 +113,7 @@ _Safe Option<RefMut<T>> RefCell<T>::try_borrow_mut(const This* borrow this) {
     }
 }
 
-_Safe RefMut<T> RefCell<T>::borrow_mut(const This* borrow this) {
+_Safe RefMut<T> RefCell<T>::borrow_mut(const This* _Borrow this) {
     Option<RefMut<T>> option_ref = this->try_borrow_mut();
     if (option_ref.is_none())
         bsc_refcell_mut_borrow_failed();

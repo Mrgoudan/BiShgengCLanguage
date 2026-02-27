@@ -4,7 +4,7 @@ void test1(int *p) {}
 
 void test_freeze_arrow_var1() {
     int arr[10] = {0};
-    int * borrow c = &mut arr[1]; // expected-note {{`arr` is borrowed here}}
+    int * _Borrow c = &mut arr[1]; // expected-note {{`arr` is borrowed here}}
                                   // expected-note@-1 {{`arr` is borrowed here}}
                                   // expected-note@-2 {{`arr` is borrowed here}}
     int a = arr[1]; // expected-error {{cannot use `arr` because it was mutably borrowed}}
@@ -21,7 +21,7 @@ void test2(int p[10][10]) {}
 
 void test_freeze_arrow_var2() {
     int arr[10][10] = {0};
-    int * borrow k = &mut arr[1][1]; // expected-note {{`arr` is borrowed here}}
+    int * _Borrow k = &mut arr[1][1]; // expected-note {{`arr` is borrowed here}}
                                      // expected-note@-1 {{`arr` is borrowed here}}
                                      // expected-note@-2 {{`arr` is borrowed here}}
                                      // expected-note@-3 {{`arr` is borrowed here}}
@@ -39,7 +39,7 @@ void test_freeze_arrow_var2() {
 
 void test_freeze_arrow_var3() {
     int arr[10] = {0};
-    int * borrow c = &mut arr[1];
+    int * _Borrow c = &mut arr[1];
     int a = arr[1];
     int b = arr[2];
     arr[1] = 2;
@@ -49,7 +49,7 @@ void test_freeze_arrow_var3() {
 
 void test_freeze_arrow_var4() {
     int arr[10][10] = {0};
-    int * borrow k = &mut arr[1][1];
+    int * _Borrow k = &mut arr[1][1];
     int a = arr[1][1];
     int b = arr[1][2];
     int c = arr[2][2];

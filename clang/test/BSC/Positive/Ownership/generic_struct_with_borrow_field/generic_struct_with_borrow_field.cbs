@@ -4,17 +4,17 @@
 
 struct S<T> {
     int a;
-    T *borrow b;
+    T *_Borrow b;
 };
 
-T *borrow test<T>(struct S<T> s) {
+T *_Borrow test<T>(struct S<T> s) {
     return s.b;
 }
 
 int main(void) {
     int a = 2;
     struct S<int> s = { 1, &mut a };
-    int *borrow p = test<int>(s);
+    int *_Borrow p = test<int>(s);
     *p = 3;
     if (a == 3) return 0;
     return 1;

@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-void foo(int *borrow a, int size) {
+void foo(int *_Borrow a, int size) {
     *a = 2;
 }
 
@@ -22,7 +22,7 @@ void test2() {
 
 void test3() {
   int a = 1;
-  int *borrow p = &mut a;
+  int *_Borrow p = &mut a;
   int x = sizeof(a);
   *p = 2;
 }

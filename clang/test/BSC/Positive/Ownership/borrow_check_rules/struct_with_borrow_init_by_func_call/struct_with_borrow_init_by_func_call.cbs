@@ -8,11 +8,11 @@
 #include <stdlib.h>
 
 struct S {
-  int *borrow p1;
-  const int *borrow p2;
+  int *_Borrow p1;
+  const int *_Borrow p2;
 };
 
-struct S struct S::new(int *borrow p1, const int *borrow p2) {
+struct S struct S::new(int *_Borrow p1, const int *_Borrow p2) {
   struct S s = { .p1 = p1, .p2 = p2 };
   return s;
 }

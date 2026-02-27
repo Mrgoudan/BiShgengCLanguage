@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 
 void check_dereferenced_test1(void) {
-  int *borrow _Nullable p = nullptr;
+  int *_Borrow _Nullable p = nullptr;
   {
     *p = 10; // expected-error {{nullable pointer cannot be dereferenced}}
     _Unsafe {
@@ -13,7 +13,7 @@ void check_dereferenced_test1(void) {
 }
 
 void check_dereferenced_test2(void) {
-  int *borrow _Nullable p = nullptr;
+  int *_Borrow _Nullable p = nullptr;
   if (p != nullptr) {
     *p = 5;
   }
@@ -22,7 +22,7 @@ void check_dereferenced_test2(void) {
 
 void check_dereferenced_test3() {
   _Safe {
-    int *borrow _Nullable p = nullptr;
+    int *_Borrow _Nullable p = nullptr;
     _Unsafe {
       *p = 5; // expected-error {{nullable pointer cannot be dereferenced}}
       _Safe {
@@ -37,21 +37,21 @@ void check_dereferenced_test3() {
 }
 
 void check_assigned_test(void) {
-  int *borrow p = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Borrow p = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
   _Unsafe {
-    int *borrow p2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow p2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
   }
 }
 
-int* borrow _Nonnull check_returned_test(int *borrow _Nonnull ptr ) {
-  int *borrow _Nullable p = nullptr;
+int* _Borrow _Nonnull check_returned_test(int *_Borrow _Nonnull ptr ) {
+  int *_Borrow _Nullable p = nullptr;
   return p; // expected-error {{cannot return nullable pointer type}}
 }
 
-void check_param_pass_test(int *borrow ptr) {
-  int *borrow _Nullable p = nullptr;
-  int *borrow p2 = check_returned_test(p); // expected-error {{cannot pass nullable pointer argument}}
+void check_param_pass_test(int *_Borrow ptr) {
+  int *_Borrow _Nullable p = nullptr;
+  int *_Borrow p2 = check_returned_test(p); // expected-error {{cannot pass nullable pointer argument}}
   _Unsafe {
-    int *borrow p3 = check_returned_test(p); // expected-error {{cannot pass nullable pointer argument}}
+    int *_Borrow p3 = check_returned_test(p); // expected-error {{cannot pass nullable pointer argument}}
   }
 }

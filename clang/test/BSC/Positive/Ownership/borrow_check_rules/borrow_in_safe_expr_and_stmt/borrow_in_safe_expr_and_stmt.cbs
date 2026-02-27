@@ -5,14 +5,14 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-_Safe void use(int *borrow p) {
+_Safe void use(int *_Borrow p) {
     *p = 5;
 }
 
 void test1(int a, int b, char c) {
     _Safe switch (a) {
     case 5: {
-        int *borrow pb = &mut b;
+        int *_Borrow pb = &mut b;
         use(pb);
         break;
     }
@@ -36,7 +36,7 @@ void test2(int a, int b, char c) {
         break;
     }
     case 5: {
-        int *borrow pb = &mut b;
+        int *_Borrow pb = &mut b;
         use(pb);
         break;
     }
@@ -58,7 +58,7 @@ void test2(int a, int b, char c) {
                         break;
                     }
                     case 5: {
-                        int *borrow pb = &mut b;
+                        int *_Borrow pb = &mut b;
                         use(pb);
                         break;
                     }
@@ -86,12 +86,12 @@ typedef struct {
 static unsigned index = 0;
 static S *g = (void *)0;
 
-void rre_memset(void *borrow p) {
+void rre_memset(void *_Borrow p) {
 }
 
 void foo() {
   if (g != nullptr) {
-    rre_memset(_Unsafe((void *borrow)(void *)(g[index].bits)));
+    rre_memset(_Unsafe((void *_Borrow)(void *)(g[index].bits)));
   }
 }
 

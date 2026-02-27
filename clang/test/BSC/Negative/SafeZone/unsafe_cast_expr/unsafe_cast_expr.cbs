@@ -58,7 +58,7 @@ void diffPointCastConver(void) {
       pa = (int *)p1;                    // expected-error{{conversion from type 'int *owned' to 'int *' is forbidden in the safe zone}}
     }
   }
-  // borrow -> raw  (waiting complement...)
+  // _Borrow -> raw  (waiting complement...)
 }
 
 void pointCastConver() {
@@ -80,7 +80,7 @@ void pointCastConver() {
     int *owned p1 = (int * owned)a;   // expected-error{{conversion from type 'int' to 'int *owned' is forbidden in the safe zone}}
     a = (int)p1;                      // expected-error{{conversion from type 'int *owned' to 'int' is forbidden in the safe zone}}
   }
-  // borrow int * -> int  (waiting complement...)
+  // _Borrow int * -> int  (waiting complement...)
 }
 
 void baseTypeCastConver() {

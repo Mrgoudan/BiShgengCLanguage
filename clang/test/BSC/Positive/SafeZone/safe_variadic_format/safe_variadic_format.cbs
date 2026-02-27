@@ -32,26 +32,26 @@ _Safe T *owned safe_free<T>(T *owned p) {
 }
 
 // Printf-style variadic function with format attribute allowed in safe zone
-_Safe int my_safe_printf(const char * borrow fmt, ...)__attribute__((format(printf, 1, 2)));
+_Safe int my_safe_printf(const char * _Borrow fmt, ...)__attribute__((format(printf, 1, 2)));
 
 // Declaration and definition
 __attribute__((format(printf, 1, 2)))
-_Safe int my_safe_printf2(const char * borrow fmt, ...) {
+_Safe int my_safe_printf2(const char * _Borrow fmt, ...) {
     return 0;
 }
 
 // Scanf-style variadic function with format attribute allowed in safe zone
 __attribute__((format(scanf, 1, 2)))
-_Safe int my_safe_scanf(const char * borrow fmt, ...);
+_Safe int my_safe_scanf(const char * _Borrow fmt, ...);
 
 // Function pointer with format attribute
 __attribute__((format(printf, 1, 2)))
-_Safe int (*safe_printf_ptr)(const char * borrow fmt, ...);
+_Safe int (*safe_printf_ptr)(const char * _Borrow fmt, ...);
 
 // Multiple format attributes
 __attribute__((format(printf, 1, 2)))
 __attribute__((format(printf, 1, 2)))
-_Safe int multi_format(const char * borrow fmt, ...);
+_Safe int multi_format(const char * _Borrow fmt, ...);
 
 // Test calling format-attributed _Safe variadic function from _Safe zone
 _Safe void test_caller(void) {
@@ -59,12 +59,12 @@ _Safe void test_caller(void) {
     my_safe_printf2(&const *"world %s", "test");
 }
 
-// Test passing borrow pointers to variadic functions
+// Test passing _Borrow pointers to variadic functions
 __attribute__((format(printf, 1, 2)))
-_Safe void log_with_borrow(const char * borrow fmt, ...);
+_Safe void log_with_borrow(const char * _Borrow fmt, ...);
 
-_Safe void test_with_borrow_ptr(int * borrow ptr) {
-    // Test: borrow pointers can be passed to variadic functions
+_Safe void test_with_borrow_ptr(int * _Borrow ptr) {
+    // Test: _Borrow pointers can be passed to variadic functions
     log_with_borrow(&const *"Value: %d", *ptr);
 }
 
@@ -75,37 +75,37 @@ struct Point {
 };
 
 __attribute__((format(printf, 2, 3)))
-_Safe void log_point(const struct Point * borrow p, const char * borrow fmt, ...);
+_Safe void log_point(const struct Point * _Borrow p, const char * _Borrow fmt, ...);
 
 _Safe void test_point_logging(void) {
     const struct Point pt = {10, 20};
-    const struct Point * borrow pborrow = &const pt;
+    const struct Point * _Borrow pborrow = &const pt;
     log_point(pborrow, &const *"Coordinates: %d, %d", pt.x, pt.y);
 }
 
 // Test declaration with format attr, definition also with attr
 __attribute__((format(printf, 1, 2)))
-_Safe void decl_has_attr(const char * borrow fmt, ...);
+_Safe void decl_has_attr(const char * _Borrow fmt, ...);
 
 __attribute__((format(printf, 1, 2)))
-_Safe void decl_has_attr(const char * borrow fmt, ...) {
+_Safe void decl_has_attr(const char * _Borrow fmt, ...) {
     return;
 }
 
 // Test multiple declarations, all with format attr
 __attribute__((format(printf, 1, 2)))
-_Safe void multi_decl(const char * borrow fmt, ...);
+_Safe void multi_decl(const char * _Borrow fmt, ...);
 
 __attribute__((format(printf, 1, 2)))
-_Safe void multi_decl(const char * borrow fmt, ...);
+_Safe void multi_decl(const char * _Borrow fmt, ...);
 
 __attribute__((format(printf, 1, 2)))
-_Safe void multi_decl(const char * borrow fmt, ...) {
+_Safe void multi_decl(const char * _Borrow fmt, ...) {
     return;
 }
 
 // va_start, va_arg, va_end are allowed in UNSAFE zone
-int unsafe_variadic_function(const char * borrow fmt, ...) {
+int unsafe_variadic_function(const char * _Borrow fmt, ...) {
     va_list args;
     va_start(args, fmt);
     int val = va_arg(args, int);
@@ -115,7 +115,7 @@ int unsafe_variadic_function(const char * borrow fmt, ...) {
 
 // Using variadic operations inside _Unsafe block
 __attribute__((format(printf, 1, 2)))
-_Safe void test_variadic_in_unsafe_block(const char * borrow fmt, ...) {
+_Safe void test_variadic_in_unsafe_block(const char * _Borrow fmt, ...) {
     _Unsafe {
         va_list args;
         va_start(args, fmt);
@@ -125,9 +125,9 @@ _Safe void test_variadic_in_unsafe_block(const char * borrow fmt, ...) {
 }
 
 __attribute__((format(printf, 1, 2)))
-_Safe void test_variadic_in_unsafe_block2(const char * borrow fmt, ...);
+_Safe void test_variadic_in_unsafe_block2(const char * _Borrow fmt, ...);
 
-_Safe void test_variadic_in_unsafe_block2(const char * borrow fmt, ...) {
+_Safe void test_variadic_in_unsafe_block2(const char * _Borrow fmt, ...) {
     _Unsafe {
         va_list args;
         va_start(args, fmt);

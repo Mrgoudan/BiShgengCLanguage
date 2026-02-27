@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-// Test nullptr with BSC owned/borrow qualifiers
+// Test nullptr with BSC owned/_Borrow qualifiers
 
 // nullptr with owned pointers
 void test_nullptr_owned(void) {

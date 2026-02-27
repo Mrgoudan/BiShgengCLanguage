@@ -3,7 +3,7 @@
 _Safe void safe_free(void * owned p);
 
 int *owned _Nullable init();
-void tinker(int *borrow);
+void tinker(int *_Borrow);
 
 void call_function_after_free(){
   int *owned _Nullable p = init();
@@ -46,7 +46,7 @@ typedef struct {
 } Data;
 
 Data *owned _Nullable init_data();
-void read_data(Data *borrow);
+void read_data(Data *_Borrow);
 
 int assign_to_field_after_free() {
   Data *owned _Nullable p = init_data();
