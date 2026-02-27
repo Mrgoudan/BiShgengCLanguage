@@ -465,15 +465,12 @@ bool QualType::hasBorrow() const {
 }
 
 bool QualType::isConstBorrow() const {
-  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
-  if (QT.isBorrowQualified()) {
-    while (QT->isPointerType()) {
-      QT = QT->getPointeeType();
-    }
-    if (QT.isConstQualified())
-      return true;
-  }
-  return false;
+  if (!isBorrowQualified())
+    return false;
+  if (!getTypePtr()->isPointerType())
+    return false;
+  QualType directPointee = getTypePtr()->getPointeeType();
+  return directPointee.isConstQualified();
 }
 
 bool QualType::isConstPointee() const {
@@ -487,41 +484,32 @@ bool QualType::isConstPointee() const {
 }
 
 QualType QualType::addConstBorrow(const ASTContext &Context) {
-  SmallVector<unsigned, 4> Qualifiers;
-  int PointerNum = 0;
-  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
-  while (QT->isPointerType()) {
-    Qualifiers.push_back(QT.getLocalFastQualifiers());
-    QT = QT->getPointeeType();
-    PointerNum++;
+  QualType pointee;
+  if (getTypePtr()->isPointerType()) {
+    // Use the pointee type as stored (preserve sugar) so the result type prints
+    // without an extra tag (e.g. "const s<int> *_Borrow" not "const struct s<int> *_Borrow").
+    pointee = getTypePtr()->getPointeeType();
+  } else {
+    // Non-pointer: &_Const applied to a value of type T (e.g. *a with type s<T>)
+    // yields const T* _Borrow. Use the type as-is so printing matches the
+    // operand (e.g. "s<int>" not "struct s<int>").
+    pointee = *this;
   }
-  QT.addConst();
-  while (PointerNum) {
-    QT = Context.getPointerType(QT);
-    QT.setLocalFastQualifiers(Qualifiers[PointerNum - 1]);
-    PointerNum--;
-  }
-  QT.addBorrow();
-  return QT;
+  pointee.addConst();  // Add const to the (direct) pointee (the borrowed object)
+  QualType result = Context.getPointerType(pointee);
+  result.addBorrow();
+  return result;
 }
 
 QualType QualType::removeConstForBorrow(const ASTContext &Context) {
-  SmallVector<unsigned, 4> Qualifiers;
-  int PointerNum = 0;
-  QualType QT = QualType(getTypePtr(), getLocalFastQualifiers());
-  while (QT->isPointerType()) {
-    Qualifiers.push_back(QT.getLocalFastQualifiers());
-    QT = QT->getPointeeType();
-    PointerNum++;
-  }
-  QT.removeLocalConst();
-  PointerNum--;
-  while (PointerNum + 1) {
-    QT = Context.getPointerType(QT);
-    QT.setLocalFastQualifiers(Qualifiers[PointerNum]);
-    PointerNum--;
-  }
-  return QT;
+  // Only applies to pointer types (e.g. const int * from dereferencing const int * borrow).
+  // For non-pointer types (e.g. struct S from dereferencing struct S * borrow),
+  // return unchanged - no const to remove.
+  if (!getTypePtr()->isPointerType())
+    return *this;
+  QualType directPointee = getTypePtr()->getPointeeType();
+  directPointee.removeLocalConst();
+  return Context.getPointerType(directPointee);
 }
 
 #endif

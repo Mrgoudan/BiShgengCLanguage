@@ -359,6 +359,21 @@ void Sema::CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL) {
   }
 }
 
+namespace {
+/// Returns true if casting from RHS to LHS would cast away const qualifiers
+/// (i.e. RHS has const that LHS doesn't at some level).
+bool isCastingAwayConst(QualType LHS, QualType RHS) {
+  if (LHS->isPointerType() && RHS->isPointerType()) {
+    const auto *LHSPtr = LHS->getAs<PointerType>();
+    const auto *RHSPtr = RHS->getAs<PointerType>();
+    if (LHSPtr && RHSPtr)
+      return isCastingAwayConst(LHSPtr->getPointeeType(), RHSPtr->getPointeeType());
+  }
+  // For non-pointer types: casting away const means RHS has const that LHS doesn't
+  return RHS.isConstQualified() && !LHS.isConstQualified();
+}
+} // namespace
+
 bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
@@ -385,30 +400,30 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   if (IsSameType) {
     return true;
   }
-  if (IsPointer) {
-    if (LHSCanType->isVoidPointerType()) {
-      return true;
-    } else if (RHSCanType->isVoidPointerType() && !IsInSafeZone()) {
-      return true;
-    } else if (Context.hasSameType(LHSRawType, RHSRawType)) {
-      return true;
-    } else if (TryDesugarTrait(RHSType)) {
-      return true;
-    } else {
-      // Check borrow qualifier compatibility for non-void pointer casts
-      // Prevent casting between mutable and const borrows to avoid aliasing
-      if (RHSCanType.isBorrowQualified() && LHSCanType.isBorrowQualified()) {
-        bool RHSIsConst = RHSCanType.isConstBorrow();
-        bool LHSIsConst = LHSCanType.isConstBorrow();
-        if (RHSIsConst != LHSIsConst) {
-          return false;
-        }
-      }
-      return CheckBorrowQualTypeCStyleCast(LHSPtrType->getPointeeType(),
-                                           RHSPtrType->getPointeeType());
-    }
-  }
-  return false;
+
+  if (!IsPointer)
+    return false;
+  if (LHSCanType->isVoidPointerType())
+    return true;
+  if (RHSCanType->isVoidPointerType() && !IsInSafeZone())
+    return true;
+  // Check borrow qualifier compatibility first - prevent casting between
+  // mutable and const borrows to avoid aliasing (must run before hasSameType
+  // which may treat types as equivalent)
+  if (RHSCanType.isBorrowQualified() && LHSCanType.isBorrowQualified() &&
+      (RHSCanType.isConstBorrow() != LHSCanType.isConstBorrow()))
+    return false;
+  if (Context.hasSameType(LHSRawType, RHSRawType))
+    return true;
+  if (TryDesugarTrait(RHSType))
+    return true;
+
+  // Reject casting away const (e.g. const int *const * -> int *const *)
+  QualType LHSPointee = LHSPtrType->getPointeeType();
+  QualType RHSPointee = RHSPtrType->getPointeeType();
+  if (isCastingAwayConst(LHSPointee, RHSPointee))
+    return false;
+  return CheckBorrowQualTypeCStyleCast(LHSPointee, RHSPointee);
 }
 
 bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc) {

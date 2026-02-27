@@ -11,8 +11,7 @@ void test() {
   const int *_Borrow p2 = &_Const b; // legal
   int *_Borrow * _Borrow b1 = &_Mut p1; // expected-error {{'&_Mut' on a '_Borrow' qualified type is not allowed}}
   const int *_Borrow const * _Borrow b2 = &_Const p2; // expected-error {{'&_Const' on a '_Borrow' qualified type is not allowed}}
-  int *_Borrow const * _Borrow b3 = &_Const p1; /* expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow *_Borrow' to 'int *const _Borrow *_Borrow'}}
-                                                expected-error {{'&_Const' on a '_Borrow' qualified type is not allowed}} */
+  int *_Borrow const * _Borrow b3 = &_Const p1; // expected-error {{'&_Const' on a '_Borrow' qualified type is not allowed}}
   const int * _Borrow * _Borrow b4 = &_Mut p2; // expected-error {{'&_Mut' on a '_Borrow' qualified type is not allowed}}
   int *_Borrow *_Borrow p3 = &_Mut (&_Mut a);  // expected-error {{'&_Mut' on a '_Borrow' qualified type is not allowed}}  expected-error {{cannot take the address of an rvalue of type 'int *_Borrow'}}
   const int *_Borrow *_Borrow p4 = &_Mut (&_Const b); // expected-error {{'&_Mut' on a '_Borrow' qualified type is not allowed}}  expected-error {{cannot take the address of an rvalue of type 'const int *_Borrow'}}

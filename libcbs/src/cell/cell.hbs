@@ -26,7 +26,7 @@ _Safe T Cell<T>::get(const This * _Borrow this) {
 _Safe void Cell<T>::set(const This * _Borrow this, T val) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     _Unsafe {
-        Cell<T> * _Borrow p = (Cell<T> * _Borrow)(Cell<T> *)this;
+        Cell<T> * _Borrow p = (Cell<T> * _Borrow)(Cell<T> *)(void *)this;
         p->value = val;
     }
 }
@@ -80,7 +80,7 @@ _Safe Option<RefImmut<T>> RefCell<T>::try_borrow_immut(const This* _Borrow this)
         int b = this->borrow_count.get();
         if (b >= 0) {
             this->borrow_count.set(b + 1);
-            RefImmut<T> ref = { .ptr = (RefCell<T> *)this };
+            RefImmut<T> ref = { .ptr = (RefCell<T> *)(void *)this };
             Option<RefImmut<T>> option_ref = Option<RefImmut<T>>::Some(ref);
             return option_ref;
         } else {
@@ -103,7 +103,7 @@ _Safe Option<RefMut<T>> RefCell<T>::try_borrow_mut(const This* _Borrow this) {
         int b = this->borrow_count.get();
         if (b == 0) {
             this->borrow_count.set(-1);
-            RefMut<T> ref = { .ptr = (RefCell<T> *)this };
+            RefMut<T> ref = { .ptr = (RefCell<T> *)(void *)this };
             Option<RefMut<T>> option_ref = Option<RefMut<T>>::Some(ref);
             return option_ref;
         } else {

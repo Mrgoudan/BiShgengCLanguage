@@ -91,7 +91,7 @@ void test() {
     const int * _Borrow b6 = &_Const *p3; // legal
 
 	int *_Owned * _Borrow b7 =&_Mut p3; // legal
-	const int *_Owned * _Borrow b8 =&_Const p3; // legal
+	int *_Owned const * _Borrow b8 =&_Const p3; // legal
 
     // T 是 copy 语义，p 是 immut 借用
 	int a1 = *b4; // legal
@@ -108,6 +108,11 @@ void test() {
     a3 = ((int * _Owned)*b7); // expected-error {{_Borrow type does not allow move ownership}}
     *b7; // expected-warning {{expression result unused}}
     *b7 = a3; // legal
+
+    // Mutable borrow of const int * allows assignment through (direct pointee is not const-qualified on pointer level)
+    const int * tmp = &a;
+    const int ** _Borrow b_mut_const = &_Mut tmp;
+    *b_mut_const = &a;  // legal
 
     struct R r = {p3};
     struct R * _Borrow b9 = &_Mut r;

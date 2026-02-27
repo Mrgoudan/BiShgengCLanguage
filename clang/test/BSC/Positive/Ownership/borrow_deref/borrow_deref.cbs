@@ -50,3 +50,10 @@ int main() {
     m.foo3();
     return 0;
 }
+
+void test_mutable_pointer_borrow_assign(void) {
+  const int * tmp = (const int*)0;
+  const int v = 0;
+  const int ** _Borrow p = &_Mut tmp;
+  *p = &v;  // Legal: const int * is not const-qualified on the pointer level
+}
