@@ -181,33 +181,66 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
   const FunctionProtoType *UnsafeFPT = Type1IsUnsafe ? FPT1 : FPT2;
   const FunctionProtoType *SafeFPT = Type1IsUnsafe ? FPT2 : FPT1;
 
+  // Helper lambda: check if two (possibly function-pointer) types are compatible
+  // in the context of a heterogeneous redeclaration. For function pointer types
+  // that differ only in SafeZoneSpecifier, we apply the heterogeneous check
+  // recursively instead of relying on typesAreCompatible (which rejects
+  // safe/unsafe mismatches unconditionally).
+  auto AreParamTypesCompatible = [&](QualType UnsafeT, QualType SafeT) -> bool {
+    // Save originals for owned/borrow check.
+    QualType UnsafeTOrig = UnsafeT;
+    QualType SafeTOrig = SafeT;
+
+    // Strip nullability and owned/borrow for base type compatibility checking.
+    AttributedType::stripOuterNullability(UnsafeT);
+    AttributedType::stripOuterNullability(SafeT);
+    UnsafeT.removeLocalOwned();
+    UnsafeT.removeLocalBorrow();
+    SafeT.removeLocalOwned();
+    SafeT.removeLocalBorrow();
+
+    // Fast path: identical canonical unqualified types.
+    if (UnsafeT.getCanonicalType().getUnqualifiedType() ==
+        SafeT.getCanonicalType().getUnqualifiedType()) {
+      return AreOwnedBorrowQualifiersCompatible(UnsafeTOrig, SafeTOrig);
+    }
+
+    // If both are function pointer types, check heterogeneous compatibility
+    // recursively so that e.g. `func` and `func_safe` are accepted as a
+    // compatible pair when used as parameters in a heterogeneous redeclaration.
+    if (UnsafeT->isFunctionPointerType() && SafeT->isFunctionPointerType()) {
+      QualType UnsafePointee = UnsafeT->getPointeeType();
+      QualType SafePointee = SafeT->getPointeeType();
+      const FunctionProtoType *UnsafeFP =
+          UnsafePointee->getAs<FunctionProtoType>();
+      const FunctionProtoType *SafeFP =
+          SafePointee->getAs<FunctionProtoType>();
+      if (UnsafeFP && SafeFP) {
+        SafeZoneSpecifier UnsafeFPSZS = UnsafeFP->getFunSafeZoneSpecifier();
+        SafeZoneSpecifier SafeFPSZS = SafeFP->getFunSafeZoneSpecifier();
+        // Only treat as a heterogeneous function-pointer pair when one side is
+        // safe and the other is not.
+        bool UnsafeFPIsSafe = (UnsafeFPSZS == SZ_Safe);
+        bool SafeFPIsSafe = (SafeFPSZS == SZ_Safe);
+        if (UnsafeFPIsSafe != SafeFPIsSafe) {
+          return areFunctionTypesCompatibleForHeterogeneousRedecl(
+              Ctx, UnsafePointee, SafePointee, UnsafeFPSZS, SafeFPSZS);
+        }
+      }
+    }
+
+    // General case: use Clang's standard type compatibility check.
+    if (!Ctx.typesAreCompatible(UnsafeT, SafeT))
+      return false;
+
+    return AreOwnedBorrowQualifiersCompatible(UnsafeTOrig, SafeTOrig);
+  };
+
   // Check return type compatibility.
   QualType UnsafeRet = UnsafeFPT->getReturnType();
   QualType SafeRet = SafeFPT->getReturnType();
 
-  // Save original types for owned/borrow compatibility check.
-  QualType UnsafeRetOrig = UnsafeRet;
-  QualType SafeRetOrig = SafeRet;
-
-  // Strip nullability and owned/borrow for base type compatibility checking.
-  // We check owned/borrow separately in AreOwnedBorrowQualifiersCompatible.
-  AttributedType::stripOuterNullability(UnsafeRet);
-  AttributedType::stripOuterNullability(SafeRet);
-  UnsafeRet.removeLocalOwned();
-  UnsafeRet.removeLocalBorrow();
-  SafeRet.removeLocalOwned();
-  SafeRet.removeLocalBorrow();
-
-  // Fast path: check if canonical unqualified types are identical
-  if (UnsafeRet.getCanonicalType().getUnqualifiedType() !=
-      SafeRet.getCanonicalType().getUnqualifiedType()) {
-    // Types differ structurally, do full compatibility check
-    if (!Ctx.typesAreCompatible(UnsafeRet, SafeRet))
-      return false;
-  }
-
-  // Step 2: Add BSC-specific checks for owned/borrow using original types.
-  if (!AreOwnedBorrowQualifiersCompatible(UnsafeRetOrig, SafeRetOrig))
+  if (!AreParamTypesCompatible(UnsafeRet, SafeRet))
     return false;
 
   // Check parameter type compatibility for each parameter.
@@ -215,27 +248,7 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
     QualType UnsafeParam = UnsafeFPT->getParamType(i);
     QualType SafeParam = SafeFPT->getParamType(i);
 
-    // Save original types for owned/borrow compatibility check.
-    QualType UnsafeParamOrig = UnsafeParam;
-    QualType SafeParamOrig = SafeParam;
-
-    // Strip nullability and owned/borrow for base type compatibility checking.
-    AttributedType::stripOuterNullability(UnsafeParam);
-    AttributedType::stripOuterNullability(SafeParam);
-    UnsafeParam.removeLocalOwned();
-    UnsafeParam.removeLocalBorrow();
-    SafeParam.removeLocalOwned();
-    SafeParam.removeLocalBorrow();
-
-    // Step 1: Fast path for identical canonical types, then full compatibility check.
-    if (UnsafeParam.getCanonicalType().getUnqualifiedType() !=
-        SafeParam.getCanonicalType().getUnqualifiedType()) {
-      if (!Ctx.typesAreCompatible(UnsafeParam, SafeParam))
-        return false;
-    }
-
-    // Step 2: Add BSC-specific checks for owned/borrow using original types.
-    if (!AreOwnedBorrowQualifiersCompatible(UnsafeParamOrig, SafeParamOrig))
+    if (!AreParamTypesCompatible(UnsafeParam, SafeParam))
       return false;
   }
 
