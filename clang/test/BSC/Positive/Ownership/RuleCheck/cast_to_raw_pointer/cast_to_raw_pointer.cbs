@@ -14,15 +14,18 @@ unsigned char *call(unsigned char *p) {
 }
 
 S *_Owned test1(void *_Owned p) {
-  return (S *_Owned)(void *)((unsigned char *)p + 5);
+  void *raw = __move_to_raw(p);
+  return __take_from_raw((S *)((unsigned char *)raw + 5));
 }
 
 S *_Owned test2(void *_Owned p) {
-  return (S *_Owned)(S *)(unsigned char *)p;
+  void *raw = __move_to_raw(p);
+  return __take_from_raw((S *)raw);
 }
 
 S *_Owned test3(void *_Owned p) {
-  return (S *_Owned)(void *)(unsigned char *)p;
+  void *raw = __move_to_raw(p);
+  return __take_from_raw((S *)raw);
 }
 
 S *_Owned test4(void *_Owned p) {
@@ -30,15 +33,18 @@ S *_Owned test4(void *_Owned p) {
 }
 
 S *_Owned test5(void *_Owned p) {
-  return (S *_Owned)(void *)(call((unsigned char *)p + 5) + 6);
+  void *raw = __move_to_raw(p);
+  return __take_from_raw((S *)(call((unsigned char *)raw + 5) + 6));
 }
 
 int test6(void *_Owned p) {
-  return (int)*call((unsigned char *)p + 5) + 10;
+  void *raw = __move_to_raw(p);
+  return (int)*call((unsigned char *)raw + 5) + 10;
 }
 
 S *_Owned test7(void *_Owned p) {
-  return (S *_Owned)(void *)((unsigned char *)p - 5);
+  void *raw = __move_to_raw(p);
+  return __take_from_raw((S *)((unsigned char *)raw - 5));
 }
 
 int main(void) {

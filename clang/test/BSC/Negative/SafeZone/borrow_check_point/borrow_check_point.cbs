@@ -16,9 +16,9 @@ _Safe void test_1(void) {
 
 void test_2(void) {
     int t_a = 1;
-    int *_Owned t_b = (int *_Owned)&t_a;
+    int *_Owned t_b = __take_from_raw(&t_a);
     int t_c = 1;
-    int *_Owned t_d = (int *_Owned)&t_c;
+    int *_Owned t_d = __take_from_raw(&t_c);
     int t_g;
     int *t_e = &t_g;
     int *t_f = &t_g;
@@ -62,7 +62,7 @@ void test_3(void) {
     }
 
     int t_c = 1;
-    int * _Owned t_d = (int * _Owned)&t_c;
+    int * _Owned t_d = __take_from_raw(&t_c);
     int t_e = 1;
     int * _Borrow t_f = &_Mut t_e;
     int t_g = 1;
@@ -107,7 +107,7 @@ void test_4(void) {
     struct s_a *c = &b;
     
     struct s_a e = {1};   
-    struct s_a * _Owned f = (struct s_a * _Owned)&e;
+    struct s_a * _Owned f = __take_from_raw(&e);
 
     struct s_a h = {1};
     struct s_a * _Borrow i = &_Mut h;

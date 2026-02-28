@@ -11,11 +11,11 @@
 T* _Owned malloc_owned<T>(T value) {
     T * p = (T *) malloc( sizeof(T) );
     *p = value;
-    return (T* _Owned)p;
+    return __take_from_raw(p);
 }
 
 void free_owned<T>(T* _Owned p) {
-        free( (T*)p );
+        free( __move_to_raw(p) );
 }
 
 struct Owned<T> {
@@ -34,7 +34,7 @@ _Async int f() {
 _Async int foo() {
     struct Owned<int> q = make_owned(2);
     int a = _Await f();
-    int * p = (int *) q.p;
+    int * p = __move_to_raw(q.p);
     return a;
 }
 

@@ -5,11 +5,11 @@
 T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* _Owned)p;
+  return __take_from_raw(p);
 }
 
 void safe_free<T>(T* _Owned p) {
-  free( (T*)p );
+  free( __move_to_raw(p) );
 }
 
 _Safe int foo(int *_Borrow x) { return *x; }

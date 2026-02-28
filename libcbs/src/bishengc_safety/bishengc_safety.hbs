@@ -43,7 +43,7 @@ _Safe T *_Owned safe_malloc<T>(T t) {
         } else {
             *addr = t;
         }
-        return (T *_Owned)addr;
+        return __take_from_raw(addr);
     }
 }
 

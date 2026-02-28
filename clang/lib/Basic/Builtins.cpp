@@ -89,10 +89,16 @@ static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
   bool CUDAUnsupported = !LangOpts.CUDA && BuiltinInfo.Langs == CUDA_LANG;
   bool CPlusPlusUnsupported =
       !LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG;
+#if ENABLE_BSC
+  bool BSCUnsupported = !LangOpts.BSC && (BuiltinInfo.Langs & BSC_LANG);
+#endif
   return !BuiltinsUnsupported && !CorBuiltinsUnsupported &&
          !MathBuiltinsUnsupported && !OclCUnsupported && !OclGASUnsupported &&
          !OclPipeUnsupported && !OclDSEUnsupported && !OpenMPUnsupported &&
          !GnuModeUnsupported && !MSModeUnsupported && !ObjCUnsupported &&
+#if ENABLE_BSC
+         !BSCUnsupported &&
+#endif
          !CPlusPlusUnsupported && !CUDAUnsupported;
 }
 

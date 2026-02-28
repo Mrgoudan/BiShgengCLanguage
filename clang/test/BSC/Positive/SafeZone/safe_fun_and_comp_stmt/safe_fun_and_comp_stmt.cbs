@@ -13,7 +13,7 @@ typedef struct File{
 
 FileID* _Owned create() {
   FileID *p = malloc(sizeof(FileID));
-  return (FileID* _Owned)p;
+  return __take_from_raw(p);
 }
 
 FileID* _Owned consume_and_return(FileID* _Owned p) {
@@ -23,9 +23,9 @@ FileID* _Owned consume_and_return(FileID* _Owned p) {
 _Safe void safe_free(FileID* _Owned p) {
   int x = 2;
   if (x > 1) {
-    _Unsafe {free((FileID*)p);}
+    _Unsafe {free(__move_to_raw(p));}
   } else {
-    _Unsafe {free((FileID*)p);}
+    _Unsafe {free(__move_to_raw(p));}
   }
 }
 
@@ -40,11 +40,11 @@ int main(void) {
 // CHECK-NEXT:   int x = 2;
 // CHECK-NEXT:   if (x > 1) {
 // CHECK-NEXT:     {
-// CHECK-NEXT:       free((FileID *)p);
+// CHECK-NEXT:       free((struct File *)p);
 // CHECK-NEXT:     }
 // CHECK-NEXT:   } else {
 // CHECK-NEXT:     {
-// CHECK-NEXT:       free((FileID *)p);
+// CHECK-NEXT:       free((struct File *)p);
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

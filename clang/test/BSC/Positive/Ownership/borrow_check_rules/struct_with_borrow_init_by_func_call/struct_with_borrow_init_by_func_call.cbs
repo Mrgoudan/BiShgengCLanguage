@@ -24,8 +24,8 @@ int main() {
   int b = 10;
   int *p1 = &a;
   int *p2 = &b;
-  int *_Owned p3 = (int *_Owned)malloc(sizeof(int));
-  int *_Owned p4 = (int *_Owned)malloc(sizeof(int));
+  int *_Owned p3 = __take_from_raw((int *)malloc(sizeof(int)));
+  int *_Owned p4 = __take_from_raw((int *)malloc(sizeof(int)));
   struct S s1 = struct S::new(&_Mut a, &_Const b);
   struct S s2 = struct S::new(&_Mut *p1, &_Const *p2);
   struct S s3 = struct S::new(&_Mut *p3, &_Const *p4);
@@ -38,7 +38,7 @@ int main() {
   use(s1);
   use(s2);
   use(s3);
-  free((int *)p3);
-  free((int *)p4);
+  free(__move_to_raw(p3));
+  free(__move_to_raw(p4));
   return 0;
 }

@@ -9,7 +9,7 @@ _Owned struct A {
    int x;
    char* _Owned str;
   ~A( A this) {
-    free((void *)this.str);
+    free(__move_to_raw(this.str));
   }
 };
 int main() {

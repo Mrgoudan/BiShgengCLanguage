@@ -12,8 +12,8 @@ void test1() {
 void test2() {
     int *p1, *p2;
     p1 = p2 = nullptr;
-    int *_Owned p3 = (int *_Owned)p1; // expected-error {{cannot cast nullable pointer to nonnull type}}
-    int *_Owned p4 = (int *_Owned)p2; // expected-error {{cannot cast nullable pointer to nonnull type}}
+    int *_Owned p3 = __take_from_raw(p1); // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Owned p4 = __take_from_raw(p2); // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     safe_free((void *_Owned)p3);
     safe_free((void *_Owned)p4);
 }

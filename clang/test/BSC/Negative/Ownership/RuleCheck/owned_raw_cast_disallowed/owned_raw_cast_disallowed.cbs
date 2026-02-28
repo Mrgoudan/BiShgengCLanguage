@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -verify %s
+
+void free(void *ptr);
+void *malloc(unsigned long size);
+
+void test_owned_to_raw_cast(int *_Owned p) {
+  int *raw = (int *)p; // expected-error {{cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer}}
+  (void)raw;
+}
+
+void test_raw_to_owned_cast() {
+  int *raw = (int *)malloc(sizeof(int));
+  int *_Owned p = (int *_Owned)raw; // expected-error {{cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer}}
+  free(raw);
+  (void)p;
+}

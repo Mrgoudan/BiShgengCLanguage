@@ -18,11 +18,11 @@ void use_mut(int *_Borrow p) {}
 T *_Owned safe_malloc<T>(T value) {
   T *p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T *_Owned)p;
+  return __take_from_raw(p);
 }
 
 void free_owned<T>(T *_Owned p) {
-  free( (T *)p );
+  free( __move_to_raw(p) );
 }
 
 void test1() {

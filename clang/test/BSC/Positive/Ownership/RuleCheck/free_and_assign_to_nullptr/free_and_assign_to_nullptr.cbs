@@ -6,7 +6,7 @@
 // expected-no-diagnostics
 
 void consume(int *_Owned p) {
-  int *pp = (int *)p;
+  int *pp = __move_to_raw(p);
 }
 
 void test1(int *_Owned p) {

@@ -30,8 +30,8 @@ void func1(int * _Owned * _Owned * _Owned a, int * _Owned * _Owned * _Owned b) {
 } // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}} expected-error {{memory leak of value: `b`}} expected-error {{field memory leak of value: `b`, *b, **b are leak}} expected-error {{memory leak of value: `d`}} expected-error {{memory leak of value: `e`}}
 
 void * _Owned VoidPtrOwned_err(struct C * _Owned c) {
-    int *d = (int*)c->a;
-    d = (int*)c->b;
+    int *d = __move_to_raw(c->a);
+    d = __move_to_raw(c->b);
     return (void * _Owned)c;
 }
 

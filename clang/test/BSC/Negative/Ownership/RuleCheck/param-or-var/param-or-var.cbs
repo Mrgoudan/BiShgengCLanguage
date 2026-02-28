@@ -12,19 +12,19 @@ void func5(struct A * _Owned a) {} // expected-error {{memory leak of value: `a`
 
 void func6(int * _Owned a) {
 	int num = 5;
-	a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
+	a = __take_from_raw(&num); // expected-error {{assign to _Owned value: `a`}}
 } // expected-error {{memory leak of value: `a`}}
 
 void func7() {
 	int num = 1;
 	int * _Owned a;
-	a = (int * _Owned)&num;
+	a = __take_from_raw(&num);
 } // expected-error {{memory leak of value: `a`}}
 
 void func13(int * _Owned a) {
 	int * _Owned p = a;
 	int n = 0;
-	a = (int * _Owned)&n;
+	a = __take_from_raw(&n);
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `p`}}
 
 void func14(int * _Owned a, int * _Owned b) {

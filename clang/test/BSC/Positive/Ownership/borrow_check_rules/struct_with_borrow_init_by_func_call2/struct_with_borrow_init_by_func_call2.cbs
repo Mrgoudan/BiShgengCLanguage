@@ -11,7 +11,7 @@ _Owned struct Option<T> {
 _Public:
   T *_Owned inner;
   ~Option(This this) {
-    free((T *)this.inner);
+    free(__move_to_raw(this.inner));
   }
 };
 
@@ -35,7 +35,7 @@ _Safe OptionRefMut<T> Option<T>::as_mut_2(Option<T> *_Borrow this) {
 }
 
 int main() {
-  Option<int> op = { .inner = (int *_Owned)malloc(sizeof(int)) };
+  Option<int> op = { .inner = __take_from_raw((int *)malloc(sizeof(int))) };
   OptionRefMut<int> rm1 = op.as_mut_1();
   OptionRefMut<int> rm2 = op.as_mut_2();
   return 0;

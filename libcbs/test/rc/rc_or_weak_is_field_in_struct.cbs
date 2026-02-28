@@ -10,7 +10,7 @@ _Owned struct P {
 _Public:
     int *_Owned k;
     ~P(P this) {
-        free((void*)this.k);
+        free((void*)__move_to_raw(this.k));
     }
 };
 
@@ -20,7 +20,7 @@ _Public:
     Rc<P> p;
 };
 void test1() {
-    int *_Owned k = (int *_Owned)(void *_Owned)malloc(sizeof(int));
+    int *_Owned k = __take_from_raw((int *)malloc(sizeof(int)));
     *k = 5;
     P p = { .k = k };
     Rc<P> rc = Rc<P>::new(p);
@@ -50,7 +50,7 @@ _Public:
 };
 
 void test2() {
-    int *_Owned k = (int *_Owned)(void *_Owned)malloc(sizeof(int));
+    int *_Owned k = __take_from_raw((int *)malloc(sizeof(int)));
     *k = 5;
     P p = { .k = k };
 

@@ -41,7 +41,7 @@ void caller5(int * _Owned a, int * _Owned b) {
 
 int * _Owned IntPtrOwned1() {
 	int num = 1;
-	int * _Owned a = (int * _Owned)&num;
+	int * _Owned a = __take_from_raw(&num);
 	return a;
 }
 

@@ -14,7 +14,7 @@ int * _Owned func1(int * _Owned a) {
 
 int * _Owned func3() {
 	int num = 1;
-	int * _Owned p = (int * _Owned)&num;
+	int * _Owned p = __take_from_raw(&num);
 	return p;
 }
 

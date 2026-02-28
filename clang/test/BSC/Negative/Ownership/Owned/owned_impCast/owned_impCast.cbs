@@ -4,7 +4,7 @@
 
 //_Owned to _Owned
 void test1(float f) {
-    float* _Owned a1 = (float* _Owned)&f;
+    float* _Owned a1 = __take_from_raw(&f);
     int* _Owned a2 = a1;    //expected-error {{incompatible _Owned types, cannot cast 'float *_Owned' to 'int *_Owned'}}
 }
 
@@ -49,7 +49,7 @@ int* test6()
 int test6_1()
 {
     int* a = test6();
-    int* _Owned b = (int* _Owned)a;
+    int* _Owned b = __take_from_raw(a);
     if (*b != 0) {
         return 1;
     }
@@ -71,7 +71,7 @@ int test7()
 // with other qualifiers
 void test9() {
     int a = 10;
-    int* const _Owned p1 = (int* _Owned)&a;   //legal
+    int* const _Owned p1 = __take_from_raw(&a);   //legal
     int* const _Owned p2 = p1;   //legal
     const int* _Owned p3 = p1;   //legal
     const int* const _Owned p4 = p1; //legal

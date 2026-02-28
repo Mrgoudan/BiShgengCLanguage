@@ -32,7 +32,7 @@ _Safe void foo<T>(T* _Owned p) {
 
 _Safe void test_safe_expr3(void) {
     int a = 0;
-    int *_Owned p = _Unsafe((int *_Owned)&a);
+    int *_Owned p = _Unsafe(__take_from_raw(&a));
     foo<int>(p);
 }
 

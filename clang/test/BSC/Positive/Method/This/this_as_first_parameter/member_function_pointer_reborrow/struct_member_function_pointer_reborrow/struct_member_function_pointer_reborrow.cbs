@@ -19,11 +19,11 @@ _Safe void free_owned<T>(T* _Owned p);
 T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* _Owned)p;
+  return __take_from_raw(p);
 }
 
 _Safe void free_owned<T>(T* _Owned p) {
-  _Unsafe free( (void *)p );
+  _Unsafe free( __move_to_raw(p) );
 }
 
 int struct Foo::getB(This* this) {

@@ -26,10 +26,10 @@ void test1() {
     float * _Borrow p1 = &_Mut y;
     myInt p3 = p;
 
-    int * _Owned p5 = (int * _Owned)&x1;
+    int * _Owned p5 = __take_from_raw(&x1);
     const int * _Borrow b6 = &_Const *p3;
     p7 = &_Mut *p;
-    int * p8 = (int *)p5;
+    int * p8 = __move_to_raw(p5);
 }
 
 void test2() {

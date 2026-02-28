@@ -36,6 +36,6 @@ void v5_accept(int fd, void *addr, int *addrLen, int *_Borrow p) {
     SkAcceptInfoSet(ls, s); 
   }
   v5_adpt_socket_t *_Borrow s = &_Mut t->inner; // expected-note {{`(*t).inner` is borrowed here}}
-  ListNode *t1 = (ListNode *)t; // expected-error {{cannot move out of `t` because it is borrowed}}
+  ListNode *t1 = __move_to_raw(t); // expected-error {{cannot move out of `t` because it is borrowed}}
   CloseSocket((v5_adpt_socket_t *)s);
 }

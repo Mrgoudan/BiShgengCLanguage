@@ -7,7 +7,7 @@ _Trait T {
 };
 
 _Safe void int::do_it(int* _Owned this) {
-  _Unsafe { int* x = (int*)this; }
+  _Unsafe { int* x = __move_to_raw(this); }
 }
 
 void int::do_that(int* this) {
@@ -25,9 +25,9 @@ struct S {
 
 _Safe void struct S::do_it(struct S* _Owned this) {
   _Unsafe {
-    int* a = (int *)this->a;
-    int* b = (int *)this->b;
-    void* s = (void *)(void* _Owned)this;
+    int* a = __move_to_raw(this->a);
+    int* b = __move_to_raw(this->b);
+    void* s = __move_to_raw(this); // expected-error {{use of all moved value: `this`}}
   }
 }
 
@@ -48,7 +48,7 @@ void test1() {
 
 void test2() {
   int x = 1;
-  _Trait T* _Owned t = (int* _Owned)&x;
+  _Trait T* _Owned t = __take_from_raw(&x); // expected-error {{expected a pointer type which has implemented '_Trait T', found 'int *_Owned _Nullable'}}
   t->do_it();
   t->do_that(); // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned' to 'void *'}}
   t->do_this(); // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned' to 'void *_Borrow'}}

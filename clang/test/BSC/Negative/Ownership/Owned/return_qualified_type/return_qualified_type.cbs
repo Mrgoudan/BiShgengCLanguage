@@ -2,7 +2,7 @@
 
 
 void* _Owned test1(void* p) {    //legal
-    void* _Owned a = (void* _Owned)p;
+    void* _Owned a = __take_from_raw(p);
     return a;
 }
 
@@ -38,7 +38,7 @@ const void* test8(void* p) {
 }
 
 T* _Owned safePtr<T>(T* p) {
-    T* _Owned a = (T* _Owned)p;
+    T* _Owned a = __take_from_raw(p);
     return a;
 }
 

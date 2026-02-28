@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+void free(void *ptr);
+void *malloc(unsigned long size);
+
+int *_Owned make_owned() {
+  int *raw = (int *)malloc(sizeof(int));
+  return __take_from_raw(raw);
+}
+
+void consume_owned(int *_Owned p) {
+  int *raw = __move_to_raw(p);
+  free(raw);
+}
+
+void test_round_trip() {
+  int *_Owned p = make_owned();
+  consume_owned(p);
+}

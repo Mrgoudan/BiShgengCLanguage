@@ -90,7 +90,7 @@ int f9() {
 
 int f10() {
 	int local = 1;
-	int * _Owned a = (int * _Owned)&local;
+	int * _Owned a = __take_from_raw(&local);
 	int * _Owned b = a;
 	return 0; // expected-error {{memory leak of value: `b`}}
 }
@@ -98,7 +98,7 @@ int f10() {
 int * _Owned f11(int * _Owned a)
 {
   const int local = 2;
-  const int * _Owned b = (const int * _Owned)&local;
+  const int * _Owned b = __take_from_raw(&local);
   *a -= *b;
   return a; // expected-error {{memory leak of value: `b`}}
 }
@@ -106,7 +106,7 @@ int * _Owned f11(int * _Owned a)
 int * _Owned f12(int * _Owned a)
 {
   const int local = 1;
-  const int * _Owned b = (const int * _Owned)&local;
+  const int * _Owned b = __take_from_raw(&local);
   *a = *a - *b;
   return a; // expected-error {{memory leak of value: `b`}}
 }

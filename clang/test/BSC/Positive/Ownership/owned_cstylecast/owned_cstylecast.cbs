@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 
 T2 _Owned owned_cast<T2, T1>(T1 *_Owned p) {
-  { return (T2 _Owned)(T2)(T1 *)(p); }
+  { return (T2 _Owned)(p); }
 }
 
 unsigned char *_Owned getptr(void);
@@ -29,15 +29,15 @@ struct Outer {
 // ==========================================================
 
 T2 _Owned basic_owned_cast<T2, T1>(T1 *_Owned p) {
-  _Unsafe { return (T2 _Owned)(T2)(T1 *)(p); }
+  _Unsafe { return (T2 _Owned)(p); }
 }
 
 void *_Owned cast_with_crazy_parens(unsigned char *_Owned p) {
-  _Unsafe { return (void *_Owned)(void *)(((((p))))); }
+  _Unsafe { return (void *_Owned)(((((p))))); }
 }
 
 void *_Owned cast_with_multiple_raw_types(int *_Owned p) {
-  _Unsafe { return (void *_Owned)(void *)(char *)(int *)(p); }
+  _Unsafe { return (void *_Owned)(p); }
 }
 
 void *_Owned direct_cast(int *_Owned p) {
@@ -49,19 +49,19 @@ void *_Owned direct_cast(int *_Owned p) {
 // ==========================================================
 
 void *_Owned cast_member_dot(struct Inner s) {
-  _Unsafe { return (void *_Owned)(void *)(s.data); }
+  _Unsafe { return (void *_Owned)(s.data); }
 }
 
 void *_Owned cast_member_arrow(struct Inner *s_ptr) {
-  _Unsafe { return (void *_Owned)(void *)(s_ptr->data); }
+  _Unsafe { return (void *_Owned)(s_ptr->data); }
 }
 
 void *_Owned cast_deep_member_dot(struct Outer o) {
-  _Unsafe { return (void *_Owned)(void *)(((o.inner_val.data))); }
+  _Unsafe { return (void *_Owned)(((o.inner_val.data))); }
 }
 
 void *_Owned cast_deep_member_arrow(struct Outer *o_ptr) {
-  _Unsafe { return (void *_Owned)(void *)(o_ptr->inner_ptr->data); }
+  _Unsafe { return (void *_Owned)(o_ptr->inner_ptr->data); }
 }
 
 // ==========================================================
@@ -69,22 +69,22 @@ void *_Owned cast_deep_member_arrow(struct Outer *o_ptr) {
 // ==========================================================
 
 void *_Owned cast_deref(int *_Owned *ptr_to_owned) {
-  _Unsafe { return (void *_Owned)(void *)(*ptr_to_owned); }
+  _Unsafe { return (void *_Owned)(*ptr_to_owned); }
 }
 
 void *_Owned cast_deref_with_parens(int *_Owned *ptr_to_owned) {
-  _Unsafe { return (void *_Owned)(void *)((*((ptr_to_owned)))); }
+  _Unsafe { return (void *_Owned)((*((ptr_to_owned)))); }
 }
 
 void *_Owned cast_double_deref(int *_Owned **pptr) {
-  _Unsafe { return (void *_Owned)(void *)(**pptr); }
+  _Unsafe { return (void *_Owned)(**pptr); }
 }
 
 // ==========================================================
 // Macro expansion patterns
 // ==========================================================
 
-#define BSC__Unsafe_CAST_TO_VOID(expr) ((void *_Owned)(void *)(expr))
+#define BSC__Unsafe_CAST_TO_VOID(expr) ((void *_Owned)(expr))
 #define GET_AND_CAST(expr) BSC__Unsafe_CAST_TO_VOID((expr))
 
 void *_Owned cast_via_macro(unsigned char *_Owned p) {

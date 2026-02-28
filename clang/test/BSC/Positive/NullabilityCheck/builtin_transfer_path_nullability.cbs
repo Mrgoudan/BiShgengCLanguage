@@ -1,0 +1,28 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+void takes_nonnull(int *_Nonnull p);
+void consume(int * _Owned);
+
+void test_builtin_transfer_keeps_path_nonnull(int *_Nullable p) {
+  if (p != nullptr) {
+    int *_Nullable raw = __move_to_raw(__take_from_raw(p));
+    *raw = 1;
+    takes_nonnull(__move_to_raw(__take_from_raw(p)));
+  }
+}
+
+void test_builtin_transfer_keeps_path_nonnull_take_from_raw(int *_Nullable p) {
+  if (p != nullptr) {
+    int * _Owned p2 = __take_from_raw(p);
+    *p2 = 1;
+    consume(p2);
+  }
+}
+
+void test_builtin_transfer_keeps_path_nonnull_move_to_raw(int * _Owned _Nullable p) {
+  if (p != nullptr) {
+    int * _Nonnull p2 = __move_to_raw(p);
+    *p2 = 1;
+  }
+}

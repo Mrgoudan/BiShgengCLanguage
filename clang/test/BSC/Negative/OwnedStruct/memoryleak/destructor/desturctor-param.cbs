@@ -7,6 +7,6 @@ _Owned struct A {
 };
 int main() {
     int local = 1;
-    A a ={ .a = (int * _Owned)&local };
+    A a ={ .a = __take_from_raw(&local) };
     return 0;
 }

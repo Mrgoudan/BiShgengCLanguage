@@ -65,6 +65,6 @@ _Safe _Noreturn void bsc_refcell_immut_borrow_failed(void) {
 
 _Safe void safe_free(void * _Nullable _Owned p) {
 	_Unsafe {
-		free((void *)p);
+		free(__move_to_raw(p));
 	}
 }

@@ -5,5 +5,5 @@ typedef int* _Owned myInt;
 void test () {
     int x = 10;
     int* p = &x;
-    myInt p1 = (myInt)p;
+    myInt p1 = __take_from_raw(p);
 } // expected-error {{memory leak of value: `p1`}}

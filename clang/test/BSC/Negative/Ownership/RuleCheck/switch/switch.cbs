@@ -2,7 +2,7 @@
 
 void func1(int n) {
     int num = 5;
-    int * _Owned a = (int * _Owned)&num;
+    int * _Owned a = __take_from_raw(&num);
     int * _Owned b;
     switch (n) {
         case 0:
@@ -18,12 +18,12 @@ void func1(int n) {
         default:
             break;
     }
-    b = (int * _Owned)&num; // expected-error {{assign to _Owned value: `b`}}
+    b = __take_from_raw(&num); // expected-error {{assign to _Owned value: `b`}}
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func2(int n) {
     int num = 5;
-    int * _Owned a = (int * _Owned)&num;
+    int * _Owned a = __take_from_raw(&num);
     int * _Owned b;
     switch (n) {
         case 0: {
@@ -45,7 +45,7 @@ void func2(int n) {
             break;
         }
     }
-    b = (int * _Owned)&num; // expected-error {{assign to _Owned value: `b`}}
+    b = __take_from_raw(&num); // expected-error {{assign to _Owned value: `b`}}
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func3(int n) {
@@ -54,7 +54,7 @@ void func3(int n) {
     switch (n) {
         case 0:
             if (num > 0) {
-                a = (int * _Owned)&num;
+                a = __take_from_raw(&num);
             }
             break;
         case 1:
@@ -74,17 +74,17 @@ void func4(int n) {
     switch (n) {
         case 0:
             if (num > 0) {
-                a = (int * _Owned)&num;
+                a = __take_from_raw(&num);
             }
             break;
         case 1: {
-            a = (int * _Owned)&num;
+            a = __take_from_raw(&num);
             break;
         }
         case 2:
-            a = (int * _Owned)&num;
+            a = __take_from_raw(&num);
         case 4: {
-            a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
+            a = __take_from_raw(&num); // expected-error {{assign to _Owned value: `a`}}
         }
             break;
         case 5:
@@ -92,7 +92,7 @@ void func4(int n) {
         default:
             break;
     }
-    int * b = (int *)a; // expected-error {{use of possibly uninitialized value: `a`}}
+    int * b = __move_to_raw(a); // expected-error {{use of possibly uninitialized value: `a`}}
 }
 
 void func5(int n) {
@@ -102,12 +102,12 @@ void func5(int n) {
         case 0:
             for (int i = 0; i < 10; i++) {
                 if (n > 4) {
-                    a = (int * _Owned)&num;
+                    a = __take_from_raw(&num);
                     break;
                 }
             }
         case 1:
-            a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
+            a = __take_from_raw(&num); // expected-error {{assign to _Owned value: `a`}}
             break;
         case 4:
             for (int i = 0; i < 10; i++)
@@ -124,11 +124,11 @@ void func6(int n) {
     int * _Owned a;
     switch (n) {
         case 1:
-            a = (int * _Owned)&num;
+            a = __take_from_raw(&num);
             for (int i = 0; i < 10; i++)
                 break;
         case 2:
-            a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
+            a = __take_from_raw(&num); // expected-error {{assign to _Owned value: `a`}}
             break;
         default:
             break;
@@ -137,7 +137,7 @@ void func6(int n) {
 
 void func7(int n) {
     int num = 5;
-    int * _Owned a = (int * _Owned)&num;
+    int * _Owned a = __take_from_raw(&num);
     int * _Owned b;
     switch (n) {
         case 0 : {
@@ -159,7 +159,7 @@ void func7(int n) {
             for (int i = 0; i < 10; i++)
                 break;
         case 5:
-            b = (int * _Owned)&num; // expected-error {{assign to _Owned value: `b`}}
+            b = __take_from_raw(&num); // expected-error {{assign to _Owned value: `b`}}
         default: {
             break;
         }
@@ -168,7 +168,7 @@ void func7(int n) {
 
 void func8(int n) {
     int num = 5;
-    int * _Owned a = (int * _Owned)&num;
+    int * _Owned a = __take_from_raw(&num);
     int * _Owned b;
     switch (n) {
         case 0: {
@@ -189,7 +189,7 @@ void func8(int n) {
         }
         default: {
             b = a;
-            int * c = (int *)b;
+            int * c = __move_to_raw(b);
             break;
         }
     }
@@ -197,7 +197,7 @@ void func8(int n) {
 
 void func9(int n) {
     int num = 5;
-    int * _Owned a = (int * _Owned)&num;
+    int * _Owned a = __take_from_raw(&num);
     int * _Owned b;
     switch (n) {
         case 0: {

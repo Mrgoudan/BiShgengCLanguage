@@ -10,12 +10,12 @@ _Owned struct A {
 _Public:
     int *_Owned p;
     ~A(A this) {
-        free((void*)this.p);
+        free((void*)__move_to_raw(this.p));
     }
 };
 
 void rc_ref_count_check_1() {
-    int *_Owned p = (int *_Owned)(void *_Owned)malloc(sizeof(int));
+    int *_Owned p = __take_from_raw((int *)malloc(sizeof(int)));
     *p = 5;
     A a = { .p = p };
 
@@ -44,7 +44,7 @@ void rc_ref_count_check_1() {
 }
 
 void rc_ref_count_check_2() {
-    int *_Owned p = (int *_Owned)(void *_Owned)malloc(sizeof(int));
+    int *_Owned p = __take_from_raw((int *)malloc(sizeof(int)));
     *p = 5;
     A a = { .p = p };
 
@@ -75,7 +75,7 @@ void rc_ref_count_check_2() {
 }
 
 void weak_ref_count_check() {
-    int *_Owned p = (int *_Owned)(void *_Owned)malloc(sizeof(int));
+    int *_Owned p = __take_from_raw((int *)malloc(sizeof(int)));
     *p = 5;
     A a = { .p = p };
 

@@ -14,6 +14,7 @@
 #if ENABLE_BSC
 
 #include "clang/AST/Type.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 
@@ -145,9 +146,43 @@ void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
   }
 }
 
+namespace {
+bool IsOwnedRawPointerCastDisallowed(QualType LHSCanType, QualType RHSCanType) {
+  const auto *LHSPtrType = LHSCanType->getAs<PointerType>();
+  const auto *RHSPtrType = RHSCanType->getAs<PointerType>();
+  if (!LHSPtrType || !RHSPtrType)
+    return false;
+
+  bool LHSOwned = LHSCanType.isOwnedQualified();
+  bool RHSOwned = RHSCanType.isOwnedQualified();
+  bool LHSRaw = !LHSOwned && !LHSCanType.isBorrowQualified();
+  bool RHSRaw = !RHSOwned && !RHSCanType.isBorrowQualified();
+  if ((LHSOwned && RHSRaw) || (RHSOwned && LHSRaw))
+    return true;
+
+  return IsOwnedRawPointerCastDisallowed(LHSPtrType->getPointeeType(),
+                                         RHSPtrType->getPointeeType());
+}
+} // end anonymous namespace
+
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
+  if ((LHSCanType.isBorrowQualified() && LHSCanType->isPointerType() &&
+       RHSCanType.isOwnedQualified() && RHSCanType->isPointerType()) ||
+      (RHSCanType.isBorrowQualified() && RHSCanType->isPointerType() &&
+       LHSCanType.isOwnedQualified() && LHSCanType->isPointerType())) {
+    return false;
+  }
+
+  // Allow owned pointer to be cast from nullptr_t
+  if (LHSCanType.isOwnedQualified() && LHSCanType->isPointerType() &&
+      RHSCanType->isNullPtrType()) {
+    return true;
+  }
+
+  if (IsOwnedRawPointerCastDisallowed(LHSCanType, RHSCanType))
+    return false;
 
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
@@ -199,7 +234,12 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
 
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc) {
   if (!CheckOwnedQualTypeCStyleCast(LHSType, RHSType)) {
-    Diag(RLoc, diag::err_owned_qualcheck_incompatible) << RHSType << LHSType;
+    QualType RHSCanType = RHSType.getCanonicalType();
+    QualType LHSCanType = LHSType.getCanonicalType();
+    if (IsOwnedRawPointerCastDisallowed(LHSCanType, RHSCanType))
+      Diag(RLoc, diag::err_owned_raw_cast_disallowed);
+    else
+      Diag(RLoc, diag::err_owned_qualcheck_incompatible) << RHSType << LHSType;
     return false;
   } else {
     return true;

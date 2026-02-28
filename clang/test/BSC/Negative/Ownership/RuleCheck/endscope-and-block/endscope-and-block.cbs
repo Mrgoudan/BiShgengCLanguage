@@ -3,38 +3,38 @@
 void func1() {
     int num = 1;
     int * _Owned a;
-    a = (int * _Owned)&num;
+    a = __take_from_raw(&num);
 } // expected-error {{memory leak of value: `a`}}
 
 void func2(int * _Owned a) {
     {
-        int * p = (int *)a;
+        int * p = __move_to_raw(a);
     }
 }
 
 void func3(int * _Owned a) {
     {
-        int * p = (int *)a;
+        int * p = __move_to_raw(a);
     }
     {
-        int * _Owned q = (int * _Owned)a; // expected-error {{use of moved value: `a`}}
+        int * _Owned q = a; // expected-error {{use of moved value: `a`}}
     } // expected-error {{memory leak of value: `q`}}
 }
 
 void func4(int * _Owned a) {
     {
-        int * p = (int *)a;
+        int * p = __move_to_raw(a);
         {
-            int * _Owned q = (int * _Owned)p;
+            int * _Owned q = __take_from_raw(p);
         } // expected-error {{memory leak of value: `q`}}
     }
 }
 
 void func5(int * _Owned a) {
     {
-        int *p = (int *)a;
+        int *p = __move_to_raw(a);
         {
-            int * _Owned q = (int * _Owned)p;
+            int * _Owned q = __take_from_raw(p);
             {}
         } // expected-error {{memory leak of value: `q`}}
     }

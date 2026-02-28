@@ -19,14 +19,14 @@ _Safe T *_Owned safe_malloc<T>(T t) {
             exit(1);
         }
         *addr = t;
-        return (T *_Owned)addr;
+        return __take_from_raw(addr);
     }
 }
 
 _Safe T *_Owned safe_free<T>(T *_Owned p) {
     _Unsafe {
-        free((void *)p);
-        T *_Owned null_ptr = (T *_Owned)(void *)0;
+        free(__move_to_raw(p));
+        T *_Owned null_ptr = __take_from_raw((T *)0);
         return null_ptr;
     }
 }

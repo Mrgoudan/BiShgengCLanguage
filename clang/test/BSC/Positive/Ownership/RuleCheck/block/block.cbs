@@ -8,7 +8,7 @@
 
 int * _Owned pmalloc() {
 	int a = 1;
-	int *_Owned p = (int * _Owned)&a;
+	int *_Owned p = __take_from_raw(&a);
 	return p;
 }
 

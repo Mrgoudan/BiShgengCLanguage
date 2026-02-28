@@ -33,11 +33,11 @@ void func12(int * _Owned a, int * _Owned b) {
 
 void func15(int * _Owned * _Owned a) {
     int * _Owned b = *a;
-    int * c = (int *)b;
+    int * c = __move_to_raw(b);
 } // expected-error {{memory leak of value: `a`}}
 
 void func16(struct A a) {
-    int* b = (int*)a.a;
+    int* b = __move_to_raw(a.a);
 } // expected-error {{field memory leak of value: `a`, a.b is leak}}
 
 void func17(struct A a) {
@@ -57,13 +57,13 @@ struct B {
 };
 
 void func21(struct B a) {
-    int* b = (int*)a.a;
-    int* c = (int*)a.b;
+    int* b = __move_to_raw(a.a);
+    int* c = __move_to_raw(a.b);
 } // expected-error {{field memory leak of value: `a`, a.c is leak}}
 
 void func22(struct A a) {
-    int* b = (int*)a.a;
-    a.a = (int * _Owned)b;
+    int* b = __move_to_raw(a.a);
+    a.a = __take_from_raw(b);
     struct A c = a;
 } // expected-error {{field memory leak of value: `c`, c.a, c.b are leak}}
 
@@ -73,7 +73,7 @@ void func23(struct A a) {
 } // expected-error {{field memory leak of value: `a`, a.a, a.b are leak}}
 
 void func25(int * _Owned a, int * _Owned b) {
-    int* c = (int*)a;
+    int* c = __move_to_raw(a);
     a = b;
 } // expected-error {{memory leak of value: `a`}}
 
@@ -101,9 +101,9 @@ void func29(int * _Owned * _Owned a) {
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `c`}} expected-error {{field memory leak of value: `a`, *a is leak}}
 
 void func31(struct A * _Owned a) {
-    int* b = (int*)a->a;
-    int* c = (int*)a->b;
-    a->a = (int * _Owned)b;
+    int* b = __move_to_raw(a->a);
+    int* c = __move_to_raw(a->b);
+    a->a = __take_from_raw(b);
 } // expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, a.a is leak}}
 
 void func32(int * _Owned * _Owned a, int * _Owned * _Owned b) {
@@ -117,8 +117,8 @@ void * _Owned func33(int * _Owned * _Owned a) {
 }
 
 void * _Owned func34(struct A a) {
-    int* c = (int*)a.a;
-    int* d = (int*)a.b;
-    int * _Owned x = (int * _Owned)d;
+    int* c = __move_to_raw(a.a);
+    int* d = __move_to_raw(a.b);
+    int * _Owned x = __take_from_raw(d);
     a.a = x;
 } // expected-error {{field memory leak of value: `a`, a.a is leak}}

@@ -1701,6 +1701,12 @@ LANGBUILTIN(__builtin_get_device_side_mangled_name, "cC*.", "ncT", CUDA_LANG)
 // HLSL
 LANGBUILTIN(__builtin_hlsl_wave_active_count_bits, "Uib", "nc", HLSL_LANG)
 
+#if ENABLE_BSC
+// BSC (BiShengC) ownership transfer
+LANGBUILTIN(__move_to_raw, "v.", "tn", BSC_LANG)
+LANGBUILTIN(__take_from_raw, "v.", "tn", BSC_LANG)
+#endif
+
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")
 BUILTIN(__xray_typedevent, "vzcC*z", "")

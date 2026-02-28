@@ -2379,21 +2379,42 @@ _Safe int main(void) {
 }
 ```
 
-8. 基本类型一致时，允许`_Owned`指针类型与非`_Owned`指针类型之间的显式强制类型转换，且这种转换只能在非安全区进行；
+8. 禁止 `_Owned` 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 `_Owned` 指针时，必须使用内置函数 `__take_from_raw` 显式表达所有权转移；当用户需要将 `_Owned` 指针转换为裸指针时：若需转移所有权，必须使用 `__move_to_raw` 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 `(T *)&_Mut *p`。以上转换均需在非安全区进行。
 基本类型不一致时，只允许`void * _Owned`类型与`T * _Owned`类型之间的相互强制转换；
+
+    **显式所有权转移接口**（内置函数）：
+    - `__move_to_raw(p)`：将 `_Owned` 指针 `p` 转为裸指针并转移所有权，返回的裸指针与入参具有相同的 Nullability，返回类型不保留指针本身的 `const`/`volatile`/`restrict`。
+    - `__take_from_raw(p)`：将裸指针 `p` 转为 `_Owned` 指针并取得其所指对象的所有权，返回的 `_Owned` 指针与入参具有相同的 Nullability，返回类型不保留指针本身的 `const`/`volatile`/`restrict`。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 int main() {
-  int *i = (int *)malloc(sizeof(int));
-  int *_Owned pi = (int *_Owned)i; // ok: i 和 pi 的基本类型均为 int
-  double *d = (double *)malloc(sizeof(double));
-  int *_Owned pd = (int *_Owned)d; // error: d 和 pd 基本类型不一致
-  double *_Owned dd = safe_malloc(1.5);
-  void *_Owned pdd = (void *_Owned)dd; // ok: 允许显式转换为 void *_Owned
-  safe_free((void *_Owned)pi);
-  safe_free((void *_Owned)d);
-  safe_free((void *_Owned)pdd);
+  int *pi1 = (int *)malloc(sizeof(int));
+  int *_Owned pi2 = (int *_Owned)pi1;  // error: 不允许裸指针转换为 _Owned 指针
+  int *_Owned pi3 = __take_from_raw(pi1);  // ok: 显式将裸指针所有权转移至 _Owned
+
+  double *_Owned pd1 = safe_malloc(1.0);
+  int *_Owned pi4 = (int *_Owned)pd1;   // error: pi4 和 pd1 基本类型不一致
+  double *pd2 = __move_to_raw(pd1); // ok: 显式将 _Owned 所有权转移至裸指针
+
+  double *_Owned pd3 = safe_malloc(1.5);
+  void *_Owned pv1 = (void *_Owned)pd3; // ok: 允许显式转换为 void *_Owned
+  safe_free((void *_Owned)pi3);
+  safe_free(pv1);
+  free((void*)pd2);
+  return 0;
+}
+```
+
+```c
+// 不转移所有权时，先取借用再转换为裸指针:
+#include "bishengc_safety.hbs"
+void foo(int *);
+int main() {
+  int *_Owned p = safe_malloc(1);
+  int *raw_ptr = (int *)&_Mut *p; // ok: 先取借用再转为裸指针，不转移所有权
+  foo(raw_ptr); // 使用 raw_ptr
+  safe_free((void *_Owned)p);
   return 0;
 }
 ```

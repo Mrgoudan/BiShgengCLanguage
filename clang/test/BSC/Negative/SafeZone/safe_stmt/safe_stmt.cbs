@@ -56,6 +56,6 @@ _Safe void test_safe_stmt3(void) {
         _Safe default: a--;               // allowed
     }
     add<int>(1, 2);                      // expected-error {{_Unsafe function call is forbidden in the safe zone}}
-    _Unsafe int *_Owned p = (int *_Owned)&a;
+    _Unsafe int *_Owned p = __take_from_raw(&a);
     foo<int>(p);
 }

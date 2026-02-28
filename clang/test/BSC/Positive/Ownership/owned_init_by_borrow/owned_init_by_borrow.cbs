@@ -12,11 +12,11 @@
 int *_Borrow *_Owned safe_malloc1(int *_Borrow bp) {
   int *_Borrow * p = (int *_Borrow *) malloc( sizeof(int *_Borrow) );
   *p = bp;
-  return (int *_Borrow *_Owned)p;
+  return __take_from_raw(p);
 }
 
 void safe_free1(int *_Borrow *_Owned p) {
-  free( (int *_Borrow *)p );
+  free( __move_to_raw(p) );
 }
 
 void test1() {
@@ -33,11 +33,11 @@ struct M {
 struct M *_Owned safe_malloc2(struct M m) {
   struct M * p = (struct M *) malloc( sizeof(struct M) );
   *p = m;
-  return (struct M *_Owned)p;
+  return __take_from_raw(p);
 }
 
 void safe_free2(struct M *_Owned p) {
-  free( (struct M *)p );
+  free( __move_to_raw(p) );
 }
 
 void test2() {

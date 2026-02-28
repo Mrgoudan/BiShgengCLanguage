@@ -8,7 +8,7 @@ void test1(int *_Owned p, int x) {
     x = x + i;
   }
 L1:{
-    void *temp = (void *)(void *_Owned)p;
+    void *temp = __move_to_raw(p);
   }
 }
 
@@ -17,5 +17,5 @@ void test2(int *_Owned p, int x) {
 L1:
   x = x + 1;
   if (x < 10) goto L1;  // expected-error {{invalid code structure, jumping back to previous labels is not allowed}}
-  void *temp = (void *)(void *_Owned)p;
+  void *temp = __move_to_raw(p);
 }

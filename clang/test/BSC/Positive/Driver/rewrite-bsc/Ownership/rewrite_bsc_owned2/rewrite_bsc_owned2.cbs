@@ -8,7 +8,7 @@ typedef int* _Owned myIntPtr;
 int* _Owned test2() {
     int x = 10;
     int* p = &x;
-    myIntPtr p1 = (myIntPtr)p;
+    myIntPtr p1 = __take_from_raw(p);
     return p1;
 }
 
@@ -28,7 +28,7 @@ int main() {
 // CHECK-NEXT: int * test2(void) {
 // CHECK-NEXT:     int x = 10;
 // CHECK-NEXT:     int *p = &x;
-// CHECK-NEXT:     myIntPtr p1 = (myIntPtr)p;
+// CHECK-NEXT:     myIntPtr p1 = (int *)p;
 // CHECK-NEXT:     return p1;
 // CHECK-NEXT: }
 // CHECK-EMPTY:

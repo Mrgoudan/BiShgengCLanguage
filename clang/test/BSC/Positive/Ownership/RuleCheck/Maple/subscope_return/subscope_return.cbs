@@ -11,7 +11,7 @@ struct A {
 };
 
 void eat(struct A *_Owned a) {
-    struct A *b = (struct A*)a;
+    struct A *b = __move_to_raw(a);
 }
 
 void f() {

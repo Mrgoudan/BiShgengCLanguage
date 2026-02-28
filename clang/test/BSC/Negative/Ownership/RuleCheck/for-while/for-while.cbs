@@ -3,7 +3,7 @@
 void func1() {
 	int * _Owned a;
 	for (int i = 0; i < 10; i++) {
-		a = (int * _Owned)&i; // expected-error {{assign to _Owned value: `a`}}
+		a = __take_from_raw(&i); // expected-error {{assign to _Owned value: `a`}}
 	}
 } // expected-error {{memory leak of value: `a`}}
 
@@ -14,7 +14,7 @@ void func2() {
 	int * _Owned b;
 	int num = 5;
 	for (int i = 0; i < 10; i++) {
-		b = (int * _Owned)&num;
+		b = __take_from_raw(&num);
 		a = IntPtrOwned(b); // expected-error {{assign to _Owned value: `a`}}
 	}
 } // expected-error {{memory leak of value: `a`}}
@@ -27,18 +27,18 @@ void func3(int num) {
 			continue;
 		}
 		if (i > 5) {
-			b = (int * _Owned)&num;
+			b = __take_from_raw(&num);
 			int * _Owned a;
 			if (i < 10) {
 				a = b;
-				b = (int * _Owned)&i;
+				b = __take_from_raw(&i);
 			} else if (i < 20) {
 				if (i > 12) {
-					a = (int * _Owned)&i;
+					a = __take_from_raw(&i);
 				} else if (i < 16) {
 					a = b;
 				} else {
-					a = (int * _Owned)&num;
+					a = __take_from_raw(&num);
 				}
 			}
 		} // expected-error {{memory leak of value: `a`}}
@@ -55,18 +55,18 @@ void func4(int num) {
 			continue;
 		}
 		if (i > 5) {
-			b = (int * _Owned)&num;
+			b = __take_from_raw(&num);
 			int * _Owned a;
 			if (i < 10) {
 				a = b;
-				b = (int * _Owned)&i;
+				b = __take_from_raw(&i);
 			} else if (i < 20) {
 				if (i > 12) {
-					a = (int * _Owned)&i;
+					a = __take_from_raw(&i);
 				} else if (i < 16) {
 					a = b;
 				} else {
-					a = (int * _Owned)&num;
+					a = __take_from_raw(&num);
 				}
 			}
 		} // expected-error {{memory leak of value: `a`}}
@@ -84,18 +84,18 @@ void func5(int num) {
 			continue;
 		}
 		if (i > 5) {
-			b = (int * _Owned)&num;
+			b = __take_from_raw(&num);
 			int * _Owned a;
 			if (i < 10) {
 				a = b;
-				b = (int * _Owned)&i;
+				b = __take_from_raw(&i);
 			} else if (i < 20) {
 				if (i > 12) {
-					a = (int * _Owned)&i;
+					a = __take_from_raw(&i);
 				} else if (i < 16) {
 					a = b;
 				} else {
-					a = (int * _Owned)&num;
+					a = __take_from_raw(&num);
 				}
 			}
 		} // expected-error {{memory leak of value: `a`}}

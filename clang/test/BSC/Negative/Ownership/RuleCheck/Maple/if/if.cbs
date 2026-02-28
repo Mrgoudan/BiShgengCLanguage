@@ -30,7 +30,7 @@ void func3(int * _Owned argA, int * _Owned argB) {
 } // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `argB`}}
 
 void func4(int local) {
-    int * _Owned a = (int * _Owned)&local;
+    int * _Owned a = __take_from_raw(&local);
     int * _Owned b;
     switch (rand()) {
         case 0: {
@@ -50,7 +50,7 @@ void func4(int local) {
         default:
             break;
     }
-    b = (int * _Owned)&local; // expected-error {{assign to _Owned value: `b`}}
+    b = __take_from_raw(&local); // expected-error {{assign to _Owned value: `b`}}
 } // expected-error {{memory leak of value: `b`}} expected-error {{memory leak of value: `a`}}
 
 void func5(int * _Owned argA, int * _Owned argB) {

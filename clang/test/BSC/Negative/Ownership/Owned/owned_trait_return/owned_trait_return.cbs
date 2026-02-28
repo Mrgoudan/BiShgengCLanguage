@@ -7,7 +7,7 @@ _Trait T {
 };
 
 _Safe void int::do_it(int* _Owned this) {
-  _Unsafe { int* x = (int*)this; }
+  _Unsafe { int* x = __move_to_raw(this); }
 }
 
 void int::do_that(int* this) {
@@ -25,9 +25,9 @@ struct S {
 
 _Safe void struct S::do_it(struct S* _Owned this) {
   _Unsafe {
-    int* a = (int *)this->a;
-    int* b = (int *)this->b;
-    void* s = (void *)(void* _Owned)this;
+    int* a = __move_to_raw(this->a);
+    int* b = __move_to_raw(this->b);
+    void* s = __move_to_raw(this); // expected-error {{use of all moved value: `this`}}
   }
 }
 
@@ -53,7 +53,7 @@ _Trait T* cond1(int flag) {
     return sp;
   } else if (flag == 3) {
     int x = 2;
-    return (int* _Owned)&x;
+    return __take_from_raw(&x); // expected-error {{expected a pointer type which has implemented '_Trait T', found 'int *_Owned _Nullable'}}
   } else {
     double y = 2.0;
     return &y; // expected-error {{expected a pointer type which has implemented '_Trait T', found 'double'}}
@@ -63,7 +63,7 @@ _Trait T* cond1(int flag) {
 _Trait T* _Owned cond2(int flag) {
   if (flag == 1) {
     int x = 1;
-    return (int* _Owned)&x;
+    return __take_from_raw(&x); // expected-error {{expected a pointer type which has implemented '_Trait T', found 'int *_Owned _Nullable'}}
   } else if (flag == 2) {
     struct S s = initS();
     struct S* _Owned sp = convertToOwned(s);

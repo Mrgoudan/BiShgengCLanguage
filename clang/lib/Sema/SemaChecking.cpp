@@ -148,6 +148,46 @@ static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
          << Call->getArg(1)->getSourceRange();
 }
 
+#if ENABLE_BSC
+static NullabilityKind getBSCEffectiveNullability(QualType QT, ASTContext &Ctx) {
+  Optional<NullabilityKind> Kind = QT->getNullability(Ctx);
+  if (Kind) {
+    if (*Kind == NullabilityKind::NullableResult)
+      return NullabilityKind::Nullable;
+    return *Kind;
+  }
+
+  QualType CanQT = QT.getCanonicalType();
+  if (!CanQT->isPointerType())
+    return NullabilityKind::Unspecified;
+
+  if (CanQT.isOwnedQualified() || CanQT.isBorrowQualified())
+    return NullabilityKind::NonNull;
+  return NullabilityKind::Nullable;
+}
+
+static QualType applyNullabilityToType(QualType QT, NullabilityKind NK,
+                                       ASTContext &Ctx) {
+  if (NK != NullabilityKind::Nullable && NK != NullabilityKind::NonNull)
+    return QT;
+
+  Optional<NullabilityKind> Current = QT->getNullability(Ctx);
+  if (Current &&
+      (*Current == NK ||
+       (*Current == NullabilityKind::NullableResult &&
+        NK == NullabilityKind::Nullable)))
+    return QT;
+
+  QualType BaseTy = QT;
+  while (BaseTy->getNullability(Ctx))
+    BaseTy = BaseTy.getSingleStepDesugaredType(Ctx);
+
+  auto AttrKind = AttributedType::getNullabilityAttrKind(NK);
+  return Ctx.getAttributedType(AttrKind, BaseTy, BaseTy);
+}
+
+#endif
+
 /// Check that the first argument to __builtin_annotation is an integer
 /// and the second argument is a non-wide string literal.
 static bool SemaBuiltinAnnotation(Sema &S, CallExpr *TheCall) {
@@ -2067,6 +2107,53 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     }
 #endif
     break;
+
+#if ENABLE_BSC
+  case Builtin::BI__move_to_raw: {
+    if (checkArgCount(*this, TheCall, 1))
+      return ExprError();
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (!ArgTy->isPointerType() || !ArgTy.isOwnedQualified()) {
+      return ExprError(Diag(TheCall->getArg(0)->getBeginLoc(),
+                            diag::err_bsc_move_to_raw_not_owned)
+                       << ArgTy);
+    }
+    NullabilityKind SrcNullability =
+        getBSCEffectiveNullability(ArgTy, Context);
+    QualType ResultTy = ArgTy.getUnqualifiedType();
+    ResultTy.removeLocalOwned();
+    ResultTy.removeLocalBorrow();
+    NullabilityKind DstNullability =
+        getBSCEffectiveNullability(ResultTy, Context);
+    if (SrcNullability != DstNullability)
+      ResultTy = applyNullabilityToType(ResultTy, SrcNullability, Context);
+    TheCall->setType(ResultTy);
+    break;
+  }
+  case Builtin::BI__take_from_raw: {
+    if (checkArgCount(*this, TheCall, 1))
+      return ExprError();
+    QualType ArgTy = TheCall->getArg(0)->getType();
+    if (!ArgTy->isPointerType() || ArgTy.isOwnedQualified() ||
+        ArgTy.isBorrowQualified()) {
+      return ExprError(Diag(TheCall->getArg(0)->getBeginLoc(),
+                            diag::err_bsc_take_from_raw_not_raw)
+                       << ArgTy);
+    }
+    NullabilityKind SrcNullability =
+        getBSCEffectiveNullability(ArgTy, Context);
+    QualType ResultTy = ArgTy.getUnqualifiedType();
+    ResultTy.removeLocalOwned();
+    ResultTy.removeLocalBorrow();
+    ResultTy = ResultTy.withOwned();
+    NullabilityKind DstNullability =
+        getBSCEffectiveNullability(ResultTy, Context);
+    if (SrcNullability != DstNullability)
+      ResultTy = applyNullabilityToType(ResultTy, SrcNullability, Context);
+    TheCall->setType(ResultTy);
+    break;
+  }
+#endif
 
   // The acquire, release, and no fence variants are ARM and AArch64 only.
   case Builtin::BI_interlockedbittestandset_acq:

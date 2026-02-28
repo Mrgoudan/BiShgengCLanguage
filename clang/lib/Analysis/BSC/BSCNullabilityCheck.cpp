@@ -19,6 +19,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Basic/Builtins.h"
 #include "llvm/ADT/DenseMap.h"
 
 using namespace clang;
@@ -314,8 +315,17 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
     case Expr::ImplicitCastExprClass:
       return getExprPathNullability(cast<ImplicitCastExpr>(E)->getSubExpr(),
                                     true);
-    case Expr::CallExprClass:
-      return getDefNullability(cast<CallExpr>(E)->getType(), Ctx);
+    case Expr::CallExprClass: {
+      CallExpr *CE = cast<CallExpr>(E);
+      if (FunctionDecl *FD = CE->getDirectCallee()) {
+        if (CE->getNumArgs() == 1 &&
+            (FD->getBuiltinID() == Builtin::BI__move_to_raw ||
+             FD->getBuiltinID() == Builtin::BI__take_from_raw)) {
+          return getExprPathNullability(CE->getArg(0), true);
+        }
+      }
+      return getDefNullability(CE->getType(), Ctx);
+    }
     case Expr::ConditionalOperatorClass: {
       NullabilityKind LHSNK =
           getExprPathNullability(cast<ConditionalOperator>(E)->getLHS(), true);

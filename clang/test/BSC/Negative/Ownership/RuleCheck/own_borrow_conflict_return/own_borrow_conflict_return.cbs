@@ -2,7 +2,7 @@
 
 int *_Owned _Borrow get_resource() { //#1
     static int resource = 42;
-    return (int *_Owned _Borrow)&resource; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+    return __take_from_raw(&resource); // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned _Nullable' to 'int *_Owned _Borrow'}}
 }
 
 // expected-error@#1 {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}

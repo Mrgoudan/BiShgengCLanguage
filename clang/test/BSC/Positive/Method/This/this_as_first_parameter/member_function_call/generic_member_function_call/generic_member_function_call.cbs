@@ -19,11 +19,11 @@ void free_owned<T>(T* _Owned p);
 T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* _Owned)p;
+  return __take_from_raw(p);
 }
 
 void free_owned<T>(T* _Owned p) {
-  free( (void *)p );
+  free( __move_to_raw(p) );
 }
 
 
@@ -246,5 +246,5 @@ int main() {
 // CHECK-NEXT: }
 
 // CHECK: static void free_owned_struct_Foo_int(struct Foo_int * p) {
-// CHECK-NEXT:     free((void *)p);
+// CHECK-NEXT:     free((struct Foo_int *)p);
 // CHECK-NEXT: }

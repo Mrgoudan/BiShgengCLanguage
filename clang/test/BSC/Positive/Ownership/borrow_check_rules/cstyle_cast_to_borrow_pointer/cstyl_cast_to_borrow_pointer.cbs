@@ -25,7 +25,7 @@ void foo(void *_Borrow p, void *_Borrow q) {
 }
 
 void check_free(void *_Owned p) {
-  void *q = (void *)p;
+  void *q = __move_to_raw(p);
 }
 
 void test1() {

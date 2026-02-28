@@ -23,7 +23,7 @@ typedef void (*unsafeFun)(void);
 
 void genericMemberFun() {
   int a = 1;
-  int* _Owned p = (int* _Owned)&a;
+  int* _Owned p = __take_from_raw(&a);
   int *q = (void*)0;
   int res1 = struct MyStruct<int>::foo_a(12); // OK
   int* _Owned m = struct MyStruct<int* _Owned>::foo_a(p);   // OK 

@@ -12,6 +12,6 @@ _Public:
         short * _Owned x;
         struct A y;
         ~S(S this) {
-                free((void *)this.x);
+                free(__move_to_raw(this.x));
         } // expected-error {{destructor for`_Owned struct S` incorrect, this.y.b is of _Owned type and needs to be handled manually}}
 };

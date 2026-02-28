@@ -5,22 +5,22 @@ void free(void * p);
 
 int * _Owned case1() {
     int * a = (int*)malloc(sizeof(int));
-    int * _Owned b = (int * _Owned)a;
+    int * _Owned b = __take_from_raw(a);
     return b;
 }
 
 void * _Owned case2() {
-    void * _Owned a = (void * _Owned)malloc(sizeof(int));
+    void * _Owned a = __take_from_raw(malloc(sizeof(int)));
     return a;
 }
 
 void case3() {
-    void * _Owned a = (void * _Owned)malloc(sizeof(int));
-    free((void *)a);
+    void * _Owned a = __take_from_raw(malloc(sizeof(int)));
+    free(__move_to_raw(a));
 }
 
 void case4(void * _Owned buf) {
-    free((void *)buf);
+    free(__move_to_raw(buf));
 }
 
 struct B {};
@@ -30,12 +30,12 @@ struct A {
 };
 
 void case7() {
-    struct A * _Owned aaa = (struct A * _Owned)(struct A *)malloc(sizeof(struct A));
-    aaa->b = (struct B * _Owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of _Owned value: `aaa.b`}}
-    free((void *)(void * _Owned)aaa->b);
+    struct A * _Owned aaa = __take_from_raw((struct A *)malloc(sizeof(struct A)));
+    aaa->b = __take_from_raw((struct B *)malloc(sizeof(struct B))); // expected-error {{assign to part of _Owned value: `aaa.b`}}
+    free(__move_to_raw(aaa->b));
 } // expected-error {{memory leak of value: `aaa`}}
 
 void case8() {
-    struct A * _Owned aaa = (struct A * _Owned)(struct A *)malloc(sizeof(struct A));
-    aaa->b = (struct B * _Owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of _Owned value: `aaa.b`}}
+    struct A * _Owned aaa = __take_from_raw((struct A *)malloc(sizeof(struct A)));
+    aaa->b = __take_from_raw((struct B *)malloc(sizeof(struct B))); // expected-error {{assign to part of _Owned value: `aaa.b`}}
 } // expected-error {{memory leak of value: `aaa`}} expected-error {{field memory leak of value: `aaa`, aaa.b is leak}}

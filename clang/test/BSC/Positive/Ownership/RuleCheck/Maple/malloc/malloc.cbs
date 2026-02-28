@@ -8,7 +8,7 @@
 
 void * _Owned pmalloc(unsigned long long a) {
     void * addr;
-    return (void * _Owned)addr;
+    return __take_from_raw(addr);
 }
 
 void * _Owned case1() {

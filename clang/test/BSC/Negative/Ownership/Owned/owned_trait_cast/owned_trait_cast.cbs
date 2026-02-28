@@ -7,7 +7,7 @@ _Trait T {
 };
 
 _Safe void int::do_it(int* _Owned this) {
-  _Unsafe { int* x = (int*)this; }
+  _Unsafe { int* x = __move_to_raw(this); }
 }
 
 void int::do_that(int* this) {
@@ -26,9 +26,9 @@ void cast1() {
 
 void cast2() {
   int x = 1;
-  _Trait T* _Owned t1 = (int* _Owned)&x;
+  _Trait T* _Owned t1 = (_Trait T* _Owned)__take_from_raw(&x); // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to '_Trait T *_Owned'}}
   _Trait T* _Owned t2 = t1;
-} // expected-error {{field memory leak of value: `t2`, t2.data is leak}}
+}
 
 void cast3() {
   int x = 1;

@@ -11,7 +11,7 @@ void eat(struct A * _Owned a) {
 void f() {
     struct A a = { .a = 0 };
     if (a.a) {
-        struct A * _Owned b = (struct A * _Owned)&a;
+        struct A * _Owned b = __take_from_raw(&a);
         if (a.a) {
             return; // expected-error {{memory leak of value: `b`}}
         }

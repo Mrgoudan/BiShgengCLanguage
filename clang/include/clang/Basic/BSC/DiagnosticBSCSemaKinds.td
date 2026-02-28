@@ -53,6 +53,12 @@ def err_owned_decl: Error<"%0 cannot be qualified by '_Owned'">;
 def err_owned_funcPtr_incompatible : Error<"cannot cast %0 to %1">;
 def err_owned_qualcheck_incompatible : Error<
   "incompatible _Owned types, cannot cast %0 to %1">;
+def err_bsc_move_to_raw_not_owned : Error<
+  "argument must be an _Owned pointer type (have %0)">;
+def err_bsc_take_from_raw_not_raw : Error<
+  "argument must be a raw pointer type (have %0)">;
+def err_owned_raw_cast_disallowed : Error<
+  "cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer">;
 def err_typecheck_invalid_owned_binOp : Error<
   "invalid operands to binary expression (%0 and %1)">;
 def err_typecheck_invalid_owned_unaOp : Error<

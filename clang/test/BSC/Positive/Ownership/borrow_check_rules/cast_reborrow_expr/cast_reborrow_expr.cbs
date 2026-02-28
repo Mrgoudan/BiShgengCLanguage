@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 void safe_free(void *_Owned ptr) {
-  free((void *)ptr);
+  free(__move_to_raw(ptr));
 }
 
 void test1(int *_Owned p) {
@@ -32,7 +32,7 @@ void test3(double *_Owned p) {
 }
 
 int main(void) {
-  int *_Owned p = (int *_Owned)malloc(sizeof(int));
+  int *_Owned p = __take_from_raw((int *)malloc(sizeof(int)));
   test1(p);
   return 0;
 }

@@ -129,7 +129,7 @@ int main() {
   test13(&_Mut q, 5);
   test14(&q, 5, &_Mut local);
   // test15(q, 5, &_Mut local);
-  int *_Owned c = (int *_Owned)&local;
+  int *_Owned c = __take_from_raw(&local);
   struct M m = { .a = c };
   struct N n = { .m = &m };
   test16(n, &_Mut local);
@@ -139,6 +139,6 @@ int main() {
   S s = { .a = &_Mut m.a };
   s.test20();
   s.test21();
-  int *d = (int *) m.a;
+  int *d = __move_to_raw(m.a);
   return 0;
 }

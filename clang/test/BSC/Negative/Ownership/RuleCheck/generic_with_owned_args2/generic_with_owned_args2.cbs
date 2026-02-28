@@ -15,18 +15,18 @@
 // This follows C++'s behavior where "const T" with T=int* gives "int* const", not "const int*"
 _Owned T Func_1<T>(T t)
 {
-    T _Owned tmp = (_Owned T)t;
+    T _Owned tmp = t;
     return tmp;
 }
 
 void consume_owned(int* _Owned p) {
-    int* p2 = (int*)p;
+    int* p2 = __move_to_raw(p);
     return;
 }
 
 void test() {
     int a = 10;
-    int* _Owned p1 = Func_1<int*>(&a);
+    int* _Owned p1 = __take_from_raw(&a);
     consume_owned(p1);
     return;
 }
@@ -34,7 +34,7 @@ void test() {
 
 void test2() {
     int a = 10;
-    int* _Owned p1 = Func_1<int* _Owned>((int* _Owned)&a);
+    int* _Owned p1 = Func_1<int* _Owned>(__take_from_raw(&a));
     consume_owned(p1);
     return;
 }
@@ -43,7 +43,7 @@ typedef int* _Owned ownedIntPtr;
 
 void test3() {
     int a = 10;
-    int* _Owned p1 = Func_1<ownedIntPtr>((int* _Owned)&a);
+    int* _Owned p1 = Func_1<ownedIntPtr>(__take_from_raw(&a));
     consume_owned(p1);
     return;
 }

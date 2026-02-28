@@ -81,7 +81,7 @@ void test() {
 	int a = 0;
     int *p1 = &a;
 	const int* p2 = &a;
-	int * _Owned p3 = (int * _Owned)&a;
+	int * _Owned p3 = __take_from_raw(&a);
 
 	int * _Borrow b1 = &_Mut *p1; // legal
     const int * _Borrow b2 = &_Mut *p2; // expected-error {{the expression after '&_Mut' must be modifiable}}

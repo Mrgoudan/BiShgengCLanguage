@@ -5362,6 +5362,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(V);
   }
 
+#if ENABLE_BSC
+  // BSC ownership transfer builtins: behave like casts (no-op at codegen).
+  if (BuiltinID == Builtin::BI__move_to_raw ||
+      BuiltinID == Builtin::BI__take_from_raw) {
+    assert(E->getNumArgs() == 1 && "expected one argument");
+    Value *ArgVal = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+    if (ArgVal->getType() != RetTy)
+      ArgVal = Builder.CreatePointerCast(ArgVal, RetTy);
+    return RValue::get(ArgVal);
+  }
+#endif
+
   // Some target-specific builtins can have aggregate return values, e.g.
   // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
   // ReturnValue to be non-null, so that the target-specific emission code can

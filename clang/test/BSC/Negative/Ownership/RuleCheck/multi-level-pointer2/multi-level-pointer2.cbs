@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 void cons(int * _Owned p) {
-    int* a = (int *)p;
+    int* a = __move_to_raw(p);
 }
 
 int * _Owned * func4(int * _Owned * p) {
@@ -18,7 +18,7 @@ int * _Owned * _Owned func6(int * _Owned * _Owned p) {
 }
 
 void consumePtr(int * _Owned p) {
-    int * p1 = (int *)p;
+    int * p1 = __move_to_raw(p);
     return;
 }
 

@@ -16,6 +16,7 @@
 #if ENABLE_BSC
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/BSC/MangleBSC.h"
+#include "clang/Basic/Builtins.h"
 #endif
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -1681,6 +1682,18 @@ void StmtPrinter::PrintCallArgs(CallExpr *Call) {
 
 void StmtPrinter::VisitCallExpr(CallExpr *Call) {
 #if ENABLE_BSC
+  if (Policy.RewriteBSC && Call->getDirectCallee() &&
+      Call->getNumArgs() == 1) {
+    unsigned BuiltinID = Call->getDirectCallee()->getBuiltinID();
+    if (BuiltinID == Builtin::BI__move_to_raw ||
+        BuiltinID == Builtin::BI__take_from_raw) {
+      OS << '(';
+      Call->getType().print(OS, Policy);
+      OS << ')';
+      PrintExpr(Call->getArg(0));
+      return;
+    }
+  }
   if (Policy.RewriteBSC && Call->isEvaluatable(*Context)) {
     Expr::EvalResult Res;
     if (Call->EvaluateAsRValue(Res, *Context) &&

@@ -11,11 +11,11 @@ void free(void *ptr);
 T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc(sizeof(T));
   *p = value;
-  return (T* _Owned)p;
+  return __take_from_raw(p);
 }
 
 void safe_free(void* _Owned p) {
-  free((void*)p);
+  free(__move_to_raw(p));
 }
 
 struct S1 {

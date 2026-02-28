@@ -6,13 +6,13 @@
 _Safe int* _Owned hack_malloc(void) {
   int x = 1;
   _Unsafe {
-    int* _Owned p = (int* _Owned)&x;
+    int* _Owned p = __take_from_raw(&x);
     return p;
   }
 }
 
 __attribute__((visibility("default"))) void test1() {
-  int* p = (int *)hack_malloc();
+  int* p = __move_to_raw(hack_malloc());
   int a = 1;
 }
 _Owned struct T {

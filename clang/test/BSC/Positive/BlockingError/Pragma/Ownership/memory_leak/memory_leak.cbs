@@ -9,7 +9,7 @@ typedef int* _Owned myInt;
 void test1() {
     int x = 10;
     int* p = &x;
-    myInt p1 = (myInt)p;
+    myInt p1 = __take_from_raw(p);
 } // memory leak of value: `p1`
 #pragma GCC diagnostic pop
 
@@ -63,7 +63,7 @@ void test2(S* _Owned sp) {
 // CHECK:      void test1(void) {
 // CHECK-NEXT:     int x = 10;
 // CHECK-NEXT:     int *p = &x;
-// CHECK-NEXT:     myInt p1 = (myInt)p;
+// CHECK-NEXT:     myInt p1 = (int *)p;
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      struct __Trait_T_Vtable ___Owned_struct_S_trait_T = {};

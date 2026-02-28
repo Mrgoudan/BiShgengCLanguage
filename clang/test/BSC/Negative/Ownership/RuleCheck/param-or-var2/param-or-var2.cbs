@@ -7,11 +7,11 @@ void func9(int _Owned * a) {} // expected-error {{type of 'int' cannot be qualif
 void func10(int * _Owned * a) {}
 
 void func11(int * _Owned a) {
-	int * b = (int *)a;
+	int * b = __move_to_raw(a);
 }
 
 void func12(int * _Owned a) {
-	int * b = (int *)a;
+	int * b = __move_to_raw(a);
 }
 
 int main() {
