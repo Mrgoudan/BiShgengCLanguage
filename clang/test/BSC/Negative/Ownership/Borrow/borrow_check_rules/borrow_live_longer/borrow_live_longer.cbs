@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 struct S1 { int a; };
-struct S2 { int *owned b; };
+struct S2 { int *_Owned b; };
 struct S3 { struct S1 c; };
 struct S4 {
   int m;
@@ -10,8 +10,8 @@ struct S4 {
 
 void use_mut(int *_Borrow p);
 void use_immut(const int *_Borrow p);
-T *owned safe_malloc<T>(T value);
-void free_owned<T>(T *owned p);
+T *_Owned safe_malloc<T>(T value);
+void free_owned<T>(T *_Owned p);
 void free(void*);
 
 void test1() {
@@ -56,13 +56,13 @@ void test4() {
 }
 
 void test5() {
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   const int *_Borrow p = &_Const *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
   free_owned<int>(oriPtr); // expected-error {{cannot move out of `oriPtr` because it is borrowed}}
   use_immut(p);
 }
 
-void test6(int *owned oriPtr) {
+void test6(int *_Owned oriPtr) {
   int *_Borrow p = &_Mut *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
   free_owned<int>(oriPtr); // expected-error {{cannot move out of `oriPtr` because it is borrowed}}
   use_mut(p);
@@ -70,7 +70,7 @@ void test6(int *owned oriPtr) {
 
 void test7() {
   int a = 5;
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   int *_Borrow p = &_Mut *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
                                 // expected-note@-1 {{`*oriPtr` is borrowed here}}
   if (a > 0) {

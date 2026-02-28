@@ -23,20 +23,20 @@ typedef void (*unsafeFun)(void);
 
 void genericMemberFun() {
   int a = 1;
-  int* owned p = (int* owned)&a;
+  int* _Owned p = (int* _Owned)&a;
   int *q = (void*)0;
   int res1 = struct MyStruct<int>::foo_a(12); // OK
-  int* owned m = struct MyStruct<int* owned>::foo_a(p);   // OK 
+  int* _Owned m = struct MyStruct<int* _Owned>::foo_a(p);   // OK 
   int *n = struct MyStruct<int*>::foo_b(q);
   unsafeFun fun_c;
   struct MyStruct<unsafeFun>::foo_c(fun_c);  // expected-note{{in instantiation of member function 'MyStruct<void (*)(void)>::foo_c' requested here}}
 }// expected-error {{memory leak of value: `m`}}
 
 trait F<T> {
-  _Safe int foo(This* owned this, T b);
+  _Safe int foo(This* _Owned this, T b);
 };
 
-_Safe int int::foo(int* owned this, int *b) {
+_Safe int int::foo(int* _Owned this, int *b) {
   return 0;
 } // expected-error {{memory leak of value: `this`}}
 

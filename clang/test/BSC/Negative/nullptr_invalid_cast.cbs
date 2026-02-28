@@ -55,10 +55,10 @@ void test_nullptr_array_assignment(void) {
   arr = (int [10])nullptr; // expected-error {{used type 'int[10]' where arithmetic or pointer type is required}}
 }
 
-// Safe zone: owned/_Borrow qualifier mismatches
+// Safe zone: _Owned/_Borrow qualifier mismatches
 _Safe void test_safe_owned_borrow_mismatch(void) {
-  int * owned po = (int * _Borrow)nullptr; // expected-error {{conversion from type 'int *_Borrow' to 'int *owned' is forbidden in the safe zone}}
-  int * _Borrow pb = (int * owned)nullptr; // expected-error {{conversion from type 'int *owned' to 'int *_Borrow' is forbidden in the safe zone}}
+  int * _Owned po = (int * _Borrow)nullptr; // expected-error {{conversion from type 'int *_Borrow' to 'int *_Owned' is forbidden in the safe zone}}
+  int * _Borrow pb = (int * _Owned)nullptr; // expected-error {{conversion from type 'int *_Owned' to 'int *_Borrow' is forbidden in the safe zone}}
 }
 
 // Safe zone: pointer to different qualifiers

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-typedef int* owned myInt;
+typedef int* _Owned myInt;
 
 void test () {
     int x = 10;

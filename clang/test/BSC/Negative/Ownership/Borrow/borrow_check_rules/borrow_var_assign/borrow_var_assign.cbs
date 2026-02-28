@@ -6,8 +6,8 @@ struct S {
 
 void use_mut(int* _Borrow p);
 void use_immut(const int* _Borrow p);
-T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+T* _Owned safe_malloc<T>(T value);
+void free_owned<T>(T* _Owned p);
 void free(void*);
 
 void test1() {
@@ -19,7 +19,7 @@ void test1() {
 }
 
 void test2() {
-  int* owned oriPtr = safe_malloc<int>(0);
+  int* _Owned oriPtr = safe_malloc<int>(0);
   int* _Borrow p1 = &_Mut *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
   int* _Borrow p2 = p1;
   free_owned<int>(oriPtr); // expected-error {{cannot move out of `oriPtr` because it is borrowed}}

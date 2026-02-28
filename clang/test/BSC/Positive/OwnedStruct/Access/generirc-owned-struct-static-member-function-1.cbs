@@ -7,7 +7,7 @@
 // RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
 // RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 
-owned struct A<T> {
+_Owned struct A<T> {
 public:
     T z;
     T foo(T a) {

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify %s
 typedef NullableBorrowInt = int *_Borrow _Nullable;
 typedef NonnullBorrowInt = int *_Borrow _Nonnull;
-typedef NullableOwnedInt = int *owned _Nullable;
-typedef NonnullOwnedInt = int *owned _Nonnull;
+typedef NullableOwnedInt = int *_Owned _Nullable;
+typedef NonnullOwnedInt = int *_Owned _Nonnull;
 
 _Safe void foo1(NonnullBorrowInt a);
 _Safe void test1(void) {

@@ -1,83 +1,83 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-// Test that 'owned' qualifier can only be applied to pointer types
+// Test that '_Owned' qualifier can only be applied to pointer types
 
 struct S {
     int x;
 };
 
-// Define an owned struct to test the exception
-owned struct OwnedS {
+// Define an _Owned struct to test the exception
+_Owned struct OwnedS {
     int y;
 };
 
-// Define a template owned struct to test the exception
-owned struct OwnedT<T> {
+// Define a template _Owned struct to test the exception
+_Owned struct OwnedT<T> {
     T value;
 };
 
 void test_owned_non_pointer_types() {
-    // These should trigger the error: 'owned' qualifier on non-pointer primitive types
-    int owned a;           // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    float owned b;         // expected-error {{type of 'float' cannot be qualified by 'owned'}}
-    double owned c;        // expected-error {{type of 'double' cannot be qualified by 'owned'}}
-    char owned d;          // expected-error {{type of 'char' cannot be qualified by 'owned'}}
-    long owned e;          // expected-error {{type of 'long' cannot be qualified by 'owned'}}
-    short owned f;         // expected-error {{type of 'short' cannot be qualified by 'owned'}}
-    struct S owned g;      // expected-error {{type of 'struct S' cannot be qualified by 'owned'}}
+    // These should trigger the error: '_Owned' qualifier on non-pointer primitive types
+    int _Owned a;           // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    float _Owned b;         // expected-error {{type of 'float' cannot be qualified by '_Owned'}}
+    double _Owned c;        // expected-error {{type of 'double' cannot be qualified by '_Owned'}}
+    char _Owned d;          // expected-error {{type of 'char' cannot be qualified by '_Owned'}}
+    long _Owned e;          // expected-error {{type of 'long' cannot be qualified by '_Owned'}}
+    short _Owned f;         // expected-error {{type of 'short' cannot be qualified by '_Owned'}}
+    struct S _Owned g;      // expected-error {{type of 'struct S' cannot be qualified by '_Owned'}}
 }
 
 void test_owned_valid_types() {
-    // These are valid: 'owned' qualifier on pointer types (no errors expected)
-    int * owned p1;
-    float * owned p2;
-    double * owned p3;
-    char * owned p4;
-    struct S * owned p5;
-    void * owned p6;
+    // These are valid: '_Owned' qualifier on pointer types (no errors expected)
+    int * _Owned p1;
+    float * _Owned p2;
+    double * _Owned p3;
+    char * _Owned p4;
+    struct S * _Owned p5;
+    void * _Owned p6;
 
-    // Using owned struct types directly (no explicit 'owned' qualifier applied)
+    // Using _Owned struct types directly (no explicit '_Owned' qualifier applied)
     OwnedS s1;
-    OwnedS * owned s2;  // OK - pointer type
+    OwnedS * _Owned s2;  // OK - pointer type
 
-    // Using template owned struct types directly (no explicit 'owned' qualifier applied)
+    // Using template _Owned struct types directly (no explicit '_Owned' qualifier applied)
     OwnedT<int> t1;
-    OwnedT<int> * owned t2;  // OK - pointer type
+    OwnedT<int> * _Owned t2;  // OK - pointer type
 }
 
 // Test in struct member declarations
 struct TestStruct {
-    int owned member1;        // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int * owned member2;      // OK - pointer type
-    OwnedS member3;           // OK - using owned struct type directly
-    struct S * owned member4; // OK - pointer type
-    OwnedT<int> member5;      // OK - using template owned struct type directly
+    int _Owned member1;        // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int * _Owned member2;      // OK - pointer type
+    OwnedS member3;           // OK - using _Owned struct type directly
+    struct S * _Owned member4; // OK - pointer type
+    OwnedT<int> member5;      // OK - using template _Owned struct type directly
 };
 
 // Test in function parameters
 void test_function_params(
-    int owned param1,         // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int * owned param2,       // OK - pointer type
-    OwnedS param3,            // OK - using owned struct type directly
-    struct S * owned param4,  // OK - pointer type
-    OwnedT<int> param5        // OK - using template owned struct type directly
+    int _Owned param1,         // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int * _Owned param2,       // OK - pointer type
+    OwnedS param3,            // OK - using _Owned struct type directly
+    struct S * _Owned param4,  // OK - pointer type
+    OwnedT<int> param5        // OK - using template _Owned struct type directly
 ) {}
 
 // Test in function return types
-int owned test_return1() {    // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int _Owned test_return1() {    // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     return 0;
 }
 
-int * owned test_return2() {  // OK - pointer type
-    return 0;                // expected-error {{incompatible owned types, cannot cast 'int' to 'int *owned'}}
+int * _Owned test_return2() {  // OK - pointer type
+    return 0;                // expected-error {{incompatible _Owned types, cannot cast 'int' to 'int *_Owned'}}
 }
 
-OwnedS test_return3() {       // OK - using owned struct type directly
+OwnedS test_return3() {       // OK - using _Owned struct type directly
     OwnedS s;
     return s;
 }
 
-OwnedT<int> test_return4() {  // OK - using template owned struct type directly
+OwnedT<int> test_return4() {  // OK - using template _Owned struct type directly
     OwnedT<int> t;
     return t;
 }

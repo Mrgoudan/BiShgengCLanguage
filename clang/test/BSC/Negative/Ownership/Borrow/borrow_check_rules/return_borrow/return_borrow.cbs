@@ -16,8 +16,8 @@ struct Q {
   struct P g;
 };
 
-T *owned safe_malloc<T>(T value);
-void free_owned<T>(T *owned p);
+T *_Owned safe_malloc<T>(T value);
+void free_owned<T>(T *_Owned p);
 void free(void *);
 
 int *_Borrow test1(int *_Borrow p) {
@@ -58,7 +58,7 @@ int *_Borrow test6(int *_Borrow p) {
 }
 
 int *_Borrow test7(int *_Borrow p) {
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   p = &_Mut *oriPtr; // expected-error {{`*oriPtr` does not live long enough}}
                     // expected-note@-1 {{`*oriPtr` is borrowed here}}
   free_owned<int>(oriPtr); // expected-error {{cannot move out of `oriPtr` because it is borrowed}}
@@ -66,7 +66,7 @@ int *_Borrow test7(int *_Borrow p) {
 }
 
 // FIXME: parameters lakes CFGScopeEnd
-int *_Borrow test8(int *owned oriPtr, int *_Borrow p) {
+int *_Borrow test8(int *_Owned oriPtr, int *_Borrow p) {
   p = &_Mut *oriPtr; // expected-note {{`*oriPtr` is borrowed here}}
                     // expected-error@-1 {{`*oriPtr` does not live long enough}} 
   free_owned<int>(oriPtr); // expected-error {{cannot move out of `oriPtr` because it is borrowed}}
@@ -114,7 +114,7 @@ int *_Borrow test11(int *_Borrow p) {
 
 int *_Borrow test12(int *_Borrow p) {
   int local = 42;
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   if (local > 0) {
     free_owned<int>(oriPtr);
     return &_Mut *oriPtr; // expected-error {{use of moved value: `oriPtr`}}
@@ -124,7 +124,7 @@ int *_Borrow test12(int *_Borrow p) {
 }
 
 int *_Borrow test13(int *_Borrow p) {
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   if (1) {
     free_owned<int>(oriPtr);
     return &_Mut *oriPtr; // expected-error {{use of moved value: `oriPtr`}}

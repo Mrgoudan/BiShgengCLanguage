@@ -5,16 +5,16 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-void consume(int *owned p) {
+void consume(int *_Owned p) {
   int *pp = (int *)p;
 }
 
-void test1(int *owned p) {
+void test1(int *_Owned p) {
   consume(p);
   (p) = nullptr;
 }
 
-void test2(int *owned p) {
+void test2(int *_Owned p) {
   do {
     if (nullptr != p) {
       consume((p));
@@ -23,7 +23,7 @@ void test2(int *owned p) {
   } while(0);
 }
 
-void test3(int *owned p) {
+void test3(int *_Owned p) {
   do {
     if (((nullptr)) != ((p))) {
       consume((p));
@@ -33,9 +33,9 @@ void test3(int *owned p) {
 }
 
 int main() {
-  int *owned p = nullptr;
-  int *owned q = nullptr;
-  int *owned r = nullptr;
+  int *_Owned p = nullptr;
+  int *_Owned q = nullptr;
+  int *_Owned r = nullptr;
   test1(p);
   test2(q);
   test3(r);

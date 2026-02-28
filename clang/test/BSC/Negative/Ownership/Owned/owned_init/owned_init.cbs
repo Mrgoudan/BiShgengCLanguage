@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 void test1() {
-    int owned a = 10;           // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned a1 = 10.0f;       // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{incompatible owned types, cannot cast 'float' to 'owned int'}}
-    int owned c = 10 + 20;      /// expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{incompatible owned types, cannot cast 'int' to 'owned int'}}
-    int owned b = (int owned)10;   // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int _Owned a = 10;           // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned a1 = 10.0f;       // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{incompatible _Owned types, cannot cast 'float' to '_Owned int'}}
+    int _Owned c = 10 + 20;      /// expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{incompatible _Owned types, cannot cast 'int' to '_Owned int'}}
+    int _Owned b = (int _Owned)10;   // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     int d = 10;
-    int owned e = d;   // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{incompatible owned types, cannot cast 'int' to 'owned int'}}
-    int owned f = (int owned)d; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int _Owned e = d;   // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{incompatible _Owned types, cannot cast 'int' to '_Owned int'}}
+    int _Owned f = (int _Owned)d; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 
-    float owned f1 = 1.0f;// expected-error {{type of 'float' cannot be qualified by 'owned'}}
-    char owned c1 = 'c';// expected-error {{type of 'char' cannot be qualified by 'owned'}}
+    float _Owned f1 = 1.0f;// expected-error {{type of 'float' cannot be qualified by '_Owned'}}
+    char _Owned c1 = 'c';// expected-error {{type of 'char' cannot be qualified by '_Owned'}}
 }
 
 typedef struct A {
@@ -18,17 +18,17 @@ typedef struct A {
 }SA;
 
 typedef struct B {
-    owned int num;// expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    _Owned int num;// expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 }SB;
 
 void test2() {
-    struct A owned a1 = {.num = 10}; // expected-error {{type of 'struct A' cannot be qualified by 'owned'}}
-    SA owned a2 = {.num = 20}; // expected-error {{type of 'SA' (aka 'struct A') cannot be qualified by 'owned'}}
-    struct B owned b1 = {.num = 10}; // expected-error {{type of 'struct B' cannot be qualified by 'owned'}}
-    SB owned b2 = {.num = 20}; // expected-error {{type of 'SB' (aka 'struct B') cannot be qualified by 'owned'}}
+    struct A _Owned a1 = {.num = 10}; // expected-error {{type of 'struct A' cannot be qualified by '_Owned'}}
+    SA _Owned a2 = {.num = 20}; // expected-error {{type of 'SA' (aka 'struct A') cannot be qualified by '_Owned'}}
+    struct B _Owned b1 = {.num = 10}; // expected-error {{type of 'struct B' cannot be qualified by '_Owned'}}
+    SB _Owned b2 = {.num = 20}; // expected-error {{type of 'SB' (aka 'struct B') cannot be qualified by '_Owned'}}
 }
 
 void test3() {
     int a = 10;
-    int* owned b = &a;  // expected-error {{incompatible owned types, cannot cast 'int *' to 'int *owned'}}
+    int* _Owned b = &a;  // expected-error {{incompatible _Owned types, cannot cast 'int *' to 'int *_Owned'}}
 }

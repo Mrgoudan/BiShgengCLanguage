@@ -1,20 +1,20 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
-// Tests for mixed mode with owned/_Borrow pointer parameters and returns
+// Tests for mixed mode with _Owned/_Borrow pointer parameters and returns
 
-_Safe void drop(int* owned p);
-_Safe void drop_buffer(void* owned p);
+_Safe void drop(int* _Owned p);
+_Safe void drop_buffer(void* _Owned p);
 
 // Owned pointer returns
 _Unsafe int* allocate_int(void);
-_Safe int* owned allocate_int(void);
+_Safe int* _Owned allocate_int(void);
 
 void test_owned_return_unsafe(void) {
-  int* owned ptr = allocate_int();
+  int* _Owned ptr = allocate_int();
   drop(ptr);
 }
 
 _Safe void test_owned_return_safe(void) {
-  int* owned ptr = allocate_int();
+  int* _Owned ptr = allocate_int();
   drop(ptr);
 }
 
@@ -36,19 +36,19 @@ _Safe void test_param_safe(void) {
 
 // Owned pointer parameters
 _Unsafe void consume_int(int* p);
-_Safe void consume_int(int* owned p);
+_Safe void consume_int(int* _Owned p);
 
 void test_owned_param(void) {
-  int* owned ptr = allocate_int();
+  int* _Owned ptr = allocate_int();
   consume_int(ptr);
 }
 
 // Multiple parameters
 _Unsafe void copy_data(int* dest, int src_val, int n);
-_Safe void copy_data(int* owned dest, int src_val, int n);
+_Safe void copy_data(int* _Owned dest, int src_val, int n);
 
 void test_multi_params(void) {
-  int* owned dest = allocate_int();
+  int* _Owned dest = allocate_int();
   int src = 100;
   copy_data(dest, src, 1);
 }
@@ -67,77 +67,77 @@ void test_struct_return(void) {
   (void)node;
 }
 
-// Chain of owned operations
+// Chain of _Owned operations
 _Unsafe int* create_buffer(int size);
-_Safe int* owned create_buffer(int size);
+_Safe int* _Owned create_buffer(int size);
 
 _Unsafe int* resize_buffer(int* buf, int new_size);
-_Safe int* owned resize_buffer(int* owned buf, int new_size);
+_Safe int* _Owned resize_buffer(int* _Owned buf, int new_size);
 
 _Unsafe void free_buffer(int* buf);
-_Safe void free_buffer(int* owned buf);
+_Safe void free_buffer(int* _Owned buf);
 
 void test_owned_chain(void) {
-  int* owned buf = create_buffer(10);
+  int* _Owned buf = create_buffer(10);
   buf = resize_buffer(buf, 20);
   free_buffer(buf);
 }
 
 // Owned with values
 _Unsafe void update_value(int* dest, int src);
-_Safe void update_value(int* owned dest, int src);
+_Safe void update_value(int* _Owned dest, int src);
 
 void test_owned_value(void) {
-  int* owned dest = allocate_int();
+  int* _Owned dest = allocate_int();
   int src = 200;
   update_value(dest, src);
 }
 
 // Array of pointers
 _Unsafe int** allocate_array(int count);
-_Safe int** owned allocate_array(int count);
+_Safe int** _Owned allocate_array(int count);
 
 _Unsafe void free_array(int** arr, int count);
-_Safe void free_array(int** owned arr, int count);
+_Safe void free_array(int** _Owned arr, int count);
 
 void test_array_ptrs(void) {
-  int** owned arr = allocate_array(5);
+  int** _Owned arr = allocate_array(5);
   free_array(arr, 5);
 }
 
-// Struct with owned
+// Struct with _Owned
 struct Buffer {
   int* data;
   int size;
 };
 
 _Unsafe struct Buffer* create_buffer_struct(int size);
-_Safe struct Buffer* owned create_buffer_struct(int size);
+_Safe struct Buffer* _Owned create_buffer_struct(int size);
 
 _Unsafe void destroy_buffer_struct(struct Buffer* buf);
-_Safe void destroy_buffer_struct(struct Buffer* owned buf);
+_Safe void destroy_buffer_struct(struct Buffer* _Owned buf);
 
 void test_struct_owned(void) {
-  struct Buffer* owned buf = create_buffer_struct(100);
+  struct Buffer* _Owned buf = create_buffer_struct(100);
   destroy_buffer_struct(buf);
 }
 
-// Conditional with owned
+// Conditional with _Owned
 _Unsafe int* maybe_allocate(int condition);
-_Safe int* owned maybe_allocate(int condition);
+_Safe int* _Owned maybe_allocate(int condition);
 
 void test_conditional_owned(int should_alloc) {
-  int* owned ptr = maybe_allocate(should_alloc);
+  int* _Owned ptr = maybe_allocate(should_alloc);
   drop(ptr);
 }
 
 // Owned in loop
 _Unsafe int* get_next_item(void);
-_Safe int* owned get_next_item(void);
+_Safe int* _Owned get_next_item(void);
 
 void test_loop_owned(void) {
   for (int i = 0; i < 3; i++) {
-    int* owned item = get_next_item();
+    int* _Owned item = get_next_item();
     drop(item);
   }
 }
@@ -151,15 +151,15 @@ _Safe void test_value_safe(void) {
   process_value(x);
 }
 
-// Multiple owned returns
+// Multiple _Owned returns
 _Unsafe int* alloc_a(void);
-_Safe int* owned alloc_a(void);
+_Safe int* _Owned alloc_a(void);
 
 _Unsafe int* alloc_b(void);
-_Safe int* owned alloc_b(void);
+_Safe int* _Owned alloc_b(void);
 
 void test_multi_owned_returns(int which) {
-  int* owned ptr = which ? alloc_a() : alloc_b();
+  int* _Owned ptr = which ? alloc_a() : alloc_b();
   drop(ptr);
 }
 
@@ -176,28 +176,28 @@ void test_container_return(void) {
   (void)c;
 }
 
-// Nested owned transform
+// Nested _Owned transform
 _Unsafe int* transform(int* input);
-_Safe int* owned transform(int* owned input);
+_Safe int* _Owned transform(int* _Owned input);
 
 void test_nested_transform(void) {
-  int* owned ptr = allocate_int();
+  int* _Owned ptr = allocate_int();
   ptr = transform(ptr);
   ptr = transform(ptr);
   drop(ptr);
 }
 
-// Typedef owned
+// Typedef _Owned
 typedef int* IntPtr;
 
 _Unsafe IntPtr make_int(void);
-_Safe IntPtr owned make_int(void);
+_Safe IntPtr _Owned make_int(void);
 
 _Unsafe void take_int(IntPtr p);
-_Safe void take_int(IntPtr owned p);
+_Safe void take_int(IntPtr _Owned p);
 
 void test_typedef_owned(void) {
-  IntPtr owned ptr = make_int();
+  IntPtr _Owned ptr = make_int();
   take_int(ptr);
 }
 
@@ -212,33 +212,33 @@ void test_multi_values(void) {
 
 // Owned function chain
 _Unsafe int* step_a(int* p);
-_Safe int* owned step_a(int* owned p);
+_Safe int* _Owned step_a(int* _Owned p);
 
 _Unsafe int* step_b(int* p);
-_Safe int* owned step_b(int* owned p);
+_Safe int* _Owned step_b(int* _Owned p);
 
 void test_owned_chain_calls(void) {
-  int* owned ptr = allocate_int();
+  int* _Owned ptr = allocate_int();
   ptr = step_b(step_a(ptr));
   drop(ptr);
 }
 
 // Owned with values
 _Unsafe void set_values(int* dest, int val1, int val2);
-_Safe void set_values(int* owned dest, int val1, int val2);
+_Safe void set_values(int* _Owned dest, int val1, int val2);
 
 void test_set_values(void) {
-  int* owned dest = allocate_int();
+  int* _Owned dest = allocate_int();
   int a = 10, b = 20;
   set_values(dest, a, b);
 }
 
 // Owned in expression
 _Unsafe int* make_ptr(int value);
-_Safe int* owned make_ptr(int value);
+_Safe int* _Owned make_ptr(int value);
 
 _Unsafe int deref_and_free(int* p);
-_Safe int deref_and_free(int* owned p);
+_Safe int deref_and_free(int* _Owned p);
 
 void test_owned_expression(void) {
   int value = deref_and_free(make_ptr(42));

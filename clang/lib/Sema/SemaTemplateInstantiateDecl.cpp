@@ -1155,7 +1155,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
     enum { ownedQualified };
     StringRef Env = "template instantiation";
     SemaRef.Diag(Var->getBeginLoc(), diag::err_owned_inderictOwned_type_check)
-        << ownedQualified << "owned" << Env;
+        << ownedQualified << "_Owned" << Env;
   }
 #endif
 

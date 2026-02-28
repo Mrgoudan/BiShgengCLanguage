@@ -5,12 +5,12 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-owned struct C {
+_Owned struct C {
 public:
     int m;
 };
 
-owned struct A<T> {
+_Owned struct A<T> {
 public:
     T a;
 };
@@ -20,7 +20,7 @@ A<T> A<T>::new(T value) {
     return a;
 }
 
-owned struct B<T> {
+_Owned struct B<T> {
 public:
     T b;
 };

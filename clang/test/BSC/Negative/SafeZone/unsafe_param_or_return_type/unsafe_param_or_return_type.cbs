@@ -29,7 +29,7 @@ _Safe struct SA fund(struct SA f) {
   return f;
 }
 
-_Safe struct SA fund1(struct SA *owned fp) {
+_Safe struct SA fund1(struct SA *_Owned fp) {
   return *fp;
 }// expected-error {{memory leak of value: `fp`}}
 
@@ -77,12 +77,12 @@ _Safe struct SF funi(struct SF f) {
   return f;
 }
 
-_Safe int* owned funj(int* owned a) {
+_Safe int* _Owned funj(int* _Owned a) {
   return a;
 }
 
 struct SG {
-  int* owned a;
+  int* _Owned a;
 };
 
 _Safe struct SG funk(struct SG f) {

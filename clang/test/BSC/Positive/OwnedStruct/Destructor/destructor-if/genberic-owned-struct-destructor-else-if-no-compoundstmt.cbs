@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 
 int g_flag = 0x2;
-owned struct S<T> {
+_Owned struct S<T> {
 public:
     ~S(S<T> this) {
         g_flag--;

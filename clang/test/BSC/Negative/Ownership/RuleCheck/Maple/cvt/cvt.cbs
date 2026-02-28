@@ -3,39 +3,39 @@
 void * malloc(unsigned long);
 void free(void * p);
 
-int * owned case1() {
+int * _Owned case1() {
     int * a = (int*)malloc(sizeof(int));
-    int * owned b = (int * owned)a;
+    int * _Owned b = (int * _Owned)a;
     return b;
 }
 
-void * owned case2() {
-    void * owned a = (void * owned)malloc(sizeof(int));
+void * _Owned case2() {
+    void * _Owned a = (void * _Owned)malloc(sizeof(int));
     return a;
 }
 
 void case3() {
-    void * owned a = (void * owned)malloc(sizeof(int));
+    void * _Owned a = (void * _Owned)malloc(sizeof(int));
     free((void *)a);
 }
 
-void case4(void * owned buf) {
+void case4(void * _Owned buf) {
     free((void *)buf);
 }
 
 struct B {};
 struct A {
     int numRunxs;
-    struct B * owned b;
+    struct B * _Owned b;
 };
 
 void case7() {
-    struct A * owned aaa = (struct A * owned)(struct A *)malloc(sizeof(struct A));
-    aaa->b = (struct B * owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of owned value: `aaa.b`}}
-    free((void *)(void * owned)aaa->b);
+    struct A * _Owned aaa = (struct A * _Owned)(struct A *)malloc(sizeof(struct A));
+    aaa->b = (struct B * _Owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of _Owned value: `aaa.b`}}
+    free((void *)(void * _Owned)aaa->b);
 } // expected-error {{memory leak of value: `aaa`}}
 
 void case8() {
-    struct A * owned aaa = (struct A * owned)(struct A *)malloc(sizeof(struct A));
-    aaa->b = (struct B * owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of owned value: `aaa.b`}}
+    struct A * _Owned aaa = (struct A * _Owned)(struct A *)malloc(sizeof(struct A));
+    aaa->b = (struct B * _Owned)(struct B *)malloc(sizeof(struct B)); // expected-error {{assign to part of _Owned value: `aaa.b`}}
 } // expected-error {{memory leak of value: `aaa`}} expected-error {{field memory leak of value: `aaa`, aaa.b is leak}}

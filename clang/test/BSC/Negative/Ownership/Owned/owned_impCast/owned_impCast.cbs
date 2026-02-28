@@ -2,36 +2,36 @@
 
 #define NULL ((void*) 0)
 
-//owned to owned
+//_Owned to _Owned
 void test1(float f) {
-    float* owned a1 = (float* owned)&f;
-    int* owned a2 = a1;    //expected-error {{incompatible owned types, cannot cast 'float *owned' to 'int *owned'}}
+    float* _Owned a1 = (float* _Owned)&f;
+    int* _Owned a2 = a1;    //expected-error {{incompatible _Owned types, cannot cast 'float *_Owned' to 'int *_Owned'}}
 }
 
-//unOwned to owned
+//unOwned to _Owned
 void test2(int* b1) {
-    int* owned b2 = b1;  //expected-error {{incompatible owned types, cannot cast 'int *' to 'int *owned'}}
+    int* _Owned b2 = b1;  //expected-error {{incompatible _Owned types, cannot cast 'int *' to 'int *_Owned'}}
 }
 
-//owned to unOwned
-void test3(int* owned c1) {
-    int* c2 = c1;  //expected-error {{incompatible owned types, cannot cast 'int *owned' to 'int *'}}
+//_Owned to unOwned
+void test3(int* _Owned c1) {
+    int* c2 = c1;  //expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'int *'}}
 }
 
-//unOwned to owned with typedef
-typedef int* owned myInt;
+//unOwned to _Owned with typedef
+typedef int* _Owned myInt;
 void test4() {
     int b = 10;
     int* p1 = &b;
-    myInt p2 = p1;  //expected-error {{incompatible owned types, cannot cast 'int *' to 'myInt' (aka 'int *owned'}}
+    myInt p2 = p1;  //expected-error {{incompatible _Owned types, cannot cast 'int *' to 'myInt' (aka 'int *_Owned'}}
 }
 
-int* owned test5(int* owned a){
+int* _Owned test5(int* _Owned a){
     return a;
 }
 
-int test5_1(int* owned a) {
-    int* owned b;
+int test5_1(int* _Owned a) {
+    int* _Owned b;
     b = test5(a);
     if (b != 0) {
         return 1;
@@ -49,7 +49,7 @@ int* test6()
 int test6_1()
 {
     int* a = test6();
-    int* owned b = (int* owned)a;
+    int* _Owned b = (int* _Owned)a;
     if (*b != 0) {
         return 1;
     }
@@ -60,8 +60,8 @@ int test6_1()
 int test7()
 {
     short a = 0;
-    owned short *b = &a;    // expected-error {{type of 'short' cannot be qualified by 'owned'}} //expected-error {{incompatible owned types, cannot cast 'short *' to 'owned short *'}}
-    owned int **c = (owned int**)&b; // expected-error {{type of 'int' cannot be qualified by 'owned'}} // expected-error {{incompatible owned types, cannot cast 'owned short **' to 'owned int **'}}
+    _Owned short *b = &a;    // expected-error {{type of 'short' cannot be qualified by '_Owned'}} //expected-error {{incompatible _Owned types, cannot cast 'short *' to '_Owned short *'}}
+    _Owned int **c = (_Owned int**)&b; // expected-error {{type of 'int' cannot be qualified by '_Owned'}} // expected-error {{incompatible _Owned types, cannot cast '_Owned short **' to '_Owned int **'}}
     if(**c != 0) {
         return 1;
     }
@@ -71,35 +71,35 @@ int test7()
 // with other qualifiers
 void test9() {
     int a = 10;
-    int* const owned p1 = (int* owned)&a;   //legal
-    int* const owned p2 = p1;   //legal
-    const int* owned p3 = p1;   //legal
-    const int* const owned p4 = p1; //legal
-    volatile int* owned p5 = p1;
+    int* const _Owned p1 = (int* _Owned)&a;   //legal
+    int* const _Owned p2 = p1;   //legal
+    const int* _Owned p3 = p1;   //legal
+    const int* const _Owned p4 = p1; //legal
+    volatile int* _Owned p5 = p1;
 }
 
-// pointer to owned type, recursively check
-void test10(owned int* p0) {// expected-error {{type of 'int' cannot be qualified by 'owned'}} 
-    int* p1 = p0;   //expected-error {{incompatible owned types, cannot cast 'owned int *' to 'int *'}}
+// pointer to _Owned type, recursively check
+void test10(_Owned int* p0) {// expected-error {{type of 'int' cannot be qualified by '_Owned'}} 
+    int* p1 = p0;   //expected-error {{incompatible _Owned types, cannot cast '_Owned int *' to 'int *'}}
 }
 
-void test11(int* owned *p0) {
-    int** p1 = p0;  //expected-error {{incompatible owned types, cannot cast 'int *owned *' to 'int **'}}
+void test11(int* _Owned *p0) {
+    int** p1 = p0;  //expected-error {{incompatible _Owned types, cannot cast 'int *_Owned *' to 'int **'}}
 }
 
-typedef int* owned * myIntPP;
-void test12(int* owned *p0, int** p1) {
+typedef int* _Owned * myIntPP;
+void test12(int* _Owned *p0, int** p1) {
     myIntPP p2 = p0;
-    myIntPP p3 = p1;    //expected-error {{incompatible owned types, cannot cast 'int **' to 'myIntPP' (aka 'int *owned *'}}
+    myIntPP p3 = p1;    //expected-error {{incompatible _Owned types, cannot cast 'int **' to 'myIntPP' (aka 'int *_Owned *'}}
 }
 
-void test13(int* owned p0, const int* owned p1) {
-    float* owned p2 = p0;   //expected-error {{incompatible owned types, cannot cast 'int *owned' to 'float *owned'}}
-    const float* owned p3 = p1; //expected-error {{incompatible owned types, cannot cast 'const int *owned' to 'const float *owned'}}
-    int* owned p4 = p1; //expected-warning {{initializing 'int *owned' with an expression of type 'const int *owned' discards qualifiers}}
+void test13(int* _Owned p0, const int* _Owned p1) {
+    float* _Owned p2 = p0;   //expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'float *_Owned'}}
+    const float* _Owned p3 = p1; //expected-error {{incompatible _Owned types, cannot cast 'const int *_Owned' to 'const float *_Owned'}}
+    int* _Owned p4 = p1; //expected-warning {{initializing 'int *_Owned' with an expression of type 'const int *_Owned' discards qualifiers}}
 }
 
-owned struct S {
+_Owned struct S {
 public:
     ~S(S this) {}
 };
@@ -108,7 +108,7 @@ void test14() {
     S* s = NULL;
 }
 
-owned struct R<T> {
+_Owned struct R<T> {
 public:
     T* ptr;
     ~R(R<T> this) {}

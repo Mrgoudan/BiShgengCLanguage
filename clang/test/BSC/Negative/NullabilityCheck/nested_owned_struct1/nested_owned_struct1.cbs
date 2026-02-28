@@ -1,25 +1,25 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 
-_Safe T *owned safe_malloc<T>(T t);
-_Safe void safe_free(void *owned p);
+_Safe T *_Owned safe_malloc<T>(T t);
+_Safe void safe_free(void *_Owned p);
 
-owned struct B{
+_Owned struct B{
     public:
-    int * owned p;
+    int * _Owned p;
     int pp;
     ~B(B this){
-        safe_free((void*owned)this.p);
+        safe_free((void*_Owned)this.p);
     }
 };
 
-owned struct A{
+_Owned struct A{
     public:
     B b;
-    int * owned p;
+    int * _Owned p;
     int * q;
     int * _Nullable nq;
     ~A(A this){
-        safe_free((void* owned)this.p);
+        safe_free((void* _Owned)this.p);
     }
 };
 

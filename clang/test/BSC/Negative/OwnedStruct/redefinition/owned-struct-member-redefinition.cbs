@@ -1,115 +1,115 @@
 // RUN: %clang_cc1 -verify %s
 
 // field redefinition
-owned struct A {
+_Owned struct A {
     int a; // expected-note {{previous declaration is here}}
     int a; // expected-error {{duplicate member 'a'}}
 };
 
-owned struct B {
+_Owned struct B {
     static int a; // expected-note {{previous declaration is here}}
     int a; // expected-error {{duplicate member 'a'}}
 };
 
-owned struct C {
+_Owned struct C {
     static int a; // expected-note {{previous declaration is here}}
     static int a; // expected-error {{duplicate member 'a'}}
 };
 
 // field with function redefinition
-owned struct D {
+_Owned struct D {
     int a; // expected-note {{previous definition is here}}
     int a() { return 0; } // expected-error {{redefinition of 'a' as different kind of symbol}}
 };
 
-owned struct E {
+_Owned struct E {
     static int a; // expected-note {{previous definition is here}}
     int a() { return 0; } // expected-error {{redefinition of 'a' as different kind of symbol}}
 };
 
-owned struct F {
+_Owned struct F {
     int a; // expected-note {{previous definition is here}}
     int a(F* this) { return 0; } // expected-error {{redefinition of 'a' as different kind of symbol}}
 };
 
-owned struct G {
+_Owned struct G {
     static int a; // expected-note {{previous definition is here}}
     int a(G* this) { return 0; } // expected-error {{redefinition of 'a' as different kind of symbol}}
 };
 
 // function redefinition
-owned struct H {
+_Owned struct H {
     int a(); // expected-note {{previous declaration is here}}
     int a(); // expected-error {{struct member cannot be redeclared}}
 };
 
-owned struct I {
+_Owned struct I {
     int a(); // expected-note {{previous declaration is here}}
     int a(int a); // expected-error {{conflicting types for 'a'}}
 };
 
-owned struct J {
+_Owned struct J {
     int a(); // expected-note {{previous declaration is here}}
     int a(J* this); // expected-error {{conflicting types for 'a'}}
 };
 
-owned struct K {
+_Owned struct K {
     int a(K* this); // expected-note {{previous declaration is here}}
     int a(K* this); // expected-error {{struct member cannot be redeclared}}
 };
 
-owned struct L {
+_Owned struct L {
     int a();                // expected-note {{previous declaration is here}}
     int a() { return 0; } // expected-error {{struct member cannot be redeclared}}
 };
 
-owned struct M {
+_Owned struct M {
     int a(M* this); // expected-note {{previous declaration is here}}
     int a(M* this) { return 0; } // expected-error {{struct member cannot be redeclared}}
 };
 
-owned struct N {
+_Owned struct N {
     int a() { return 0; } // expected-note {{previous definition is here}}
     int a() { return 0; } // expected-error {{struct member cannot be redeclared}}
 };
 
-owned struct O {
+_Owned struct O {
     int a(O* this) { return 0; } // expected-note {{previous definition is here}}
     int a(O* this) { return 0; } // expected-error {{struct member cannot be redeclared}}
 };
 
-owned struct P {
+_Owned struct P {
     int a() { return 0; } // expected-note {{previous definition is here}}
 };
 
 int P::a() { return 0; } // expected-error {{redefinition of 'a'}}
 
-owned struct Q {
+_Owned struct Q {
     int a(); // expected-note {{previous declaration is here}}
 };
 
 int Q::a(int a) { return 0; } // expected-error {{conflicting types for 'a'}}
 
-owned struct R {
+_Owned struct R {
     int a();
 };
 
 int R::a() { return 0; } // expected-note {{previous definition is here}}
 int R::a() { return 0; } // expected-error {{redefinition of 'a'}}
 
-owned struct S {
+_Owned struct S {
     int a(S* this) { return 0; } // expected-note {{previous definition is here}}
 };
 
 int S::a(S* this) { return 0; } // expected-error {{redefinition of 'a'}}
 
-owned struct T {
+_Owned struct T {
     int a(T* this); // expected-note {{previous declaration is here}}
 };
 
 int T::a(int a) { return 0; } // expected-error {{conflicting types for 'a'}}
 
-owned struct U {
+_Owned struct U {
     int a(U* this);
 };
 

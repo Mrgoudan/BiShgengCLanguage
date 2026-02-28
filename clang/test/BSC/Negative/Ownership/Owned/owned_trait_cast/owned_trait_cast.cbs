@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -verify %s
 
 trait T {
-  _Safe void do_it(This* owned this);
+  _Safe void do_it(This* _Owned this);
   void do_that(This* this);
   _Safe void do_this(This* _Borrow this);
 };
 
-_Safe void int::do_it(int* owned this) {
+_Safe void int::do_it(int* _Owned this) {
   _Unsafe { int* x = (int*)this; }
 }
 
@@ -26,8 +26,8 @@ void cast1() {
 
 void cast2() {
   int x = 1;
-  trait T* owned t1 = (int* owned)&x;
-  trait T* owned t2 = t1;
+  trait T* _Owned t1 = (int* _Owned)&x;
+  trait T* _Owned t2 = t1;
 } // expected-error {{field memory leak of value: `t2`, t2.data is leak}}
 
 void cast3() {

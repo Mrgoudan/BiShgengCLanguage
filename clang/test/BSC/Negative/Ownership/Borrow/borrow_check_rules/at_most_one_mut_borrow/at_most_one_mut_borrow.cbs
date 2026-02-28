@@ -6,7 +6,7 @@ struct S {
   int a;
 };
 
-owned struct M {
+_Owned struct M {
 public:
   int a;
 };
@@ -16,8 +16,8 @@ void use_immut(const int *_Borrow p);
 void use_two_borrow(int *_Borrow p1, int *_Borrow p2);
 void useM_mut(M *_Borrow m);
 void useM_immut(const M *_Borrow m);
-T *owned safe_malloc<T>(T value);
-void free_owned<T>(T *owned p);
+T *_Owned safe_malloc<T>(T value);
+void free_owned<T>(T *_Owned p);
 void free(void *);
 
 void test1() {
@@ -29,7 +29,7 @@ void test1() {
 }
 
 void test2() {
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   int *_Borrow p1 = &_Mut *oriPtr; // expected-note {{first mut borrow occurs here}}
   int *_Borrow p2 = &_Mut *oriPtr; // expected-error {{cannot borrow `*oriPtr` as mutable more than once at a time}}
   use_mut(p1);
@@ -97,7 +97,7 @@ void test10() {
   int local = 5;
   int *_Borrow p1 = &_Mut local;
   const int *_Borrow p2 = &_Const local;
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   if (local > 0) {
     p1 = &_Mut *oriPtr; // expected-note {{mutable borrow occurs here}}
     p2 = &_Const *oriPtr; // expected-error {{cannot borrow `*oriPtr` as immutable because it is also borrowed as mutable}}
@@ -114,7 +114,7 @@ void test11() {
   int local = 5;
   int *_Borrow p1 = &_Mut local;
   const int *_Borrow p2 = &_Const local;
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   if (1) {
     p1 = &_Mut *oriPtr; // expected-note {{mutable borrow occurs here}}
     p2 = &_Const *oriPtr; // expected-error {{cannot borrow `*oriPtr` as immutable because it is also borrowed as mutable}}

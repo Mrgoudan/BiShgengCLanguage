@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A<T> {
+_Owned struct A<T> {
   public:
     static int a;
 };
 int A<T>::a;
 
-owned struct B<T> {
+_Owned struct B<T> {
   public:
    static A<T> aa;
    static A<int> aa1;
@@ -19,7 +19,7 @@ int goo() {
     A<int> a = {};
     a.a = 1;
     A<int>::a = 2;
-    return a.a; // expected-error {{memory leak because temporary variable 'a' is owned or indirect owned type, please fix it}}
+    return a.a; // expected-error {{memory leak because temporary variable 'a' is _Owned or indirect _Owned type, please fix it}}
 }
 
 int foo() {
@@ -28,7 +28,7 @@ int foo() {
     A<int>::a = 2;
     B<int> b = {};
     b.aa= a;
-    return b.aa.a; // expected-error {{memory leak because temporary variable 'b' is owned or indirect owned type, please fix it}}
+    return b.aa.a; // expected-error {{memory leak because temporary variable 'b' is _Owned or indirect _Owned type, please fix it}}
 }
 int koo() {
     A<char> a = {};
@@ -36,7 +36,7 @@ int koo() {
     A<char>::a = 2;
     B<char> b = {};
     b.aa= a;
-    return -b.aa.a + b.aa1.a; // expected-error {{memory leak because temporary variable 'b' is owned or indirect owned type, please fix it}}
+    return -b.aa.a + b.aa1.a; // expected-error {{memory leak because temporary variable 'b' is _Owned or indirect _Owned type, please fix it}}
 }
 
 int main() {

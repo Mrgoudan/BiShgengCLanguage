@@ -9,20 +9,20 @@
 
 #include <stdlib.h>
 
-int *_Borrow *owned safe_malloc1(int *_Borrow bp) {
+int *_Borrow *_Owned safe_malloc1(int *_Borrow bp) {
   int *_Borrow * p = (int *_Borrow *) malloc( sizeof(int *_Borrow) );
   *p = bp;
-  return (int *_Borrow *owned)p;
+  return (int *_Borrow *_Owned)p;
 }
 
-void safe_free1(int *_Borrow *owned p) {
+void safe_free1(int *_Borrow *_Owned p) {
   free( (int *_Borrow *)p );
 }
 
 void test1() {
   int a = 0;
   int *_Borrow p = &_Mut a;
-  int* _Borrow *owned ap = safe_malloc1(p);
+  int* _Borrow *_Owned ap = safe_malloc1(p);
   safe_free1(ap);
 }
 
@@ -30,21 +30,21 @@ struct M {
     int* _Borrow ma;
 };
 
-struct M *owned safe_malloc2(struct M m) {
+struct M *_Owned safe_malloc2(struct M m) {
   struct M * p = (struct M *) malloc( sizeof(struct M) );
   *p = m;
-  return (struct M *owned)p;
+  return (struct M *_Owned)p;
 }
 
-void safe_free2(struct M *owned p) {
+void safe_free2(struct M *_Owned p) {
   free( (struct M *)p );
 }
 
 void test2() {
   int a = 0;
   struct M m = { &_Mut a };
-  struct M *owned mp = safe_malloc2(m);
-  struct M *owned *mpp = &mp;
+  struct M *_Owned mp = safe_malloc2(m);
+  struct M *_Owned *mpp = &mp;
   safe_free2(mp);
 }
 

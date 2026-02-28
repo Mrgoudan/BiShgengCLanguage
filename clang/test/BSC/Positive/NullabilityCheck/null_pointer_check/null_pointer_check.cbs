@@ -13,7 +13,7 @@
       return ret;            \
     }
 
-_Safe T *owned safe_malloc<T>(T t) {
+_Safe T *_Owned safe_malloc<T>(T t) {
     _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
@@ -24,18 +24,18 @@ _Safe T *owned safe_malloc<T>(T t) {
         } else {
             *addr = t;
         }
-        return (T *owned)addr;
+        return (T *_Owned)addr;
 	}
 }
 
-_Safe void safe_free<T>(T *owned p) {
+_Safe void safe_free<T>(T *_Owned p) {
     _Unsafe {
         free((void *)p);
     }
 }
 
 _Safe int test(void) {
-  int * owned _Nullable p = nullptr;
+  int * _Owned _Nullable p = nullptr;
   RETURN_IF(nullptr == p, 1);
   int a = 1;
   p = safe_malloc<int>(a);
@@ -46,7 +46,7 @@ _Safe int test(void) {
 
 void nullptr_equals() {
   int a = 0;
-  int *owned _Nullable p = nullptr;
+  int *_Owned _Nullable p = nullptr;
   if (nullptr == nullptr) {
     printf ("nullptr equals nullptr\n");
   } else {

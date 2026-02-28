@@ -5,13 +5,13 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 int x = 0;
-owned struct A<T>{
+_Owned struct A<T>{
     ~A(A<T> this) {
       x++;
     }
 };
 int y = 1;
- owned struct B<T> {
+ _Owned struct B<T> {
  public:
      A<int> a;
     ~B(B<T> this) { 
@@ -20,7 +20,7 @@ int y = 1;
     }
 };
 
-owned struct C<T> {
+_Owned struct C<T> {
 public:
   T elem;
   ~C(C<T> this) {}

@@ -1,7 +1,7 @@
 // RUN: cp %s %t.cbs
 // RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
 
-owned struct S{
+_Owned struct S{
   private2:
 };
 

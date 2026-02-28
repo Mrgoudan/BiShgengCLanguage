@@ -5,7 +5,7 @@
 #include <bsc_type_traits.hbs>
 #include <string.h>
 
-owned struct Vec<T> {
+_Owned struct Vec<T> {
 // FIXME: make it private later
 public:
 	RawVec<T> buf;
@@ -15,7 +15,7 @@ public:
 	~Vec(Vec<T> this) {
 		for (size_t index = 0; index < this.len; index++) {
 			_BSC_UNUSED T tmp = this.buf.ptr[index];
-			// IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
+			// IF(`T` isa _Owned struct type) AUTO INSERT: ~T(tmp)
 		}
 		// AUTO INSERT: ~RawVec(this.buf)
 	}
@@ -29,7 +29,7 @@ _Safe void Vec<T>::clear(Vec<T>* _Borrow this) {
 	_Unsafe {
 		for (size_t index = 0; index < this->len; index++) {
 			_BSC_UNUSED T tmp = this->buf.ptr[index];
-			// IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
+			// IF(`T` isa _Owned struct type) AUTO INSERT: ~T(tmp)
 		}
 		this->len = 0;
 	}
@@ -65,9 +65,9 @@ _Safe size_t Vec<T>::length(const Vec<T>* _Borrow this) {
 
 _Safe Vec<T> Vec<T>::new(void) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                	"Can only instantiate Vec with owned struct or copyable type, "
+                	"Can only instantiate Vec with _Owned struct or copyable type, "
 					"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap T with an owned struct.");
+					"Fix: You can wrap T with an _Owned struct.");
 	_Unsafe {
 		RawVec<T> buf = RawVec<T>::new();
 		Vec<T> v = { .buf = buf, .len = 0 };
@@ -123,7 +123,7 @@ _Safe void Vec<T>::set(Vec<T>* _Borrow this, size_t index, T value) {
 			T* ptr = this->buf.ptr + index;
 			*ptr = value;
 		}
-		// IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
+		// IF(`T` isa _Owned struct type) AUTO INSERT: ~T(tmp)
 	} else {
 		this->push(value);
 	}
@@ -137,9 +137,9 @@ _Safe void Vec<T>::shrink_to_fit(Vec<T>* _Borrow this) {
 
 _Safe Vec<T> Vec<T>::with_capacity(size_t cap) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-					"Can only instantiate Vec with owned struct or copyable type, "
+					"Can only instantiate Vec with _Owned struct or copyable type, "
 					"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap T with an owned struct.");
+					"Fix: You can wrap T with an _Owned struct.");
 	RawVec<T> buf = RawVec<T>::with_capacity(cap);
 	Vec<T> v = { .buf = buf, .len = 0 };
 	return v;

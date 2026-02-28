@@ -141,7 +141,7 @@ int test5() {
 struct RcData<T> {
 	T data;
 };
-owned struct Rc<T> {
+_Owned struct Rc<T> {
 public:
   RcData<T> * ptr;
 };
@@ -172,7 +172,7 @@ int test6() {
     return 0;
 }
 // struct include Rc
-owned struct RcRecord<T>
+_Owned struct RcRecord<T>
 {
 public:
     Rc<T> rc;

@@ -12,14 +12,14 @@ _Safe void explicit_reborrow2(void) {
     int *_Borrow _Nullable mbp = &_Mut *ptr;
 }
 
-_Safe int *owned _Nullable explicit_reborrow3(int *owned _Nullable ptr) {
+_Safe int *_Owned _Nullable explicit_reborrow3(int *_Owned _Nullable ptr) {
     const int *_Borrow _Nullable cbp = &_Const *ptr;
     int *_Borrow _Nullable mbp = &_Mut *ptr;
     return ptr;
 }
 
-_Safe int *owned _Nullable explicit_reborrow4(void) {
-    int *owned _Nullable ptr = nullptr;
+_Safe int *_Owned _Nullable explicit_reborrow4(void) {
+    int *_Owned _Nullable ptr = nullptr;
     const int *_Borrow _Nullable cbp = &_Const *ptr;
     int *_Borrow _Nullable mbp = &_Mut *ptr;
     return ptr;

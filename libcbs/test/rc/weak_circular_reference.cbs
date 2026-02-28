@@ -6,15 +6,15 @@
 #include "rc.hbs"
 #include "cell.hbs"
 
-owned struct B;
+_Owned struct B;
 
-owned struct A {
+_Owned struct A {
 public:
     int value;
     RefCell<Rc<B>> c;
 };
 
-owned struct B {
+_Owned struct B {
 public:
     int value;
     RefCell<Weak<A>> d;

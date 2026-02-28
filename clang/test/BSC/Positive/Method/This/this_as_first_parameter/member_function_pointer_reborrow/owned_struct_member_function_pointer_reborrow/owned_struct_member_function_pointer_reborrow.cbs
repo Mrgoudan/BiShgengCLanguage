@@ -9,21 +9,21 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-owned struct Bar {
+_Owned struct Bar {
 public:
   int a;
 };
 
-T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+T* _Owned safe_malloc<T>(T value);
+void free_owned<T>(T* _Owned p);
 
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
     T * p = (T *) malloc( sizeof(T) );
     *p = value;
-    return (T* owned)p;
+    return (T* _Owned)p;
 }
 
-void free_owned<T>(T* owned p) {
+void free_owned<T>(T* _Owned p) {
   free( (void *)p );
 }
 
@@ -53,7 +53,7 @@ _Safe int Bar::getC_2(const This* _Borrow this) {
   return this->a;
 }
 
-_Safe void Bar::getD(This* owned this) {
+_Safe void Bar::getD(This* _Owned this) {
   _Unsafe free_owned<Bar>(this);
 }
 
@@ -92,7 +92,7 @@ void test_const_raw_pointer_call_reborrow() {
 void test_owned_pointer_call_reborrow() {
   printf("test_owned_pointer_call_reborrow:\n");
   Bar foo = {.a = 1};
-  Bar * owned foo_owned = safe_malloc<Bar>(foo);
+  Bar * _Owned foo_owned = safe_malloc<Bar>(foo);
   int b = foo_owned->getB();
   int b_2 = foo_owned->getB_2();
   _Safe {

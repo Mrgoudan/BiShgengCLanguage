@@ -9,7 +9,7 @@
 
 #include <stdatomic.h>
 
-owned struct Person<T, int N> {
+_Owned struct Person<T, int N> {
 public:
     char name[50];
     T age;

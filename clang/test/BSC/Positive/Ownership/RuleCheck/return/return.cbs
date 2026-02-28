@@ -8,13 +8,13 @@
 
 struct A {};
 
-int * owned func1(int * owned a) {
+int * _Owned func1(int * _Owned a) {
 	return a;
 }
 
-int * owned func3() {
+int * _Owned func3() {
 	int num = 1;
-	int * owned p = (int * owned)&num;
+	int * _Owned p = (int * _Owned)&num;
 	return p;
 }
 
@@ -22,7 +22,7 @@ struct A func7(struct A a) {
 	return a;
 }
 
-struct A * owned func8(struct A * owned a) {
+struct A * _Owned func8(struct A * _Owned a) {
 	return a;
 }
 

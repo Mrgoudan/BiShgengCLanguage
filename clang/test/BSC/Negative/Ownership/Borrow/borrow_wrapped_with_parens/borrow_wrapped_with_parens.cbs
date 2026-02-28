@@ -9,23 +9,23 @@ typedef struct {
   int b;
 } B;
 
-B *_Borrow borrow_bak_offset(A *owned *_Borrow, int);
+B *_Borrow borrow_bak_offset(A *_Owned *_Borrow, int);
 void use(B *_Borrow header);
 
-A *owned test1() {
-  A *owned block = nullptr;
+A *_Owned test1() {
+  A *_Owned block = nullptr;
   B *_Borrow header = nullptr;
   header = borrow_bak_offset((&_Mut block), sizeof(B)); // expected-note {{`block` is borrowed here}}
-  A *owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
+  A *_Owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
   use(header);
   return block2;
 }
 
-A *owned test2() {
-  A *owned block = nullptr;
+A *_Owned test2() {
+  A *_Owned block = nullptr;
   B *_Borrow header = nullptr;
   header = borrow_bak_offset(((&_Mut block)), sizeof(B)); // expected-note {{`block` is borrowed here}}
-  A *owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
+  A *_Owned block2 = block; // expected-error {{cannot move out of `block` because it is borrowed}}
   use(header);
   return block2;
 }

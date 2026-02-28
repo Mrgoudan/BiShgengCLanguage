@@ -4,7 +4,7 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 int x = 0;
-owned struct B{
+_Owned struct B{
     ~B(B this) { 
       x++;
    }

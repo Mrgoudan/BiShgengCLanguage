@@ -15,8 +15,8 @@ void use_mutI(int *_Borrow);
 void use_constI(const int *_Borrow);
 void use_mutS(S *_Borrow);
 void use_constS(const S *_Borrow);
-T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+T* _Owned safe_malloc<T>(T value);
+void free_owned<T>(T* _Owned p);
 void free(void *);
 
 void test1() {

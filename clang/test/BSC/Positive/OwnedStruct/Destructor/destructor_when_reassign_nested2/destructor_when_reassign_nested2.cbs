@@ -8,20 +8,20 @@
 int x = 0;
 int y = 0;
 int z = 0;
-owned struct A{
+_Owned struct A{
     public:
     ~A(A this){
         x++;
     }
 };
-owned struct B{
+_Owned struct B{
     public:
     A a;
     ~B(B this){
         y++;
     }
 };
-owned struct C{
+_Owned struct C{
     public:
     A a;
     B b;

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 union D {
-    owned int a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of union field cannot qualified by 'owned'}}
+    _Owned int a;  // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{type of union field cannot qualified by '_Owned'}}
 };
 
 
@@ -10,21 +10,21 @@ typedef union E {
 }EE;
 
 int main() {
-    owned union E e = {.a = 10};  // expected-error {{'union E' cannot be qualified by 'owned'}}
-    owned EE ee = {.a = 10}; // expected-error {{'EE' (aka 'union E') cannot be qualified by 'owned'}}
+    _Owned union E e = {.a = 10};  // expected-error {{'union E' cannot be qualified by '_Owned'}}
+    _Owned EE ee = {.a = 10}; // expected-error {{'EE' (aka 'union E') cannot be qualified by '_Owned'}}
 }
 
 union A {
-    owned int* a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    _Owned int* a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 };
 
-typedef owned int ownedInt; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+typedef _Owned int ownedInt; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 union B {
-    ownedInt a; //expected-error {{type of union field cannot qualified by 'owned', 'ownedInt' (aka 'owned int') contains 'owned' type}}
+    ownedInt a; //expected-error {{type of union field cannot qualified by '_Owned', 'ownedInt' (aka '_Owned int') contains '_Owned' type}}
 };
 
 struct S {
-    owned int num; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    _Owned int num; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 };
 
 union C {

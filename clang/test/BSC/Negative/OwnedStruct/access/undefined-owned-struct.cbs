@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct B {};
+_Owned struct B {};
 
 A f(); // expected-error {{unknown type name 'A'}}
 

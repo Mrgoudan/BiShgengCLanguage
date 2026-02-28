@@ -6,7 +6,7 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
-_Safe T *owned safe_malloc<T>(T t) {
+_Safe T *_Owned safe_malloc<T>(T t) {
     _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
@@ -17,18 +17,18 @@ _Safe T *owned safe_malloc<T>(T t) {
         } else {
             *addr = t;
         }
-        return (T *owned)addr;
+        return (T *_Owned)addr;
 	}
 }
 
-_Safe void safe_free(void *owned p) {
+_Safe void safe_free(void *_Owned p) {
     _Unsafe {
         free((void *)p);
     }
 }
 
 _Safe void test1(void) {
-    int *owned _Nullable p = nullptr;
+    int *_Owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
         p = safe_malloc<int>(10);
@@ -36,17 +36,17 @@ _Safe void test1(void) {
     }
     if (p != nullptr) {
         *p = 10;
-        safe_free((void *owned)p);
+        safe_free((void *_Owned)p);
     }
 }
 
 _Safe void test2(void) {
-    int *owned _Nullable p = nullptr;
+    int *_Owned _Nullable p = nullptr;
     p = nullptr;
 }
 
 struct S {
-    int *owned _Nullable p;
+    int *_Owned _Nullable p;
 };
 _Safe void test3(void) {
     struct S s = { nullptr };
@@ -56,40 +56,40 @@ _Safe void test3(void) {
     }
     if (s.p != nullptr) {
         *s.p = 10;
-        safe_free((void *owned)s.p);
+        safe_free((void *_Owned)s.p);
     }
 }
 
 _Safe void test4(void) {
     struct S s = { nullptr };
-    struct S *owned _Nullable p = safe_malloc<struct S>(s);
+    struct S *_Owned _Nullable p = safe_malloc<struct S>(s);
     if (p->p != nullptr)
-        safe_free((void *owned)p->p);
-    safe_free((void *owned)p);
+        safe_free((void *_Owned)p->p);
+    safe_free((void *_Owned)p);
 }
 
-long * owned return_nonnull() {
-    long * owned p = safe_malloc<long>(10);
+long * _Owned return_nonnull() {
+    long * _Owned p = safe_malloc<long>(10);
     return p;
 }
 
 _Safe int test6(void) {
     _Unsafe {
-        const long * owned a = return_nonnull();
+        const long * _Owned a = return_nonnull();
         if (a != 0) {
-            free((void *)(void * owned)a);
+            free((void *)(void * _Owned)a);
             return 1;
         }
         return 0;
     }
 }
 
-owned struct K {
+_Owned struct K {
 public:
-    int *owned _Nullable p;
+    int *_Owned _Nullable p;
     ~K(This this) {
         if (this.p != nullptr) {
-            safe_free((void *owned)this.p);
+            safe_free((void *_Owned)this.p);
         }
     }
 };
@@ -105,7 +105,7 @@ _Safe void test7(void) {
 }
 
 struct S2 {
-    int *owned _Nullable p;
+    int *_Owned _Nullable p;
     int *_Borrow _Nullable q;
 };
 
@@ -115,7 +115,7 @@ _Safe void test8(void) {
         .p = _Unsafe(safe_malloc<int>(a)),
         .q = _Unsafe(&_Mut a)
     };
-    safe_free((void *owned)s.p);
+    safe_free((void *_Owned)s.p);
 }
 
 _Safe void test9(void) {
@@ -124,7 +124,7 @@ _Safe void test9(void) {
         .p = (safe_malloc<int>(a)),
         .q = (&_Mut a)
     };
-    safe_free((void *owned)s.p);
+    safe_free((void *_Owned)s.p);
 }
 
 int main() {

@@ -6,17 +6,17 @@ struct Base {
 
 struct A {
     int b;
-    owned int* c; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    owned struct Base base; // expected-error {{type of 'struct Base' cannot be qualified by 'owned'}}
+    _Owned int* c; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned struct Base base; // expected-error {{type of 'struct Base' cannot be qualified by '_Owned'}}
 };
 
-int * owned foo(owned int* a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    return (int* owned)a;
+int * _Owned foo(_Owned int* a) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    return (int* _Owned)a;
 }
 
 void test2() {
-    struct A owned a; // expected-error {{type of 'struct A' cannot be qualified by 'owned'}}
-    int res = a.b;                  //unlike const, a.b's QualType is int(not owned int)
-    int * owned res2 = foo(a.c);      //a.c's QualType is owned int*(not owned int* owned)
+    struct A _Owned a; // expected-error {{type of 'struct A' cannot be qualified by '_Owned'}}
+    int res = a.b;                  //unlike const, a.b's QualType is int(not _Owned int)
+    int * _Owned res2 = foo(a.c);      //a.c's QualType is _Owned int*(not _Owned int* _Owned)
     int res3 = a.base.num;
 }

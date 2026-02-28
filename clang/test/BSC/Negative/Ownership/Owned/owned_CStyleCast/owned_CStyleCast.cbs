@@ -1,48 +1,48 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-//owned to owned
+//_Owned to _Owned
 void test1() {
-    int* owned p1;
-    int* owned p3 = (int* owned)p1;     //legal
-    void* owned p4 = (void* owned)p1;   //legal
-    float* owned p2 = (float* owned)p1;   //expected-error {{incompatible owned types, cannot cast 'int *owned' to 'float *owned'}}
-    int owned a = 10;                     //expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    float owned b = (float owned)a;     //expected-error {{type of 'float' cannot be qualified by 'owned'}} //expected-error {{incompatible owned types, cannot cast 'owned int' to 'owned float'}}
-    void* owned p5;
-    int* owned p6 = (int* owned)p5;     //legal
+    int* _Owned p1;
+    int* _Owned p3 = (int* _Owned)p1;     //legal
+    void* _Owned p4 = (void* _Owned)p1;   //legal
+    float* _Owned p2 = (float* _Owned)p1;   //expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'float *_Owned'}}
+    int _Owned a = 10;                     //expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    float _Owned b = (float _Owned)a;     //expected-error {{type of 'float' cannot be qualified by '_Owned'}} //expected-error {{incompatible _Owned types, cannot cast '_Owned int' to '_Owned float'}}
+    void* _Owned p5;
+    int* _Owned p6 = (int* _Owned)p5;     //legal
 }
 
-//owned to unOwned
+//_Owned to unOwned
 void test2() {
     int* p1;
-    int* owned p2 = (int* owned)p1;
-    float* owned p3 = (float* owned)p1;  //expected-error {{incompatible owned types, cannot cast 'int *' to 'float *owned'}}
+    int* _Owned p2 = (int* _Owned)p1;
+    float* _Owned p3 = (float* _Owned)p1;  //expected-error {{incompatible _Owned types, cannot cast 'int *' to 'float *_Owned'}}
 }
 
-//unOwned to owned
+//unOwned to _Owned
 void test3() {
-    int* owned p1;
+    int* _Owned p1;
     int* p2 = (int*)p1;
-    float* p3 = (float*)p1;  //expected-error {{incompatible owned types, cannot cast 'int *owned' to 'float *'}}
+    float* p3 = (float*)p1;  //expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'float *'}}
 }
 
 //with const & muiti-layer pointer
-void test4(int** p0, owned int* p1, int* p3) { //expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    const int* owned p11 = (const int* owned)p1;
-    owned int* const owned * owned p22 = (owned int* const owned * owned)p0; //expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int* const * owned p33 = (int* const * owned)p0;
-    void* owned p44 = (void* owned)p3;
-    owned int* p55 = (owned int*)p3; //expected-error {{type of 'int' cannot be qualified by 'owned'}}
+void test4(int** p0, _Owned int* p1, int* p3) { //expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    const int* _Owned p11 = (const int* _Owned)p1;
+    _Owned int* const _Owned * _Owned p22 = (_Owned int* const _Owned * _Owned)p0; //expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int* const * _Owned p33 = (int* const * _Owned)p0;
+    void* _Owned p44 = (void* _Owned)p3;
+    _Owned int* p55 = (_Owned int*)p3; //expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 }
 
 // illegal cases
-void test5(float owned f1, float* owned f2){ //expected-error {{type of 'float' cannot be qualified by 'owned'}}
-    int owned a1 = (int owned)f1;   //expected-error {{incompatible owned types, cannot cast 'owned float' to 'owned int'}} //expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int* owned a2 = (int* owned)f2; //expected-error {{incompatible owned types, cannot cast 'float *owned' to 'int *owned'}}
-    void* owned a4 = (void* owned)0;   //expected-error {{incompatible owned types, cannot cast 'int' to 'void *owned'}}
+void test5(float _Owned f1, float* _Owned f2){ //expected-error {{type of 'float' cannot be qualified by '_Owned'}}
+    int _Owned a1 = (int _Owned)f1;   //expected-error {{incompatible _Owned types, cannot cast '_Owned float' to '_Owned int'}} //expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int* _Owned a2 = (int* _Owned)f2; //expected-error {{incompatible _Owned types, cannot cast 'float *_Owned' to 'int *_Owned'}}
+    void* _Owned a4 = (void* _Owned)0;   //expected-error {{incompatible _Owned types, cannot cast 'int' to 'void *_Owned'}}
 }
 
-void test6(int** owned p) {
-    const int** owned p1 = p;   //expected-warning {{initializing 'const int **owned' with an expression of type 'int **owned' discards qualifiers in nested pointer types}} [-Wincompatible-pointer-types-discards-qualifiers]
-    const int** owned p2 = (const int** owned)p;
+void test6(int** _Owned p) {
+    const int** _Owned p1 = p;   //expected-warning {{initializing 'const int **_Owned' with an expression of type 'int **_Owned' discards qualifiers in nested pointer types}} [-Wincompatible-pointer-types-discards-qualifiers]
+    const int** _Owned p2 = (const int** _Owned)p;
 }

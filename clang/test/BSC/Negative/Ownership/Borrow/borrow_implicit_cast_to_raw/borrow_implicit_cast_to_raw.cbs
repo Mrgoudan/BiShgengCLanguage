@@ -7,12 +7,12 @@ void log_print(void *msg, const char *pcFormat, ...){}
 #define bsc_log_print(msg, pcFormat, ...) \
   _Unsafe {log_print(msg, pcFormat, ##__VA_ARGS__);}
 
-_Safe T* owned _Nullable bsc_malloc<T>(int  size) {
-  _Unsafe {return (T* owned _Nullable )malloc(size);}
+_Safe T* _Owned _Nullable bsc_malloc<T>(int  size) {
+  _Unsafe {return (T* _Owned _Nullable )malloc(size);}
 }
 
 int main() {
-  void * owned _Nullable pMsg = nullptr;
+  void * _Owned _Nullable pMsg = nullptr;
   pMsg = bsc_malloc<void>(100);
   bsc_log_print(&_Mut *pMsg, "Info: no memory!"); // expected-error {{incompatible borrow types, cannot cast 'void *_Borrow' to 'void *'}}
   void * a = (void *)pMsg;

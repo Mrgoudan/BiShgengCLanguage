@@ -14,11 +14,11 @@ typedef struct G { int a; } G;
 typedef enum E { Mon=1, Tue, Wed } E;
 typedef union U { int a; } U;
 typedef struct S<int> S_int;
-owned struct A {public: int a; };
-typedef struct B { int *owned a; } B;
+_Owned struct A {public: int a; };
+typedef struct B { int *_Owned a; } B;
 typedef struct C { A a; } C;
 typedef struct D { B b; } D;
-typedef int *owned OwnedInt;
+typedef int *_Owned OwnedInt;
 int main() {
     struct S<int> s1;
     struct S<float> s2;
@@ -44,7 +44,7 @@ int main() {
     _Static_assert(is_const<int>() == false, "fail");
     _Static_assert(is_volatile<volatile int>() == true, "fail");
     _Static_assert(is_volatile<int>() == false, "fail");
-    _Static_assert(is_move_semantic<int *owned>() == true, "fail");
+    _Static_assert(is_move_semantic<int *_Owned>() == true, "fail");
     _Static_assert(is_move_semantic<A>() == true, "fail");
     _Static_assert(is_move_semantic<struct B>() == true, "fail");
     _Static_assert(is_move_semantic<B>() == true, "fail");
@@ -52,9 +52,9 @@ int main() {
     _Static_assert(is_move_semantic<A*>() == false, "fail");
     _Static_assert(is_move_semantic<struct S<A>>() == true, "fail");
     _Static_assert(is_move_semantic<struct S<int>>() == false, "fail");
-    _Static_assert(is_owned_pointer<int *owned>() == true, "fail");
+    _Static_assert(is_owned_pointer<int *_Owned>() == true, "fail");
     _Static_assert(is_owned_pointer<OwnedInt>() == true, "fail");
-    _Static_assert(is_owned_pointer<int *owned *>() == false, "fail");
+    _Static_assert(is_owned_pointer<int *_Owned *>() == false, "fail");
     _Static_assert(is_owned_pointer<A>() == false, "fail");
     _Static_assert(is_owned_struct<B>() == false, "fail");
     _Static_assert(is_owned_struct<A>() == true, "fail");

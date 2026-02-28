@@ -17,20 +17,20 @@ void use_immut(const int *_Borrow p) {
   }
 }
 
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T* _Owned)p;
 }
 
-void free_owned<T>(T* owned p) {
+void free_owned<T>(T* _Owned p) {
   free( (T*)p );
 }
 
-// Test 1: Simple ternary with &_Mut on owned pointers
+// Test 1: Simple ternary with &_Mut on _Owned pointers
 void test_mut_on_owned() {
-  int *owned ptr1 = safe_malloc<int>(10);
-  int *owned ptr2 = safe_malloc<int>(20);
+  int *_Owned ptr1 = safe_malloc<int>(10);
+  int *_Owned ptr2 = safe_malloc<int>(20);
   int cond = 1;
 
   int *_Borrow result = cond ? &_Mut * ptr1 : &_Mut * ptr2;
@@ -40,10 +40,10 @@ void test_mut_on_owned() {
   free_owned<int>(ptr2);
 }
 
-// Test 2: Ternary with &_Const on owned pointers
+// Test 2: Ternary with &_Const on _Owned pointers
 void test_const_on_owned() {
-  int *owned ptr1 = safe_malloc<int>(100);
-  int *owned ptr2 = safe_malloc<int>(200);
+  int *_Owned ptr1 = safe_malloc<int>(100);
+  int *_Owned ptr2 = safe_malloc<int>(200);
   int cond = 0;
 
   const int *_Borrow result = cond ? &_Const * ptr1 : &_Const * ptr2;
@@ -80,9 +80,9 @@ void test_mixed_borrow_param(const int *_Borrow date) {
 
 // Test 6: Nested ternary
 void test_nested_ternary() {
-  int *owned ptr1 = safe_malloc<int>(1);
-  int *owned ptr2 = safe_malloc<int>(2);
-  int *owned ptr3 = safe_malloc<int>(3);
+  int *_Owned ptr1 = safe_malloc<int>(1);
+  int *_Owned ptr2 = safe_malloc<int>(2);
+  int *_Owned ptr3 = safe_malloc<int>(3);
   int cond1 = 1, cond2 = 0;
 
   int *_Borrow result = cond1 ? (cond2 ? &_Mut * ptr1 : &_Mut * ptr2) : &_Mut * ptr3;
@@ -95,8 +95,8 @@ void test_nested_ternary() {
 
 // Test 7: Ternary in function call argument
 void test_in_function_call() {
-  int *owned ptr1 = safe_malloc<int>(30);
-  int *owned ptr2 = safe_malloc<int>(40);
+  int *_Owned ptr1 = safe_malloc<int>(30);
+  int *_Owned ptr2 = safe_malloc<int>(40);
   int cond = 1;
 
   use_mut(cond ? &_Mut * ptr1 : &_Mut * ptr2);
@@ -129,10 +129,10 @@ void test_const_deref() {
 
 // Test 10: Multiple sequential ternaries
 void test_multiple_ternaries() {
-  int *owned ptr1 = safe_malloc<int>(50);
-  int *owned ptr2 = safe_malloc<int>(60);
-  int *owned ptr3 = safe_malloc<int>(70);
-  int *owned ptr4 = safe_malloc<int>(80);
+  int *_Owned ptr1 = safe_malloc<int>(50);
+  int *_Owned ptr2 = safe_malloc<int>(60);
+  int *_Owned ptr3 = safe_malloc<int>(70);
+  int *_Owned ptr4 = safe_malloc<int>(80);
   int cond1 = 1, cond2 = 0;
 
   int *_Borrow result1 = cond1 ? &_Mut * ptr1 : &_Mut * ptr2;
@@ -151,8 +151,8 @@ void test_multiple_ternaries() {
 #define SELECT_PTR(cond, p1, p2) ((cond) ? &_Mut * (p1) : &_Mut * (p2))
 
 void test_macro_ternary() {
-  int *owned ptr1 = safe_malloc<int>(90);
-  int *owned ptr2 = safe_malloc<int>(100);
+  int *_Owned ptr1 = safe_malloc<int>(90);
+  int *_Owned ptr2 = safe_malloc<int>(100);
   int cond = 1;
 
   int *_Borrow result = SELECT_PTR(cond, ptr1, ptr2);
@@ -179,8 +179,8 @@ void test_complex_macro(const int *_Borrow date, char *_Borrow time, unsigned in
 
 // Test 13: Ternary with complex condition
 void test_complex_condition() {
-  int *owned ptr1 = safe_malloc<int>(110);
-  int *owned ptr2 = safe_malloc<int>(120);
+  int *_Owned ptr1 = safe_malloc<int>(110);
+  int *_Owned ptr2 = safe_malloc<int>(120);
   int a = 5, b = 10;
 
   int *_Borrow result = (a > b && a < 100) ? &_Mut * ptr1 : &_Mut * ptr2;
@@ -192,11 +192,11 @@ void test_complex_condition() {
 
 // Test 14: Ternary returning const _Borrow from mut _Borrow
 void test_const_from_mut() {
-  int *owned ptr1 = safe_malloc<int>(130);
-  int *owned ptr2 = safe_malloc<int>(140);
+  int *_Owned ptr1 = safe_malloc<int>(130);
+  int *_Owned ptr2 = safe_malloc<int>(140);
   int cond = 1;
 
-  // Taking &_Const of owned pointers
+  // Taking &_Const of _Owned pointers
   const int *_Borrow result = cond ? &_Const * ptr1 : &_Const * ptr2;
   use_immut(result);
 

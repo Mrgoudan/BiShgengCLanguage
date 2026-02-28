@@ -5,7 +5,7 @@ struct Simple {
 };
 
 struct Pair<T, U> {
-    T *owned first;
+    T *_Owned first;
     U *_Borrow second;
 };
 

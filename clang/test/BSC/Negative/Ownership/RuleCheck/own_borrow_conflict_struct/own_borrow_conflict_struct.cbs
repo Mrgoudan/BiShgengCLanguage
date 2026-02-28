@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify %s
 
 struct Container {
-    int *owned _Borrow data; // expected-error {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+    int *_Owned _Borrow data; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
 };

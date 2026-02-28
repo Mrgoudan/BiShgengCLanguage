@@ -40,11 +40,11 @@ _Safe struct T *f5(struct T *t) {
   return t;
 }
 
-_Safe struct S *owned f6(struct S *owned sp) {
+_Safe struct S *_Owned f6(struct S *_Owned sp) {
   return sp;
 }
 
-_Safe struct T *owned f7(struct T *owned tp) {
+_Safe struct T *_Owned f7(struct T *_Owned tp) {
   return tp;
 }
 
@@ -60,7 +60,7 @@ _Safe union U f10(union U u) {
   return u;
 }
 
-_Safe union U *owned f11(union U *owned up) {
+_Safe union U *_Owned f11(union U *_Owned up) {
   return up;
 }
 

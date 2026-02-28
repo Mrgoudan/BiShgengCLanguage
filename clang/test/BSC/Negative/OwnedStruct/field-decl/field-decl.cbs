@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct S {
+_Owned struct S {
 public:
   typedef int Int; // expected-error {{type name does not allow storage class to be specified}}
   Int y; // expected-error {{unknown type name 'Int'; did you mean 'int'?}}
@@ -10,20 +10,20 @@ public:
   }
 };
 
-owned struct GS<T> {
+_Owned struct GS<T> {
 public:
   typedef int Int; // expected-error {{type name does not allow storage class to be specified}}
   Int y; // expected-error {{unknown type name 'Int'; did you mean 'int'?}}
   typedef T type; // expected-error {{type name does not allow storage class to be specified}}
 };
 
-owned struct U {
+_Owned struct U {
 public:
   typedef GS<int> gs_t; // expected-error {{type name does not allow storage class to be specified}}
   gs_t gs; // expected-error {{unknown type name 'gs_t'}}
 };
 
-owned struct UU {
+_Owned struct UU {
 public:
   typedef Int = int; // expected-error {{type name does not allow storage class to be specified}}
                      // expected-error@-1 {{expected ';' at end of declaration list}}

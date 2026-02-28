@@ -9,8 +9,8 @@ _Safe void test_raw_nullable(void) {
 }
 
 _Safe void test_owned_nullable(void) {
-  void * owned _Nullable ptr = (nullptr);
-  int * owned _Nullable ip = (((nullptr)));
+  void * _Owned _Nullable ptr = (nullptr);
+  int * _Owned _Nullable ip = (((nullptr)));
   (void)ptr;
   (void)ip;
 }

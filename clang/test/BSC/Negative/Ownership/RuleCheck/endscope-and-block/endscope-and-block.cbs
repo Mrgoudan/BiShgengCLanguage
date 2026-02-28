@@ -2,44 +2,44 @@
 
 void func1() {
     int num = 1;
-    int owned * a;         // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    a = (owned int *)&num;
+    int _Owned * a;         // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    a = (_Owned int *)&num;
 }
 void func2() {
     int num = 1;
-    int * owned a;
-    a = (int * owned)&num;
+    int * _Owned a;
+    a = (int * _Owned)&num;
 } 
 
-void func3(int * owned a) {
+void func3(int * _Owned a) {
     {
         int * p = (int *)a;
     }
 }
 
-void func4(int * owned a) {
+void func4(int * _Owned a) {
     {
         int * p = (int *)a;
     }
     {
-        int * owned q = (int * owned)a; 
+        int * _Owned q = (int * _Owned)a; 
     } 
 }
 
-void func5(int * owned a) {
+void func5(int * _Owned a) {
     {
         int * p = (int *)a;
         {
-            int * owned q = (int * owned)p;
+            int * _Owned q = (int * _Owned)p;
         } 
     }
 }
 
-void func6(int * owned a) {
+void func6(int * _Owned a) {
     {
         int *p = (int *)a;
         {
-            int * owned q = (int * owned)p;
+            int * _Owned q = (int * _Owned)p;
             {}
         } 
     }

@@ -5,19 +5,19 @@ struct sockaddr;
 typedef struct v5_adpt_socket {
 } v5_adpt_socket_t;
 
-owned struct ListNode {
+_Owned struct ListNode {
 public:
   v5_adpt_socket_t inner;
 };
 
-owned struct OptionRefMut {
+_Owned struct OptionRefMut {
 public:
   ListNode * inner;
 };
 
 OptionRefMut socket_table_find(int *_Borrow);
 ListNode *_Borrow OptionRefMut::unwrap(OptionRefMut *_Borrow this);
-ListNode *owned AllocSocket();
+ListNode *_Owned AllocSocket();
 void accept(int, struct sockaddr *, int *);
 void SkAcceptInfoSet(const v5_adpt_socket_t *_Borrow, v5_adpt_socket_t *_Borrow);
 void CloseSocket(v5_adpt_socket_t *); 
@@ -29,7 +29,7 @@ void v5_accept(int fd, void *addr, int *addrLen, int *_Borrow p) {
                                                                 
   use(o.inner); // expected-error {{cannot use `o.inner` because it was mutably borrowed}}
                
-  ListNode *owned t = AllocSocket();
+  ListNode *_Owned t = AllocSocket();
   {
     v5_adpt_socket_t *_Borrow s = &_Mut t->inner;
     accept(fd, (struct sockaddr *)addr, addrLen);

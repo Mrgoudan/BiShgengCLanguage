@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 
-_Safe T *owned safe_malloc<T>(T t) {
+_Safe T *_Owned safe_malloc<T>(T t) {
   _Unsafe {
     T *addr = (T *)malloc(sizeof(T));
     if (!addr) {
@@ -15,36 +15,36 @@ _Safe T *owned safe_malloc<T>(T t) {
     } else {
       *addr = t;
     }
-    return (T *owned)addr;
+    return (T *_Owned)addr;
   }
 }
 
-_Safe void safe_free(void* owned p) {
+_Safe void safe_free(void* _Owned p) {
   _Unsafe {
     free((void *)p);
   }
 }
 
-_Safe void cast1(int* owned a) {
-  void* owned p = (void* owned)a;
+_Safe void cast1(int* _Owned a) {
+  void* _Owned p = (void* _Owned)a;
   safe_free(p);
 }
 
 struct S {
-  int* owned p;
-  int* owned q;
+  int* _Owned p;
+  int* _Owned q;
 };
  
-_Safe void cast2(struct S* owned s) {
-  safe_free((void* owned)s->p);
-  safe_free((void* owned)s->q);
-  safe_free((void* owned)s);
+_Safe void cast2(struct S* _Owned s) {
+  safe_free((void* _Owned)s->p);
+  safe_free((void* _Owned)s->q);
+  safe_free((void* _Owned)s);
 }
 
 int main() {
-   int* owned a = safe_malloc(5);
+   int* _Owned a = safe_malloc(5);
    cast1(a);
    struct S s = { .p = safe_malloc(1), .q = safe_malloc(2) };
-   struct S* owned sp = safe_malloc(s);
+   struct S* _Owned sp = safe_malloc(s);
    cast2(sp);
 }

@@ -3,6 +3,6 @@
 #include "owned_struct_cbs.h"
 
 int main() {
-    struct A owned a; // expected-error {{type of 'struct A' cannot be qualified by 'owned'}}
+    struct A _Owned a; // expected-error {{type of 'struct A' cannot be qualified by '_Owned'}}
     return 0;
 }

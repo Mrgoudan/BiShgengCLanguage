@@ -2,8 +2,8 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-int * owned test() {
-	int * owned a;
+int * _Owned test() {
+	int * _Owned a;
 	return a;        // use of uninitialized value: `a`
 }
 

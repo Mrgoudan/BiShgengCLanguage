@@ -2,12 +2,12 @@
 
 #define NULL ((void *)0)
 
-_Safe T* owned safe_malloc<T>(T);
-_Safe void safe_free(void* owned);
+_Safe T* _Owned safe_malloc<T>(T);
+_Safe void safe_free(void* _Owned);
 
 struct U { 
   int a;
-  int* owned b;
+  int* _Owned b;
 };
 
 struct M {
@@ -15,14 +15,14 @@ struct M {
   int* q;
 };
 
-owned struct S<T> {
+_Owned struct S<T> {
 public:
-  T *owned a;
+  T *_Owned a;
   ~S(S<T> this) {
     if(this.a == NULL) {
     return;
     }
-    safe_free((void* owned)this.a); // expected-error {{invalid cast to `void * owned` of not all moved value: `this.a`, this.a.b is owned}}
+    safe_free((void* _Owned)this.a); // expected-error {{invalid cast to `void * _Owned` of not all moved value: `this.a`, this.a.b is _Owned}}
   }   
 };
 int main() {

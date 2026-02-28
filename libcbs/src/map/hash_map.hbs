@@ -22,7 +22,7 @@
 //
 // In other words, if two keys are equal, their hashes must be equal.
 // Violating this property is a logic error.
-owned struct HashMap<K, V, S> {
+_Owned struct HashMap<K, V, S> {
 // FIXME: makes it private
 public:
     S hash_builder;
@@ -186,7 +186,7 @@ _Safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* _Borrow this, K k, V 
             _Unsafe {
                 V old = *(this->table.values + index);
                 *(this->table.values + index) = v;
-                // IF(`K` isa owned struct type) AUTO INSERT: ~K(k)
+                // IF(`K` isa _Owned struct type) AUTO INSERT: ~K(k)
                 return Option<V>::Some(old);
             }
         } else {
@@ -225,13 +225,13 @@ _Safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* _Borrow this, const K
 // reallocating. If `cap` is 0, the hash map will not allocate.
 _Safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S hash_builder) {
     _Unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
-                    "Can only instantiate HashMap with owned struct or copyable type, "
+                    "Can only instantiate HashMap with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap K with an owned struct.");
+					"Fix: You can wrap K with an _Owned struct.");
     _Unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
-                    "Can only instantiate HashMap with owned struct or copyable type, "
+                    "Can only instantiate HashMap with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap V with an owned struct.");
+					"Fix: You can wrap V with an _Owned struct.");
     RawTable<K, V> rt = RawTable<K, V>::with_capacity(cap);
     HashMap<K, V, S> hm = {
         .hash_builder = hash_builder,
@@ -246,13 +246,13 @@ _Safe HashMap<K, V, S> HashMap<K, V, S>::with_capacity_and_hasher(size_t cap, S 
 // so it will not allocate until it is first inserted into.
 _Safe HashMap<K, V, S> HashMap<K, V, S>::with_hasher(S hash_builder) {
     _Unsafe _Static_assert(is_move_semantic<K>() == false || is_owned_struct<K>() == true,
-                    "Can only instantiate HashMap with owned struct or copyable type, "
+                    "Can only instantiate HashMap with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap K with an owned struct.");
+					"Fix: You can wrap K with an _Owned struct.");
     _Unsafe _Static_assert(is_move_semantic<V>() == false || is_owned_struct<V>() == true,
-                    "Can only instantiate HashMap with owned struct or copyable type, "
+                    "Can only instantiate HashMap with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap V with an owned struct.");
+					"Fix: You can wrap V with an _Owned struct.");
     RawTable<K, V> rt = RawTable<K, V>::new();
     HashMap<K, V, S> hm = {
         .hash_builder = hash_builder,

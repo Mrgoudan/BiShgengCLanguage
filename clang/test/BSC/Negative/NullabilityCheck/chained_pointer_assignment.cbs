@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 
-_Safe void safe_free(void *owned p);
+_Safe void safe_free(void *_Owned p);
 
 void test1() {
     int *p1, *p2;
@@ -12,10 +12,10 @@ void test1() {
 void test2() {
     int *p1, *p2;
     p1 = p2 = nullptr;
-    int *owned p3 = (int *owned)p1; // expected-error {{cannot cast nullable pointer to nonnull type}}
-    int *owned p4 = (int *owned)p2; // expected-error {{cannot cast nullable pointer to nonnull type}}
-    safe_free((void *owned)p3);
-    safe_free((void *owned)p4);
+    int *_Owned p3 = (int *_Owned)p1; // expected-error {{cannot cast nullable pointer to nonnull type}}
+    int *_Owned p4 = (int *_Owned)p2; // expected-error {{cannot cast nullable pointer to nonnull type}}
+    safe_free((void *_Owned)p3);
+    safe_free((void *_Owned)p4);
 }
 
 void test3() {

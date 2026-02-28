@@ -23,7 +23,7 @@ _Safe void bsc_unwrap_failed(void);
 _Safe void bsc_refcell_mut_borrow_failed(void);
 _Safe void bsc_refcell_immut_borrow_failed(void);
 
-_Safe void safe_free(void * _Nullable owned p);
+_Safe void safe_free(void * _Nullable _Owned p);
 
 // Takes ownership and “forgets” about the value without running its destructor.
 _Safe void forget<T>(T t) {
@@ -33,7 +33,7 @@ _Safe void forget<T>(T t) {
     }
 }
 
-_Safe T *owned safe_malloc<T>(T t) {
+_Safe T *_Owned safe_malloc<T>(T t) {
     _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
@@ -43,7 +43,7 @@ _Safe T *owned safe_malloc<T>(T t) {
         } else {
             *addr = t;
         }
-        return (T *owned)addr;
+        return (T *_Owned)addr;
     }
 }
 

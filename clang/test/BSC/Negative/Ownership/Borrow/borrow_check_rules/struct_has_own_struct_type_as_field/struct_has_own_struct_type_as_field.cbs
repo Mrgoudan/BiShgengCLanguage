@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct G;
-owned struct G {
+_Owned struct G;
+_Owned struct G {
   public:
     G *g;
 };
 
-owned struct K;
-owned struct S {
+_Owned struct K;
+_Owned struct S {
   public:
     K *k;
 };
 
-owned struct K {
+_Owned struct K {
   public:
     S *s;
 };

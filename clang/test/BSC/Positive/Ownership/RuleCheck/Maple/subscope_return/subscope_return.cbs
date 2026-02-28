@@ -10,7 +10,7 @@ struct A {
     int a;
 };
 
-void eat(struct A *owned a) {
+void eat(struct A *_Owned a) {
     struct A *b = (struct A*)a;
 }
 

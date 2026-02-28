@@ -17,7 +17,7 @@ struct B SafeMalloc(int *arg) {
 
 void SafeMalloc1(int *arg) {
     struct B aaa = { .a = arg };
-    struct B * owned bbb = (struct B * owned)&aaa;
+    struct B * _Owned bbb = (struct B * _Owned)&aaa;
     struct B *ccc = (struct B *)bbb;
 }
 
@@ -35,7 +35,7 @@ struct C {
 
 void SafeMalloc2() {
     struct C aaa = { .latch = &g_t.a };
-    struct C * owned local = (struct C* owned)&aaa;
+    struct C * _Owned local = (struct C* _Owned)&aaa;
     struct C *ccc = (struct C *)local;
 }
 

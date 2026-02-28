@@ -70,7 +70,7 @@ _Safe void test5(char* str1, const char* str2, char* str3){
     }
 }
 
-// Test 6: Const with owned/_Borrow qualifiers
+// Test 6: Const with _Owned/_Borrow qualifiers
 void owned_func(const int* p);
 _Safe void owned_func(const int* _Borrow p);
 

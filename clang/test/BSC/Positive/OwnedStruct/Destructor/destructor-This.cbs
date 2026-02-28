@@ -6,15 +6,15 @@
 
 #include <stdio.h>
 
-owned struct Person{
+_Owned struct Person{
 public:
     int age;
     ~Person(Person this) {
     }
 };
 
-// nested owned struct
-owned struct Student{
+// nested _Owned struct
+_Owned struct Student{
 public:
     int score;
     Person p;
@@ -23,7 +23,7 @@ public:
 };
 
 // generic case
-owned struct Person2<T>{
+_Owned struct Person2<T>{
 public:
     T age;
     ~Person2(This this) {
@@ -31,8 +31,8 @@ public:
     }
 };
 
-// nested owned struct and generic case 1
-owned struct Student2<T>{
+// nested _Owned struct and generic case 1
+_Owned struct Student2<T>{
 public:
     T score;
     Person p;
@@ -41,8 +41,8 @@ public:
     }
 };
 
-// nested owned struct and generic case 2
-owned struct Student3<T1, T2>{
+// nested _Owned struct and generic case 2
+_Owned struct Student3<T1, T2>{
 public:
     T1 score;
     Person2<T2> p;
@@ -52,7 +52,7 @@ public:
 };
 
 // Constant generic
-owned struct Student4<T, int N>{
+_Owned struct Student4<T, int N>{
 public:
     T scores[N];
     Person p;

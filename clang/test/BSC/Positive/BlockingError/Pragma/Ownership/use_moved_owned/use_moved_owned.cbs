@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-owned struct A {  
+_Owned struct A {  
    public:
    int x;
    int y ;
@@ -21,13 +21,13 @@ int test1() {
   #pragma GCC diagnostic pop
 }
 
-owned struct S {
+_Owned struct S {
 public:
   int a;
   int b;
 };
 
-owned struct T {
+_Owned struct T {
 public:
   S s;
 };

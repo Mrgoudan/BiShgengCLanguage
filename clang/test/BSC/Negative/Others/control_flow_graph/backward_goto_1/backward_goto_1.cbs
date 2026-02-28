@@ -2,9 +2,9 @@
 
 int rand();
 
-void func(int *owned argA, int *owned argB) {
-  int *owned a;
-  int *owned b;
+void func(int *_Owned argA, int *_Owned argB) {
+  int *_Owned a;
+  int *_Owned b;
 label1:
   if (rand()) {
     a = argA;

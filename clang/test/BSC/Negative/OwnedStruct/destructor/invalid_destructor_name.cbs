@@ -5,20 +5,20 @@ struct B
 
 };
 
-owned struct A {    
- ~B(A this) { // expected-error {{expected the owned struct name after '~' to name the enclosing owned struct}}
+_Owned struct A {    
+ ~B(A this) { // expected-error {{expected the _Owned struct name after '~' to name the enclosing _Owned struct}}
   }
 
 };
 
-owned struct C<T> {    
- ~C<T>(C<T> this) { // expected-error {{expected the owned struct name after '~' to name the enclosing owned struct}}
+_Owned struct C<T> {    
+ ~C<T>(C<T> this) { // expected-error {{expected the _Owned struct name after '~' to name the enclosing _Owned struct}}
   }
 
 };
 
-owned struct D<T> {    
- ~B(D<T> this) { // expected-error {{expected the owned struct name after '~' to name the enclosing owned struct}}
+_Owned struct D<T> {    
+ ~B(D<T> this) { // expected-error {{expected the _Owned struct name after '~' to name the enclosing _Owned struct}}
   }
 
 };

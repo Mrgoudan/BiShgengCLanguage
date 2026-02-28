@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 struct M {
-    int *owned _Nullable a;
+    int *_Owned _Nullable a;
 };
 
 struct N {
@@ -37,12 +37,12 @@ _Safe void test4(void) {
             *n1.b->a = 10;
 }
 
-_Safe void safe_free (struct N *owned _Nullable p);
-_Safe struct N *owned _Nullable safe_malloc(struct N n);
+_Safe void safe_free (struct N *_Owned _Nullable p);
+_Safe struct N *_Owned _Nullable safe_malloc(struct N n);
 
 _Safe void test5(void) {
     struct N n = { .b = nullptr };
-    struct N *owned _Nullable p = safe_malloc(n);
+    struct N *_Owned _Nullable p = safe_malloc(n);
     if (p->b->a != nullptr)   // expected-error {{cannot access member through nullable pointer}}
         *p->b->a = 10;  // expected-error {{cannot access member through nullable pointer}}
     safe_free(p);
@@ -50,7 +50,7 @@ _Safe void test5(void) {
 
 _Safe void test6(void) {
     struct N n = { .b = nullptr };
-    struct N *owned _Nullable p = safe_malloc(n);
+    struct N *_Owned _Nullable p = safe_malloc(n);
     if (p->b != nullptr && p->b->a != nullptr)  // expected-error {{cannot access member through nullable pointer}} expected-error {{cannot access member through nullable pointer}}
         *p->b->a = 10; // expected-error {{cannot access member through nullable pointer}}
     safe_free(p);
@@ -59,7 +59,7 @@ _Safe void test6(void) {
 
 _Safe void test7(void) {
     struct N n = { .b = nullptr };
-    struct N *owned _Nullable p = safe_malloc(n);
+    struct N *_Owned _Nullable p = safe_malloc(n);
     if (p != nullptr) {
         if (p->b != nullptr)
             if (p->b->a != nullptr) 
@@ -70,7 +70,7 @@ _Safe void test7(void) {
 
 _Safe void test8(void) {
     struct N n = { .b = nullptr };
-    struct N *owned _Nullable p = safe_malloc(n);
+    struct N *_Owned _Nullable p = safe_malloc(n);
     if (p != nullptr && p->b != nullptr && p->b->a != nullptr)
         *p->b->a = 10;
     safe_free(p);
@@ -78,7 +78,7 @@ _Safe void test8(void) {
 
 _Safe void test9(void) {
     struct N n = { .b = nullptr };
-    struct N *owned _Nullable p = safe_malloc(n);
+    struct N *_Owned _Nullable p = safe_malloc(n);
     if (p != nullptr && p->b != nullptr)
         if (p->b->a != nullptr) 
             *p->b->a = 10;

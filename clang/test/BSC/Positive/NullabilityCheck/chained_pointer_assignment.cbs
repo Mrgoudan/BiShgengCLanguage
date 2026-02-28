@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 // expected-no-diagnostics
 
-_Safe void safe_free(void *owned p);
+_Safe void safe_free(void *_Owned p);
 
 void test1() {
     int *p1, *p2;
@@ -18,12 +18,12 @@ void test2() {
     int *p1, *p2;
     p1 = p2 = nullptr;
     if (p1 != nullptr) {
-        int *owned p3 = (int *owned)p1;
-        safe_free((void *owned)p3);
+        int *_Owned p3 = (int *_Owned)p1;
+        safe_free((void *_Owned)p3);
     }
     if (p2 != nullptr) {
-        int *owned p4 = (int *owned)p2;
-        safe_free((void *owned)p4);
+        int *_Owned p4 = (int *_Owned)p2;
+        safe_free((void *_Owned)p4);
     }
 }
 

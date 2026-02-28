@@ -14,7 +14,7 @@ void UnsafeOperator() {
 
   struct F pb = {10, "tom", 80};
   struct F *pc = &pb;
-  struct F* owned po = (struct F * owned)&pb;
+  struct F* _Owned po = (struct F * _Owned)&pb;
 
   _Safe {
     int a = 0;

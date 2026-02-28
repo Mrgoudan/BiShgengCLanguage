@@ -6,7 +6,7 @@
 // expected-no-diagnostics
 
 #include <stdlib.h>
-_Safe T *owned safe_malloc<T>(T t) {
+_Safe T *_Owned safe_malloc<T>(T t) {
     _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
@@ -17,7 +17,7 @@ _Safe T *owned safe_malloc<T>(T t) {
         } else {
             *addr = t;
         }
-        return (T *owned)addr;
+        return (T *_Owned)addr;
 	}
 }
 
@@ -25,16 +25,16 @@ _Safe int get_current_status(void) {
     return 1;
 }
 
-_Safe int *owned get_nonnull(int a) {
-    int *owned p = safe_malloc<int>(5);
+_Safe int *_Owned get_nonnull(int a) {
+    int *_Owned p = safe_malloc<int>(5);
     *p = a;
     return p;
 }
 
-_Safe int *owned _Nullable get_nullable(int a) {
+_Safe int *_Owned _Nullable get_nullable(int a) {
     if (get_current_status > 0) {
         _Unsafe {
-            int *owned p = safe_malloc<int>(5);
+            int *_Owned p = safe_malloc<int>(5);
             *p = a;
             return p;
         }
@@ -44,10 +44,10 @@ _Safe int *owned _Nullable get_nullable(int a) {
 
 _Safe void use(int *_Borrow p) { }
 
-owned struct Data {
+_Owned struct Data {
 public:
-    int *owned _Nullable p1;
-    int *owned p2;
+    int *_Owned _Nullable p1;
+    int *_Owned p2;
     ~Data(This this) {
         free((void*)this.p2);
         if (this.p1 != nullptr)
@@ -56,8 +56,8 @@ public:
 };
 
 _Safe Data Data::init(int a) {
-    int *owned _Nullable data1 = get_nullable(a);
-    int *owned data2 = get_nonnull(a);
+    int *_Owned _Nullable data1 = get_nullable(a);
+    int *_Owned data2 = get_nonnull(a);
     Data data = { .p1 = data1, .p2 = data2 };
     return data;
 }

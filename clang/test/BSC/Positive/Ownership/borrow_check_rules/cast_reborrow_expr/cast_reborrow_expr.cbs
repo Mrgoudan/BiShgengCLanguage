@@ -7,32 +7,32 @@
 
 #include <stdlib.h>
 
-void safe_free(void *owned ptr) {
+void safe_free(void *_Owned ptr) {
   free((void *)ptr);
 }
 
-void test1(int *owned p) {
+void test1(int *_Owned p) {
   int *_Borrow p1 = (int *_Borrow)(int *)((&_Mut *p));
   *p1 = 2;
-  safe_free((void *owned)p);
+  safe_free((void *_Owned)p);
 }
 
 // Use after free, but as expected.
 // Borrow checker should not track that p1 borrows *p
-void test2(int *owned p) {
+void test2(int *_Owned p) {
   int *_Borrow p1 = (int *_Borrow)(int *)(&_Mut *p);
-  safe_free((void *owned)p);
+  safe_free((void *_Owned)p);
   *p1 = 2;
 }
 
-void test3(double *owned p) {
+void test3(double *_Owned p) {
   int *_Borrow p1 = ((int *_Borrow)((int *)(double *)(&_Mut *p)));
   *p1 = 2;
-  safe_free((void *owned)p);
+  safe_free((void *_Owned)p);
 }
 
 int main(void) {
-  int *owned p = (int *owned)malloc(sizeof(int));
+  int *_Owned p = (int *_Owned)malloc(sizeof(int));
   test1(p);
   return 0;
 }

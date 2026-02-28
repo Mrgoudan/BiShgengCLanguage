@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 
 int x = 0;
-owned struct Foo {
+_Owned struct Foo {
   public:
     int a;
   ~Foo(Foo this){

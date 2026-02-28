@@ -19,7 +19,7 @@ typedef trait F {
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 referenced data 'void *'
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 referenced vtable 'struct __Trait_F_Vtable *
 // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <col:9, col:15> col:15 struct __Trait_F_Owned definition
-// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 data 'void *owned'
+// CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 data 'void *_Owned'
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 vtable 'struct __Trait_F_Vtable *'
 // CHECK-NEXT: RecordDecl 0x{{[^ ]*}} <col:9, col:15> col:15 struct __Trait_F_Borrow definition
 // CHECK-NEXT: FieldDecl 0x{{[^ ]*}} <col:9, col:15> col:15 data 'void *_Borrow'

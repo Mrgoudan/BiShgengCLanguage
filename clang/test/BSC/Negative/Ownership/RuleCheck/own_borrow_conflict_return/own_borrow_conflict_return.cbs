@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
-int *owned _Borrow get_resource() { //#1
+int *_Owned _Borrow get_resource() { //#1
     static int resource = 42;
-    return (int *owned _Borrow)&resource; // expected-error {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+    return (int *_Owned _Borrow)&resource; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
 }
 
-// expected-error@#1 {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+// expected-error@#1 {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
 // expected-error@#1 {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}

@@ -7,15 +7,15 @@
 
 #include <stdlib.h>
 
-owned struct Option<T> {
+_Owned struct Option<T> {
 public:
-  T *owned inner;
+  T *_Owned inner;
   ~Option(This this) {
     free((T *)this.inner);
   }
 };
 
-owned struct OptionRefMut<T> {
+_Owned struct OptionRefMut<T> {
 public:
   T *_Borrow p;
 };
@@ -35,7 +35,7 @@ _Safe OptionRefMut<T> Option<T>::as_mut_2(Option<T> *_Borrow this) {
 }
 
 int main() {
-  Option<int> op = { .inner = (int *owned)malloc(sizeof(int)) };
+  Option<int> op = { .inner = (int *_Owned)malloc(sizeof(int)) };
   OptionRefMut<int> rm1 = op.as_mut_1();
   OptionRefMut<int> rm2 = op.as_mut_2();
   return 0;

@@ -4,9 +4,9 @@
 // should report conflicting types error
 
 // Test 1: Declaration without _Nullable, definition with _Nullable
-_Safe int *owned foo1(void);  // expected-note {{previous declaration is here}}
+_Safe int *_Owned foo1(void);  // expected-note {{previous declaration is here}}
 
-_Safe int *owned _Nullable foo1(void) {  // expected-error {{conflicting types for 'foo1'}}
+_Safe int *_Owned _Nullable foo1(void) {  // expected-error {{conflicting types for 'foo1'}}
   return nullptr;
 }
 
@@ -18,29 +18,29 @@ _Safe int *_Borrow foo2(int *_Borrow p) {  // expected-error {{conflicting types
 }
 
 // Test 3: Parameters with different nullability qualifiers
-_Safe void foo3(int *owned p);  // expected-note {{previous declaration is here}}
+_Safe void foo3(int *_Owned p);  // expected-note {{previous declaration is here}}
 
-_Safe void foo3(int *owned _Nullable p) {  // expected-error {{conflicting types for 'foo3'}}
+_Safe void foo3(int *_Owned _Nullable p) {  // expected-error {{conflicting types for 'foo3'}}
 }
 
 // Test 4: Nested pointer with different nullability
-_Safe int **owned foo4(void);  // expected-note {{previous declaration is here}}
+_Safe int **_Owned foo4(void);  // expected-note {{previous declaration is here}}
 
-_Safe int **owned _Nullable foo4(void) {  // expected-error {{conflicting types for 'foo4'}}
+_Safe int **_Owned _Nullable foo4(void) {  // expected-error {{conflicting types for 'foo4'}}
   return nullptr;
 }
 
 // Test 5: Both declaration and definition have same _Nullable (should pass)
-_Safe int *owned _Nullable foo5(void);
+_Safe int *_Owned _Nullable foo5(void);
 
-_Safe int *owned _Nullable foo5(void) {
+_Safe int *_Owned _Nullable foo5(void) {
   return nullptr;
 }
 
 // Test 6: Both declaration and definition without _Nullable (should pass)
-_Safe int *owned foo6(void);
+_Safe int *_Owned foo6(void);
 
-_Safe int *owned foo6(void) {
-  int *owned p = nullptr;
+_Safe int *_Owned foo6(void) {
+  int *_Owned p = nullptr;
   return p;
 }

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 
-owned struct A {
+_Owned struct A {
     int a;
     int f() { 
      a;// expected-error {{invalid implicit use of member 'a' in struct member function}}
@@ -9,27 +9,27 @@ owned struct A {
     } 
 };
 
-owned struct B {
+_Owned struct B {
     static int a;
     int f() { return a; } // expected-error {{invalid implicit use of member 'a' in struct member function}}
 };
 
-owned struct C {
+_Owned struct C {
     int a;
     int f(C* this) { return a; } // expected-error {{invalid implicit use of member 'a' in struct member function}}
 };
 
-owned struct D {
+_Owned struct D {
     static int a;
     int f(D* this) { return a; } // expected-error {{invalid implicit use of member 'a' in struct member function}}
 };
 
-owned struct E {
+_Owned struct E {
     int f(E* this) { return 0; } 
     int f1(E* this) { return f(this); } // expected-error {{use of undeclared identifier 'f'}}
 };
 
-owned struct F {
+_Owned struct F {
     int f(F* this);
     int f1(F* this); 
 };

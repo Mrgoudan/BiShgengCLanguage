@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify %s
 
-void exhaust(void *owned);
+void exhaust(void *_Owned);
 
 void basic() {
-    int *owned uninit;
-    exhaust((void *owned)uninit); // expected-error {{invalid cast to `void * owned` of uninit value: `uninit`}}
+    int *_Owned uninit;
+    exhaust((void *_Owned)uninit); // expected-error {{invalid cast to `void * _Owned` of uninit value: `uninit`}}
 }
 
 struct Foo {
@@ -12,8 +12,8 @@ struct Foo {
 };
 
 void custom() {
-    struct Foo *owned uninit;
-    exhaust((void *owned)uninit); // expected-error {{invalid cast to `void * owned` of uninit value: `uninit`}}
+    struct Foo *_Owned uninit;
+    exhaust((void *_Owned)uninit); // expected-error {{invalid cast to `void * _Owned` of uninit value: `uninit`}}
 }
 
 int main() {

@@ -1,7 +1,7 @@
 // RUN: cp %s %t.cbs
 // RUN: clangd --check=%t.cbs 2>&1 | FileCheck %s
 
-owned struct A {
+_Owned struct A {
     int a;
     int f(A this) {return 0;}
 };

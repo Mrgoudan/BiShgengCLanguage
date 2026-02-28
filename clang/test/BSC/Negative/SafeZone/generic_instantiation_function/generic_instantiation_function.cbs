@@ -19,9 +19,9 @@ void genericFun(){
   int a = 1;
   double b = 2.0;
   int c = max_a<int>(1, 2); // ok
-  int* owned p = (int* owned)&a;
-  int* owned q = (int* owned)&a;
-  int* owned m = max_b<int* owned>(p, q); // expected-note{{in instantiation of function template specialization 'max_b<int *owned>' requested here}}
+  int* _Owned p = (int* _Owned)&a;
+  int* _Owned q = (int* _Owned)&a;
+  int* _Owned m = max_b<int* _Owned>(p, q); // expected-note{{in instantiation of function template specialization 'max_b<int *_Owned>' requested here}}
   int *n = max_c<void *>((void*)0, (void *)0);
 
 }// expected-error {{memory leak of value: `m`}}
@@ -103,9 +103,9 @@ _Safe T poo_c<T>(T a) {
 int test_generic_type_point() {
   int a = 1;
   int *p;
-  int* owned q = (int* owned)&a;
+  int* _Owned q = (int* _Owned)&a;
   int* m = poo_b(p);         // expected-note{{in instantiation of function template specialization 'poo_b<int *>' requested here}}
-  int* owned n = poo_c(q);
+  int* _Owned n = poo_c(q);
   return 0; // expected-error {{memory leak of value: `n`}}
 }
 

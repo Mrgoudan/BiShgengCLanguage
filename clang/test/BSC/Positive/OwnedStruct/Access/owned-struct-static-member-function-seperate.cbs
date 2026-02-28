@@ -5,7 +5,7 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-owned struct A {
+_Owned struct A {
     int a;
     public:
     int f();

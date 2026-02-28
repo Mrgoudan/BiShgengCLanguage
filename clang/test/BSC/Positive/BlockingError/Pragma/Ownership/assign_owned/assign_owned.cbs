@@ -2,17 +2,17 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-_Safe T *owned safe_malloc<T>(T t);
+_Safe T *_Owned safe_malloc<T>(T t);
 _Safe void test1(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Eassign-owned"
-    int *owned _Nullable p = nullptr;
+    int *_Owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
         p = safe_malloc<int>(10);
         *p = 10;
     }
-    p = nullptr; //assign to owned value: `p`
+    p = nullptr; //assign to _Owned value: `p`
     #pragma GCC diagnostic pop
 }
 

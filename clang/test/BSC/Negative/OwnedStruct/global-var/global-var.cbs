@@ -1,21 +1,21 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct S {
+_Owned struct S {
 public:
   int a;
   int b;
 };
 
-S s1 = {}; // expected-error {{type of global variable cannot qualified by 'owned' }}
-S s2 = { 2, 3 }; // expected-error {{type of global variable cannot qualified by 'owned' }}
-S s3 = { .a = 1, .b = 2}; // expected-error {{type of global variable cannot qualified by 'owned' }}
+S s1 = {}; // expected-error {{type of global variable cannot qualified by '_Owned' }}
+S s2 = { 2, 3 }; // expected-error {{type of global variable cannot qualified by '_Owned' }}
+S s3 = { .a = 1, .b = 2}; // expected-error {{type of global variable cannot qualified by '_Owned' }}
 
-owned struct U<T> {
+_Owned struct U<T> {
 public:
   T a;
   int* p;
 };
 
-U<int> u1 = {}; // expected-error {{type of global variable cannot qualified by 'owned' }}
-U<double> u2 = { 1.5, 0 }; // expected-error {{type of global variable cannot qualified by 'owned' }}
-U<unsigned int> u3 = { 2, 0 }; // expected-error {{type of global variable cannot qualified by 'owned' }}
+U<int> u1 = {}; // expected-error {{type of global variable cannot qualified by '_Owned' }}
+U<double> u2 = { 1.5, 0 }; // expected-error {{type of global variable cannot qualified by '_Owned' }}
+U<unsigned int> u3 = { 2, 0 }; // expected-error {{type of global variable cannot qualified by '_Owned' }}

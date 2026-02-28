@@ -11,20 +11,20 @@ struct _BSC_ListNode<T> {
   T element;
 };
 
-owned struct LinkedList<T> {
+_Owned struct LinkedList<T> {
 private:
     _BSC_ListNode<T> *head;
     _BSC_ListNode<T> *tail;
     int len;
 };
 
-owned struct RawVec<T> {
+_Owned struct RawVec<T> {
 public:
   T* ptr;
   int cap;
 };
 
-owned struct Vec<T> {
+_Owned struct Vec<T> {
 public:
   RawVec<T> buf;
   int len;

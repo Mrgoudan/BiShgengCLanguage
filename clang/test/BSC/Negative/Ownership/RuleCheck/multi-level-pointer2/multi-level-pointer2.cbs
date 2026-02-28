@@ -1,44 +1,44 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-void cons(int * owned p) {
+void cons(int * _Owned p) {
     int* a = (int *)p;
 }
 
-int * owned * func4(int * owned * p) {
-    int * owned re1 = *p;
+int * _Owned * func4(int * _Owned * p) {
+    int * _Owned re1 = *p;
     cons(re1);
     return p;
 }
 
-int * owned * owned func6(int * owned * owned p) {
-    int * owned re1;
+int * _Owned * _Owned func6(int * _Owned * _Owned p) {
+    int * _Owned re1;
     re1 = *p;
     *p = re1;
     return p;
 }
 
-void consumePtr(int * owned p) {
+void consumePtr(int * _Owned p) {
     int * p1 = (int *)p;
     return;
 }
 
-void f1(int owned * p) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+void f1(int _Owned * p) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     return;
 }
 
-int * owned f2(int * owned p) {
-    int * owned re1 = p;
+int * _Owned f2(int * _Owned p) {
+    int * _Owned re1 = p;
     return re1;
 }
 
-int * owned * f3(int * owned * p) {
-    int * owned re1 = *p;
+int * _Owned * f3(int * _Owned * p) {
+    int * _Owned re1 = *p;
     consumePtr(re1);
     return p;
 }
 
-int * owned * owned * f7(int * owned * owned * p) {
-    int * owned re1;
+int * _Owned * _Owned * f7(int * _Owned * _Owned * p) {
+    int * _Owned re1;
     re1 = **p;
     cons(re1);
     return p;

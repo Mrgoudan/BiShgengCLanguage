@@ -1330,11 +1330,11 @@ def err_atomic_property_nontrivial_assign_op : Error<
   " operator">;
 def warn_cocoa_naming_owned_rule : Warning<
   "property follows Cocoa naming"
-  " convention for returning 'owned' objects">,
+  " convention for returning '_Owned' objects">,
   InGroup<DiagGroup<"objc-property-matches-cocoa-ownership-rule">>;
 def err_cocoa_naming_owned_rule : Error<
   "property follows Cocoa naming"
-  " convention for returning 'owned' objects">;
+  " convention for returning '_Owned' objects">;
 def note_cocoa_naming_declare_family : Note<
   "explicitly declare getter %objcinstance0 with '%1' to return an 'unowned' "
   "object">;

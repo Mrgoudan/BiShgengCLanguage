@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-_Safe int *owned _Nonnull safe_malloc(int a);
+_Safe int *_Owned _Nonnull safe_malloc(int a);
 
 _Safe void test1(void) {
     int *_Borrow _Nullable p1 = nullptr;
@@ -14,11 +14,11 @@ _Safe void test1(void) {
 }
 
 _Safe void test2(void) {
-    int *owned _Nullable p1 = nullptr;
-    int *owned _Nonnull p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    int *owned _Nullable p3 = safe_malloc(5);
-    int *owned _Nonnull p4 = p3;
-    int *owned _Nonnull p5 = safe_malloc(5);
+    int *_Owned _Nullable p1 = nullptr;
+    int *_Owned _Nonnull p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Owned _Nullable p3 = safe_malloc(5);
+    int *_Owned _Nonnull p4 = p3;
+    int *_Owned _Nonnull p5 = safe_malloc(5);
     p5 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     p5 = p3;
 }
@@ -35,11 +35,11 @@ _Safe void test3(void) {
 }
 
 _Safe void test4(void) {
-    int *owned _Nullable p1 = nullptr;
-    int *owned p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    int *owned _Nullable p3 = safe_malloc(5);
-    int *owned p4 = p3;
-    int *owned p5 = safe_malloc(5);
+    int *_Owned _Nullable p1 = nullptr;
+    int *_Owned p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Owned _Nullable p3 = safe_malloc(5);
+    int *_Owned p4 = p3;
+    int *_Owned p5 = safe_malloc(5);
     p5 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     p5 = p3;
 }

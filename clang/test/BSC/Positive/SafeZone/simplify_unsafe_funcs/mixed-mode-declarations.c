@@ -2,25 +2,25 @@
 // Positive tests for mixed mode function declarations (Manual sections 7.1-7.4)
 
 _Unsafe int* process1(int* p);
-_Safe int* owned process1(int* owned p);
+_Safe int* _Owned process1(int* _Owned p);
 
 // Manual 2500-2501: void* compatibility
 _Unsafe void* get_data(void);
-_Safe void* owned get_data(void);
+_Safe void* _Owned get_data(void);
 
 // Manual 2508-2509: Same modifiers, identical types
-_Safe int* owned bar(int* owned p);
-_Safe int* owned bar(int* owned q);
+_Safe int* _Owned bar(int* _Owned p);
+_Safe int* _Owned bar(int* _Owned q);
 
 // These are all compatible even with mismatched const/volatile
 _Unsafe const int* get_const(void);
-_Safe const int* owned get_const(void);
+_Safe const int* _Owned get_const(void);
 
 _Unsafe volatile int* get_volatile(void);
-_Safe volatile int* owned get_volatile(void);
+_Safe volatile int* _Owned get_volatile(void);
 
 _Unsafe const volatile int* get_cv(void);
-_Safe const volatile int* owned get_cv(void);
+_Safe const volatile int* _Owned get_cv(void);
 
 // Manual 2486: _Unsafe T* ⟷ _Safe T* _Borrow
 _Unsafe void process_borrow(int* p);
@@ -38,20 +38,20 @@ _Unsafe int no_params(void);
 _Safe int no_params(void);
 
 _Unsafe int** double_ptr(int** p);
-_Safe int** owned double_ptr(int** owned p);
+_Safe int** _Owned double_ptr(int** _Owned p);
 
 _Unsafe int*** triple_ptr(int*** p);
-_Safe int*** owned triple_ptr(int*** owned p);
+_Safe int*** _Owned triple_ptr(int*** _Owned p);
 
 // Manual 2518-2524: Mixed mode function can have one definition
 _Unsafe int* defined_func(int* p);
-_Safe int* owned defined_func(int* owned p);
+_Safe int* _Owned defined_func(int* _Owned p);
 // Definition based on _Safe version
-_Safe int* owned defined_func(int* owned p) { return p; }
+_Safe int* _Owned defined_func(int* _Owned p) { return p; }
 
 // Definition based on _Unsafe version
 _Unsafe float* defined_func2(float* p) { return p; }
-_Safe float* owned defined_func2(float* owned p);
+_Safe float* _Owned defined_func2(float* _Owned p);
 
 // Manual 2465: Multiple _Safe declarations must be compatible
 _Safe void safe_multi1(int x);
@@ -70,10 +70,10 @@ _Safe float compute(float x, float y);
 
 // Multiple parameters with mixed pointer and non-pointer
 _Unsafe void complex1(int a, int* p, float b, int* q);
-_Safe void complex1(int a, int* owned p, float b, int* owned q);
+_Safe void complex1(int a, int* _Owned p, float b, int* _Owned q);
 
-// Pointer to const with owned
+// Pointer to const with _Owned
 _Unsafe const int* complex2(const int* p);
-_Safe const int* owned complex2(const int* owned p);
+_Safe const int* _Owned complex2(const int* _Owned p);
 
 // expected-no-diagnostics

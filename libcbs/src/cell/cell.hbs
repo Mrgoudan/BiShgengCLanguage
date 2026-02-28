@@ -16,7 +16,7 @@ _Safe Cell<T> Cell<T>::new(T value) {
 }
 
 // Return a copy of the contained value,
-// Here T should not be owned type, because _Borrow type cannot move ownership.
+// Here T should not be _Owned type, because _Borrow type cannot move ownership.
 _Safe T Cell<T>::get(const This * _Borrow this) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false, "Cell can only be used for copyable type.");
     return this->value;
@@ -31,7 +31,7 @@ _Safe void Cell<T>::set(const This * _Borrow this, T val) {
     }
 }
 
-owned struct RefCell<T> {
+_Owned struct RefCell<T> {
 public:
     Cell<int> borrow_count;
     T value;
@@ -43,7 +43,7 @@ _Safe RefCell<T> RefCell<T>::new(T value) {
     return refcell;
 }
 
-owned struct RefImmut<T> {
+_Owned struct RefImmut<T> {
 public:
     RefCell<T> * ptr;
 
@@ -59,7 +59,7 @@ _Safe const T* _Borrow RefImmut<T>::deref(const This* _Borrow this) {
     }
 }
 
-owned struct RefMut<T> {
+_Owned struct RefMut<T> {
 public:
     RefCell<T> * ptr;
 

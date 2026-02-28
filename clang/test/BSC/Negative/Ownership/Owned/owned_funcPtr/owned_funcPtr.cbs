@@ -4,36 +4,36 @@ int myadd(int* a, int* b) {
     return *a + *b;
 }
 
-int owned myadd2(int* a, int* b) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned x = 10; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int _Owned myadd2(int* a, int* b) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned x = 10; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     return x;
 }
 
 typedef int (*FTP)(int*, int*);
-typedef int (*FTPO)(int* owned, int*);
+typedef int (*FTPO)(int* _Owned, int*);
 
 //case1: callExpr through funcPtr
 void test1() {
     FTP ftp1 = myadd;
     int a = 10;
     int b = 10;
-    int* owned p1 = (int* owned)&a;
+    int* _Owned p1 = (int* _Owned)&a;
     int* p2 = &b;
-    int res = ftp1(p1, p2); //expected-error {{incompatible owned types, cannot cast 'int *owned' to 'int *'}}
+    int res = ftp1(p1, p2); //expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'int *'}}
 }
 
-// case2: unOwned to owned
+// case2: unOwned to _Owned
 void test2() {
-    FTP owned ftp1 = myadd; //expected-error {{incompatible owned types, cannot cast 'int (int *, int *)' to 'owned FTP' (aka 'int (*owned)(int *, int *)')}}
+    FTP _Owned ftp1 = myadd; //expected-error {{incompatible _Owned types, cannot cast 'int (int *, int *)' to '_Owned FTP' (aka 'int (*_Owned)(int *, int *)')}}
 }
 
-// case3: inner owned check
+// case3: inner _Owned check
 void test3() {
     FTP ftp1 = myadd;
-    FTP ftp2 = myadd2;  //expected-error {{cannot cast 'FTP' (aka 'int (*)(int *, int *)') to 'owned int (int *, int *)'}}
-    FTPO ftpo1 = ftp1;  //expected-error {{cannot cast 'FTPO' (aka 'int (*)(int *owned, int *)') to 'FTP' (aka 'int (*)(int *, int *)')}}
+    FTP ftp2 = myadd2;  //expected-error {{cannot cast 'FTP' (aka 'int (*)(int *, int *)') to '_Owned int (int *, int *)'}}
+    FTPO ftpo1 = ftp1;  //expected-error {{cannot cast 'FTPO' (aka 'int (*)(int *_Owned, int *)') to 'FTP' (aka 'int (*)(int *, int *)')}}
     FTPO ftpo2 = (FTPO)ftp1;
 }
 
-// case4: no owned-like property
-FTPO ftpo1; //legal even FTPO contains owned
+// case4: no _Owned-like property
+FTPO ftpo1; //legal even FTPO contains _Owned

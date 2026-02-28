@@ -1,27 +1,27 @@
 // RUN: %clang_cc1 -verify %s
 
 int rand();
-int * owned assign();
+int * _Owned assign();
 
 void func1() {
-    int * owned a;
+    int * _Owned a;
     while (rand()) {
-        a = assign(); // expected-error {{assign to owned value: `a`}}
+        a = assign(); // expected-error {{assign to _Owned value: `a`}}
     }
 } // expected-error {{memory leak of value: `a`}}
 
 void func2() {
-    int * owned a;
-    int * owned b;
+    int * _Owned a;
+    int * _Owned b;
     while (rand()) {
         b = assign();
-        a = b; // expected-error {{assign to owned value: `a`}}
+        a = b; // expected-error {{assign to _Owned value: `a`}}
     }
 } // expected-error {{memory leak of value: `a`}}
 
 void func3() {
-    int * owned a;
-    int * owned b;
+    int * _Owned a;
+    int * _Owned b;
     int c;
     while (rand()) {
         if (c) {
@@ -31,13 +31,13 @@ void func3() {
             continue;
         }
         b = assign();
-        a = b; // expected-error {{assign to owned value: `a`}}
+        a = b; // expected-error {{assign to _Owned value: `a`}}
     }
 } // expected-error {{memory leak of value: `a`}}
 
 void func4() {
-    int * owned a;
-    int * owned b;
+    int * _Owned a;
+    int * _Owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -51,14 +51,14 @@ label1:
             continue;
         }
         while (rand()) {
-            b = assign(); // expected-error {{assign to owned value: `b`}}
+            b = assign(); // expected-error {{assign to _Owned value: `b`}}
         }
     }
 } // expected-error {{memory leak of value: `b`}}
 
 void func5() {
-    int * owned a;
-    int * owned b;
+    int * _Owned a;
+    int * _Owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -72,14 +72,14 @@ label1:
             continue;
         }
         while (rand()) {
-            a = b; // expected-error {{assign to owned value: `a`}} expected-error {{use of uninitialized value: `b`}}
+            a = b; // expected-error {{assign to _Owned value: `a`}} expected-error {{use of uninitialized value: `b`}}
         }
     }
 } // expected-error {{memory leak of value: `a`}}
 
 void func6() {
-    int * owned a;
-    int * owned b;
+    int * _Owned a;
+    int * _Owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -94,14 +94,14 @@ label1:
         }
         while (rand()) {
             b = assign();
-            a = b; // expected-error {{assign to owned value: `a`}}
+            a = b; // expected-error {{assign to _Owned value: `a`}}
         }
     }
 } // expected-error {{memory leak of value: `a`}}
 
 void func7() {
-    int * owned a;
-    int * owned b;
+    int * _Owned a;
+    int * _Owned b;
     int c;
     if (rand()) {
         goto label1;
@@ -115,7 +115,7 @@ label1:
             continue;
         }
         while (rand()) {
-            b = assign(); // expected-error {{assign to owned value: `b`}}
+            b = assign(); // expected-error {{assign to _Owned value: `b`}}
         }
     }
 } // expected-error {{memory leak of value: `b`}}

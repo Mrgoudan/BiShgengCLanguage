@@ -24,15 +24,15 @@ void test_safe_expr2() {
     }
 }
 
-_Safe void foo<T>(T* owned p) {
-    T * a = (T*)p                       // expected-error {{conversion from type 'T *owned' to 'T *' is forbidden in the safe zone}}
+_Safe void foo<T>(T* _Owned p) {
+    T * a = (T*)p                       // expected-error {{conversion from type 'T *_Owned' to 'T *' is forbidden in the safe zone}}
     T * b = _Unsafe((T*)p);              // ok
-    T * c = (T*)p;                      // expected-error {{conversion from type 'T *owned' to 'T *' is forbidden in the safe zone}}
+    T * c = (T*)p;                      // expected-error {{conversion from type 'T *_Owned' to 'T *' is forbidden in the safe zone}}
 }
 
 _Safe void test_safe_expr3(void) {
     int a = 0;
-    int *owned p = _Unsafe((int *owned)&a);
+    int *_Owned p = _Unsafe((int *_Owned)&a);
     foo<int>(p);
 }
 

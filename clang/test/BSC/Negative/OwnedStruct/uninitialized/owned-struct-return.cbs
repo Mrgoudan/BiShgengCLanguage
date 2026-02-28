@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify %s
-owned struct A {  
+_Owned struct A {  
    public:
    int x;
    int y ;

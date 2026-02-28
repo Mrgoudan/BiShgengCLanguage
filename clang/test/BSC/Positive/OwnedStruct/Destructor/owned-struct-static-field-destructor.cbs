@@ -4,12 +4,12 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 int y  = 0;
-owned struct B{
+_Owned struct B{
     ~B(B this){
        y++;
     }
 };
-owned struct A {
+_Owned struct A {
 public:
   static B b;
   ~A( A this) {

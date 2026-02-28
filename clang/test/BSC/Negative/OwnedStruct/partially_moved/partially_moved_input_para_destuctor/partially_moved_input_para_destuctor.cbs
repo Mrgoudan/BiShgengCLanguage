@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -verify %s
 
-_Safe T *owned safe_malloc<T>(T t);
-_Safe void safe_free(void *owned p);
+_Safe T *_Owned safe_malloc<T>(T t);
+_Safe void safe_free(void *_Owned p);
 
-owned struct S{
+_Owned struct S{
 public:
-    int* owned p;
+    int* _Owned p;
     ~S(This this) {
-        safe_free((void* owned)this.p); 
+        safe_free((void* _Owned)this.p); 
     }
 };
 
 int main() {
     S s = {.p = safe_malloc(42)};
-    int* owned p = s.p; 
-    safe_free((void* owned)p);
-    return 0; // expected-error {{partially moved owned struct:`s` at scope end, s.p is moved}}
+    int* _Owned p = s.p; 
+    safe_free((void* _Owned)p);
+    return 0; // expected-error {{partially moved _Owned struct:`s` at scope end, s.p is moved}}
 }

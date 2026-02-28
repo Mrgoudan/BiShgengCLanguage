@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -verify %s
-owned struct A<T> {
+_Owned struct A<T> {
     public:
-    int * owned a;
+    int * _Owned a;
     ~A(A<T> this) {
-    }// expected-error {{destructor for`owned A<int>` incorrect, this.a is of owned type and needs to be handled manually}}
+    }// expected-error {{destructor for`_Owned A<int>` incorrect, this.a is of _Owned type and needs to be handled manually}}
 };
 int main() {
     int local = 1;
-    A<int> a ={.a = (int * owned)&local};
+    A<int> a ={.a = (int * _Owned)&local};
     return 0;
 }

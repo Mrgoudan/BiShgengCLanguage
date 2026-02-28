@@ -41,7 +41,7 @@ typedef struct ProbeSeq {
 void ProbeSeq::move_next(ProbeSeq* _Borrow this, size_t bucket_mask);
 
 // A raw hash table which holds data for `HashMap`.
-owned struct RawTable<K, V> {
+_Owned struct RawTable<K, V> {
 // FIXME: makes it private
 public:
     // Mask to get an index from a hash value. The value is one less than the
@@ -71,8 +71,8 @@ public:
                     *(this.ctrl + index) != DELETED) {
                     _BSC_UNUSED K key = this.keys[index];
                     _BSC_UNUSED V value = this.values[index];
-                    // IF(`K` isa owned struct type) AUTO INSERT: ~K(key)
-                    // IF(`V` isa owned struct type) AUTO INSERT: ~V(value)
+                    // IF(`K` isa _Owned struct type) AUTO INSERT: ~K(key)
+                    // IF(`V` isa _Owned struct type) AUTO INSERT: ~V(value)
                 }
             }
         }
@@ -131,8 +131,8 @@ _Safe void RawTable<K, V>::clear(RawTable<K, V>* _Borrow this) {
                 *(this->ctrl + index) != DELETED) {
                 _BSC_UNUSED K key = this->keys[index];
                 _BSC_UNUSED V value = this->values[index];
-                // IF(`K` isa owned struct type) AUTO INSERT: ~K(key)
-                // IF(`V` isa owned struct type) AUTO INSERT: ~V(value)
+                // IF(`K` isa _Owned struct type) AUTO INSERT: ~K(key)
+                // IF(`V` isa _Owned struct type) AUTO INSERT: ~V(value)
             }
         }
         memset(this->ctrl, EMPTY, this->bucket_mask + 1);
@@ -315,7 +315,7 @@ _Safe Option<V> RawTable<K, V>::remove_entry(RawTable<K, V>* _Borrow this, uint6
 
             _BSC_UNUSED K key = *(this->keys + index);
             V value = *(this->values + index);
-            // IF(`K` isa owned struct type) AUTO INSERT: ~K(key)
+            // IF(`K` isa _Owned struct type) AUTO INSERT: ~K(key)
             return Option<V>::Some(value);
         }
     }

@@ -7,8 +7,8 @@ typedef struct S {
 
 void use_mut(S *_Borrow s);
 void use_const(const S *_Borrow s);
-T *owned safe_malloc<T>(T value);
-void free_owned<T>(T *owned p);
+T *_Owned safe_malloc<T>(T value);
+void free_owned<T>(T *_Owned p);
 void free(void*);
 
 void test1() {
@@ -21,7 +21,7 @@ void test1() {
 
 void test2() {
   S tmp = {.a = 1, .b = 2};
-  S *owned oriPtr = safe_malloc<S>(tmp);
+  S *_Owned oriPtr = safe_malloc<S>(tmp);
   S *_Borrow p1 = &_Mut *oriPtr; // expected-note {{first mut borrow occurs here}}
   S *_Borrow p2 = &_Mut *oriPtr; // expected-error {{cannot borrow `*oriPtr` as mutable more than once at a time}}
   use_mut(p1);

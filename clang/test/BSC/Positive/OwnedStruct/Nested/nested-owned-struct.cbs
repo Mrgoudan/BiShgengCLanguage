@@ -2,9 +2,9 @@
 // RUN: %clang %s -o %test.output
 // RUN: %test.output
 
-owned struct A {  
+_Owned struct A {  
 public:
- owned struct B{
+ _Owned struct B{
   public:
   ~B(B this){
   }

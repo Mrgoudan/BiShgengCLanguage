@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-// Test owned/_Borrow qualifiers on generic template instantiation
+// Test _Owned/_Borrow qualifiers on generic template instantiation
 // This tests CheckInstantiatedTypeOwnedQualifiers and CheckInstantiatedTypeBorrowQualifiers
 
 struct ClassOwned<T> {
-    owned T member;   // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    _Owned T member;   // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 };
 
 void test_class_owned() {
-    struct ClassOwned<int*> obj1;   // OK: int* can be owned
+    struct ClassOwned<int*> obj1;   // OK: int* can be _Owned
     struct ClassOwned<int> obj2;    // expected-note {{in instantiation of template class 'ClassOwned<int>' requested here}}
 }
 

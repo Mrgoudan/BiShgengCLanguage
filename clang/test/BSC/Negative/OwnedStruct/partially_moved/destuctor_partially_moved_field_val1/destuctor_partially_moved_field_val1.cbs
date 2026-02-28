@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A {
+_Owned struct A {
 
   };
   
-  owned struct S {
+  _Owned struct S {
   public:
       A a;
       char a2;
@@ -14,7 +14,7 @@ owned struct A {
   int foo() {
     S s1 = {};
     A a = s1.a;
-    return 1;// expected-error {{partially moved owned struct:`s1` at scope end, s1.a is moved}}
+    return 1;// expected-error {{partially moved _Owned struct:`s1` at scope end, s1.a is moved}}
   }
 
   int main() {

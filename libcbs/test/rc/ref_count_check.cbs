@@ -6,16 +6,16 @@
 #include "rc.hbs"
 #include "assert.h"
 
-owned struct A {
+_Owned struct A {
 public:
-    int *owned p;
+    int *_Owned p;
     ~A(A this) {
         free((void*)this.p);
     }
 };
 
 void rc_ref_count_check_1() {
-    int *owned p = (int *owned)(void *owned)malloc(sizeof(int));
+    int *_Owned p = (int *_Owned)(void *_Owned)malloc(sizeof(int));
     *p = 5;
     A a = { .p = p };
 
@@ -44,7 +44,7 @@ void rc_ref_count_check_1() {
 }
 
 void rc_ref_count_check_2() {
-    int *owned p = (int *owned)(void *owned)malloc(sizeof(int));
+    int *_Owned p = (int *_Owned)(void *_Owned)malloc(sizeof(int));
     *p = 5;
     A a = { .p = p };
 
@@ -75,7 +75,7 @@ void rc_ref_count_check_2() {
 }
 
 void weak_ref_count_check() {
-    int *owned p = (int *owned)(void *owned)malloc(sizeof(int));
+    int *_Owned p = (int *_Owned)(void *_Owned)malloc(sizeof(int));
     *p = 5;
     A a = { .p = p };
 

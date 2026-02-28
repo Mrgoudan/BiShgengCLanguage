@@ -15,7 +15,7 @@ int struct F::structMember(struct F *this, struct F f2){    // expected-error {{
     return this->a - f2.a;                                   // expected-error@-1 {{expected identifier or '('}}
 }
 
-owned struct G {
+_Owned struct G {
     public:
     int a;
     __attribute__((operator +))
@@ -35,7 +35,7 @@ trait H {
 void int::foo(int* this) {
 }
 
-owned struct S {
+_Owned struct S {
 public:
     int a;
 };
@@ -49,7 +49,7 @@ S S::add_struct(S *this, S s) {            // expected-error {{function unsuppor
 int main() {
     S s1 = {1};
     S s2 = {2};
-    S s3 = s1 + s2;                        // expected-error {{invalid operands to binary expression ('owned struct S' and 'owned struct S'}}
+    S s3 = s1 + s2;                        // expected-error {{invalid operands to binary expression ('_Owned struct S' and '_Owned struct S'}}
     if (s3.a == 3) {
         return 0;
     }

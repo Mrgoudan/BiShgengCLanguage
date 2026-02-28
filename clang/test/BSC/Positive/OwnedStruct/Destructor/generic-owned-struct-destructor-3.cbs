@@ -1,19 +1,19 @@
 // RUN: %clang -rewrite-bsc %s -o %t-rw.c
 // RUN: FileCheck --input-file=%t-rw.c %s
 
-owned struct Raw<T> {
+_Owned struct Raw<T> {
   public:
     T* ptr;
     ~Raw(Raw<T> this) {}
 };
 
-owned struct Vec<T> {
+_Owned struct Vec<T> {
   public:
     Raw<T> raw;
     ~Vec(Vec<T> this) {}
 };
 
-owned struct String {
+_Owned struct String {
   public:
     Vec<char> buf;
     ~String(String this) {}

@@ -2,8 +2,8 @@
 
 void func1(int n) {
     int num = 5;
-    int * owned a = (int * owned)&num;
-    int * owned b;
+    int * _Owned a = (int * _Owned)&num;
+    int * _Owned b;
     switch (n) {
         case 0:
             break;
@@ -18,13 +18,13 @@ void func1(int n) {
         default:
             break;
     }
-    b = (int * owned)&num; // expected-error {{assign to owned value: `b`}}
+    b = (int * _Owned)&num; // expected-error {{assign to _Owned value: `b`}}
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func2(int n) {
     int num = 5;
-    int * owned a = (int * owned)&num;
-    int * owned b;
+    int * _Owned a = (int * _Owned)&num;
+    int * _Owned b;
     switch (n) {
         case 0: {
             num = 1;
@@ -45,16 +45,16 @@ void func2(int n) {
             break;
         }
     }
-    b = (int * owned)&num; // expected-error {{assign to owned value: `b`}}
+    b = (int * _Owned)&num; // expected-error {{assign to _Owned value: `b`}}
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
 
 void func3(int n) {
     int num = 5;
-    int * owned a;
+    int * _Owned a;
     switch (n) {
         case 0:
             if (num > 0) {
-                a = (int * owned)&num;
+                a = (int * _Owned)&num;
             }
             break;
         case 1:
@@ -70,21 +70,21 @@ void func3(int n) {
 
 void func4(int n) {
     int num = 5;
-    int * owned a;
+    int * _Owned a;
     switch (n) {
         case 0:
             if (num > 0) {
-                a = (int * owned)&num;
+                a = (int * _Owned)&num;
             }
             break;
         case 1: {
-            a = (int * owned)&num;
+            a = (int * _Owned)&num;
             break;
         }
         case 2:
-            a = (int * owned)&num;
+            a = (int * _Owned)&num;
         case 4: {
-            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
+            a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
         }
             break;
         case 5:
@@ -97,17 +97,17 @@ void func4(int n) {
 
 void func5(int n) {
     int num = 5;
-    int * owned a;
+    int * _Owned a;
     switch (n) {
         case 0:
             for (int i = 0; i < 10; i++) {
                 if (n > 4) {
-                    a = (int * owned)&num;
+                    a = (int * _Owned)&num;
                     break;
                 }
             }
         case 1:
-            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
+            a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
             break;
         case 4:
             for (int i = 0; i < 10; i++)
@@ -121,14 +121,14 @@ void func5(int n) {
 
 void func6(int n) {
     int num = 5;
-    int * owned a;
+    int * _Owned a;
     switch (n) {
         case 1:
-            a = (int * owned)&num;
+            a = (int * _Owned)&num;
             for (int i = 0; i < 10; i++)
                 break;
         case 2:
-            a = (int * owned)&num; // expected-error {{assign to owned value: `a`}}
+            a = (int * _Owned)&num; // expected-error {{assign to _Owned value: `a`}}
             break;
         default:
             break;
@@ -137,21 +137,21 @@ void func6(int n) {
 
 void func7(int n) {
     int num = 5;
-    int * owned a = (int * owned)&num;
-    int * owned b;
+    int * _Owned a = (int * _Owned)&num;
+    int * _Owned b;
     switch (n) {
         case 0 : {
             if (num > 0)
                 b = a;
 
             if (num < 5)
-                b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
+                b = a; // expected-error {{assign to _Owned value: `b`}} expected-error {{use of moved value: `a`}}
             break;
         }
         case 1:
             b = a;
             {
-                b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
+                b = a; // expected-error {{assign to _Owned value: `b`}} expected-error {{use of moved value: `a`}}
                 break;
             }
         case 4:
@@ -159,7 +159,7 @@ void func7(int n) {
             for (int i = 0; i < 10; i++)
                 break;
         case 5:
-            b = (int * owned)&num; // expected-error {{assign to owned value: `b`}}
+            b = (int * _Owned)&num; // expected-error {{assign to _Owned value: `b`}}
         default: {
             break;
         }
@@ -168,8 +168,8 @@ void func7(int n) {
 
 void func8(int n) {
     int num = 5;
-    int * owned a = (int * owned)&num;
-    int * owned b;
+    int * _Owned a = (int * _Owned)&num;
+    int * _Owned b;
     switch (n) {
         case 0: {
             b = a;
@@ -197,8 +197,8 @@ void func8(int n) {
 
 void func9(int n) {
     int num = 5;
-    int * owned a = (int * owned)&num;
-    int * owned b;
+    int * _Owned a = (int * _Owned)&num;
+    int * _Owned b;
     switch (n) {
         case 0: {
             b = a;
@@ -216,7 +216,7 @@ void func9(int n) {
                 break;
         }
         case 5: {
-            b = a; // expected-error {{assign to owned value: `b`}} expected-error {{use of moved value: `a`}}
+            b = a; // expected-error {{assign to _Owned value: `b`}} expected-error {{use of moved value: `a`}}
             break;
         }
         default: {

@@ -13,16 +13,16 @@ struct Foo<T> {
   T a;
 };
 
-T* owned safe_malloc<T>(T value);
-void free_owned<T>(T* owned p);
+T* _Owned safe_malloc<T>(T value);
+void free_owned<T>(T* _Owned p);
 
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T* _Owned)p;
 }
 
-void free_owned<T>(T* owned p) {
+void free_owned<T>(T* _Owned p) {
   free( (void *)p );
 }
 
@@ -51,7 +51,7 @@ T struct Foo<T>::getC_2(const This* _Borrow this) {
   return this->a;
 }
 
-void struct Foo<T>::getD(This* owned this) {
+void struct Foo<T>::getD(This* _Owned this) {
   free_owned<struct Foo<T>>(this);
 }
 
@@ -102,7 +102,7 @@ void test_const_This_pointer_borrow_actual_param(void) {
 
 void test_This_pointer_owned_actual_param(void) {
   struct Foo<int> foo = {.a = 1};
-  struct Foo<int> * owned foo_owned = safe_malloc<struct Foo<int>>(foo);
+  struct Foo<int> * _Owned foo_owned = safe_malloc<struct Foo<int>>(foo);
   int b = foo_owned->getB();
   int b2 = foo_owned->getB_2();
   int c = foo_owned->getC();

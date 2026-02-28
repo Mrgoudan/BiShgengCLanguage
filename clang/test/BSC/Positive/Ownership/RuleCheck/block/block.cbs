@@ -6,16 +6,16 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-int * owned pmalloc() {
+int * _Owned pmalloc() {
 	int a = 1;
-	int *owned p = (int * owned)&a;
+	int *_Owned p = (int * _Owned)&a;
 	return p;
 }
 
-int * owned func() {
+int * _Owned func() {
 	int p = 1;
 	{
-		int * owned p = pmalloc();
+		int * _Owned p = pmalloc();
 		return p;
 	}
 }

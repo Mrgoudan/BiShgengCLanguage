@@ -2,16 +2,16 @@
 // expected-no-diagnostics
 
 struct S3 {
-  int *owned _Nullable p;
+  int *_Owned _Nullable p;
 };
 
 struct S2 {
-  int *owned _Nullable p;
+  int *_Owned _Nullable p;
   struct S3 s3;
 };
 
 struct S1 {
-  int *owned _Nullable p;
+  int *_Owned _Nullable p;
   struct S2 s2;
 };
 

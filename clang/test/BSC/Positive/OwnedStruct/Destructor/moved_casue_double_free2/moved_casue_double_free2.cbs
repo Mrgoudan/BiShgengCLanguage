@@ -8,14 +8,14 @@
 int x = 0;
 int f = 0;
 int z = 0;
-owned struct A{
+_Owned struct A{
     public:
     int * y;
     ~A(A this){
         x++;
     }
 };
-owned struct B{
+_Owned struct B{
     public:
     int * y;
     A a;
@@ -23,7 +23,7 @@ owned struct B{
         f++;
     }
 };
-owned struct C{
+_Owned struct C{
     public:
     int * y;
     A a;

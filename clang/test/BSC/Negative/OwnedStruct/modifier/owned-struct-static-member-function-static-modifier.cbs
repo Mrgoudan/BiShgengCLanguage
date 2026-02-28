@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -verify %s
 
- owned struct A {
+ _Owned struct A {
     int a;
     static int f() {return 0;}  // expected-error {{function declared in struct scope cannot have 'static' storage class}}
 };
 
-owned struct B {
+_Owned struct B {
     int a;
     static int f(B* this) {return 0;}  // expected-error {{function declared in struct scope cannot have 'static' storage class}}
 };
 
 
-owned struct C {
+_Owned struct C {
     int a;
     static int f();  // expected-error {{function declared in struct scope cannot have 'static' storage class}}
                     // expected-note@-1 {{previous declaration is here}}
@@ -21,7 +21,7 @@ static int C::f() { // expected-error {{static declaration of 'f' follows non-st
     return 0;
 }
 
-owned struct D {
+_Owned struct D {
     int a;
     static int f(D* this); // expected-error {{function declared in struct scope cannot have 'static' storage class}}
                            // expected-note@-1 {{previous declaration is here}}

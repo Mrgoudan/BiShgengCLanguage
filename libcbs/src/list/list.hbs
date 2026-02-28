@@ -22,7 +22,7 @@ _Unsafe _BSC_ListNode<T>* _BSC_ListNode<T>::new(T el){
     return rv;
 }
 
-owned struct LinkedList<T> {
+_Owned struct LinkedList<T> {
 private:
     _BSC_ListNode<T> *head;
     _BSC_ListNode<T> *tail;
@@ -67,9 +67,9 @@ static void LinkedList<T>::unlink_node(LinkedList<T> * _Borrow this, _BSC_ListNo
 
 _Safe LinkedList<T> LinkedList<T>::new(void){
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                    "Can only instantiate LinkedList with owned struct or copyable type, "
+                    "Can only instantiate LinkedList with _Owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
-				    "Fix: You can wrap T with an owned struct.");
+				    "Fix: You can wrap T with an _Owned struct.");
     _Unsafe {
         LinkedList<T> rv = {NULL, NULL, 0};
         return rv;

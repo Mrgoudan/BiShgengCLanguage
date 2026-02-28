@@ -1,21 +1,21 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 struct A {
-    owned int a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned b; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned * c; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int* owned d;
-    int* owned* owned e;
+    _Owned int a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned b; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned * c; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int* _Owned d;
+    int* _Owned* _Owned e;
 };
 
 void ownedTest0() {
-    int owned a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int* owned b;
-    int* owned * owned d;
+    int _Owned a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int* _Owned b;
+    int* _Owned * _Owned d;
     return;
 }
 
-int* owned ownedTest2(int* owned p) {
+int* _Owned ownedTest2(int* _Owned p) {
     return p;
 }
 

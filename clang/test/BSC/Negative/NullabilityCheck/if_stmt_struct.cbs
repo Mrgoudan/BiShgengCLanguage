@@ -243,15 +243,15 @@ _Safe void test16(void) {
 }
 
 struct S1 {
-    int *owned _Nullable p;
+    int *_Owned _Nullable p;
 };
 
-_Safe T *owned safe_malloc<T>(T t);
-_Safe void safe_free(void *owned p);
+_Safe T *_Owned safe_malloc<T>(T t);
+_Safe void safe_free(void *_Owned p);
 
 _Safe void test17(void) {
     struct S1 s = { nullptr };
-    struct S1 *owned _Nullable p = nullptr;
+    struct S1 *_Owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
         p = safe_malloc<struct S1>(s);
@@ -259,7 +259,7 @@ _Safe void test17(void) {
     if (p != nullptr) {
         if (p->p != nullptr) {
             *p->p = 10;
-            safe_free((void *owned)p->p);
+            safe_free((void *_Owned)p->p);
         }
     }
 } // expected-error {{memory leak of value: `p`}}

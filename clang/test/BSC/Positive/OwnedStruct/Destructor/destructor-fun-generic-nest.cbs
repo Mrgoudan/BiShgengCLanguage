@@ -4,17 +4,17 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-owned struct A<T> {
+_Owned struct A<T> {
 public:
     int a;
 };
 
-owned struct B<T> {
+_Owned struct B<T> {
 public:
     char *b;
 };
 
-owned struct S<T> {
+_Owned struct S<T> {
 public:
     A<T> a;
     B<T> b;

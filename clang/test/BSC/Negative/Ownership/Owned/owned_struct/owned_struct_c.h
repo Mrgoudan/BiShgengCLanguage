@@ -1,4 +1,4 @@
 struct A {
-    owned int a;  // expected-error {{unknown type name 'owned'}}
-    owned int* b; // expected-error {{unknown type name 'owned'}}
+    _Owned int a;  // expected-error {{unknown type name '_Owned'}}
+    _Owned int* b; // expected-error {{unknown type name '_Owned'}}
 };

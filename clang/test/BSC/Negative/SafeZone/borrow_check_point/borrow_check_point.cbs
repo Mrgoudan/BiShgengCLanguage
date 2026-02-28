@@ -16,9 +16,9 @@ _Safe void test_1(void) {
 
 void test_2(void) {
     int t_a = 1;
-    int *owned t_b = (int *owned)&t_a;
+    int *_Owned t_b = (int *_Owned)&t_a;
     int t_c = 1;
-    int *owned t_d = (int *owned)&t_c;
+    int *_Owned t_d = (int *_Owned)&t_c;
     int t_g;
     int *t_e = &t_g;
     int *t_f = &t_g;
@@ -54,30 +54,30 @@ void test_3(void) {
     int t_a = 1;
     int * t_b = &t_a;
     _Safe {
-        // owned point <-> raw point 
-        int * owned a = (int * owned)t_b;   // expected-error {{conversion from type 'int *' to 'int *owned' is forbidden in the safe zone}}
-        int * b = (int *)a;                 // expected-error {{conversion from type 'int *owned' to 'int *' is forbidden in the safe zone}}
-        int * owned c = t_b;                // expected-error {{conversion from type 'int *' to 'int *owned' is forbidden in the safe zone}}
-        int * d = c;                        // expected-error {{conversion from type 'int *owned' to 'int *' is forbidden in the safe zone}}
+        // _Owned point <-> raw point 
+        int * _Owned a = (int * _Owned)t_b;   // expected-error {{conversion from type 'int *' to 'int *_Owned' is forbidden in the safe zone}}
+        int * b = (int *)a;                 // expected-error {{conversion from type 'int *_Owned' to 'int *' is forbidden in the safe zone}}
+        int * _Owned c = t_b;                // expected-error {{conversion from type 'int *' to 'int *_Owned' is forbidden in the safe zone}}
+        int * d = c;                        // expected-error {{conversion from type 'int *_Owned' to 'int *' is forbidden in the safe zone}}
     }
 
     int t_c = 1;
-    int * owned t_d = (int * owned)&t_c;
+    int * _Owned t_d = (int * _Owned)&t_c;
     int t_e = 1;
     int * _Borrow t_f = &_Mut t_e;
     int t_g = 1;
     const int * _Borrow t_h = &_Const t_g;
     _Safe {
-        // owned point <-> _Borrow point
-        int * owned a = (int * owned)t_f;               // expected-error {{conversion from type 'int *_Borrow' to 'int *owned' is forbidden in the safe zone}}
-        int * owned b = (int * owned)t_h;               // expected-error {{conversion from type 'const int *_Borrow' to 'int *owned' is forbidden in the safe zone}}
-        int * _Borrow c = (int * _Borrow)a;               // expected-error {{conversion from type 'int *owned' to 'int *_Borrow' is forbidden in the safe zone}}
-        const int * _Borrow d = (const int * _Borrow)b;   // expected-error {{conversion from type 'int *owned' to 'const int *_Borrow' is forbidden in the safe zone}}
+        // _Owned point <-> _Borrow point
+        int * _Owned a = (int * _Owned)t_f;               // expected-error {{conversion from type 'int *_Borrow' to 'int *_Owned' is forbidden in the safe zone}}
+        int * _Owned b = (int * _Owned)t_h;               // expected-error {{conversion from type 'const int *_Borrow' to 'int *_Owned' is forbidden in the safe zone}}
+        int * _Borrow c = (int * _Borrow)a;               // expected-error {{conversion from type 'int *_Owned' to 'int *_Borrow' is forbidden in the safe zone}}
+        const int * _Borrow d = (const int * _Borrow)b;   // expected-error {{conversion from type 'int *_Owned' to 'const int *_Borrow' is forbidden in the safe zone}}
 
-        int * owned e = t_f;                            // expected-error {{conversion from type 'int *_Borrow' to 'int *owned' is forbidden in the safe zone}}
-        int * owned f = t_h;                            // expected-error {{conversion from type 'const int *_Borrow' to 'int *owned' is forbidden in the safe zone}}
-        int * _Borrow g = e;                             // expected-error {{conversion from type 'int *owned' to 'int *_Borrow' is forbidden in the safe zone}}
-        const int * _Borrow h = f;                       // expected-error {{conversion from type 'int *owned' to 'const int *_Borrow' is forbidden in the safe zone}}
+        int * _Owned e = t_f;                            // expected-error {{conversion from type 'int *_Borrow' to 'int *_Owned' is forbidden in the safe zone}}
+        int * _Owned f = t_h;                            // expected-error {{conversion from type 'const int *_Borrow' to 'int *_Owned' is forbidden in the safe zone}}
+        int * _Borrow g = e;                             // expected-error {{conversion from type 'int *_Owned' to 'int *_Borrow' is forbidden in the safe zone}}
+        const int * _Borrow h = f;                       // expected-error {{conversion from type 'int *_Owned' to 'const int *_Borrow' is forbidden in the safe zone}}
     }
 
     int t_i = 1;
@@ -107,7 +107,7 @@ void test_4(void) {
     struct s_a *c = &b;
     
     struct s_a e = {1};   
-    struct s_a * owned f = (struct s_a * owned)&e;
+    struct s_a * _Owned f = (struct s_a * _Owned)&e;
 
     struct s_a h = {1};
     struct s_a * _Borrow i = &_Mut h;

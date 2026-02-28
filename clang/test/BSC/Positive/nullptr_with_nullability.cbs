@@ -74,10 +74,10 @@ void test_nullable_array(void) {
   (void)arr;
 }
 
-// _Nullable with owned
+// _Nullable with _Owned
 void test_nullable_owned(void) {
-  int * _Nullable owned po = (int * owned)nullptr;
-  void * _Nullable owned vo = nullptr;
+  int * _Nullable _Owned po = (int * _Owned)nullptr;
+  void * _Nullable _Owned vo = nullptr;
   (void)po;
   (void)vo;
 }

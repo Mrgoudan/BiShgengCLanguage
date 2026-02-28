@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test cases for structs with both _Borrow and owned fields
-// Rule: _Borrow fields MUST be initialized, owned fields CAN be uninitialized
+// Test cases for structs with both _Borrow and _Owned fields
+// Rule: _Borrow fields MUST be initialized, _Owned fields CAN be uninitialized
 
 struct BorrowAndOwned {
     int *_Borrow b;
-    int *owned o;
+    int *_Owned o;
 };
 
 void test_basic_mixed() {
@@ -20,7 +20,7 @@ void test_basic_mixed() {
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct BorrowAndOwned m3 = {.o = nullptr};  // _Borrow field not initialized
 
-    // OK: _Borrow initialized, owned can be uninitialized
+    // OK: _Borrow initialized, _Owned can be uninitialized
     struct BorrowAndOwned m4 = {.b = &_Mut x};
 
     // OK: both initialized
@@ -32,9 +32,9 @@ void test_basic_mixed() {
 
 struct MultipleMixed {
     int *_Borrow b1;
-    int *owned o1;
+    int *_Owned o1;
     int *_Borrow b2;
-    int *owned o2;
+    int *_Owned o2;
 };
 
 void test_multiple_mixed() {
@@ -52,7 +52,7 @@ void test_multiple_mixed() {
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct MultipleMixed m4 = {.o1 = nullptr, .o2 = nullptr};  // both _Borrow not initialized
 
-    // OK: all _Borrow initialized, owned can be left out
+    // OK: all _Borrow initialized, _Owned can be left out
     struct MultipleMixed m5 = {.b1 = &_Mut x, .b2 = &_Mut y};
 
     // OK: all initialized
@@ -61,13 +61,13 @@ void test_multiple_mixed() {
 
 struct InnerMixed {
     int *_Borrow b;
-    int *owned o;
+    int *_Owned o;
 };
 
 struct OuterMixed {
     int a;
     struct InnerMixed inner;
-    int *owned outer_o;
+    int *_Owned outer_o;
 };
 
 void test_nested_mixed() {
@@ -85,7 +85,7 @@ void test_nested_mixed() {
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct OuterMixed o4 = {.a = 1, .inner = {.o = nullptr}};  // inner.b not initialized
 
-    // OK: _Borrow initialized, owned fields can be omitted
+    // OK: _Borrow initialized, _Owned fields can be omitted
     struct OuterMixed o5 = {.a = 1, .inner = {.b = &_Mut x}};
 
     // OK: all initialized
@@ -97,11 +97,11 @@ void test_nested_mixed() {
 
 struct Level3Mixed {
     int *_Borrow b;
-    int *owned o;
+    int *_Owned o;
 };
 
 struct Level2Mixed {
-    int *owned o;
+    int *_Owned o;
     struct Level3Mixed l3;
 };
 
@@ -133,12 +133,12 @@ void test_deep_mixed() {
 }
 
 struct Interleaved {
-    int *owned o1;
+    int *_Owned o1;
     int *_Borrow b1;
     int regular;
-    int *owned o2;
+    int *_Owned o2;
     int *_Borrow b2;
-    int *owned o3;
+    int *_Owned o3;
 };
 
 void test_interleaved() {
@@ -153,7 +153,7 @@ void test_interleaved() {
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct Interleaved i3 = {.b1 = &_Mut x};  // b2 not initialized
 
-    // OK: all _Borrow initialized, owned can be omitted
+    // OK: all _Borrow initialized, _Owned can be omitted
     struct Interleaved i4 = {.b1 = &_Mut x, .b2 = &_Mut y};
 
     // OK: all initialized
@@ -167,7 +167,7 @@ void test_interleaved() {
 struct ConstBorrowOwned {
     const int *_Borrow cb;
     int *_Borrow b;
-    int *owned o;
+    int *_Owned o;
 };
 
 void test_const_borrow_owned() {
@@ -190,7 +190,7 @@ void test_const_borrow_owned() {
 }
 
 struct Node {
-    int *owned data;
+    int *_Owned data;
     int *_Borrow parent;
     struct {
         int *_Borrow left;
@@ -216,7 +216,7 @@ void test_tree_node() {
     // OK: all _Borrow initialized
     struct Node n5 = {.parent = &_Mut p, .children = {.left = &_Mut l, .right = &_Mut r}};
 
-    // OK: with owned field too
+    // OK: with _Owned field too
     struct Node n6 = {.data = nullptr, .parent = &_Mut p,
                       .children = {.left = &_Mut l, .right = &_Mut r}};
 }

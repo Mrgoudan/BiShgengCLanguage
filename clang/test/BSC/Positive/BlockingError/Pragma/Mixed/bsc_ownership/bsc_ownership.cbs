@@ -2,38 +2,38 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-void free_owned_new(void * owned p);
+void free_owned_new(void * _Owned p);
 
 typedef struct A {
-	int * owned a;
+	int * _Owned a;
 } A;
 
-void test1(A * owned p) {
+void test1(A * _Owned p) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-ownership"
-	free_owned_new((void * owned)p); // invalid cast to `void * owned` of not all moved value: `p`, p.a is owned
+	free_owned_new((void * _Owned)p); // invalid cast to `void * _Owned` of not all moved value: `p`, p.a is _Owned
     #pragma GCC diagnostic pop
 }
 
-int * owned test2() {
+int * _Owned test2() {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-ownership"
-	int * owned a;
+	int * _Owned a;
 	return a;        // use of uninitialized value: `a`
     #pragma GCC diagnostic pop
 }
 
-_Safe T *owned safe_malloc<T>(T t);
+_Safe T *_Owned safe_malloc<T>(T t);
 _Safe void test3(void) {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Ebsc-ownership"
-    int *owned _Nullable p = nullptr;
+    int *_Owned _Nullable p = nullptr;
     int cond = 1;
     if (cond) {
         p = safe_malloc<int>(10);
         *p = 10;
     }
-    p = nullptr; //assign to owned value: `p`
+    p = nullptr; //assign to _Owned value: `p`
     #pragma GCC diagnostic pop
 }
 

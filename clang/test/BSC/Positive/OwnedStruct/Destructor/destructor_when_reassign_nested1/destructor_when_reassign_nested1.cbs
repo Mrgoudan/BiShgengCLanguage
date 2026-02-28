@@ -6,17 +6,17 @@
 // RUN: %clang -rewrite-bsc -line %s -o %t-rwline.c
 // RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 
-// Flaw in Nested owned sturct reassign 
+// Flaw in Nested _Owned sturct reassign 
 // https://gitee.com/bisheng_c_language_dep/llvm-project/issues/ICD2TU
 int x = 0;
 int y = 0;
-owned struct Weak{
+_Owned struct Weak{
     public:
     ~Weak(Weak this){
         x++;
     }
 };
-owned struct W{
+_Owned struct W{
     public:
     Weak p;
     ~W(W this){

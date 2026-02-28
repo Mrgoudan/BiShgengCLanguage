@@ -2,7 +2,7 @@
 
 int SetVersionInfo(int id, const char* name, const char* commitId);
 
-owned struct String {
+_Owned struct String {
 public:
     const char *_Borrow as_str(const String *_Borrow this);
 };
@@ -11,7 +11,7 @@ public:
 _Safe int SafeSetVersionInfo(int id, String name, String commitId)
 {
     _Unsafe {
-         return SetVersionInfo(id, (const char*)name.as_str(), (const char*)commitId.as_str()); // expected-error {{memory leak because temporary variable 'name' is owned or indirect owned type, please fix it}}
+         return SetVersionInfo(id, (const char*)name.as_str(), (const char*)commitId.as_str()); // expected-error {{memory leak because temporary variable 'name' is _Owned or indirect _Owned type, please fix it}}
     }
 }
 

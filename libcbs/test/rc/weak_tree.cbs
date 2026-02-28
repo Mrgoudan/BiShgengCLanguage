@@ -7,7 +7,7 @@
 #include "rc.hbs"
 #include "vec.hbs"
 
-owned struct Node {
+_Owned struct Node {
 public:
     int value;
     RefCell<Weak<Node>> parent;

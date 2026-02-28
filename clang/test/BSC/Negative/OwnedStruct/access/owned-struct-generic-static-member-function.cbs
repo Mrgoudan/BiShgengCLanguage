@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A{
+_Owned struct A{
 public:
     int foo<T>(){ // expected-error {{expected ';' at end of declaration list}}
        return 5;

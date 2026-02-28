@@ -1,29 +1,29 @@
 #include "bishengc_safety.hbs"
 
 struct S {
-    int* owned a;
-    int* owned b;
+    int* _Owned a;
+    int* _Owned b;
 };
 
 void test1() {
     int a = 2;
-    int* owned ap = safe_malloc(a);
-    safe_free((void* owned)ap);
+    int* _Owned ap = safe_malloc(a);
+    safe_free((void* _Owned)ap);
     double b = 3.2;
-    double* owned bp = safe_malloc(b);
-    safe_free((void* owned)bp);
+    double* _Owned bp = safe_malloc(b);
+    safe_free((void* _Owned)bp);
     struct S s = { .a = safe_malloc(3), .b = safe_malloc(5) };
-    struct S* owned sp = safe_malloc(s);
-    safe_free((void* owned)sp->a);
-    safe_free((void* owned)sp->b);
-    safe_free((void* owned)sp);
+    struct S* _Owned sp = safe_malloc(s);
+    safe_free((void* _Owned)sp->a);
+    safe_free((void* _Owned)sp->b);
+    safe_free((void* _Owned)sp);
 }
 
-owned struct Resource {
+_Owned struct Resource {
 public:
-    int * owned value;
+    int * _Owned value;
     ~Resource(This this) {
-        safe_free((void * owned)this.value);
+        safe_free((void * _Owned)this.value);
     }
 };
 
@@ -31,8 +31,8 @@ _Safe void test2(void) {
     Resource r = { .value = safe_malloc(1) };
     forget<Resource>(r);
 
-    int *owned p = safe_malloc(1);
-    forget<int *owned>(p);
+    int *_Owned p = safe_malloc(1);
+    forget<int *_Owned>(p);
 }
 
 int main() {

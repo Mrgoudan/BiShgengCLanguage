@@ -2,28 +2,28 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T* _Owned)p;
 }
 
-void safe_free<T>(T* owned p) {
+void safe_free<T>(T* _Owned p) {
   free( (T*)p );
 }
 
 _Safe int foo(int *_Borrow x) { return *x; }
 typedef struct S {
-  int *owned p;
+  int *_Owned p;
 } S;
 
 int main(void) {
-  int *owned ptr = safe_malloc(0);
+  int *_Owned ptr = safe_malloc(0);
   int x = foo(&_Mut * ptr);
-  safe_free((void *owned)(ptr));
+  safe_free((void *_Owned)(ptr));
   S s = {.p = safe_malloc(1)};
-  S *owned pp = safe_malloc(s);
-  safe_free((void *owned)(pp->p));
-  safe_free((void *owned)(pp));
+  S *_Owned pp = safe_malloc(s);
+  safe_free((void *_Owned)(pp->p));
+  safe_free((void *_Owned)(pp));
   return 0;
 }

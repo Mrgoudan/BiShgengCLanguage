@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -ast-dump -Wextra -Werror -verify %s
 
 
-void* owned test1(void* p) {    //legal
-    void* owned a = (void* owned)p;
+void* _Owned test1(void* p) {    //legal
+    void* _Owned a = (void* _Owned)p;
     return a;
 }
 
@@ -11,8 +11,8 @@ void* const test2(void* p) {   //expected-error {{'const' type qualifier on retu
     return a;
 }
 
-int owned test3(int size) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned a = (int owned)size; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int _Owned test3(int size) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned a = (int _Owned)size; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     return a;
 }
 
@@ -21,14 +21,14 @@ int const test4(int size) {   //expected-error {{'const' type qualifier on retur
     return a;
 }
 
-int const owned test5(int size) { // expected-error {{type of 'const int' cannot be qualified by 'owned'}}
-    int const owned a = (int const owned)size; // expected-error {{type of 'const int' cannot be qualified by 'owned'}}
+int const _Owned test5(int size) { // expected-error {{type of 'const int' cannot be qualified by '_Owned'}}
+    int const _Owned a = (int const _Owned)size; // expected-error {{type of 'const int' cannot be qualified by '_Owned'}}
     return a;
 }
 
 
-owned void* test7(void* p) { // expected-error {{type of 'void' cannot be qualified by 'owned'}}
-    owned void* a = (owned void*)(p); // expected-error {{type of 'void' cannot be qualified by 'owned'}}
+_Owned void* test7(void* p) { // expected-error {{type of 'void' cannot be qualified by '_Owned'}}
+    _Owned void* a = (_Owned void*)(p); // expected-error {{type of 'void' cannot be qualified by '_Owned'}}
     return a;
 }
 
@@ -37,14 +37,14 @@ const void* test8(void* p) {
     return a;
 }
 
-T* owned safePtr<T>(T* p) {
-    T* owned a = (T* owned)p;
+T* _Owned safePtr<T>(T* p) {
+    T* _Owned a = (T* _Owned)p;
     return a;
 }
 
 int testsafePtr(int* p1, float* p2) {
-    int* owned sptr1 = safePtr<int>(p1);
-    float* owned sptr2 = safePtr<float>(p2);
+    int* _Owned sptr1 = safePtr<int>(p1);
+    float* _Owned sptr2 = safePtr<float>(p2);
     if(sptr1) {
         return 0;
     }else if (sptr2) {

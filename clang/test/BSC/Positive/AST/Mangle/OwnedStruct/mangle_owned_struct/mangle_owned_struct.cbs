@@ -3,7 +3,7 @@
 // RUN: %test.output
 // expected-no-diagnostics
 
-owned struct Person<T, H> {
+_Owned struct Person<T, H> {
   public:
     char name[50];
     T age;

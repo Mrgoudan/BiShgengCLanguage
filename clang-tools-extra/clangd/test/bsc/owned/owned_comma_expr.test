@@ -1,9 +1,9 @@
 // RUN: cp %s %t.cbs
 // RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
 
-int * owned initIPO();
+int * _Owned initIPO();
 int f1() {
-	int * owned a = initIPO(), * owned b;
+	int * _Owned a = initIPO(), * _Owned b;
 	return 0;
 }
 

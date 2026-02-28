@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 int x = 0;
-owned struct Foo {
+_Owned struct Foo {
   public:
     int a;
   ~Foo(Foo this){

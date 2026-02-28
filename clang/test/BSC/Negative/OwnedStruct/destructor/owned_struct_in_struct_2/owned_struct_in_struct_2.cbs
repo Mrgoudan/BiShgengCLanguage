@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct B {
+_Owned struct B {
 };
-owned struct A {
+_Owned struct A {
 public:
     B b;  
 };
 void test(A a) {
     B b = a.b;
-} // expected-error {{partially moved owned struct:`a` at scope end, a.b is moved}}
+} // expected-error {{partially moved _Owned struct:`a` at scope end, a.b is moved}}

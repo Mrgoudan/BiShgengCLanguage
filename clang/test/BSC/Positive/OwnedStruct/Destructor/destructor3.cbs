@@ -4,13 +4,13 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 int y  = 0;
-owned struct B{
+_Owned struct B{
     ~B(B this){
        y++;
     }
 };
 void free(void * p);
-owned struct A {
+_Owned struct A {
 public:
    B b;
   ~A( A this) {

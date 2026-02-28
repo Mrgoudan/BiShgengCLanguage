@@ -3,9 +3,9 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-typedef int* owned myIntPtr;
+typedef int* _Owned myIntPtr;
 
-int* owned test2() {
+int* _Owned test2() {
     int x = 10;
     int* p = &x;
     myIntPtr p1 = (myIntPtr)p;
@@ -13,7 +13,7 @@ int* owned test2() {
 }
 
 typedef int (*FTP)(int*, int*);
-typedef int (*FTPO)(int* owned, int*);
+typedef int (*FTPO)(int* _Owned, int*);
 
 int main() {
     return 0;

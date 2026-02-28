@@ -435,7 +435,7 @@ void DeclSpec::forEachCVRUQualifier(
     Handle(TQ_const, "const", TQ_constLoc);
   #if ENABLE_BSC
   if (TypeQualifiers & TQ_owned)
-    Handle(TQ_owned, "owned", TQ_ownedLoc);
+    Handle(TQ_owned, "_Owned", TQ_ownedLoc);
   if (TypeQualifiers & TQ_borrow)
     Handle(TQ_borrow, "_Borrow", TQ_borrowLoc);
   #endif
@@ -633,7 +633,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   case DeclSpec::TQ_unspecified: return "unspecified";
   case DeclSpec::TQ_const:       return "const";
   #if ENABLE_BSC
-  case DeclSpec::TQ_owned:       return "owned";
+  case DeclSpec::TQ_owned:       return "_Owned";
   case DeclSpec::TQ_borrow:      return "_Borrow";
   #endif
   case DeclSpec::TQ_restrict:    return "restrict";

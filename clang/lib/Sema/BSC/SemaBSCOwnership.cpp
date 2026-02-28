@@ -29,13 +29,13 @@ void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, Stri
   };
   if (T.getCanonicalType().isOwnedQualified() && !T.getTypePtr()->getAs<TypedefType>()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
-        << ownedQualified << "owned" << Env;
+        << ownedQualified << "_Owned" << Env;
   } else if (T.getCanonicalType().isOwnedQualified() && T.getTypePtr()->getAs<TypedefType>()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
-        << ownedTypedef << "owned" << Env << T;
+        << ownedTypedef << "_Owned" << Env << T;
   } else if (T.getCanonicalType().getTypePtr()->isMoveSemanticType()) {
     Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
-        << ownedFields << "owned" << Env << T;
+        << ownedFields << "_Owned" << Env << T;
   }
 }
 
@@ -73,7 +73,7 @@ bool Sema::CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc) 
   if (T.isOwnedQualified() && !isValidOwnedType(T)) {
     QualType UnqualType = T;
     UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
-    Diag(Loc, diag::err_owned_qualifier_non_pointer) << "owned" << UnqualType;
+    Diag(Loc, diag::err_owned_qualifier_non_pointer) << "_Owned" << UnqualType;
     return false;
   }
 
@@ -108,7 +108,7 @@ void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
     QualType UnqualType = Ty;
     UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
     Diag(DS.getOwnedSpecLoc(), diag::err_owned_qualifier_non_pointer)
-        << "owned" << UnqualType;
+        << "_Owned" << UnqualType;
   };
 
   // First Check: Deep type analysis

@@ -6,7 +6,7 @@
 #include "cell.hbs"
 #include <assert.h>
 
-owned struct A {
+_Owned struct A {
 public:
     int a;
 };

@@ -1,37 +1,37 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A;
+_Owned struct A;
 
-owned struct A {};
-owned struct A a; // expected-error {{must ignore 'owned struct' tag before struct name}}
-                  // expected-error@-1 {{type of global variable cannot qualified by 'owned'}}
+_Owned struct A {};
+_Owned struct A a; // expected-error {{must ignore '_Owned struct' tag before struct name}}
+                  // expected-error@-1 {{type of global variable cannot qualified by '_Owned'}}
 struct B{
-    owned struct A b;// expected-error {{must ignore 'owned struct' tag before struct name}}
+    _Owned struct A b;// expected-error {{must ignore '_Owned struct' tag before struct name}}
 };
 
-owned struct C {
-    owned struct A b; // expected-error {{must ignore 'owned struct' tag before struct name}}
+_Owned struct C {
+    _Owned struct A b; // expected-error {{must ignore '_Owned struct' tag before struct name}}
 };
 
-owned struct A ff() { // expected-error {{must ignore 'owned struct' tag before struct name}}
+_Owned struct A ff() { // expected-error {{must ignore '_Owned struct' tag before struct name}}
     A b; // ok
     return b;
 }
 
-int owned struct A::f() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}  expected-error {{must ignore 'owned struct' tag before struct name}}
+int _Owned struct A::f() { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}  expected-error {{must ignore '_Owned struct' tag before struct name}}
     return 0;
 }
 
-int A::g(owned struct A* this) { // expected-error {{must ignore 'owned struct' tag before struct name}}
+int A::g(_Owned struct A* this) { // expected-error {{must ignore '_Owned struct' tag before struct name}}
     return 0;
 }
 
 struct D;
 
-owned struct D {};// expected-error {{inconsistent tag before struct name}}
+_Owned struct D {};// expected-error {{inconsistent tag before struct name}}
 
 int main() {
-    owned struct A b; // expected-error {{must ignore 'owned struct' tag before struct name}}
-    owned struct B bb; // expected-error {{type of 'struct B' cannot be qualified by 'owned'}}
+    _Owned struct A b; // expected-error {{must ignore '_Owned struct' tag before struct name}}
+    _Owned struct B bb; // expected-error {{type of 'struct B' cannot be qualified by '_Owned'}}
     return 0;
 }

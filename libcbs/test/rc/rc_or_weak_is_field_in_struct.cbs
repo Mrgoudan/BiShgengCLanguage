@@ -6,21 +6,21 @@
 #include "rc.hbs"
 #include "assert.h"
 
-owned struct P {
+_Owned struct P {
 public:
-    int *owned k;
+    int *_Owned k;
     ~P(P this) {
         free((void*)this.k);
     }
 };
 
-owned struct S {
+_Owned struct S {
 public:
     int id;
     Rc<P> p;
 };
 void test1() {
-    int *owned k = (int *owned)(void *owned)malloc(sizeof(int));
+    int *_Owned k = (int *_Owned)(void *_Owned)malloc(sizeof(int));
     *k = 5;
     P p = { .k = k };
     Rc<P> rc = Rc<P>::new(p);
@@ -43,14 +43,14 @@ void test1() {
     assert(s2.p.strong_ref_count() == 2);
 }
 
-owned struct W {
+_Owned struct W {
 public:
     int id;
     Weak<P> p;
 };
 
 void test2() {
-    int *owned k = (int *owned)(void *owned)malloc(sizeof(int));
+    int *_Owned k = (int *_Owned)(void *_Owned)malloc(sizeof(int));
     *k = 5;
     P p = { .k = k };
 

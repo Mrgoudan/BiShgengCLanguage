@@ -4,7 +4,7 @@
 struct Foo {
   int a;
 };
-owned struct Bar {
+_Owned struct Bar {
 public:
   int a;
 };
@@ -40,10 +40,10 @@ int struct Foo::getE(const This* _Borrow this) {
 int struct Foo::getE_2(const struct Foo* _Borrow this) {
   return this->a;
 }
-struct Foo* owned struct Foo::getF(This* owned this) {
+struct Foo* _Owned struct Foo::getF(This* _Owned this) {
   return this;
 }
-struct Foo* owned struct Foo::getF_2(struct Foo* owned this) {
+struct Foo* _Owned struct Foo::getF_2(struct Foo* _Owned this) {
   return this;
 }
 
@@ -53,7 +53,7 @@ int struct Foo::getG(const This this) {
 struct Foo* const struct Foo::getG_2(This* const this) { 
   return this;
 }
-const struct Foo* owned struct Foo::getH(const This* owned this) { 
+const struct Foo* _Owned struct Foo::getH(const This* _Owned this) { 
   return this;
 }
 
@@ -61,14 +61,14 @@ Bar Bar::getA_0(const This this) {
   return this;
 }
 
-const Bar* owned Bar::getD_0(const This* owned this) {
+const Bar* _Owned Bar::getD_0(const This* _Owned this) {
   return this;
 }
 Bar* const Bar::getE_0(This* const this) {
   return this;
 }
 
-// ok member functions definition for owned struct
+// ok member functions definition for _Owned struct
 Bar Bar::getA(This this) {
   return this;
 }
@@ -99,9 +99,9 @@ int Bar::getE(const This* _Borrow this) {
 int Bar::getE_2(const Bar* _Borrow this) {
   return this->a;
 }
-Bar* owned Bar::getF(This* owned this) {
+Bar* _Owned Bar::getF(This* _Owned this) {
   return this;
 }
-Bar* owned Bar::getF_2(Bar* owned this) {
+Bar* _Owned Bar::getF_2(Bar* _Owned this) {
   return this;
 }

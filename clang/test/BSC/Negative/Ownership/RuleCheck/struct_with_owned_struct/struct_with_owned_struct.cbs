@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct S {
+_Owned struct S {
 public:
   int a;
   int b;
 };
 
-owned struct T {
+_Owned struct T {
 public:
   S s;
 };
@@ -28,7 +28,7 @@ void test_no_leak(struct A sa) {
   S sp = sa.s;
 }
 
-void test_owned_pointer_A(struct A* owned ap) {
+void test_owned_pointer_A(struct A* _Owned ap) {
 } // expected-error {{memory leak of value: `ap`}}
   // expected-error@-1 {{field memory leak of value: `ap`, ap.s is leak}}
 
@@ -51,16 +51,16 @@ void test_partially_moved_leak2(struct B sb) {
   T t = sb.t; // expected-error {{use of partially moved value: `sb.t`, sb.t.s is moved}}
 }
 
-struct A* owned change_to_owned_pointer(struct A a);
+struct A* _Owned change_to_owned_pointer(struct A a);
 void print(struct A a);
-void safe_free(void* owned p);
+void safe_free(void* _Owned p);
 
 void use_after_free() {
   struct A a = { .s = { .a = 1, .b = 2}, .c = 3 };
-  struct A* owned ap = change_to_owned_pointer(a);
+  struct A* _Owned ap = change_to_owned_pointer(a);
 
   print(*ap);
-  safe_free((void* owned)ap);
+  safe_free((void* _Owned)ap);
 
   struct A an = a; // expected-error {{use of partially moved value: `a`, a.s is moved}}
 } // expected-error {{field memory leak of value: `an`, an.s is leak}}

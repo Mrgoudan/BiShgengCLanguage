@@ -12,7 +12,7 @@ impl trait F for union U<T>; // expected-error {{use of undeclared identifier 'T
 impl trait F for U<int>; // expected-error {{cannot impl trait for an instantiated type}}
 impl trait F for union U<int>; // expected-error {{cannot impl trait for an instantiated type}}
 
-owned struct K<T> {};
+_Owned struct K<T> {};
 impl trait F for K<T>; // expected-error {{use of undeclared identifier 'T'}}
 impl trait F for K<int>; // expected-error {{cannot impl trait for an instantiated type}}
 

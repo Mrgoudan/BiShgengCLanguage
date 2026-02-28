@@ -87,7 +87,7 @@ void test5(){
     assert(4 == k.length());      // A B C D
 }
 
-owned struct MyClass{
+_Owned struct MyClass{
 public:
     int a;
     ~MyClass(MyClass this){

@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 
-owned struct Vec<T> {
+_Owned struct Vec<T> {
 public:
     T* ptr;
     int len;

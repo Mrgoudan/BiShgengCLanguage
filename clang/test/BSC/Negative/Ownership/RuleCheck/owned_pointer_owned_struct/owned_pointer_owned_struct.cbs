@@ -1,45 +1,45 @@
 // RUN: %clang_cc1 -verify %s
 
-void safe_free(void* owned);
+void safe_free(void* _Owned);
 
-owned struct S {
+_Owned struct S {
 public:
-    int* owned a;
+    int* _Owned a;
     int b;
     ~S(S this) {
-        safe_free((void* owned)this.a);
+        safe_free((void* _Owned)this.a);
     }
 };
 
 typedef struct R {
-    S* owned sp;
+    S* _Owned sp;
     S s;
 } R;
 
-S* owned initS();
+S* _Owned initS();
 
-void test1(R* owned r) {
+void test1(R* _Owned r) {
     S tmp1 = *r->sp;
     S tmp2 = r->s;
 } // expected-error {{memory leak of value: `r`}}
   // expected-error@-1 {{field memory leak of value: `r`, r.sp is leak}}
 
-void test2(R* owned r) {
+void test2(R* _Owned r) {
     S tmp1 = *r->sp;
     S tmp2 = r->s;
-    safe_free((void* owned)r); // expected-error {{invalid cast to `void * owned` of not all moved value: `r`, r.sp is owned}}
+    safe_free((void* _Owned)r); // expected-error {{invalid cast to `void * _Owned` of not all moved value: `r`, r.sp is _Owned}}
 }
 
-void test3(R* owned r) {
+void test3(R* _Owned r) {
     S tmp1 = *r->sp;
     S tmp2 = r->s;
-    safe_free((void* owned)r->sp);
+    safe_free((void* _Owned)r->sp);
 } // expected-error {{memory leak of value: `r`}}
 
-void test4(R* owned r) {
-    S* owned sp = r->sp;
+void test4(R* _Owned r) {
+    S* _Owned sp = r->sp;
     S tmp2 = r->s;
-    safe_free((void* owned)r);
+    safe_free((void* _Owned)r);
 } // expected-error {{memory leak of value: `sp`}}
   // expected-error@-1 {{field memory leak of value: `sp`, sp.a is leak}}
 
@@ -51,26 +51,26 @@ void test5(R r) {
 void test6(R r) {
     S tmp1 = *r.sp;
     S tmp2 = r.s;
-    safe_free((void* owned)r.sp);
+    safe_free((void* _Owned)r.sp);
 }
 
 void test7(R r) {
-    S* owned sp = r.sp;
+    S* _Owned sp = r.sp;
     S tmp2 = r.s;
 } // expected-error {{memory leak of value: `sp`}}
   // expected-error@-1 {{field memory leak of value: `sp`, sp.a is leak}}
 
 void test8(R r) {
-    S* owned sp = r.sp;
+    S* _Owned sp = r.sp;
     S tmp2 = r.s;
     S tmp1 = *sp;
 } // expected-error {{memory leak of value: `sp`}}
 
 void test9(R r) {
-    S* owned sp = r.sp;
+    S* _Owned sp = r.sp;
     S tmp2 = r.s;
     S tmp1 = *sp;
-    safe_free((void* owned)sp);
+    safe_free((void* _Owned)sp);
 }
 
 void test10(R r) {
@@ -82,29 +82,29 @@ void test11(R r) {
     S tmp1 = *r.sp;
     *r.sp = tmp1;
     S tmp2 = {};
-    *r.sp = tmp2; // expected-error {{assign to subfield owned value: `r`, r.sp.a is owned}}
-                  // expected-error@-1 {{assign to part of owned value: `*r.sp`}}
+    *r.sp = tmp2; // expected-error {{assign to subfield _Owned value: `r`, r.sp.a is _Owned}}
+                  // expected-error@-1 {{assign to part of _Owned value: `*r.sp`}}
 } // expected-error {{field memory leak of value: `r`, r.sp, r.s, r.s.a, r.sp.a, *r.sp are leak}}
 
 void test12(R r) {
     S tmp1 = *r.sp;
-    r.sp = initS();  // expected-error {{assign to part of owned value: `r.sp`}}
+    r.sp = initS();  // expected-error {{assign to part of _Owned value: `r.sp`}}
 } // expected-error {{field memory leak of value: `r`, r.sp, r.s, r.s.a, r.sp.a, *r.sp are leak}}
 
-void test13(R* owned r) {
+void test13(R* _Owned r) {
     R tmp = *r;
     *r = tmp;
 } // expected-error {{memory leak of value: `r`}}
   // expected-error@-1 {{field memory leak of value: `r`, r.sp, *r.sp, r.sp.a, r.s, r.s.a are leak}}
 
-void test14(R* owned r) {
+void test14(R* _Owned r) {
     S tmp = *r->sp;
     *r->sp = tmp;
 } // expected-error {{memory leak of value: `r`}}
   // expected-error@-1 {{field memory leak of value: `r`, r.sp, r.s, r.s.a, r.sp.a, *r.sp are leak}}
 
-void test15(R* owned r) {
-    S* owned tmp = r->sp;
+void test15(R* _Owned r) {
+    S* _Owned tmp = r->sp;
     *r->sp = *tmp; // expected-error {{assign to part of moved value: `r.sp`}}
 } // expected-error {{memory leak of value: `tmp`}}
   // expected-error@-1 {{memory leak of value: `r`}}

@@ -475,7 +475,7 @@ KEYWORD(__auto_type                 , KEYALL)
 // BSC keywords
 KEYWORD(async                       , KEYBSC)
 KEYWORD(await                       , KEYBSC)
-KEYWORD(owned                       , KEYBSC)
+KEYWORD(_Owned                       , KEYBSC)
 KEYWORD(_Borrow                     , KEYBSC)
 KEYWORD(trait                       , KEYBSC)
 KEYWORD(impl                        , KEYBSC)

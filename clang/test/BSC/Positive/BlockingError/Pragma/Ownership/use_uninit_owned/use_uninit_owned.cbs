@@ -2,10 +2,10 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-int * owned test() {
+int * _Owned test() {
 	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Euse-uninit-owned"
-	int * owned a;
+	#pragma GCC diagnostic ignored "-Euse-uninit-owned "
+	int * _Owned a;
 	return a;        // use of uninitialized value: `a`
 	#pragma GCC diagnostic pop
 }

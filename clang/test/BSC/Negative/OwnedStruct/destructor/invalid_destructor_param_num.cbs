@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A {    
+_Owned struct A {    
  ~A(A this, int x) { // expected-error {{destructor can only have one parameter}}
   }
 
 };
 
 
-owned struct B<T> {    
+_Owned struct B<T> {    
  ~B(int x,int y) { // expected-error {{the parameter of destructor must be 'B<T> this'}}
   }
 

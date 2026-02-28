@@ -9,7 +9,7 @@ struct RcData<T> {
     unsigned weak_count;
 };
 
-owned struct Rc<T> {
+_Owned struct Rc<T> {
 public:
     RcData<T> * ptr;
 
@@ -27,9 +27,9 @@ public:
 
 _Safe Rc<T> Rc<T>::new(T data) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                    "Can only instantiate Rc with owned struct or copyable type, "
+                    "Can only instantiate Rc with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap T with an owned struct.");
+					"Fix: You can wrap T with an _Owned struct.");
     _Unsafe {
         struct RcData<T> * RcDataPtr = (struct RcData<T> *)malloc(sizeof(struct RcData<T>));
         RcDataPtr->data = data;
@@ -66,7 +66,7 @@ _Safe const T * _Borrow Rc<T>::deref(const This * _Borrow this) {
     }
 }
 
-owned struct Weak<T> {
+_Owned struct Weak<T> {
 public:
     RcData<T> * ptr;
 

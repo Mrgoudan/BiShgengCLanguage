@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
 int const_1 = 10;
-void test3(int *owned p, int x) {
+void test3(int *_Owned p, int x) {
 L1:
   x = x + 1;
   if (x < const_1) goto L1; // expected-error {{invalid code structure, jumping back to previous labels is not allowed}}
-  void *temp = (void *)(void *owned)p;
+  void *temp = (void *)(void *_Owned)p;
 }

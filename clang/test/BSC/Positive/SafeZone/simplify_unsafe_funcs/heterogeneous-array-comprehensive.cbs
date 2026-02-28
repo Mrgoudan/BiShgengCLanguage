@@ -2,7 +2,7 @@
 // expected-no-diagnostics
 
 // Comprehensive tests for heterogeneous function declarations with array arguments
-// Key: _Unsafe versions have NO _Borrow/owned qualifiers, _Safe versions DO
+// Key: _Unsafe versions have NO _Borrow/_Owned qualifiers, _Safe versions DO
 
 // Test 1: Array with const elements to const void*
 _Safe int const_process(const void* _Borrow src, unsigned int size);
@@ -22,14 +22,14 @@ _Safe void test2(void) {
     get_message("hello world");  // String literal auto-borrows in _Safe context
 }
 
-// Test 3: Array to owned pointer parameter
-_Safe void owned_func(int* owned data, int size);
+// Test 3: Array to _Owned pointer parameter
+_Safe void owned_func(int* _Owned data, int size);
 void owned_func(int* data, int size);
 
 _Safe void test3(void) {
     int data[100];
     _Unsafe {
-        owned_func(data, 100);  // Matches _Unsafe: int* (no owned)
+        owned_func(data, 100);  // Matches _Unsafe: int* (no _Owned)
     }
 }
 

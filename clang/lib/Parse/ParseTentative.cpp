@@ -1019,7 +1019,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
     ConsumeToken();
 
 #if ENABLE_BSC
-  if (Tok.isOneOf(tok::kw__Borrow, tok::kw_owned))
+  if (Tok.isOneOf(tok::kw__Borrow, tok::kw__Owned))
     ConsumeToken();
 #endif
 
@@ -1541,7 +1541,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::kw_const:
   case tok::kw_volatile:
 #if ENABLE_BSC
-  case tok::kw_owned:
+  case tok::kw__Owned:
 #endif
     return TPResult::True;
 

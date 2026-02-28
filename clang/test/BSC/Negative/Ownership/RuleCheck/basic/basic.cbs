@@ -1,21 +1,21 @@
 // RUN: %clang_cc1 -verify %s
 
-int * owned initIPO();
-struct S * owned initS();
+int * _Owned initIPO();
+struct S * _Owned initS();
 
 int f1() {
-	int * owned a = initIPO(), * owned b;
+	int * _Owned a = initIPO(), * _Owned b;
 	b = a;
 	return 0; // expected-error {{memory leak of value: `b`}}
 }
 
 int f2() {
-	int * owned a = initIPO(), * owned b = a;
+	int * _Owned a = initIPO(), * _Owned b = a;
 	return 0; // expected-error {{memory leak of value: `b`}}
 }
 
 int f3() {
-	int * owned a = initIPO(), * owned b, * owned c;
+	int * _Owned a = initIPO(), * _Owned b, * _Owned c;
 	b = a;
 	c = b;
 	return 0; // expected-error {{memory leak of value: `c`}}
@@ -23,8 +23,8 @@ int f3() {
 
 int f4() {
 	int flag = 1;
-	int * owned a = initIPO();
-	int * owned b, * owned c;
+	int * _Owned a = initIPO();
+	int * _Owned b, * _Owned c;
 	if (flag) {
 		b = a;
 	} else {
@@ -35,20 +35,20 @@ int f4() {
 
 int f5() {
 	int flag = 1;
-	int * owned a = initIPO();
+	int * _Owned a = initIPO();
 	if (flag) {
-		int * owned b = a;
+		int * _Owned b = a;
 	} else { // expected-error {{memory leak of value: `b`}}
-		int * owned c = a;
+		int * _Owned c = a;
 	} // expected-error {{memory leak of value: `c`}}
 	return 0;
 }
 
 int f6() {
 	int flag = 2;
-	int * owned a = initIPO();
-	int * owned b = initIPO();
-	int * owned c;
+	int * _Owned a = initIPO();
+	int * _Owned b = initIPO();
+	int * _Owned c;
 	switch (flag) {
 		case 1: c = a; break;
 		case 2: c = b; break;
@@ -58,10 +58,10 @@ int f6() {
 }
 
 int f7() {
-	int * owned a = initIPO();
-	int * owned b = initIPO();
+	int * _Owned a = initIPO();
+	int * _Owned b = initIPO();
 	{
-		int * owned c = b;
+		int * _Owned c = b;
 	} // expected-error {{memory leak of value: `c`}}
 	return 0; // expected-error {{memory leak of value: `a`}}
 }
@@ -72,17 +72,17 @@ struct S {
 };
 
 int f8() {
-	struct S * owned s1 = initS();
-	struct S * owned s2 = s1;
+	struct S * _Owned s1 = initS();
+	struct S * _Owned s2 = s1;
 	return 0; // expected-error {{memory leak of value: `s2`}}
 }
 
 int f9() {
-	int * owned a = initIPO();
+	int * _Owned a = initIPO();
 	{
-		int * owned b = a;
+		int * _Owned b = a;
 		{
-			int * owned c = b;
+			int * _Owned c = b;
 		} // expected-error {{memory leak of value: `c`}}
 	}
 	return 0;
@@ -90,23 +90,23 @@ int f9() {
 
 int f10() {
 	int local = 1;
-	int * owned a = (int * owned)&local;
-	int * owned b = a;
+	int * _Owned a = (int * _Owned)&local;
+	int * _Owned b = a;
 	return 0; // expected-error {{memory leak of value: `b`}}
 }
 
-int * owned f11(int * owned a)
+int * _Owned f11(int * _Owned a)
 {
   const int local = 2;
-  const int * owned b = (const int * owned)&local;
+  const int * _Owned b = (const int * _Owned)&local;
   *a -= *b;
   return a; // expected-error {{memory leak of value: `b`}}
 }
 
-int * owned f12(int * owned a)
+int * _Owned f12(int * _Owned a)
 {
   const int local = 1;
-  const int * owned b = (const int * owned)&local;
+  const int * _Owned b = (const int * _Owned)&local;
   *a = *a - *b;
   return a; // expected-error {{memory leak of value: `b`}}
 }

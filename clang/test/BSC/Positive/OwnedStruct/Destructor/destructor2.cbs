@@ -5,9 +5,9 @@
 // RUN: %t-rw.output
 
 void free(void * p);
-owned struct A {
+_Owned struct A {
    int x;
-   char* owned str;
+   char* _Owned str;
   ~A( A this) {
     free((void *)this.str);
   }

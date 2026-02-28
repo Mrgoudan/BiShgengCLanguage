@@ -2,14 +2,14 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-typedef int* owned myInt;
+typedef int* _Owned myInt;
 void test1() {
     int x = 10;
     int* p = &x;
     myInt p1 = (myInt)p;
 } // memory leak of value: `p1`
 
-owned struct S { 
+_Owned struct S { 
 public:
   int a;
 };
@@ -19,8 +19,8 @@ trait T {
 
 impl trait T for S;
 
-void test2(S* owned sp) {
-  trait T* owned t = sp;
+void test2(S* _Owned sp) {
+  trait T* _Owned t = sp;
 } // field memory leak of value: `t`, t.data is leak
 
 // CHECK:      struct S;
@@ -60,10 +60,10 @@ void test2(S* owned sp) {
 // CHECK-NEXT:     myInt p1 = (myInt)p;
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
-// CHECK:      struct __Trait_T_Vtable __owned_struct_S_trait_T = {};
+// CHECK:      struct __Trait_T_Vtable ___Owned_struct_S_trait_T = {};
 // CHECK-EMPTY: 
 // CHECK:      void test2( struct S * sp) {
-// CHECK-NEXT:     struct __Trait_T_Owned t = {sp, &__owned_struct_S_trait_T};
+// CHECK-NEXT:     struct __Trait_T_Owned t = {sp, &___Owned_struct_S_trait_T};
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      void struct_S_D( struct S this) {

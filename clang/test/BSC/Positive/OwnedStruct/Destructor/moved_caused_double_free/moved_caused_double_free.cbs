@@ -6,9 +6,9 @@
 // RUN: %t-rw.output
 // RUN: gcc %t-rw.c -o %t-rw.output
 // expected-no-diagnostics
-owned struct C {};
+_Owned struct C {};
 
-owned struct A {
+_Owned struct A {
 public:
     int* y;
     C x;

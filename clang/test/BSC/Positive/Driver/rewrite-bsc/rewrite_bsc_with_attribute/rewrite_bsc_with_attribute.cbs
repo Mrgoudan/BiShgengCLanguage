@@ -3,10 +3,10 @@
 // RUN: %clang %t-rw.c -I %S -o %t-rw.output
 // RUN: %t-rw.output
 
-_Safe int* owned hack_malloc(void) {
+_Safe int* _Owned hack_malloc(void) {
   int x = 1;
   _Unsafe {
-    int* owned p = (int* owned)&x;
+    int* _Owned p = (int* _Owned)&x;
     return p;
   }
 }
@@ -15,7 +15,7 @@ __attribute__((visibility("default"))) void test1() {
   int* p = (int *)hack_malloc();
   int a = 1;
 }
-owned struct T {
+_Owned struct T {
   __attribute__((unused)) int * a;
 };
 

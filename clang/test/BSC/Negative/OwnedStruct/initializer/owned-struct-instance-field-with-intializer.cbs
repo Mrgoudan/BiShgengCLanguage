@@ -1,21 +1,21 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A {
+_Owned struct A {
     int a = 0; // expected-error {{expected ';' at end of declaration list}}
 };
 
-owned struct B {
+_Owned struct B {
     static int a = 0; // expected-error {{expected ';' at end of declaration list}}
 };
 
-owned struct C {
+_Owned struct C {
     int a() = 0; // expected-error {{expected ';' at end of declaration list}}
 };
 
-owned struct D {
+_Owned struct D {
     int a{0}; // expected-error {{function definition does not declare parameters}}
 };
 
-owned struct E {
+_Owned struct E {
     E(); // expected-error {{expected member name or ';' after declaration specifiers}}
 };

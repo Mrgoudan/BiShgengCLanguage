@@ -2,13 +2,13 @@
 
 struct S {
   int a;
-  int *owned b;
+  int *_Owned b;
 };
 
 void use_mut(int *_Borrow p);
 void use_immut(const int *_Borrow p);
-T *owned safe_malloc<T>(T value);
-void free_owned<T>(T *owned p);
+T *_Owned safe_malloc<T>(T value);
+void free_owned<T>(T *_Owned p);
 
 void test1() {
   int e = 1;

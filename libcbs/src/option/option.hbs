@@ -14,7 +14,7 @@ typedef enum {
 //
 // Type `Option` represents an optional value:
 // every `Option` is either `Some` and contains a value, or `None`, and does not.
-owned struct Option<T> {
+_Owned struct Option<T> {
 // FIXME: makes it private later
 public:
     OptionState state;
@@ -24,7 +24,7 @@ public:
         if (this.state == Some) {
             T* ptr = (T *)this.val;
             _BSC_UNUSED T tmp = *ptr;
-            // IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
+            // IF(`T` isa _Owned struct type) AUTO INSERT: ~T(tmp)
         }
     }
 };
@@ -46,9 +46,9 @@ _Safe _Bool Option<T>::is_some(const Option<T>* _Borrow this) {
 // Creates a `Some` value.
 _Safe Option<T> Option<T>::Some(T t) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                    "Can only instantiate Option with owned struct or copyable type, "
+                    "Can only instantiate Option with _Owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap T with an owned struct.");
+					"Fix: You can wrap T with an _Owned struct.");
     _Unsafe {
         Option<T> o = {
             .state = Some,
@@ -63,9 +63,9 @@ _Safe Option<T> Option<T>::Some(T t) {
 // Creates a `None` value.
 _Safe Option<T> Option<T>::None(void) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                    "Can only instantiate Option with owned struct or copyable type, "
+                    "Can only instantiate Option with _Owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
-				    "Fix: You can wrap T with an owned struct.");
+				    "Fix: You can wrap T with an _Owned struct.");
     _Unsafe {
         Option<T> o = {
             .state = None,

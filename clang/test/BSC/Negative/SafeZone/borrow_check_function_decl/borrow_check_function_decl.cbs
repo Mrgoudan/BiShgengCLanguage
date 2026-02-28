@@ -3,52 +3,52 @@
 // If the function declaration and function implementation are inconsistent,
 // a compilation error is reported
 
-_Safe void test_1(int * owned p);    // expected-note {{previous declaration is here}}
+_Safe void test_1(int * _Owned p);    // expected-note {{previous declaration is here}}
 _Safe void test_1(int * p) {
 }                                   // expected-error@-1 {{conflicting types for 'test_1'}}
 
-_Safe void test_1_0(int * owned p);    // expected-note {{previous declaration is here}}
-_Safe void test_1_0(owned int * p) {   // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+_Safe void test_1_0(int * _Owned p);    // expected-note {{previous declaration is here}}
+_Safe void test_1_0(_Owned int * p) {   // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 }                                     // expected-error@-1 {{conflicting types for 'test_1_0'}}
 
-_Safe void test_1_1(int * owned p);           // expected-note {{previous declaration is here}}
-_Safe void test_1_1(owned int * owned p) {    // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{conflicting types for 'test_1_1'}}
+_Safe void test_1_1(int * _Owned p);           // expected-note {{previous declaration is here}}
+_Safe void test_1_1(_Owned int * _Owned p) {    // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{conflicting types for 'test_1_1'}}
 }
 
-_Safe void test_1_2(int ** owned p);           // expected-note {{previous declaration is here}}
-_Safe void test_1_2(owned int ** owned p) {    // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{conflicting types for 'test_1_2'}}
+_Safe void test_1_2(int ** _Owned p);           // expected-note {{previous declaration is here}}
+_Safe void test_1_2(_Owned int ** _Owned p) {    // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{conflicting types for 'test_1_2'}}
 }
 
-_Safe void test_2(int owned p);      // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-note {{previous declaration is here}}
+_Safe void test_2(int _Owned p);      // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-note {{previous declaration is here}}
 _Safe void test_2(int p) {           // expected-error {{conflicting types for 'test_2'}}
 }
 
-_Safe int * test_3(int * owned p);
+_Safe int * test_3(int * _Owned p);
                                             // expected-note@-1 {{previous declaration is here}}
-_Safe int * owned test_3(int * owned p) {    // expected-error {{conflicting types for 'test_3'}}
+_Safe int * _Owned test_3(int * _Owned p) {    // expected-error {{conflicting types for 'test_3'}}
     return p;
 }
 
-_Safe int * owned test_3_0(int * owned p);                 // expected-note {{previous declaration is here}}
-_Safe owned int * owned test_3_0(owned int * owned p) {    // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{conflicting types for 'test_3_0'}}
+_Safe int * _Owned test_3_0(int * _Owned p);                 // expected-note {{previous declaration is here}}
+_Safe _Owned int * _Owned test_3_0(_Owned int * _Owned p) {    // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{conflicting types for 'test_3_0'}}
     return p;
 }
 
-_Safe int ** owned test_3_1(int ** owned p);                 // expected-note {{previous declaration is here}}
-_Safe owned int ** owned test_3_1(owned int ** owned p) {    // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{conflicting types for 'test_3_1'}}
+_Safe int ** _Owned test_3_1(int ** _Owned p);                 // expected-note {{previous declaration is here}}
+_Safe _Owned int ** _Owned test_3_1(_Owned int ** _Owned p) {    // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{conflicting types for 'test_3_1'}}
     return p;
 }
 
-_Safe int owned test_4(void);                // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-note {{previous declaration is here}}
+_Safe int _Owned test_4(void);                // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-note {{previous declaration is here}}
 _Safe int test_4(void) {                     // expected-error {{conflicting types for 'test_4'}}
     return 0;
 }
 
-_Safe void test_5(int *owned p);             // expected-note {{previous declaration is here}}
+_Safe void test_5(int *_Owned p);             // expected-note {{previous declaration is here}}
 _Safe void test_5(int *_Borrow p) {           // expected-error {{conflicting types for 'test_5'}}
 }
 
-_Safe int * owned test_6(int *owned p);      // expected-note {{previous declaration is here}}
+_Safe int * _Owned test_6(int *_Owned p);      // expected-note {{previous declaration is here}}
 _Safe int * _Borrow test_6(int *_Borrow p) {   // expected-error {{conflicting types for 'test_6'}}
     return p;
 }
@@ -72,41 +72,41 @@ _Safe int *_Borrow test_81(int *_Borrow p);                // expected-note {{pr
 _Safe const int *_Borrow test_81(const int *_Borrow p) {   // expected-error{{conflicting types for 'test_81'}}
 }
 
-void test_9(int * owned p);   // expected-note {{previous declaration is here}}
+void test_9(int * _Owned p);   // expected-note {{previous declaration is here}}
 void test_9(int * p) {    // expected-error{{conflicting types for 'test_9'}}
 }
 
-_Unsafe void test_9_0(int * owned p);     // expected-note {{previous declaration is here}}
+_Unsafe void test_9_0(int * _Owned p);     // expected-note {{previous declaration is here}}
 void test_9_0(int * p) {       // expected-error{{function 'test_9_0' has incompatible _Safe and _Unsafe declarations}}
 }
 
-_Unsafe void test_9_1(int * owned p);// expected-note {{previous declaration is here}}
+_Unsafe void test_9_1(int * _Owned p);// expected-note {{previous declaration is here}}
 _Unsafe void test_9_1(int * p) {   // expected-error{{conflicting types for 'test_9_1'}}
 }
 
-void test_9_2(int * owned p);// expected-note {{previous declaration is here}}
-void test_9_2(owned int * p) {// expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error{{conflicting types for 'test_9_2'}}
+void test_9_2(int * _Owned p);// expected-note {{previous declaration is here}}
+void test_9_2(_Owned int * p) {// expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error{{conflicting types for 'test_9_2'}}
 }
 
-void test_10(int owned p);// expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-note {{previous declaration is here}}
+void test_10(int _Owned p);// expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-note {{previous declaration is here}}
 void test_10(int p) {   // expected-error{{conflicting types for 'test_10'}}
 }
 
-int * owned test_11(int *p);// expected-note {{previous declaration is here}}
-int * owned test_11(int *owned p) {   // expected-error{{conflicting types for 'test_11'}}
+int * _Owned test_11(int *p);// expected-note {{previous declaration is here}}
+int * _Owned test_11(int *_Owned p) {   // expected-error{{conflicting types for 'test_11'}}
     return p;
 }
 
 int test_12(void);// expected-note {{previous declaration is here}}
-int owned test_12(void) {   // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error{{conflicting types for 'test_12'}}
+int _Owned test_12(void) {   // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error{{conflicting types for 'test_12'}}
     return 0;
 }
 
-void test_13(int *owned p);// expected-note {{previous declaration is here}}
+void test_13(int *_Owned p);// expected-note {{previous declaration is here}}
 void test_13(int *_Borrow p) {  // expected-error{{conflicting types for 'test_13'}}
 }
 
-int * owned test_14(int *owned p);  // expected-note {{previous declaration is here}}
+int * _Owned test_14(int *_Owned p);  // expected-note {{previous declaration is here}}
 int * _Borrow test_14(int *_Borrow p) {   // expected-error{{conflicting types for 'test_14'}}
 }
 
@@ -129,11 +129,11 @@ _Safe void test_18(int * _Borrow p);
 void test_18(int * p) {  // ok: mixed mode compatible
 }
 
-_Safe void test_19(int * owned p);
+_Safe void test_19(int * _Owned p);
 void test_19(int * p) {  // ok: mixed mode compatible
 }
 
-_Safe int * owned test_20(int * owned p);
+_Safe int * _Owned test_20(int * _Owned p);
 int * test_20(int * p) {  // ok: mixed mode compatible
     return 0;
 }

@@ -1,54 +1,54 @@
 // RUN: %clang_cc1 -verify %s
 
-void write_error_1(int * owned * owned * owned a) {
+void write_error_1(int * _Owned * _Owned * _Owned a) {
     ***a = 5;
 }// expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
 
-void write_error_2(owned int * owned * owned * owned a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    owned int * owned * owned * owned b = a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    owned int * owned * owned * owned c = a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+void write_error_2(_Owned int * _Owned * _Owned * _Owned a) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned b = a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned c = a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 }
 
-void write_error_3(owned int * owned * owned * owned a) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    owned int * owned * owned * owned b = a; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    owned int * owned * owned * owned c = b; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    owned int * owned * owned * owned d = b; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+void write_error_3(_Owned int * _Owned * _Owned * _Owned a) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned b = a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned c = b; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned d = b; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
 } 
 
-void * owned VoidPtrOwned();
+void * _Owned VoidPtrOwned();
 
 void write_error_4() {
-    void * owned c = VoidPtrOwned();
-    void * owned d = c;
-    void * owned e = c; 
+    void * _Owned c = VoidPtrOwned();
+    void * _Owned d = c;
+    void * _Owned e = c; 
 } 
 
-void f4(int * owned p) {
+void f4(int * _Owned p) {
     int re1;
     re1 = *p;
     return;
 } 
 
-int * owned f5(int * owned p) {
+int * _Owned f5(int * _Owned p) {
     int re1;
     re1 = *p;
     return p;
 }
 
-int * owned * owned f6(int * owned * owned p) {
+int * _Owned * _Owned f6(int * _Owned * _Owned p) {
     int re1;
     re1 = **p;
     return p;
 }
 
-void ufree(void * owned p);
+void ufree(void * _Owned p);
 
-void f8(int * owned * owned * owned p) {
-    int * owned * owned q;
+void f8(int * _Owned * _Owned * _Owned p) {
+    int * _Owned * _Owned q;
     q = *p;
-    ufree((void * owned)p);
+    ufree((void * _Owned)p);
 } 
-void f9(int * owned * owned * owned p) {
-    int * owned q = **p;
-    ufree((void * owned)p); 
+void f9(int * _Owned * _Owned * _Owned p) {
+    int * _Owned q = **p;
+    ufree((void * _Owned)p); 
 } 

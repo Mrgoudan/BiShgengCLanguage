@@ -824,7 +824,7 @@ void Sema::CheckBSCDestructorDeclarator(FunctionDecl *NewFD) {
 
   bool IsEqualType = true;
   if (isa<InjectedClassNameType>(ClassType)) {
-    IsEqualType = ("owned " + ClassType.getAsString()) ==
+    IsEqualType = ("_Owned " + ClassType.getAsString()) ==
                   NewFD->getParamDecl(0)->getType().getAsString();
   } else {
     auto ParamType = NewFD->getParamDecl(0)->getType().getTypePtrOrNull();

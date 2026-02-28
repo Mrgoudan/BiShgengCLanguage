@@ -26,7 +26,7 @@ _Safe void accept_mutable(int *_Borrow); // expected-note 3 {{passing argument t
 // re-_Borrow when return value
 _Safe int *ret_raw(void);
 _Safe const int *_Borrow ret_immutable(const int *_Borrow);
-_Safe int *owned ret_own(void);
+_Safe int *_Owned ret_own(void);
 
 _Safe void raw2immutable(int *ptr) {
     const int *_Borrow cref = ptr; // expected-error {{conversion from type 'int *' to 'const int *_Borrow' is forbidden in the safe zone}}
@@ -34,10 +34,10 @@ _Safe void raw2immutable(int *ptr) {
     const int *_Borrow cref2 = ret_raw(); // expected-error {{conversion from type 'int *' to 'const int *_Borrow' is forbidden in the safe zone}}
 }
 
-_Safe int *owned own2immutable(int *owned ptr) {
-    const int *_Borrow cref = ptr; // expected-error {{conversion from type 'int *owned' to 'const int *_Borrow' is forbidden in the safe zone}}
-    accept_immutable(ptr); // expected-error {{conversion from type 'int *owned' to 'const int *_Borrow' is forbidden in the safe zone}}
-    const int *_Borrow cref2 = ret_own(); // expected-error {{conversion from type 'int *owned' to 'const int *_Borrow' is forbidden in the safe zone}}
+_Safe int *_Owned own2immutable(int *_Owned ptr) {
+    const int *_Borrow cref = ptr; // expected-error {{conversion from type 'int *_Owned' to 'const int *_Borrow' is forbidden in the safe zone}}
+    accept_immutable(ptr); // expected-error {{conversion from type 'int *_Owned' to 'const int *_Borrow' is forbidden in the safe zone}}
+    const int *_Borrow cref2 = ret_own(); // expected-error {{conversion from type 'int *_Owned' to 'const int *_Borrow' is forbidden in the safe zone}}
     return ptr;
 }
 
@@ -54,9 +54,9 @@ _Safe void raw2mutable(int *ptr) {
     int *_Borrow ref2 = ret_raw(); // expected-error {{conversion from type 'int *' to 'int *_Borrow' is forbidden in the safe zone}}
 }
 
-_Safe int *owned own2mutable(int *owned ptr) {
-    int *_Borrow ref = ptr; // expected-error {{conversion from type 'int *owned' to 'int *_Borrow' is forbidden in the safe zone}}
-    accept_mutable(ptr); // expected-error {{conversion from type 'int *owned' to 'int *_Borrow' is forbidden in the safe zone}}
-    int *_Borrow ref2 = ret_own(); // expected-error {{conversion from type 'int *owned' to 'int *_Borrow' is forbidden in the safe zone}}
+_Safe int *_Owned own2mutable(int *_Owned ptr) {
+    int *_Borrow ref = ptr; // expected-error {{conversion from type 'int *_Owned' to 'int *_Borrow' is forbidden in the safe zone}}
+    accept_mutable(ptr); // expected-error {{conversion from type 'int *_Owned' to 'int *_Borrow' is forbidden in the safe zone}}
+    int *_Borrow ref2 = ret_own(); // expected-error {{conversion from type 'int *_Owned' to 'int *_Borrow' is forbidden in the safe zone}}
     return ptr;
 }

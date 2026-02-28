@@ -7,22 +7,22 @@
 // RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 
 int x = 0;
-owned struct A {
+_Owned struct A {
   ~A(A this) {
     x++;
   }
 };
 
 
-owned struct B {
+_Owned struct B {
 };
 
-owned struct C {
+_Owned struct C {
 public:
     A a;
 };
 
-owned struct D {
+_Owned struct D {
 public:
     A a;
     ~D(D this) {
@@ -30,7 +30,7 @@ public:
 };
 
 
-owned struct E {
+_Owned struct E {
 public:
     A *a;
 };

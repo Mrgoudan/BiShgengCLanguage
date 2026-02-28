@@ -170,14 +170,14 @@ struct S {
 
 void test_freeze_ident17(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   int *_Borrow c = &_Mut *b;
   int *d = (int *)b;
 }
 
 void test_freeze_ident18(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   int *_Borrow c = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   use(c);
@@ -185,23 +185,23 @@ void test_freeze_ident18(){
 
 void test_freeze_ident19(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   int *_Borrow c = &_Mut *b; // expected-note {{`*b` is borrowed here}}
-  int *owned d = b; // expected-error {{cannot move out of `b` because it is borrowed}}
+  int *_Owned d = b; // expected-error {{cannot move out of `b` because it is borrowed}}
   use(c);
   int *e = (int *)d;
 }
 
 void test_freeze_ident20(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   const int *_Borrow c = &_Const *b; // expected-note {{`*b` is borrowed here}}
-  int *owned d = b; // expected-error {{cannot move out of `b` because it is borrowed}}
+  int *_Owned d = b; // expected-error {{cannot move out of `b` because it is borrowed}}
   const_use(c);
   int * e = (int *)d;
 }
 
-owned struct F {
+_Owned struct F {
 public:
   int a;
 };
@@ -225,7 +225,7 @@ void test_freeze_ident22(){
 }
 
 struct H {
-  int *owned a;
+  int *_Owned a;
   int b;
 };
 
@@ -233,7 +233,7 @@ void owned_struct_use3(struct H *_Borrow b){}
 
 void test_freeze_ident23(){
   int a = 1;
-  struct H h = {(int *owned)&a, 2};
+  struct H h = {(int *_Owned)&a, 2};
   struct H *_Borrow b = &_Mut h; // expected-note {{`h` is borrowed here}}
   struct H g = h; // expected-error {{cannot move out of `h` because it is borrowed}}
   owned_struct_use3(b);
@@ -244,7 +244,7 @@ void owned_struct_use4(const struct H *_Borrow b){}
 
 void test_freeze_ident24(){
   int a = 1;
-  struct H h = {(int *owned)&a, 2};
+  struct H h = {(int *_Owned)&a, 2};
   const struct H *_Borrow b = &_Const h; // expected-note {{`h` is borrowed here}}
   struct H g = h; // expected-error {{cannot move out of `h` because it is borrowed}}
   owned_struct_use4(b);
@@ -260,7 +260,7 @@ void test_freeze_ident25(){
 
 void test_freeze_ident26(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   int *_Borrow p1 = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   int *_Borrow p2 = p1;
@@ -268,7 +268,7 @@ void test_freeze_ident26(){
 
 void test_freeze_ident27(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   int *_Borrow p1 = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *_Borrow p2 = p1;
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
@@ -277,12 +277,12 @@ void test_freeze_ident27(){
 
 void test_freeze_ident28(){
   int a = 1;
-  int *owned b = (int *owned)&a;
+  int *_Owned b = (int *_Owned)&a;
   int *_Borrow p1 = &_Mut *b; // expected-note {{`*b` is borrowed here}}
                             // expected-note@-1 {{`b` is borrowed here}}
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   int *_Borrow p2 = p1;
-  b = (int *owned)&a; // expected-error {{cannot assign to `b` because it is borrowed}}
+  b = (int *_Owned)&a; // expected-error {{cannot assign to `b` because it is borrowed}}
   d = (int *)b;
   use(p2);
 }

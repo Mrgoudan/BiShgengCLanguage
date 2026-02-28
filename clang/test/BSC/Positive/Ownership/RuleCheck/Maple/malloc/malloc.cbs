@@ -6,13 +6,13 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-void * owned pmalloc(unsigned long long a) {
+void * _Owned pmalloc(unsigned long long a) {
     void * addr;
-    return (void * owned)addr;
+    return (void * _Owned)addr;
 }
 
-void * owned case1() {
-    void * owned a = pmalloc(sizeof(int));
+void * _Owned case1() {
+    void * _Owned a = pmalloc(sizeof(int));
     return a;
 }
 

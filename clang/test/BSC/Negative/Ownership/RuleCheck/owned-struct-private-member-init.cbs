@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-owned struct D{
+_Owned struct D{
     int a ;
     public:
     D init_a(){
@@ -18,8 +18,8 @@ struct C{
     int x;
 };
 
-owned struct C init_a(){ // expected-error {{type of 'struct C' cannot be qualified by 'owned'}}
-   owned struct C c ={2}; // expected-error {{type of 'struct C' cannot be qualified by 'owned'}}
+_Owned struct C init_a(){ // expected-error {{type of 'struct C' cannot be qualified by '_Owned'}}
+   _Owned struct C c ={2}; // expected-error {{type of 'struct C' cannot be qualified by '_Owned'}}
    c.x= 2;
    return c;
 }

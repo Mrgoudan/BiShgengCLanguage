@@ -6,13 +6,13 @@ extern void * malloc(unsigned long);
 extern void free(void *);
 
 struct A {
-    int * owned m;
-    struct A * owned next;
+    int * _Owned m;
+    struct A * _Owned next;
 };
 
-void f1(struct A * owned p) {
-    int * owned pm1 = p->next->next->next->m;
-    int * owned pm2 = p->next->next->next->m; // expected-error {{use of moved value: `p.next.next.next.m`}}
+void f1(struct A * _Owned p) {
+    int * _Owned pm1 = p->next->next->next->m;
+    int * _Owned pm2 = p->next->next->next->m; // expected-error {{use of moved value: `p.next.next.next.m`}}
 } // expected-error {{memory leak of value: `pm2`}}
   // expected-error@-1 {{memory leak of value: `pm1`}}
   // expected-error@-2 {{memory leak of value: `p`}}

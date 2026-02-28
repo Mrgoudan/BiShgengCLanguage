@@ -8,13 +8,13 @@
 
 #include <stdlib.h>
 
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T* _Owned)p;
 }
 
-void free_owned<T>(T* owned p) {
+void free_owned<T>(T* _Owned p) {
   free( (void *)p );
 }
 
@@ -24,8 +24,8 @@ struct Foo_No_Owned {
 };
 
 struct Foo_With_Owned {
-  int* owned a;
-  int* owned m;
+  int* _Owned a;
+  int* _Owned m;
 };
 
 struct Foo_with_struct{
@@ -38,16 +38,16 @@ struct Foo_with_struct_with_owned{
   int m;
 };
 
-owned struct Bar_No_Owned {
+_Owned struct Bar_No_Owned {
 public:
   int a;
   int m;
 };
 
-owned struct Bar_With_Owned {
+_Owned struct Bar_With_Owned {
 public:
-  int* owned a;
-  int* owned m;
+  int* _Owned a;
+  int* _Owned m;
   ~Bar_With_Owned(This this) {
     free_owned<int>(this.a);
     free_owned<int>(this.m);
@@ -56,39 +56,39 @@ public:
 
 void struct_field_copy_test() {
   struct Foo_No_Owned foo = {.a = 1, .m = 2};
-  struct Foo_No_Owned *owned foo_owned = safe_malloc<struct Foo_No_Owned>(foo);
+  struct Foo_No_Owned *_Owned foo_owned = safe_malloc<struct Foo_No_Owned>(foo);
   int f = foo_owned->a;
   free_owned<struct Foo_No_Owned>(foo_owned); // error: use of all moved value: `bar_owned`
 }
 
 void struct_field_move_test() {
   struct Foo_With_Owned foo = {.a = safe_malloc<int>(1), .m = safe_malloc<int>(2)};
-  struct Foo_With_Owned *owned foo_owned = safe_malloc<struct Foo_With_Owned>(foo);
-  int* owned f = foo_owned->a;
+  struct Foo_With_Owned *_Owned foo_owned = safe_malloc<struct Foo_With_Owned>(foo);
+  int* _Owned f = foo_owned->a;
   free_owned<int>(f); 
   free_owned<int>(foo_owned->m);
-  free_owned<void>((void* owned)foo_owned);
+  free_owned<void>((void* _Owned)foo_owned);
 }
 
 void struct_field_struct_copy_test() {
   struct Foo_with_struct foo = {.a = {.a = 1, .m = 2}, .m = 3};
-  struct Foo_with_struct *owned foo_owned = safe_malloc<struct Foo_with_struct>(foo);
+  struct Foo_with_struct *_Owned foo_owned = safe_malloc<struct Foo_with_struct>(foo);
   int f = foo_owned->a.a;
   free_owned<struct Foo_with_struct>(foo_owned);
 }
 
 void struct_field_struct_move_test() {
   struct Foo_with_struct_with_owned foo = {.a = {.a = safe_malloc<int>(1), .m = safe_malloc<int>(2)}, .m = 3};
-  struct Foo_with_struct_with_owned *owned foo_owned = safe_malloc<struct Foo_with_struct_with_owned>(foo);
-  int* owned f = foo_owned->a.a;
+  struct Foo_with_struct_with_owned *_Owned foo_owned = safe_malloc<struct Foo_with_struct_with_owned>(foo);
+  int* _Owned f = foo_owned->a.a;
   free_owned<int>(f);
   free_owned<int>(foo_owned->a.m);
-  free_owned<void>((void* owned)foo_owned);
+  free_owned<void>((void* _Owned)foo_owned);
 }
 
 void owned_struct_field_copy_test() {
   Bar_No_Owned bar = {.a = 1, .m = 2};
-  Bar_No_Owned * owned bar_owned = safe_malloc<Bar_No_Owned>(bar);
+  Bar_No_Owned * _Owned bar_owned = safe_malloc<Bar_No_Owned>(bar);
   int f = bar_owned->a;
   free_owned<Bar_No_Owned>(bar_owned);
 }

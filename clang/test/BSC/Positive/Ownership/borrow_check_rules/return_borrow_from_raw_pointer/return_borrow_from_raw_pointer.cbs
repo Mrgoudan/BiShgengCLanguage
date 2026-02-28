@@ -75,7 +75,7 @@ int *_Borrow test14(struct Q *q, int index, int *_Borrow p) {
 // }
 
 struct M {
-  int *owned a;
+  int *_Owned a;
 };
 
 struct N {
@@ -86,7 +86,7 @@ int *_Borrow test16(struct N n, int *_Borrow p) {
   return &_Mut *n.m->a;
 }
 
-int *owned *_Borrow test17(struct N n, int *_Borrow p) {
+int *_Owned *_Borrow test17(struct N n, int *_Borrow p) {
   return &_Mut n.m->a;
 }
 
@@ -98,16 +98,16 @@ int *_Borrow struct N::test19(This* this, int* _Borrow p) {
   return &_Mut *this->m->a;
 }
 
-owned struct S {
+_Owned struct S {
 public:
-  int *owned *_Borrow a;
-  int *owned *_Borrow test20(S *this) {
-    int *owned *_Borrow a = this->a;
+  int *_Owned *_Borrow a;
+  int *_Owned *_Borrow test20(S *this) {
+    int *_Owned *_Borrow a = this->a;
     return a;
   }
 };
 
-int *owned *_Borrow S::test21(This* this) {
+int *_Owned *_Borrow S::test21(This* this) {
   return this->a;
 }
 
@@ -129,7 +129,7 @@ int main() {
   test13(&_Mut q, 5);
   test14(&q, 5, &_Mut local);
   // test15(q, 5, &_Mut local);
-  int *owned c = (int *owned)&local;
+  int *_Owned c = (int *_Owned)&local;
   struct M m = { .a = c };
   struct N n = { .m = &m };
   test16(n, &_Mut local);

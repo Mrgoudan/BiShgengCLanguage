@@ -2,7 +2,7 @@
 
 typedef struct {
     int a;
-    int* owned p;
+    int* _Owned p;
 } ownedA;
 
 typedef struct {
@@ -18,31 +18,31 @@ void test1(int a) {
     return;
 }
 
-//owned callexpr
-int* owned func2(int* owned a) { return a; }
+//_Owned callexpr
+int* _Owned func2(int* _Owned a) { return a; }
 
-void test2(int* owned a, int* owned b) {
-    int* owned res1 = func2(a);
-    int* owned res2 = func2(func2(b));
-    func2(res1);   // expected-error {{memory leak because temporary variable 'func2(res1)' is owned or indirect owned type, please fix it}}
-    func2(func2(res2));    // expected-error {{memory leak because temporary variable 'func2(func2(res2))' is owned or indirect owned type, please fix it}}
+void test2(int* _Owned a, int* _Owned b) {
+    int* _Owned res1 = func2(a);
+    int* _Owned res2 = func2(func2(b));
+    func2(res1);   // expected-error {{memory leak because temporary variable 'func2(res1)' is _Owned or indirect _Owned type, please fix it}}
+    func2(func2(res2));    // expected-error {{memory leak because temporary variable 'func2(func2(res2))' is _Owned or indirect _Owned type, please fix it}}
     return;
 
 }
 
-typedef int* owned MyIntPtr;
+typedef int* _Owned MyIntPtr;
 
 MyIntPtr func3(MyIntPtr a) { return a; }
 
 void test3(MyIntPtr a) {
-    func3(a);   // expected-error {{memory leak because temporary variable 'func3(a)' is owned or indirect owned type, please fix it}}
+    func3(a);   // expected-error {{memory leak because temporary variable 'func3(a)' is _Owned or indirect _Owned type, please fix it}}
     return;
 }
 
 ownedA func4(ownedA a) { return a; }
 void test4(ownedA a) {
-    func4(a);   // expected-error {{memory leak because temporary variable 'func4(a)' is owned or indirect owned type, please fix it}}
-    int b; func4(a); int c;    // expected-error {{memory leak because temporary variable 'func4(a)' is owned or indirect owned type, please fix it}}
+    func4(a);   // expected-error {{memory leak because temporary variable 'func4(a)' is _Owned or indirect _Owned type, please fix it}}
+    int b; func4(a); int c;    // expected-error {{memory leak because temporary variable 'func4(a)' is _Owned or indirect _Owned type, please fix it}}
     return;
 }
 
@@ -52,16 +52,16 @@ typedef struct {
 } C;
 
 typedef struct {
-    int owned db; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int _Owned db; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     int db2;
 } D;
 
 D C::createD(This* this) {
-    D d2 = {.db=(int owned)this->a, .db2=this->a};
+    D d2 = {.db=(int _Owned)this->a, .db2=this->a};
     return d2;
 }
 
 
 void test5(C c1) {
-    c1.createD();   // // expected-error {{memory leak because temporary variable 'C_createD(&c1)' is owned or indirect owned type, please fix it}}
+    c1.createD();   // // expected-error {{memory leak because temporary variable 'C_createD(&c1)' is _Owned or indirect _Owned type, please fix it}}
 }

@@ -2,28 +2,28 @@
 
 trait F {
   int foo(const This* this);
-  int goo(owned This* this); // expected-error {{type of 'This' cannot be qualified by 'owned'}}
-  int hoo(const owned This* this); // expected-error {{type of 'const This' cannot be qualified by 'owned'}}
-  int ioo(This* const owned this);
+  int goo(_Owned This* this); // expected-error {{type of 'This' cannot be qualified by '_Owned'}}
+  int hoo(const _Owned This* this); // expected-error {{type of 'const This' cannot be qualified by '_Owned'}}
+  int ioo(This* const _Owned this);
   int joo(const This* const this);
-  int koo(owned This* owned this); // expected-error {{type of 'This' cannot be qualified by 'owned'}}
-  int loo(owned This* const this); // expected-error {{type of 'This' cannot be qualified by 'owned'}}
-  int moo(const This* owned this);
+  int koo(_Owned This* _Owned this); // expected-error {{type of 'This' cannot be qualified by '_Owned'}}
+  int loo(_Owned This* const this); // expected-error {{type of 'This' cannot be qualified by '_Owned'}}
+  int moo(const This* _Owned this);
 };
 
 int int::foo(const int* this) {
   return 1;
 }
 
-int int::goo(owned int* this) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int int::goo(_Owned int* this) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
   return 1;
 }
 
-int int::hoo(const owned int* this) { // expected-error {{type of 'const int' cannot be qualified by 'owned'}}
+int int::hoo(const _Owned int* this) { // expected-error {{type of 'const int' cannot be qualified by '_Owned'}}
   return 1;
 }
 
-int int::ioo(int* const owned this) {
+int int::ioo(int* const _Owned this) {
   int *p = (int *)this;
   return 1;
 }
@@ -32,16 +32,16 @@ int int::joo(const int* const this) {
   return 1;
 }
 
-int int::koo(owned int* owned this) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int int::koo(_Owned int* _Owned this) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
   int *p = (int *)this;
   return 1;
 }
 
-int int::loo(owned int* const this) { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int int::loo(_Owned int* const this) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
   return 1;
 }
 
-int int::moo(const int* owned this) {
+int int::moo(const int* _Owned this) {
   int *p = (int *)this;
   return 1;
 }

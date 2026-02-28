@@ -3,13 +3,13 @@
 trait F {
   _Unsafe int foo(This* this);
   _Unsafe int goo(This* this);
-  _Unsafe int* owned hoo(This* owned this);
+  _Unsafe int* _Owned hoo(This* _Owned this);
 };
 
 trait G {
-  _Safe int* owned ioo(This* owned this);
-  _Safe int* owned joo(This* owned this);
-  _Safe int* owned koo(This* owned this);
+  _Safe int* _Owned ioo(This* _Owned this);
+  _Safe int* _Owned joo(This* _Owned this);
+  _Safe int* _Owned koo(This* _Owned this);
 };
 
 _Unsafe int int::foo(int* this) { 
@@ -20,26 +20,26 @@ int int::goo(int* this) {   // OK
   return 1;
 }
 
-_Safe int* owned int::hoo(int* owned this) {   // OK
+_Safe int* _Owned int::hoo(int* _Owned this) {   // OK
   return this;
 }
 
-_Safe int* owned int::ioo(int* owned this) {  // OK
+_Safe int* _Owned int::ioo(int* _Owned this) {  // OK
   return this;
 }
 
-_Unsafe int* owned int::joo(int* owned this) {
+_Unsafe int* _Owned int::joo(int* _Owned this) {
   return this;
 }
 
-int* owned int::koo(int* owned this) {
+int* _Owned int::koo(int* _Owned this) {
   return this;
 }
 
 impl trait F for int; 
 
-impl trait G for int; // expected-error {{conversion from type 'int *owned (*)(void *owned)' to '_Safe int *owned (*)(void *owned)' is forbidden}}
-                      // expected-error@-1 {{conversion from type 'int *owned (*)(void *owned)' to '_Safe int *owned (*)(void *owned)' is forbidden}}
+impl trait G for int; // expected-error {{conversion from type 'int *_Owned (*)(void *_Owned)' to '_Safe int *_Owned (*)(void *_Owned)' is forbidden}}
+                      // expected-error@-1 {{conversion from type 'int *_Owned (*)(void *_Owned)' to '_Safe int *_Owned (*)(void *_Owned)' is forbidden}}
 int main() {
   int a = 1;
   int *p = &a;

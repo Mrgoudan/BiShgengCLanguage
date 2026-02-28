@@ -2,15 +2,15 @@
 
 struct A {};
 
-void func4(int * owned a) {
+void func4(int * _Owned a) {
 	return;
 	int * b = (int *)a;
 } // expected-error {{memory leak of value: `a`}}
 
 void func5(int num) {
 	int b = 5;
-	int * owned p = (int * owned)&b;
-	int * owned a;
+	int * _Owned p = (int * _Owned)&b;
+	int * _Owned a;
 	if (num > 0) {
 		a = p;
 	} else {
@@ -18,16 +18,16 @@ void func5(int num) {
 	}
 } // expected-error {{memory leak of value: `a`}}
 
-void func(struct A * owned a) {
-	struct A * owned b = a;
+void func(struct A * _Owned a) {
+	struct A * _Owned b = a;
 } // expected-error {{memory leak of value: `b`}}
 
-void func9(int * owned a) {
+void func9(int * _Owned a) {
 	{
 		int * p = (int *)a;
 	}
 	{
-		int * owned q = a; // expected-error {{use of moved value: `a`}}
+		int * _Owned q = a; // expected-error {{use of moved value: `a`}}
 	} // expected-error {{memory leak of value: `q`}}
 }
 

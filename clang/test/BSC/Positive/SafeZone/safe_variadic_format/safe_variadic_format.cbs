@@ -12,21 +12,21 @@ extern void free(void *);
 extern void exit(int);
 
 // Helper functions for memory management
-_Safe T *owned safe_malloc<T>(T t) {
+_Safe T *_Owned safe_malloc<T>(T t) {
     _Unsafe {
         T *addr = (T *)malloc(sizeof(T));
         if (!addr) {
             exit(1);
         }
         *addr = t;
-        return (T *owned)addr;
+        return (T *_Owned)addr;
     }
 }
 
-_Safe T *owned safe_free<T>(T *owned p) {
+_Safe T *_Owned safe_free<T>(T *_Owned p) {
     _Unsafe {
         free((void *)p);
-        T *owned null_ptr = (T *owned)(void *)0;
+        T *_Owned null_ptr = (T *_Owned)(void *)0;
         return null_ptr;
     }
 }
@@ -68,7 +68,7 @@ _Safe void test_with_borrow_ptr(int * _Borrow ptr) {
     log_with_borrow(&_Const *"Value: %d", *ptr);
 }
 
-// Test that variadic functions can be declared with owned pointer parameters in signature
+// Test that variadic functions can be declared with _Owned pointer parameters in signature
 struct Point {
     int x;
     int y;

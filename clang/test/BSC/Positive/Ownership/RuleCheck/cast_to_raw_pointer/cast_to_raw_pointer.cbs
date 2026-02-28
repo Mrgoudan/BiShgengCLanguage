@@ -13,32 +13,32 @@ unsigned char *call(unsigned char *p) {
   return p;
 }
 
-S *owned test1(void *owned p) {
-  return (S *owned)(void *)((unsigned char *)p + 5);
+S *_Owned test1(void *_Owned p) {
+  return (S *_Owned)(void *)((unsigned char *)p + 5);
 }
 
-S *owned test2(void *owned p) {
-  return (S *owned)(S *)(unsigned char *)p;
+S *_Owned test2(void *_Owned p) {
+  return (S *_Owned)(S *)(unsigned char *)p;
 }
 
-S *owned test3(void *owned p) {
-  return (S *owned)(void *)(unsigned char *)p;
+S *_Owned test3(void *_Owned p) {
+  return (S *_Owned)(void *)(unsigned char *)p;
 }
 
-S *owned test4(void *owned p) {
-  return (S *owned)p;
+S *_Owned test4(void *_Owned p) {
+  return (S *_Owned)p;
 }
 
-S *owned test5(void *owned p) {
-  return (S *owned)(void *)(call((unsigned char *)p + 5) + 6);
+S *_Owned test5(void *_Owned p) {
+  return (S *_Owned)(void *)(call((unsigned char *)p + 5) + 6);
 }
 
-int test6(void *owned p) {
+int test6(void *_Owned p) {
   return (int)*call((unsigned char *)p + 5) + 10;
 }
 
-S *owned test7(void *owned p) {
-  return (S *owned)(void *)((unsigned char *)p - 5);
+S *_Owned test7(void *_Owned p) {
+  return (S *_Owned)(void *)((unsigned char *)p - 5);
 }
 
 int main(void) {

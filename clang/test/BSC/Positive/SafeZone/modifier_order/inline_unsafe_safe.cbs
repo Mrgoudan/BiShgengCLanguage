@@ -2,7 +2,7 @@
 
 // expected-no-diagnostics
 
-owned struct S<T> {
+_Owned struct S<T> {
 private:
   T *ptr;
 public:
@@ -14,7 +14,7 @@ inline _Unsafe T *S<T>::pointer(const This *_Borrow this) {
   return this->ptr;
 }
 
-owned struct B<T> {
+_Owned struct B<T> {
 private:
   T val; 
 public:

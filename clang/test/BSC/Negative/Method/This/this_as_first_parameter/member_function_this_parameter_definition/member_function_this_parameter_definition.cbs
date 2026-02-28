@@ -3,7 +3,7 @@
 struct Foo {
   int a;
 };
-owned struct Bar {
+_Owned struct Bar {
 public:
   int a;
 };
@@ -23,16 +23,16 @@ int struct Foo::getC(const This _Borrow this) { // expected-error {{_Borrow type
 int struct Foo::getC_2(const struct Foo _Borrow this) { // expected-error {{_Borrow type requires a pointer or reference ('struct Foo' is invalid)}}
   return 0;
 }
-int struct Foo::getD(This owned this) { // expected-error {{type of 'This' cannot be qualified by 'owned'}} 
+int struct Foo::getD(This _Owned this) { // expected-error {{type of 'This' cannot be qualified by '_Owned'}} 
   return 0;
 }
-int struct Foo::getD_2(struct Foo owned this) { // expected-error {{type of 'struct Foo' cannot be qualified by 'owned'}}
+int struct Foo::getD_2(struct Foo _Owned this) { // expected-error {{type of 'struct Foo' cannot be qualified by '_Owned'}}
   return 0;
 }
 
 
 
-// error member functions definition for owned struct
+// error member functions definition for _Owned struct
 int Bar::getA(const This this) { // ok
   return 0;
 }
@@ -45,11 +45,11 @@ int Bar::getB_2(Bar this) { // ok
   return 0;
 }
 
-int Bar::getC(This owned this) { // expected-error {{type of 'This' cannot be qualified by 'owned'}} 
+int Bar::getC(This _Owned this) { // expected-error {{type of 'This' cannot be qualified by '_Owned'}} 
   return 0;
 }
 
-// expected-warning@+1 {{duplicate 'owned' declaration specifier}}
-int Bar::getC_2(Bar owned this) { 
+// expected-warning@+1 {{duplicate '_Owned' declaration specifier}}
+int Bar::getC_2(Bar _Owned this) { 
   return 0;
 }

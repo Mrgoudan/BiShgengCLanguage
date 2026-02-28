@@ -1,47 +1,47 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-// Test nullptr with BSC owned/_Borrow qualifiers
+// Test nullptr with BSC _Owned/_Borrow qualifiers
 
-// nullptr with owned pointers
+// nullptr with _Owned pointers
 void test_nullptr_owned(void) {
-  int * owned po1 = (int * owned)nullptr;
-  void * owned po2 = (void * owned)nullptr;
-  char * owned po3 = (char * owned)nullptr;
+  int * _Owned po1 = (int * _Owned)nullptr;
+  void * _Owned po2 = (void * _Owned)nullptr;
+  char * _Owned po3 = (char * _Owned)nullptr;
 }
 
-// nullptr with const owned
+// nullptr with const _Owned
 void test_nullptr_const_owned(void) {
-  const int * owned cpo1 = (const int * owned)nullptr;
-  const void * owned cpo2 = (const void * owned)nullptr;
+  const int * _Owned cpo1 = (const int * _Owned)nullptr;
+  const void * _Owned cpo2 = (const void * _Owned)nullptr;
 }
 
-// nullptr in safe zone with owned
+// nullptr in safe zone with _Owned
 _Safe void test_safe_nullptr_owned(void) {
-  int * owned po = (int * owned)nullptr;
-  void * owned vo = (void * owned)nullptr;
+  int * _Owned po = (int * _Owned)nullptr;
+  void * _Owned vo = (void * _Owned)nullptr;
 }
 
-// nullptr casts with owned qualifiers
+// nullptr casts with _Owned qualifiers
 void test_nullptr_owned_casts(void) {
-  void * owned vo = (void * owned)nullptr;
-  int * owned io = (int * owned)nullptr;
+  void * _Owned vo = (void * _Owned)nullptr;
+  int * _Owned io = (int * _Owned)nullptr;
 }
 
-// Struct with owned pointers initialized to nullptr
+// Struct with _Owned pointers initialized to nullptr
 struct OwnedPointers {
-  int * owned po;
-  void * owned vo;
+  int * _Owned po;
+  void * _Owned vo;
 };
 
 void test_struct_owned_nullptr(void) {
   struct OwnedPointers op = {
-    (int * owned)nullptr,
-    (void * owned)nullptr
+    (int * _Owned)nullptr,
+    (void * _Owned)nullptr
   };
 
   struct OwnedPointers op2 = {
-    (int * owned)nullptr,
-    (void * owned)nullptr
+    (int * _Owned)nullptr,
+    (void * _Owned)nullptr
   };
 }

@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -verify %s
 
 struct R {
-    int * owned p;
+    int * _Owned p;
 };
 
-int * owned foo(int * owned a) {
+int * _Owned foo(int * _Owned a) {
     return a;
 }
-int owned foo1() { // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned * _Borrow b = &_Mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int _Owned foo1() { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned a = 1; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned * _Borrow b = &_Mut a;  // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     return *b; // expected-error {{_Borrow type does not allow move ownership}}
 }
 
@@ -21,26 +21,26 @@ void foo2() {
     return;
 }
 
-int owned test_use(int owned a){ // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{type of 'int' cannot be qualified by 'owned'}}
+int _Owned test_use(int _Owned a){ // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     return a;
 }
 int foo3() {
-    int owned a = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned * _Borrow b = &_Mut a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
-    int owned c = test_use(*b);     // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{_Borrow type does not allow move ownership}}
+    int _Owned a = 1; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned * _Borrow b = &_Mut a;  // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    int _Owned c = test_use(*b);     // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{_Borrow type does not allow move ownership}}
     int d = (int)a;
     return 0;
 }
 
 struct S1 {
-    int owned * _Borrow a;  // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int _Owned * _Borrow a;  // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     int * b;
 };
 int foo4() {
-    int owned m = 1; // expected-error {{type of 'int' cannot be qualified by 'owned'}}
+    int _Owned m = 1; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
     int n = 1;
     struct S1 k = {&_Mut m, &n};
-    int owned a = *(k.a);          // expected-error {{type of 'int' cannot be qualified by 'owned'}} expected-error {{_Borrow type does not allow move ownership}}
+    int _Owned a = *(k.a);          // expected-error {{type of 'int' cannot be qualified by '_Owned'}} expected-error {{_Borrow type does not allow move ownership}}
     int b = *(k.b);
 }
 
@@ -51,8 +51,8 @@ struct S2 {
 int foo5() {
     int m = 1;
     int n = 1;
-    struct S2 owned * _Borrow k = &_Mut(struct S2 owned){&m, &n};  // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}}
-    struct S2 owned a = *(k);   // expected-error {{type of 'struct S2' cannot be qualified by 'owned'}} expected-error {{_Borrow type does not allow move ownership}}
+    struct S2 _Owned * _Borrow k = &_Mut(struct S2 _Owned){&m, &n};  // expected-error {{type of 'struct S2' cannot be qualified by '_Owned'}}
+    struct S2 _Owned a = *(k);   // expected-error {{type of 'struct S2' cannot be qualified by '_Owned'}} expected-error {{_Borrow type does not allow move ownership}}
 }
 
 
@@ -81,7 +81,7 @@ void test() {
 	int a = 0;
     int *p1 = &a;
 	const int* p2 = &a;
-	int * owned p3 = (int * owned)&a;
+	int * _Owned p3 = (int * _Owned)&a;
 
 	int * _Borrow b1 = &_Mut *p1; // legal
     const int * _Borrow b2 = &_Mut *p2; // expected-error {{the expression after '&_Mut' must be modifiable}}
@@ -90,8 +90,8 @@ void test() {
     const int * _Borrow b5 = &_Const *p2; // legal
     const int * _Borrow b6 = &_Const *p3; // legal
 
-	int *owned * _Borrow b7 =&_Mut p3; // legal
-	const int *owned * _Borrow b8 =&_Const p3; // legal
+	int *_Owned * _Borrow b7 =&_Mut p3; // legal
+	const int *_Owned * _Borrow b8 =&_Const p3; // legal
 
     // T 是 copy 语义，p 是 immut 借用
 	int a1 = *b4; // legal
@@ -100,22 +100,22 @@ void test() {
     int a2 = *b1; // legal
     *b1 = a2; // legal
     // T 是 move 语义，p 是 immut 借用
-    int * owned a3 = *b8; // expected-error {{_Borrow type does not allow move ownership}}
-    int * owned a4 = ((int * owned)*b8); // expected-error {{_Borrow type does not allow move ownership}}
+    int * _Owned a3 = *b8; // expected-error {{_Borrow type does not allow move ownership}}
+    int * _Owned a4 = ((int * _Owned)*b8); // expected-error {{_Borrow type does not allow move ownership}}
     *b8 = p3; // expected-error {{read-only variable is not assignable}}
     // T 是 move 语义，p 是 mut 借用
     a3 = *b7; // expected-error {{_Borrow type does not allow move ownership}}
-    a3 = ((int * owned)*b7); // expected-error {{_Borrow type does not allow move ownership}}
+    a3 = ((int * _Owned)*b7); // expected-error {{_Borrow type does not allow move ownership}}
     *b7; // expected-warning {{expression result unused}}
     *b7 = a3; // legal
 
     struct R r = {p3};
     struct R * _Borrow b9 = &_Mut r;
     struct R r1 = *b9; // legal
-    int * owned *_Borrow b10 = &_Mut r.p;
+    int * _Owned *_Borrow b10 = &_Mut r.p;
     a4 = *b10; // expected-error {{_Borrow type does not allow move ownership}}
 
-    foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is owned or indirect owned type, please fix it}}
+    foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is _Owned or indirect _Owned type, please fix it}}
               // expected-error@-1 {{_Borrow type does not allow move ownership}}
     test1<int>();
     test2<int>(); // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}

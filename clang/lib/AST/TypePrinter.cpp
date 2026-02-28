@@ -192,7 +192,7 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
   if ((TypeQuals & Qualifiers::Owned) &&
       (!IsRewriteBSC || MangleWithSafeQualifier)) {
     if (appendSpace) OS << ' ';
-    OS << "owned";
+    OS << "_Owned";
     appendSpace = true;
   }
   if ((TypeQuals & Qualifiers::Borrow) &&

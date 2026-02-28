@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -verify %s
 
 struct C {
-  int * owned c1;
-  int * owned c2;
+  int * _Owned c1;
+  int * _Owned c2;
 };
 
 struct B {
-  int * owned b1;
-  int * owned b2;
-  struct C * owned b3;
+  int * _Owned b1;
+  int * _Owned b2;
+  struct C * _Owned b3;
 };
 
 struct A {
   struct B a1;
-  struct B * owned a2;
+  struct B * _Owned a2;
   struct B a3;
   struct A * a5;
 };
@@ -29,7 +29,7 @@ void func2(struct A a) {
 void func3(struct A * a) {
 }
 
-void func4(struct A * owned a) {
+void func4(struct A * _Owned a) {
 } // expected-error {{memory leak of value: `a`}}
   // expected-error@-1 {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3... are leak}}
 
@@ -39,7 +39,7 @@ void func6(struct A a) {
 
 void func7(struct A *a) {
   int num = 1;
-  a->a1.b2 = (int *owned)&num;
+  a->a1.b2 = (int *_Owned)&num;
 }
 
 void func8(struct A * a) {
@@ -48,7 +48,7 @@ void func8(struct A * a) {
 }
 
 
-//------------------owned-->allmoved--------------------
+//------------------owned -->allmoved--------------------
 void func9(struct A a) {
   struct A p = a;
 } // expected-error {{field memory leak of value: `p`, p.a1.b1, p.a1.b2, p.a1.b3, p.a1.b3.c1, p.a1.b3.c2, p.a2, p.a2.b1, p.a2.b2, p.a2.b3... are leak}}
@@ -63,14 +63,14 @@ void func11(struct A a) {
   p = a;
 } // expected-error {{field memory leak of value: `p`, p.a1.b1, p.a1.b2, p.a1.b3, p.a1.b3.c1, p.a1.b3.c2, p.a2, p.a2.b1, p.a2.b2, p.a2.b3... are leak}}
 
-void func12(struct A * owned a) {
-  struct A * owned p = a;
+void func12(struct A * _Owned a) {
+  struct A * _Owned p = a;
 } // expected-error {{memory leak of value: `p`}}
   // expected-error@-1 {{field memory leak of value: `p`, p.a1.b1, p.a1.b2, p.a1.b3, p.a1.b3.c1, p.a1.b3.c2, p.a2, p.a2.b1, p.a2.b2, p.a2.b3... are leak}}
 
-void func13(struct B* owned bp) {
+void func13(struct B* _Owned bp) {
   struct B b = *bp;
-  struct B* owned bo = bp; // expected-error {{use of all moved value: `bp`}}
+  struct B* _Owned bo = bp; // expected-error {{use of all moved value: `bp`}}
 } // expected-error {{memory leak of value: `b`}}
   // expected-error@-1 {{memory leak of value: `bo`}}
   // expected-error@-2 {{field memory leak of value: `bo`, bo.b1, bo.b2, bo.b3, bo.b3.c1, bo.b3.c2 are leak}}
@@ -81,19 +81,19 @@ void func14(struct B b) {
   struct C *p3 = (struct C *)b.b3;
 }
 
-//-----------------------------owned-->partialMoved---------------------------
+//-----------------------------owned -->partialMoved---------------------------
 void func15(struct A a) {
   struct C *p = (struct C *)a.a1.b3;
 } // expected-error {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3, a.a2.b3.c1, a.a2.b3.c2, a.a3.b1... are leak}}
 
 void func16(struct A a) {
-  struct C *owned p = a.a1.b3;
+  struct C *_Owned p = a.a1.b3;
 } // expected-error {{memory leak of value: `p`}}
   // expected-error@-1 {{field memory leak of value: `p`, p.c1, p.c2 are leak}}
   // expected-error@-2 {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3, a.a2.b3.c1, a.a2.b3.c2, a.a3.b1... are leak}}
 
 struct A func17(struct A a) {
-  struct C *owned p = a.a1.b3;
+  struct C *_Owned p = a.a1.b3;
   return a; // expected-error {{use of partially moved value: `a`, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2 are moved}} expected-error {{memory leak of value: `p`}} expected-error {{field memory leak of value: `p`, p.c1, p.c2 are leak}}
 }
 
@@ -103,7 +103,7 @@ void func18(struct A a) {
 } // expected-error {{field memory leak of value: `b`, b.b1, b.b2, b.b3, b.b3.c1, b.b3.c2 are leak}}
   // expected-error@-1 {{field memory leak of value: `a`, a.a2, a.a2.b1, a.a2.b2, a.a2.b3, a.a2.b3.c1, a.a2.b3.c2, a.a3.b1, a.a3.b2, a.a3.b3... are leak}}
 
-int *owned func19(struct A a) {
+int *_Owned func19(struct A a) {
   return a.a1.b1;
 } // expected-error {{field memory leak of value: `a`, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3, a.a2.b3.c1... are leak}}
 
@@ -113,7 +113,7 @@ struct B func20(struct A a) {
 
 void func21(struct A a) {
   int *p1 = (int *)a.a1.b1;
-  int *owned p2 = a.a2->b2;
+  int *_Owned p2 = a.a2->b2;
 } // expected-error {{field memory leak of value: `a`, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b3, a.a2.b3.c1, a.a2.b3.c2... are leak}}
   // expected-error@-1 {{memory leak of value: `p2`}}
 
@@ -123,35 +123,35 @@ void func22(struct A a) {
   int *p3 = (int *)(a.a1.b1); // expected-error {{use of moved value: `a.a1.b1`}}
 } // expected-error {{field memory leak of value: `a`, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b2, a.a2.b3, a.a2.b3.c1, a.a2.b3.c2... are leak}}
 
-//------------------------------owned-->owned--------------------------
+//------------------------------owned -->_Owned--------------------------
 
 void func23(struct A a) {
   int num = 1;
-  a.a1.b2 = (int *owned)&num; // expected-error {{assign to part of owned value: `a.a1.b2`}}
+  a.a1.b2 = (int *_Owned)&num; // expected-error {{assign to part of _Owned value: `a.a1.b2`}}
 } // expected-error {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3... are leak}}
 
 void func24(struct B b) {
   int num = 1;
   int * p1 = (int*)(b.b1);
-  b.b1 = (int *owned)&num;
+  b.b1 = (int *_Owned)&num;
 } // expected-error {{field memory leak of value: `b`, b.b2, b.b3, b.b3.c1, b.b3.c2, b.b1 are leak}}
 
 void func25(struct A a, struct B b) {
   int * p = (int*)(a.a1.b1);
-  a.a1 = b; // expected-error {{assign to subfield owned value: `a`, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2 are owned}}
+  a.a1 = b; // expected-error {{assign to subfield _Owned value: `a`, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2 are _Owned}}
 } // expected-error {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3... are leak}}
 
-//--------------------------owned-->null-----------------------------
-void func26(struct A *owned a) {
-  a = (struct A* owned)(void *owned)NULL; // expected-error {{assign to owned value: `a`}}
+//--------------------------owned -->null-----------------------------
+void func26(struct A *_Owned a) {
+  a = (struct A* _Owned)(void *_Owned)NULL; // expected-error {{assign to _Owned value: `a`}}
 }
 
 void func27(struct A a) {
-  a.a2 = (struct B* owned)(void *owned)NULL; // expected-error {{assign to part of owned value: `a.a2`}}
+  a.a2 = (struct B* _Owned)(void *_Owned)NULL; // expected-error {{assign to part of _Owned value: `a.a2`}}
 } // expected-error {{field memory leak of value: `a`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a3.b1, a.a3.b2, a.a3.b3, a.a3.b3.c1... are leak}}
 
-//----------------------------------uninitialized-->owned----------------------------------
-void func28(struct C * owned c) {
+//----------------------------------uninitialized-->_Owned----------------------------------
+void func28(struct C * _Owned c) {
   struct A a;
   a.a1.b3 = c;
 } // expected-error {{field memory leak of value: `a`, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2 are leak}}
@@ -189,7 +189,7 @@ void func33() {
 struct A func34(struct A a) {
   struct A a1 = a;
   int num = 0;
-  a.a1.b1 = (int *owned)&num;
+  a.a1.b1 = (int *_Owned)&num;
   return a1;
 } // expected-error {{field memory leak of value: `a`, a.a1.b1 is leak}}
 
@@ -200,9 +200,9 @@ void func35(struct A a) {
 } // expected-error {{field memory leak of value: `p1`, p1.a1.b1, p1.a1.b2, p1.a1.b3, p1.a1.b3.c1, p1.a1.b3.c2, p1.a2, p1.a2.b1, p1.a2.b2, p1.a2.b3... are leak}}
   // expected-error@-1 {{field memory leak of value: `p`, p.a1.b1, p.a1.b2, p.a1.b3, p.a1.b3.c1, p.a1.b3.c2, p.a2, p.a2.b1, p.a2.b2, p.a2.b3... are leak}}
 
-void func37(struct A *owned a) {
-  struct A *owned p = a;
-  struct A *owned p1 = a; // expected-error {{use of moved value: `a`}}
+void func37(struct A *_Owned a) {
+  struct A *_Owned p = a;
+  struct A *_Owned p1 = a; // expected-error {{use of moved value: `a`}}
 } // expected-error {{memory leak of value: `p1`}}
   // expected-error@-1 {{field memory leak of value: `p1`, p1.a1.b1, p1.a1.b2, p1.a1.b3, p1.a1.b3.c1, p1.a1.b3.c2, p1.a2, p1.a2.b1, p1.a2.b2, p1.a2.b3... are leak}}
   // expected-error@-2 {{memory leak of value: `p`}}

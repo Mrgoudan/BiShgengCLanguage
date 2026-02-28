@@ -26,7 +26,7 @@ void test1() {
     float * _Borrow p1 = &_Mut y;
     myInt p3 = p;
 
-    int * owned p5 = (int * owned)&x1;
+    int * _Owned p5 = (int * _Owned)&x1;
     const int * _Borrow b6 = &_Const *p3;
     p7 = &_Mut *p;
     int * p8 = (int *)p5;

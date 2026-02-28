@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A {    
+_Owned struct A {    
    ~A(A this){
    }
    public:
    int x; 
 };
-owned struct B {    
+_Owned struct B {    
    public:
    int x; 
    ~B(B this){}

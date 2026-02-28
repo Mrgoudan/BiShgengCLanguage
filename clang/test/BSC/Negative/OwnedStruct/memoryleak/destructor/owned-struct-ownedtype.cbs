@@ -4,14 +4,14 @@ void * malloc(unsigned long);
 void free(void *);
 
 struct A {
-        long * owned b;
+        long * _Owned b;
 };
 
-owned struct S {
+_Owned struct S {
 public:
-        short * owned x;
+        short * _Owned x;
         struct A y;
         ~S(S this) {
                 free((void *)this.x);
-        } // expected-error {{destructor for`owned struct S` incorrect, this.y.b is of owned type and needs to be handled manually}}
+        } // expected-error {{destructor for`_Owned struct S` incorrect, this.y.b is of _Owned type and needs to be handled manually}}
 };

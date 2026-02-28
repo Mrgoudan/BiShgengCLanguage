@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 
 #include <stdio.h>
-typedef owned struct S {
+typedef _Owned struct S {
     public:
         int a;
 }S1;
@@ -33,7 +33,7 @@ void int::dump2(This this) {
     printf("%d\n", this);
 }
 
-owned struct G<T> {
+_Owned struct G<T> {
     public:
         T d;
 };

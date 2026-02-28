@@ -13,8 +13,8 @@ void test1() {
 }
 
 void use_mut(int *_Borrow p);
-void free_owned<T>(T* owned p);
-void test2(int* owned oriPtr) {
+void free_owned<T>(T* _Owned p);
+void test2(int* _Owned oriPtr) {
   int *_Borrow p = &_Mut *oriPtr;
   free_owned<int>(oriPtr); // cannot move out of `oriPtr` because it is borrowed
   use_mut(p);

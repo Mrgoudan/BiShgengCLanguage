@@ -8,7 +8,7 @@ __attribute__((objc_root_class))
 // rdar://19904648
 // The diagnostic will try to find a suitable macro name to use (instead of raw __attribute__).
 // While iterating through the macros it would dereference a null pointer if the macro was undefined in the same module as it was originally defined in.
-@property (assign) id newFile; // expected-error {{property follows Cocoa naming convention for returning 'owned' objects}} \
+@property (assign) id newFile; // expected-error {{property follows Cocoa naming convention for returning '_Owned' objects}} \
                                // expected-note {{explicitly declare getter '-newFile' with '__attribute__((objc_method_family(none)))' to return an 'unowned' object}}
 @end
 

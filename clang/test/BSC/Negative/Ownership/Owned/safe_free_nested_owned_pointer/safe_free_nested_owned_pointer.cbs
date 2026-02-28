@@ -2,22 +2,22 @@
 
 void*malloc(unsigned long);
 void free(void *);
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T* _Owned)p;
 }
 
-void safe_free<T>(T* owned p) {
+void safe_free<T>(T* _Owned p) {
   free( (T*)p );
 }
 
 void test_double_pointer_ok() {
-  int* owned inner = safe_malloc(1);
-  int* owned * owned outer = safe_malloc(inner);
-  int* owned * owned * owned ultraout = safe_malloc(outer);
-  safe_free((void *owned)**ultraout);
-  safe_free((void *owned)ultraout);  //expected-error {{invalid cast to `void * owned` of not all moved value: `ultraout`, *ultraout is owned}}
+  int* _Owned inner = safe_malloc(1);
+  int* _Owned * _Owned outer = safe_malloc(inner);
+  int* _Owned * _Owned * _Owned ultraout = safe_malloc(outer);
+  safe_free((void *_Owned)**ultraout);
+  safe_free((void *_Owned)ultraout);  //expected-error {{invalid cast to `void * _Owned` of not all moved value: `ultraout`, *ultraout is _Owned}}
 }
 int main(){
   test_double_pointer_ok();

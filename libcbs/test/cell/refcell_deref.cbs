@@ -32,7 +32,7 @@ void test_deref2() {
     assert(rm1.deref()->a == 10);
 }
 
-owned struct A {
+_Owned struct A {
 public:
     int a;
 };

@@ -2,14 +2,14 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 // expected-no-diagnostics
 
-void free_owned_new(void * owned p);
+void free_owned_new(void * _Owned p);
 
 typedef struct A {
-	int * owned a;
+	int * _Owned a;
 } A;
 
-void test1(A * owned p) {
-	free_owned_new((void * owned)p); // invalid cast to `void * owned` of not all moved value: `p`, p.a is owned
+void test1(A * _Owned p) {
+	free_owned_new((void * _Owned)p); // invalid cast to `void * _Owned` of not all moved value: `p`, p.a is _Owned
 }
 
 // CHECK:      struct A;

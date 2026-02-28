@@ -11,7 +11,7 @@ def err_incompatible_pointer_cast : Error<
 def err_incompatible_const_cast : Error<
   "incompatible conversion from const type '%0' to non-const type '%1' in member function call">;
 def err_incompatible_owned_cast : Error<
-  "incompatible conversion from non owned type '%0' to owned type '%1' in member function call">;
+  "incompatible conversion from non _Owned type '%0' to _Owned type '%1' in member function call">;
 
 // BSC attributes warnings and errors.
 def warn_attribute_no_pointers : Warning<
@@ -49,18 +49,18 @@ def err_owned_inderictOwned_type_check : Error<
   "type of %2 cannot qualified by '%1' |"
   "type of %2 cannot qualified by '%1', %3 contains '%1' type |"
   "type of %2 cannot qualified by '%1'(even indirectly), %3 contains '%1' type}0">;
-def err_owned_decl: Error<"%0 cannot be qualified by 'owned'">;
+def err_owned_decl: Error<"%0 cannot be qualified by '_Owned'">;
 def err_owned_funcPtr_incompatible : Error<"cannot cast %0 to %1">;
 def err_owned_qualcheck_incompatible : Error<
-  "incompatible owned types, cannot cast %0 to %1">;
+  "incompatible _Owned types, cannot cast %0 to %1">;
 def err_typecheck_invalid_owned_binOp : Error<
   "invalid operands to binary expression (%0 and %1)">;
 def err_typecheck_invalid_owned_unaOp : Error<
   "invalid operands to unary expression (%0)">;
 def err_typecheck_invalid_owned_arrsub : Error<
-  "owned pointer type (%0) do not support ArraySubscript operate">;
+  "_Owned pointer type (%0) do not support ArraySubscript operate">;
 def err_owned_temporary_memLeak : Error<
-  "memory leak because temporary variable '%0' is owned or indirect owned type, please fix it">;
+  "memory leak because temporary variable '%0' is _Owned or indirect _Owned type, please fix it">;
 def err_funcPtr_incompatible : Error<
   "incompatible _Borrow function pointer types, cannot cast %0 to %1">;
 def err_borrow_on_borrow : Error<"%0 on a '_Borrow' qualified type is not allowed">;
@@ -75,7 +75,7 @@ def err_borrow_qualcheck_compare : Error<
   "incompatible borrow types, %0 and %1 cannot be compared">;
 def err_typecheck_borrow_func : Error<"no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified">;
 def err_typecheck_borrow_subscript : Error<"subscript of _Borrow pointer is not allowed">;
-def err_owned_and_borrow_conflict : Error<"cannot combine 'owned' and '_Borrow' qualifiers on the same type">;
+def err_owned_and_borrow_conflict : Error<"cannot combine '_Owned' and '_Borrow' qualifiers on the same type">;
 def err_owned_qualifier_non_pointer : Error<
   "type of %1 cannot be qualified by '%0'">,
   InGroup<OwnedQualifierType>;
@@ -129,7 +129,7 @@ def err_bsc_generic_heterogeneous_redecl : Error<"generic function %0 cannot hav
 def err_bsc_incompatible_heterogeneous_redecl : Error<"function %0 has incompatible _Safe and _Unsafe declarations">;
 def err_bsc_no_matching_heterogeneous_function : Error<"no matching function for call to %0; argument types do not match any _Safe or _Unsafe declaration">;
 
-// BSC owned struct
+// BSC _Owned struct
 def err_invalid_member_use_in_class_method : Error <
   "invalid implicit use of member %0 in struct member function">;
 def err_static_class_func : Error<
@@ -144,7 +144,7 @@ def err_destructor_call : Error<"destructor %0 cannot be called directly">;
 def err_assignment_in_destructor : Error<"'this' cannot be moved in destructor">;
 def warn_destructor_execute : Warning<"the destructor may be not executed">,
 InGroup<BSCOwnedStruct>;
-def err_owned_struct_destructor_name : Error<"expected the owned struct name after '~' to name the enclosing owned struct">;
+def err_owned_struct_destructor_name : Error<"expected the _Owned struct name after '~' to name the enclosing _Owned struct">;
 def err_owned_struct_destructor_body : Error<"destructor must have a function body">;
 
 // BSC Ownership Analysis errors.
@@ -167,7 +167,7 @@ def err_ownership_use_possibly_uninit : Error<
 
 // assign
 def err_ownership_assign_owned : Error<
-  "assign to owned value: `%0`">,
+  "assign to _Owned value: `%0`">,
   InGroup<AssignOwned>;
 def err_ownership_assign_partially_moved : Error<
   "assign to partially moved value: `%0`, %1 moved">,
@@ -183,27 +183,27 @@ def err_ownership_assign_field_uninit : Error<
   "assign to part of uninitialized value: `%0`">,
   InGroup<AssignUninitOwned>;
 def err_ownership_assign_field_owned : Error<
-  "assign to part of owned value: `%0`">,
+  "assign to part of _Owned value: `%0`">,
   InGroup<AssignOwned>;
 def err_ownership_assign_field_moved : Error<
   "assign to part of moved value: `%0`">,
   InGroup<AssignMovedOwned>;
 def err_ownership_assign_field_subfield_owned : Error<
-  "assign to subfield owned value: `%0`, %1 owned">,
+  "assign to subfield _Owned value: `%0`, %1 _Owned">,
   InGroup<AssignOwned>;
 
-// cast to `void * owned`
+// cast to `void * _Owned`
 def err_ownership_cast_moved : Error<
-  "invalid cast to `void * owned` of moved value: `%0`">,
+  "invalid cast to `void * _Owned` of moved value: `%0`">,
   InGroup<CastMovedOwned>;
 def err_ownership_cast_owned : Error<
-  "invalid cast to `void * owned` of owned value: `%0`">,
+  "invalid cast to `void * _Owned` of _Owned value: `%0`">,
   InGroup<CastOwned>;
 def err_ownership_cast_uninit: Error<
-  "invalid cast to `void * owned` of uninit value: `%0`">,
+  "invalid cast to `void * _Owned` of uninit value: `%0`">,
   InGroup<CastOwned>;
 def err_ownership_cast_subfield_owned : Error<
-  "invalid cast to `void * owned` of not all moved value: `%0`, %1 owned">,
+  "invalid cast to `void * _Owned` of not all moved value: `%0`, %1 _Owned">,
   InGroup<CastOwned>;
 // memory leak
 def err_ownership_memory_leak_field : Error<
@@ -213,10 +213,10 @@ def err_ownership_memory_leak : Error<
   "memory leak of value: `%0`">,
   InGroup<CheckMemoryLeak>;
 def err_ownership_owned_struct_patially_moved : Error<
-  "partially moved owned struct:`%0` at scope end, %1 moved">,
+  "partially moved _Owned struct:`%0` at scope end, %1 moved">,
   InGroup<PartiallyMovedStruct>;
 def err_ownership_owned_struct_not_properly_freed : Error<
-  "destructor for`%0` incorrect, %1 of owned type and needs to be handled manually">,
+  "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually">,
   InGroup<DestructOwnedStruct>;
 
 // BSC Borrow Checker errors.

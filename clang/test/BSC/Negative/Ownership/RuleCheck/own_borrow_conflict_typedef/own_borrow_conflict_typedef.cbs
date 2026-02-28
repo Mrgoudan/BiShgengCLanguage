@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
-typedef int *owned _Borrow InvalidPtr; // expected-error {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
-typedef Invalid = int *owned _Borrow; // expected-error {{cannot combine 'owned' and '_Borrow' qualifiers on the same type}}
+typedef int *_Owned _Borrow InvalidPtr; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+typedef Invalid = int *_Owned _Borrow; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
 
 
 void demo() {

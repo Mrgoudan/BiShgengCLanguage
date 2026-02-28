@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 void test1() {
-    int* owned p1;
-    int* owned p2 = p1 + 1; //expected-error {{invalid operands to binary expression ('int *owned' and 'int')}}
-    int* owned p3 = 1 + p1; //expected-error {{invalid operands to binary expression ('int' and 'int *owned')}}
-    int* owned p4;
+    int* _Owned p1;
+    int* _Owned p2 = p1 + 1; //expected-error {{invalid operands to binary expression ('int *_Owned' and 'int')}}
+    int* _Owned p3 = 1 + p1; //expected-error {{invalid operands to binary expression ('int' and 'int *_Owned')}}
+    int* _Owned p4;
 
     if (p1 == p4) {
         return;
@@ -12,15 +12,15 @@ void test1() {
 }
 
 void test2() {
-    int* owned p1;
-    p1++;                   //expected-error {{invalid operands to unary expression ('int *owned')}}
-    int* owned p2 = p1[0];  //expected-error {{owned pointer type ('int *owned') do not support ArraySubscript operate}}
+    int* _Owned p1;
+    p1++;                   //expected-error {{invalid operands to unary expression ('int *_Owned')}}
+    int* _Owned p2 = p1[0];  //expected-error {{_Owned pointer type ('int *_Owned') do not support ArraySubscript operate}}
     int x = *p1;
-    int* owned* p3 = &p1;
+    int* _Owned* p3 = &p1;
 }
 
-void test3(int* owned a, int* owned b) {
-    int* owned c = a;
-    int* owned d = c;
+void test3(int* _Owned a, int* _Owned b) {
+    int* _Owned c = a;
+    int* _Owned d = c;
     c = b;  //legal BinaryOperator '=' is allowed
 }

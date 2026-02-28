@@ -6,15 +6,15 @@ struct Node {
   char data[SIZE];
 };
 
-struct Node *owned safe_malloc(struct Node);
-void safe_free(void *owned);
+struct Node *_Owned safe_malloc(struct Node);
+void safe_free(void *_Owned);
 
 void test1() {
-  struct Node *owned p = safe_malloc(struct Node{.data = {0}}); // expected-error{{expected expression}}
-  safe_free((void *owned)p);
+  struct Node *_Owned p = safe_malloc(struct Node{.data = {0}}); // expected-error{{expected expression}}
+  safe_free((void *_Owned)p);
 }
 
 void test2() {
-  struct Node *owned p = safe_malloc((struct Node){.data = {0}});
-  safe_free((void *owned)p);
+  struct Node *_Owned p = safe_malloc((struct Node){.data = {0}});
+  safe_free((void *_Owned)p);
 }

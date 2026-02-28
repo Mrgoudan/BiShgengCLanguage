@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify %s
 
-void cast_owned_to_borrow(int *owned p) {
-    int *_Borrow q = (int *_Borrow) p; // expected-error {{incompatible owned types, cannot cast 'int *owned' to 'int *_Borrow'}}
+void cast_owned_to_borrow(int *_Owned p) {
+    int *_Borrow q = (int *_Borrow) p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
 }
 
-int *owned cast_borrow_to_owned(int *_Borrow p) {
-    int *owned q = (int *owned) p; // expected-error {{incompatible owned types, cannot cast 'int *_Borrow' to 'int *owned'}}
+int *_Owned cast_borrow_to_owned(int *_Borrow p) {
+    int *_Owned q = (int *_Owned) p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Borrow' to 'int *_Owned'}}
     return q;
 }

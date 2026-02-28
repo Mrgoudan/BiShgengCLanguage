@@ -4,7 +4,7 @@
 // RUN: | FileCheck --strict-whitespace %s
 // expected-no-diagnostics
 
-owned struct RawVec<T> {
+_Owned struct RawVec<T> {
 public:
   T a;
   _Safe ~RawVec(This this) {}
@@ -28,6 +28,6 @@ int main() {
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:25, line:18:1>
 // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <line:14:11, line:16:3> _Unsafe
 // CHECK-NEXT: DeclStmt 0x{{[^ ]*}} <line:15:5, col:31>
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:30> col:17 used rv 'owned RawVec<int>':'owned struct RawVec<int>' cinit
-// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:22, col:30> 'owned RawVec<int>':'owned struct RawVec<int>'
+// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:30> col:17 used rv '_Owned RawVec<int>':'_Owned struct RawVec<int>' cinit
+// CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:22, col:30> '_Owned RawVec<int>':'_Owned struct RawVec<int>'
 // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:29> 'int' 1

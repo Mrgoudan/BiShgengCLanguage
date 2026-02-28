@@ -4,7 +4,7 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-owned struct Vec<T> {
+_Owned struct Vec<T> {
 public:
     T* ptr;
     int cap;

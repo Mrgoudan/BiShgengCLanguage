@@ -11,13 +11,13 @@
 void use_mut(int *_Borrow p) {}
 void use_immut(const int *_Borrow p) {}
 
-T* owned safe_malloc<T>(T value) {
+T* _Owned safe_malloc<T>(T value) {
   T * p = (T *) malloc( sizeof(T) );
   *p = value;
-  return (T* owned)p;
+  return (T* _Owned)p;
 }
 
-void free_owned<T>(T* owned p) {
+void free_owned<T>(T* _Owned p) {
   free( (T*)p );
 }
 
@@ -33,7 +33,7 @@ void test1() {
 }
 
 void test2() {
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   const int *_Borrow p1 = &_Const * oriPtr;
   const int *_Borrow p2 = &_Const * oriPtr;
   use_immut(p1);
@@ -44,7 +44,7 @@ void test2() {
 void test3() {
   int a = 5;
   int b = 5, c = 5;
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   int *_Borrow p1 = &_Mut a;
   int *_Borrow p2 = &_Mut b;
   if (c > 0)
@@ -59,7 +59,7 @@ void test3() {
 void test4() {
   int a = 5;
   int b = 5;
-  int *owned oriPtr = safe_malloc<int>(0);
+  int *_Owned oriPtr = safe_malloc<int>(0);
   int *_Borrow p1 = &_Mut a;
   int *_Borrow p2 = &_Mut b;
   if (1) {

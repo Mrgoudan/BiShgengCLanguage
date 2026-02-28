@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -verify %s
 
-owned struct A {
+_Owned struct A {
     int a;
-    int f(A this) { return this.a; } // expected-error {{memory leak because temporary variable 'this' is owned or indirect owned type, please fix it}}
+    int f(A this) { return this.a; } // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type, please fix it}}
     int g(A this);
 };
 
 int A::q(int b, A* this); // expected-error {{'this' cannot be the name of a parameter}}
 
-int A::o(int* this); // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'This' or 'owned struct A*' or 'owned struct A', but found 'int *'}}
+int A::o(int* this); // expected-error {{type of parameter 'this' is wrong, expected 'This*' or 'This' or '_Owned struct A*' or '_Owned struct A', but found 'int *'}}

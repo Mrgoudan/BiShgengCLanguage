@@ -7,7 +7,7 @@
 const int( * const q)(int const a,const float b,const int c , const int d);
 
 //test2
-const int( * const p)(const int* owned const a,const float b,const int c , const int d);
+const int( * const p)(const int* _Owned const a,const float b,const int c , const int d);
 
 //test3
 int add(int a, int b) { return a + b; }

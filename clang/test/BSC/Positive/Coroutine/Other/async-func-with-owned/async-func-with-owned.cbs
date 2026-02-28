@@ -8,18 +8,18 @@
 
 #include "future.hbs"
 #include <stdlib.h>
-T* owned malloc_owned<T>(T value) {
+T* _Owned malloc_owned<T>(T value) {
     T * p = (T *) malloc( sizeof(T) );
     *p = value;
-    return (T* owned)p;
+    return (T* _Owned)p;
 }
 
-void free_owned<T>(T* owned p) {
+void free_owned<T>(T* _Owned p) {
         free( (T*)p );
 }
 
 struct Owned<T> {
-    T* owned p;
+    T* _Owned p;
 };
 
 struct Owned<T> make_owned<T>(T value) {

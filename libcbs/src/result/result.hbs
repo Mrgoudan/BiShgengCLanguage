@@ -15,7 +15,7 @@ typedef enum {
 // `Result` is the type used for returning and propagating
 // errors. The `Ok` represents success and contains a value,
 // and the `Err` represents error and contains an error value.
-owned struct Result<T, E> {
+_Owned struct Result<T, E> {
 // FIXME: makes it private later
 public:
     ResultState state;
@@ -26,11 +26,11 @@ public:
         if (this.state == Ok) {
             T* ptr = (T *)this.t;
             _BSC_UNUSED T tmp = *ptr;
-            // IF(`T` isa owned struct type) AUTO INSERT: ~T(tmp)
+            // IF(`T` isa _Owned struct type) AUTO INSERT: ~T(tmp)
         } else {
             E* ptr = (E *)this.e;
             _BSC_UNUSED E tmp = *ptr;
-            // IF(`E` isa owned struct type) AUTO INSERT: ~E(tmp)
+            // IF(`E` isa _Owned struct type) AUTO INSERT: ~E(tmp)
         }
     }
 };
@@ -52,13 +52,13 @@ _Safe _Bool Result<T, E>::is_ok(const Result<T, E>* _Borrow this) {
 // Creates an `Ok` value.
 _Safe Result<T, E> Result<T, E>::Ok(T t) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                    "Can only instantiate Result with owned struct or copyable type, "
+                    "Can only instantiate Result with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap T with an owned struct.");
+					"Fix: You can wrap T with an _Owned struct.");
     _Unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
-                    "Can only instantiate Result with owned struct or copyable type, "
+                    "Can only instantiate Result with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap E with an owned struct.");
+					"Fix: You can wrap E with an _Owned struct.");
     _Unsafe {
         Result<T, E> r = {
             .state = Ok,
@@ -74,13 +74,13 @@ _Safe Result<T, E> Result<T, E>::Ok(T t) {
 // Creates an `Err` value.
 _Safe Result<T, E> Result<T, E>::Err(E e) {
     _Unsafe _Static_assert(is_move_semantic<T>() == false || is_owned_struct<T>() == true,
-                    "Can only instantiate Result with owned struct or copyable type, "
+                    "Can only instantiate Result with _Owned struct or copyable type, "
 				    "because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap T with an owned struct.");
+					"Fix: You can wrap T with an _Owned struct.");
     _Unsafe _Static_assert(is_move_semantic<E>() == false || is_owned_struct<E>() == true,
-                    "Can only instantiate Result with owned struct or copyable type, "
+                    "Can only instantiate Result with _Owned struct or copyable type, "
 				   	"because BSC doesn't know how to free memory for other types. "
-					"Fix: You can wrap E with an owned struct.");
+					"Fix: You can wrap E with an _Owned struct.");
     _Unsafe {
         Result<T, E> r = {
             .state = Err,

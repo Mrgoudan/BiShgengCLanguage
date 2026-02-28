@@ -9,8 +9,8 @@ struct G {
 };
 
 int rand();
-T *owned safe_malloc<T>(T value);
-void free_owned<T>(T *owned p);
+T *_Owned safe_malloc<T>(T value);
+void free_owned<T>(T *_Owned p);
 void free(void *);
 
 int *_Borrow test1(int *_Borrow p) {

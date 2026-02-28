@@ -6,7 +6,7 @@
 
 int b = 1;
 
-owned struct A {
+_Owned struct A {
     public:
         int a;
         int f(A* this) { return b; }

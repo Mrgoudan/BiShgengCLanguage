@@ -4,14 +4,14 @@ struct A {
     int a;
 };
 
-void eat(struct A * owned a) {
+void eat(struct A * _Owned a) {
     struct A b = (struct A)*a;
 } // expected-error {{memory leak of value: `a`}}
 
 void f() {
     struct A a = { .a = 0 };
     if (a.a) {
-        struct A * owned b = (struct A * owned)&a;
+        struct A * _Owned b = (struct A * _Owned)&a;
         if (a.a) {
             return; // expected-error {{memory leak of value: `b`}}
         }
