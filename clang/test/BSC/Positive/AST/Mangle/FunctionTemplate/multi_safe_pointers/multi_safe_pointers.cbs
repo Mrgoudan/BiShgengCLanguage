@@ -59,7 +59,7 @@ void test_pointers<T>(T t) {
 void test_owned_and_borrow_pointer(void) {
     int a = 0;
     int * p1 = &a;
-    int *_Borrow p2 = &mut a;
+    int *_Borrow p2 = &_Mut a;
     int *owned p3 = safe_malloc(1);
     test_pointers<int*>(p1);
     test_pointers<int* _Borrow>(p2);

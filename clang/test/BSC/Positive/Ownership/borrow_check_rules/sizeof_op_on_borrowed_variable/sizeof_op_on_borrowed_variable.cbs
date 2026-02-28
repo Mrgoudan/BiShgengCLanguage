@@ -11,18 +11,18 @@ void foo(int *_Borrow a, int size) {
 
 void test1() {
   int a = 1;
-  foo(&mut a, sizeof(a));
+  foo(&_Mut a, sizeof(a));
 }
 
 void test2() {
   int a = 1;
   int x = sizeof(a);
-  foo(&mut a, x);
+  foo(&_Mut a, x);
 }
 
 void test3() {
   int a = 1;
-  int *_Borrow p = &mut a;
+  int *_Borrow p = &_Mut a;
   int x = sizeof(a);
   *p = 2;
 }

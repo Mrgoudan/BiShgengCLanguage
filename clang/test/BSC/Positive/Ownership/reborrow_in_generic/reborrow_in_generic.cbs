@@ -12,15 +12,15 @@ void use_immut(const int *_Borrow p) {
 
 void test1<T>() {
   int a = 1;
-  int *_Borrow p = &mut a;
-  int *_Borrow q = &mut *p;
+  int *_Borrow p = &_Mut a;
+  int *_Borrow q = &_Mut *p;
   use(q);
 }
 
 void test2<T>() {
     int a = 1;
-    int *_Borrow p = &mut a;
-    const int *_Borrow q = &const *p;
+    int *_Borrow p = &_Mut a;
+    const int *_Borrow q = &_Const *p;
     use_immut(q);
 }
 

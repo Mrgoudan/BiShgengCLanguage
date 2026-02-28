@@ -113,7 +113,7 @@ _Safe void test8(void) {
     int a = 1;
     struct S2 s = {
         .p = _Unsafe(safe_malloc<int>(a)),
-        .q = _Unsafe(&mut a)
+        .q = _Unsafe(&_Mut a)
     };
     safe_free((void *owned)s.p);
 }
@@ -122,7 +122,7 @@ _Safe void test9(void) {
     int a = 1;
     struct S2 s = {
         .p = (safe_malloc<int>(a)),
-        .q = (&mut a)
+        .q = (&_Mut a)
     };
     safe_free((void *owned)s.p);
 }

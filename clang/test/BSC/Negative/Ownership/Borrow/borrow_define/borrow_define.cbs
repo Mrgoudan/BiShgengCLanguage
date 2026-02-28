@@ -18,7 +18,7 @@ void test() {
                    // expected-error@-1 {{variable declarations of _Borrow qualified must be initialized}}
   const int _Borrow * b4; // expected-error {{_Borrow type requires a pointer or reference ('int' is invalid)}}
                          // expected-error@-1 {{variable declarations of _Borrow qualified must be initialized}}
-  f2<int>(&mut a);
+  f2<int>(&_Mut a);
 }
 
 trait F {};

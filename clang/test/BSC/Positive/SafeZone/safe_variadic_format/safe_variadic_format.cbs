@@ -55,8 +55,8 @@ _Safe int multi_format(const char * _Borrow fmt, ...);
 
 // Test calling format-attributed _Safe variadic function from _Safe zone
 _Safe void test_caller(void) {
-    my_safe_printf(&const *"hello %d", 42);
-    my_safe_printf2(&const *"world %s", "test");
+    my_safe_printf(&_Const *"hello %d", 42);
+    my_safe_printf2(&_Const *"world %s", "test");
 }
 
 // Test passing _Borrow pointers to variadic functions
@@ -65,7 +65,7 @@ _Safe void log_with_borrow(const char * _Borrow fmt, ...);
 
 _Safe void test_with_borrow_ptr(int * _Borrow ptr) {
     // Test: _Borrow pointers can be passed to variadic functions
-    log_with_borrow(&const *"Value: %d", *ptr);
+    log_with_borrow(&_Const *"Value: %d", *ptr);
 }
 
 // Test that variadic functions can be declared with owned pointer parameters in signature
@@ -79,8 +79,8 @@ _Safe void log_point(const struct Point * _Borrow p, const char * _Borrow fmt, .
 
 _Safe void test_point_logging(void) {
     const struct Point pt = {10, 20};
-    const struct Point * _Borrow pborrow = &const pt;
-    log_point(pborrow, &const *"Coordinates: %d, %d", pt.x, pt.y);
+    const struct Point * _Borrow pborrow = &_Const pt;
+    log_point(pborrow, &_Const *"Coordinates: %d, %d", pt.x, pt.y);
 }
 
 // Test declaration with format attr, definition also with attr

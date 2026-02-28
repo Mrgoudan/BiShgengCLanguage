@@ -27,28 +27,28 @@ void free_owned<T>(T *owned p) {
 
 void test1() {
   int *a = (int *)malloc(sizeof(int));
-  int *_Borrow p = &mut *a;
+  int *_Borrow p = &_Mut *a;
   use_mut(p);
   free(a);
 }
 
 void test2(int *a) {
-  int *_Borrow p = &mut *a;
+  int *_Borrow p = &_Mut *a;
   use_mut(p);
   free(a);
 }
 
 void test3(int *_Borrow p) {
-  int *_Borrow p1 = &mut *p;
+  int *_Borrow p1 = &_Mut *p;
   use_mut(p1);
 }
 
 void test4(struct S s) {
-  int *_Borrow p3 = &mut s.a;
+  int *_Borrow p3 = &_Mut s.a;
   use_mut(p3);
   int *_Borrow p4 = s.p1;
   use_mut(p4);
-  int *_Borrow p5 = &mut *s.p2;
+  int *_Borrow p5 = &_Mut *s.p2;
   use_mut(p5); 
   free_owned<int>(s.p2);
 }
@@ -58,8 +58,8 @@ int main() {
   int *a = (int *)malloc(sizeof(int));
   test1();
   test2(a);
-  test3(&mut local);
-  struct S s = { .a = 5, .p1 = &mut local, .p2 = safe_malloc<int>(5) };
+  test3(&_Mut local);
+  struct S s = { .a = 5, .p1 = &_Mut local, .p2 = safe_malloc<int>(5) };
   test4(s);
   return 0;
 }

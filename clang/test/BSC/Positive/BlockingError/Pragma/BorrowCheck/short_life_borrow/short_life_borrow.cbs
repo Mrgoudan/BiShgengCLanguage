@@ -8,7 +8,7 @@ void test1(int *_Borrow p) {
     int local1 = 42;
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Eshort-life-borrow"
-    p = &mut local1; // `local1` does not live long enough
+    p = &_Mut local1; // `local1` does not live long enough
     #pragma GCC diagnostic pop
   }
   use_mut(p);

@@ -5,8 +5,8 @@
 // expected-no-diagnostics
 
 #ifdef __bishengc
-#define CONST const
-#define MUT mut
+#define CONST _Const
+#define MUT _Mut
 #define BORROW _Borrow
 #else
 #define CONST

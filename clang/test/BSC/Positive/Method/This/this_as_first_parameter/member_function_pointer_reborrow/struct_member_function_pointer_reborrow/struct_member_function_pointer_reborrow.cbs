@@ -91,7 +91,7 @@ void test_const_raw_pointer_call_reborrow() {
 void test_borrow_pointer_call_reborrow() {
   printf("test_borrow_pointer_call_reborrow:\n");
   struct Foo foo = {.a = 1};
-  struct Foo* _Borrow c_foo_mut = &mut foo;
+  struct Foo* _Borrow c_foo_mut = &_Mut foo;
   int b_2 = c_foo_mut->getB();
   int c_2 = c_foo_mut->getC();
   printf("this->a in test: %d\n", foo.a);

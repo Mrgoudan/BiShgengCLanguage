@@ -26,7 +26,7 @@ _Safe void consume(int* _Borrow p);
 void test2(void) {
     int local = 5;
     int* raw_p = &local;
-    int* _Borrow borrow_p = &mut local;
+    int* _Borrow borrow_p = &_Mut local;
 
     consume(raw_p);      // Calls _Unsafe version
     consume(borrow_p);   // Calls _Safe version
@@ -96,7 +96,7 @@ _Safe void mixed_func(int* owned p1, int* _Borrow p2);
 void test9(void) {
     int local = 5;
     int* owned owned_p = safe_malloc<int>(9);
-    int* _Borrow borrow_p = &mut local;
+    int* _Borrow borrow_p = &_Mut local;
     int* raw1 = (int*)0;
     int* raw2 = (int*)0;
 

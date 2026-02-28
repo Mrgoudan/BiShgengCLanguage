@@ -3884,35 +3884,38 @@ LexNextToken:
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
     }
 #if ENABLE_BSC
-    else if (LangOpts.BSC && Char == 'm' &&
-             getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == 'u' &&
-             getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3) == 't') {
+    else if (LangOpts.BSC && Char == '_' &&
+             getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == 'M' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3) == 'u' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3, SizeTmp4) == 't') {
       char After =
-          getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3, SizeTmp4);
+          getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4, SizeTmp5);
       if ((After >= '0' && After <= '9') || (After >= 'a' && After <= 'z') ||
-          (After >= 'A' && After <= 'Z')) {
+          (After >= 'A' && After <= 'Z') || After == '_') {
         Kind = tok::amp;
       } else {
         Kind = tok::ampmut;
-        CurPtr = ConsumeChar(
+        CurPtr = ConsumeChar(ConsumeChar(
             ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result), SizeTmp2, Result),
-            SizeTmp3, Result);
+            SizeTmp3, Result), SizeTmp4, Result);
       }
-    } else if (LangOpts.BSC && Char == 'c' &&
-             getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == 'o' &&
-             getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3) == 'n' &&
-             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3, SizeTmp4) == 's' &&
-             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4, SizeTmp5) == 't') {
+    } else if (LangOpts.BSC && Char == '_' &&
+             getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == 'C' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2, SizeTmp3) == 'o' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3, SizeTmp4) == 'n' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4, SizeTmp5) == 's' &&
+             getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4 + SizeTmp5, SizeTmp6) == 't') {
+      unsigned SizeTmpAfter;
       char After =
-          getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4 + SizeTmp5, SizeTmp6);
+          getCharAndSize(CurPtr + SizeTmp + SizeTmp2 + SizeTmp3 + SizeTmp4 + SizeTmp5 + SizeTmp6, SizeTmpAfter);
       if ((After >= '0' && After <= '9') || (After >= 'a' && After <= 'z') ||
-          (After >= 'A' && After <= 'Z')) {
+          (After >= 'A' && After <= 'Z') || After == '_') {
         Kind = tok::amp;
       } else {
         Kind = tok::ampconst;
-        CurPtr = ConsumeChar(ConsumeChar(ConsumeChar(
+        CurPtr = ConsumeChar(ConsumeChar(ConsumeChar(ConsumeChar(
             ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result), SizeTmp2, Result),
-            SizeTmp3, Result), SizeTmp4, Result), SizeTmp5, Result);
+            SizeTmp3, Result), SizeTmp4, Result), SizeTmp5, Result), SizeTmp6, Result);
       }
     }
 #endif

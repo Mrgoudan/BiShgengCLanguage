@@ -17,14 +17,14 @@ impl trait F for int;
 void test() {
     int x = 0;
     float y = 1.0;
-    int *_Borrow p = &mut x;          // legal
-    float * _Borrow py = &mut y;     // legal
-    const int * _Borrow p1 = &const x; // legal
-    int *_Borrow p2 = &const x;          // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
-    const int * _Borrow p3 = &mut x; // allow in-place re-borrowing
+    int *_Borrow p = &_Mut x;          // legal
+    float * _Borrow py = &_Mut y;     // legal
+    const int * _Borrow p1 = &_Const x; // legal
+    int *_Borrow p2 = &_Const x;          // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+    const int * _Borrow p3 = &_Mut x; // allow in-place re-borrowing
     const int * _Borrow p4 = &x; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
-    const int * _Borrow *p5 = &const x; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'const int *_Borrow *'}}
-    int *p6 = &mut x; // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'int *'}}
+    const int * _Borrow *p5 = &_Const x; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'const int *_Borrow *'}}
+    int *p6 = &_Mut x; // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'int *'}}
 
     p = p2; // legal
     p = py; // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
@@ -36,8 +36,8 @@ void test() {
     r.p1 = p; // legal
 
     myInt m = &x; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'myInt' (aka 'int *_Borrow')}}
-    myInt m1 = &mut x; // legal
-    m = &const x; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'myInt' (aka 'int *_Borrow')}}
+    myInt m1 = &_Mut x; // legal
+    m = &_Const x; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'myInt' (aka 'int *_Borrow')}}
 
     trait F * f = &x; // legal
     trait F * _Borrow f1 = p; // legal

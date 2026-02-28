@@ -2,26 +2,26 @@
 // expected-no-diagnostics
 
 _Safe void explicit_reborrow(int *_Borrow _Nullable ptr) {
-    const int *_Borrow _Nullable cbp = &const *ptr;
-    int *_Borrow _Nullable mbp = &mut *ptr;
+    const int *_Borrow _Nullable cbp = &_Const *ptr;
+    int *_Borrow _Nullable mbp = &_Mut *ptr;
 }
 
 _Safe void explicit_reborrow2(void) {
     int *_Borrow _Nullable ptr = nullptr;
-    const int *_Borrow _Nullable cbp = &const *ptr;
-    int *_Borrow _Nullable mbp = &mut *ptr;
+    const int *_Borrow _Nullable cbp = &_Const *ptr;
+    int *_Borrow _Nullable mbp = &_Mut *ptr;
 }
 
 _Safe int *owned _Nullable explicit_reborrow3(int *owned _Nullable ptr) {
-    const int *_Borrow _Nullable cbp = &const *ptr;
-    int *_Borrow _Nullable mbp = &mut *ptr;
+    const int *_Borrow _Nullable cbp = &_Const *ptr;
+    int *_Borrow _Nullable mbp = &_Mut *ptr;
     return ptr;
 }
 
 _Safe int *owned _Nullable explicit_reborrow4(void) {
     int *owned _Nullable ptr = nullptr;
-    const int *_Borrow _Nullable cbp = &const *ptr;
-    int *_Borrow _Nullable mbp = &mut *ptr;
+    const int *_Borrow _Nullable cbp = &_Const *ptr;
+    int *_Borrow _Nullable mbp = &_Mut *ptr;
     return ptr;
 }
 

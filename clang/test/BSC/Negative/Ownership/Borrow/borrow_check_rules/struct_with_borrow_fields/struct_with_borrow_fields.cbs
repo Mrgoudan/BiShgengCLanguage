@@ -32,35 +32,35 @@ void useC(C);
 
 void test1() {
   int local = 42;
-  A a = { .p = &mut local }; // expected-note {{`local` is borrowed here}}
+  A a = { .p = &_Mut local }; // expected-note {{`local` is borrowed here}}
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   use_mut(a.p);
 }
 
 void test2(A a) {
   int local = 42;
-  a.p = &mut local; // expected-note {{`local` is borrowed here}}
+  a.p = &_Mut local; // expected-note {{`local` is borrowed here}}
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   int x = *a.p;
 }
 
 void test3() {
   int local = 42;
-  C c = { .p = &mut local }; // expected-note {{`local` is borrowed here}}
+  C c = { .p = &_Mut local }; // expected-note {{`local` is borrowed here}}
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   int temp = c.b.m;
 }
 
 void test4(C c) {
   int local = 42;
-  c = (struct C) { .p = &mut local }; // expected-note {{`local` is borrowed here}}
+  c = (struct C) { .p = &_Mut local }; // expected-note {{`local` is borrowed here}}
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   int temp = c.b.m;
 }
 
 void test5() {
   int local = 42;
-  D d = { .p = &mut local, .q = &mut local }; // expected-error {{cannot borrow `local` as mutable more than once at a time}}
+  D d = { .p = &_Mut local, .q = &_Mut local }; // expected-error {{cannot borrow `local` as mutable more than once at a time}}
                                               // expected-note@-1 {{`local` is borrowed here}}
                                               // expected-note@-2 {{first mut borrow occurs here}}
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
@@ -69,7 +69,7 @@ void test5() {
 
 void test6() {
   int local = 42;
-  E e = { .c = (struct C) { .p = &mut local }, .p = &mut local }; // expected-error {{cannot borrow `local` as mutable more than once at a time}}
+  E e = { .c = (struct C) { .p = &_Mut local }, .p = &_Mut local }; // expected-error {{cannot borrow `local` as mutable more than once at a time}}
                                                                   // expected-note@-1 {{`local` is borrowed here}}
                                                                   // expected-note@-2 {{first mut borrow occurs here}}
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
@@ -79,7 +79,7 @@ void test6() {
 void test7(A a) {
   {
     int local = 42;
-    a = (struct A) { .p = &mut local }; // expected-error {{`local` does not live long enough}}
+    a = (struct A) { .p = &_Mut local }; // expected-error {{`local` does not live long enough}}
   } // expected-note {{`local` dropped here while still borrowed}}
   use_mut(a.p);
 }
@@ -87,7 +87,7 @@ void test7(A a) {
 void test8(A a) {
   {
     int local = 42;
-    a = (struct A) { .p = &mut local }; // expected-note {{`local` is borrowed here}}
+    a = (struct A) { .p = &_Mut local }; // expected-note {{`local` is borrowed here}}
     local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   }
   use_mut(a.p);
@@ -95,7 +95,7 @@ void test8(A a) {
 
 void test9(A a1) {
   int local = 42;
-  A a2 = { .p = &mut local }; // expected-note {{`local` is borrowed here}}
+  A a2 = { .p = &_Mut local }; // expected-note {{`local` is borrowed here}}
   a1 = a2;
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   use_mut(a1.p);
@@ -103,7 +103,7 @@ void test9(A a1) {
 
 void test10() {
   int local = 42;
-  A a1 = { .p = &mut local }; // expected-note {{`local` is borrowed here}}
+  A a1 = { .p = &_Mut local }; // expected-note {{`local` is borrowed here}}
   A a2 = a1;
   local = 43; // expected-error {{cannot assign to `local` because it is borrowed}}
   use_mut(a2.p);
@@ -111,7 +111,7 @@ void test10() {
 
 void test11() {
   int local = 42;
-  C c = { .p = &mut local };
+  C c = { .p = &_Mut local };
   int *_Borrow q = c.p; // expected-note {{`*c.p` is borrowed here}}
   int temp = *c.p; // expected-error {{cannot use `*c.p` because it was mutably borrowed}}
   use_mut(q);
@@ -119,7 +119,7 @@ void test11() {
 
 void test12() {
   int local = 42;
-  C c1 = { .p = &mut local };
+  C c1 = { .p = &_Mut local };
   C c2 = c1; // expected-note {{`*c1.p` is borrowed here}}
   int temp = *c1.p; // expected-error {{cannot use `*c1.p` because it was mutably borrowed}}
   use_mut(c2.p);
@@ -128,7 +128,7 @@ void test12() {
 void test13() {
   int local1 = 42;
   int local2 = 42;
-  E e1 = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
+  E e1 = { .c = (struct C) { .p = &_Mut local1 }, .p = &_Mut local2 };
   E e2 = e1; // expected-note {{`*e1.c.p` is borrowed here}}
              // expected-note@-1 {{first mut borrow occurs here}}
              // expected-note@-2 {{first mut borrow occurs here}}
@@ -141,7 +141,7 @@ void test13() {
 void test14() {
   int local1 = 42;
   int local2 = 42;
-  E e1 = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
+  E e1 = { .c = (struct C) { .p = &_Mut local1 }, .p = &_Mut local2 };
   C c = e1.c;
   useE(e1);
 }
@@ -150,16 +150,16 @@ void test15() {
   int local1 = 42;
   int local2 = 42;
   int local3 = 42;
-  E e1 = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
+  E e1 = { .c = (struct C) { .p = &_Mut local1 }, .p = &_Mut local2 };
   C c = e1.c;
-  e1.c = (struct C) { .p = &mut local3 };
+  e1.c = (struct C) { .p = &_Mut local3 };
   useE(e1);
 }
 
 void test16() {
   int local1 = 42;
   int local2 = 42;
-  E e1 = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
+  E e1 = { .c = (struct C) { .p = &_Mut local1 }, .p = &_Mut local2 };
   int *_Borrow p = e1.p;
   useE(e1);
 }
@@ -167,7 +167,7 @@ void test16() {
 void test17() {
   int local1 = 42;
   int local2 = 42;
-  E e = { .c = (struct C) { .p = &mut local1 }, .p = &mut local2 };
+  E e = { .c = (struct C) { .p = &_Mut local1 }, .p = &_Mut local2 };
   C c = e.c; // expected-note {{`*e.c.p` is borrowed here}}
              // expected-note@-1 {{first mut borrow occurs here}}
   int *_Borrow p1 = e.p; // expected-note {{`*e.p` is borrowed here}}

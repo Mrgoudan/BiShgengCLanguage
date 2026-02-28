@@ -21,30 +21,30 @@ void free(void *);
 
 void test1() {
   S local = { .a = 1, .b = 2 };
-  int *_Borrow p = &mut local.a; // expected-note {{first mut borrow occurs here}}
-  S *_Borrow s = &mut local; // expected-error {{cannot borrow `local` as mutable more than once at a time}}
+  int *_Borrow p = &_Mut local.a; // expected-note {{first mut borrow occurs here}}
+  S *_Borrow s = &_Mut local; // expected-error {{cannot borrow `local` as mutable more than once at a time}}
   use_mutI(p);
   use_mutS(s);
 }
 
 void test2() {
   S local = { .a = 1, .b = 2 };
-  const int *_Borrow p = &const local.a; // expected-note {{immutable borrow occurs here}}
-  S *_Borrow s = &mut local; // expected-error {{cannot borrow `local` as mutable because it is also borrowed as immutable}}
+  const int *_Borrow p = &_Const local.a; // expected-note {{immutable borrow occurs here}}
+  S *_Borrow s = &_Mut local; // expected-error {{cannot borrow `local` as mutable because it is also borrowed as immutable}}
   use_constI(p);
   use_mutS(s);
 }
 
 void test3() {
   S local = { .a = 1, .b = 2 };
-  int *_Borrow p = &mut local.a; // expected-note {{mutable borrow occurs here}}
-  const S *_Borrow s = &const local; // expected-error {{cannot borrow `local` as immutable because it is also borrowed as mutable}}
+  int *_Borrow p = &_Mut local.a; // expected-note {{mutable borrow occurs here}}
+  const S *_Borrow s = &_Const local; // expected-error {{cannot borrow `local` as immutable because it is also borrowed as mutable}}
   use_mutI(p);
   use_constS(s);
 }
 
 void test4(Foo a) {
-  int *_Borrow b = &mut *a.field; // expected-note {{`*a.field` is borrowed here}}
+  int *_Borrow b = &_Mut *a.field; // expected-note {{`*a.field` is borrowed here}}
                                  // expected-note@-1 {{first mut borrow occurs here}}
   Foo temp = a; // expected-error {{cannot use `a` because it was mutably borrowed}}
                 // expected-error@-1 {{cannot borrow `*a.field` as mutable more than once at a time}}
@@ -52,13 +52,13 @@ void test4(Foo a) {
 }
 
 void test5(Foo a) {
-  int *_Borrow b = &mut *a.field;
+  int *_Borrow b = &_Mut *a.field;
   a = (Foo) { .field = (int *_Borrow)NULL };
   use_mutI(b);
 }
 
 void test6(Foo a) {
-  const int *_Borrow b = &const *a.field;
+  const int *_Borrow b = &_Const *a.field;
   a = (Foo) { .field = (int *_Borrow)NULL };
   use_constI(b);
 }

@@ -12,8 +12,8 @@ void foo(int *_Borrow p, int *_Borrow q) {
 int main() {
     int x = 0;
     int y = 1;
-    int *_Borrow px = &mut x;
-    int *_Borrow py = &mut y;
+    int *_Borrow px = &_Mut x;
+    int *_Borrow py = &_Mut y;
     foo(px, py);
     return 0;
 }

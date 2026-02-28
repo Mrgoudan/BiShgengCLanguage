@@ -1439,12 +1439,13 @@ ExprResult Parser::ParseCastExpression(
     SourceLocation SavedLoc = ConsumeToken();
 #if ENABLE_BSC
     if (getLangOpts().BSC && SavedKind == tok::amp) {
-      if (Tok.getKind() == tok::kw_const) {
+      if (Tok.getKind() == tok::identifier &&
+          Tok.getIdentifierInfo()->getName() == "_Const") {
         ConsumeToken();
         SavedKind = tok::ampconst;
       }
       if (Tok.getKind() == tok::identifier &&
-          Tok.getIdentifierInfo()->getName() == "mut") {
+          Tok.getIdentifierInfo()->getName() == "_Mut") {
         ConsumeToken();
         SavedKind = tok::ampmut;
       }

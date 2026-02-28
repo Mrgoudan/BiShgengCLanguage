@@ -21,7 +21,7 @@ void safe_free1(int *_Borrow *owned p) {
 
 void test1() {
   int a = 0;
-  int *_Borrow p = &mut a;
+  int *_Borrow p = &_Mut a;
   int* _Borrow *owned ap = safe_malloc1(p);
   safe_free1(ap);
 }
@@ -42,7 +42,7 @@ void safe_free2(struct M *owned p) {
 
 void test2() {
   int a = 0;
-  struct M m = { &mut a };
+  struct M m = { &_Mut a };
   struct M *owned mp = safe_malloc2(m);
   struct M *owned *mpp = &mp;
   safe_free2(mp);

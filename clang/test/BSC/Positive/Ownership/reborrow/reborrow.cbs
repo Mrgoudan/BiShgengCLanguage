@@ -7,7 +7,7 @@ void mutable2immutable(int *_Borrow ref) {
 }
 
 void inplace_reborrow(int x) {
-    const int *_Borrow cref = &mut x;
+    const int *_Borrow cref = &_Mut x;
 }
 
 _Safe void nullable_reborrow(int *_Borrow _Nullable ref) {
@@ -24,18 +24,18 @@ int main() {
     // assignment
     int x = 0;
     inplace_reborrow(x);
-    mutable2immutable(&mut x);
-    int *_Borrow _Nullable n_ref = &mut x;
+    mutable2immutable(&_Mut x);
+    int *_Borrow _Nullable n_ref = &_Mut x;
     nullable_reborrow(n_ref);
     nullable_reborrow(nullptr);
     
     // argument to parameter
-    accept_immutable(&mut x);
-    int *_Borrow ref = &mut x;
+    accept_immutable(&_Mut x);
+    int *_Borrow ref = &_Mut x;
     accept_immutable(ref);
 
     // return value
     int y = 2;
-    const int *_Borrow cref = ret_mutable(&mut x, &mut y);    
+    const int *_Borrow cref = ret_mutable(&_Mut x, &_Mut y);    
     return 0;
 }

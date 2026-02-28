@@ -64,8 +64,8 @@ def err_owned_temporary_memLeak : Error<
 def err_funcPtr_incompatible : Error<
   "incompatible _Borrow function pointer types, cannot cast %0 to %1">;
 def err_borrow_on_borrow : Error<"%0 on a '_Borrow' qualified type is not allowed">;
-def err_mut_expr_unmodifiable  : Error<"the expression after '&mut' must be modifiable">;
-def err_mut_expr_func : Error<"'&mut' for function pointer is not allowed">;
+def err_mut_expr_unmodifiable  : Error<"the expression after '&_Mut' must be modifiable">;
+def err_mut_expr_func : Error<"'&_Mut' for function pointer is not allowed">;
 def err_safe_mut : Error<"global or static variables are not allowed to be mutably borrowed within the safe zone">;
 def err_move_borrow : Error<"_Borrow type does not allow move ownership">;
 def err_typecheck_invalid_borrow_not_pointer : Error<"_Borrow type requires a pointer or reference (%0 is invalid)">;
@@ -295,9 +295,9 @@ def err_nonnull_init_by_default : Error<
 
 // BSC string literal borrow errors.
 def err_mut_borrow_string_literal : Error<
-  "cannot take mutable borrow of string literal with '&mut'; string literals are immutable">;
+  "cannot take mutable borrow of string literal with '&_Mut'; string literals are immutable">;
 def err_mut_borrow_string_literal_indirect : Error<
-  "cannot take mutable borrow through string literal with '&mut *'; string literals are immutable">;
+  "cannot take mutable borrow through string literal with '&_Mut *'; string literals are immutable">;
 def err_pass_string_literal_to_mut_borrow : Error<
   "cannot pass string literal to parameter of type %0; string literals are immutable">;
 

@@ -19,24 +19,24 @@ void test1() {
     int x1 = 0;
     int x = 0;
     float y = 1.0;
-    const int * _Borrow p2 = &const x;
+    const int * _Borrow p2 = &_Const x;
     const int * _Borrow p4= (const int * _Borrow)&x;
-    int * _Borrow p7 = &mut *(&x);
-    int * _Borrow p = &mut x;
-    float * _Borrow p1 = &mut y;
+    int * _Borrow p7 = &_Mut *(&x);
+    int * _Borrow p = &_Mut x;
+    float * _Borrow p1 = &_Mut y;
     myInt p3 = p;
 
     int * owned p5 = (int * owned)&x1;
-    const int * _Borrow b6 = &const *p3;
-    p7 = &mut *p;
+    const int * _Borrow b6 = &_Const *p3;
+    p7 = &_Mut *p;
     int * p8 = (int *)p5;
 }
 
 void test2() {
     int x = 0;
     int y = 1;
-    struct R r1 = { &mut x, &const y };
-    struct R r2 = { .p1 = &mut x, .p2 = &const y };    
+    struct R r1 = { &_Mut x, &_Const y };
+    struct R r2 = { .p1 = &_Mut x, .p2 = &_Const y };    
 }
 
 int main() {

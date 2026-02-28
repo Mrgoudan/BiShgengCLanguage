@@ -17,7 +17,7 @@ void test1() {
 	s1.set(4, 'o');
 	s1.set(5, '\0');
 	String s2 = String::with_capacity(7);
-	safe_swap(&mut s1, &mut s2);
+	safe_swap(&_Mut s1, &_Mut s2);
 }
 
 int main() {

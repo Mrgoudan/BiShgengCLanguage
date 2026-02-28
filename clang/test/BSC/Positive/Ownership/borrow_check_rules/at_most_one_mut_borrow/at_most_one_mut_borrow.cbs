@@ -23,9 +23,9 @@ void free_owned<T>(T* owned p) {
 
 void test1() {
   int *oriPtr = malloc(sizeof(int));
-  int *_Borrow p1 = &mut * oriPtr;
-  const int *_Borrow p2 = &const * oriPtr;
-  int *_Borrow p3 = &mut * oriPtr;
+  int *_Borrow p1 = &_Mut * oriPtr;
+  const int *_Borrow p2 = &_Const * oriPtr;
+  int *_Borrow p3 = &_Mut * oriPtr;
   use_mut(p3);
   // use_immut(p2);
   // use_mut(p1);  
@@ -34,8 +34,8 @@ void test1() {
 
 void test2() {
   int *owned oriPtr = safe_malloc<int>(0);
-  const int *_Borrow p1 = &const * oriPtr;
-  const int *_Borrow p2 = &const * oriPtr;
+  const int *_Borrow p1 = &_Const * oriPtr;
+  const int *_Borrow p2 = &_Const * oriPtr;
   use_immut(p1);
   use_immut(p2);
   free_owned<int>(oriPtr);
@@ -45,12 +45,12 @@ void test3() {
   int a = 5;
   int b = 5, c = 5;
   int *owned oriPtr = safe_malloc<int>(0);
-  int *_Borrow p1 = &mut a;
-  int *_Borrow p2 = &mut b;
+  int *_Borrow p1 = &_Mut a;
+  int *_Borrow p2 = &_Mut b;
   if (c > 0)
-    p1 = &mut * oriPtr;
+    p1 = &_Mut * oriPtr;
   else 
-    p2 = &mut * oriPtr;
+    p2 = &_Mut * oriPtr;
   use_mut(p1);
   use_mut(p2);
   free_owned<int>(oriPtr);
@@ -60,14 +60,14 @@ void test4() {
   int a = 5;
   int b = 5;
   int *owned oriPtr = safe_malloc<int>(0);
-  int *_Borrow p1 = &mut a;
-  int *_Borrow p2 = &mut b;
+  int *_Borrow p1 = &_Mut a;
+  int *_Borrow p2 = &_Mut b;
   if (1) {
-    p2 = &mut * oriPtr;
-    p1 = &mut * oriPtr;  
+    p2 = &_Mut * oriPtr;
+    p1 = &_Mut * oriPtr;  
   } else {  // Dead Code
-    p2 = &mut * oriPtr;  
-    p1 = &mut * oriPtr;
+    p2 = &_Mut * oriPtr;  
+    p1 = &_Mut * oriPtr;
   }
   use_mut(p1);
   // use_mut(p2);
@@ -79,7 +79,7 @@ int* _Borrow use_borrow_and_return(int *_Borrow p) {
 }
 void test5() {
   int local = 42;
-  int *_Borrow p1 = &mut local;
+  int *_Borrow p1 = &_Mut local;
   int *_Borrow p2 = use_borrow_and_return(p1);
   use_mut(p2);
   // use_mut(p1);

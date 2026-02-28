@@ -42,7 +42,7 @@ typedef struct {
 
 int bug() {
   int a = 1;
-  int *_Borrow b = &mut a;
+  int *_Borrow b = &_Mut a;
 
   struct dlist_node *hdr = NULL;
   info_t *info = NULL;

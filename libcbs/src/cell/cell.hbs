@@ -55,7 +55,7 @@ public:
 
 _Safe const T* _Borrow RefImmut<T>::deref(const This* _Borrow this) {
     _Unsafe {
-        return &const this->ptr->value;
+        return &_Const this->ptr->value;
     }
 }
 
@@ -71,7 +71,7 @@ public:
 
 _Safe T* _Borrow RefMut<T>::deref(This* _Borrow this) {
     _Unsafe {
-        return &mut this->ptr->value;
+        return &_Mut this->ptr->value;
     }
 }
 

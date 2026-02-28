@@ -34,7 +34,7 @@ int operator5(struct A s) {
     return s.a;
 }
 
-__attribute__((operator &mut))     // expected-error {{unsupported operator type}}
+__attribute__((operator &_Mut))     // expected-error {{unsupported operator type}}
 int operator6(struct A s) {        // expected-error@-1 {{expected ')'}}
     return s.a;
 }
@@ -109,7 +109,7 @@ int operator20(struct A s) {
     return s.a;
 }
 
-__attribute__((operator &const))        // expected-error {{unsupported operator type}}
+__attribute__((operator &_Const))        // expected-error {{unsupported operator type}}
 int operator21(struct A s) {            // expected-error@-1 {{expected ')'}}
     return s.a;
 }

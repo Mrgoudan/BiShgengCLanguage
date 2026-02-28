@@ -6,14 +6,14 @@ const size_t bsc_string_no_pos = SIZE_MAX;
 _Safe char* _Borrow String::as_mut_str(String* _Borrow this) {
     _Unsafe {
         if (this->vec.buf.ptr != nullptr)
-            return &mut *this->vec.buf.ptr;
+            return &_Mut *this->vec.buf.ptr;
     }
 }
 
 _Safe const char* _Borrow String::as_str(const String* _Borrow this) {
     _Unsafe {
         if (this->vec.buf.ptr != nullptr)
-            return &const *this->vec.buf.ptr;
+            return &_Const *this->vec.buf.ptr;
     }
 }
 

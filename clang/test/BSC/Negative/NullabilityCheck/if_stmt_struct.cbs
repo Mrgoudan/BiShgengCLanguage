@@ -20,7 +20,7 @@ _Safe void test2(void) {
     if (s.p != nullptr) {
         *s.p = 10;
     } else {
-        s.p = &mut a;
+        s.p = &_Mut a;
     }
     *s.p = 30;
 }
@@ -48,8 +48,8 @@ _Safe void test4(void) {
         *s1.p = 10;
         *s2.p = 10;
     } else {
-        s1.p = &mut a;
-        s2.p = &mut b;
+        s1.p = &_Mut a;
+        s2.p = &_Mut b;
     }
     *s1.p = 30;
     *s2.p = 30;
@@ -79,13 +79,13 @@ _Safe void test6(void) {
         if (s2.p != nullptr)
           *s2.p = 10;
         else
-          s2.p = &mut b;
+          s2.p = &_Mut b;
     } else {
-        s1.p = &mut a;
+        s1.p = &_Mut a;
         if (s2.p != nullptr)
           *s2.p = 10;
         else
-          s2.p = &mut b;
+          s2.p = &_Mut b;
     }
     *s1.p = 30;
     *s2.p = 30;
@@ -103,9 +103,9 @@ _Safe void test7(void) {
         *s2.p = 10;
         *s3.p = 10;
     } else {
-        s1.p = &mut a;
-        s2.p = &mut b;
-        s3.p = &mut c;
+        s1.p = &_Mut a;
+        s2.p = &_Mut b;
+        s3.p = &_Mut c;
     }
     *s1.p = 30;
     *s2.p = 30;
@@ -157,7 +157,7 @@ _Safe void test10(void) {
         *s.p = 10;
         s.p = nullptr;
     } else {
-        s.p = &mut a;
+        s.p = &_Mut a;
     }
     *s.p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
@@ -201,8 +201,8 @@ _Safe void test13(void) {
         *s1.p = 10;
         *s2.p = 10;
     } else {
-        s1.p = &mut a;
-        s2.p = &mut b;
+        s1.p = &_Mut a;
+        s2.p = &_Mut b;
     }
     *s1.p = 30;
     *s2.p = 30;

@@ -55,7 +55,7 @@ void test2() {
     P p = { .k = k };
 
     Rc<P> rc = Rc<P>::new(p);
-    W w1 = { .id = 1, .p = Weak<P>::new(&const rc) };
+    W w1 = { .id = 1, .p = Weak<P>::new(&_Const rc) };
     assert(rc.strong_ref_count() == 1);
     assert(rc.weak_ref_count() == 1);
     assert(w1.p.strong_ref_count() == 1);

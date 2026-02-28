@@ -6,18 +6,18 @@ _Safe void foo(const char *_Borrow str) {
 }
 
 _Safe void test_safe_function_param(void) {
-  // Automatic &const * insertion in _Safe function
+  // Automatic &_Const * insertion in _Safe function
   foo("hello");
 }
 
 _Safe void test_safe_function_init(void) {
-  // Automatic &const * insertion for variable initialization in _Safe function
+  // Automatic &_Const * insertion for variable initialization in _Safe function
   const char *_Borrow p = "hello";
 }
 
 void test_safe_block(void) {
   _Safe {
-    // Automatic &const * insertion in _Safe block
+    // Automatic &_Const * insertion in _Safe block
     const char *_Borrow p = "hello";
     foo("world");
   }
@@ -42,25 +42,25 @@ void test_mut_borrow_in_safe_block(void) {
   }
 }
 
-// Test error: direct &mut on string literal in safe zone
+// Test error: direct &_Mut on string literal in safe zone
 _Safe void test_direct_mut_error(void) {
-  const char *_Borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+  const char *_Borrow p = &_Mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&_Mut'; string literals are immutable}}
 }
 
 void test_direct_mut_in_safe_block(void) {
   _Safe {
-    const char *_Borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+    const char *_Borrow p = &_Mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&_Mut'; string literals are immutable}}
   }
 }
 
-// Test error: indirect &mut * on string literal in safe zone
+// Test error: indirect &_Mut * on string literal in safe zone
 _Safe void test_indirect_mut_error(void) {
-  const char *_Borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
+  const char *_Borrow p = &_Mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&_Mut *'; string literals are immutable}}
 }
 
 void test_indirect_mut_in_safe_block(void) {
   _Safe {
-    const char *_Borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
+    const char *_Borrow p = &_Mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&_Mut *'; string literals are immutable}}
   }
 }
 

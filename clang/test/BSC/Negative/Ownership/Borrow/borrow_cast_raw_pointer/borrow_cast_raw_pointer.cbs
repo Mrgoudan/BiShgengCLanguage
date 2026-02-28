@@ -15,10 +15,10 @@ void test() {
   p2 = p1; // allow re-borrowing
 
   // T * _Borrow --> T *
-  int * p3 = (int *)&mut a; // legal
-  const int * p4 = (const int *)&const a; // legal
-  p3 = (int *)&mut a; // legal
-  p4 = (const int *)&const a; // legal
+  int * p3 = (int *)&_Mut a; // legal
+  const int * p4 = (const int *)&_Const a; // legal
+  p3 = (int *)&_Mut a; // legal
+  p4 = (const int *)&_Const a; // legal
 
   _Safe {
     // T * --> T * _Borrow
@@ -28,9 +28,9 @@ void test() {
     p2 = (const int * _Borrow)p; // expected-error {{conversion from type 'int *' to 'const int *_Borrow' is forbidden in the safe zone}}
 
     // T * _Borrow --> T *
-    int * p3 = (int *)&mut a; // expected-error {{conversion from type 'int *_Borrow' to 'int *' is forbidden in the safe zone}}
-    const int * p4 = (const int *)&const a; // expected-error {{conversion from type 'const int *_Borrow' to 'const int *' is forbidden in the safe zone}}
-    p3 = (int *)&mut a; // expected-error {{conversion from type 'int *_Borrow' to 'int *' is forbidden in the safe zone}}
-    p4 = (const int *)&const a; // expected-error {{conversion from type 'const int *_Borrow' to 'const int *' is forbidden in the safe zone}}
+    int * p3 = (int *)&_Mut a; // expected-error {{conversion from type 'int *_Borrow' to 'int *' is forbidden in the safe zone}}
+    const int * p4 = (const int *)&_Const a; // expected-error {{conversion from type 'const int *_Borrow' to 'const int *' is forbidden in the safe zone}}
+    p3 = (int *)&_Mut a; // expected-error {{conversion from type 'int *_Borrow' to 'int *' is forbidden in the safe zone}}
+    p4 = (const int *)&_Const a; // expected-error {{conversion from type 'const int *_Borrow' to 'const int *' is forbidden in the safe zone}}
   }
 }

@@ -45,7 +45,7 @@ void test_non_pointer_This_call_reborrow() {
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:13, col:17> 'int (*)(struct Foo *_Borrow)' _Safe <FunctionToPointerDecay>
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:13, col:17> 'int (struct Foo *_Borrow)' _Safe lvalue .getC
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'struct Foo':'struct Foo' lvalue Var 0x{{[^ ]*}} 'foo' 'struct Foo':'struct Foo'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:13> 'struct Foo *_Borrow' prefix '&mut' cannot overflow
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:13> 'struct Foo *_Borrow' prefix '&_Mut' cannot overflow
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'struct Foo':'struct Foo' lvalue Var 0x{{[^ ]*}} 'foo' 'struct Foo':'struct Foo'
 
 // CHECK: DeclStmt 0x{{[^ ]*}} <line:{{.*}}:5, col:27>
@@ -54,7 +54,7 @@ void test_non_pointer_This_call_reborrow() {
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:15, col:19> 'int (*)(const struct Foo *_Borrow)' _Safe <FunctionToPointerDecay>
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:15, col:19> 'int (const struct Foo *_Borrow)' _Safe lvalue .getC_2 0x{{[^ ]*}}
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:15> 'struct Foo':'struct Foo' lvalue Var 0x{{[^ ]*}} 'foo' 'struct Foo':'struct Foo'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:15> 'const struct Foo *_Borrow' prefix '&const' cannot overflow
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:15> 'const struct Foo *_Borrow' prefix '&_Const' cannot overflow
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:15> 'struct Foo':'struct Foo' lvalue Var 0x{{[^ ]*}} 'foo' 'struct Foo':'struct Foo'
 
 
@@ -81,7 +81,7 @@ void test_const_raw_pointer_call_reborrow() {
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:13, col:22> 'int (const struct Foo *_Borrow)' _Safe lvalue ->getC_2 0x{{[^ ]*}}
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:13> 'const struct Foo *' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'const struct Foo *' lvalue Var 0x{{[^ ]*}} 'c_foo_p' 'const struct Foo *'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:13> 'const struct Foo *_Borrow' prefix '&const *' cannot overflow
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:13> 'const struct Foo *_Borrow' prefix '&_Const *' cannot overflow
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:13> 'const struct Foo *' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'const struct Foo *' lvalue Var 0x{{[^ ]*}} 'c_foo_p' 'const struct Foo *'
 
@@ -103,7 +103,7 @@ void test_owned_pointer_call_reborrow() {
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:13, col:24> 'int (struct Foo *_Borrow)' _Safe lvalue ->getC 0x{{[^ ]*}}
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:13> 'struct Foo *owned' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'struct Foo *owned' lvalue Var 0x{{[^ ]*}} 'foo_owned' 'struct Foo *owned'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:13> 'struct Foo *_Borrow' prefix '&mut *' cannot overflow
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:13> 'struct Foo *_Borrow' prefix '&_Mut *' cannot overflow
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:13> 'struct Foo *owned' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:13> 'struct Foo *owned' lvalue Var 0x{{[^ ]*}} 'foo_owned' 'struct Foo *owned'
 
@@ -114,6 +114,6 @@ void test_owned_pointer_call_reborrow() {
 // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:15, col:26> 'int (const struct Foo *_Borrow)' _Safe lvalue ->getC_2 0x{{[^ ]*}}
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:15> 'struct Foo *owned' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:15> 'struct Foo *owned' lvalue Var 0x{{[^ ]*}} 'foo_owned' 'struct Foo *owned'
-// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:15> 'const struct Foo *_Borrow' prefix '&const *' cannot overflow
+// CHECK-NEXT: UnaryOperator 0x{{[^ ]*}} <<invalid sloc>, col:15> 'const struct Foo *_Borrow' prefix '&_Const *' cannot overflow
 // CHECK-NEXT: ImplicitCastExpr 0x{{[^ ]*}} <col:15> 'struct Foo *owned' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:15> 'struct Foo *owned' lvalue Var 0x{{[^ ]*}} 'foo_owned' 'struct Foo *owned'

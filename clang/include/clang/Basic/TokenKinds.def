@@ -249,8 +249,8 @@ PUNCTUATOR(caretcaret,            "^^")
 
 // BSC support
 #if ENABLE_BSC
-PUNCTUATOR(ampmut,            "&mut")
-PUNCTUATOR(ampconst,          "&const")
+PUNCTUATOR(ampmut,            "&_Mut")
+PUNCTUATOR(ampconst,          "&_Const")
 #endif
 
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.

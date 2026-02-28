@@ -168,7 +168,7 @@ _Safe Option<size_t> RawTable<K, V>::find(const RawTable<K, V>* _Borrow this, ui
 
                 // check the equivalence of `k`
                 K* key_index = this->keys + index;
-                const K* _Borrow key = &const *key_index;
+                const K* _Borrow key = &_Const *key_index;
                 // NOTE: maybe we can use `==` after supporting BiShengC operator overloading
                 if (key->equals(k)) {
                     return Option<size_t>::Some(index);
@@ -210,7 +210,7 @@ _Safe Result<size_t, size_t> RawTable<K, V>::find_or_find_insert_slot(RawTable<K
 
                 // check the equivalence of `k`
                 K* key_index = this->keys + index;
-                const K* _Borrow key = &const *key_index;
+                const K* _Borrow key = &_Const *key_index;
                 // NOTE: maybe we can use `==` after supporting BiShengC operator overloading
                 if (key->equals(k)) {
                     return Result<size_t, size_t>::Ok(index);

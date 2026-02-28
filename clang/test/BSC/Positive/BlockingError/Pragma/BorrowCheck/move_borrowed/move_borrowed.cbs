@@ -5,7 +5,7 @@
 void use_mut(int *_Borrow p);
 void free_owned<T>(T* owned p);
 void test1(int* owned oriPtr) {
-  int *_Borrow p = &mut *oriPtr;
+  int *_Borrow p = &_Mut *oriPtr;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Emove-borrowed"
   free_owned<int>(oriPtr); // cannot move out of `oriPtr` because it is borrowed

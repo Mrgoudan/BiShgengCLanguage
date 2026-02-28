@@ -18,7 +18,7 @@ void free_owned<T>(T* owned p) {
 
 int g = 5;
 const int *_Borrow test1(const int *_Borrow p) {
-  return &const g;
+  return &_Const g;
 }
 
 int *_Borrow test2(int *_Borrow p) {
@@ -26,44 +26,44 @@ int *_Borrow test2(int *_Borrow p) {
 }
 
 const int *_Borrow test3(const int *_Borrow p) {
-  p = &const g;
+  p = &_Const g;
   return p;
 }
 
 int *_Borrow test4(int *_Borrow p) {
   int local = 5;
   int *oriPtr = &local;
-  return &mut * oriPtr;
+  return &_Mut * oriPtr;
 }
 
 int *_Borrow test5(int *_Borrow p) {
   int local = 5;
   int *oriPtr = &local;
-  p = &mut * oriPtr;
+  p = &_Mut * oriPtr;
   return p;
 }
 
 int *_Borrow test6(int *_Borrow p, int* a) {
-  return &mut * a;
+  return &_Mut * a;
 }
 
 int *_Borrow test7(int *_Borrow p, int* a) {
-  p = &mut * a;
+  p = &_Mut * a;
   return p;
 }
 
 int *_Borrow test8(int *_Borrow p) {
-  int* _Borrow p1 = &mut * p;
+  int* _Borrow p1 = &_Mut * p;
   return p1;
 }
 
 int *_Borrow test9(int *_Borrow p) {
-  return &mut * p;
+  return &_Mut * p;
 }
 
 int* _Borrow test10(int *_Borrow p, int* a) {
   if (a) {
-    return &mut * a;
+    return &_Mut * a;
   }
   return p;
 }
@@ -72,7 +72,7 @@ int* _Borrow test11(int *_Borrow p, int a) {
   if (1) {
     return p;
   }
-  // return &mut a;  // Dead Code, this ReturnStmt is unreachable.
+  // return &_Mut a;  // Dead Code, this ReturnStmt is unreachable.
 }
 
 int* _Borrow test12(int* _Borrow p) {
@@ -81,7 +81,7 @@ int* _Borrow test12(int* _Borrow p) {
     free_owned<int>(oriPtr);
     return p;
   }
-//   return &mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
+//   return &_Mut * oriPtr; // Dead Code, this ReturnStmt is unreachable.
 }
 
 struct S { int * _Borrow p; };
@@ -100,34 +100,34 @@ typedef struct {
 
 int test15() {
     int y = 10;
-    Holder res = (Holder){ .data = &mut y };
+    Holder res = (Holder){ .data = &_Mut y };
     return *res.data;
 }
 
 Holder test16(int* _Borrow dummy) {
-    return (Holder){ .data = &mut *dummy };
+    return (Holder){ .data = &_Mut *dummy };
 }
 
 int main() {
   int local = 5;
   int *p = &local;
-  test1(&const local);
-  test2(&mut local);
-  test3(&const local);
-  test4(&mut local);
-  test5(&mut local);
-  test6(&mut local, p);
-  test7(&mut local, p);
-  test8(&mut local);
-  test9(&mut local);
-  test10(&mut local, p);
-  test11(&mut local, 5);
-  test12(&mut local);
-  struct S s = { .p = &mut local };
+  test1(&_Const local);
+  test2(&_Mut local);
+  test3(&_Const local);
+  test4(&_Mut local);
+  test5(&_Mut local);
+  test6(&_Mut local, p);
+  test7(&_Mut local, p);
+  test8(&_Mut local);
+  test9(&_Mut local);
+  test10(&_Mut local, p);
+  test11(&_Mut local, 5);
+  test12(&_Mut local);
+  struct S s = { .p = &_Mut local };
   test13(s);
   int local2 = 5;
-  test14(s, &mut local2);
+  test14(s, &_Mut local2);
   int a = test15();
-  Holder h = test16(&mut a);
+  Holder h = test16(&_Mut a);
   return 0;
 }

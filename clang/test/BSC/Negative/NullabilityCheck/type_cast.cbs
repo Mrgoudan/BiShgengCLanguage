@@ -10,7 +10,7 @@ _Safe int *_Borrow return_and_take_nonnull(int *_Borrow a) {
 _Safe void test1(void) {
     _Unsafe {
         int a = 10;
-        int *_Borrow _Nullable p = &mut a;
+        int *_Borrow _Nullable p = &_Mut a;
         return_and_take_nonnull((int *_Borrow)p);
         int *_Borrow k1 = (int *_Borrow)p;
         p = nullptr;

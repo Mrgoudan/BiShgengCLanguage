@@ -9,7 +9,7 @@ void use_borrow(int *_Borrow b) {}
 
 void test() {
     int a = 0;
-    int *_Borrow p = &mut a;
+    int *_Borrow p = &_Mut a;
 
     struct S b = {.b1 = p, .b2 = p};
     // expected-error@-1 {{cannot use `p` because it was mutably borrowed}}
@@ -26,7 +26,7 @@ void test() {
 
 void test2(){
     int a = 0;
-    int *_Borrow p = &mut a;
+    int *_Borrow p = &_Mut a;
     int *_Borrow arr[2] = {p, p};
     // expected-error@-1 {{cannot use `p` because it was mutably borrowed}}
     // expected-error@-2 {{cannot borrow `*p` as mutable more than once at a time}}

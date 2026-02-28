@@ -6,18 +6,18 @@
 // expected-no-diagnostics
 
 void call1(int *_Borrow p, int *raw) {
-    p = &mut *raw;
+    p = &_Mut *raw;
 }
 
 void call2(const int *_Borrow q, int x) {
-    q = &const x;
+    q = &_Const x;
 }
 
 int main() {
     int a = 1, b = 2;
     int *raw = &a;
-    int *_Borrow p = &mut a;
-    const int *_Borrow q = &const b;
+    int *_Borrow p = &_Mut a;
+    const int *_Borrow q = &_Const b;
     call1(p, raw);
     call2(q, 2);
     return 0;

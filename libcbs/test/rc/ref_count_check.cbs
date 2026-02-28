@@ -80,14 +80,14 @@ void weak_ref_count_check() {
     A a = { .p = p };
 
     Rc<A> rc = Rc<A>::new(a);
-    Weak<A> weak1 = Weak<A>::new(&const rc);
+    Weak<A> weak1 = Weak<A>::new(&_Const rc);
 	
     assert(rc.strong_ref_count() == 1);
     assert(rc.weak_ref_count() == 1);
     assert(weak1.strong_ref_count() == 1);
     assert(weak1.weak_ref_count() == 1);
     {
-        Weak<A> weak2 = Weak<A>::new(&const rc);
+        Weak<A> weak2 = Weak<A>::new(&_Const rc);
         assert(rc.strong_ref_count() == 1);
         assert(rc.weak_ref_count() == 2);
         assert(weak1.strong_ref_count() == 1);

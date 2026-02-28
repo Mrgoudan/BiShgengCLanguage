@@ -43,6 +43,6 @@ int main() {
     int (*pSub)(int, int);
     pAdd = &add;
     pSub = &sub;
-    safe_swap(&mut pAdd, &mut pSub);
+    safe_swap(&_Mut pAdd, &_Mut pSub);
     return 0;
 }

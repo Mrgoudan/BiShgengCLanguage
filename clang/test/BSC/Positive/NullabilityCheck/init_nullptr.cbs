@@ -67,14 +67,14 @@ _Safe int main(void) {
     Data data2 = Data::init(10);
     Data *_Borrow _Nullable p = nullptr;
     if (get_current_status() == 1) {
-        p = &mut data1;
+        p = &_Mut data1;
     } else if (get_current_status() == 2){
-        p = &mut data2;
+        p = &_Mut data2;
     }
     if (p != nullptr) {
-        use(&mut *(p->p2));
+        use(&_Mut *(p->p2));
         if (p->p1 != nullptr) {
-            use(&mut *(p->p1));
+            use(&_Mut *(p->p1));
         }
     }
     return 0;

@@ -17,10 +17,10 @@ void test_simple_borrow() {
     struct SimpleBorrow s2 = {};
 
     // OK: fully initialized
-    struct SimpleBorrow s3 = {.p = &mut x};
+    struct SimpleBorrow s3 = {.p = &_Mut x};
 
     // OK: positional initialization
-    struct SimpleBorrow s4 = {&mut x};
+    struct SimpleBorrow s4 = {&_Mut x};
 }
 
 struct Inner {
@@ -48,10 +48,10 @@ void test_nested_borrow() {
     struct Outer o4 = {.a = 1, .inner = {}};  // inner.p not initialized
 
     // OK: fully initialized
-    struct Outer o5 = {.a = 0, .inner = {.p = &mut x}};
+    struct Outer o5 = {.a = 0, .inner = {.p = &_Mut x}};
 
     // OK: positional initialization
-    struct Outer o6 = {0, {&mut x}};
+    struct Outer o6 = {0, {&_Mut x}};
 }
 
 struct Level3 {
@@ -87,10 +87,10 @@ void test_deep_nesting() {
     struct Level1 v5 = {0, {0, {}}};  // l2.l3.p not initialized
 
     // OK: fully initialized
-    struct Level1 v6 = {.a = 0, .l2 = {.b = 1, .l3 = {.p = &mut x}}};
+    struct Level1 v6 = {.a = 0, .l2 = {.b = 1, .l3 = {.p = &_Mut x}}};
 
     // OK: positional initialization
-    struct Level1 v7 = {0, {1, {&mut x}}};
+    struct Level1 v7 = {0, {1, {&_Mut x}}};
 }
 
 struct MultipleBorrow {
@@ -106,19 +106,19 @@ void test_multiple_borrow() {
     struct MultipleBorrow m1;
 
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
-    struct MultipleBorrow m2 = {.p1 = &mut x};  // p2 not initialized
+    struct MultipleBorrow m2 = {.p1 = &_Mut x};  // p2 not initialized
 
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
-    struct MultipleBorrow m3 = {.p1 = &mut x, .regular = 0};  // p2 not initialized
+    struct MultipleBorrow m3 = {.p1 = &_Mut x, .regular = 0};  // p2 not initialized
 
     // OK: all _Borrow fields initialized
-    struct MultipleBorrow m4 = {.p1 = &mut x, .p2 = &mut y};
+    struct MultipleBorrow m4 = {.p1 = &_Mut x, .p2 = &_Mut y};
 
     // OK: all fields initialized
-    struct MultipleBorrow m5 = {.p1 = &mut x, .p2 = &mut y, .regular = 0};
+    struct MultipleBorrow m5 = {.p1 = &_Mut x, .p2 = &_Mut y, .regular = 0};
 
     // OK: positional
-    struct MultipleBorrow m6 = {&mut x, &mut y, 0};
+    struct MultipleBorrow m6 = {&_Mut x, &_Mut y, 0};
 
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
     struct MultipleBorrow m7 = {.regular = 0};
@@ -138,7 +138,7 @@ void test_const_borrow() {
     struct ConstBorrow c2 = {};
 
     // OK: initialized with const _Borrow
-    struct ConstBorrow c3 = {.p = &const x};
+    struct ConstBorrow c3 = {.p = &_Const x};
 }
 
 
@@ -161,13 +161,13 @@ void test_mixed() {
     struct Mixed m3 = {.a = 1, .b = 2};  // p not initialized
 
     // OK: _Borrow field initialized
-    struct Mixed m5 = {.a = 1, .p = &mut x};
+    struct Mixed m5 = {.a = 1, .p = &_Mut x};
 
     // OK: all fields initialized
-    struct Mixed m6 = {.a = 1, .p = &mut x, .b = 2};
+    struct Mixed m6 = {.a = 1, .p = &_Mut x, .b = 2};
 
     // OK: positional with _Borrow
-    struct Mixed m7 = {1, &mut x, 2};
+    struct Mixed m7 = {1, &_Mut x, 2};
 }
 
 struct ArrayTest {
@@ -181,7 +181,7 @@ void test_array() {
     // Each element must have its _Borrow fields initialized
 
     // OK: all elements fully initialized
-    struct ArrayTest arr4[2] = {{&mut x}, {&mut y}};
+    struct ArrayTest arr4[2] = {{&_Mut x}, {&_Mut y}};
 }
 
 struct Complex {
@@ -200,17 +200,17 @@ void test_complex() {
     struct Complex c1;
 
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
-    struct Complex c2 = {.p1 = &mut x};  // nested.p2 and p3 not initialized
+    struct Complex c2 = {.p1 = &_Mut x};  // nested.p2 and p3 not initialized
 
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
-    struct Complex c3 = {.p1 = &mut x, .p3 = &mut z};  // nested.p2 not initialized
+    struct Complex c3 = {.p1 = &_Mut x, .p3 = &_Mut z};  // nested.p2 not initialized
 
     // expected-error@+1 {{variable declarations of _Borrow qualified must be initialized}}
-    struct Complex c4 = {.p1 = &mut x, .nested = {.data = 0}};  // nested.p2 not initialized
+    struct Complex c4 = {.p1 = &_Mut x, .nested = {.data = 0}};  // nested.p2 not initialized
 
     // OK: all _Borrow fields initialized
-    struct Complex c5 = {.p1 = &mut x, .nested = {.p2 = &mut y}, .p3 = &mut z};
+    struct Complex c5 = {.p1 = &_Mut x, .nested = {.p2 = &_Mut y}, .p3 = &_Mut z};
 
     // OK: with data field too
-    struct Complex c6 = {.p1 = &mut x, .nested = {.p2 = &mut y, .data = 0}, .p3 = &mut z};
+    struct Complex c6 = {.p1 = &_Mut x, .nested = {.p2 = &_Mut y, .data = 0}, .p3 = &_Mut z};
 }

@@ -56,10 +56,10 @@ struct S3 {
 void test_assign_borrow_after_owned_move() {
   int a = 0;
   int b = 1;
-  struct S3 s3 = {.p2 = &mut a};
+  struct S3 s3 = {.p2 = &_Mut a};
   struct S3 *owned p3 = safe_malloc(s3);
   safe_free((void *owned)p3->ptr);
-  p3->p2 = &mut b;
+  p3->p2 = &_Mut b;
   safe_free((void *owned)p3);
 }
 

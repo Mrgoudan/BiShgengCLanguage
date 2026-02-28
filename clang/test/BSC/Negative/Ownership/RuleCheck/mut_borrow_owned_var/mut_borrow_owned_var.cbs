@@ -20,62 +20,62 @@ void consume(int *owned p);
 
 void test1() {
   int *owned p = nullptr;
-  foo1(&mut p);
+  foo1(&_Mut p);
 } // expected-error {{memory leak of value: `p`}}
 
 void test2() {
   int *owned p = nullptr;
-  int *owned *_Borrow q = &mut p;
+  int *owned *_Borrow q = &_Mut p;
   foo1(q);
 } // expected-error {{memory leak of value: `p`}}
 
 void test3() {
   S *owned p = nullptr;
-  foo2(&mut p); // expected-error {{use of moved value: `p`}}
+  foo2(&_Mut p); // expected-error {{use of moved value: `p`}}
 } // expected-error {{memory leak of value: `p`}}
 
 void test4() {
   S s;
-  foo3(&mut s); // expected-error {{use of partially moved value: `s`, s.a, s.b are moved}}
+  foo3(&_Mut s); // expected-error {{use of partially moved value: `s`, s.a, s.b are moved}}
 }
 
 void test5(S *owned p) {
-  foo2(&mut p);
+  foo2(&_Mut p);
 } // expected-error {{memory leak of value: `p`}}
   // expected-error@-1 {{field memory leak of value: `p`, p.a, p.b are leak}}
 
 void test6(S *owned p) {
   int *owned q = p->a;
   consume(q);
-  foo2(&mut p); // expected-error {{use of partially moved value: `p`, p.a is moved}}
+  foo2(&_Mut p); // expected-error {{use of partially moved value: `p`, p.a is moved}}
 } // expected-error {{memory leak of value: `p`}}
   // expected-error@-1 {{field memory leak of value: `p`, p.b is leak}}
 
 void test7(U *owned p) {
-  foo4(&mut p);
+  foo4(&_Mut p);
 } // expected-error {{memory leak of value: `p`}}
 
 void test8() {
   U *owned sp = nullptr;
-  foo4(&mut sp);
+  foo4(&_Mut sp);
 } // expected-error {{memory leak of value: `sp`}}
 
 void test9() {
   U u;
-  foo5(&mut u);
+  foo5(&_Mut u);
 }
 
 void test10(int *owned p) {
   S s;
   s.a = p;
-  foo3(&mut s); // expected-error {{use of partially moved value: `s`, s.b is moved}}
+  foo3(&_Mut s); // expected-error {{use of partially moved value: `s`, s.b is moved}}
 } // expected-error {{field memory leak of value: `s`, s.a is leak}}
 
 void test11(int *owned p, int *owned q) {
   S s;
   s.a = p;
   s.b = q;
-  foo3(&mut s);
+  foo3(&_Mut s);
 } // expected-error {{field memory leak of value: `s`, s.a, s.b are leak}}
 
 void test12(int *owned p, int *owned q) {
@@ -83,7 +83,7 @@ void test12(int *owned p, int *owned q) {
   s.a = p;
   s.b = q;
   if (s.a == nullptr) {
-    foo3(&mut s);
+    foo3(&_Mut s);
     s.a = nullptr; // expected-error {{assign to part of owned value: `s.a`}}
   }
 } // expected-error {{field memory leak of value: `s`, s.b, s.a are leak}}
@@ -93,7 +93,7 @@ void test13(int *owned p, int *owned q) {
   s.a = p;
   s.b = q;
   if (s.a == nullptr) {
-    foo3(&mut s);
+    foo3(&_Mut s);
     return; // expected-error {{field memory leak of value: `s`, s.b, s.a are leak}}
   }
 } // expected-error {{field memory leak of value: `s`, s.a, s.b are leak}}
@@ -102,13 +102,13 @@ void test14(int *owned p) {
   S s;
   s.a = p;
   if (s.a == nullptr) {
-    foo3(&mut s); // expected-error {{use of partially moved value: `s`, s.a, s.b are moved}}
+    foo3(&_Mut s); // expected-error {{use of partially moved value: `s`, s.a, s.b are moved}}
   }
 } // expected-error {{field memory leak of value: `s`, s.a is leak}}
 
 void test15(int *owned q) {
   int *owned p = q;
   while (p != nullptr) {
-    foo1(&mut p);
+    foo1(&_Mut p);
   }
 }

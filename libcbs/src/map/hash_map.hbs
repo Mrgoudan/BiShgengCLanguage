@@ -57,7 +57,7 @@ _Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* _Borrow this,
 
     _Unsafe {
         S hash_builder = this->hash_builder;
-        uint64_t hash = k->hash(&mut hash_builder);
+        uint64_t hash = k->hash(&_Mut hash_builder);
         Option<size_t> option = this->table.find(hash, k);
         _Bool result = option.is_some();
         // AUTO INSERT: ~Option(option)
@@ -73,11 +73,11 @@ _Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* _Borrow this,
 // _Safe Option<const V* _Borrow> HashMap<K, V, S>::get(const HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
 //     _Unsafe {
 //         S hash_builder = this->hash_builder;
-//         uint64_t hash = k->hash(&mut hash_builder);
+//         uint64_t hash = k->hash(&_Mut hash_builder);
 //         Option<size_t> option = this->table.find(hash, k);
 //         if (option.is_some()) {
 //             size_t index = option_unwrap<size_t>(option);
-//             const V* _Borrow val = &const *(this->table.values + index);
+//             const V* _Borrow val = &_Const *(this->table.values + index);
 //             return Option<const V* _Borrow>::Some(val);
 //         } else {
 //             // AUTO INSERT: ~Option(option)
@@ -93,11 +93,11 @@ _Safe _Bool HashMap<K, V, S>::contains_key(const HashMap<K, V, S>* _Borrow this,
 _Safe Option<V* _Borrow> HashMap<K, V, S>::get_mut(HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
     _Unsafe {
         S hash_builder = this->hash_builder;
-        uint64_t hash = k->hash(&mut hash_builder);
+        uint64_t hash = k->hash(&_Mut hash_builder);
         Option<size_t> option = this->table.find(hash, k);
         if (option.is_some()) {
             size_t index = option_unwrap<size_t>(option);
-            V* _Borrow val = &mut *(this->table.values + index);
+            V* _Borrow val = &_Mut *(this->table.values + index);
             return Option<V* _Borrow>::Some(val);
         } else {
             // AUTO INSERT: ~Option(option)
@@ -148,8 +148,8 @@ _Safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* _Borrow this, size_t addi
                         *(this->table.ctrl + index) = EMPTY;
 
                         // insert key and value into new_hm
-                        uint64_t hash = key.hash(&mut hash_builder);
-                        Result<size_t, size_t> result = new_hm.table.find_or_find_insert_slot(hash, &const key);
+                        uint64_t hash = key.hash(&_Mut hash_builder);
+                        Result<size_t, size_t> result = new_hm.table.find_or_find_insert_slot(hash, &_Const key);
                         if (result.is_err()) {
                             size_t slot = result_unwrap_err<size_t, size_t>(result);
                             new_hm.table.insert_in_slot(slot, hash, key, value);
@@ -160,7 +160,7 @@ _Safe void HashMap<K, V, S>::reserve(HashMap<K, V, S>* _Borrow this, size_t addi
             }
         }
 
-        safe_swap(this, &mut new_hm);
+        safe_swap(this, &_Mut new_hm);
         // AUTO INSERT: ~HashMap(new_hm)
     }
 }
@@ -179,8 +179,8 @@ _Safe Option<V> HashMap<K, V, S>::insert(HashMap<K, V, S>* _Borrow this, K k, V 
 
     S hash_builder = this->hash_builder;
     _Unsafe {
-        uint64_t hash = k.hash(&mut hash_builder);
-        Result<size_t, size_t> result = this->table.find_or_find_insert_slot(hash, &const k);
+        uint64_t hash = k.hash(&_Mut hash_builder);
+        Result<size_t, size_t> result = this->table.find_or_find_insert_slot(hash, &_Const k);
         if (result.is_ok()) {
             size_t index = result_unwrap<size_t, size_t>(result);
             _Unsafe {
@@ -212,7 +212,7 @@ _Safe size_t HashMap<K, V, S>::length(const HashMap<K, V, S>* _Borrow this) {
 _Safe Option<V> HashMap<K, V, S>::remove(HashMap<K, V, S>* _Borrow this, const K* _Borrow k) {
     _Unsafe {
         S hash_builder = this->hash_builder;
-        uint64_t hash = k->hash(&mut hash_builder);
+        uint64_t hash = k->hash(&_Mut hash_builder);
         Option<V> result = this->table.remove_entry(hash, k);
         return result;
     }

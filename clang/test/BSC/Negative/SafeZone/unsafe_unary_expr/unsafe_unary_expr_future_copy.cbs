@@ -13,9 +13,9 @@ int main(void) {
     // With ENABLE_BSC_FUTURE, [] operator on raw pointers is forbidden
     int d = b[0]; // expected-error {{'[]' operator is forbidden in the safe zone}}
     int x = 0;
-    const int *_Borrow cb = &const x;
+    const int *_Borrow cb = &_Const x;
     int y = *cb;
-    int *_Borrow mb = &mut x;
+    int *_Borrow mb = &_Mut x;
     int z = ++*mb; // ok: ++ on dereferenced _Borrow pointer is allowed
     int w = *mb++; //#1
     int * p = &x; // expected-error {{'&' operator is forbidden in the safe zone}}

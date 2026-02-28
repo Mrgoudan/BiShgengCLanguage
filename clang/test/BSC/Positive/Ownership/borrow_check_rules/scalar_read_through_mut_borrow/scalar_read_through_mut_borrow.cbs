@@ -35,7 +35,7 @@ typedef struct Date {
 // This function should compile without "cannot _Borrow as mutable more than once" errors
 void GmTmGet(DATE_T *_Borrow pDate, unsigned int *_Borrow puiMillSecs) {
   SYSTEM_S stGmtTime = {2024, 1, 15, 1000};
-  GET(&mut stGmtTime, pDate, puiMillSecs);
+  GET(&_Mut stGmtTime, pDate, puiMillSecs);
 }
 
 // Direct version without macro - should also work
@@ -43,16 +43,16 @@ void DirectRead(DATE_T *_Borrow pDate, unsigned int *_Borrow puiMillSecs) {
   SYSTEM_S stGmtTime = {2024, 1, 15, 1000};
 
   // Each _Borrow is independent and ends immediately after reading the scalar value
-  SYSTEM_S *_Borrow tmp0 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp0 = &_Mut stGmtTime;
   pDate->uwYear = tmp0->usYear;
 
-  SYSTEM_S *_Borrow tmp1 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp1 = &_Mut stGmtTime;
   pDate->uwMonth = tmp1->ucMonth;
 
-  SYSTEM_S *_Borrow tmp2 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp2 = &_Mut stGmtTime;
   pDate->ucDate = tmp2->ucDate;
 
-  SYSTEM_S *_Borrow tmp3 = &mut stGmtTime;
+  SYSTEM_S *_Borrow tmp3 = &_Mut stGmtTime;
   *puiMillSecs = tmp3->uiMillSec;
 }
 
@@ -60,8 +60,8 @@ int main() {
   DATE_T date;
   unsigned int millisecs;
 
-  GmTmGet(&mut date, &mut millisecs);
-  DirectRead(&mut date, &mut millisecs);
+  GmTmGet(&_Mut date, &_Mut millisecs);
+  DirectRead(&_Mut date, &_Mut millisecs);
 
   return 0;
 }

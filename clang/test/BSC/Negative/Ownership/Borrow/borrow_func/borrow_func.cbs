@@ -3,7 +3,7 @@
 int *_Borrow f(); // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
 int *_Borrow f1(int a) { // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
     static int b = 1;
-    return &mut b;
+    return &_Mut b;
 }
 int *_Borrow f2(int a, int *_Borrow p); // legal
 
@@ -17,7 +17,7 @@ struct R f4 () {} // expected-error {{no _Borrow qualified type found in the fun
 int *_Borrow struct R::foo(int a); // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
 int *_Borrow struct R::foo(int a) { // expected-error {{no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified}}
     static int b = 1;
-    return &mut b;
+    return &_Mut b;
 }
 
 struct MyStruct<T> {};

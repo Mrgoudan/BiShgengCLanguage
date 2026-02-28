@@ -13,7 +13,7 @@ _Safe void test1(void) {
     if (n1.b->a != nullptr)   // expected-error {{cannot access member through nullable pointer}}
         *n1.b->a = 10;  // expected-error {{cannot access member through nullable pointer}}
     struct M m = { .a = nullptr };
-    struct N n2 = { .b = &mut m };
+    struct N n2 = { .b = &_Mut m };
     if (n2.b->a != nullptr)
         *n2.b->a = 10;
 }

@@ -20,7 +20,7 @@ const T *_Borrow Slice<T>::get(This this, int index) {
 
 int test() {
     int arr[5] = { 1, 2, 3, 4, 5 };
-    Slice<int> s = Slice<int>::new(&const arr[1], 4); 
+    Slice<int> s = Slice<int>::new(&_Const arr[1], 4); 
     const int *_Borrow temp = s.ptr;
     const int *_Borrow second = s.get(1);
     int b = *temp;

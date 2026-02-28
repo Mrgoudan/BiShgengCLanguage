@@ -27,54 +27,54 @@ void free_owned<T>(T* owned p) {
   free( (T*)p );
 }
 
-// Test 1: Simple ternary with &mut on owned pointers
+// Test 1: Simple ternary with &_Mut on owned pointers
 void test_mut_on_owned() {
   int *owned ptr1 = safe_malloc<int>(10);
   int *owned ptr2 = safe_malloc<int>(20);
   int cond = 1;
 
-  int *_Borrow result = cond ? &mut * ptr1 : &mut * ptr2;
+  int *_Borrow result = cond ? &_Mut * ptr1 : &_Mut * ptr2;
   use_mut(result);
 
   free_owned<int>(ptr1);
   free_owned<int>(ptr2);
 }
 
-// Test 2: Ternary with &const on owned pointers
+// Test 2: Ternary with &_Const on owned pointers
 void test_const_on_owned() {
   int *owned ptr1 = safe_malloc<int>(100);
   int *owned ptr2 = safe_malloc<int>(200);
   int cond = 0;
 
-  const int *_Borrow result = cond ? &const * ptr1 : &const * ptr2;
+  const int *_Borrow result = cond ? &_Const * ptr1 : &_Const * ptr2;
   use_immut(result);
 
   free_owned<int>(ptr1);
   free_owned<int>(ptr2);
 }
 
-// Test 3: Ternary with &mut on local variables
+// Test 3: Ternary with &_Mut on local variables
 void test_mut_on_locals() {
   int a = 5, b = 10;
   int cond = 1;
 
-  int *_Borrow result = cond ? &mut a : &mut b;
+  int *_Borrow result = cond ? &_Mut a : &_Mut b;
   use_mut(result);
 }
 
-// Test 4: Ternary with &const on local variables
+// Test 4: Ternary with &_Const on local variables
 void test_const_on_locals() {
   int a = 5, b = 10;
   int cond = 0;
 
-  const int *_Borrow result = cond ? &const a : &const b;
+  const int *_Borrow result = cond ? &_Const a : &_Const b;
   use_immut(result);
 }
 
 // Test 5: Mixed - one branch with _Borrow, one with parameter
 void test_mixed_borrow_param(const int *_Borrow date) {
   int sdate = 0;
-  const int *_Borrow result = ((date) != 0) ? (date) : &const (sdate);
+  const int *_Borrow result = ((date) != 0) ? (date) : &_Const (sdate);
   use_immut(result);
 }
 
@@ -85,7 +85,7 @@ void test_nested_ternary() {
   int *owned ptr3 = safe_malloc<int>(3);
   int cond1 = 1, cond2 = 0;
 
-  int *_Borrow result = cond1 ? (cond2 ? &mut * ptr1 : &mut * ptr2) : &mut * ptr3;
+  int *_Borrow result = cond1 ? (cond2 ? &_Mut * ptr1 : &_Mut * ptr2) : &_Mut * ptr3;
   use_mut(result);
 
   free_owned<int>(ptr1);
@@ -99,31 +99,31 @@ void test_in_function_call() {
   int *owned ptr2 = safe_malloc<int>(40);
   int cond = 1;
 
-  use_mut(cond ? &mut * ptr1 : &mut * ptr2);
+  use_mut(cond ? &_Mut * ptr1 : &_Mut * ptr2);
 
   free_owned<int>(ptr1);
   free_owned<int>(ptr2);
 }
 
-// Test 8: Ternary with &mut deref on raw pointers
+// Test 8: Ternary with &_Mut deref on raw pointers
 void test_mut_deref() {
   int a = 5, b = 10;
   int *p_a = &a;
   int *p_b = &b;
   int cond = 1;
 
-  int *_Borrow result = cond ? &mut * p_a : &mut * p_b;
+  int *_Borrow result = cond ? &_Mut * p_a : &_Mut * p_b;
   use_mut(result);
 }
 
-// Test 9: Ternary with &const deref on raw pointers
+// Test 9: Ternary with &_Const deref on raw pointers
 void test_const_deref() {
   int a = 5, b = 10;
   int *p_a = &a;
   int *p_b = &b;
   int cond = 0;
 
-  const int *_Borrow result = cond ? &const * p_a : &const * p_b;
+  const int *_Borrow result = cond ? &_Const * p_a : &_Const * p_b;
   use_immut(result);
 }
 
@@ -135,10 +135,10 @@ void test_multiple_ternaries() {
   int *owned ptr4 = safe_malloc<int>(80);
   int cond1 = 1, cond2 = 0;
 
-  int *_Borrow result1 = cond1 ? &mut * ptr1 : &mut * ptr2;
+  int *_Borrow result1 = cond1 ? &_Mut * ptr1 : &_Mut * ptr2;
   use_mut(result1);
 
-  int *_Borrow result2 = cond2 ? &mut * ptr3 : &mut * ptr4;
+  int *_Borrow result2 = cond2 ? &_Mut * ptr3 : &_Mut * ptr4;
   use_mut(result2);
 
   free_owned<int>(ptr1);
@@ -148,7 +148,7 @@ void test_multiple_ternaries() {
 }
 
 // Test 11: Ternary inside macro expansion
-#define SELECT_PTR(cond, p1, p2) ((cond) ? &mut * (p1) : &mut * (p2))
+#define SELECT_PTR(cond, p1, p2) ((cond) ? &_Mut * (p1) : &_Mut * (p2))
 
 void test_macro_ternary() {
   int *owned ptr1 = safe_malloc<int>(90);
@@ -165,9 +165,9 @@ void test_macro_ternary() {
 // Test 12: Complex macro with multiple ternaries and mixed _Borrow types
 #define INIT_PTRS(date, time, pui, sdate, stime, ui) \
   do { \
-    (date) = ((date) != 0) ? (date) : &const (sdate); \
-    (time) = ((time) != 0) ? (time) : &mut (stime); \
-    (pui) = ((pui) != 0) ? (pui) : &mut (ui); \
+    (date) = ((date) != 0) ? (date) : &_Const (sdate); \
+    (time) = ((time) != 0) ? (time) : &_Mut (stime); \
+    (pui) = ((pui) != 0) ? (pui) : &_Mut (ui); \
   } while(0)
 
 void test_complex_macro(const int *_Borrow date, char *_Borrow time, unsigned int *_Borrow pui) {
@@ -183,7 +183,7 @@ void test_complex_condition() {
   int *owned ptr2 = safe_malloc<int>(120);
   int a = 5, b = 10;
 
-  int *_Borrow result = (a > b && a < 100) ? &mut * ptr1 : &mut * ptr2;
+  int *_Borrow result = (a > b && a < 100) ? &_Mut * ptr1 : &_Mut * ptr2;
   use_mut(result);
 
   free_owned<int>(ptr1);
@@ -196,8 +196,8 @@ void test_const_from_mut() {
   int *owned ptr2 = safe_malloc<int>(140);
   int cond = 1;
 
-  // Taking &const of owned pointers
-  const int *_Borrow result = cond ? &const * ptr1 : &const * ptr2;
+  // Taking &_Const of owned pointers
+  const int *_Borrow result = cond ? &_Const * ptr1 : &_Const * ptr2;
   use_immut(result);
 
   free_owned<int>(ptr1);
@@ -209,6 +209,6 @@ void test_with_parens() {
   int a = 1, b = 2;
   int cond = 1;
 
-  int *_Borrow result = cond ? (&mut (a)) : (&mut (b));
+  int *_Borrow result = cond ? (&_Mut (a)) : (&_Mut (b));
   use_mut(result);
 }

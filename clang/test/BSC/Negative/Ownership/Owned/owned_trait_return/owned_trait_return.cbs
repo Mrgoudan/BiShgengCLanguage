@@ -79,10 +79,10 @@ trait T* _Borrow cond3(int flag, int* _Borrow x) {
     return x;
   } else if (flag == 2) {
     struct S* sp = initSP();
-    return &mut *sp;
+    return &_Mut *sp;
   } else {
     struct S s = initS();
-    return &mut s;
+    return &_Mut s;
   }
 }
 

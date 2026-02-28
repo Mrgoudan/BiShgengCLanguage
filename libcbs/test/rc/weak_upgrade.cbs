@@ -20,7 +20,7 @@ void weak_upgrade() {
     A a = { .p = p };
 
     Rc<A> rc1 = Rc<A>::new(a);
-    Weak<A> weak1 = Weak<A>::new(&const rc1);
+    Weak<A> weak1 = Weak<A>::new(&_Const rc1);
     assert(rc1.strong_ref_count() == 1);
     assert(rc1.weak_ref_count() == 1);
     assert(weak1.strong_ref_count() == 1);

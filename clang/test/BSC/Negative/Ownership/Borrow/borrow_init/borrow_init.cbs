@@ -14,9 +14,9 @@ void test() {
   int * _Borrow b1; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
   const int * _Borrow b2; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
   int * _Borrow * b3; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  int * _Borrow b4 = &mut a; // legal
-  const int * _Borrow b5 = &const b; // legal
-  int _Borrow * b6 = &mut a; // expected-error {{_Borrow type requires a pointer or reference ('int' is invalid)}}
+  int * _Borrow b4 = &_Mut a; // legal
+  const int * _Borrow b5 = &_Const b; // legal
+  int _Borrow * b6 = &_Mut a; // expected-error {{_Borrow type requires a pointer or reference ('int' is invalid)}}
                             // expected-error@-1 {{incompatible borrow types, cannot cast 'int *_Borrow' to '_Borrow int *'}}
   struct R r; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
   struct R *pr; // expected-error {{variable declarations of _Borrow qualified must be initialized}}

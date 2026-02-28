@@ -2,7 +2,7 @@
 
 void test5() {
   int* owned oriPtr = safe_malloc<int>(0);  // expected-error{{use of undeclared identifier 'safe_malloc'}}
-  int* _Borrow p = &mut *oriPtr;
+  int* _Borrow p = &_Mut *oriPtr;
   while (rand()) {    // expected-error{{use of undeclared identifier 'rand'}}
     if (rand()) {    // expected-error{{use of undeclared identifier 'rand'}}
       free_owned<int>(oriPtr);    // expected-error{{use of undeclared identifier 'free_owned'}}

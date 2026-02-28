@@ -6,24 +6,24 @@ void use_mut(int *_Borrow p);
 void use_immut(const int *_Borrow p);
 void test1() {
   int local = 42;
-  int *_Borrow p = &mut local;
-  int *_Borrow q = &mut local; // cannot borrow `local` as mutable more than once at a time
+  int *_Borrow p = &_Mut local;
+  int *_Borrow q = &_Mut local; // cannot borrow `local` as mutable more than once at a time
   use_mut(p);
   use_mut(q);
 }
 
 void test2() {
   int local = 42;
-  int *_Borrow p = &mut local;
-  const int *_Borrow q = &const local; // cannot borrow `local` as immutable because it is also borrowed as mutable
+  int *_Borrow p = &_Mut local;
+  const int *_Borrow q = &_Const local; // cannot borrow `local` as immutable because it is also borrowed as mutable
   use_mut(p);
   use_immut(q);
 }
 
 void test3(int *_Borrow p) {
   int local = 5;
-  p = &mut local;
-  const int *_Borrow p1 = &const *p;
+  p = &_Mut local;
+  const int *_Borrow p1 = &_Const *p;
   use_mut(p);          // cannot borrow `*p` as mutable because it is also borrowed as immutable
   use_immut(p1);
 }

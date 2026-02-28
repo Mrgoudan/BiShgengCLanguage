@@ -11,7 +11,7 @@ int *_Borrow return_and_take_nonnull(int *_Borrow a) {
 
 int main(void) {
   int a = 10; 
-  int *_Borrow p = &mut a;
+  int *_Borrow p = &_Mut a;
   return_and_take_nonnull((int *_Borrow)p);
   return 0;
 }

@@ -18,7 +18,7 @@ struct S f(struct S ss) {
 
 int main() {
   int b = 20;
-  int *_Borrow p = &mut b;
+  int *_Borrow p = &_Mut b;
   struct S s = {p};
   struct S s_r =  f(s);
   struct S *m = &s;

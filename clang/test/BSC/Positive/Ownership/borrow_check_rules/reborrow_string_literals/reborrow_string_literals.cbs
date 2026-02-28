@@ -11,6 +11,6 @@ void bsc_strcpy_s(char* _Borrow strDest, int destMax, const char* _Borrow strSrc
 
 int main(){
   char db[10] = {0};
-  bsc_strcpy_s(&mut *db, 5, &const *"DB1");
+  bsc_strcpy_s(&_Mut *db, 5, &_Const *"DB1");
   return 0;
 }

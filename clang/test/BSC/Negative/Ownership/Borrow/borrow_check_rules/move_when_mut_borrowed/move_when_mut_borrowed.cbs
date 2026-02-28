@@ -8,7 +8,7 @@ S *_Borrow foo(int *_Borrow);
 S *_Borrow bar(S *_Borrow, int);
 
 int *owned test1(int *owned p) {
-  S *_Borrow p1 = foo(&mut *p); // expected-note {{`*p` is borrowed here}}
+  S *_Borrow p1 = foo(&_Mut *p); // expected-note {{`*p` is borrowed here}}
   S *_Borrow p2 = bar(p1, 2); // expected-note {{`(*p1).a` is borrowed here}}
   int *owned q= p; // expected-error {{cannot move out of `p` because it is borrowed}}
   p1->a = 2; // expected-error {{cannot assign to `(*p1).a` because it is borrowed}}
@@ -17,7 +17,7 @@ int *owned test1(int *owned p) {
 }
 
 int *owned test2(int *owned p) {
-  S *_Borrow p1 = (S *_Borrow)(S *)(int *)&mut *p;
+  S *_Borrow p1 = (S *_Borrow)(S *)(int *)&_Mut *p;
   int *owned q= p;
   p1->a = 2;
   return q;

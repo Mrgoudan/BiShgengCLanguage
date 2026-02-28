@@ -56,7 +56,7 @@ void test2() {
 
 void test3() {
   int x = 1;
-  trait T* _Borrow t = &mut x;
+  trait T* _Borrow t = &_Mut x;
   t->do_it(); // expected-error {{incompatible owned types, cannot cast 'void *_Borrow' to 'void *owned'}}
   t->do_this();
 }
@@ -84,7 +84,7 @@ void test5() {
 
 void test6() {
   struct S s = initS();
-  trait T* _Borrow t= &mut s;
+  trait T* _Borrow t= &_Mut s;
   t->do_it(); // expected-error {{incompatible owned types, cannot cast 'void *_Borrow' to 'void *owned'}}
   t->do_this();
 }

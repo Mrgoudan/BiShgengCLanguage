@@ -25,7 +25,7 @@ _Safe T2 _Borrow convert<T1, T2, T3>(T1 _Borrow a, T3 _Borrow b) {
 
 _Safe int main(void) {
   int x = 42;
-  int * _Borrow ptr = &mut x;
+  int * _Borrow ptr = &_Mut x;
 
   // Test cast function - T1 and T2 are int*, _Borrow is added by function signature
   int *_Borrow p1 = cast<int *, int *>(ptr);

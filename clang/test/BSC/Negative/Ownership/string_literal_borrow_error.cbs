@@ -8,16 +8,16 @@ void test_mut_param() {
 }
 
 void test_direct_mut() {
-  const char * _Borrow p = &mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+  const char * _Borrow p = &_Mut "hello";  // expected-error {{cannot take mutable borrow of string literal with '&_Mut'; string literals are immutable}}
 }
 
 void test_indirect_mut() {
-  const char * _Borrow p = &mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&mut *'; string literals are immutable}}
+  const char * _Borrow p = &_Mut * "hello";  // expected-error {{cannot take mutable borrow through string literal with '&_Mut *'; string literals are immutable}}
 }
 
 void test_indirect_mut_via_var() {
   const char *value = "hello";
-  const char * _Borrow p = &mut * value;  // expected-error {{the expression after '&mut' must be modifiable}}
+  const char * _Borrow p = &_Mut * value;  // expected-error {{the expression after '&_Mut' must be modifiable}}
 }
 
 int main() {

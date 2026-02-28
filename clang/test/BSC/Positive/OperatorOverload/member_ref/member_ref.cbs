@@ -82,7 +82,7 @@ struct A *_Borrow memberDerefC(struct CP * _Borrow s) {
 
 int test3() {
     struct A sa = {1};
-    struct CP scp = {&mut sa};
+    struct CP scp = {&_Mut sa};
     int b = scp->m;
     if (b != 1) {
         return -1;
@@ -106,7 +106,7 @@ __attribute__((operator ->))
 
 int test4() {
     struct A sa = {1};
-    struct DP sdp = {&mut sa};
+    struct DP sdp = {&_Mut sa};
     int b = sdp->m;
     if (b != 1) {
         return -1;

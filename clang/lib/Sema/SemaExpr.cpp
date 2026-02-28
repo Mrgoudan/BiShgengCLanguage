@@ -15269,7 +15269,7 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
     } else {
       if (Opc == UO_AddrMut && InputExpr->getType().hasBorrow())
         Diag(OpLoc, diag::err_borrow_on_borrow)
-            << "'&mut'" << InputExpr->getSourceRange();
+            << "'&_Mut'" << InputExpr->getSourceRange();
       if (InputExpr->getType().isConstQualified())
         Diag(OpLoc, diag::err_mut_expr_unmodifiable)
             << InputExpr->getSourceRange();
@@ -15302,7 +15302,7 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
     } else {
       if (Opc == UO_AddrConst && InputExpr->getType().hasBorrow())
         Diag(OpLoc, diag::err_borrow_on_borrow)
-            << "'&const'" << InputExpr->getSourceRange();
+            << "'&_Const'" << InputExpr->getSourceRange();
     }
     if (!resultType.isNull()) {
       if (resultType->isFunctionPointerType()) {

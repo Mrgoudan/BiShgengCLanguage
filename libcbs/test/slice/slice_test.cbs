@@ -10,14 +10,14 @@
 
 void test1() {
     int arr[5] = {1, 2, 3, 4, 5};
-    Slice<int> slice = Slice<int>::new(&const *arr, 5);
+    Slice<int> slice = Slice<int>::new(&_Const *arr, 5);
     const int *_Borrow _Nonnull first = slice.get(0);
     assert(*first == 1);
 }
 
 void test2() {
     int arr[5] = {1, 2, 3, 4, 5};
-    Slice<int> slice = Slice<int>::new(&const arr[1], 3);
+    Slice<int> slice = Slice<int>::new(&_Const arr[1], 3);
     const int *_Borrow _Nonnull first = slice.get(0);
     assert(*first == 2);
     Slice<int> slice_copy = slice;
@@ -33,7 +33,7 @@ void test3() {
     memset(p, 0, sizeof(int) * 10);
     p[8] = 1;
     p[9] = 10;
-    Slice<int> slice = Slice<int>::new(&const p[8], 2);
+    Slice<int> slice = Slice<int>::new(&_Const p[8], 2);
     assert(*slice.get(0) == 1);
     assert(*slice.get(1) == 10);
     assert(slice.length() == 2);
@@ -47,7 +47,7 @@ void test4() {
     p[4] = 2;
     p[5] = 3;
     p[7] = 3;
-    Slice<int> slice = Slice<int>::new(&const p[4], 4);
+    Slice<int> slice = Slice<int>::new(&_Const p[4], 4);
     assert(*slice.get(0) == 2);
     assert(slice.length() == 4);
     assert(slice.is_empty() == false);
@@ -60,7 +60,7 @@ void test4() {
 
 _Safe void test5(void) {
     int arr[5] = {1, 2, 3, 4, 5};
-    _Unsafe Slice<int> slice = Slice<int>::new(&const arr[0], 10);
+    _Unsafe Slice<int> slice = Slice<int>::new(&_Const arr[0], 10);
     _Unsafe assert(*slice.get(4) == 5);
     _Unsafe const int *p = slice.as_ptr();
     _Unsafe assert(p[2] == 3);
@@ -68,7 +68,7 @@ _Safe void test5(void) {
 
 void test6() {
     int arr[5] = {1, 2, 3, 4, 5};
-    SliceMut<int> slice = SliceMut<int>::new(&mut *arr, 5);
+    SliceMut<int> slice = SliceMut<int>::new(&_Mut *arr, 5);
     assert(slice.is_empty() == false);
     assert(slice.length() == 5);
     assert(*slice.get(4) == 5);
@@ -80,7 +80,7 @@ void test7() {
     char arr[] = "hello world";
     char *first = &arr[5];
     char last = arr[11];
-    SliceMut<char> slice = SliceMut<char>::new(&mut arr[5], 7);
+    SliceMut<char> slice = SliceMut<char>::new(&_Mut arr[5], 7);
     assert(slice.is_empty() == false);
     assert(slice.length() == 7);
     assert(*slice.get(6) == last);
@@ -93,7 +93,7 @@ void test7() {
 
 _Safe void test8(void) {
     char arr[] = "hello, bisheng c";
-    _Unsafe SliceMut<char> slice = SliceMut<char>::new(&mut *arr, 17);
+    _Unsafe SliceMut<char> slice = SliceMut<char>::new(&_Mut *arr, 17);
     _Unsafe assert(slice.is_empty() == false);
     _Unsafe assert(slice.length() == 17);
     _Unsafe char *ptr_mut = slice.as_mut_ptr();
@@ -105,7 +105,7 @@ _Safe void test8(void) {
 
 void test9() {
     int arr[5] = {1, 2, 3, 4, 5};
-    SliceMut<int> slice = SliceMut<int>::new(&mut *arr, 5);
+    SliceMut<int> slice = SliceMut<int>::new(&_Mut *arr, 5);
     Slice<int> sub = slice.sub(0, 4);
     assert(sub.is_empty() == false);
     assert(sub.length() == 4);

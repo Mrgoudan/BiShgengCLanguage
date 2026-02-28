@@ -62,7 +62,7 @@ _Safe unsigned Rc<T>::weak_ref_count(const This * _Borrow this) {
 
 _Safe const T * _Borrow Rc<T>::deref(const This * _Borrow this) {
     _Unsafe {
-        return &const this->ptr->data;
+        return &_Const this->ptr->data;
     }
 }
 

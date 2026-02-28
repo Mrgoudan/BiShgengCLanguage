@@ -12,7 +12,7 @@ _Safe void use(int *_Borrow p) {
 void test1(int a, int b, char c) {
     _Safe switch (a) {
     case 5: {
-        int *_Borrow pb = &mut b;
+        int *_Borrow pb = &_Mut b;
         use(pb);
         break;
     }
@@ -36,7 +36,7 @@ void test2(int a, int b, char c) {
         break;
     }
     case 5: {
-        int *_Borrow pb = &mut b;
+        int *_Borrow pb = &_Mut b;
         use(pb);
         break;
     }
@@ -58,7 +58,7 @@ void test2(int a, int b, char c) {
                         break;
                     }
                     case 5: {
-                        int *_Borrow pb = &mut b;
+                        int *_Borrow pb = &_Mut b;
                         use(pb);
                         break;
                     }

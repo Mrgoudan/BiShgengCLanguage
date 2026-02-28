@@ -7,13 +7,13 @@ typedef NonnullOwnedInt = int *owned _Nonnull;
 _Safe void foo1(NonnullBorrowInt a);
 _Safe void test1(void) {
     int a = 10;
-    NonnullBorrowInt p1 = &mut a;
+    NonnullBorrowInt p1 = &_Mut a;
     foo1(p1);
-    NullableBorrowInt p2 = &mut a;
+    NullableBorrowInt p2 = &_Mut a;
     foo1(p2);
     NullableBorrowInt p3 = nullptr;
     foo1(p3);  // expected-error {{cannot pass nullable pointer argument}}
-    foo1(&mut a);
+    foo1(&_Mut a);
     foo1(nullptr); // expected-error {{cannot pass nullable pointer argument}} expected-warning {{null passed to a callee that requires a non-null argument}}
 }
 
@@ -33,9 +33,9 @@ _Safe void test2(void) {
 _Safe void foo3(NullableBorrowInt a);   
 _Safe void test3(void) {
     int a = 10;
-    NonnullBorrowInt p1 = &mut a;
+    NonnullBorrowInt p1 = &_Mut a;
     foo3(p1);
-    NullableBorrowInt p2 = &mut a;
+    NullableBorrowInt p2 = &_Mut a;
     foo3(p2);
     NullableBorrowInt p3 = nullptr; 
     foo3(p3);

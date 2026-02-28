@@ -30,7 +30,7 @@ MESSAGE_MEMORY_MALLOC_S g_stMessageMemory; /* */
 
 void bug() {
 	int a = 1;
-	int * _Borrow b = &mut a;
+	int * _Borrow b = &_Mut a;
     VOS_LIST_HEAD_S *pstListNode = 0;
 	VOS_LIST_HEAD_S *pstListNodeTemp = 0;
 	  VOS_LIST_FOR_EACH_ITEM_SAFE(pstListNode, pstListNodeTemp, &g_stMessageMemory.stMemList)

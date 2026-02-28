@@ -57,7 +57,7 @@ struct H {
 
 __attribute__((operator []))
 _Safe int * _Borrow deref2(struct H * _Borrow h, int i) {
-    return _Unsafe(&mut(h->g[i].a));
+    return _Unsafe(&_Mut(h->g[i].a));
 }
 
 int test2() {
@@ -88,7 +88,7 @@ struct J {
 
 __attribute__((operator []))
 _Safe const int * _Borrow deref3(const struct J * _Borrow j, int n) {
-    return _Unsafe(&const(j->i[n].a));
+    return _Unsafe(&_Const(j->i[n].a));
 }
 
 int test3() {
@@ -114,7 +114,7 @@ struct L {
 
 __attribute__((operator []))
 _Safe struct K * _Borrow deref4(struct L * _Borrow h, int i) {
-    return _Unsafe(&mut(h->g[i]));
+    return _Unsafe(&_Mut(h->g[i]));
 }
 
 int test4() {
@@ -142,7 +142,7 @@ struct DataArray<T> {
 };
 __attribute__((operator []))
 struct Data<T> * _Borrow deref5<T>(struct DataArray<T> * _Borrow da, int i) {
-    return &mut(da->array[i]);
+    return &_Mut(da->array[i]);
 }
 
 int test5() {

@@ -10,7 +10,7 @@ void rc_deref_1() {
     Rc<int> rc1 = Rc<int>::new(5);
     assert(*(rc1.deref()) == 5);
 
-    Weak<int> weak = Weak<int>::new(&const rc1);
+    Weak<int> weak = Weak<int>::new(&_Const rc1);
     Option<Rc<int>> option_rc2 = weak.upgrade();
     if (option_rc2.is_some()) {
         Rc<int> rc2 = option_unwrap<Rc<int>>(option_rc2);
@@ -37,7 +37,7 @@ void rc_deref_2() {
     Rc<A> rc1 = Rc<A>::new(a);
     assert(*(rc1.deref()->p) == 5);
 
-    Weak<A> weak = Weak<A>::new(&const rc1);
+    Weak<A> weak = Weak<A>::new(&_Const rc1);
     Option<Rc<A>> option_rc2 = weak.upgrade();
     if (option_rc2.is_some()) {
         Rc<A> rc2 = option_unwrap<Rc<A>>(option_rc2);

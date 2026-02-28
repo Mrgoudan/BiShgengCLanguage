@@ -13,7 +13,7 @@ T *_Borrow test<T>(struct S<T> s) {
 
 int main(void) {
     int a = 2;
-    struct S<int> s = { 1, &mut a };
+    struct S<int> s = { 1, &_Mut a };
     int *_Borrow p = test<int>(s);
     *p = 3;
     if (a == 3) return 0;

@@ -14,7 +14,7 @@ impl trait T for int;
 int main() {
   int a = 1;
   int* t = &a;
-  trait T* _Borrow p = &mut *t;
+  trait T* _Borrow p = &_Mut *t;
   a = 2;
   t = &a;
   return 0;

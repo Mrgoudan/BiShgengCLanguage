@@ -22,7 +22,7 @@ int * owned foo(int * owned a) {
 }
 int * owned foo1() {
     struct S s;
-    const struct S * _Borrow p1 = &const s;
+    const struct S * _Borrow p1 = &_Const s;
     return p1->p;                // expected-error {{_Borrow type does not allow move ownership}}
 }
 
@@ -30,7 +30,7 @@ int * owned foo2(){
   int a = 0;
   struct S s = {0, (int * owned)&a};
   struct S * owned b = (struct S * owned)&s;
-  struct S * _Borrow p1 = &mut *b;
+  struct S * _Borrow p1 = &_Mut *b;
   int k = p1->num;
   int * owned l = p1->p;         // expected-error {{_Borrow type does not allow move ownership}}
   return p1->p;                  // expected-error {{_Borrow type does not allow move ownership}}
@@ -40,8 +40,8 @@ void struct S::f1(const This * _Borrow this) {}
 void struct S::f2(This * _Borrow this) {}
 void test() {
   struct S s;
-  struct S * _Borrow p1 = &mut s;
-  const struct S * _Borrow p2 = &const s;// expected-note {{variable 'p2' declared const here}} // expected-note {{variable 'p2' declared const here}}
+  struct S * _Borrow p1 = &_Mut s;
+  const struct S * _Borrow p2 = &_Const s;// expected-note {{variable 'p2' declared const here}} // expected-note {{variable 'p2' declared const here}}
   p2->num = 1; // expected-error {{cannot assign to variable 'p2' with const-qualified type 'const struct S *_Borrow'}}
   int a = p2->num; // legal
   a = p2->num; // legal

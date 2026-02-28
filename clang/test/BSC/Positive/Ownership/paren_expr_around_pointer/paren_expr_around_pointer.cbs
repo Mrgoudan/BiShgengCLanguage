@@ -19,7 +19,7 @@ typedef struct S {
 
 int main(void) {
   int *owned ptr = safe_malloc(0);
-  int x = foo(&mut * ptr);
+  int x = foo(&_Mut * ptr);
   safe_free((void *owned)(ptr));
   S s = {.p = safe_malloc(1)};
   S *owned pp = safe_malloc(s);

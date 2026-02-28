@@ -24,23 +24,23 @@ void move(S s) {
 void test1() {
   int* owned p = (int* owned)malloc(sizeof(int));
   S s = {.p = p, .data = 42};
-  modify(&mut s);
+  modify(&_Mut s);
   move(s);
-  modify(&mut s); // expected-error {{use of moved value: `s`}}
+  modify(&_Mut s); // expected-error {{use of moved value: `s`}}
 }
 
 void test2() {
   int* owned p = (int* owned)malloc(sizeof(int));
   S s = {.p = p, .data = 42};
-  modify(&mut s);
+  modify(&_Mut s);
   move(s);
 }
 
 void test3() {
   int* owned p = (int* owned)malloc(sizeof(int));
   S s = {.p = p, .data = 42};
-  borrow_p(&mut *s.p);
-  borrow_p(&mut s.data);
+  borrow_p(&_Mut *s.p);
+  borrow_p(&_Mut s.data);
   move(s);
 }
 
@@ -54,8 +54,8 @@ void consumeR(R* owned);
 
 void test4() {
   R* owned r = initR();
-  borrow_p(&mut *r->a);
-  borrow_p(&mut *r->b);
+  borrow_p(&_Mut *r->a);
+  borrow_p(&_Mut *r->b);
   consumeR(r);
 }
 
@@ -63,7 +63,7 @@ void test5() {
   R* owned r = initR();
   R* owned rr = r;
   int* a = (int *)r->a; // expected-error {{use of moved value: `r.a`}}
-  borrow_p(&mut *r->a); // expected-error {{use of moved value: `r.a`}}
-  borrow_p(&mut *r->b); // expected-error {{use of moved value: `r.b`}}
+  borrow_p(&_Mut *r->a); // expected-error {{use of moved value: `r.a`}}
+  borrow_p(&_Mut *r->b); // expected-error {{use of moved value: `r.b`}}
   consumeR(rr);
 }

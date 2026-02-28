@@ -32,6 +32,6 @@ void cast2() {
 
 void cast3() {
   int x = 1;
-  trait T* _Borrow t1 = &mut x;
+  trait T* _Borrow t1 = &_Mut x;
   trait T* _Borrow t2 = t1;
 }

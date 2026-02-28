@@ -14,27 +14,27 @@ void test1(void) {
 }
 
 void test2(void) {
-  foo(&const *__FUNCTION__);
-  foo(&const *__func__);
-  foo(&const *__PRETTY_FUNCTION__);
+  foo(&_Const *__FUNCTION__);
+  foo(&_Const *__func__);
+  foo(&_Const *__PRETTY_FUNCTION__);
 }
 
 void test3(void) {
   const char *p1 = __FUNCTION__;
-  foo(&const *p1);
+  foo(&_Const *p1);
   const char *p2 = __func__;
-  foo(&const *p2);
+  foo(&_Const *p2);
   const char *p3 = __PRETTY_FUNCTION__;
-  foo(&const *p3);
+  foo(&_Const *p3);
 }
 
 void test4(void) {
   char *p1 = __FUNCTION__;
-  foo(&const *p1);
+  foo(&_Const *p1);
   char *p2 = __func__;
-  foo(&const *p2);
+  foo(&_Const *p2);
   char *p3 = __PRETTY_FUNCTION__;
-  foo(&const *p3);
+  foo(&_Const *p3);
 }
 
 void test5(void) {

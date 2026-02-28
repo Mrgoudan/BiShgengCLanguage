@@ -2,21 +2,21 @@
 
 void test_freeze_ident1() {
   int a = 1;
-  int *_Borrow c = &mut a;
+  int *_Borrow c = &_Mut a;
   // we can modify "a" when c life time is end;
   a = 2;
 }
 
 void test_freeze_ident2() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{`a` is borrowed here}}
+  int *_Borrow c = &_Mut a; // expected-note {{`a` is borrowed here}}
   a = 2; // expected-error {{cannot assign to `a` because it is borrowed}}
   int d = *c;
 }
 
 void test_freeze_ident2_0() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{`a` is borrowed here}}
+  int *_Borrow c = &_Mut a; // expected-note {{`a` is borrowed here}}
   int m = a; // expected-error {{cannot use `a` because it was mutably borrowed}}
   int d = *c;
 }
@@ -24,51 +24,51 @@ void test_freeze_ident2_0() {
 void test_freeze_ident3() {
   int a = 1;
   int b = 2;
-  int *_Borrow c = &mut a;
+  int *_Borrow c = &_Mut a;
   // "c" life time is end at before, and reactivate at after;
   a = 2;
-  c = &mut b;
+  c = &_Mut b;
 }
 
 void test_freeze_ident4() {
   int a = 1;
-  int *_Borrow c = &mut a;
-  int *_Borrow d = &mut a;    
+  int *_Borrow c = &_Mut a;
+  int *_Borrow d = &_Mut a;    
 }
 
 void test_freeze_ident5() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{first mut borrow occurs here}}
-  int *_Borrow d = &mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+  int *_Borrow c = &_Mut a; // expected-note {{first mut borrow occurs here}}
+  int *_Borrow d = &_Mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
   int e = *c;
 }
 
 void test_freeze_ident6() {
   int a = 1;
-  int *_Borrow c = &mut a;
-  int *_Borrow d = &mut a;
+  int *_Borrow c = &_Mut a;
+  int *_Borrow d = &_Mut a;
   int e = *d;
 }
 
 void test_freeze_ident6_0() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{first mut borrow occurs here}}
-  int *_Borrow d = &mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+  int *_Borrow c = &_Mut a; // expected-note {{first mut borrow occurs here}}
+  int *_Borrow d = &_Mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
   int e = *d;
   int f = *c;
 }
 
 void test_freeze_ident6_1() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{first mut borrow occurs here}}
-  int *_Borrow d = &mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+  int *_Borrow c = &_Mut a; // expected-note {{first mut borrow occurs here}}
+  int *_Borrow d = &_Mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
   int e = *c;
   int f = *d;
 }
 
 void test_freeze_ident6_2() {
   int a = 1;
-  int *_Borrow c = &mut a;
+  int *_Borrow c = &_Mut a;
   int *_Borrow d = c; // expected-note {{`*c` is borrowed here}}
   int e = *c; // expected-error {{cannot use `*c` because it was mutably borrowed}}
   int f = *d;
@@ -78,7 +78,7 @@ void use(int *_Borrow a) {}
 
 void test_freeze_ident6_3() {
   int a = 1;
-  int *_Borrow c = &mut a;
+  int *_Borrow c = &_Mut a;
   int *_Borrow d = c; // expected-note {{`*c` is borrowed here}}
   int e = *c; // expected-error {{cannot use `*c` because it was mutably borrowed}}
   use(d);
@@ -86,28 +86,28 @@ void test_freeze_ident6_3() {
 
 void test_freeze_ident7() {
   int a = 1;
-  int *_Borrow c = &mut a;
-  const int *_Borrow d = &const a;
+  int *_Borrow c = &_Mut a;
+  const int *_Borrow d = &_Const a;
 }
 
 void test_freeze_ident8() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{mutable borrow occurs here}}
-  const int *_Borrow d = &const a; // expected-error {{cannot borrow `a` as immutable because it is also borrowed as mutable}}
+  int *_Borrow c = &_Mut a; // expected-note {{mutable borrow occurs here}}
+  const int *_Borrow d = &_Const a; // expected-error {{cannot borrow `a` as immutable because it is also borrowed as mutable}}
   int e = *c;
 }
 
 void test_freeze_ident9() {
   int a = 1;
-  int *_Borrow c = &mut a;
-  const int *_Borrow d = &const a;
+  int *_Borrow c = &_Mut a;
+  const int *_Borrow d = &_Const a;
   int e = *d;
 }
 
 void test_freeze_ident10() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{mutable borrow occurs here}}
-  const int *_Borrow d = &const a; // expected-error {{cannot borrow `a` as immutable because it is also borrowed as mutable}}
+  int *_Borrow c = &_Mut a; // expected-note {{mutable borrow occurs here}}
+  const int *_Borrow d = &_Const a; // expected-error {{cannot borrow `a` as immutable because it is also borrowed as mutable}}
   int b = *d;
   int e = *c;
 }
@@ -116,23 +116,23 @@ void const_use(const int *_Borrow a) {};
 
 void test_freeze_ident11() {
   int a = 1;
-  int *_Borrow c = &mut a; // expected-note {{mutable borrow occurs here}}
-  const int *_Borrow d = &const a; // expected-error {{cannot borrow `a` as immutable because it is also borrowed as mutable}}
+  int *_Borrow c = &_Mut a; // expected-note {{mutable borrow occurs here}}
+  const int *_Borrow d = &_Const a; // expected-error {{cannot borrow `a` as immutable because it is also borrowed as mutable}}
   int b = *c;
   const_use(d);
 }
 
 void test_freeze_ident12() {
   int a = 1;
-  const int *_Borrow c = &const a;
-  const int *_Borrow d = &const a;
+  const int *_Borrow c = &_Const a;
+  const int *_Borrow d = &_Const a;
   int b = *c;
   int e = *d;
 }
 
 void test_freeze_ident13() {
   int a = 1;
-  const int *_Borrow c = &const a; // expected-note {{`a` is borrowed here}}
+  const int *_Borrow c = &_Const a; // expected-note {{`a` is borrowed here}}
   a = 2; // expected-error {{cannot assign to `a` because it is borrowed}}
   int b = *c;
 }
@@ -143,7 +143,7 @@ int test_freeze_ident14(){
   int *c, *d;
   c = &a;
   d = &b;
-  int * _Borrow e = &mut *c;
+  int * _Borrow e = &_Mut *c;
   int m = *d;
   use(e);
   return 0;
@@ -155,8 +155,8 @@ int test_freeze_ident15(int *_Borrow m){
   int *c, *d;
   c = &a;
   d = &b;
-  int *_Borrow e = &mut *c; // expected-note {{first mut borrow occurs here}}
-  int *_Borrow f = &mut *c; // expected-error {{cannot borrow `*c` as mutable more than once at a time}}
+  int *_Borrow e = &_Mut *c; // expected-note {{first mut borrow occurs here}}
+  int *_Borrow f = &_Mut *c; // expected-error {{cannot borrow `*c` as mutable more than once at a time}}
   int g = f == e ? *f : *e;
   use(f);
   use(e);
@@ -171,14 +171,14 @@ struct S {
 void test_freeze_ident17(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  int *_Borrow c = &mut *b;
+  int *_Borrow c = &_Mut *b;
   int *d = (int *)b;
 }
 
 void test_freeze_ident18(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  int *_Borrow c = &mut *b; // expected-note {{`*b` is borrowed here}}
+  int *_Borrow c = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   use(c);
 }
@@ -186,7 +186,7 @@ void test_freeze_ident18(){
 void test_freeze_ident19(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  int *_Borrow c = &mut *b; // expected-note {{`*b` is borrowed here}}
+  int *_Borrow c = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *owned d = b; // expected-error {{cannot move out of `b` because it is borrowed}}
   use(c);
   int *e = (int *)d;
@@ -195,7 +195,7 @@ void test_freeze_ident19(){
 void test_freeze_ident20(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  const int *_Borrow c = &const *b; // expected-note {{`*b` is borrowed here}}
+  const int *_Borrow c = &_Const *b; // expected-note {{`*b` is borrowed here}}
   int *owned d = b; // expected-error {{cannot move out of `b` because it is borrowed}}
   const_use(c);
   int * e = (int *)d;
@@ -210,7 +210,7 @@ void owned_struct_use1(F *_Borrow b){}
 
 void test_freeze_ident21(){
   F f = {1};
-  F *_Borrow b = &mut f; // expected-note {{`f` is borrowed here}}
+  F *_Borrow b = &_Mut f; // expected-note {{`f` is borrowed here}}
   F k = f; // expected-error {{cannot move out of `f` because it is borrowed}}
   owned_struct_use1(b);
 }
@@ -219,7 +219,7 @@ void owned_struct_use2(const F *_Borrow b){}
 
 void test_freeze_ident22(){
   F f = {1};
-  const F *_Borrow b = &const f; // expected-note {{`f` is borrowed here}}
+  const F *_Borrow b = &_Const f; // expected-note {{`f` is borrowed here}}
   F k = f; // expected-error {{cannot move out of `f` because it is borrowed}}
   owned_struct_use2(b);
 }
@@ -234,7 +234,7 @@ void owned_struct_use3(struct H *_Borrow b){}
 void test_freeze_ident23(){
   int a = 1;
   struct H h = {(int *owned)&a, 2};
-  struct H *_Borrow b = &mut h; // expected-note {{`h` is borrowed here}}
+  struct H *_Borrow b = &_Mut h; // expected-note {{`h` is borrowed here}}
   struct H g = h; // expected-error {{cannot move out of `h` because it is borrowed}}
   owned_struct_use3(b);
   int *c = (int *)g.a;
@@ -245,7 +245,7 @@ void owned_struct_use4(const struct H *_Borrow b){}
 void test_freeze_ident24(){
   int a = 1;
   struct H h = {(int *owned)&a, 2};
-  const struct H *_Borrow b = &const h; // expected-note {{`h` is borrowed here}}
+  const struct H *_Borrow b = &_Const h; // expected-note {{`h` is borrowed here}}
   struct H g = h; // expected-error {{cannot move out of `h` because it is borrowed}}
   owned_struct_use4(b);
   int *c = (int *)g.a;
@@ -253,7 +253,7 @@ void test_freeze_ident24(){
 
 void test_freeze_ident25(){
   int a = 1;
-  int *_Borrow p1 = &mut a; // expected-note {{`a` is borrowed here}}
+  int *_Borrow p1 = &_Mut a; // expected-note {{`a` is borrowed here}}
   a = 5; // expected-error {{cannot assign to `a` because it is borrowed}}
   int *_Borrow p2 = p1;
 }
@@ -261,7 +261,7 @@ void test_freeze_ident25(){
 void test_freeze_ident26(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  int *_Borrow p1 = &mut *b; // expected-note {{`*b` is borrowed here}}
+  int *_Borrow p1 = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   int *_Borrow p2 = p1;
 }
@@ -269,7 +269,7 @@ void test_freeze_ident26(){
 void test_freeze_ident27(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  int *_Borrow p1 = &mut *b; // expected-note {{`*b` is borrowed here}}
+  int *_Borrow p1 = &_Mut *b; // expected-note {{`*b` is borrowed here}}
   int *_Borrow p2 = p1;
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   use(p2);
@@ -278,7 +278,7 @@ void test_freeze_ident27(){
 void test_freeze_ident28(){
   int a = 1;
   int *owned b = (int *owned)&a;
-  int *_Borrow p1 = &mut *b; // expected-note {{`*b` is borrowed here}}
+  int *_Borrow p1 = &_Mut *b; // expected-note {{`*b` is borrowed here}}
                             // expected-note@-1 {{`b` is borrowed here}}
   int *d = (int *)b; // expected-error {{cannot move out of `b` because it is borrowed}}
   int *_Borrow p2 = p1;
@@ -289,16 +289,16 @@ void test_freeze_ident28(){
 
 void test_freeze_ident29(){
   int a = 1;
-  int *_Borrow p1 = &mut a; // expected-note {{first mut borrow occurs here}}
+  int *_Borrow p1 = &_Mut a; // expected-note {{first mut borrow occurs here}}
                            // expected-note@-1 {{`a` is borrowed here}}
-  int *_Borrow p2 = &mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
+  int *_Borrow p2 = &_Mut a; // expected-error {{cannot borrow `a` as mutable more than once at a time}}
   a = 5; // expected-error {{cannot assign to `a` because it is borrowed}}
   p2 = p1;
 }
 
 void test_freeze_ident30(){
   int local = 5;
-  int *_Borrow p = &mut local; // expected-note {{first mut borrow occurs here}}
-  use(&mut local); // expected-error {{cannot borrow `local` as mutable more than once at a time}}
+  int *_Borrow p = &_Mut local; // expected-note {{first mut borrow occurs here}}
+  use(&_Mut local); // expected-error {{cannot borrow `local` as mutable more than once at a time}}
   use(p);
 }

@@ -25,17 +25,17 @@ void use(ListNode *);
 
 void v5_accept(int fd, void *addr, int *addrLen, int *_Borrow p) {
   OptionRefMut o = socket_table_find(p);
-  const v5_adpt_socket_t *_Borrow ls = &const o.unwrap()->inner; // expected-note {{`o` is borrowed here}}
+  const v5_adpt_socket_t *_Borrow ls = &_Const o.unwrap()->inner; // expected-note {{`o` is borrowed here}}
                                                                 
   use(o.inner); // expected-error {{cannot use `o.inner` because it was mutably borrowed}}
                
   ListNode *owned t = AllocSocket();
   {
-    v5_adpt_socket_t *_Borrow s = &mut t->inner;
+    v5_adpt_socket_t *_Borrow s = &_Mut t->inner;
     accept(fd, (struct sockaddr *)addr, addrLen);
     SkAcceptInfoSet(ls, s); 
   }
-  v5_adpt_socket_t *_Borrow s = &mut t->inner; // expected-note {{`(*t).inner` is borrowed here}}
+  v5_adpt_socket_t *_Borrow s = &_Mut t->inner; // expected-note {{`(*t).inner` is borrowed here}}
   ListNode *t1 = (ListNode *)t; // expected-error {{cannot move out of `t` because it is borrowed}}
   CloseSocket((v5_adpt_socket_t *)s);
 }

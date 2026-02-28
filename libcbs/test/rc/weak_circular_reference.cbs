@@ -30,7 +30,7 @@ void test() {
     Rc<A> ap = Rc<A>::new(a);
 	
     RefMut<Weak<A>> rm_b_a = bp.deref()->d.borrow_mut();
-    *(rm_b_a.deref()) = Weak<A>::new(&const ap);
+    *(rm_b_a.deref()) = Weak<A>::new(&_Const ap);
 }
 
 int main() {

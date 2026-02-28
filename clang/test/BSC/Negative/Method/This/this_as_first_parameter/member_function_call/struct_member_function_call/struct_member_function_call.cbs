@@ -75,7 +75,7 @@ void test_const_This_pointer_actual_param() {
 
 void test_This_pointer_borrow_actual_param(void) {
   struct Foo foo = {.a = 1};
-  struct Foo *_Borrow foo_mut = &mut foo;
+  struct Foo *_Borrow foo_mut = &_Mut foo;
   int a = foo_mut->getA();  // expected-error {{incompatible conversion from pointer type 'struct Foo *_Borrow' to non-pointer type 'struct Foo' in member function call}}
   int b = foo_mut->getB();  // expect ok, run ok
   int b2 = foo_mut->getB_2(); //expect ok, run ok
@@ -86,7 +86,7 @@ void test_This_pointer_borrow_actual_param(void) {
 
 void test_const_This_pointer_borrow_actual_param(void) {
   struct Foo foo = {.a = 1};
-  const struct Foo *_Borrow c_foo_mut = &const foo;
+  const struct Foo *_Borrow c_foo_mut = &_Const foo;
   int a = c_foo_mut->getA();  // expected-error {{incompatible conversion from pointer type 'const struct Foo *_Borrow' to non-pointer type 'struct Foo' in member function call}}
   int b = c_foo_mut->getB();  // expected-error {{incompatible conversion from const type 'const struct Foo *_Borrow' to non-const type 'struct Foo *' in member function call}}
   int b2 = c_foo_mut->getB_2(); //expect ok, run ok

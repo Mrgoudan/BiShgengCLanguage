@@ -6,10 +6,10 @@ void use_mut(int *_Borrow p);
 void use_immut(const int *_Borrow p);
 void test1() {
   int local = 42;
-  int *_Borrow p = &mut local;
+  int *_Borrow p = &_Mut local;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Erepeated-borrow"
-  int *_Borrow q = &mut local; // cannot borrow `local` as mutable more than once at a time
+  int *_Borrow q = &_Mut local; // cannot borrow `local` as mutable more than once at a time
   #pragma GCC diagnostic pop
   use_mut(p);
   use_mut(q);
@@ -17,10 +17,10 @@ void test1() {
 
 void test2() {
   int local = 42;
-  int *_Borrow p = &mut local;
+  int *_Borrow p = &_Mut local;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Erepeated-borrow"
-  const int *_Borrow q = &const local; // cannot borrow `local` as immutable because it is also borrowed as mutable
+  const int *_Borrow q = &_Const local; // cannot borrow `local` as immutable because it is also borrowed as mutable
   use_mut(p);
   #pragma GCC diagnostic pop
   use_immut(q);
@@ -28,8 +28,8 @@ void test2() {
 
 void test3(int *_Borrow p) {
   int local = 5;
-  p = &mut local;
-  const int *_Borrow p1 = &const *p;
+  p = &_Mut local;
+  const int *_Borrow p1 = &_Const *p;
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Erepeated-borrow"
   use_mut(p);          // cannot borrow `*p` as mutable because it is also borrowed as immutable

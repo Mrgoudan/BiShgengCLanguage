@@ -49,17 +49,17 @@ public:
 _Safe int main(void) {
     Data<int> data1 = Data<int>::init(5);
     if (data1.p1 != nullptr) {
-        use(&mut *(data1.p1));
+        use(&_Mut *(data1.p1));
     }
-    use(&mut *(data1.p2));
+    use(&_Mut *(data1.p2));
 
     Data<int> data2 = Data<int>::init(5);
-    BorrowData<int> borrow_data = { .p1 = nullptr, .p2 = &mut data2 };
+    BorrowData<int> borrow_data = { .p1 = nullptr, .p2 = &_Mut data2 };
     if (borrow_data.p1 != nullptr) {
         if (borrow_data.p1->p1 != nullptr) {
-          use(&mut *(borrow_data.p1->p1));
+          use(&_Mut *(borrow_data.p1->p1));
         }
     }
-    use(&mut *(borrow_data.p2->p2));
+    use(&_Mut *(borrow_data.p2->p2));
     return 0;
 }

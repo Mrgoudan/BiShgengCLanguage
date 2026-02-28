@@ -16,34 +16,34 @@ void test() {
   const int a = 1;
   struct R2_wrap r2;
   struct R2_wrap *pr2;
-  struct R2_wrap * _Borrow b1 = &mut r2; // legal
-  struct R2_wrap ** _Borrow b2 = &mut pr2; // legal
-  struct R2 * _Borrow b3 = &mut r2.r; // legal
-  const int * _Borrow b4 = &mut r2.r.a; // expected-error {{the expression after '&mut' must be modifiable}}
-  b3 = &mut pr2->r; // legal
-  b4 = &mut pr2->r.a; // expected-error {{the expression after '&mut' must be modifiable}}
-  b4 = &mut a; // expected-error {{the expression after '&mut' must be modifiable}}
-  &mut "const"; // expected-error {{cannot take mutable borrow of string literal with '&mut'; string literals are immutable}}
+  struct R2_wrap * _Borrow b1 = &_Mut r2; // legal
+  struct R2_wrap ** _Borrow b2 = &_Mut pr2; // legal
+  struct R2 * _Borrow b3 = &_Mut r2.r; // legal
+  const int * _Borrow b4 = &_Mut r2.r.a; // expected-error {{the expression after '&_Mut' must be modifiable}}
+  b3 = &_Mut pr2->r; // legal
+  b4 = &_Mut pr2->r.a; // expected-error {{the expression after '&_Mut' must be modifiable}}
+  b4 = &_Mut a; // expected-error {{the expression after '&_Mut' must be modifiable}}
+  &_Mut "const"; // expected-error {{cannot take mutable borrow of string literal with '&_Mut'; string literals are immutable}}
 
   int arr1[] = {1, 2, 3};
   const int arr2[] = {1, 2, 3};
-  &mut arr1; // expected-warning {{expression result unused}}
-  int * _Borrow b5 = &mut arr1[1]; // legal
-  &mut arr2; // expected-error {{the expression after '&mut' must be modifiable}}
+  &_Mut arr1; // expected-warning {{expression result unused}}
+  int * _Borrow b5 = &_Mut arr1[1]; // legal
+  &_Mut arr2; // expected-error {{the expression after '&_Mut' must be modifiable}}
              // expected-warning@-1 {{expression result unused}}
-  b4 = &mut arr2[1]; // expected-error {{the expression after '&mut' must be modifiable}}
+  b4 = &_Mut arr2[1]; // expected-error {{the expression after '&_Mut' must be modifiable}}
 
   int b = 1;
   int *p = &b;
-  b5 = &mut b;
-  b4 = &const b;
+  b5 = &_Mut b;
+  b4 = &_Const b;
   int *a1 = &*p;
-  b5 = &mut *b5; // legal
-  b4 = &const *b5;
-  b4 = &const *p;
-  trait T *t1 = &mut b;
-  const trait T *t2 = &const b;
-  &mut foo; // expected-error {{'&mut' for function pointer is not allowed}}
+  b5 = &_Mut *b5; // legal
+  b4 = &_Const *b5;
+  b4 = &_Const *p;
+  trait T *t1 = &_Mut b;
+  const trait T *t2 = &_Const b;
+  &_Mut foo; // expected-error {{'&_Mut' for function pointer is not allowed}}
             // expected-warning@-1 {{expression result unused}}
-  &const foo; // expected-warning {{expression result unused}}
+  &_Const foo; // expected-warning {{expression result unused}}
 }

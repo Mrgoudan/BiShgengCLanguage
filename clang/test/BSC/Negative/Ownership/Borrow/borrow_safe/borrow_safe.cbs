@@ -12,22 +12,22 @@ _Safe void foo1(int p) {
   extern int num;
   static int num1 = 0; // expected-error {{defining mutable global variables is not allowed within the safe zone}}
   static const int c1 = 0; // legal
-  &mut a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  &_Mut a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
           // expected-warning@-1{{expression result unused}}
-  &mut num1; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  &_Mut num1; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
              // expected-warning@-1{{expression result unused}}
-  &mut c1; // expected-error {{the expression after '&mut' must be modifiable}}
+  &_Mut c1; // expected-error {{the expression after '&_Mut' must be modifiable}}
           // expected-warning@-1{{expression result unused}}
-  &const a; // legal
+  &_Const a; // legal
             // expected-warning@-1{{expression result unused}}
-  &const num1; // legal
+  &_Const num1; // legal
                // expected-warning@-1{{expression result unused}}
   _Unsafe {
    static int num2 = 0; // legal
-   &mut a; // expected-warning{{expression result unused}}
-   &mut num2; // expected-warning{{expression result unused}}
-   &const a; // expected-warning{{expression result unused}}
-   &const num2; // expected-warning{{expression result unused}}
+   &_Mut a; // expected-warning{{expression result unused}}
+   &_Mut num2; // expected-warning{{expression result unused}}
+   &_Const a; // expected-warning{{expression result unused}}
+   &_Const num2; // expected-warning{{expression result unused}}
   }
 }
 
@@ -36,11 +36,11 @@ _Unsafe void foo2(int p) {
     extern int num;
     static int num3 = 0; // expected-error {{defining mutable global variables is not allowed within the safe zone}}
     static const int c2 = 0; // legal
-    &mut a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+    &_Mut a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
             // expected-warning@-1{{expression result unused}}
-    &mut num3; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+    &_Mut num3; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
                // expected-warning@-1{{expression result unused}}
-    &const a; // expected-warning{{expression result unused}}
-    &const num3; // expected-warning{{expression result unused}}
+    &_Const a; // expected-warning{{expression result unused}}
+    &_Const num3; // expected-warning{{expression result unused}}
   }
 }

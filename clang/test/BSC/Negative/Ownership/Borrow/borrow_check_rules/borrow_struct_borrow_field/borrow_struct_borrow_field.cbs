@@ -58,34 +58,34 @@ void test3(B b) {
 
 void test4() {
   struct V v = { .a = 5 };
-  struct V *_Borrow p = &mut v;
-  int *_Borrow q1 = &mut p->a; // expected-note {{mutable borrow occurs here}}
-  const int *_Borrow q2 = &const p->a; // expected-error {{cannot borrow `(*p).a` as immutable because it is also borrowed as mutable}}
+  struct V *_Borrow p = &_Mut v;
+  int *_Borrow q1 = &_Mut p->a; // expected-note {{mutable borrow occurs here}}
+  const int *_Borrow q2 = &_Const p->a; // expected-error {{cannot borrow `(*p).a` as immutable because it is also borrowed as mutable}}
   struct M m = { .ma = q1, .na = q2 };
   use_mut(m.ma);
   use_immut(m.na);
 
   struct V v1 = { .a = 5 };
-  p = &mut v1;
-  m.ma = &mut p->a; // expected-note {{mutable borrow occurs here}}
-  m.na = &const p->a; // expected-error {{cannot borrow `(*p).a` as immutable because it is also borrowed as mutable}}
+  p = &_Mut v1;
+  m.ma = &_Mut p->a; // expected-note {{mutable borrow occurs here}}
+  m.na = &_Const p->a; // expected-error {{cannot borrow `(*p).a` as immutable because it is also borrowed as mutable}}
   use_mut(m.ma);
   use_immut(m.na);
 }
 
 void test5() {
   struct V v = { .a = 5 };
-  struct V *_Borrow p = &mut v;
-  int *_Borrow q1 = &mut p->a; // expected-note {{mutable borrow occurs here}}
-  const int *_Borrow q2 = &const p->a; // expected-error {{cannot borrow `(*p).a` as immutable because it is also borrowed as mutable}}
+  struct V *_Borrow p = &_Mut v;
+  int *_Borrow q1 = &_Mut p->a; // expected-note {{mutable borrow occurs here}}
+  const int *_Borrow q2 = &_Const p->a; // expected-error {{cannot borrow `(*p).a` as immutable because it is also borrowed as mutable}}
   struct M m = { .ma = q1, .na = q2 };
   use_mut(m.ma);
   use_immut(m.na);
 
   struct V v1 = { .a = 5 };
-  p = &mut v1;
-  m.na = &const p->a; // expected-note {{immutable borrow occurs here}}
-  m.ma = &mut p->a; // expected-error {{cannot borrow `(*p).a` as mutable because it is also borrowed as immutable}}
+  p = &_Mut v1;
+  m.na = &_Const p->a; // expected-note {{immutable borrow occurs here}}
+  m.ma = &_Mut p->a; // expected-error {{cannot borrow `(*p).a` as mutable because it is also borrowed as immutable}}
   use_immut(m.na);
   use_mut(m.ma);
 }
@@ -93,7 +93,7 @@ void test5() {
 void test6() {
   int a = 0;
   int b = 0;
-  struct M m = { &mut a, &const b };
+  struct M m = { &_Mut a, &_Const b };
   struct M *mp = &m;
   int *_Borrow p1 = mp->ma;
   int *_Borrow p2 = mp->ma;
@@ -108,8 +108,8 @@ void test6() {
 
 void test7() {
   int local = 2;
-  int *_Borrow p = &mut local;
-  int *_Borrow q = &mut *p; // expected-note {{`*p` is borrowed here}}
+  int *_Borrow p = &_Mut local;
+  int *_Borrow q = &_Mut *p; // expected-note {{`*p` is borrowed here}}
                            // expected-note@-1 {{first mut borrow occurs here}}
   int y = get_by_mut(p) + 2; // expected-error {{cannot use `p` because it was mutably borrowed}}
                              // expected-error@-1 {{cannot borrow `*p` as mutable more than once at a time}}

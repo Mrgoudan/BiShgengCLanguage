@@ -9,11 +9,11 @@ struct A {
 };
 
 int * _Borrow struct A::get_p_mut(This *_Borrow this) {
-    return &mut *(this->p);
+    return &_Mut *(this->p);
 }
 
 const int *_Borrow struct A::get_p_immut(This *_Borrow this) {
-    return &const *(this->p);
+    return &_Const *(this->p);
 }
 
 void struct A::free_p(This *_Borrow this) {

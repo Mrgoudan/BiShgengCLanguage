@@ -9,7 +9,7 @@ void call_function_after_free(){
   int *owned _Nullable p = init();
   if (p != nullptr) {
     safe_free((void *owned) p);
-    tinker(&mut *p); // expected-error {{use of moved value: `p`}}
+    tinker(&_Mut *p); // expected-error {{use of moved value: `p`}}
   }
 }
 
@@ -51,7 +51,7 @@ void read_data(Data *_Borrow);
 int assign_to_field_after_free() {
   Data *owned _Nullable p = init_data();
   if (p != nullptr) {
-    read_data(&mut *p);
+    read_data(&_Mut *p);
     safe_free((void *owned)p);
     p->value += 1; // expected-error {{assign to part of moved value: `p`}}
     p->value -= 1; // expected-error {{assign to part of moved value: `p`}}
@@ -67,7 +67,7 @@ int assign_to_field_after_free() {
     --p->value; // expected-error {{assign to part of moved value: `p`}}
     (p->value)++; // expected-error {{assign to part of moved value: `p`}}
     (p->value)--; // expected-error {{assign to part of moved value: `p`}}
-    tinker(&mut p->value); // expected-error {{use of moved value: `p.value`}}
+    tinker(&_Mut p->value); // expected-error {{use of moved value: `p.value`}}
   }
   _Unsafe {
     return p->value; // expected-error {{use of moved value: `p.value`}}

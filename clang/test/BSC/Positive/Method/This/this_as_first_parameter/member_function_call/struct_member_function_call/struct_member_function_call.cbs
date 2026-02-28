@@ -85,7 +85,7 @@ void test_const_This_pointer_actual_param() {
 
 void test_This_pointer_borrow_actual_param(void) {
   struct Foo foo = {.a = 1};
-  struct Foo *_Borrow foo_mut = &mut foo;
+  struct Foo *_Borrow foo_mut = &_Mut foo;
   int b = foo_mut->getB();
   int b2 = foo_mut->getB_2();
   int c = foo_mut->getC();
@@ -94,7 +94,7 @@ void test_This_pointer_borrow_actual_param(void) {
 
 void test_const_This_pointer_borrow_actual_param(void) {
   struct Foo foo = {.a = 1};
-  const struct Foo *_Borrow c_foo_mut = &const foo;
+  const struct Foo *_Borrow c_foo_mut = &_Const foo;
   int b2 = c_foo_mut->getB_2();
   int c2 = c_foo_mut->getC_2();
 }

@@ -4,14 +4,14 @@ _Safe void read_by_value(int);
 _Safe void read_by_borrow(const int *_Borrow);
 
 _Safe void non_lexical_lifetime(int x) {
-    int *_Borrow ref = &mut x;
+    int *_Borrow ref = &_Mut x;
     const int *_Borrow cref = ref; // expected-note {{`*ref` is borrowed here}}
     ++*ref; // expected-error {{cannot assign to `*ref` because it is borrowed}}
     read_by_value(*cref); 
 }
 
 _Safe void non_lexical_lifetime_limitation(int x) {
-    int *_Borrow ref = &mut x; // expected-note {{`x` is borrowed here}}
+    int *_Borrow ref = &_Mut x; // expected-note {{`x` is borrowed here}}
     // explicitly define an immutable reference
     const int *_Borrow cref = ref;
     // ref does not expire here, even without any modification
@@ -45,7 +45,7 @@ _Safe void immutable2mutable(const int *_Borrow cref) {
     int *_Borrow ref = cref; // expected-error {{conversion from type 'const int *_Borrow' to 'int *_Borrow' is forbidden in the safe zone}}
     accept_mutable(cref); // expected-error {{conversion from type 'const int *_Borrow' to 'int *_Borrow' is forbidden in the safe zone}}
     int dummy = 0;
-    int *_Borrow ref2 = ret_immutable(&const dummy); // expected-error {{conversion from type 'const int *_Borrow' to 'int *_Borrow' is forbidden in the safe zone}}
+    int *_Borrow ref2 = ret_immutable(&_Const dummy); // expected-error {{conversion from type 'const int *_Borrow' to 'int *_Borrow' is forbidden in the safe zone}}
 }
 
 _Safe void raw2mutable(int *ptr) {

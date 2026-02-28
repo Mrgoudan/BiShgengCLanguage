@@ -39,7 +39,7 @@ void test2() {
 	v2.set(1, 2);
 	v2.push(526);
 	v2.push(64);
-	safe_swap(&mut v1, &mut v2);
+	safe_swap(&_Mut v1, &_Mut v2);
 	assert(*v1.get(0) == 3);
 	assert(*v1.get(1) == 2);
 	assert(*v1.get(2) == 526);

@@ -47,7 +47,7 @@ struct H {
 
 __attribute__((operator *))
 _Safe int * _Borrow deref2(struct H * _Borrow h) {
-    return &mut(h->g.a);
+    return &_Mut(h->g.a);
 }
 
 int test2() {
@@ -79,7 +79,7 @@ struct J {
 
 __attribute__((operator *))
 _Safe const int * _Borrow deref4(const struct J * _Borrow j) {
-    return &const(j->i.a);
+    return &_Const(j->i.a);
 }
 
 int test3() {
@@ -113,7 +113,7 @@ _Safe Rc<T> Rc<T>::new(T data) {
 
 __attribute__((operator *))
 T* _Borrow deref<T>(Rc<T> * _Borrow rc) {
-	return &mut(rc->ptr->data);
+	return &_Mut(rc->ptr->data);
 }
 
 int test4() {

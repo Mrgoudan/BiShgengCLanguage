@@ -46,7 +46,7 @@ int main() {
     k.foo1();
     k.foo2();
 
-    struct M<int> m = { .a = &mut k };
+    struct M<int> m = { .a = &_Mut k };
     m.foo3();
     return 0;
 }

@@ -6,9 +6,9 @@ _Safe void test1(void) {
     int *_Borrow _Nullable p1 = nullptr;
     int *_Borrow _Nonnull p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     int a = 10;
-    int *_Borrow _Nullable p3 = &mut a;
+    int *_Borrow _Nullable p3 = &_Mut a;
     int *_Borrow _Nonnull p4 = p3;
-    int *_Borrow _Nonnull p5 = &mut a;
+    int *_Borrow _Nonnull p5 = &_Mut a;
     p5 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     p5 = p3;
 }
@@ -27,9 +27,9 @@ _Safe void test3(void) {
     int *_Borrow _Nullable p1 = nullptr;
     int *_Borrow p2 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     int a = 10;
-    int *_Borrow _Nullable p3 = &mut a;
+    int *_Borrow _Nullable p3 = &_Mut a;
     int *_Borrow p4 = p3;
-    int *_Borrow p5 = &mut a;
+    int *_Borrow p5 = &_Mut a;
     p5 = p1;   // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     p5 = p3;
 }
@@ -46,16 +46,16 @@ _Safe void test4(void) {
 
 _Safe void test5(void) {
     int a = 10;
-    int *_Borrow _Nonnull p1 = a == 1 ? nullptr : &mut a; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    int *_Borrow _Nullable p2 = a == 1 ? nullptr : &mut a;
+    int *_Borrow _Nonnull p1 = a == 1 ? nullptr : &_Mut a; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow _Nullable p2 = a == 1 ? nullptr : &_Mut a;
     *p2 = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
     int b = 10;
-    int *_Borrow _Nullable p3 = a == 1 && b == 10 ? &mut b : &mut a;
+    int *_Borrow _Nullable p3 = a == 1 && b == 10 ? &_Mut b : &_Mut a;
     *p3 = 10;
 
-    p1 = a == 1 ? nullptr : &mut a;  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
-    p2 = a == 1 ? nullptr : &mut a;
+    p1 = a == 1 ? nullptr : &_Mut a;  // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    p2 = a == 1 ? nullptr : &_Mut a;
     *p2 = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
-    p3 = a == 1 && b == 10 ? &mut b : &mut a;
+    p3 = a == 1 && b == 10 ? &_Mut b : &_Mut a;
     *p3 = 10;
 }

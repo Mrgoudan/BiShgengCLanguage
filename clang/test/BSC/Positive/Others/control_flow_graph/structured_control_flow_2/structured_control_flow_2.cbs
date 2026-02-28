@@ -22,7 +22,7 @@ typedef struct {
 
 static int use_cert_blob(int type) {
   int tmp = 0;
-  int *_Borrow p = &mut tmp;
+  int *_Borrow p = &_Mut tmp;
   int ret = 0;
   Data1 *x = NULL;
   Data2 *in = (Data2 *)malloc(sizeof(Data2));
@@ -52,7 +52,7 @@ end:
 
 static int use_private_blob(int type) {
   int tmp = 0;
-  int *_Borrow p = &mut tmp;
+  int *_Borrow p = &_Mut tmp;
   int ret = 0;
   Key *pKey = NULL;
   Data2 *in = (Data2 *)malloc(sizeof(Data2));
@@ -81,7 +81,7 @@ int g_err_num = 0;
 
 static int use_cert_chain_blob(void *ctx, int status) {
   int tmp = 0;
-  int *_Borrow p = &mut tmp;
+  int *_Borrow p = &_Mut tmp;
   int ret = 0;
   Data1 *x = NULL;
   Data2 *in = (Data2 *)malloc(sizeof(Data2));

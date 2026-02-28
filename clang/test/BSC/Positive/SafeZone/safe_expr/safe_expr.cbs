@@ -10,7 +10,7 @@ int *g_a;
 _Safe void test_safe_stmt1(void) {
     int v = 1;
     _Unsafe g_a = &v;
-    int *_Borrow a = _Unsafe(&mut *g_a);
+    int *_Borrow a = _Unsafe(&_Mut *g_a);
     int b = *a;
 }
 

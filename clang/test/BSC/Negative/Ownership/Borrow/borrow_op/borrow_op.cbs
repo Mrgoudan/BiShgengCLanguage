@@ -7,7 +7,7 @@ struct R {
 int f() { return 2; }
 int test() {
   int arr[3] = {1, 2, 3};
-  int * _Borrow p1 = &mut arr[0];
+  int * _Borrow p1 = &_Mut arr[0];
   // unary *
   *p1 += 1; // legal
 
@@ -15,23 +15,23 @@ int test() {
   int a = 1;
   float b = 1.0;
   int * p2 = &a;
-  int *_Borrow  p3 = &mut a;
-  int *_Borrow  p4 = &mut a;
-  const int *_Borrow p5 = &const a;
-  const int *_Borrow p6 = &const a;
-  float *_Borrow p7 = &mut b;
+  int *_Borrow  p3 = &_Mut a;
+  int *_Borrow  p4 = &_Mut a;
+  const int *_Borrow p5 = &_Const a;
+  const int *_Borrow p6 = &_Const a;
+  float *_Borrow p7 = &_Mut b;
   if (p3 == p4) {} // legal
   if (p5 != p6) {} // legal
   if (p3 == p5) {} // expected-error {{incompatible borrow types, 'const int *_Borrow' and 'int *_Borrow' cannot be compared}}
   if (p3 == p7) {} // expected-error {{incompatible borrow types, 'float *_Borrow' and 'int *_Borrow' cannot be compared}}
-  if (p3 >= &mut a) {} // legal
+  if (p3 >= &_Mut a) {} // legal
   if (p5 < &a) {} // expected-error {{incompatible borrow types, 'int *' and 'const int *_Borrow' cannot be compared}}
 
   if (sizeof(int * _Borrow) != sizeof(int *)) { return 1; }
   if (_Alignof(int * _Borrow) != _Alignof(int *)) { return 1; }
 
-  int (* _Borrow p8)() = &mut f; // expected-error {{'&mut' for function pointer is not allowed}}
-  int (* const _Borrow p9)() = &const f; // legal
+  int (* _Borrow p8)() = &_Mut f; // expected-error {{'&_Mut' for function pointer is not allowed}}
+  int (* const _Borrow p9)() = &_Const f; // legal
   a = p9();
 
   // ! && ||
@@ -43,7 +43,7 @@ int test() {
 
   // ->
   struct R r = { .num = 1 };
-  struct R * _Borrow p10 = &mut r;
+  struct R * _Borrow p10 = &_Mut r;
   a = p10->num;
 
   // unsupport
@@ -59,13 +59,13 @@ int test() {
   ~p5; // expected-error {{invalid argument type 'const int *_Borrow' to unary expression}}
   p5 << 6; // expected-error {{invalid operands to binary expression ('const int *_Borrow' and 'int')}}
   p3 >> p4; // expected-error {{invalid operands to binary expression ('int *_Borrow' and 'int *_Borrow')}}
-  &mut p3; // expected-error {{'&mut' on a '_Borrow' qualified type is not allowed}}
+  &_Mut p3; // expected-error {{'&_Mut' on a '_Borrow' qualified type is not allowed}}
            // expected-warning@-1 {{expression result unused}}
-  &mut p5; // expected-error {{'&mut' on a '_Borrow' qualified type is not allowed}}
+  &_Mut p5; // expected-error {{'&_Mut' on a '_Borrow' qualified type is not allowed}}
            // expected-warning@-1 {{expression result unused}}
-  &const p3; // expected-error {{'&const' on a '_Borrow' qualified type is not allowed}}
+  &_Const p3; // expected-error {{'&_Const' on a '_Borrow' qualified type is not allowed}}
              // expected-warning@-1 {{expression result unused}}
-  &const p5; // expected-error {{'&const' on a '_Borrow' qualified type is not allowed}}
+  &_Const p5; // expected-error {{'&_Const' on a '_Borrow' qualified type is not allowed}}
              // expected-warning@-1 {{expression result unused}}
 
   // unary -- ++

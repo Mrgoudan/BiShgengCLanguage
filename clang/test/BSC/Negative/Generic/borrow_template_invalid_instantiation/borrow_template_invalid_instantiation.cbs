@@ -10,7 +10,7 @@ T2 _Borrow cast<T1, T2>(T1 _Borrow p) { // expected-note {{candidate template ig
 
 void test_valid() {
   int x = 42;
-  int * _Borrow ptr = &mut x;
+  int * _Borrow ptr = &_Mut x;
 
   // This should work - T1 and T2 are pointer types, _Borrow added by function signature
   int *_Borrow p1 = cast<int *, int *>(ptr);
