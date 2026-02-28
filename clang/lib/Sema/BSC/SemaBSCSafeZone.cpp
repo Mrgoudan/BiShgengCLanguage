@@ -622,6 +622,12 @@ DeclRefExpr *getDeclRefExprForEnumCoversion(Expr *E) {
     if (BO->getOpcode() == BO_Comma) {
       return getDeclRefExprForEnumCoversion(cast<BinaryOperator>(E)->getRHS());
     }
+    if (BO->getOpcode() == BO_Assign) {
+      // (e1 = ONE) or (e1 = e2): RHS is the value produced, LHS is enum var
+      if (DeclRefExpr *DRE = getDeclRefExprForEnumCoversion(BO->getRHS()))
+        return DRE;
+      return getDeclRefExprForEnumCoversion(BO->getLHS());
+    }
     break;
   }
   default:
@@ -706,7 +712,10 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     }
   }
 
-  if (const ConditionalOperator *Exp = dyn_cast<ConditionalOperator>(E)) {
+  // Strip implicit casts so we recurse into ternaries whose result was promoted
+  // (e.g. enum E -> unsigned int) to int.
+  if (const ConditionalOperator *Exp =
+          dyn_cast<ConditionalOperator>(E->IgnoreParenImpCasts())) {
     return IsSafeConversion(DestType, Exp->getTrueExpr(), IsExplicitCast) &&
            IsSafeConversion(DestType, Exp->getFalseExpr(), IsExplicitCast);
   }
@@ -832,14 +841,28 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
         if (SrcType.getCanonicalType() == DestType.getCanonicalType()) {
           IsSafeBehavior = true;
         }
-        // Enum constant to same enum type: allowed.
         if (auto *DRE = getDeclRefExprForEnumCoversion(E)) {
+          // Enum constant to same enum type: allowed.
           if (EnumConstantDecl *ECD =
                   dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
             EnumDecl *Enum = cast<EnumDecl>(ECD->getDeclContext());
             QualType EnumTy = Context.getTypeDeclType(Enum);
             if (DestType.getCanonicalType() == EnumTy.getCanonicalType()) {
               IsSafeBehavior = true;
+            }
+          }
+          // Enum variable of same enum type: allowed (e.g. ternary (cond)?e1:e2
+          // branches where e1,e2 are enum vars promoted to int).
+          if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+            QualType VarTy = VD->getType();
+            if (const EnumType *VarET = VarTy->getAs<EnumType>()) {
+              const EnumType *DestET = DestType->getAs<EnumType>();
+              if (DestET && SrcType->isIntegerType() &&
+                  (VarTy.getCanonicalType() == DestType.getCanonicalType() ||
+                   EnumDestContainsAllValuesOfSource(DestET->getDecl(),
+                                                    VarET->getDecl(), Context))) {
+                IsSafeBehavior = true;
+              }
             }
           }
         }

@@ -35,12 +35,16 @@ void test_implicit_enum_conversion(void) {
 
   _Safe {
     int a = 0;
+    int cond = 1;
     // Implicit int to enum conversion is forbidden
     enum E num = a;  // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
 
     enum F day = SUN;
     // Implicit enum to enum conversion is an error in the safe zone
     num = day;  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+
+    // Ternary with different enum types: still forbidden
+    num = cond ? num : day;  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
 
     // Implicit enum to int conversion is allowed
     a = num;  // ok

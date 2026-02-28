@@ -39,6 +39,20 @@ _Safe void rule4_enum(void) {
   a = ZERO;
 }
 
+// Rule 4b: Ternary with same enum type: allowed (branches promoted to int)
+_Safe void rule4_enum_ternary(void) {
+  enum E { ZERO, ONE, TWO };
+  enum E num = ZERO;
+  enum E e1 = ONE;
+  enum E e2 = TWO;
+  int cond = 1;
+  num = cond ? e1 : e2;   // ok
+  num = cond ? ZERO : ONE; // ok: enum constants
+  num = cond ? e1 : ONE;   // ok: mix of var and constant
+  num = cond ? (cond ? e1 : ZERO) : (cond ? e2 : ONE); // ok: mixed ternary, var, and constants
+  num = cond ? (e1 = ONE) : ONE; // ok
+}
+
 // Rule 5: double -> float explicit allowed; float -> double implicit
 _Safe void rule5_float_precision(void) {
   double a = 1.0;
@@ -110,6 +124,7 @@ int main(void) {
   rule2_unsigned();
   rule3_signed();
   rule4_enum();
+  rule4_enum_ternary();
   rule5_float_precision();
   rule6_int_to_float();
   rule7_comparison_result();
