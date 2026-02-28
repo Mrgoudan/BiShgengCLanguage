@@ -175,6 +175,8 @@ static VarDecl *getVarDeclFromExpr(Expr *E) {
     return getVarDeclFromExpr(ICE->getSubExpr());
   } else if (auto PE = dyn_cast<ParenExpr>(E)) {
     return getVarDeclFromExpr(PE->getSubExpr());
+  } else if (auto BO = dyn_cast<BinaryOperator>(E)) {
+    return getVarDeclFromExpr(BO->getLHS());
   }
   return nullptr;
 }

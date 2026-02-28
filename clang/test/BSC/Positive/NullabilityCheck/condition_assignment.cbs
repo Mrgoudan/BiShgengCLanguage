@@ -1,0 +1,24 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+int *foo();
+
+void test1(int *p) {
+  if ((p = foo()) != nullptr) {
+    *p = 1;
+  }
+}
+
+void test2(int *p) {
+  while ((p = foo()) != nullptr) {
+    *p = 1;
+  }
+}
+
+_Safe int *_Borrow _Nullable readdir(int *_Borrow);
+
+_Safe void test3(int *_Borrow _Nullable dirInfo, int *_Borrow dir) {
+  while ((dirInfo = readdir(&_Mut *dir)) != nullptr) {
+    *dirInfo = 2;
+  }
+}
