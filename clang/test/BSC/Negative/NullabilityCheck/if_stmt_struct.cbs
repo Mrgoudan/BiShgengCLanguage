@@ -263,4 +263,3 @@ _Safe void test17(void) {
         }
     }
 } // expected-error {{memory leak of value: `p`}}
-  // expected-error@-1 {{field memory leak of value: `p`, p.p is leak}}

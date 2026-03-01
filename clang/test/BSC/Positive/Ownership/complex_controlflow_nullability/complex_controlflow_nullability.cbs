@@ -1,0 +1,28 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+void release(int *_Owned _Nullable);
+int *_Owned _Nullable take(void);
+void test1(int *_Owned _Nullable p) {
+  if (p != nullptr) {
+    if (p != nullptr) {
+      release(p);
+    }
+  }
+}
+
+void test2(int *_Owned _Nullable p) {
+  do {
+    release(p);
+    p = take();
+  } while(p != nullptr);
+}
+
+void test3(int *_Owned _Nullable p) {
+  while(p != nullptr) {
+    release(p);
+    p = take();
+  }
+  p = take();
+  release(p);
+}

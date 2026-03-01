@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -verify %s
+
+void release(int *_Owned _Nullable);
+int *_Owned _Nullable take(void);
+void test1(int *_Owned _Nullable p) {
+  if (p != nullptr) {
+    if (p != nullptr) {
+      release(p);
+    }
+    p = take();
+  }
+}// expected-error {{memory leak of value: `p`}}
+
+void test2(int *_Owned _Nullable p) {
+  do {
+    release(p); // expected-error {{use of moved value: `p`}}
+  } while(p != nullptr);
+}

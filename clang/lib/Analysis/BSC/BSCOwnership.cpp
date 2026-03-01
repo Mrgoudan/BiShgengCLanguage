@@ -1991,11 +1991,11 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
 
 void TransferFunctions::VisitAbstractConditionalOperator(AbstractConditionalOperator* ACO) {
   Operation Inherited = op;
-  
+
   op = None;
   Visit(ACO->getCond());
   Ownership::OwnershipStatus StatAfterCond = stat;
-  
+
   op = Inherited;
   Visit(ACO->getTrueExpr());
   Ownership::OwnershipStatus StatAfterTrue = stat;
@@ -2331,18 +2331,15 @@ void TransferFunctions::HandleDREUse(const DeclRefExpr *DRE,
 
 void OwnershipImpl::MaybeSetNull(const CFGBlock *block, const CFGBlock *cur,
                                  Ownership::OwnershipStatus &status) {
-  if (!block || block->pred_empty())
+  if (!block || !cur)
     return;
-  const CFGBlock *pred = *block->pred_rbegin();
-  if (pred == nullptr || pred != cur) {
-    return;
-  }
-  Stmt *TermStmt = const_cast<Stmt *>(pred->getTerminatorStmt());
+  Stmt *TermStmt = const_cast<Stmt *>(cur->getTerminatorStmt());
   const Expr *Cond = nullptr;
-  if (isa_and_nonnull<IfStmt, WhileStmt>(TermStmt)) {
+  if (isa_and_nonnull<IfStmt, WhileStmt, DoStmt>(TermStmt)) {
     llvm::TypeSwitch<Stmt *>(TermStmt)
         .Case<IfStmt>([&](IfStmt *IS) { Cond = IS->getCond(); })
         .Case<WhileStmt>([&](WhileStmt *WS) { Cond = WS->getCond(); })
+        .Case<DoStmt>([&](DoStmt *DS) { Cond = DS->getCond(); })
         .Default([&](Stmt *S) { Cond = nullptr; });
     if (const BinaryOperator *BO =
             dyn_cast<BinaryOperator>(Cond->IgnoreParenImpCasts())) {
@@ -2354,10 +2351,10 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block, const CFGBlock *cur,
         if (const ImplicitCastExpr *ICE =
                 dyn_cast<ImplicitCastExpr>(PointerE)) {
           if (BO->getOpcode() == BO_EQ) {
-            if (*pred->succ_begin() == block) // block is True branch.
+            if (*cur->succ_begin() == block) // block is True branch.
               status.setToNull(ICE->getSubExpr());
           } else if (BO->getOpcode() == BO_NE) {
-            if (*(pred->succ_begin() + 1) == block) // block is False branch.
+            if (*(cur->succ_begin() + 1) == block) // block is False branch.
               status.setToNull(ICE->getSubExpr());
           }
         }
