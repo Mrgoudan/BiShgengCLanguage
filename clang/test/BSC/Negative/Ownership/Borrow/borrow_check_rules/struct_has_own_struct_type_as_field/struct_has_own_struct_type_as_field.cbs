@@ -2,18 +2,18 @@
 
 _Owned struct G;
 _Owned struct G {
-  public:
+  _Public:
     G *g;
 };
 
 _Owned struct K;
 _Owned struct S {
-  public:
+  _Public:
     K *k;
 };
 
 _Owned struct K {
-  public:
+  _Public:
     S *s;
 };
 

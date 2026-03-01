@@ -10,7 +10,7 @@ _Owned struct B{
     }
 };
 _Owned struct A {
-public:
+_Public:
   ~A( A this) {
     y++;
   }

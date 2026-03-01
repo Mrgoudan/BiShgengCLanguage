@@ -6,7 +6,7 @@
 // RUN: %t-rw.output
 
 _Owned struct S<T> {
-public:
+_Public:
     int a1;
     char a2;
 };

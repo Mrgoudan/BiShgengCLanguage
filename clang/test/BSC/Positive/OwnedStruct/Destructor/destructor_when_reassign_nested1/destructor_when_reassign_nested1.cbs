@@ -11,13 +11,13 @@
 int x = 0;
 int y = 0;
 _Owned struct Weak{
-    public:
+    _Public:
     ~Weak(Weak this){
         x++;
     }
 };
 _Owned struct W{
-    public:
+    _Public:
     Weak p;
     ~W(W this){
         y++;

@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 
 _Owned struct Vec<T> {
-public:
+_Public:
     T* ptr;
     int cap;
     int len;

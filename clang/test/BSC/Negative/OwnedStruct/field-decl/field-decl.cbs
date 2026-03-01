@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 _Owned struct S {
-public:
+_Public:
   typedef int Int; // expected-error {{type name does not allow storage class to be specified}}
   Int y; // expected-error {{unknown type name 'Int'; did you mean 'int'?}}
   ~S(S this) {
@@ -11,20 +11,20 @@ public:
 };
 
 _Owned struct GS<T> {
-public:
+_Public:
   typedef int Int; // expected-error {{type name does not allow storage class to be specified}}
   Int y; // expected-error {{unknown type name 'Int'; did you mean 'int'?}}
   typedef T type; // expected-error {{type name does not allow storage class to be specified}}
 };
 
 _Owned struct U {
-public:
+_Public:
   typedef GS<int> gs_t; // expected-error {{type name does not allow storage class to be specified}}
   gs_t gs; // expected-error {{unknown type name 'gs_t'}}
 };
 
 _Owned struct UU {
-public:
+_Public:
   typedef Int = int; // expected-error {{type name does not allow storage class to be specified}}
                      // expected-error@-1 {{expected ';' at end of declaration list}}
                      // expected-warning@-2 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}

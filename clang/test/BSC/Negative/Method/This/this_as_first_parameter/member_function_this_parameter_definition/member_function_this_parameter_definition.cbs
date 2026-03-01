@@ -4,7 +4,7 @@ struct Foo {
   int a;
 };
 _Owned struct Bar {
-public:
+_Public:
   int a;
 };
 

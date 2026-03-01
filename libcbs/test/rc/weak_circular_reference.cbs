@@ -9,13 +9,13 @@
 _Owned struct B;
 
 _Owned struct A {
-public:
+_Public:
     int value;
     RefCell<Rc<B>> c;
 };
 
 _Owned struct B {
-public:
+_Public:
     int value;
     RefCell<Weak<A>> d;
 };

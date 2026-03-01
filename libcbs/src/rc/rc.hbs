@@ -10,7 +10,7 @@ struct RcData<T> {
 };
 
 _Owned struct Rc<T> {
-public:
+_Public:
     RcData<T> * ptr;
 
     ~Rc(Rc<T> this) {
@@ -67,7 +67,7 @@ _Safe const T * _Borrow Rc<T>::deref(const This * _Borrow this) {
 }
 
 _Owned struct Weak<T> {
-public:
+_Public:
     RcData<T> * ptr;
 
     ~Weak(Weak<T> this) {

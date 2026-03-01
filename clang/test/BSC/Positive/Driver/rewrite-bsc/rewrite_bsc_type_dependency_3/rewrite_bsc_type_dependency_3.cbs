@@ -12,20 +12,20 @@ struct _BSC_ListNode<T> {
 };
 
 _Owned struct LinkedList<T> {
-private:
+_Private:
     _BSC_ListNode<T> *head;
     _BSC_ListNode<T> *tail;
     int len;
 };
 
 _Owned struct RawVec<T> {
-public:
+_Public:
   T* ptr;
   int cap;
 };
 
 _Owned struct Vec<T> {
-public:
+_Public:
   RawVec<T> buf;
   int len;
 };

@@ -4,7 +4,7 @@ _Safe T *_Owned safe_malloc<T>(T t);
 _Safe void safe_free(void *_Owned p);
 
 _Owned struct B{
-    public:
+    _Public:
     int * _Owned p;
     ~B(B this){
         safe_free((void*_Owned)this.p);
@@ -12,7 +12,7 @@ _Owned struct B{
 };
 
 _Owned struct A{
-    public:
+    _Public:
     B b;
 };
 

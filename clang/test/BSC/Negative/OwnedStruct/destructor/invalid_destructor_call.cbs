@@ -3,11 +3,11 @@
 _Owned struct A {    
    ~A(A this){
    }
-   public:
+   _Public:
    int x; 
 };
 _Owned struct B {    
-   public:
+   _Public:
    int x; 
    ~B(B this){}
 };

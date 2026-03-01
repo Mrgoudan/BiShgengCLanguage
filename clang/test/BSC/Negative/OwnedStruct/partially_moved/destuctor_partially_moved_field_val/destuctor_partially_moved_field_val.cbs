@@ -3,7 +3,7 @@
 _Owned struct Weak {};
 
 _Owned struct W {
-public:
+_Public:
 	Weak p;
 };
 

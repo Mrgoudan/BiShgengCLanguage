@@ -3,7 +3,7 @@
 
 _Owned struct A {
     int a;
-public:
+_Public:
     int f() {return 0; }
 };
 

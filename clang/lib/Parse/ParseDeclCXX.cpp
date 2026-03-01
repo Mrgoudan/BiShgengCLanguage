@@ -2367,10 +2367,12 @@ AccessSpecifier Parser::getAccessSpecifierIfPresent() const {
   default:
     return AS_none;
   case tok::kw_private:
+  case tok::kw__Private:
     return AS_private;
   case tok::kw_protected:
     return AS_protected;
   case tok::kw_public:
+  case tok::kw__Public:
     return AS_public;
   }
 }
@@ -3400,6 +3402,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
       return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
     LLVM_FALLTHROUGH;
+  case tok::kw__Private:
+  case tok::kw__Public:
   case tok::kw_public:
   case tok::kw_protected: {
     if (getLangOpts().HLSL)

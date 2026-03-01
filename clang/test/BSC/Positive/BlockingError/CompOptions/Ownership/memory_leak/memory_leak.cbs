@@ -10,7 +10,7 @@ void test1() {
 } // memory leak of value: `p1`
 
 _Owned struct S { 
-public:
+_Public:
   int a;
 };
 

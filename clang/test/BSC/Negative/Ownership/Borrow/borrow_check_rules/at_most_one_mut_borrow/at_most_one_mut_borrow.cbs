@@ -7,7 +7,7 @@ struct S {
 };
 
 _Owned struct M {
-public:
+_Public:
   int a;
 };
 

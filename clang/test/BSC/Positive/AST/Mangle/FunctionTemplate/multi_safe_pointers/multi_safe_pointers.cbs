@@ -23,7 +23,7 @@ void foo<T1,T2>(T1 t1, T2 t2) {
 }
 
 _Owned struct Bar {
-public:
+_Public:
   int a;
   int m;
 };

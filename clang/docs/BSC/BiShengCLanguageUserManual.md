@@ -4690,7 +4690,7 @@ int main() {
 #include <stdio.h>
 
 _Owned struct Person {
-public:
+_Public:
   char name[50];
   int age;
   char *getName(Person *this) { return this->name; }
@@ -4717,7 +4717,7 @@ int main() {
 #include <stdio.h>
 
 _Owned struct Person{
-public:
+_Public:
     char name[50];
     static int age;
 };
@@ -4749,7 +4749,7 @@ int main() {
 #include <stdio.h>
 
 _Owned struct Person {
-public:
+_Public:
   int *_Owned age;
   ~Person(Person this) {
     printf("%d\n", *this.age);
@@ -4790,7 +4790,7 @@ int main() {
 #include <stdio.h>
 
 _Owned struct Person {
-public:
+_Public:
   char name[50];
   int age;
   char *getName(Person *this) { return this->name; }
@@ -4814,7 +4814,7 @@ int main() {
 #include <stdio.h>
 
 _Owned struct Person {
-public:
+_Public:
   char name[50];
   int age;
   char *getName(Person *this);
@@ -4837,9 +4837,9 @@ int main() {
 
 ```c
 _Owned struct A{
-    private:
+    _Private:
     int a;
-    public:
+    _Public:
     int b;
 };
 int A::f(A* this) {
@@ -5516,7 +5516,7 @@ _Safe void example(void) {
 
 ```c
 _Owned struct S {
-public:
+_Public:
     int* _Owned p;
     int* _Owned q;
     ~S(S this) {
@@ -5544,7 +5544,7 @@ _Safe void example(void) {
 #include "bishengc_safety.hbs"
 #include <string.h>
 _Owned struct Resource {
-public:
+_Public:
     char *_Owned s;
     ~Resource(This this) {
         safe_free((void *_Owned)this.s);
@@ -6077,7 +6077,7 @@ int main() {
 _Owned struct B;
 
 _Owned struct A {
-public:
+_Public:
     int value;
     RefCell<Rc<B>> c;
     ~A(A this) {
@@ -6086,7 +6086,7 @@ public:
 };
 
 _Owned struct B {
-public:
+_Public:
     int value;
     RefCell<Rc<A>> d;
     ~B(B this) {
@@ -6141,7 +6141,7 @@ a 的析构需要 b 先被析构，而 b 的析构需要 a 先被析构，结果
 _Owned struct B;
 
 _Owned struct A {
-public:
+_Public:
     int value;
     RefCell<Rc<B>> c;     //A 通过 Rc 引用 B
     ~A(A this) {
@@ -6150,7 +6150,7 @@ public:
 };
 
 _Owned struct B {
-public:
+_Public:
     int value;
     RefCell<Weak<A>> d;  //B 通过 Weak 引用 A
     ~B(B this) {
@@ -6191,7 +6191,7 @@ A is destructed, value = 5
 Weak 常常被应用于父子循环引用关系中，做法是：让父节点通过 Rc 来引用子节点，然后让子节点通过 Weak 来引用父节点。接下来我们构造一个简单的 tree，它有 1 个 root 节点和 2 个 leaf 节点：
 ```C
 _Owned struct Node {
-public:
+_Public:
     int value;
     RefCell<Weak<Node>> parent;      //子结点通过 Weak 引用父节点
     RefCell<Vec<Rc<Node>>> children; //父结点通过 Rc 引用子节点
@@ -6481,7 +6481,7 @@ int main() {
 下面是一个例子：
 ```c
 _Owned struct Person<T>{
-public:
+_Public:
     char name[50];
     T age;
     ~Person(This this) {

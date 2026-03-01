@@ -9,20 +9,20 @@ int x = 0;
 int y = 0;
 int z = 0;
 _Owned struct A{
-    public:
+    _Public:
     ~A(A this){
         x++;
     }
 };
 _Owned struct B{
-    public:
+    _Public:
     A a;
     ~B(B this){
         y++;
     }
 };
 _Owned struct C{
-    public:
+    _Public:
     A a;
     B b;
     ~C(C this){

@@ -5,12 +5,12 @@
 // RUN: %t-rw.output
 
 _Owned struct A {
-    public:
+    _Public:
         int a;
         int l(A* this) {
             return this->f(); // ok
         }
-    private:
+    _Private:
         int f(A* this) { return 0;}
         int q(A* this);
         int m(A* this) {

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 _Owned struct A {  
-   public:
+   _Public:
    int x;
    int y ;
   ~A(A this){

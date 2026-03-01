@@ -3,7 +3,7 @@
 _Owned struct B {
 };
 _Owned struct A {
-public:
+_Public:
     B b;  
 };
 void test(A a) {

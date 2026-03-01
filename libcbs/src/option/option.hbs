@@ -16,7 +16,7 @@ typedef enum {
 // every `Option` is either `Some` and contains a value, or `None`, and does not.
 _Owned struct Option<T> {
 // FIXME: makes it private later
-public:
+_Public:
     OptionState state;
     char val[sizeof(T)];
 

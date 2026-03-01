@@ -12,7 +12,7 @@ _Owned struct A<T>{
 };
 int y = 1;
  _Owned struct B<T> {
- public:
+ _Public:
      A<int> a;
     ~B(B<T> this) { 
       y++;
@@ -21,7 +21,7 @@ int y = 1;
 };
 
 _Owned struct C<T> {
-public:
+_Public:
   T elem;
   ~C(C<T> this) {}
 };

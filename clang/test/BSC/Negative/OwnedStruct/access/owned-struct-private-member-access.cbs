@@ -2,11 +2,11 @@
 
 _Owned struct A {
     int a;
-    public:
+    _Public:
         int l(A* this) {
             return this->f(); // ok
         }
-    private:
+    _Private:
         int f(A* this);
         int q(A* this);
         int m(A* this) {

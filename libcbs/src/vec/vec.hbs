@@ -7,11 +7,11 @@
 
 _Owned struct Vec<T> {
 // FIXME: make it private later
-public:
+_Public:
 	RawVec<T> buf;
 	size_t len;
 
-public:
+_Public:
 	~Vec(Vec<T> this) {
 		for (size_t index = 0; index < this.len; index++) {
 			_BSC_UNUSED T tmp = this.buf.ptr[index];

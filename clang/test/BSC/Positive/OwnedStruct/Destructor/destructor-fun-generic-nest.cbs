@@ -5,17 +5,17 @@
 // RUN: %t-rw.output
 
 _Owned struct A<T> {
-public:
+_Public:
     int a;
 };
 
 _Owned struct B<T> {
-public:
+_Public:
     char *b;
 };
 
 _Owned struct S<T> {
-public:
+_Public:
     A<T> a;
     B<T> b;
 };

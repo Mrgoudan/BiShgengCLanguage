@@ -14,7 +14,7 @@ void test1() {
 #pragma GCC diagnostic pop
 
 _Owned struct S { 
-public:
+_Public:
   int a;
 };
 

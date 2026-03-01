@@ -8,7 +8,7 @@
 
 int x = 0;
 _Owned struct Foo {
-  public:
+  _Public:
     int a;
   ~Foo(Foo this){
    x++;

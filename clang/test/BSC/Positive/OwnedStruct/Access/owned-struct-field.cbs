@@ -6,7 +6,7 @@
 // RUN: %t-rw.output
 
 _Owned struct C {
-    public:
+    _Public:
     int f(C* this) { return this->a; } 
     int a;
     int g(C* this) { return this->f(); }

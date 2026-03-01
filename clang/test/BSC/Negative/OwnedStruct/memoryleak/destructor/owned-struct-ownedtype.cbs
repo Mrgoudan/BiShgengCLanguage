@@ -8,7 +8,7 @@ struct A {
 };
 
 _Owned struct S {
-public:
+_Public:
         short * _Owned x;
         struct A y;
         ~S(S this) {

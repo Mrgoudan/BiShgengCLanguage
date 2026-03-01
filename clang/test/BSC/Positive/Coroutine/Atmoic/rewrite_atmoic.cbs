@@ -10,7 +10,7 @@
 #include <stdatomic.h>
 
 _Owned struct Person<T, int N> {
-public:
+_Public:
     char name[50];
     T age;
     ~Person(This this) {

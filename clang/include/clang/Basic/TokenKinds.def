@@ -356,17 +356,12 @@ KEYWORD(namespace                   , KEYCXX)
 KEYWORD(new                         , KEYCXX)
 #if ENABLE_BSC
 KEYWORD(operator                    , KEYCXX|KEYBSC)
-KEYWORD(private                     , KEYCXX|KEYBSC)
 #else
 KEYWORD(operator                    , KEYCXX)
+#endif
 KEYWORD(private                     , KEYCXX)
-#endif
 KEYWORD(protected                   , KEYCXX)
-#if ENABLE_BSC
-KEYWORD(public                      , KEYCXX|KEYBSC)
-#else
 KEYWORD(public                      , KEYCXX)
-#endif
 KEYWORD(reinterpret_cast            , KEYCXX)
 KEYWORD(static_cast                 , KEYCXX)
 KEYWORD(template                    , KEYCXX)
@@ -481,6 +476,8 @@ KEYWORD(trait                       , KEYBSC)
 KEYWORD(impl                        , KEYBSC)
 KEYWORD(_Safe                       , KEYBSC)
 KEYWORD(_Unsafe                     , KEYBSC)
+KEYWORD(_Public                     , KEYBSC)
+KEYWORD(_Private                    , KEYBSC)
 KEYWORD(__conditional               , KEYBSC)
 #endif
 

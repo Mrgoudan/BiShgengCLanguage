@@ -7,7 +7,7 @@
 int b = 1;
 
 _Owned struct A {
-    public:
+    _Public:
         int a;
         int f(A* _Borrow this) { return b; }
 };

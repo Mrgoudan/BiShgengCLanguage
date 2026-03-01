@@ -8,7 +8,7 @@
 // RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 
 _Owned struct A<T> {
-public:
+_Public:
     T z;
     T foo(T a) {
         return a;

@@ -8,12 +8,12 @@
 _Owned struct A<T> {};
 
 _Owned struct B<T> {
-    public:
+    _Public:
         A<T> a;
 };
 
 _Owned struct C {
-    public:
+    _Public:
         B<int> b;
 };
 

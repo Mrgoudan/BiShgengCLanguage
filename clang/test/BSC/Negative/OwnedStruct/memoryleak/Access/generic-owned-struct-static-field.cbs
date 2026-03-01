@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -verify %s
 
 _Owned struct A<T> {
-  public:
+  _Public:
     static int a;
 };
 int A<T>::a;
 
 _Owned struct B<T> {
-  public:
+  _Public:
    static A<T> aa;
    static A<int> aa1;
 

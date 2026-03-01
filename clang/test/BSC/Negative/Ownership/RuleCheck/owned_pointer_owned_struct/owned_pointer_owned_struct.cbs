@@ -3,7 +3,7 @@
 void safe_free(void* _Owned);
 
 _Owned struct S {
-public:
+_Public:
     int* _Owned a;
     int b;
     ~S(S this) {

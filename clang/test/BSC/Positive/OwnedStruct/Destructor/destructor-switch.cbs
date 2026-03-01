@@ -5,7 +5,7 @@
 // RUN: %t-rw.output
 int y = 0;
 _Owned struct S {
-public:
+_Public:
   ~S(S this) {
     y++;
   }

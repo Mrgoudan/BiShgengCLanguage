@@ -6,7 +6,7 @@
 
 int y = 0;
 _Owned struct A<T> {  
- public:
+ _Public:
      int x;
      ~A(A<T> this) {
         y++;

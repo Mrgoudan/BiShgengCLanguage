@@ -16,7 +16,7 @@ int struct F::structMember(struct F *this, struct F f2){    // expected-error {{
 }
 
 _Owned struct G {
-    public:
+    _Public:
     int a;
     __attribute__((operator +))
     int ownedMember(G *this, struct F f) {    // expected-error {{function unsupport overload}}
@@ -36,7 +36,7 @@ void int::foo(int* this) {
 }
 
 _Owned struct S {
-public:
+_Public:
     int a;
 };
 

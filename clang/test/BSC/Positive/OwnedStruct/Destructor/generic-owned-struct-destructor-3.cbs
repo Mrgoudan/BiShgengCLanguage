@@ -2,19 +2,19 @@
 // RUN: FileCheck --input-file=%t-rw.c %s
 
 _Owned struct Raw<T> {
-  public:
+  _Public:
     T* ptr;
     ~Raw(Raw<T> this) {}
 };
 
 _Owned struct Vec<T> {
-  public:
+  _Public:
     Raw<T> raw;
     ~Vec(Vec<T> this) {}
 };
 
 _Owned struct String {
-  public:
+  _Public:
     Vec<char> buf;
     ~String(String this) {}
 };

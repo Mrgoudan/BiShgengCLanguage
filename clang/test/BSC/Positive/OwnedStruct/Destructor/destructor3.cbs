@@ -11,7 +11,7 @@ _Owned struct B{
 };
 void free(void * p);
 _Owned struct A {
-public:
+_Public:
    B b;
   ~A( A this) {
     y++;

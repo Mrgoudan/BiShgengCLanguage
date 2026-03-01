@@ -24,7 +24,7 @@
 // Violating this property is a logic error.
 _Owned struct HashMap<K, V, S> {
 // FIXME: makes it private
-public:
+_Public:
     S hash_builder;
     RawTable<K, V> table;
 

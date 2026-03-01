@@ -18,12 +18,12 @@ _Owned struct B {
 };
 
 _Owned struct C {
-public:
+_Public:
     A a;
 };
 
 _Owned struct D {
-public:
+_Public:
     A a;
     ~D(D this) {
     }
@@ -31,7 +31,7 @@ public:
 
 
 _Owned struct E {
-public:
+_Public:
     A *a;
 };
 

@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %s -verify 
 
 _Owned struct Redefiniton<T> {
-public:
+_Public:
     T Redefin;
 
-public:
+_Public:
     ~Redefiniton(Redefiniton<T> this) {
 
     }

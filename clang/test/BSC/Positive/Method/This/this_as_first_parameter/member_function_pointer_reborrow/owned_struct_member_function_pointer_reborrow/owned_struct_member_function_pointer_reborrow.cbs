@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 _Owned struct Bar {
-public:
+_Public:
   int a;
 };
 

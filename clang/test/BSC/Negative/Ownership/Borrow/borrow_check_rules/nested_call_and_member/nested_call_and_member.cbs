@@ -6,12 +6,12 @@ typedef struct v5_adpt_socket {
 } v5_adpt_socket_t;
 
 _Owned struct ListNode {
-public:
+_Public:
   v5_adpt_socket_t inner;
 };
 
 _Owned struct OptionRefMut {
-public:
+_Public:
   ListNode * inner;
 };
 

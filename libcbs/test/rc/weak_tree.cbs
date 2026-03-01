@@ -8,7 +8,7 @@
 #include "vec.hbs"
 
 _Owned struct Node {
-public:
+_Public:
     int value;
     RefCell<Weak<Node>> parent;
     RefCell<Vec<Rc<Node>>> children;

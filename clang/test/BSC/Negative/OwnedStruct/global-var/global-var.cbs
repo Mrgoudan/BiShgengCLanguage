@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 _Owned struct S {
-public:
+_Public:
   int a;
   int b;
 };
@@ -11,7 +11,7 @@ S s2 = { 2, 3 }; // expected-error {{type of global variable cannot qualified by
 S s3 = { .a = 1, .b = 2}; // expected-error {{type of global variable cannot qualified by '_Owned' }}
 
 _Owned struct U<T> {
-public:
+_Public:
   T a;
   int* p;
 };

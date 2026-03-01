@@ -23,7 +23,7 @@ _Safe T *_Owned safe_malloc<T>(T t) {
 _Safe void use<T>(T *_Borrow p) {}
 
 _Owned struct Data<T> {
-public:
+_Public:
     T *_Owned _Nullable p1;
     T *_Owned p2;
     ~Data(This this) {
@@ -41,7 +41,7 @@ _Safe Data<T> Data<T>::init(T a) {
 }
 
 _Owned struct BorrowData<T> {
-public:
+_Public:
     Data<T> *_Borrow _Nullable p1;
     Data<T> *_Borrow p2;
 };

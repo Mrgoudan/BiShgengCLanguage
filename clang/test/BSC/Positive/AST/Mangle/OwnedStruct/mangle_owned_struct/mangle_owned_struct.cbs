@@ -4,7 +4,7 @@
 // expected-no-diagnostics
 
 _Owned struct Person<T, H> {
-  public:
+  _Public:
     char name[50];
     T age;
     H height;

@@ -99,7 +99,7 @@ int *_Borrow struct N::test19(This* this, int* _Borrow p) {
 }
 
 _Owned struct S {
-public:
+_Public:
   int *_Owned *_Borrow a;
   int *_Owned *_Borrow test20(S *this) {
     int *_Owned *_Borrow a = this->a;

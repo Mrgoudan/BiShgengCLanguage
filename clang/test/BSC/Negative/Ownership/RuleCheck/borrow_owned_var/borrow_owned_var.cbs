@@ -4,7 +4,7 @@ extern void* malloc(unsigned long);
 extern void free(void *);
 
 _Owned struct S{
-public:
+_Public:
     int data;
     int* _Owned p;
     ~S(S this) {

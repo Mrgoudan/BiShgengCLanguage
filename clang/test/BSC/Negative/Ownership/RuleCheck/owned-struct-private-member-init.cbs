@@ -2,7 +2,7 @@
 
 _Owned struct D{
     int a ;
-    public:
+    _Public:
     D init_a(){
       D d ={2};
      return d;

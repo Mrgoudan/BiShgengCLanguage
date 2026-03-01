@@ -7,7 +7,7 @@
 
 
 _Owned struct S {
-public:
+_Public:
     int a;
     char* c;
     ~S(S this) {}

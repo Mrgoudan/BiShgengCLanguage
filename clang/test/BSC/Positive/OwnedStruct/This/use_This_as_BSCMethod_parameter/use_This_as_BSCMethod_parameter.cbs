@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 typedef _Owned struct S {
-    public:
+    _Public:
         int a;
 }S1;
 
@@ -34,7 +34,7 @@ void int::dump2(This this) {
 }
 
 _Owned struct G<T> {
-    public:
+    _Public:
         T d;
 };
 

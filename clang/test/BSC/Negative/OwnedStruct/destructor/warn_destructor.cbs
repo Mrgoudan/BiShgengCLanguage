@@ -8,7 +8,7 @@
 
 int y = 0;
 _Owned struct A {  
-public:
+_Public:
    ~A(A this){
     y++;
    }

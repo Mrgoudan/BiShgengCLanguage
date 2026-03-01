@@ -7,7 +7,7 @@
 #include "assert.h"
 
 _Owned struct P {
-public:
+_Public:
     int *_Owned k;
     ~P(P this) {
         free((void*)this.k);
@@ -15,7 +15,7 @@ public:
 };
 
 _Owned struct S {
-public:
+_Public:
     int id;
     Rc<P> p;
 };
@@ -44,7 +44,7 @@ void test1() {
 }
 
 _Owned struct W {
-public:
+_Public:
     int id;
     Weak<P> p;
 };

@@ -4,7 +4,7 @@ _Safe T* _Owned safe_malloc<T>(T);
 _Safe void safe_free(void* _Owned);
 
 _Owned struct Test {
-public:
+_Public:
     int *_Owned t;
     ~Test(This this)
     {

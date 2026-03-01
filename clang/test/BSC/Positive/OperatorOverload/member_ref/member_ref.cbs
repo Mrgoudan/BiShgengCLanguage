@@ -142,7 +142,7 @@ struct RcData<T> {
 	T data;
 };
 _Owned struct Rc<T> {
-public:
+_Public:
   RcData<T> * ptr;
 };
 
@@ -174,7 +174,7 @@ int test6() {
 // struct include Rc
 _Owned struct RcRecord<T>
 {
-public:
+_Public:
     Rc<T> rc;
 };
 

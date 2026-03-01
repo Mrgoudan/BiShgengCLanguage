@@ -5,7 +5,7 @@
 
 _Owned struct S {
     double *_Borrow a3; // contain _Borrow 
-public:
+_Public:
     int a1;
     char a2;
 

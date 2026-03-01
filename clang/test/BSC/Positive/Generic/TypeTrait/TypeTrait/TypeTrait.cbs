@@ -14,7 +14,7 @@ typedef struct G { int a; } G;
 typedef enum E { Mon=1, Tue, Wed } E;
 typedef union U { int a; } U;
 typedef struct S<int> S_int;
-_Owned struct A {public: int a; };
+_Owned struct A {_Public: int a; };
 typedef struct B { int *_Owned a; } B;
 typedef struct C { A a; } C;
 typedef struct D { B b; } D;

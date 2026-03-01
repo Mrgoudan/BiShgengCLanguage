@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 _Owned struct A {
-    public:
+    _Public:
     int * _Owned a;
     ~A(A this) {
     } // expected-error {{destructor for`_Owned struct A` incorrect, this.a is of _Owned type and needs to be handled manually}}

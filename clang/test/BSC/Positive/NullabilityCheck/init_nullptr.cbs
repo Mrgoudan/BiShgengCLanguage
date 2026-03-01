@@ -45,7 +45,7 @@ _Safe int *_Owned _Nullable get_nullable(int a) {
 _Safe void use(int *_Borrow p) { }
 
 _Owned struct Data {
-public:
+_Public:
     int *_Owned _Nullable p1;
     int *_Owned p2;
     ~Data(This this) {

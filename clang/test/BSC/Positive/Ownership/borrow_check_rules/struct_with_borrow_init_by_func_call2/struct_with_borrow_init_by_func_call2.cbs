@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 _Owned struct Option<T> {
-public:
+_Public:
   T *_Owned inner;
   ~Option(This this) {
     free((T *)this.inner);
@@ -16,7 +16,7 @@ public:
 };
 
 _Owned struct OptionRefMut<T> {
-public:
+_Public:
   T *_Borrow p;
 };
 

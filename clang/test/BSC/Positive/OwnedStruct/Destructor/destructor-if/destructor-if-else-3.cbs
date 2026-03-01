@@ -10,13 +10,13 @@ int g_flag1 = 1;
 int g_flag2 = 1;
 int g_temp = 1;
 _Owned struct S1<T> {
-public:
+_Public:
     ~S1(S1<T> this) {
         g_flag1--;
     }
 };
 _Owned struct S2<T> {
-public:
+_Public:
     S1<T> s1;
     ~S2(S2<T> this) {
         g_flag2--;

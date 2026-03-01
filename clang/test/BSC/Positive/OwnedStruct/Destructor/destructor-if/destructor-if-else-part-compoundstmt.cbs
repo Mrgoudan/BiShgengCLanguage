@@ -6,7 +6,7 @@
 
 int g_flag = 0x2;
 _Owned struct S {
-public:
+_Public:
     ~S(S this) {
         g_flag--;
     }

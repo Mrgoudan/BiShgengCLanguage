@@ -43,7 +43,7 @@ void ProbeSeq::move_next(ProbeSeq* _Borrow this, size_t bucket_mask);
 // A raw hash table which holds data for `HashMap`.
 _Owned struct RawTable<K, V> {
 // FIXME: makes it private
-public:
+_Public:
     // Mask to get an index from a hash value. The value is one less than the
     // number of buckets in the table.
     size_t bucket_mask;

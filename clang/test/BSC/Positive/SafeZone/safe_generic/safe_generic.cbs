@@ -5,7 +5,7 @@
 // expected-no-diagnostics
 
 _Owned struct RawVec<T> {
-public:
+_Public:
   T a;
   _Safe ~RawVec(This this) {}
 };

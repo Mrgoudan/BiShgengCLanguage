@@ -3,9 +3,9 @@
 // RUN: %test.output
 
 _Owned struct A {  
-public:
+_Public:
  _Owned struct B{
-  public:
+  _Public:
   ~B(B this){
   }
   int foo(B *this){return 1;}

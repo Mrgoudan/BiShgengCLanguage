@@ -33,7 +33,7 @@ void test_deref2() {
 }
 
 _Owned struct A {
-public:
+_Public:
     int a;
 };
 

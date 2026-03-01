@@ -7,7 +7,7 @@
 #include "assert.h"
 
 _Owned struct A {
-public:
+_Public:
     int *_Owned p;
     ~A(A this) {
         free((void*)this.p);

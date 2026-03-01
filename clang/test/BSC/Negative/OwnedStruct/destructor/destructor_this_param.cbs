@@ -10,7 +10,7 @@ _Owned struct A {
 int f(A this){ A a = this ;return 1;} 
                   
 _Owned struct B {  
-  public:
+  _Public:
   ~B(B this){
     B a = this; // expected-error {{'this' cannot be moved in destructor}}
   }

@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 _Owned struct Vec<T> {
-public:
+_Public:
     T* ptr;
     int len;
     ~Vec(Vec<T> this) {

@@ -3,11 +3,11 @@
 _Owned struct A{
 };
 _Owned struct B{
-    public:
+    _Public:
     A a;
 };
 _Owned struct C{
-    public:
+    _Public:
     A a;
     B b;
 };

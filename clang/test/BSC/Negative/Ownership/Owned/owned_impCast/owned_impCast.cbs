@@ -100,7 +100,7 @@ void test13(int* _Owned p0, const int* _Owned p1) {
 }
 
 _Owned struct S {
-public:
+_Public:
     ~S(S this) {}
 };
 
@@ -109,7 +109,7 @@ void test14() {
 }
 
 _Owned struct R<T> {
-public:
+_Public:
     T* ptr;
     ~R(R<T> this) {}
 };

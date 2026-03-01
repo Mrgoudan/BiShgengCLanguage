@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 _Owned struct B {
-public:
+_Public:
     int x;
 };
 

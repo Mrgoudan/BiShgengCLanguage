@@ -32,7 +32,7 @@ _Safe void Cell<T>::set(const This * _Borrow this, T val) {
 }
 
 _Owned struct RefCell<T> {
-public:
+_Public:
     Cell<int> borrow_count;
     T value;
 };
@@ -44,7 +44,7 @@ _Safe RefCell<T> RefCell<T>::new(T value) {
 }
 
 _Owned struct RefImmut<T> {
-public:
+_Public:
     RefCell<T> * ptr;
 
     ~RefImmut(RefImmut<T> this) {
@@ -60,7 +60,7 @@ _Safe const T* _Borrow RefImmut<T>::deref(const This* _Borrow this) {
 }
 
 _Owned struct RefMut<T> {
-public:
+_Public:
     RefCell<T> * ptr;
 
     ~RefMut(RefMut<T> this) {

@@ -6,12 +6,12 @@
 // expected-no-diagnostics
 
 _Owned struct C {
-public:
+_Public:
     int m;
 };
 
 _Owned struct A<T> {
-public:
+_Public:
     T a;
 };
 
@@ -21,7 +21,7 @@ A<T> A<T>::new(T value) {
 }
 
 _Owned struct B<T> {
-public:
+_Public:
     T b;
 };
 

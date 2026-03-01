@@ -20,7 +20,7 @@ void test1() {
 }
 
 _Owned struct Resource {
-public:
+_Public:
     int * _Owned value;
     ~Resource(This this) {
         safe_free((void * _Owned)this.value);

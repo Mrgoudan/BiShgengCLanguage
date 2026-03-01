@@ -16,7 +16,7 @@ struct M {
 };
 
 _Owned struct S<T> {
-public:
+_Public:
   T *_Owned a;
   ~S(S<T> this) {
     if(this.a == NULL) {

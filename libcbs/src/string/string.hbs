@@ -8,10 +8,10 @@ extern const size_t bsc_string_no_pos;
 
 _Owned struct String {
 // FIXME: make it private later
-public:
+_Public:
     Vec<char> vec;
 
-public:
+_Public:
     ~String(String this) {
         // AUTO INSERT: ~Vec(this.vec)
     }

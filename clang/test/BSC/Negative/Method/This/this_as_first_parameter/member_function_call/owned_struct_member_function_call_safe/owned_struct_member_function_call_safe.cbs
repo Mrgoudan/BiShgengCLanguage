@@ -2,7 +2,7 @@
 // #include <stdlib.h>
 
 _Owned struct Bar {
-public:
+_Public:
   int a;
 };
 _Safe T* _Owned safe_malloc<T>(T value);

@@ -9,7 +9,7 @@
 _Owned struct C {};
 
 _Owned struct A {
-public:
+_Public:
     int* y;
     C x;
 };

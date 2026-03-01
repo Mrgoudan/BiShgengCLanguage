@@ -18,7 +18,7 @@ _Safe T *_Nullable _Owned malloc_obj_zero<T>(void) {
 }
 
 _Owned struct TestStruct {
-public:
+_Public:
   int x;
   int y;
 };

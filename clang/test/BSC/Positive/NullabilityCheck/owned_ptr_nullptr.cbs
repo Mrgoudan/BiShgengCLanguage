@@ -85,7 +85,7 @@ _Safe int test6(void) {
 }
 
 _Owned struct K {
-public:
+_Public:
     int *_Owned _Nullable p;
     ~K(This this) {
         if (this.p != nullptr) {

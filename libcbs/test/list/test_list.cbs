@@ -88,7 +88,7 @@ void test5(){
 }
 
 _Owned struct MyClass{
-public:
+_Public:
     int a;
     ~MyClass(MyClass this){
         // printf("free MyClass");

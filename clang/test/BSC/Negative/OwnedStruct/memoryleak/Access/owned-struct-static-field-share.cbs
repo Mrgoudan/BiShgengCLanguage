@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -verify %s
 
 _Owned struct A {
-  public:
+  _Public:
     static int a;
 };
 int A::a;
 
 _Owned struct B {
-  public:
+  _Public:
    static A aa;
 };
 A B::aa;
@@ -43,13 +43,13 @@ A zoo() {
 }
 
 _Owned struct C<T>{
-  public:
+  _Public:
     static int a;
 };
 int C<T>::a;
 
 _Owned struct D<T> {
-  public:
+  _Public:
    static C<int> aa;
 };
 C<int> D<T>::aa;

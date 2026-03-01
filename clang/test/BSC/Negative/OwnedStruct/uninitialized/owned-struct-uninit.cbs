@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 
 _Owned struct S {
-public:
+_Public:
 	int *a;
 	short *b;
 };

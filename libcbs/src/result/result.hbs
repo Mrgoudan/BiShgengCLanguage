@@ -17,7 +17,7 @@ typedef enum {
 // and the `Err` represents error and contains an error value.
 _Owned struct Result<T, E> {
 // FIXME: makes it private later
-public:
+_Public:
     ResultState state;
     char t[sizeof(T)];
     char e[sizeof(E)];

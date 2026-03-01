@@ -5,7 +5,7 @@ _Owned struct A {
   };
   
   _Owned struct S {
-  public:
+  _Public:
       A a;
       char a2;
 

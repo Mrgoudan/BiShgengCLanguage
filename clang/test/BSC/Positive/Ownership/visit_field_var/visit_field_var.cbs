@@ -39,13 +39,13 @@ struct Foo_with_struct_with_owned{
 };
 
 _Owned struct Bar_No_Owned {
-public:
+_Public:
   int a;
   int m;
 };
 
 _Owned struct Bar_With_Owned {
-public:
+_Public:
   int* _Owned a;
   int* _Owned m;
   ~Bar_With_Owned(This this) {

@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 _Owned struct Person{
-public:
+_Public:
     int age;
     ~Person(Person this) {
     }
@@ -15,7 +15,7 @@ public:
 
 // nested _Owned struct
 _Owned struct Student{
-public:
+_Public:
     int score;
     Person p;
     ~Student(This this) {
@@ -24,7 +24,7 @@ public:
 
 // generic case
 _Owned struct Person2<T>{
-public:
+_Public:
     T age;
     ~Person2(This this) {
         printf("P2 age = %d\n", this.age); // print P2 age = **
@@ -33,7 +33,7 @@ public:
 
 // nested _Owned struct and generic case 1
 _Owned struct Student2<T>{
-public:
+_Public:
     T score;
     Person p;
     ~Student2(This this) {
@@ -43,7 +43,7 @@ public:
 
 // nested _Owned struct and generic case 2
 _Owned struct Student3<T1, T2>{
-public:
+_Public:
     T1 score;
     Person2<T2> p;
     ~Student3(This this) {
@@ -53,7 +53,7 @@ public:
 
 // Constant generic
 _Owned struct Student4<T, int N>{
-public:
+_Public:
     T scores[N];
     Person p;
     ~Student4(This this) {

@@ -202,7 +202,7 @@ void test_freeze_ident20(){
 }
 
 _Owned struct F {
-public:
+_Public:
   int a;
 };
 
