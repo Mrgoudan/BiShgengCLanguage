@@ -5222,7 +5222,26 @@ int *_Borrow p8 = &_Mut a;
 int *_Owned p9 = safe_malloc<int>(5);
 ```
 
-对于 Nonnull 指针，它的 Nullability 一定是 Nonnull 的。
+对于 Nonnull 指针，它的 Nullability 一定是 Nonnull 的。如果在控制流语句中对其做了判空，那么在空的分支中，其被认为是空指针。
+
+```C
+#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe int test(void) {
+  int * _Owned a = safe_malloc<int>(1); // _Owned 指针默认为 _Nonnull
+  if (a != nullptr) {
+    safe_free((void * _Owned)a);
+    return 1;
+  }
+  return 0; // ok 不会有 error: memory leak of value: `a`
+}
+
+int main() {
+  test();
+  return 0;
+}
+```
+
 对于 Nullable 指针，它的 Nullability 可能会发生变化：
 1. 如果用非空表达式对其进行了赋值，那么在这条赋值语句后面可以把它当做 Nonnull 指针使用
 2. 如果在控制流语句中对其做了判空，那么在非空的分支中，可以把它当做 Nonnull 指针使用
