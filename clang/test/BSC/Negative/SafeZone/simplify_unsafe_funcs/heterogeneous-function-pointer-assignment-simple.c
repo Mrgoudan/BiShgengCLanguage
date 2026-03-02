@@ -34,7 +34,7 @@ _Safe void int_param(int* _Owned p);
 
 void test4(void) {
     _Safe void (*ptr_float)(float* _Owned) = 0;
-    ptr_float = int_param;  // expected-error {{conversion from type '_Safe void (*)(int *_Owned)' to '_Safe void (*)(float *_Owned)' is forbidden}}
+    ptr_float = int_param;  // expected-error {{no matching function for call to 'int_param'; argument types do not match any _Safe or _Unsafe declaration}}
 }
 
 // Test 5: void* _Owned/_Borrow mismatch in function pointer

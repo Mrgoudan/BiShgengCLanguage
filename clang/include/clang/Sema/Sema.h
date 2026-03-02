@@ -12402,6 +12402,9 @@ public:
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   FunctionDecl *SelectFunctionDeclForPointerAssignment(
       Expr *SrcExpr, const FunctionProtoType *DestFuncType);
+  FunctionDecl *SelectDeclForHeterogeneousRedecl(
+      FunctionDecl *CurrentDecl, bool IsInSafeContext,
+      llvm::function_ref<bool(FunctionDecl *)> CheckConstraints);
   bool IsSafeFunctionPointerType(QualType Type);
   bool IsUnsafeType(QualType Type);
   bool CanBeUninitializedInSafeZone(QualType Type);
@@ -12410,6 +12413,10 @@ public:
   /// This is used for both function calls and function pointer assignments.
   /// Returns true if Source can be assigned to Dest considering owned/borrow/const qualifiers.
   bool DoPointerTypesSatisfyAssignmentConstraints(QualType Dest, QualType Src);
+  /// Strict variant for function pointer assignment: pointee types must match
+  /// exactly (const on pointee is NOT stripped). Used by borrow function pointer
+  /// type checking where parameter types must be identical modulo safe-zone specifier.
+  bool DoPointerTypesSatisfyAssignmentConstraintsStrict(QualType Dest, QualType Src);
   void DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,
                                                  tok::TokenKind Kind,
                                                  QualType Type);

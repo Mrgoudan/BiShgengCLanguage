@@ -257,39 +257,6 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
 
 } // namespace clang
 
-// Check if a function type matches a required SafeZoneSpecifier
-// with compatibility checking (not just exact match)
-bool Type::isFunctionTypeCompatibleWith(SafeZoneSpecifier RequiredSZS) const {
-  const FunctionProtoType *FPT = nullptr;
-  if (isFunctionType()) {
-    FPT = getAs<FunctionProtoType>();
-  } else if (isFunctionPointerType()) {
-    FPT = getPointeeType()->getAs<FunctionProtoType>();
-  }
-
-  if (!FPT)
-    return false;
-
-  FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-  SafeZoneSpecifier ActualSZS = EPI.SafeZoneSpec;
-
-  // Exact match
-  if (ActualSZS == RequiredSZS)
-    return true;
-
-  // In safe zone, unsafe functions are not compatible
-  if (RequiredSZS == SZ_Safe &&
-      (ActualSZS == SZ_Unsafe || ActualSZS == SZ_None))
-    return false;
-
-  // In unsafe zone, safe functions are compatible
-  if ((RequiredSZS == SZ_Unsafe || RequiredSZS == SZ_None) &&
-      ActualSZS == SZ_Safe)
-    return true;
-
-  return false;
-}
-
 bool Type::isOwnedStructureType() const {
   if (const auto *RT = getAs<RecordType>())
     return RT->getDecl()->isStruct() && RT->getDecl()->isOwnedDecl();

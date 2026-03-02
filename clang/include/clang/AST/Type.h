@@ -2279,9 +2279,6 @@ public:
   bool hasTraitType() const;
   bool isBSCCalculatedTypeInCompileTime() const;
   bool checkFunctionProtoType(SafeZoneSpecifier SZS) const;
-
-
-  bool isFunctionTypeCompatibleWith(SafeZoneSpecifier RequiredSZS) const;
   bool isOwnedStructureType() const;
   bool isOwnedTemplateSpecializationType() const;
   bool isMoveSemanticType() const;

@@ -202,21 +202,19 @@ bool Sema::IsSafeConstantValueConversion(QualType DestType, Expr *E) {
   return false;
 }
 
-/// Generic heterogeneous function declaration selector.
-/// Selects the best matching function declaration from heterogeneous redeclarations
+/// Select the best matching declaration from heterogeneous redeclarations
 /// (functions with both safe and unsafe declarations) based on context and constraints.
+/// Used for both function pointer assignment and function call resolution.
 ///
-/// @param S The Sema instance
 /// @param CurrentDecl The current function declaration (any redeclaration)
 /// @param IsInSafeContext Whether we're in a safe zone
 /// @param CheckConstraints Callback to check if a FunctionDecl satisfies constraints
-/// @return The best matching FunctionDecl, or nullptr/CurrentDecl if no match
-template<typename ConstraintChecker>
-static FunctionDecl *SelectBestHeterogeneousFunctionDecl(
-    Sema &S, FunctionDecl *CurrentDecl, bool IsInSafeContext,
-    ConstraintChecker CheckConstraints) {
+/// @return The best matching FunctionDecl, or nullptr if no match found
+FunctionDecl *Sema::SelectDeclForHeterogeneousRedecl(
+    FunctionDecl *CurrentDecl, bool IsInSafeContext,
+    llvm::function_ref<bool(FunctionDecl *)> CheckConstraints) {
 
-  if (!CurrentDecl || !S.getLangOpts().BSC)
+  if (!CurrentDecl || !getLangOpts().BSC)
     return CurrentDecl;
 
   // Collect safe and unsafe declarations.
@@ -237,35 +235,30 @@ static FunctionDecl *SelectBestHeterogeneousFunctionDecl(
   if (SafeDecls.empty() || UnsafeDecls.empty())
     return CurrentDecl;
 
-  // Safe context: must use safe declaration that satisfies constraints.
+  // Safe context: must use a safe declaration that satisfies constraints.
   if (IsInSafeContext) {
     for (FunctionDecl *SafeFD : SafeDecls) {
-      if (CheckConstraints(SafeFD)) {
+      if (CheckConstraints(SafeFD))
         return SafeFD;
-      }
     }
-    // No safe declaration satisfies constraints, return first safe decl
-    // and let subsequent checks report the error.
-    return SafeDecls.front();
+    // No safe declaration satisfies constraints.
+    return nullptr;
   }
 
   // Unsafe context: prefer safe declaration if it satisfies constraints.
   for (FunctionDecl *SafeFD : SafeDecls) {
-    if (CheckConstraints(SafeFD)) {
+    if (CheckConstraints(SafeFD))
       return SafeFD;
-    }
   }
 
   // No safe declaration matches, try unsafe declarations.
   for (FunctionDecl *UnsafeFD : UnsafeDecls) {
-    if (CheckConstraints(UnsafeFD)) {
+    if (CheckConstraints(UnsafeFD))
       return UnsafeFD;
-    }
   }
 
-  // No declaration satisfies constraints - return current and let normal
-  // type checking report the error.
-  return CurrentDecl;
+  // No declaration satisfies constraints.
+  return nullptr;
 }
 
 /// Check if BSC pointer qualifiers (owned/borrow) are compatible between Dest and Src.
@@ -392,6 +385,12 @@ bool Sema::DoPointerTypesSatisfyAssignmentConstraints(QualType Dest, QualType Sr
                                                          /*AllowImplicitConversions=*/true);
 }
 
+/// Public wrapper for function pointer assignment - strict, no implicit conversions.
+bool Sema::DoPointerTypesSatisfyAssignmentConstraintsStrict(QualType Dest, QualType Src) {
+  return DoPointerTypesSatisfyAssignmentConstraintsImpl(*this, Dest, Src,
+                                                         /*AllowImplicitConversions=*/false);
+}
+
 /// Helper function: Check if function pointer types satisfy assignment constraints.
 /// This checks owned/borrow qualifiers, const compatibility, and type compatibility.
 static bool DoesFunctionPointerSatisfyConstraints(Sema &S,
@@ -447,7 +446,7 @@ Sema::SelectFunctionDeclForPointerAssignment(Expr *SrcExpr,
     return DoesFunctionPointerSatisfyConstraints(*this, DestFuncType, CandidateType, Loc);
   };
 
-  return SelectBestHeterogeneousFunctionDecl(*this, FD, IsInSafeContext, CheckConstraints);
+  return SelectDeclForHeterogeneousRedecl(FD, IsInSafeContext, CheckConstraints);
 }
 
 bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
@@ -481,6 +480,19 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   if (SelectedFD) {
     // Update RSHFuncType to the selected declaration's function type.
     RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+  } else {
+    // SelectFunctionDeclForPointerAssignment returns nullptr only when the
+    // source is a heterogeneous redeclaration and no decl satisfies the
+    // destination constraints.
+    DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SrcExpr->IgnoreParenImpCasts());
+    if (DRE) {
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
+        Diag(SrcExpr->getBeginLoc(),
+             diag::err_bsc_no_matching_heterogeneous_function)
+            << FD->getDeclName();
+        return false;
+      }
+    }
   }
 
   // conversion to an unsafe type is allowed in the unsafe zone

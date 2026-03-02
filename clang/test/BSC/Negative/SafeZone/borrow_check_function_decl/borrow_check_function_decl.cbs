@@ -77,7 +77,7 @@ void test_9(int * p) {    // expected-error{{conflicting types for 'test_9'}}
 }
 
 _Unsafe void test_9_0(int * _Owned p);     // expected-note {{previous declaration is here}}
-void test_9_0(int * p) {       // expected-error{{function 'test_9_0' has incompatible _Safe and _Unsafe declarations}}
+void test_9_0(int * p) {       // expected-error{{conflicting types for 'test_9_0'}}
 }
 
 _Unsafe void test_9_1(int * _Owned p);// expected-note {{previous declaration is here}}

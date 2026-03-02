@@ -7147,8 +7147,6 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
 #if ENABLE_BSC
 /// Check if arguments satisfy assignment constraints for a function call.
-/// This implements the constraint checking from Manual section 8.2 and 4.2.
-///
 /// The constraint rule: argument type must be a superset of (or compatible with)
 /// parameter type, with exact matching required for owned/borrow/nonnull/nullable.
 static bool DoesCallSatisfyAssignmentConstraints(Sema &S, FunctionDecl *FD,
@@ -7190,74 +7188,6 @@ static bool DoesCallSatisfyAssignmentConstraints(Sema &S, FunctionDecl *FD,
   return true;
 }
 
-/// Select the best matching declaration for heterogeneous redeclarations
-/// where a function has both safe and unsafe declarations.
-///
-/// Selection rules (Manual section 8.2):
-/// - Safe context: Only safe declarations allowed, must satisfy constraints
-/// - Unsafe context: Prefer safe if it satisfies constraints, fallback to unsafe
-///
-/// This implements the call resolution strategy for heterogeneous
-/// redeclarations (Manual section 8.2) using a generic selection algorithm.
-static FunctionDecl *SelectBestMatchingDeclForHeterogeneousRedecl(
-    Sema &S, FunctionDecl *CurrentDecl, MultiExprArg Args, bool IsInSafeZone) {
-
-  if (!CurrentDecl || !S.getLangOpts().BSC)
-    return CurrentDecl;
-
-  // Collect safe and unsafe declarations.
-  SmallVector<FunctionDecl *, 4> SafeDecls;
-  SmallVector<FunctionDecl *, 4> UnsafeDecls;
-
-  for (auto *Redecl : CurrentDecl->redecls()) {
-    if (auto *FD = dyn_cast<FunctionDecl>(Redecl)) {
-      SafeZoneSpecifier SZS = FD->getSafeZoneSpecifier();
-      if (SZS == SZ_Safe)
-        SafeDecls.push_back(FD);
-      else
-        UnsafeDecls.push_back(FD);
-    }
-  }
-
-  // If all declarations have the same safety level, not heterogeneous.
-  if (SafeDecls.empty() || UnsafeDecls.empty())
-    return CurrentDecl;
-
-  // Lambda to check if a function declaration satisfies call constraints.
-  auto CheckCallConstraints = [&](FunctionDecl *CandidateFD) -> bool {
-    return DoesCallSatisfyAssignmentConstraints(S, CandidateFD, Args);
-  };
-
-  // Safe context: must use safe declaration that satisfies constraints.
-  if (IsInSafeZone) {
-    for (FunctionDecl *SafeFD : SafeDecls) {
-      if (CheckCallConstraints(SafeFD)) {
-        return SafeFD;
-      }
-    }
-    // No safe declaration satisfies constraints - return nullptr to signal failure.
-    // Unsafe declarations cannot be used in safe context.
-    return nullptr;
-  }
-
-  // Unsafe context: prefer safe declaration if it satisfies constraints.
-  for (FunctionDecl *SafeFD : SafeDecls) {
-    if (CheckCallConstraints(SafeFD)) {
-      return SafeFD;
-    }
-  }
-
-  // No safe declaration matches, try unsafe declarations.
-  for (FunctionDecl *UnsafeFD : UnsafeDecls) {
-    if (CheckCallConstraints(UnsafeFD)) {
-      return UnsafeFD;
-    }
-  }
-
-  // No declaration satisfies constraints - return nullptr to signal failure.
-  // The caller will emit an appropriate diagnostic.
-  return nullptr;
-}
 #endif // ENABLE_BSC
 
 /// BuildCallExpr - Handle a call to Fn with the specified array of arguments.
@@ -7416,8 +7346,11 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     // Select best matching declaration for heterogeneous redeclarations
     // (Manual section 8.2).
     if (getLangOpts().BSC) {
-      FunctionDecl *BestMatch = SelectBestMatchingDeclForHeterogeneousRedecl(
-          *this, FD, ArgExprs, IsInSafeZone());
+      auto CheckCallConstraints = [&](FunctionDecl *CandidateFD) -> bool {
+        return DoesCallSatisfyAssignmentConstraints(*this, CandidateFD, ArgExprs);
+      };
+      FunctionDecl *BestMatch = SelectDeclForHeterogeneousRedecl(
+          FD, IsInSafeZone(), CheckCallConstraints);
       if (!BestMatch) {
         // No matching declaration found - emit diagnostic and return error.
         Diag(Fn->getBeginLoc(), diag::err_bsc_no_matching_heterogeneous_function)

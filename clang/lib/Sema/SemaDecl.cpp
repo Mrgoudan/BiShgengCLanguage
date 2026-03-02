@@ -2584,8 +2584,9 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
       SafeZoneSpecifier OldSZS = extractSafeZoneSpecFromFunctionPointer(OldType);
       SafeZoneSpecifier NewSZS = extractSafeZoneSpecFromFunctionPointer(NewType);
 
-      // Check if this is a heterogeneous redeclaration (different safety levels).
-      if (OldSZS != NewSZS) {
+      // Check if this is a heterogeneous redeclaration (one _Safe, one unsafe).
+      // SZ_None and SZ_Unsafe are both treated as unsafe.
+      if ((OldSZS == SZ_Safe) != (NewSZS == SZ_Safe)) {
         // Generic function pointer typedefs cannot have heterogeneous
         // redeclarations.
         TypedefNameDecl *OldTypedef = dyn_cast<TypedefNameDecl>(Old);
@@ -4164,7 +4165,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       SafeZoneSpecifier NewSZS = New->getSafeZoneSpecifier();
 
       // Check if this is a heterogeneous redeclaration (safe vs. unsafe).
-      if (OldSZS != NewSZS) {
+      // SZ_None and SZ_Unsafe are both "unsafe" — treat them as the same level.
+      if ((OldSZS == SZ_Safe) != (NewSZS == SZ_Safe)) {
         // Generic functions cannot have heterogeneous redeclarations.
         if (New->getDescribedFunctionTemplate() ||
             Old->getDescribedFunctionTemplate()) {
@@ -4235,7 +4237,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       // BSC: Check for heterogeneous redeclarations (one safe, one unsafe).
       SafeZoneSpecifier OldSZS = Old->getSafeZoneSpecifier();
       SafeZoneSpecifier NewSZS = New->getSafeZoneSpecifier();
-      bool IsHeterogeneousRedecl = (OldSZS != NewSZS);
+      // SZ_None and SZ_Unsafe are both "unsafe" — treat them as the same level.
+      bool IsHeterogeneousRedecl = ((OldSZS == SZ_Safe) != (NewSZS == SZ_Safe));
 
       // Handle heterogeneous redeclarations with special compatibility rules.
       if (IsHeterogeneousRedecl) {

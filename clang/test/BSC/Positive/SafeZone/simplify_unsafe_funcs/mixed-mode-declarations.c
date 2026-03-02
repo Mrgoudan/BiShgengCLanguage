@@ -76,4 +76,12 @@ _Safe void complex1(int a, int* _Owned p, float b, int* _Owned q);
 _Unsafe const int* complex2(const int* p);
 _Safe const int* _Owned complex2(const int* _Owned p);
 
+// SZ_None and SZ_Unsafe are both "unsafe" — redeclarations between them are
+// homogeneous and must be accepted like any standard C compatible redeclaration.
+void plain_then_unsafe(int *a, int *b);
+_Unsafe void plain_then_unsafe(int *a, int *b);
+
+_Unsafe void unsafe_then_plain(int *a, int *b);
+void unsafe_then_plain(int *a, int *b);
+
 // expected-no-diagnostics

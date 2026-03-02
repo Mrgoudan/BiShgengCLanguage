@@ -587,7 +587,41 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
       !RSHFuncType->hasBorrowRetOrParams()) {
     return true;
   }
-  if (!Context.hasSameType(LSHFuncType, RSHFuncType)) {
+  
+  auto BorrowParamTypesMatch = [&](QualType Dest, QualType Src) -> bool {
+    if (!DoPointerTypesSatisfyAssignmentConstraintsStrict(Dest, Src))
+      return false;
+    // For pointer params, additionally require that the pointee types match
+    // exactly including const/volatile (not just unqualified base type).
+    if (Dest->isPointerType() && Src->isPointerType()) {
+      QualType DestPointee = Dest->getPointeeType().getCanonicalType();
+      QualType SrcPointee = Src->getPointeeType().getCanonicalType();
+      // Strip BSC qualifiers (_Borrow/_Owned) from the pointee for comparison;
+      // keep all standard qualifiers (const, volatile, restrict).
+      DestPointee.removeLocalOwned();
+      DestPointee.removeLocalBorrow();
+      SrcPointee.removeLocalOwned();
+      SrcPointee.removeLocalBorrow();
+      if (DestPointee != SrcPointee)
+        return false;
+    }
+    return true;
+  };
+
+  bool Compatible = true;
+  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
+    Compatible = false;
+  } else {
+    if (!BorrowParamTypesMatch(LSHFuncType->getReturnType(),
+                               RSHFuncType->getReturnType()))
+      Compatible = false;
+    for (unsigned I = 0, N = LSHFuncType->getNumParams(); Compatible && I < N; ++I) {
+      if (!BorrowParamTypesMatch(LSHFuncType->getParamType(I),
+                                 RSHFuncType->getParamType(I)))
+        Compatible = false;
+    }
+  }
+  if (!Compatible) {
     Diag(ExprLoc, diag::err_funcPtr_incompatible)
         << LHSType << RHSExpr->getType();
     return false;
