@@ -182,7 +182,7 @@ void func32() {
 //------------------------uninitialized-->partialMoved----------------------
 void func33() {
   struct A a;
-  struct B p = a.a1; // expected-error {{use of partially moved value: `a.a1`, a.a1.b1, a.a1.b2, a.a1.b3, a.a1.b3.c1, a.a1.b3.c2, a.a2, a.a2.b1, a.a2.b2, a.a2.b3, a.a2.b3.c1, a.a2.b3.c2, a.a3.b1, a.a3.b2, a.a3.b3, a.a3.b3.c1, a.a3.b3.c2 are moved}}
+  struct B p = a.a1; // expected-error {{use of uninitialized value: `a.a1`}}
 } // expected-error {{field memory leak of value: `p`, p.b1, p.b2, p.b3, p.b3.c1, p.b3.c2 are leak}}
 
 //-----------------------------allMoved-->partialMoved------------------------

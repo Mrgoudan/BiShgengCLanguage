@@ -194,7 +194,7 @@ def err_ownership_assign_field_subfield_owned : Error<
 
 // cast to `void * _Owned`
 def err_ownership_cast_moved : Error<
-  "invalid cast to `void * _Owned` of moved value: `%0`">,
+  "invalid cast to `void * _Owned` of moved or uninitialized value: `%0`">,
   InGroup<CastMovedOwned>;
 def err_ownership_cast_owned : Error<
   "invalid cast to `void * _Owned` of _Owned value: `%0`">,

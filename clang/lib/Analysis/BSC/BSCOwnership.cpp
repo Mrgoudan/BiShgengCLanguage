@@ -204,7 +204,7 @@ OwnershipImpl::merge(Ownership::OwnershipStatus statsA,
     if (statsA.OPSAllOwnedFields.count(VD) &&
         !statsA.OPSOwnedOwnedFields.empty()) {
       if (!value.empty()) {
-        for (auto s : value)
+        for (const auto &s : value)
           statsA.OPSOwnedOwnedFields[VD].insert(s);
       }
     } else {
@@ -231,18 +231,18 @@ OwnershipImpl::merge(Ownership::OwnershipStatus statsA,
     if (statsA.SAllOwnedFields.count(VD) &&
         (!statsA.SOwnedOwnedFields.empty() || !statsA.SNullOwnedFields.empty())) {
       if (!statsA.SOwnedOwnedFields.empty() && !OwnedValue.empty()) {
-        for (auto s : OwnedValue)
+        for (const auto &s : OwnedValue)
           statsA.SOwnedOwnedFields[VD].insert(s);
       }
       if (!statsA.SNullOwnedFields.empty() && !NullValue.empty()) {
-        for (auto s : NullValue)
+        for (const auto &s : NullValue)
           statsA.SNullOwnedFields[VD].insert(s);
       }
     } else {
-      for (auto s : OwnedValue)
-          statsA.SAllOwnedFields[VD].insert(s);
-      for (auto s : NullValue)
-          statsA.SAllOwnedFields[VD].insert(s);
+      for (const auto &s : OwnedValue)
+        statsA.SAllOwnedFields[VD].insert(s);
+      for (const auto &s : NullValue)
+        statsA.SAllOwnedFields[VD].insert(s);
     }
   }
 
@@ -264,7 +264,7 @@ OwnershipImpl::merge(Ownership::OwnershipStatus statsA,
     if (statsA.BOPAllOwnedFields.count(VD) &&
         !statsA.BOPOwnedOwnedFields.empty()) {
       if (!value.empty()) {
-        for (auto s : value)
+        for (const auto& s : value)
           statsA.BOPOwnedOwnedFields[VD].insert(s);
       }
     } else {
@@ -886,8 +886,11 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
     }
     if (OPSAllOwnedFields[VD].count(current) &&
         !OPSOwnedOwnedFields[VD].count(current)) {
+      OwnershipDiagKind Kind = is(VD, Uninitialized) || has(VD, Uninitialized)
+                                   ? OwnershipDiagKind::InvalidUseOfUninit
+                                   : OwnershipDiagKind::InvalidUseOfMoved;
       diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidUseOfMoved,
+          Loc, Kind,
           moveAsterisksToFront(VD->getNameAsString() + "." + current)));
       break;
     }
@@ -907,7 +910,8 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
 
   // check condition 3
   // if fullFieldName has been moved, report error
-  if (OPSAllOwnedFields[VD].count(fullFieldName) && !OPSOwnedOwnedFields[VD].count(fullFieldName)) {
+  if (OPSAllOwnedFields[VD].count(fullFieldName) &&
+      !OPSOwnedOwnedFields[VD].count(fullFieldName) && diags.empty()) {
     diags.push_back(
         OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfMoved,
                           VD->getNameAsString() + "." + fullFieldName));
@@ -921,7 +925,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
   }
   auto allPrefixStrsStar =
       findPrefixStrings(OPSAllOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : allPrefixStrsStar) {
+  for (const auto &elem : allPrefixStrsStar) {
     allPrefixStrs.insert(elem);
   }
   llvm::SmallSet<string, 10> ownedPrefixStrs;
@@ -932,7 +936,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
   }
   auto ownedPrefixStrsStar =
       findPrefixStrings(OPSOwnedOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : ownedPrefixStrsStar) {
+  for (const auto& elem : ownedPrefixStrsStar) {
     ownedPrefixStrs.insert(elem);
   }
   if (allPrefixStrs.size() != ownedPrefixStrs.size() && diags.empty()) {
@@ -944,7 +948,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
     // change the status of the fields
     OPSOwnedOwnedFields[VD].erase(fullFieldName);
     // remove ownedPrefixStrs from OPSOwnedOwnedFields
-    for (auto str : ownedPrefixStrs) {
+    for (const auto &str : ownedPrefixStrs) {
       OPSOwnedOwnedFields[VD].erase(str);
     }
     if (OPSAllOwnedFields[VD].size() != OPSOwnedOwnedFields[VD].size()) {
@@ -1090,7 +1094,7 @@ Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
   }
   auto allPrefixStrsStar =
       findPrefixStrings(OPSAllOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : allPrefixStrsStar) {
+  for (const auto &elem : allPrefixStrsStar) {
     allPrefixStrs.insert(elem);
   }
   llvm::SmallSet<string, 10> ownedPrefixStrs;
@@ -1101,7 +1105,7 @@ Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
   }
   auto ownedPrefixStrsStar =
       findPrefixStrings(OPSOwnedOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : ownedPrefixStrsStar) {
+  for (const auto &elem : ownedPrefixStrsStar) {
     ownedPrefixStrs.insert(elem);
   }
   if (!ownedPrefixStrs.empty() && diags.empty()) {
@@ -1114,7 +1118,7 @@ Ownership::OwnershipStatus::checkOPSFieldAssign(const VarDecl *VD,
       OPSOwnedOwnedFields[VD].insert(fullFieldName);
     }
     // add allPrefixStrs to OPSOwnedOwnedFields
-    for (auto str : allPrefixStrs) {
+    for (const auto &str : allPrefixStrs) {
       OPSOwnedOwnedFields[VD].insert(str);
     }
   }
@@ -1175,7 +1179,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSUse(
   }
   if (isAddrMut) {
     if (SAllOwnedFields[VD].size() == SOwnedOwnedFields[VD].size() + SNullOwnedFields[VD].size()) {
-      for (auto s : SNullOwnedFields[VD])
+      for (const auto &s : SNullOwnedFields[VD])
         SOwnedOwnedFields[VD].insert(s);
       SNullOwnedFields[VD].clear();
     }
@@ -1201,6 +1205,17 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldUse(
     }
   }
 
+  if ((is(VD, Moved) || has(VD, Moved)) && diags.empty()) {
+    diags.push_back(
+        OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfMoved,
+                          VD->getNameAsString() + "." + fullFieldName));
+  }
+  if ((is(VD, Uninitialized) || has(VD, Uninitialized)) && diags.empty()) {
+    diags.push_back(
+        OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfUninit,
+                          VD->getNameAsString() + "." + fullFieldName));
+  }
+
   if (SAllOwnedFields[VD].count(fullFieldName) && !SOwnedOwnedFields[VD].count(fullFieldName) && diags.empty()) {
     diags.push_back(
         OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfMoved,
@@ -1215,7 +1230,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldUse(
   }
   auto allPrefixStrsStar =
       findPrefixStrings(SAllOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : allPrefixStrsStar) {
+  for (const auto &elem : allPrefixStrsStar) {
     allPrefixStrs.insert(elem);
   }
   llvm::SmallSet<string, 10> ownedPrefixStrs;
@@ -1226,7 +1241,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldUse(
   }
   auto ownedPrefixStrsStar =
       findPrefixStrings(SOwnedOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : ownedPrefixStrsStar) {
+  for (const auto &elem : ownedPrefixStrsStar) {
     ownedPrefixStrs.insert(elem);
   }
   if (allPrefixStrs.size() != ownedPrefixStrs.size() && diags.empty()) {
@@ -1236,7 +1251,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldUse(
   }
   if (!isGetAddr) {
     SOwnedOwnedFields[VD].erase(fullFieldName);
-    for (auto str : ownedPrefixStrs) {
+    for (const auto &str : ownedPrefixStrs) {
       SOwnedOwnedFields[VD].erase(str);
     }
   }
@@ -1345,7 +1360,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldAssign(
   }
   auto allPrefixStrsStar =
       findPrefixStrings(SAllOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : allPrefixStrsStar) {
+  for (const auto &elem : allPrefixStrsStar) {
     allPrefixStrs.insert(elem);
   }
   llvm::SmallSet<string, 10> ownedPrefixStrs;
@@ -1356,7 +1371,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldAssign(
   }
   auto ownedPrefixStrsStar =
       findPrefixStrings(SOwnedOwnedFields[VD], fullFieldName + "*");
-  for (auto elem : ownedPrefixStrsStar) {
+  for (const auto &elem : ownedPrefixStrsStar) {
     ownedPrefixStrs.insert(elem);
   }
   if (!ownedPrefixStrs.empty() && diags.empty()) {
@@ -1368,7 +1383,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldAssign(
   if (SAllOwnedFields[VD].count(fullFieldName))
     SOwnedOwnedFields[VD].insert(fullFieldName);
   // add allPrefixStrs to SOwnedOwnedFields
-  for (auto str : allPrefixStrs) {
+  for (const auto &str : allPrefixStrs) {
     SOwnedOwnedFields[VD].insert(str);
   }
 
@@ -1461,7 +1476,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkBOPFieldUse(
       // change the status of the fields
       BOPOwnedOwnedFields[VD].erase(fullFieldName);
       // remove ownedPrefixStrs from BOPOwnedOwnedFields
-      for (auto str : ownedPrefixStrs) {
+      for (const auto &str : ownedPrefixStrs) {
         BOPOwnedOwnedFields[VD].erase(str);
       }
       if (BOPAllOwnedFields[VD].size() != BOPOwnedOwnedFields[VD].size()) {
@@ -1566,7 +1581,7 @@ Ownership::OwnershipStatus::checkBOPFieldAssign(const VarDecl *VD,
         BOPOwnedOwnedFields[VD].insert(fullFieldName);
       }
       // add allPrefixStrs to BOPOwnedOwnedFields
-      for (auto str : allPrefixStrs) {
+      for (const auto &str : allPrefixStrs) {
         BOPOwnedOwnedFields[VD].insert(str);
       }
     }
@@ -1657,13 +1672,12 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkCastField(
   SmallVector<OwnershipDiagInfo> diags;
 
   if (OPSStatus.count(VD)) {
-    if (is(VD, Ownership::Status::Moved) || has(VD, Ownership::Status::Moved)) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidCastMoved, VD->getNameAsString()));
-    }
     if (!OPSOwnedOwnedFields[VD].count(fullFieldName) && diags.empty()) {
+      OwnershipDiagKind Kind = is(VD, Uninitialized) || has(VD, Uninitialized)
+                                   ? InvalidCastUninit
+                                   : InvalidCastMoved;
       diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidCastMoved,
+          Loc, Kind,
           moveAsterisksToFront(VD->getNameAsString() + "." + fullFieldName)));
     }
     // calculate the fields with fullFieldName prefix
@@ -1681,7 +1695,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkCastField(
       OPSOwnedOwnedFields[VD].erase(fullFieldName);
     }
     // remove allPrefixStrs from OPSOwnedOwnedFields
-    for (auto str : ownedPrefixStrs) {
+    for (const auto &str : ownedPrefixStrs) {
       OPSOwnedOwnedFields[VD].erase(str);
     }
     if (OPSAllOwnedFields[VD].size() != OPSOwnedOwnedFields[VD].size()) {
@@ -1700,8 +1714,11 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkCastField(
 
   if (SStatus.count(VD)) {
     if (!SOwnedOwnedFields[VD].count(fullFieldName)) {
+      OwnershipDiagKind Kind = is(VD, Uninitialized) || has(VD, Uninitialized)
+                                   ? InvalidCastUninit
+                                   : InvalidCastMoved;
       diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidCastMoved,
+          Loc, Kind,
           moveAsterisksToFront(VD->getNameAsString() + "." + fullFieldName)));
     }
     // calculate the fields with fullFieldName prefix
@@ -1716,15 +1733,18 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkCastField(
           concatFields(VD, ownedPrefixStrs)));
     }
     SOwnedOwnedFields[VD].erase(fullFieldName);
-    for (auto str : ownedPrefixStrs) {
+    for (const auto &str : ownedPrefixStrs) {
       SOwnedOwnedFields[VD].erase(str);
     }
   }
 
   if (BOPStatus.count(VD)) {
     if (!BOPOwnedOwnedFields[VD].count(fullFieldName) && diags.empty()) {
+      OwnershipDiagKind Kind = is(VD, Uninitialized) || has(VD, Uninitialized)
+                                   ? InvalidCastUninit
+                                   : InvalidCastMoved;
       diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidCastMoved,
+          Loc, Kind,
           moveAsterisksToFront(VD->getNameAsString() + "." + fullFieldName)));
     }
     // Check for deeper-level owned fields (e.g., when freeing **, check if *** exists)
@@ -1737,7 +1757,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkCastField(
     }
     BOPOwnedOwnedFields[VD].erase(fullFieldName);
     // Remove deeper-level fields
-    for (auto str : ownedPrefixStrs) {
+    for (const auto &str : ownedPrefixStrs) {
       BOPOwnedOwnedFields[VD].erase(str);
     }
     if (BOPOwnedOwnedFields[VD].empty()) {

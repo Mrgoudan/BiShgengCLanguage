@@ -24,7 +24,7 @@ void func3() {
 
 void func4() {
     struct A a;
-    int * _Owned b = a.a; // expected-error {{use of moved value: `a.a`}}
+    int * _Owned b = a.a; // expected-error {{use of uninitialized value: `a.a`}}
 } // expected-error {{memory leak of value: `b`}}
 
 void func12(int * _Owned a, int * _Owned b) {
