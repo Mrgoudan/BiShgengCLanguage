@@ -231,9 +231,11 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
                                Ctx);
     case Expr::UnaryOperatorClass: {
       UnaryOperator::Opcode Op = cast<UnaryOperator>(E)->getOpcode();
-      if (Op == UO_AddrOf || Op == UO_AddrMut || Op == UO_AddrConst ||
-          Op == UO_AddrMutDeref || Op == UO_AddrConstDeref)
+      if (Op == UO_AddrOf || Op == UO_AddrMut || Op == UO_AddrConst)
         return NullabilityKind::NonNull;
+      if (Op == UO_AddrMutDeref || Op == UO_AddrConstDeref) {
+        return getExprPathNullability(cast<UnaryOperator>(E)->getSubExpr(), true);
+      }
       break;
     }
     case Expr::BinaryOperatorClass: {

@@ -721,7 +721,14 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   #if ENABLE_BSC
   if (getLangOpts().BSC && !T->isNullPtrType() && T->getAsCXXRecordDecl())
     CK = CK_NoOp;
-
+  if (getLangOpts().BSC && isa<AttributedType>(E->getType())) {
+    auto *AT = dyn_cast<AttributedType>(E->getType());
+    Optional<NullabilityKind> Kind = AT->getNullability(Context);
+    if (Kind && (*Kind == NullabilityKind::NonNull ||
+                 *Kind == NullabilityKind::Nullable)) {
+      T = Context.getAttributedType(AT->getAttrKind(), T, T);
+    }
+  }
   /// For type 'const T * borrow' dereference, the result is type 'T'.
   /// If T is a pointer type, special handling is required.
   /// We need to remove the const qualifier that modifies type 'T'.

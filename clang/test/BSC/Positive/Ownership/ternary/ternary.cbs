@@ -15,7 +15,7 @@ _Safe int *_Owned _Nullable nested_ternary_condition_is_not_move(int *_Owned _Nu
     return p;
 }
 
-_Safe void ternary_borrow(_Bool flag, int *_Owned _Nullable p, int *_Owned _Nullable q) {
+_Safe void ternary_borrow(_Bool flag, int *_Owned  p, int *_Owned  q) {
     int *_Borrow ref = &_Mut*(flag ? p : q);
     consume(p);
     consume(q);
