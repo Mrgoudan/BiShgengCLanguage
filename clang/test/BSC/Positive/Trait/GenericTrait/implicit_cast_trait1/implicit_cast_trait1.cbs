@@ -11,7 +11,7 @@ struct PollResult<T> {
     int c;
 };
 
-trait Future<T> {
+_Trait Future<T> {
     struct PollResult<T> poll(This* this, T a);
 };
 
@@ -21,16 +21,16 @@ struct PollResult<int> int::poll(int* this, int a) {
     return p;
 }
 
-impl trait Future<int> for int;
+_Impl _Trait Future<int> for int;
 
-trait Future<int> *f() {
+_Trait Future<int> *f() {
     int* c = malloc(sizeof(int));
     *c = 3;
     return c;
 }
 
 int main() {
-    trait Future<int> *a = f();
+    _Trait Future<int> *a = f();
     int c = a->poll(0).c;
     return c;
 }

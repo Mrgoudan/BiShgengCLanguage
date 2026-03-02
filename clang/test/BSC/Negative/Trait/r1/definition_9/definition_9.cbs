@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F {
-  int a; // expected-error {{only function declarations can be trait member}}
+_Trait F {
+  int a; // expected-error {{only function declarations can be _Trait member}}
 };
 
 int main() {

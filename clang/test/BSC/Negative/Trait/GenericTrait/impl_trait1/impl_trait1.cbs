@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> { // expected-note {{declared here}}
+_Trait F<T> { // expected-note {{declared here}}
   T foo(This* this, int a);
 };
 
@@ -12,4 +12,4 @@ int struct S::foo(struct S* this, int a) {
   return this->x + a;
 }
 
-impl trait F for MyS; // expected-error {{template 'F' cannot be referenced with a trait specifier}}
+_Impl _Trait F for MyS; // expected-error {{template 'F' cannot be referenced with a _Trait specifier}}

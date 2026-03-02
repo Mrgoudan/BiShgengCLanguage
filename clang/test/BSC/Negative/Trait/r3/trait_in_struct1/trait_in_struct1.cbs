@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F {
+_Trait F {
   int f(This* this);
 };
 
@@ -9,5 +9,5 @@ int int::f(int* this) {
 }
 
 struct S {
-    trait F future; // expected-error {{only trait pointer type is allowed to be declared}}
+    _Trait F future; // expected-error {{only _Trait pointer type is allowed to be declared}}
 };

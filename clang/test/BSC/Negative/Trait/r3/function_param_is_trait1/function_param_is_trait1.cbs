@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait A {
+_Trait A {
 
 };
 
-int foo(A* a) { // expected-error {{must use 'trait' tag to refer to type 'A'}}
+int foo(A* a) { // expected-error {{must use '_Trait' tag to refer to type 'A'}}
     return 0;
 }

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify %s
 // expected-no-diagnostics
 
-trait T {
+_Trait T {
   static int f(This* this);
 };
 
@@ -9,12 +9,12 @@ int int::f(int* this) {
   return *this;
 }
 
-impl trait T for int;
+_Impl _Trait T for int;
 
 int main() {
   int a = 1;
   int* t = &a;
-  trait T* _Borrow p = &_Mut *t;
+  _Trait T* _Borrow p = &_Mut *t;
   a = 2;
   t = &a;
   return 0;

@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-trait F<T> {
+_Trait F<T> {
     T foo(This *this, T);
 };
 enum Day {
@@ -27,10 +27,10 @@ enum Day int::foo(int* this, enum Day a) {
     return a;
 }
 
-impl trait F<enum Day> for int;
-impl trait F<enum Day> for enum Day;
+_Impl _Trait F<enum Day> for int;
+_Impl _Trait F<enum Day> for enum Day;
 
-trait F<T>* get<T>(trait F<T>* t) {
+_Trait F<T>* get<T>(_Trait F<T>* t) {
     return t;
 }
 
@@ -38,12 +38,12 @@ int main()
 {
     int a = INT_MAX;
     enum Day b = Sunday;
-    trait F<enum Day> *p1 = &b;
+    _Trait F<enum Day> *p1 = &b;
     int* p2 = &a;
-    trait F<enum Day> *p3 = p2;
-    trait F<enum Day> *p4 = (trait F<enum Day>*) p1;
+    _Trait F<enum Day> *p3 = p2;
+    _Trait F<enum Day> *p4 = (_Trait F<enum Day>*) p1;
     enum Day c = p1->foo(b);
-    if (p3 != p2 || p4 != (trait F<enum Day>*)p1) {
+    if (p3 != p2 || p4 != (_Trait F<enum Day>*)p1) {
         return 1;
     }
     else if (*p2 != INT_MAX || c != Sunday) {

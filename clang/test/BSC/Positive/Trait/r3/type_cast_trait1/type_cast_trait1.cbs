@@ -7,7 +7,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
   int foo(This* this);
 };
 
@@ -15,11 +15,11 @@ int int::foo(int* this) {
   return 0;
 }
 
-impl trait F for int;
+_Impl _Trait F for int;
 
 int main() {
   int a = 1;
-  trait F* f = (trait F*)&a;
+  _Trait F* f = (_Trait F*)&a;
   return f->foo();
 }
 

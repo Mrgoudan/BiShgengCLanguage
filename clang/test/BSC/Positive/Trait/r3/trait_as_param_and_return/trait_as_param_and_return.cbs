@@ -5,34 +5,34 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
     double foo(This *this, int a);
 };
 double int::foo(int* this, int a) {
     return a;
 }
 
-impl trait F for int;
+_Impl _Trait F for int;
 
-trait F* get<T>(trait F* t) {
+_Trait F* get<T>(_Trait F* t) {
     return t;
 }
 
-trait F* get1<T>(trait F* t1, trait F* t2) {
+_Trait F* get1<T>(_Trait F* t1, _Trait F* t2) {
     return t1;
 }
 
 int main()
 {
     int a = 10;
-    trait F *p1 = &a;
+    _Trait F *p1 = &a;
     int* p2 = &a;
-    trait F* p3 = get<double>((trait F*)p2);
+    _Trait F* p3 = get<double>((_Trait F*)p2);
     float* p4 = (float*) p1;
     double c = p1->foo(a);
     if (p3 != p2 || p4 != (float*)p1) {
         return 1;
     }
-    trait F* p5 = get1<double>((trait F*)p2, p2);
+    _Trait F* p5 = get1<double>((_Trait F*)p2, p2);
     return 0;
 }

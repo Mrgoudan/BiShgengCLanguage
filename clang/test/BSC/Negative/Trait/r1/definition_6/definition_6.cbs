@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F {
-  int a(); // expected-error {{the first parameter of trait member function must be 'This* this'}}
+_Trait F {
+  int a(); // expected-error {{the first parameter of _Trait member function must be 'This* this'}}
 };
 
 int main() {

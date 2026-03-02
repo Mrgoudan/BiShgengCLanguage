@@ -52,7 +52,7 @@ struct G<T> {
     U<T> b;
 };
 
-trait F {
+_Trait F {
     S<int> foo4(This* this);
     U<int> foo5(This* this);
 };
@@ -66,7 +66,7 @@ S<int> struct P::foo4(This* this) {
 U<int> struct P::foo5(This* this) {
   return this->b;
 }
-impl trait F for struct P;
+_Impl _Trait F for struct P;
 
 // CHECK-L: #line 38 "{{.*}}.cbs"
 // CHECK-L-NEXT: struct S_int bar2(struct S_int a) {
@@ -114,7 +114,7 @@ int main() {
     G<S<int>> g2 = { .a = s5, .b = u5 };
   
     struct P p = { .a = s1, .b = u1 };
-    trait F* f = &p;
+    _Trait F* f = &p;
     f->foo4();
     f->foo5();
 

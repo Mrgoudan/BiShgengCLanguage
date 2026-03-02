@@ -7,34 +7,34 @@
 #include <stdio.h>
 #include <limits.h>
 
-trait F<T> {
+_Trait F<T> {
     T foo(This *this, int a);
 };
 double int::foo(int* this, int a) {
     return a;
 }
 
-impl trait F<double> for int;
+_Impl _Trait F<double> for int;
 
-trait F<T>* get<T>(trait F<T>* t) {
+_Trait F<T>* get<T>(_Trait F<T>* t) {
     return t;
 }
 
-trait F<double>* get1<T>(trait F<double>* t1, trait F<double>* t2) {
+_Trait F<double>* get1<T>(_Trait F<double>* t1, _Trait F<double>* t2) {
     return t1;
 }
 
 int main()
 {
     int a = INT_MAX;
-    trait F<double> *p1 = &a;
+    _Trait F<double> *p1 = &a;
     int* p2 = &a;
-    trait F<double>* p3 = get<double>((trait F<double>*)p2);
+    _Trait F<double>* p3 = get<double>((_Trait F<double>*)p2);
     float* p4 = (float*) p1;
     double c = p1->foo(a);
     if (p3 != p2 || p4 != (float*)p1) {
         return 1;
     }
-    trait F<double>* p5 = get1<double>((trait F<double>*)p2, p2);
+    _Trait F<double>* p5 = get1<double>((_Trait F<double>*)p2, p2);
     return 0;
 }

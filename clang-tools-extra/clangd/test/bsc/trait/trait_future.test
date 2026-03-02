@@ -5,6 +5,6 @@
 #include "trait_future.hbs"
 
 void int::f1(int* this) {}
-impl trait TR1 for int;
+_Impl _Trait TR1 for int;
 
 // CHECK: All checks completed, 0 errors

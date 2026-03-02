@@ -2963,7 +2963,7 @@ StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   case ETK_Enum:   return "enum";
   #if ENABLE_BSC
   case ETK_Trait:
-    return "trait";
+    return "_Trait";
   #endif
   }
 

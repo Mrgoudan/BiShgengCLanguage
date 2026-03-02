@@ -18,14 +18,14 @@ _Public:
   int a;
 };
 
-trait T { 
+_Trait T { 
 };
 
-impl trait T for S;
+_Impl _Trait T for S;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Echeck-memory-leak"
 void test2(S* _Owned sp) {
-  trait T* _Owned t = sp;
+  _Trait T* _Owned t = sp;
 } // field memory leak of value: `t`, t.data is leak
 #pragma GCC diagnostic pop
 

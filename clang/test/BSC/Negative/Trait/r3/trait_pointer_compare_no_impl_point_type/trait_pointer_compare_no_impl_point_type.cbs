@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait Future {
+_Trait Future {
     int poll(This* this);
 };
 
@@ -8,14 +8,14 @@ int int::poll(int* this) {
     return *this;
 }
 
-impl trait Future for int;
+_Impl _Trait Future for int;
 
 int main() {
     int a = 1;
-    trait Future *f = &a;
+    _Trait Future *f = &a;
     double b = 1.0;
     double *x = &b;
-    if (x == f) {  // expected-warning {{expected a pointer type which has implemented 'trait Future', found 'double *'}}
+    if (x == f) {  // expected-warning {{expected a pointer type which has implemented '_Trait Future', found 'double *'}}
         return 1;
     }
    

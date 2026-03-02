@@ -17,8 +17,8 @@ async int int::q(int* this) {
     return 0;
 }
 
-trait Future<int>* (*CallBack)(int) = int::g;
-trait Future<int>* (*CallBack2)(int*) = int::q;
+_Trait Future<int>* (*CallBack)(int) = int::g;
+_Trait Future<int>* (*CallBack2)(int*) = int::q;
 
 async int f(int start) {
   int result = await CallBack(1);

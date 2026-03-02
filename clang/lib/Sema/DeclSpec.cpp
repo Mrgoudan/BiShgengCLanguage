@@ -592,7 +592,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_interface:   return "__interface";
   case DeclSpec::TST_typename:    return "type-name";
   #if ENABLE_BSC
-  case DeclSpec::TST_trait:       return "trait";
+  case DeclSpec::TST_trait:       return "_Trait";
   case DeclSpec::TST_conditionalType: return "__conditional";
   #endif
   case DeclSpec::TST_typeofType:

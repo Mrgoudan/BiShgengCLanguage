@@ -24,7 +24,7 @@ async volatile char g(char x) {
 
 int main()
 {
-    trait Future<volatile char>* this = g(1);
+    _Trait Future<volatile char>* this = g(1);
     this->poll();
     return 0;
 }

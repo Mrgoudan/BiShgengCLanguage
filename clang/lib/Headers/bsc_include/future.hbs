@@ -28,7 +28,7 @@ struct PollResult<T> struct PollResult<T>::completed(T result)     {
     return this;
 }
 
-trait Future<T> {
+_Trait Future<T> {
     struct PollResult<T> poll(This* this);
     void free(This* this);
 };

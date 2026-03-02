@@ -1,7 +1,8 @@
 // RUN: cp %s %t.cbs
 // RUN: not clangd --check=%t.cbs 2>&1 | FileCheck %s
 
-// CHECK: [expected_after] Line 7: expected ';' after trait
+// CHECK: [expected_comma_greater] Line 8: expected ',' or '>' in template-parameter-list
+// CHECK: [expected_after] Line 9: expected ';' after _Trait
 // CHECK: All checks completed, 4 errors
 
-trait F<{>
+_Trait F<{>

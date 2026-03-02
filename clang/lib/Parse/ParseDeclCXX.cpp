@@ -1502,7 +1502,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   else if (TagTokKind == tok::kw_class)
     TagType = DeclSpec::TST_class;
 #if ENABLE_BSC
-  else if (TagTokKind == tok::kw_trait)
+  else if (TagTokKind == tok::kw__Trait)
     TagType = DeclSpec::TST_trait;
 #endif
   else {

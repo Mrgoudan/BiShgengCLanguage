@@ -16,4 +16,4 @@ union E {}; // expected-error {{redefinition of 'E'}}
 // expected-error@-1 {{use of 'E' with tag type that does not match previous declaration}}
 
 _Owned struct F {}; // expected-note {{previous use is here}}
-trait F {}; // expected-error {{use of 'F' with tag type that does not match previous declaration}}
+_Trait F {}; // expected-error {{use of 'F' with tag type that does not match previous declaration}}

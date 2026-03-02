@@ -12,14 +12,14 @@ struct S<T> {
     T a;
 };
 
-trait F<T> {};
+_Trait F<T> {};
 
-impl trait F<S<int>> for int;
+_Impl _Trait F<S<int>> for int;
 int g_flag = 1;
-static trait F<S<int>>* S<T>::getA(S<T> *this, int a, trait F<S<int>> *t) {
-    trait F<S<int>> *p1 = t;
+static _Trait F<S<int>>* S<T>::getA(S<T> *this, int a, _Trait F<S<int>> *t) {
+    _Trait F<S<int>> *p1 = t;
     int* p2 = &a;
-    trait F<S<int>> *p3 = p2;
+    _Trait F<S<int>> *p3 = p2;
     int* p4 = (int*) p1;
     if (p3 != p2 || p4 != (int*)p1) {
         return p3;
@@ -35,8 +35,8 @@ int main() {
     int a = INT_MAX;
     S<int> b;
     b.a = INT_MAX;
-    trait F<S<int>> *t = &b.a;
-    trait F<S<int>> *r = S<int>::getA(&b, a, t);
+    _Trait F<S<int>> *t = &b.a;
+    _Trait F<S<int>> *r = S<int>::getA(&b, a, t);
     return g_flag;
 }
 

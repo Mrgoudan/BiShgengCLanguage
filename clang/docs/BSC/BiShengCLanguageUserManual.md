@@ -108,7 +108,7 @@ foo.getA() = 1
 在系统编程领域，C/C++ 是应用最广泛的编程语言。在硬件资源十分受限的嵌入式场景下，C 语言使用的最多，但使用 C 语言编码存在很多痛点问题，比如 C 语言中指针使用带来的内存安全问题，C 语言缺乏原生的并发支持，以及一些基础的编程抽象(如泛型等)。近年来，在系统编程语言领域有不少探索的工作，比如 Rust，主打内存安全(所有权，生命周期，borrow checker 等)和并行并发(无栈协程)。Rust 是一门全新的编程语言，采用了和 C/C++ 完全不同的语言设计，学习曲线陡峭，也无法解决存量代码开发的问题。
 
 在这个背景下，毕昇 C 采用了不同的策略，它基于 C 语言做了很多增强的设计，比如更强的内存安全特性，语言层面支持并发等，且可以在存量代码中渐进式的使用这些特性而不用完全重写已有代码。可以认为，毕昇 C 是 C 语言的一个超集。这本用户手册，将从以下三个方面介绍毕昇 C ：
-- 基础编程抽象：成员函数，trait，泛型
+- 基础编程抽象：成员函数，_Trait，泛型
 - 内存安全：所有权，借用
 - 并发：无栈协程
 
@@ -169,7 +169,7 @@ int main() {
 
 ```
 
-如果，我们想表达某些类型具有一组相似的行为，比如上面例子中的 `print` ，我们可以定义一个 `trait`，然后让 `struct Data` `int` `float` 等类型实现这个 `trait` 。成员函数和 `trait` 相结合，非常有表达力。关于 `trait` 的介绍，参考后续章节。
+如果，我们想表达某些类型具有一组相似的行为，比如上面例子中的 `print` ，我们可以定义一个 `_Trait`，然后让 `struct Data` `int` `float` 等类型实现这个 `_Trait` 。成员函数和 `_Trait` 相结合，非常有表达力。关于 `_Trait` 的介绍，参考后续章节。
 
 下面，我们简单介绍下毕昇 C 成员函数的一些具体规则：
 
@@ -910,12 +910,12 @@ constexpr int foo2(constexpr int a) { //error
 ```
 ------
 
-### type trait
+### type _Trait
 
-type trait 可以看作是一个编译期计算返回值的 constexpr 函数。
-BSC标准库中提供了一系列 type trait 泛型函数，使用时需要导入头文件 bsc_type_traits.hbs
+type _Trait 可以看作是一个编译期计算返回值的 constexpr 函数。
+BSC标准库中提供了一系列 type _Trait 泛型函数，使用时需要导入头文件 bsc_type_traits.hbs
 
-目前实现的 type trait 函数有：
+目前实现的 type _Trait 函数有：
 ```c
 // 判断类型的分类
 constexpr bool is_integral<T>();
@@ -993,7 +993,7 @@ int main() {
 }
 ```
 
-type trait 函数可以在泛型函数和泛型结构体的成员函数中使用
+type _Trait 函数可以在泛型函数和泛型结构体的成员函数中使用
 ```c
 #include<stdio.h>
 #include<bsc_type_traits.hbs>
@@ -1026,7 +1026,7 @@ int main() {
 }
 ```
 
-type trait 函数也可用于静态断言中
+type _Trait 函数也可用于静态断言中
 ```c
 #include<bsc_type_traits.hbs>
 
@@ -1147,30 +1147,30 @@ int main() {
 
 ------
 
-## trait
+## _Trait
 
 ### 概述
 
-trait 是一种定义行为的方式，它类似于其它语言中的接口或抽象类，目的是定义一个实现某些目的所必须的行为集合。trait 定义了一组方法签名，这些方法可以被多个结构体、枚举体或内置类型共享。主要作用是为了实现代码的复用和抽象，从而提高代码的可维护性和可扩展性。
+_Trait 是一种定义行为的方式，它类似于其它语言中的接口或抽象类，目的是定义一个实现某些目的所必须的行为集合。_Trait 定义了一组方法签名，这些方法可以被多个结构体、枚举体或内置类型共享。主要作用是为了实现代码的复用和抽象，从而提高代码的可维护性和可扩展性。
 
-### trait 语法规则
+### _Trait 语法规则
 
-毕昇 C 引入关键字 `trait` 与 `impl`，通过关键字 `trait` 来定义，通过 `impl` 可以为一个类型实现一个或多个 trait。下面通过一些代码示例来了解 trait 的使用方法。
+毕昇 C 引入关键字 `_Trait` 与 `_Impl`，通过关键字 `_Trait` 来定义，通过 `_Impl` 可以为一个类型实现一个或多个 _Trait。下面通过一些代码示例来了解 _Trait 的使用方法。
 
-#### trait 的定义
+#### _Trait 的定义
 
 **语法：**
 
 ```c
-trait TraitName {
-  // 定义 trait 中的方法签名
+_Trait TraitName {
+  // 定义 _Trait 中的方法签名
 };
 ```
 
-其中，`TraitName` 是 trait 的名称，后面跟着一对花括号，里面可以定义一些方法的签名。trait 中定义的方法不支持默认实现，必须由实现该 trait 的类型提供具体实现。下面我们来看一个简单的例子：
+其中，`TraitName` 是 _Trait 的名称，后面跟着一对花括号，里面可以定义一些方法的签名。_Trait 中定义的方法不支持默认实现，必须由实现该 _Trait 的类型提供具体实现。下面我们来看一个简单的例子：
 
 ```c
-trait T {
+_Trait T {
     void doSomeThing1(This* this);
     void doSomeThing2(This* this);
 };
@@ -1178,65 +1178,65 @@ trait T {
 
 **规则：**
 
-1. trait 定义只能出现在 top-level
+1. _Trait 定义只能出现在 top-level
 
 ```c
 void test() {
-    trait T {}; //不能在函数体中定义 trait. error: trait is only allowed to be defined at top-level
+    _Trait T {}; //不能在函数体中定义 _Trait. error: _Trait is only allowed to be defined at top-level
 }
 
 struct MyStruct {
-    trait T {}; //不能在结构体中定义 trait. error: trait is only allowed to be defined at top-level
+    _Trait T {}; //不能在结构体中定义 _Trait. error: _Trait is only allowed to be defined at top-level
 };
 ```
 
-2. trait 内要求函数首个入参且只有首个入参类型为 `This` 指针，命名为 `this`; `This` 指代实现了 trait 的具体类型
+2. _Trait 内要求函数首个入参且只有首个入参类型为 `This` 指针，命名为 `this`; `This` 指代实现了 _Trait 的具体类型
 
 ```c
-trait T {
+_Trait T {
     void doSomeThing1(This* this); // ok
-    void doSomeThing2(This* a); // error: the first parameter of trait member function must be 'This* this'
-    void doSomeThing3(int a, This* this); // error: the first parameter of trait member function must be 'This* this'
+    void doSomeThing2(This* a); // error: the first parameter of _Trait member function must be 'This* this'
+    void doSomeThing3(int a, This* this); // error: the first parameter of _Trait member function must be 'This* this'
 };
 ```
 
-3. trait 内只允许声明函数
+3. _Trait 内只允许声明函数
 
 ```c
-trait T {
+_Trait T {
     void doSomeThing1(This* this) { // error: expected member name or ';' after declaration specifiers
     }
 };
 ```
 
-4. trait 内可以没有方法签名
+4. _Trait 内可以没有方法签名
 
 ```c
-trait T {}; // ok
+_Trait T {}; // ok
 ```
 
-5. 不允许给 trait 类型扩展成员函数
+5. 不允许给 _Trait 类型扩展成员函数
 
 ```c
-void trait T::getArea(trait T* this) { // error: expected identifier or '('
+void _Trait T::getArea(_Trait T* this) { // error: expected identifier or '('
 	...
 }
 ```
 
 
 
-#### 实现 trait
+#### 实现 _Trait
 
 **语法：**
 
 ```c
-impl <trait> for <type>;
+_Impl <_Trait> for <type>;
 ```
 
-我们可以通过 `impl` 关键字来为一个类型实现一个 trait。直观的，我们来看一个简单的例子：
+我们可以通过 `_Impl` 关键字来为一个类型实现一个 _Trait。直观的，我们来看一个简单的例子：
 
 ```c
-trait T {
+_Trait T {
     void f(This* this);
 };
 
@@ -1244,17 +1244,17 @@ struct S {};
 void struct S::f(struct S* this);
 void int::f(int* this);
 
-impl trait T for int;
-impl trait T for struct S;
+_Impl _Trait T for int;
+_Impl _Trait T for struct S;
 ```
 
 **规则：**
 
-1. 在 impl 语句之前，一定存在 `<trait>` 和 `<type>` 的定义
-2. 在 impl 语句之前，`<type>` 必须已经声明并实现 `<trait>` 中所有成员函数
+1. 在 _Impl 语句之前，一定存在 `<_Trait>` 和 `<type>` 的定义
+2. 在 _Impl 语句之前，`<type>` 必须已经声明并实现 `<_Trait>` 中所有成员函数
 
 ```c
-trait T {
+_Trait T {
     int f1(This* this);
     int f2(This* this);
 };
@@ -1262,9 +1262,9 @@ trait T {
 struct S{};
 
 int struct S::f1(struct S* this);
-//impl trait T for struct S; // error: function 'f1' in 'trait T' is not implemented for 'struct S
+//_Impl _Trait T for struct S; // error: function 'f1' in '_Trait T' is not implemented for 'struct S
 int struct S::f2(struct S* this);
-//impl trait T for struct S; // error: function 'f1' in 'trait T' is not implemented for 'struct S'
+//_Impl _Trait T for struct S; // error: function 'f1' in '_Trait T' is not implemented for 'struct S'
 int struct S::f2(struct S* this){
     return 1;
 };
@@ -1272,28 +1272,28 @@ int struct S::f1(struct S* this){
     return 1;
 };
 
-impl trait T for struct S; // ok，struct S 已扩展声明了 trait 中所有成员函数
+_Impl _Trait T for struct S; // ok，struct S 已扩展声明了 _Trait 中所有成员函数
 ```
 
-3. `<type>` 类型不允许是 trait
+3. `<type>` 类型不允许是 _Trait
 
 ```c
-impl trait T for struct S; // ok，支持通过 impl 对已有 struct/union/enum 或内置类型实现 trait
-impl trait T for trait T; // error: function 'f1' in 'trait T' is not implemented for 'trait T'
+_Impl _Trait T for struct S; // ok，支持通过 _Impl 对已有 struct/union/enum 或内置类型实现 _Trait
+_Impl _Trait T for _Trait T; // error: function 'f1' in '_Trait T' is not implemented for '_Trait T'
 ```
 
-4. 支持对 `typedef` 类型实现 trait
+4. 支持对 `typedef` 类型实现 _Trait
 
 ```c
 typedef struct S S1;
-impl trait T for S1;
+_Impl _Trait T for S1;
 ```
 
 
 
-#### trait 类型的变量
+#### _Trait 类型的变量
 
-我们可以定义 trait 指针类型的变量，并可以通过该指针变量进行函数调用等，具体使用方法如下：
+我们可以定义 _Trait 指针类型的变量，并可以通过该指针变量进行函数调用等，具体使用方法如下：
 
 ```c
 #include <stdio.h>
@@ -1302,7 +1302,7 @@ struct S {
     float num;
 };
 
-typedef trait Print {
+typedef _Trait Print {
     void print(This* this);
 }P;
 void struct S::print(struct S* this) {
@@ -1312,142 +1312,142 @@ void int::print(int* this) {
     printf("This is an int instance, valued %d\n", *this);
 }
 
-impl P for struct S;
-impl P for int;
+_Impl P for struct S;
+_Impl P for int;
 
 void test() {
     struct S s = { 0.0 };
     int a = 1;
     float b = 1.0;
 
-    trait Print* p;
+    _Trait Print* p;
     p = &s; // ok，隐式转换
     p->print(); // expected result: This is a struct instance, valued 0.000000
     p = &a;
     p->print(); // expected result: This is an int instance, valued 1
-    p = &b; // error: expected a pointer type which has implemented 'trait Print', found 'float'
+    p = &b; // error: expected a pointer type which has implemented '_Trait Print', found 'float'
 }
 ```
 
 **规则：**
 
-1. 支持对 trait 进行 `typedef`
+1. 支持对 _Trait 进行 `typedef`
 
 ```c
-typedef trait Print {
+typedef _Trait Print {
     ...
 }P;
 ```
 
-2. 只允许声明 trait 指针类型的变量
+2. 只允许声明 _Trait 指针类型的变量
 
 ```c
-trait Print* p1; // ok
-trait Print p2; // error: only trait pointer type is allowed to be declared
+_Trait Print* p1; // ok
+_Trait Print p2; // error: only _Trait pointer type is allowed to be declared
 ```
 
-3. 如果 `<type>` 实现了 `<trait>`，那么指向这个 `<type>` 的指针可以被转换为 `<trait>` 类型的变量
+3. 如果 `<type>` 实现了 `<_Trait>`，那么指向这个 `<type>` 的指针可以被转换为 `<_Trait>` 类型的变量
 
 ```c
-impl trait Print for struct S;
+_Impl _Trait Print for struct S;
 
 struct S s;
-trait Print* t1 = &s; // 隐式转换
-trait Print* t2 = (trait Print*)&s; // 显式转换
+_Trait Print* t1 = &s; // 隐式转换
+_Trait Print* t2 = (_Trait Print*)&s; // 显式转换
 ```
 
-4. trait 指针类型的变量可以通过 `->` 方式调用该 trait 中的成员方法
+4. _Trait 指针类型的变量可以通过 `->` 方式调用该 _Trait 中的成员方法
 
 ```c
 struct S s;
-trait Print* t = &s;
+_Trait Print* t = &s;
 t->print();
 ```
 
-5. trait 指针类型的变量，允许用 `NULL` 赋值
+5. _Trait 指针类型的变量，允许用 `NULL` 赋值
 
 ```c
-trait Print* p = NULL;
+_Trait Print* p = NULL;
 ```
 
-6. 允许指向 trait 的多级指针，但这种类型不能直接调用成员函数。不允许结构体的二级指针直接隐式转换成 trait 的二级指针
+6. 允许指向 _Trait 的多级指针，但这种类型不能直接调用成员函数。不允许结构体的二级指针直接隐式转换成 _Trait 的二级指针
 
 ```c
-trait Print* p;
+_Trait Print* p;
 p->print();
-trait Print** q = &p; // ok
+_Trait Print** q = &p; // ok
 q->print(); // error: use of address-of-label extension outside of a function body
 (*q)->print(); // ok
 struct S s;
 q = &&s; // error: tentative definition has type 'struct S' that is never completed
 ```
 
-7. trait 指针类型的变量，不可以解引用
+7. _Trait 指针类型的变量，不可以解引用
 
 ```c
-trait Print *p;
+_Trait Print *p;
 int main(){
     *p; // error: use of undeclared identifier 'p'
 }
 ```
 
-8. trait 指针类型变量可以用 `const` / `volatile` 修饰
+8. _Trait 指针类型变量可以用 `const` / `volatile` 修饰
 
 ```c
-const trait Print* p1;
-volatile trait Print* p2;
+const _Trait Print* p1;
+volatile _Trait Print* p2;
 ```
 
-9. 支持 trait 指针类型作为函数参数及返回值类型
+9. 支持 _Trait 指针类型作为函数参数及返回值类型
 
 ```c
-trait Print* get(trait Print* t) {
+_Trait Print* get(_Trait Print* t) {
     return t;
 }
 ```
 
-10. 支持 trait 指针变量和 `NULL` 做比较（这里的比较仅包含 `==` 和`!=`，下同）
+10. 支持 _Trait 指针变量和 `NULL` 做比较（这里的比较仅包含 `==` 和`!=`，下同）
 
 ```c
-trait Print* p = NULL;
+_Trait Print* p = NULL;
 if (p == NULL) {} // ok
 if (p != NULL) {} // ok
 ```
 
-11. 支持 trait 指针变量和非 trait 指针变量比较
+11. 支持 _Trait 指针变量和非 _Trait 指针变量比较
 
 ```c
 struct S {
     float num;
 };
-typedef trait Print {
+typedef _Trait Print {
     void print(This* this);
 }P;
 void struct S::print(struct S* this) {
     printf("This is a struct instance, valued %f\n", this->num);
 }
-// struct S 类型实现 trait F<int>，但 int 类型没有
-impl trait Print for struct S;
+// struct S 类型实现 _Trait F<int>，但 int 类型没有
+_Impl _Trait Print for struct S;
 int main(){
     int a = 1;
     int *p1 = &a;
     struct S s;
     struct S *p2 = &s;
-    trait Print* p;
-    if (p == p1) {}; // warning: expected a pointer type which has implemented 'trait Print', found 'int *'
+    _Trait Print* p;
+    if (p == p1) {}; // warning: expected a pointer type which has implemented '_Trait Print', found 'int *'
     if (p == p2) {}; // ok
-    if (p == a) {};  // error: expected a pointer type which has implemented 'trait Print', found 'int'
+    if (p == a) {};  // error: expected a pointer type which has implemented '_Trait Print', found 'int'
 }
 
 ```
 
-12. 支持 trait 指针变量和 trait 指针变量比较
+12. 支持 _Trait 指针变量和 _Trait 指针变量比较
 
 ```c
-trait Print* t1 = NULL;
-trait Print* t2 = NULL;
-trait G *g = NULL;
-if (t1 == g) {} // warning: 如果 trait 类型不同会报 warning
+_Trait Print* t1 = NULL;
+_Trait Print* t2 = NULL;
+_Trait G *g = NULL;
+if (t1 == g) {} // warning: 如果 _Trait 类型不同会报 warning
 if (t1 == t2) {} // ok
 ```
 
@@ -1455,52 +1455,52 @@ if (t1 == t2) {} // ok
 
 #### 类型转换
 
-trait 类型转换只能在实现了对应 trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。
+_Trait 类型转换只能在实现了对应 _Trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。
 
 **规则：**
 
-1. trait 指针类型的变量，不允许强制转换为非指针类型
+1. _Trait 指针类型的变量，不允许强制转换为非指针类型
 
-2. 支持 trait 指针类型强制转为非 trait 指针类型，但不支持隐式转换
+2. 支持 _Trait 指针类型强制转为非 _Trait 指针类型，但不支持隐式转换
 
 ```c
 int a = 0;
-trait T *p = &a; // 假设 int 类型实现了 trait T
-int *q1 = p; // error: initializing 'int *' with an expression of incompatible type 'trait T *'
+_Trait T *p = &a; // 假设 int 类型实现了 _Trait T
+int *q1 = p; // error: initializing 'int *' with an expression of incompatible type '_Trait T *'
 int *q2 = (int*)p; // ok
 struct S *q3 = (struct S*)p;
 ```
 
-3.  trait 类型支持强制转换为 `void *`类型，但`void *` 指针无法转换为 trait 指针类型
+3.  _Trait 类型支持强制转换为 `void *`类型，但`void *` 指针无法转换为 _Trait 指针类型
 
 ```c
 int a = 1;
-trait T *p = &a; // 假设 int 类型实现了 trait T
-void * q = (void *)p; // ok: trait 类型支持强制转换为 `void *`类型
-trait T *p1 = (trait T *)q; // error: expected a pointer type which has implemented 'trait T', found 'void'
-trait T *p2 = q; // error: expected a pointer type which has implemented 'trait T', found 'void'
+_Trait T *p = &a; // 假设 int 类型实现了 _Trait T
+void * q = (void *)p; // ok: _Trait 类型支持强制转换为 `void *`类型
+_Trait T *p1 = (_Trait T *)q; // error: expected a pointer type which has implemented '_Trait T', found 'void'
+_Trait T *p2 = q; // error: expected a pointer type which has implemented '_Trait T', found 'void'
 ```
 
 
 
-### 泛型 trait 语法规则
+### 泛型 _Trait 语法规则
 
-泛型 trait 是指在 trait 中使用泛型类型参数，从而使 trait 的方法可以适用于不同类型，避免代码的重复编写。下面通过一些代码示例来了解泛型 trait 的使用方法。
+泛型 _Trait 是指在 _Trait 中使用泛型类型参数，从而使 _Trait 的方法可以适用于不同类型，避免代码的重复编写。下面通过一些代码示例来了解泛型 _Trait 的使用方法。
 
-#### 泛型 trait 的定义
+#### 泛型 _Trait 的定义
 
 **语法：**
 
 ```c
-trait TraitName<T1,T2,...,Tn> {
-  // 定义泛型 trait 中的方法签名，可以使用泛型类型 T1,T2,...,Tn
+_Trait TraitName<T1,T2,...,Tn> {
+  // 定义泛型 _Trait 中的方法签名，可以使用泛型类型 T1,T2,...,Tn
 };
 ```
 
-与 trait 定义类似，`TraitName` 是泛型 trait 的名称，后面跟着一对尖括号，里面可以包含一个或多个泛型参数，在花括号里面可以定义一些方法的签名。同样，泛型 trait 中定义的方法不支持默认实现，必须由实现该泛型 trait 的类型提供具体实现。下面我们来看一个简单的例子：
+与 _Trait 定义类似，`TraitName` 是泛型 _Trait 的名称，后面跟着一对尖括号，里面可以包含一个或多个泛型参数，在花括号里面可以定义一些方法的签名。同样，泛型 _Trait 中定义的方法不支持默认实现，必须由实现该泛型 _Trait 的类型提供具体实现。下面我们来看一个简单的例子：
 
 ```c
-trait F<T1, T2> {
+_Trait F<T1, T2> {
     T1 doSomeThing1(This* this);
     T1 doSomeThing2(This* this, T2 param);
 };
@@ -1510,70 +1510,70 @@ trait F<T1, T2> {
 
 **规则：**
 
-1. 泛型 trait 定义只能出现在 top-level
+1. 泛型 _Trait 定义只能出现在 top-level
 
 ```c
 void test<T>() {
-    trait F<T> {}; // error: trait is only allowed to be defined at top-level
+    _Trait F<T> {}; // error: _Trait is only allowed to be defined at top-level
 }
 
 struct MyStruct<T> {
-    trait F<T> {}; // error: trait is only allowed to be defined at top-level
+    _Trait F<T> {}; // error: _Trait is only allowed to be defined at top-level
 };
 ```
 
-2. 泛型 trait 内要求函数首个入参且只有首个入参类型为 `This` 指针，命名为 `this`; `This` 指代实现了 trait 的具体类型
+2. 泛型 _Trait 内要求函数首个入参且只有首个入参类型为 `This` 指针，命名为 `this`; `This` 指代实现了 _Trait 的具体类型
 
 ```c
-trait F<T> {
+_Trait F<T> {
     T doSomeThing1(This* this); // ok
-    T doSomeThing2(This* a); // error: the first parameter of trait member function must be 'This* this'
-    void doSomeThing3(T a, This* this); // error: the first parameter of trait member function must be 'This* this'
+    T doSomeThing2(This* a); // error: the first parameter of _Trait member function must be 'This* this'
+    void doSomeThing3(T a, This* this); // error: the first parameter of _Trait member function must be 'This* this'
 };
 ```
 
-3. 泛型 trait 内只允许声明函数
+3. 泛型 _Trait 内只允许声明函数
 
 ```c
-trait F<T> {
+_Trait F<T> {
     void doSomeThing1(This* this) { // error: expected member name or ';' after declaration specifiers
         ...
     }
 };
 ```
 
-4. 泛型 trait 内可以没有方法签名
+4. 泛型 _Trait 内可以没有方法签名
 
 ```c
-trait F<T> {}; // ok
+_Trait F<T> {}; // ok
 ```
 
-5. 不允许给泛型 trait 类型扩展成员函数
+5. 不允许给泛型 _Trait 类型扩展成员函数
 
 ```c
-void trait F<T>::getArea(trait F<T>* this) { // error: cannot combine with previous 'void' declaration specifier
+void _Trait F<T>::getArea(_Trait F<T>* this) { // error: cannot combine with previous 'void' declaration specifier
 	...
 }
 
-void trait F<int>::getArea(trait F<int>* this) { // error: cannot combine with previous 'void' declaration specifier
+void _Trait F<int>::getArea(_Trait F<int>* this) { // error: cannot combine with previous 'void' declaration specifier
 	...
 }
 ```
 
 
 
-#### 实现泛型 trait
+#### 实现泛型 _Trait
 
 **语法：**
 
 ```c
-impl <trait<SpecializationType>> for <type>;
+_Impl <_Trait<SpecializationType>> for <type>;
 ```
 
-我们可以通过 `impl` 关键字对已有 `struct`/`union`/`enum` 类型和内置类型实现 `trait<int>`/`trait<float>`等，需要注意的是，我们目前仅支持对实例化的 trait 类型进行 impl。直观的，我们来看一个简单的例子：
+我们可以通过 `_Impl` 关键字对已有 `struct`/`union`/`enum` 类型和内置类型实现 `_Trait<int>`/`_Trait<float>`等，需要注意的是，我们目前仅支持对实例化的 _Trait 类型进行 _Impl。直观的，我们来看一个简单的例子：
 
 ```c
-trait F<T> {
+_Trait F<T> {
     T f(This* this);
 };
 
@@ -1581,23 +1581,23 @@ struct S {};
 int struct S::f(struct S* this);
 int int::f(int* this);
 
-impl trait F<int> for int;
-impl trait F<int> for struct S;
+_Impl _Trait F<int> for int;
+_Impl _Trait F<int> for struct S;
 ```
 
 **规则：**
 
-1. 在 impl 语句之前，一定存在泛型 `<trait>` 和 `<type>` 的定义
-2. 仅支持 `impl` 实例化的 trait 类型
+1. 在 _Impl 语句之前，一定存在泛型 `<_Trait>` 和 `<type>` 的定义
+2. 仅支持 `_Impl` 实例化的 _Trait 类型
 
 ```c
-impl trait F<T> for int; // error: use of undeclared identifier 'T'
+_Impl _Trait F<T> for int; // error: use of undeclared identifier 'T'
 ```
 
-3. 在 impl 语句之前，`<type>` 必须已经声明了 `<trait>` 中所有成员函数
+3. 在 _Impl 语句之前，`<type>` 必须已经声明了 `<_Trait>` 中所有成员函数
 
 ```c
-trait F<T> {
+_Trait F<T> {
     T f1(This* this);
     T f2(This* this);
 };
@@ -1605,48 +1605,48 @@ trait F<T> {
 struct S{};
 
 int struct S::f1(struct S* this){};
-impl trait F<int> for struct S; // error: function 'f2' in 'trait F<int>' is not implemented for 'struct S'
+_Impl _Trait F<int> for struct S; // error: function 'f2' in '_Trait F<int>' is not implemented for 'struct S'
 int struct S::f2(struct S* this){};
-impl trait F<int> for struct S; // ok，struct S 已扩展声明了 trait 中所有成员函数
+_Impl _Trait F<int> for struct S; // ok，struct S 已扩展声明了 _Trait 中所有成员函数
 ```
 
-4. 支持通过 `impl` 关键字对已有 `struct`/`union`/`enum` 类型和内置类型实现 `trait<int>`/`trait<float>`，但`struct`/`union` 类型类型不能是泛型的
+4. 支持通过 `_Impl` 关键字对已有 `struct`/`union`/`enum` 类型和内置类型实现 `_Trait<int>`/`_Trait<float>`，但`struct`/`union` 类型类型不能是泛型的
 
 ```c
 struct S {};
 struct G<T> {};
-trait F<T> {};
-impl trait F<int> for int; // ok
-impl trait F<int> for struct S; // ok
-impl trait F<int> for struct G<int>; // error: cannot impl trait for an instantiated type
+_Trait F<T> {};
+_Impl _Trait F<int> for int; // ok
+_Impl _Trait F<int> for struct S; // ok
+_Impl _Trait F<int> for struct G<int>; // error: cannot _Impl _Trait for an instantiated type
 ```
 
-5. `<type>` 类型不允许是 trait/泛型 trait
+5. `<type>` 类型不允许是 _Trait/泛型 _Trait
 
 ```c
-impl trait F<int>  for trait S; // error: unexpected token for ImplTraitDecl
-impl trait F<int>  for trait F<int>; // error: unexpected token for ImplTraitDecl
+_Impl _Trait F<int>  for _Trait S; // error: unexpected token for ImplTraitDecl
+_Impl _Trait F<int>  for _Trait F<int>; // error: unexpected token for ImplTraitDecl
 ```
 
-6. 支持对 `typedef` 类型实现泛型 trait
+6. 支持对 `typedef` 类型实现泛型 _Trait
 
 ```c
 typedef struct S S1;
-impl trait F<int> for S1;
+_Impl _Trait F<int> for S1;
 ```
 
 
 
-#### 泛型 trait 类型的变量
+#### 泛型 _Trait 类型的变量
 
-我们可以定义泛型 trait 实例化后的指针类型变量，并可以通过该指针变量进行函数调用等，具体使用方法如下：
+我们可以定义泛型 _Trait 实例化后的指针类型变量，并可以通过该指针变量进行函数调用等，具体使用方法如下：
 
 ```c
 #include <stdio.h>
 
 struct S {};
 
-trait F<T> {
+_Trait F<T> {
     T foo(This* this);
 };
 int struct S::foo(struct S* this) {
@@ -1656,156 +1656,156 @@ int int::foo(int* this) {
     return 0;
 }
 
-impl trait F<int> for struct S;
-impl trait F<int> for int;
+_Impl _Trait F<int> for struct S;
+_Impl _Trait F<int> for int;
 
 void test() {
     struct S s;
     int a = 1;
     float b = 1.0;
 
-    trait F<int>* p;
+    _Trait F<int>* p;
     p = &s; // ok，隐式转换
     p->foo(); // return 1
     p = &a;
     p->foo(); // return 0
-    p = &b; // error: expected a pointer type which has implemented 'trait F<int>', found 'float'
+    p = &b; // error: expected a pointer type which has implemented '_Trait F<int>', found 'float'
 }
 ```
 
 **规则：**
 
-1. 只允许声明泛型 trait 实例化后的指针类型变量
+1. 只允许声明泛型 _Trait 实例化后的指针类型变量
 
 ```c
-trait F<int>* p1; // ok
-trait F<int> p2; // error: only trait pointer type is allowed to be declared
+_Trait F<int>* p1; // ok
+_Trait F<int> p2; // error: only _Trait pointer type is allowed to be declared
 ```
 
-2. 如果 `<type>` 实现了 `<trait>`，那么指向这个 `<type>` 的指针可以被转换为 `<trait>` 类型的变量
+2. 如果 `<type>` 实现了 `<_Trait>`，那么指向这个 `<type>` 的指针可以被转换为 `<_Trait>` 类型的变量
 
 ```c
-impl trait F<int> for struct S;
+_Impl _Trait F<int> for struct S;
 
 struct S s;
-trait F<int>* t1 = &s; // 隐式转换
-trait F<int>* t2 = (trait F<int>*)&s; // 显式转换
+_Trait F<int>* t1 = &s; // 隐式转换
+_Trait F<int>* t2 = (_Trait F<int>*)&s; // 显式转换
 ```
 
-3. 泛型 trait 实例化后的指针类型变量可以通过 `->` 方式调用该泛型 trait 中的成员函数
+3. 泛型 _Trait 实例化后的指针类型变量可以通过 `->` 方式调用该泛型 _Trait 中的成员函数
 
 ```c
 struct S s;
-trait F<int>* t = &s;
+_Trait F<int>* t = &s;
 t->foo();
 ```
 
-4. 泛型 trait 实例化后的指针类型变量，允许用 `NULL` 赋值
+4. 泛型 _Trait 实例化后的指针类型变量，允许用 `NULL` 赋值
 
 ```c
-trait F<int>* p = NULL;
+_Trait F<int>* p = NULL;
 ```
 
-5. 泛型 trait 实例化后的指针类型变量，不可以解引用
+5. 泛型 _Trait 实例化后的指针类型变量，不可以解引用
 
 ```c
-trait F<int> *p;
+_Trait F<int> *p;
 *p; // error: use of undeclared identifier 'p'
 ```
 
-6. 允许指向泛型 trait 的多级指针，但这种类型不能直接调用成员函数。不允许结构体的二级指针直接隐式转换成泛型 trait 的二级指针
+6. 允许指向泛型 _Trait 的多级指针，但这种类型不能直接调用成员函数。不允许结构体的二级指针直接隐式转换成泛型 _Trait 的二级指针
 
 ```c
-trait F<int>* p;
+_Trait F<int>* p;
 p->foo();
-trait F<int>** q = &p; // ok
+_Trait F<int>** q = &p; // ok
 q->foo(); // error: use of address-of-label extension outside of a function body
 (*q)->foo(); // ok
 struct S s;
 q = &&s; // error: tentative definition has type 'struct S' that is never completed
 ```
 
-7. 泛型 trait 实例化后的指针类型变量可以用 `const` / `volatile` 修饰
+7. 泛型 _Trait 实例化后的指针类型变量可以用 `const` / `volatile` 修饰
 
 ```c
-const trait F<int>* p1;
-volatile trait F<int>* p2;
+const _Trait F<int>* p1;
+volatile _Trait F<int>* p2;
 ```
 
-8. 支持泛型 trait 实例化后的指针类型作为函数参数及返回值类型
+8. 支持泛型 _Trait 实例化后的指针类型作为函数参数及返回值类型
 
 ```c
-trait F<int>* get(trait F<int>* t) {
+_Trait F<int>* get(_Trait F<int>* t) {
     return t;
 }
 ```
 
-9. 支持泛型 trait 实例化后的指针变量和 `NULL` 做比较（这里的比较仅包含 `==` 和`!=`，下同）
+9. 支持泛型 _Trait 实例化后的指针变量和 `NULL` 做比较（这里的比较仅包含 `==` 和`!=`，下同）
 
 ```c
-trait F<int>* p = NULL;
+_Trait F<int>* p = NULL;
 p == NULL; // ok
 p != NULL; // ok
 ```
 
-10. 支持泛型 trait 实例化后的指针变量和非 trait 指针变量比较
+10. 支持泛型 _Trait 实例化后的指针变量和非 _Trait 指针变量比较
 
 ```c
 int a = 1;
 int *p1 = &a;
 struct S s;
 struct S *p2 = &s;
-trait F<int> *t = NULL;
-// 假设struct S 类型实现 trait F<int>，但 int 类型没有
+_Trait F<int> *t = NULL;
+// 假设struct S 类型实现 _Trait F<int>，但 int 类型没有
 if (t == p1) {}; // warning
 if (t == p2) {}; // ok
-if (t == a) {}; // error: expected a pointer type which has implemented 'trait F<int>', found 'int'
+if (t == a) {}; // error: expected a pointer type which has implemented '_Trait F<int>', found 'int'
 ```
 
-11. 支持指针变量和 trait 指针变量比较
+11. 支持指针变量和 _Trait 指针变量比较
 
 ```c
-trait F<int> *t1 = NULL;
-trait F<int> *t2 = NULL;
-trait F<float> *t3 = NULL;
+_Trait F<int> *t1 = NULL;
+_Trait F<int> *t2 = NULL;
+_Trait F<float> *t3 = NULL;
 if (t1 == t2) {} // ok
-if (t1 == t3) {} // warning: comparison of distinct pointer types ('trait F<int> *' and 'trait F<float> *')
+if (t1 == t3) {} // warning: comparison of distinct pointer types ('_Trait F<int> *' and '_Trait F<float> *')
 ```
 
 
 
 #### 类型转换
 
-泛型 trait 类型转换只能在实现了对应泛型 trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。
+泛型 _Trait 类型转换只能在实现了对应泛型 _Trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。
 
 **规则：**
 
-1. 泛型 trait 实例化后的指针变量，不允许强制转换为非指针类型
+1. 泛型 _Trait 实例化后的指针变量，不允许强制转换为非指针类型
 
 ```c
 struct S s;
-trait F<int> *p = &s; // 假设 struct S 类型实现了 trait F<int>
+_Trait F<int> *p = &s; // 假设 struct S 类型实现了 _Trait F<int>
 (struct S)p; // error: used type 'struct S' where arithmetic or pointer type is required
 ```
 
-2. 支持泛型 trait 指针类型强制转为非 trait 指针类型，但不支持隐式转换
+2. 支持泛型 _Trait 指针类型强制转为非 _Trait 指针类型，但不支持隐式转换
 
 ```c
 struct S s;
-trait F<int> *p = &s; // 假设 struct S 类型实现了 trait F<int>
-struct S *q1 = p; // error: initializing 'struct S *' with an expression of incompatible type 'trait F<int> *'
+_Trait F<int> *p = &s; // 假设 struct S 类型实现了 _Trait F<int>
+struct S *q1 = p; // error: initializing 'struct S *' with an expression of incompatible type '_Trait F<int> *'
 struct S *q2 = (struct S*)p; // ok
 int *q3 = (int*)p; // ok
 ```
 
-3. 泛型 trait 类型支持强制转换为 `void *`类型，但`void *` 指针无法转换为泛型 trait 指针类型
+3. 泛型 _Trait 类型支持强制转换为 `void *`类型，但`void *` 指针无法转换为泛型 _Trait 指针类型
 
 ```c
 struct S s;
-trait F<int> *p = &s;
-void * q = (void *)p; // ok: 泛型 trait 类型支持强制转换为 `void *`类型
-trait F<int> *p1 = (trait F<int> *)q; // // error: expected a pointer type which has implemented 'trait F<int>'', found 'void'
-trait F<int> *p2 = q; // // error: expected a pointer type which has implemented 'trait F<int>'', found 'void'
+_Trait F<int> *p = &s;
+void * q = (void *)p; // ok: 泛型 _Trait 类型支持强制转换为 `void *`类型
+_Trait F<int> *p1 = (_Trait F<int> *)q; // // error: expected a pointer type which has implemented '_Trait F<int>'', found 'void'
+_Trait F<int> *p2 = q; // // error: expected a pointer type which has implemented '_Trait F<int>'', found 'void'
 ```
 
 
@@ -1815,8 +1815,8 @@ trait F<int> *p2 = q; // // error: expected a pointer type which has implemented
 ```c
 #include <stdio.h>
 
-// 定义 trait
-trait Shape {
+// 定义 _Trait
+_Trait Shape {
     int getArea(This* this);
     int getSideLen(This* this);
 };
@@ -1854,28 +1854,28 @@ int struct Rectangle::getSideLen(struct Rectangle* this) {
     return length;
 }
 
-// 为结构体类型实现 trait
-impl trait Shape for struct Square;
-impl trait Shape for struct Rectangle;
+// 为结构体类型实现 _Trait
+_Impl _Trait Shape for struct Square;
+_Impl _Trait Shape for struct Rectangle;
 
-// trait 指针类型作为函数参数及返回值类型
-trait Shape* get(trait Shape* s) {
+// _Trait 指针类型作为函数参数及返回值类型
+_Trait Shape* get(_Trait Shape* s) {
     return s;
 }
 
 void test() {
     struct Square s = {.side = 5};
     struct Rectangle r = {.width = 2, .height = 3};
-    trait Shape* shape = &s;
-    // trait 指针变量调用方法
+    _Trait Shape* shape = &s;
+    // _Trait 指针变量调用方法
     shape->getArea(); // the area of this square is 25.
     // 强制转换
-    ((trait Shape*)&s)->getSideLen(); // the side length of this square is 20.
-    // 将指针赋值给 trait 指针类型的变量
+    ((_Trait Shape*)&s)->getSideLen(); // the side length of this square is 20.
+    // 将指针赋值给 _Trait 指针类型的变量
     shape = &r;
     shape->getArea(); // the area of this rectangle is 6.
-    // 隐式转换，将 struct Rectangle* 转为 trait Shape*
-    trait Shape* shape2 = get(&r);
+    // 隐式转换，将 struct Rectangle* 转为 _Trait Shape*
+    _Trait Shape* shape2 = get(&r);
     shape2->getSideLen(); // the side length of this rectangle is 10
 }
 ```
@@ -1913,7 +1913,7 @@ struct PollResult<T> struct PollResult<T>::pending() { ... }
 _Bool struct PollResult<T>::is_completed(struct PollResult<T> *this, T *out) { ... }
 struct PollResult<T> struct PollResult<T>::completed(T result) { ... }
 
-trait Future<T> {
+_Trait Future<T> {
     struct PollResult<T> poll(This* this);
     void free(This* this);
 };
@@ -2000,7 +2000,7 @@ async int int::f() {
 }
 
 async void int::g(int* this) {
-    trait Future<int>* a = read(1);
+    _Trait Future<int>* a = read(1);
     await a;
 }
 ```
@@ -2172,11 +2172,11 @@ async void g(int start) {
 }
 
 int main() {
-    trait Future<int>* this1 = f();
+    _Trait Future<int>* this1 = f();
     this1->poll();
     this1->free();
-    // 当 async 函数的返回类型是 void 时，我们需要用 struct Void 类型（会自动创建）来对 trait Future 实例化
-    trait Future<struct Void>* this2 = g(5);
+    // 当 async 函数的返回类型是 void 时，我们需要用 struct Void 类型（会自动创建）来对 _Trait Future 实例化
+    _Trait Future<struct Void>* this2 = g(5);
     this2->poll();
     this2->free();
     return 0;
@@ -2248,7 +2248,7 @@ clang -rewrite-bsc boo.cbs foo.cbs
 
 1. 头文件包含。这里包含了所有需要引用的标准 C 的头文件，包括直接被 cbs 文件引用的头文件以及被 hbs 文件间接引用的头文件。由于 hbs 文件不再被目标文件依赖，因此目标代码中不会再包含对毕昇 C 头文件的引用。
 2. 宏定义。这里包含了所有的 cbs 文件中定义的宏以及 cbs 文件引用的 hbs 文件中定义的宏。
-3. 类型别名和枚举定义。这里包含了所有的类型别名定义以及枚举类型定义。如果一个类型别名是对 trait 的类型别名，那么它不会出现在目标文件中。如果一个类型别名是对匿名类型的类型别名，那么在目标文件中会为匿名类型加上 typedef 的类型别名作为类型名。如：
+3. 类型别名和枚举定义。这里包含了所有的类型别名定义以及枚举类型定义。如果一个类型别名是对 _Trait 的类型别名，那么它不会出现在目标文件中。如果一个类型别名是对匿名类型的类型别名，那么在目标文件中会为匿名类型加上 typedef 的类型别名作为类型名。如：
     ```c
     // 毕昇 C 文件中：
     typedef struct {
@@ -2447,18 +2447,18 @@ __attribute__((format(printf, 1, 2))) _Safe int bar(const char *fmt, ...); // ok
 
 注意：即使允许声明带format属性的变长参数函数，在函数体内仍然不能使用`va_start`、`va_arg`、`va_end`等，这些操作在安全区域内是被禁止的。
 
-6. 如果`trait`中的函数被声明为`_Safe`，那么要求实现`trait`的类型的对应成员函数也必须是`_Safe`修饰的函数。若`trait`中的函数未声明为`_Safe`，也允许实现`trait`中的类型的成员函数为`_Safe`，但编译器会给出**warning**。
+6. 如果`_Trait`中的函数被声明为`_Safe`，那么要求实现`_Trait`的类型的对应成员函数也必须是`_Safe`修饰的函数。若`_Trait`中的函数未声明为`_Safe`，也允许实现`_Trait`中的类型的成员函数为`_Safe`，但编译器会给出**warning**。
 
 ```c
-trait G {
+_Trait G {
   _Safe int *_Owned foo(This * _Owned this);
   int *_Owned bar(This * _Owned this);
 };
 
-_Safe int *_Owned int ::foo(int *_Owned this) { return this; } // ok: trait 实现函数必须为 _Safe
+_Safe int *_Owned int ::foo(int *_Owned this) { return this; } // ok: _Trait 实现函数必须为 _Safe
 // 非 _Safe 函数的实现可以为 _Safe
 _Safe int *_Owned int ::bar(int *_Owned this) { return this; }
-impl trait G for int;
+_Impl _Trait G for int;
 
 int main() { return 0; }
 ```
@@ -3327,21 +3327,21 @@ int main() {
 }
 ```
 
-9. `_Owned`允许修饰指向`trait`的指针，假设有一个具体类型`S`，它实现了`trait T`，则：
+9. `_Owned`允许修饰指向`_Trait`的指针，假设有一个具体类型`S`，它实现了`_Trait T`，则：
 
-    - `S * _Owned`类型可以隐式转换为`trait T * _Owned`类型；
-    - `trait T * _Owned`类型允许被显式转换为`void * _Owned`类型。
+    - `S * _Owned`类型可以隐式转换为`_Trait T * _Owned`类型；
+    - `_Trait T * _Owned`类型允许被显式转换为`void * _Owned`类型。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 
-trait T{};
+_Trait T{};
 
-impl trait T for int;
+_Impl _Trait T for int;
 
 void test() {
   int *_Owned pi = safe_malloc(1);
-  trait T *_Owned pti = pi; // ok: 隐式转换为 trait T *_Owned
+  _Trait T *_Owned pti = pi; // ok: 隐式转换为 _Trait T *_Owned
   void *_Owned pvi = (void *_Owned)pti; // ok: 显式转换为 void *_Owned
   safe_free(pvi);
 }
@@ -3378,13 +3378,13 @@ int main() {
 }
 ```
 
-11. `_Owned`可以修饰 trait 类型，即`trait T* _Owned`，也表示该变量拥有其内部存储的数据的所有权。
-    该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持`trait T* _Owned`与`trait T*`之间的类型转换。
+11. `_Owned`可以修饰 _Trait 类型，即`_Trait T* _Owned`，也表示该变量拥有其内部存储的数据的所有权。
+    该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持`_Trait T* _Owned`与`_Trait T*`之间的类型转换。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 
-trait T { _Safe void release(This * _Owned this); };
+_Trait T { _Safe void release(This * _Owned this); };
 struct IPv4 {
   char *buf1;
 };
@@ -3403,10 +3403,10 @@ _Safe void struct IPv6::release(struct IPv6 *_Owned this) {
   }
   safe_free((void *_Owned)this);
 }
-impl trait T for struct IPv4;
-impl trait T for struct IPv6;
+_Impl _Trait T for struct IPv4;
+_Impl _Trait T for struct IPv6;
 
-void cleanup(trait T *_Owned t) { t->release(); }
+void cleanup(_Trait T *_Owned t) { t->release(); }
 
 int main() {
   struct IPv4 ipv4 = {.buf1 = "192.168.1.1"};
@@ -3414,9 +3414,9 @@ int main() {
                       .buf2 = "0000:8a2e:0370:7334"};
   struct IPv4 *_Owned sipv4 = safe_malloc(ipv4);
   struct IPv6 *_Owned sipv6 = safe_malloc(ipv6);
-  trait T *_Owned tipv4 = sipv4;
-  trait T *_Owned tipv6 = sipv6;
-  // 使用 trait T* _Owned 作为入参
+  _Trait T *_Owned tipv4 = sipv4;
+  _Trait T *_Owned tipv6 = sipv6;
+  // 使用 _Trait T* _Owned 作为入参
   tipv4->release();
   tipv6->release();
   safe_free((void *_Owned)tipv4);
@@ -4444,21 +4444,21 @@ int main() {
 ```
 
 #### 9. 借用的类型转换
-1. 对于任意类型 T，如果 T 实现了 trait TR，则允许指向类型 T 的借用向上转型为指向类型 TR 的借用；反过来，从类型 TR 的借用往类型 T 借用的转换，是不允许的。
+1. 对于任意类型 T，如果 T 实现了 _Trait TR，则允许指向类型 T 的借用向上转型为指向类型 TR 的借用；反过来，从类型 TR 的借用往类型 T 借用的转换，是不允许的。
 ```C
 #include <stdio.h>
 
-trait TR { void print(This * _Borrow this); };
+_Trait TR { void print(This * _Borrow this); };
 void int ::print(int *this) { printf("%d\n", *this); }
 
-impl trait TR for int;
+_Impl _Trait TR for int;
 
 void test() {
   int x = 10;
   int *_Borrow r = &_Mut x;
-  trait TR *_Borrow p = r; // ok: 支持 int* 类型的借用向上转型为 trait TR* 类型的借用
+  _Trait TR *_Borrow p = r; // ok: 支持 int* 类型的借用向上转型为 _Trait TR* 类型的借用
   p->print();
-  int *_Borrow px = (int *_Borrow)p; // error: 禁止 trait TR* 向下转型
+  int *_Borrow px = (int *_Borrow)p; // error: 禁止 _Trait TR* 向下转型
 }
 
 int main() {
@@ -4619,11 +4619,11 @@ int main() {
 }
 ```
 
-6. 不允许为借用类型实现 trait。
+6. 不允许为借用类型实现 _Trait。
 ```C
-trait TR{};
+_Trait TR{};
 
-impl trait TR for int *_Borrow; // error: 不允许为借用类型实现 trait
+_Impl _Trait TR for int *_Borrow; // error: 不允许为借用类型实现 _Trait
 
 int main() { return 0; }
 ```
@@ -4908,7 +4908,7 @@ struct square squareAdd(struct square s1, struct square s2){
     return s;
 }
 ```
-2、运算符重载函数只能是全局函数，不允许标记成员函数、`trait`声明的函数为重载函数。
+2、运算符重载函数只能是全局函数，不允许标记成员函数、`_Trait`声明的函数为重载函数。
 
 3、支持重载的运算符列表。
 
@@ -6395,7 +6395,7 @@ name: John, age: 13, score: 95
 | 对外接口                                                     | 接口功能                                                     | 代码示例                                                     |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | `void struct Scheduler::init(unsigned int threadCount)`      | 用于初始化调度器，不可多次重复初始化，参数为用户需要创建的线程数 | struct Scheduler::init(4);                                   |
-| `struct Task * struct Scheduler::spawn(trait Future<struct Void> * future)` | 创建异步任务，并将任务放入执行队列中等待执行（目前仅接受返回类型是void的任务）。 | async void  taskFunc(int i) { <br/>    while(i < 10000) { <br/>        i = (i * 2) + 3 ; <br/>    }<br/>    printf("result: %d\n", i);<br/>}<br>struct Scheduler::spawn(taskFunc(0)); |
+| `struct Task * struct Scheduler::spawn(_Trait Future<struct Void> * future)` | 创建异步任务，并将任务放入执行队列中等待执行（目前仅接受返回类型是void的任务）。 | async void  taskFunc(int i) { <br/>    while(i < 10000) { <br/>        i = (i * 2) + 3 ; <br/>    }<br/>    printf("result: %d\n", i);<br/>}<br>struct Scheduler::spawn(taskFunc(0)); |
 | `void struct Scheduler::run()`                               | 执行通过 spawn 函数创建的异步任务                            | struct Scheduler::run();                                     |
 | `void struct Scheduler::destroy()`                           | 销毁调度器，释放资源                                         | struct Scheduler::destroy();                                 |
 
@@ -6405,7 +6405,7 @@ name: John, age: 13, score: 95
 
 `strcut Task`: 表示异步任务，包括任务的状态和执行上下文。通过 `struct Scheduler::spawn` 方法进行创建，创建完成后会将其放入执行队列，但不会立马执行。只有调用了 `struct Scheduler::run` 方法才会真正的执行队列中的任务。
 
-另外，我们注意到 `struct Scheduler::spawn` 方法的入参是 `trait Future<struct Void> *` 类型（`trait Future` 的定义可参考无栈协程章节），所以我们除了可以传入返回类型是 `void` 的 async 函数调用，也可以传显式返回 `trait Futrue<struct Void> *`  类型的函数调用，具体使用如下：
+另外，我们注意到 `struct Scheduler::spawn` 方法的入参是 `_Trait Future<struct Void> *` 类型（`_Trait Future` 的定义可参考无栈协程章节），所以我们除了可以传入返回类型是 `void` 的 async 函数调用，也可以传显式返回 `_Trait Futrue<struct Void> *`  类型的函数调用，具体使用如下：
 
 ```c
 #include "scheduler.hbs"
@@ -6448,9 +6448,9 @@ void struct _Futurework::free(struct _Futurework *this) {
     }
 }
 
-impl trait Future<struct Void> for struct _Futurework;
+_Impl _Trait Future<struct Void> for struct _Futurework;
 
-trait Future<struct Void>* work(int a)     {
+_Trait Future<struct Void>* work(int a)     {
   struct _Futurework* ptr = malloc(sizeof(struct _Futurework));
   ptr->a = a;
   ptr->__future_state = 0;
@@ -6991,9 +6991,9 @@ int main() {
 
 ```text
 _keyword : one of
-    ....         impl         This
+    ....         _Impl         This
     async        nullptr      this
-    await        _Owned        trait
+    await        _Owned        _Trait
     _Borrow       private      _Unsafe
     constexpr    public       _Nonnull
     fat          _Safe         _Nullable
@@ -7295,25 +7295,25 @@ _function-declaration-list :
     _function-declaration-list _function-declaration
 ```
 
-新增`_trait-name`的定义，表示`trait`的名称：
+新增`_trait-name`的定义，表示`_Trait`的名称：
 
 ```text
 _trait-name :
-    trait _identifier _template-declaration_opt
+    _Trait _identifier _template-declaration_opt
 ```
 
-新增`_trait-definition`，表示`trait`的定义：
+新增`_trait-definition`，表示`_Trait`的定义：
 
 ```text
 _trait-definition :
     _trait-name { _function-declaration-list } ;
 ```
 
-新增`_impl-declaration`，表示实现`trait`：
+新增`_impl-declaration`，表示实现`_Trait`：
 
 ```text
 _impl-declaration :
-    impl _trait-name for _type-name ;
+    _Impl _trait-name for _type-name ;
 ```
 
 新增`_dtor-definition`，表示析构函数定义：
@@ -7349,7 +7349,7 @@ _owned-struct-declaration :
 
 `_external-declaration`的产生式规则有如下变化：
 
-1. `trait`定义、实现`trait`和`_Owned struct`类型声明都属于外部声明，为`_external-declaration`新增 3 条产生式。
+1. `_Trait`定义、实现`_Trait`和`_Owned struct`类型声明都属于外部声明，为`_external-declaration`新增 3 条产生式。
 
 ```text
 _external-declaration :

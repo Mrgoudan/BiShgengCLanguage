@@ -208,6 +208,11 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
 }
 
 static std::string TypeAsString(QualType T) {
+  // For trait types, build the symbol fragment directly from the declaration
+  // name, using the stable internal prefix "trait_" regardless of the
+  // user-facing keyword spelling.
+  if (const TraitType *TT = dyn_cast<TraitType>(T))
+    return "trait_" + TT->getDecl()->getNameAsString();
   PrintingPolicy PrintPolicy = LangOptions();
   SplitQualType T_split = T.split();
   std::string ExtendedTypeStr = T.getAsString(T_split, PrintPolicy);

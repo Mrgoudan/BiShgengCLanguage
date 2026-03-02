@@ -3,7 +3,7 @@
 // expected-no-diagnostics
 
 #include <stdio.h>
-trait M{
+_Trait M{
     void f(This* this, int b);
     void dump(This* this);
 };
@@ -25,10 +25,10 @@ void int::dump(This* this) {
     printf("%d\n", *this);
 }
 
-impl trait M for int;
-impl trait M for S1;
+_Impl _Trait M for int;
+_Impl _Trait M for S1;
 
-void foo(trait M* t) {
+void foo(_Trait M* t) {
     t->f(4);
     t->dump();
 }

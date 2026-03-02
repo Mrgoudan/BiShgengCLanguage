@@ -18,7 +18,7 @@ async int g() {
 }
 
 int main() {
-  trait Future<int>* a = g();
+  _Trait Future<int>* a = g();
   a->poll();
   a->free();
   return 0;

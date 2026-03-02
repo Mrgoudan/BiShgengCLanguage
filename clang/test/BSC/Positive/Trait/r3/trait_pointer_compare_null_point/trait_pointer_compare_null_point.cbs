@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-trait Future {
+_Trait Future {
     int poll(This* this);
 };
 
@@ -16,18 +16,18 @@ int int::poll(int* this) {
     return *this;
 }
 
-impl trait Future for int;
+_Impl _Trait Future for int;
 
 int main() {
     int *c = NULL;
-    trait Future *f = NULL, *g = c;
+    _Trait Future *f = NULL, *g = c;
     if (f == g) {
         return 1;
     }
     if (f != g) {
         return 0;
     }
-    if (NULL == (trait Future *)f) {
+    if (NULL == (_Trait Future *)f) {
         return 1;
     }
     return 1;

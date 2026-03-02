@@ -22,7 +22,7 @@ struct S<T> struct S<T>::foo_static(T a) {
     return p;
 }
 
-trait F<T> {
+_Trait F<T> {
     struct S<T> foo(This* this, T a);
 };
 struct S<_Bool> _Bool::foo(_Bool* this, _Bool a) {
@@ -30,7 +30,7 @@ struct S<_Bool> _Bool::foo(_Bool* this, _Bool a) {
     p.c = a;
     return p;
 }
-impl trait F<_Bool> for _Bool;
+_Impl _Trait F<_Bool> for _Bool;
 
 int main() { 
   _Bool a = 1;
@@ -46,9 +46,9 @@ int main() {
   s2.foo(a);
   struct S<_Bool>::foo_static(a);
 
-  trait F<_Bool> *f1 = &a;
+  _Trait F<_Bool> *f1 = &a;
   f1->foo(a);
-  trait F<bool> *f2 = &a;
+  _Trait F<bool> *f2 = &a;
   f2->foo(a);
   return 0;
 }

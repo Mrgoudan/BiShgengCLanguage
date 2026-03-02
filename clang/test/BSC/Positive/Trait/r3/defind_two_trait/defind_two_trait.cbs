@@ -8,11 +8,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-trait F {
+_Trait F {
   int foo(This* this);
 };
 
-trait T {
+_Trait T {
   int too(This* this);
 };
 
@@ -24,10 +24,10 @@ int int::too(int* this) {
   return *this * 10;
 }
 
-impl trait F for int;
-impl trait T for int;
+_Impl _Trait F for int;
+_Impl _Trait T for int;
 
-trait F* get(trait T* t) {
+_Trait F* get(_Trait T* t) {
   int* c = malloc(sizeof(int));
   *c = 3;
   return c;
@@ -35,10 +35,10 @@ trait F* get(trait T* t) {
 
 int main() {
   int a = 3;
-  trait T* t = &a;
+  _Trait T* t = &a;
   int b = t->too();
 
-  trait F* f = get(&b);
+  _Trait F* f = get(&b);
   int c = f->foo();
 
   return 0;

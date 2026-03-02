@@ -12,7 +12,7 @@ struct S{
   int x;
 };
 
-trait TR {
+_Trait TR {
   void sayHi(This* this);
 };
 // CHECK: struct __Trait_TR_Vtable {
@@ -32,12 +32,12 @@ void struct S::sayHi(struct S* this) {
   printf("struct S says Hi\n");
 }
 
-impl trait TR for int;
+_Impl _Trait TR for int;
 // CHECK: struct __Trait_TR_Vtable __int_trait_TR = {.sayHi = (void (*)(void *))int_sayHi};
-impl trait TR for struct S;
+_Impl _Trait TR for struct S;
 // CHECK: struct __Trait_TR_Vtable __struct_S_trait_TR = {.sayHi = (void (*)(void *))struct_S_sayHi};
 
-void greet(trait TR* t) {
+void greet(_Trait TR* t) {
   t->sayHi();
 }
 // CHECK: void greet(struct __Trait_TR t) {
@@ -47,10 +47,10 @@ void greet(trait TR* t) {
 
 int main() {
   int x = 42;
-  trait TR* t1 = &x;
+  _Trait TR* t1 = &x;
   greet(t1);
   struct S s1 = {.x = 42};
-  trait TR* t2 = &s1;
+  _Trait TR* t2 = &s1;
   greet(t2);
   return 0;
 }

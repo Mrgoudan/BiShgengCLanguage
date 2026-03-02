@@ -19,12 +19,12 @@ async UINT32 f() {
     return 0;
 }
 
-trait Future<unsigned int>* f_wrapper() {
-    trait Future<unsigned int>* a = f();
+_Trait Future<unsigned int>* f_wrapper() {
+    _Trait Future<unsigned int>* a = f();
     return a;
 }
 
-trait Future<unsigned int>* (*CallBack)() = f_wrapper;
+_Trait Future<unsigned int>* (*CallBack)() = f_wrapper;
 async UINT32 g() {
     UINT32 i = 0;
     i = await CallBack();
@@ -44,7 +44,7 @@ async UINT32 h() {
 }
 
 int main() {
-    trait Future<unsigned int>* this = g();
+    _Trait Future<unsigned int>* this = g();
     this->poll();
     this->free();
     return 0;

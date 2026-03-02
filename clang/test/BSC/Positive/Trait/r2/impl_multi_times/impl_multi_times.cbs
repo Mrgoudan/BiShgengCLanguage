@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #include <stdio.h>
 
-trait TR {
+_Trait TR {
   void f(This* this);
 };
 
@@ -19,14 +19,14 @@ void int::f(int* this) {
   printf("int::f\n");
 }
 
-impl trait TR for int;
+_Impl _Trait TR for int;
 
-impl trait TR for int; // OK, and useless.
+_Impl _Trait TR for int; // OK, and useless.
 
 // CHECK-L: #line 27 "{{.*}}.cbs"
 int main() {
   int x = 1;
-  trait TR* t = &x;
+  _Trait TR* t = &x;
   t->f();
   return 0;
 }

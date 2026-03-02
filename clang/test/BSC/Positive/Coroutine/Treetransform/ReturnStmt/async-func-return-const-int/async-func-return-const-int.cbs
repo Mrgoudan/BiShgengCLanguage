@@ -28,7 +28,7 @@ async const int f(int start) {
 }
 
 int main() {
-  trait Future<int>* this = f(1);
+  _Trait Future<int>* this = f(1);
   this->poll();
   return 0;
 }

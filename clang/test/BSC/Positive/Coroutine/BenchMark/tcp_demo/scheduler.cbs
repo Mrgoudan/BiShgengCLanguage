@@ -55,9 +55,9 @@ void struct _Yield::free(struct _Yield *this) {
     }
 }
 
-impl trait Future<struct Void> for struct _Yield;
+_Impl _Trait Future<struct Void> for struct _Yield;
 
-trait Future<struct Void> *yield() {
+_Trait Future<struct Void> *yield() {
     struct _Yield *ptr = malloc(sizeof(struct _Yield));
     if (ptr != NULL) {
         fprintf(stderr, "Error: memory alloc failed\n");
@@ -217,7 +217,7 @@ void struct Scheduler::run() {
     schedule(g_mainThread);
 }
 
-struct Task *struct Scheduler::spawn(trait Future<struct Void> *future) {
+struct Task *struct Scheduler::spawn(_Trait Future<struct Void> *future) {
     clock_t start, end;
     start = read_tsc();
     if (!S.isInit) {

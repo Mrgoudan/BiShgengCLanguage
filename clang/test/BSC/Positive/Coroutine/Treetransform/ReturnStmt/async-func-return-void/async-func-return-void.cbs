@@ -21,7 +21,7 @@ async void f(int start) {
 }
 
 int main() {
-  trait Future<struct Void>* this = f(1);
+  _Trait Future<struct Void>* this = f(1);
   this->poll();
   return 0;
 }

@@ -21,10 +21,10 @@ void test() {
   f2<int>(&_Mut a);
 }
 
-trait F {};
-trait F1<T> {};
-impl trait F for int * _Borrow; // expected-error {{expected ';' at end of declaration}}
+_Trait F {};
+_Trait F1<T> {};
+_Impl _Trait F for int * _Borrow; // expected-error {{expected ';' at end of declaration}}
                                // expected-error@-1 {{expected identifier or '('}}
-impl trait F<int> for int * _Borrow; // expected-error {{expected ';' at end of declaration}}
+_Impl _Trait F<int> for int * _Borrow; // expected-error {{expected ';' at end of declaration}}
                                // expected-error@-1 {{expected identifier or '('}}
-                               // expected-error@-2 {{explicit specialization of undeclared template trait 'F'}}
+                               // expected-error@-2 {{explicit specialization of undeclared template _Trait 'F'}}

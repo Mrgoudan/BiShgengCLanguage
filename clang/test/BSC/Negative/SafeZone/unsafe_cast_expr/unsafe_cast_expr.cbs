@@ -2,10 +2,10 @@
 
 #define NULL ((void*)0)
 
-trait F {};
-trait G {};
-impl trait F for int;
-impl trait G for int;
+_Trait F {};
+_Trait G {};
+_Impl _Trait F for int;
+_Impl _Trait G for int;
 
 void diffPointCastConver(void) {
   _Unsafe {
@@ -44,10 +44,10 @@ void diffPointCastConver(void) {
     // trait1* -> trait2*
     int m = 0;
     int *p = &m;
-    trait F *f = &m;
+    _Trait F *f = &m;
     _Safe {
-      trait G *h = (trait G*)p; //ok
-      trait G *g = (trait G*)f; // expected-error{{conversion from type 'trait F *' to 'trait G *' is forbidden in the safe zone}}
+      _Trait G *h = (_Trait G*)p; //ok
+      _Trait G *g = (_Trait G*)f; // expected-error{{conversion from type '_Trait F *' to '_Trait G *' is forbidden in the safe zone}}
     }
   }
   _Unsafe {

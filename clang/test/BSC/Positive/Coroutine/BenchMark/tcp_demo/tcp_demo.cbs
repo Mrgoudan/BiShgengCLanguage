@@ -52,7 +52,7 @@ struct PollResult<struct Void> FileWriter::poll(FileWriter *this) {
 
 void FileWriter::free(FileWriter *this) {}
 
-impl trait Future<struct Void> for FileWriter;
+_Impl _Trait Future<struct Void> for FileWriter;
 
 async void createMatrix(int matrix[ROW][COL]) {
     int i, j, k = 0;

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> {
+_Trait F<T> {
     T foo1(This *this);
 };
 
@@ -13,7 +13,7 @@ T struct MyStruct<T>::foo1(struct MyStruct<T> *this) {
     return mystruct.res;
 }
 
-impl trait F<T> for struct MyStruct<int>; // expected-error {{use of undeclared identifier 'T'}}
+_Impl _Trait F<T> for struct MyStruct<int>; // expected-error {{use of undeclared identifier 'T'}}
 
-impl trait F<int> for struct MyStruct<T>; // expected-error {{use of undeclared identifier 'T'}}
-impl trait F<int> for struct MyStruct<int>; // expected-error {{function 'foo1' in 'trait F<int>' is not implemented for 'struct MyStruct<int>'}}
+_Impl _Trait F<int> for struct MyStruct<T>; // expected-error {{use of undeclared identifier 'T'}}
+_Impl _Trait F<int> for struct MyStruct<int>; // expected-error {{function 'foo1' in '_Trait F<int>' is not implemented for 'struct MyStruct<int>'}}

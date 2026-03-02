@@ -7,7 +7,7 @@
 // expected-no-diagnostics
 #include <stdio.h>
 
-trait TR1{
+_Trait TR1{
   void f1(This* this);
   int g1(This* this, int x);
 };
@@ -22,7 +22,7 @@ trait TR1{
 // CHECK-NEXT: };
 
 
-trait TR2{
+_Trait TR2{
   void f2(This* this);
   int g2(This* this, int x);
 };
@@ -53,12 +53,12 @@ int int::g2(int* this, int x) {
   return *this + x;
 }
 
-impl trait TR1 for int;
+_Impl _Trait TR1 for int;
 // CHECK: struct __Trait_TR1_Vtable __int_trait_TR1 = {.f1 = (void (*)(void *))int_f1, .g1 = (int (*)(void *, int))int_g1};
-impl trait TR2 for int;
+_Impl _Trait TR2 for int;
 // CHECK: struct __Trait_TR2_Vtable __int_trait_TR2 = {.f2 = (void (*)(void *))int_f2, .g2 = (int (*)(void *, int))int_g2};
 
-void baz(trait TR1* tr) {
+void baz(_Trait TR1* tr) {
   tr->f1();
 };
 // CHECK: void baz(struct __Trait_TR1 tr) {
@@ -66,31 +66,31 @@ void baz(trait TR1* tr) {
 // CHECK-NEXT: }
 
 // Its ok to write a ImplTrait again.
-impl trait TR2 for int;
+_Impl _Trait TR2 for int;
 
 
 
 int main() {
-  // implicit cast to trait
+  // implicit cast to _Trait
   int x = 41;
-  trait TR1* tr1 = &x;
+  _Trait TR1* tr1 = &x;
   tr1->f1();
   int a1 = tr1->g1(1);
   if (a1 != 42) return 1;
-  trait TR2* tr2 = &x;
+  _Trait TR2* tr2 = &x;
   tr2->f2();
   int a2 = tr2->g2(1);
   if (a2 != 42) return 2;
 
-  // explicit cast to trait
+  // explicit cast to _Trait
   int y = 41;
-  trait TR1* tt1 = (trait TR1*)&y;
+  _Trait TR1* tt1 = (_Trait TR1*)&y;
   tt1->f1();
-  ((trait TR1*)&y)->f1();
+  ((_Trait TR1*)&y)->f1();
 
   // pass as a param
   baz(&y);
-  //baz((trait TR1*)&y); // TODO: need to be supported.
+  //baz((_Trait TR1*)&y); // TODO: need to be supported.
 
   return 0;
 }

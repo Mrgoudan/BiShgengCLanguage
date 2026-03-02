@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify %s
 
-trait T {
+_Trait T {
   int increase(This* this);
 };
 
-trait U {
+_Trait U {
   int increase(This* this);
 };
 
@@ -12,21 +12,21 @@ int int::increase(This* this) {
   return *this + 1;
 }
 
-impl trait T for int;
-impl trait U for int;
+_Impl _Trait T for int;
+_Impl _Trait U for int;
 
 void test1(int x, float y, double d) {
-  trait T* _Owned t1 = (int* _Owned)&x;
-  trait T* _Owned t2 = (float* _Owned)&y; // expected-error {{expected a pointer type which has implemented 'trait T', found 'float'}}
-                                        // expected-warning@-1 {{incompatible pointer types initializing 'trait T *_Owned' with an expression of type 'float *_Owned'}}
-  trait T* _Owned t3 = (double* _Owned)&d; // expected-error {{expected a pointer type which has implemented 'trait T', found 'double'}}
-                                         // expected-warning@-1 {{incompatible pointer types initializing 'trait T *_Owned' with an expression of type 'double *_Owned'}}
+  _Trait T* _Owned t1 = (int* _Owned)&x;
+  _Trait T* _Owned t2 = (float* _Owned)&y; // expected-error {{expected a pointer type which has implemented '_Trait T', found 'float'}}
+                                        // expected-warning@-1 {{incompatible pointer types initializing '_Trait T *_Owned' with an expression of type 'float *_Owned'}}
+  _Trait T* _Owned t3 = (double* _Owned)&d; // expected-error {{expected a pointer type which has implemented '_Trait T', found 'double'}}
+                                         // expected-warning@-1 {{incompatible pointer types initializing '_Trait T *_Owned' with an expression of type 'double *_Owned'}}
 }
 
 void test2(int x, float y, double d) {
-  trait T* _Owned t1 = (int* _Owned)&x;
-  trait T* _Owned t2 = t1;
-  trait U* _Owned u1 = (int* _Owned)&x;
-  trait T* _Owned t3 = u1; // expected-error {{incompatible _Owned types, cannot cast 'struct __Trait_U_Owned' to 'trait T *_Owned'}}
-                          // expected-error@-1 {{expected a pointer type which has implemented 'trait T', found 'trait U *'}}
+  _Trait T* _Owned t1 = (int* _Owned)&x;
+  _Trait T* _Owned t2 = t1;
+  _Trait U* _Owned u1 = (int* _Owned)&x;
+  _Trait T* _Owned t3 = u1; // expected-error {{incompatible _Owned types, cannot cast 'struct __Trait_U_Owned' to '_Trait T *_Owned'}}
+                          // expected-error@-1 {{expected a pointer type which has implemented '_Trait T', found '_Trait U *'}}
 }

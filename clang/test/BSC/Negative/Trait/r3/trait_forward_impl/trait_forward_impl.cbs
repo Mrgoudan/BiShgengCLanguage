@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait T{
+_Trait T{
     float f(volatile This *this, int a);
     float print(This *this);
 };
 
-impl trait T for float; // expected-error {{function 'f' in 'trait T' is not implemented for 'float'}}
+_Impl _Trait T for float; // expected-error {{function 'f' in '_Trait T' is not implemented for 'float'}}
 
 float float::f(float *this, int a) {
     return *this;
@@ -15,9 +15,9 @@ float float::print(float *this) {
     return *this;
 }
 
-impl trait T for float; 
+_Impl _Trait T for float; 
 
-volatile trait T* get(trait T* t){
+volatile _Trait T* get(_Trait T* t){
     float a = 6.0;
     float* x = &a;
     *x = 3.0;
@@ -28,8 +28,8 @@ int main()
 {
     float a = 1;
     float b = 2;
-    ((trait T*)&a)->f(b);
-    trait T* p = get(&b);
+    ((_Trait T*)&a)->f(b);
+    _Trait T* p = get(&b);
     p->print();
     return 0;
 }

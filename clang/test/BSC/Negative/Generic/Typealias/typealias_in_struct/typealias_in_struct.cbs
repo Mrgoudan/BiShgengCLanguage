@@ -52,13 +52,13 @@ union U1<T> {
                             expected-error{{expected member name or ';' after declaration specifiers}}*/
 };
 
-trait F {
+_Trait F {
     typedef MyInt = int;  /* expected-error{{expected member name or ';' after declaration specifiers}} 
                             expected-warning{{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}*/
     typedef MyType<T> = T; /* expected-error{{expected member name or ';' after declaration specifiers}}
                             expected-error{{unknown type name 'MyType'}}*/
 };
-trait F1<T> {
+_Trait F1<T> {
     typedef MyInt = int;  /* expected-error{{expected member name or ';' after declaration specifiers}} 
                             expected-warning{{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}*/
     typedef MyType1 = T; /* expected-error{{expected member name or ';' after declaration specifiers}}

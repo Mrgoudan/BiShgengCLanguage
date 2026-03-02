@@ -7,7 +7,7 @@
 // expected-no-diagnostics
 
 
-trait Future<T> {
+_Trait Future<T> {
     T poll(This* this);
 };
 
@@ -15,11 +15,11 @@ int int::poll(int* this) {
     return *this;
 }
 
-impl trait Future<int> for int;
+_Impl _Trait Future<int> for int;
 
 int main() {
   int a = 1;
-  trait Future<int> *f = &a;
+  _Trait Future<int> *f = &a;
   void *p = (void *)f;
   int *q = (int *)f;
   float *r = (float *)f;

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 
-typedef int trait; // expected-error {{declaration of anonymous trait must be a definition}}
-                   // expected-error@-1 {{invalid syntax, semi not expected after 'trait (null)'}}
+typedef int _Trait; // expected-error {{declaration of anonymous _Trait must be a definition}}
+                   // expected-error@-1 {{invalid syntax, semi not expected after '_Trait (null)'}}
                    // expected-warning@-2 {{typedef requires a name}}
-trait x = 1;       // expected-error {{expected identifier or '('}}
+_Trait x = 1;       // expected-error {{expected identifier or '('}}
 
 ?   // expected-error {{expected identifier or '('}}
 

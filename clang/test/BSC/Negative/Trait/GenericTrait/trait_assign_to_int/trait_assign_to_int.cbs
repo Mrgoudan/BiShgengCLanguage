@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> {
+_Trait F<T> {
   T foo(This* this);
 };
 
@@ -8,14 +8,14 @@ int int::foo(int* this) {
   return 0;
 }
 
-impl trait F<int> for int;
+_Impl _Trait F<int> for int;
 
-trait F<int>* get(trait F<int>* f) {
+_Trait F<int>* get(_Trait F<int>* f) {
   return f;
 };
 
 int main() {
   int a = 1;
-  int b = get(&a); // expected-error {{initializing 'int' with an expression of incompatible type 'trait F<int> *'}}
+  int b = get(&a); // expected-error {{initializing 'int' with an expression of incompatible type '_Trait F<int> *'}}
   return 0;
 }

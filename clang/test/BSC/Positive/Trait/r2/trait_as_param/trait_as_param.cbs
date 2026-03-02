@@ -19,7 +19,7 @@ struct Leah{
   int age;
 };
 
-trait TR { // define a trait
+_Trait TR { // define a _Trait
   void sayHi(This* this); // ThisType
 };
 // CHECK: struct __Trait_TR_Vtable {
@@ -43,14 +43,14 @@ void struct Leah::sayHi(struct Leah* this) {
   printf("Hi I'm Leah\n");
 }
 
-impl trait TR for int;
+_Impl _Trait TR for int;
 // CHECK: struct __Trait_TR_Vtable __int_trait_TR = {.sayHi = (void (*)(void *))int_sayHi};
-impl trait TR for struct S;
+_Impl _Trait TR for struct S;
 // CHECK: struct __Trait_TR_Vtable __struct_S_trait_TR = {.sayHi = (void (*)(void *))struct_S_sayHi};
-impl trait TR for struct Leah;
+_Impl _Trait TR for struct Leah;
 // CHECK: struct __Trait_TR_Vtable __struct_Leah_trait_TR = {.sayHi = (void (*)(void *))struct_Leah_sayHi};
 
-void greet(trait TR* t) {
+void greet(_Trait TR* t) {
   t->sayHi();
 }
 // CHECK-L: #line 53 "{{.*}}.cbs"
@@ -64,7 +64,7 @@ int main() {
   greet(&x);
   struct S* s1 = malloc(sizeof(struct S));
   s1->x = 42;
-  greet(s1); // We need to check if "struct S has impled trait TR" or not?
+  greet(s1); // We need to check if "struct S has impled _Trait TR" or not?
   struct Leah leah = {.age = 1};
   greet(&leah);
   return 0;

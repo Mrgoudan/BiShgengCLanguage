@@ -20,7 +20,7 @@ async int f(int n) {
 }
 
 int main() {
-  trait Future<int>* this = f(3);
+  _Trait Future<int>* this = f(3);
   this->poll();
   this->free();
   return 0;

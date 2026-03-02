@@ -14,8 +14,8 @@ async int read(int a) {
 }
 
 async int int::g() {
-    trait Future<int>* a = read(1);
-    trait Future<int>** b = &a;
+    _Trait Future<int>* a = read(1);
+    _Trait Future<int>** b = &a;
     int tmp = await *b;
     return tmp;
 }
@@ -26,7 +26,7 @@ async int int::f() {
 }
 
 int main() {
-  trait Future<int>* this = int::f();
+  _Trait Future<int>* this = int::f();
   this->poll();
   this->free();
   return 0;

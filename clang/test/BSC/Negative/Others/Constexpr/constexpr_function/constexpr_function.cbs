@@ -47,7 +47,7 @@ constexpr int foo10<T>() {
     return 1;
 }
 
-trait M {
+_Trait M {
     constexpr int foo(This* this); // expected-error {{BSC constexpr function does not support type 'This *'}}
 };
 constexpr int int::foo(This* this) {  // expected-error {{BSC constexpr function does not support type 'int *'}}
@@ -57,8 +57,8 @@ struct S {};
 constexpr int struct S::foo(This* this) {  // expected-error {{BSC constexpr function does not support type 'struct S *'}}
     return 1;
 }
-impl trait M for int; 
-impl trait M for struct S;
+_Impl _Trait M for int; 
+_Impl _Trait M for struct S;
 
 struct G<T> {};
 constexpr int struct G<T>::foo(This* this) { // expected-error {{BSC constexpr function does not support type 'struct G<int> *'}}

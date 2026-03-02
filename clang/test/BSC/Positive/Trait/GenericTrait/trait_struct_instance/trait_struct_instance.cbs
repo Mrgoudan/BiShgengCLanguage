@@ -6,7 +6,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait Future<T> {
+_Trait Future<T> {
     T poll(This* this, T a);
 };
 
@@ -17,12 +17,12 @@ struct S int::poll(int* this, struct S a) {
     return a;
 }
 
-impl trait Future<struct S> for int;
+_Impl _Trait Future<struct S> for int;
 
 int main() {
     int m = 0;
     struct S s = {10};
-    trait Future<struct S> *a = &m;
+    _Trait Future<struct S> *a = &m;
     int b = a->poll(s).c;
     return b - 10;
 }

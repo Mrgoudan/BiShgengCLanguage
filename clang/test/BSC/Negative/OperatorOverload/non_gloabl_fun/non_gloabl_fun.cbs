@@ -26,7 +26,7 @@ _Owned struct G {
     ~G(G this) {}                             // expected-error {{function unsupport overload}}
 };
 
-trait H {
+_Trait H {
   __attribute__((operator +))
   int foo(This* this);                      // expected-error {{function unsupport overload}}
                                             // expected-error@-1 {{overloaded 'foo' must have at least one parameter of class or enumeration type}}

@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-trait F<T> {
+_Trait F<T> {
   T f(This* this);
 };
 
@@ -17,7 +17,7 @@ int int::f(int* this) {
 
 struct S {
   int num;
-  trait F<int>* future;
+  _Trait F<int>* future;
   char c;
 };
 
@@ -25,15 +25,15 @@ struct S1 {
   struct S s;
 };
 
-impl trait F<int> for int;
+_Impl _Trait F<int> for int;
 
 int main() {
   int x = 1;
-  trait F<int> *r = &x;
+  _Trait F<int> *r = &x;
   struct S s = { .future = &x, .c = 'c'};
-  struct S s1 = { .future = (trait F<int>*)&x };
+  struct S s1 = { .future = (_Trait F<int>*)&x };
   struct S s2 = { 1, &x, 'c' };
-  struct S s3 = { 1, (trait F<int>*)&x, 'c' };
+  struct S s3 = { 1, (_Trait F<int>*)&x, 'c' };
   struct S s4 = { .num = 1, .future = r, .c = 'c' };
   struct S s5;
   s5.future = &x;
@@ -45,10 +45,10 @@ int main() {
   int a5 = s5.future->f();
 
   struct S1 s6 = { .s.future = &x };
-  struct S1 s7 = { .s.num = 1, .s.future = (trait F<int>*)&x };
+  struct S1 s7 = { .s.num = 1, .s.future = (_Trait F<int>*)&x };
   struct S1 s8 = { s };
   struct S1 s9 = { {1, &x, 'c'} };
-  struct S1 s10 = { {1, (trait F<int>*)&x, 'c'} };
+  struct S1 s10 = { {1, (_Trait F<int>*)&x, 'c'} };
   struct S1 s11 = { .s.num = 1, .s.future = r, .s.c = 'c' };
   int b = s6.s.future->f();
   int b1 = s7.s.future->f();

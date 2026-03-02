@@ -2890,9 +2890,9 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
         TagName="class" ; FixitTagName = "class " ;TagKind=tok::kw_class ;break;
 #if ENABLE_BSC
       case DeclSpec::TST_trait:
-        TagName = "trait";
-        FixitTagName = "trait ";
-        TagKind = tok::kw_trait;
+        TagName = "_Trait";
+        FixitTagName = "_Trait ";
+        TagKind = tok::kw__Trait;
         break;
 #endif
     }
@@ -4540,7 +4540,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // trait-specifier:
 #if ENABLE_BSC
-    case tok::kw_trait: {
+    case tok::kw__Trait: {
       ConsumeToken();
       ParsedAttributes Attributes(AttrFactory);
       ParseTraitSpecifier(Loc, DS, TemplateInfo, EnteringContext, DSContext,
@@ -5577,7 +5577,7 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
     // enum-specifier
   case tok::kw_enum:
 #if ENABLE_BSC
-  case tok::kw_trait:
+  case tok::kw__Trait:
 #endif
     // typedef-name
   case tok::annot_typename:
@@ -5662,7 +5662,7 @@ bool Parser::isTypeSpecifierQualifier() {
     // enum-specifier
   case tok::kw_enum:
 #if ENABLE_BSC
-  case tok::kw_trait:
+  case tok::kw__Trait:
 #endif
     // type-qualifier
   case tok::kw_const:
@@ -5838,7 +5838,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     // enum-specifier
   case tok::kw_enum:
 #if ENABLE_BSC
-  case tok::kw_trait:
+  case tok::kw__Trait:
 #endif
     // type-qualifier
   case tok::kw_const:

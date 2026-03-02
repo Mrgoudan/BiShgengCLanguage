@@ -1,22 +1,22 @@
 // RUN: %clang_cc1 -verify %s
 
-trait T {
+_Trait T {
     void f(This* this);
 };
 
 void int::f(int* this) {};
 
-impl trait T for int;
+_Impl _Trait T for int;
 
 struct S { // expected-error{{expected ';' at end of declaration list}}
-    impl x; // expected-error{{type name requires a specifier or qualifier}} expected-error{{expected member name or ';' after declaration specifiers}}
+    _Impl x; // expected-error{{type name requires a specifier or qualifier}} expected-error{{expected member name or ';' after declaration specifiers}}
 };
 
-struct S2<impl> {}; // expected-error{{expected expression}} expected-error{{explicit specialization of undeclared template struct 'S2'}}
+struct S2<_Impl> {}; // expected-error{{expected expression}} expected-error{{explicit specialization of undeclared template struct 'S2'}}
 
 int a;
-impl a; // expected-error{{unexpected token for ImplTraitDecl}}
+_Impl a; // expected-error{{unexpected token for ImplTraitDecl}}
 
 int main() {
-    int impl = 1; // expected-error{{expected identifier or '('}}
+    int _Impl = 1; // expected-error{{expected identifier or '('}}
 }

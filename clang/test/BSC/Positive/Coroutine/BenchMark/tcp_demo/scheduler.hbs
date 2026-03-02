@@ -15,7 +15,7 @@ enum State {
 };
 
 struct Task {
-    trait Future<struct Void> *future;
+    _Trait Future<struct Void> *future;
     atomic_int state;
 };
 
@@ -40,10 +40,10 @@ struct Scheduler *getScheduler();
 struct ThreadContext * getCurrentCtx();
 void struct Scheduler::init(unsigned int threadCount);
 void struct Scheduler::run();
-struct Task * struct Scheduler::spawn(trait Future<struct Void> * future);
+struct Task * struct Scheduler::spawn(_Trait Future<struct Void> * future);
 void struct Scheduler::destroy();
 
 // async void yield()
-trait Future<struct Void> *yield();
+_Trait Future<struct Void> *yield();
 
 #endif

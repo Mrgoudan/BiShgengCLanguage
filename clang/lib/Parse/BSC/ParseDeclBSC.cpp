@@ -194,7 +194,7 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   assert(getLangOpts().BSC &&
          "Error enter bsc trait specifier parsing function.");
   DeclSpec::TST TagType = DeclSpec::TST_trait;
-  tok::TokenKind TagTokKind = tok::kw_trait;
+  tok::TokenKind TagTokKind = tok::kw__Trait;
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteTag(getCurScope(), TagType);
     return cutOffParsing();
@@ -512,7 +512,7 @@ Parser::DeclGroupPtrTy Parser::ParseImplTraitDeclaration() {
   SourceLocation TraitLoc = Tok.getLocation();
   TraitDecl *Trait = nullptr;
   IdentifierInfo *TraitII = nullptr;
-  if (Tok.is(tok::kw_trait) && PP.LookAhead(0).is(tok::identifier))
+  if (Tok.is(tok::kw__Trait) && PP.LookAhead(0).is(tok::identifier))
     TraitII = PP.LookAhead(0).getIdentifierInfo();
   else { // For typedef
     NamedDecl *IIDecl = nullptr;

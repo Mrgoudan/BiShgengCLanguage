@@ -6,10 +6,10 @@ struct R2_wrap {
    struct R2 r;
 };
 
-trait T {
+_Trait T {
 };
 
-impl trait T for int;
+_Impl _Trait T for int;
 
 void foo() {}
 void test() {
@@ -41,8 +41,8 @@ void test() {
   b5 = &_Mut *b5; // legal
   b4 = &_Const *b5;
   b4 = &_Const *p;
-  trait T *t1 = &_Mut b;
-  const trait T *t2 = &_Const b;
+  _Trait T *t1 = &_Mut b;
+  const _Trait T *t2 = &_Const b;
   &_Mut foo; // expected-error {{'&_Mut' for function pointer is not allowed}}
             // expected-warning@-1 {{expression result unused}}
   &_Const foo; // expected-warning {{expression result unused}}

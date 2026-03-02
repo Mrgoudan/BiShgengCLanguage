@@ -8,18 +8,18 @@
 // RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
-trait Future<T> {};
+_Trait Future<T> {};
 
 struct A<T> {
 };
 
 // CHECK-L: #line 17 "{{.*}}.cbs"
-void struct A<T>::foo(struct A<T> *this, trait Future<T> *future) {
+void struct A<T>::foo(struct A<T> *this, _Trait Future<T> *future) {
 }
 
 int main() {
   struct A<void *> s;
-  trait Future<void *> *future;
+  _Trait Future<void *> *future;
   s.foo(future);
   struct A<void *>::foo(&s, future);
   return 0;

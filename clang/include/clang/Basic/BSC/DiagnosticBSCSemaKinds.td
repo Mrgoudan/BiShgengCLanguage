@@ -82,20 +82,20 @@ def err_owned_qualifier_non_pointer : Error<
 
 
 // BSC trait warnings and errors.
-def err_variables_not_trait_pointer : Error<"only trait pointer type is allowed to be declared">;
+def err_variables_not_trait_pointer : Error<"only _Trait pointer type is allowed to be declared">;
 def err_trait_impl : Error<"function %0 in %1 is not implemented for %2">;
 def err_trait_impl_function_type_conflict : Error<
   "type of %0 conflicts with that of %1">;
 def err_type_has_not_impl_trait : Error<
   "expected a pointer type which has implemented %0, found %1">;
 def err_trait_member_not_func : Error<
-  "only function declarations can be trait member">;
+  "only function declarations can be _Trait member">;
 def warn_type_has_not_impl_trait : Warning<
   "expected a pointer type which has implemented %0, found %1">,
   InGroup<BSCTraitMissing>;
 def err_trait_is_undefined : Error<"%0 must be defined before it can be used">;
 def err_impl_trait_for_instantiated_type : Error<
-  "cannot impl trait for an instantiated type">;
+  "cannot _Impl _Trait for an instantiated type">;
 
 // BSC generic warnings and errors.
 def err_invalid_struct_definition : Error <

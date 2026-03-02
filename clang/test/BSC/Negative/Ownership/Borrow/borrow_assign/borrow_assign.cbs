@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-trait F {
+_Trait F {
     void foo(This* _Borrow this);
 };
 struct R {
@@ -12,7 +12,7 @@ typedef int * _Borrow myInt;
 
 void int::foo(This * _Borrow this) {}
 
-impl trait F for int;
+_Impl _Trait F for int;
 
 void test() {
     int x = 0;
@@ -39,11 +39,11 @@ void test() {
     myInt m1 = &_Mut x; // legal
     m = &_Const x; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'myInt' (aka 'int *_Borrow')}}
 
-    trait F * f = &x; // legal
-    trait F * _Borrow f1 = p; // legal
-    trait F * _Borrow f2 = py; // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to 'trait F *_Borrow'}}
-                              // expected-error@-1 {{expected a pointer type which has implemented 'trait F', found 'float'}}
-    f1 = py; // expected-error {{expected a pointer type which has implemented 'trait F', found 'float'}}
+    _Trait F * f = &x; // legal
+    _Trait F * _Borrow f1 = p; // legal
+    _Trait F * _Borrow f2 = py; // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to '_Trait F *_Borrow'}}
+                              // expected-error@-1 {{expected a pointer type which has implemented '_Trait F', found 'float'}}
+    f1 = py; // expected-error {{expected a pointer type which has implemented '_Trait F', found 'float'}}
     f1 = p; // legal
     //p = (int * _Borrow)f1; // legal
     f1->foo();

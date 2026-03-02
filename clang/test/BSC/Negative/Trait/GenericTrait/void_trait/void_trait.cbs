@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // ISSUE I8MNW7 68.cbs
-trait T{
+_Trait T{
     inline void f(volatile This *this, int a);
     void print(This *this);
 };
@@ -14,12 +14,12 @@ void void::print(void *this) {  // expected-error {{variable has incomplete type
     return;
 }
 
-impl trait T for void;  // expected-error {{function 'f' in 'trait T' is not implemented for 'void'}}
+_Impl _Trait T for void;  // expected-error {{function 'f' in '_Trait T' is not implemented for 'void'}}
 
 int main()
 {
     void a = 1; // expected-error {{variable has incomplete type 'void'}}
     void b = 2; // expected-error {{variable has incomplete type 'void'}}
-    ((trait T*)&a)->f();
+    ((_Trait T*)&a)->f();
     return 0;
 }

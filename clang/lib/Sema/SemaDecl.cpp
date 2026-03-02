@@ -878,7 +878,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
 
       #if ENABLE_BSC
       case TTK_Trait:
-        FixItTagName = "trait ";
+        FixItTagName = "_Trait ";
         break;
       #endif
 

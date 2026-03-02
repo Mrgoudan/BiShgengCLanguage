@@ -5,10 +5,10 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
 
 };
-trait F* t1;
+_Trait F* t1;
 
 int main() {
     return 0;

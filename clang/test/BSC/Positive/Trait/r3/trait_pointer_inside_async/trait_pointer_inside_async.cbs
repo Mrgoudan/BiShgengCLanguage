@@ -10,21 +10,21 @@
 #include <stdlib.h>
 
 
-trait A {
+_Trait A {
 };
 
 struct B {
     int a;
 };
 
-impl trait A for struct B;
+_Impl _Trait A for struct B;
 
 async int foo() {
     struct B b;
 
     struct B* _b = &b;
 
-    trait A* a = (trait A*) _b;
+    _Trait A* a = (_Trait A*) _b;
     return 1;
 }
 

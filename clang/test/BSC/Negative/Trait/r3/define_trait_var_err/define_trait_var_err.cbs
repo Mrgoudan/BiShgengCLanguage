@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F {
+_Trait F {
   int foo(This* this);
 };
 
-trait a; // expected-error {{invalid syntax, semi not expected after 'trait a'}}
+_Trait a; // expected-error {{invalid syntax, semi not expected after '_Trait a'}}
 
 int main() {
-  trait a; // expected-error {{invalid syntax, semi not expected after 'trait a'}}
+  _Trait a; // expected-error {{invalid syntax, semi not expected after '_Trait a'}}
   return 0;
 }

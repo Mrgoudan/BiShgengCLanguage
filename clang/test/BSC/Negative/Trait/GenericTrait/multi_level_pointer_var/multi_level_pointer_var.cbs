@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> {
+_Trait F<T> {
   T foo(This *this);
 };
-trait G {};
+_Trait G {};
 
 struct S {};
 
@@ -11,58 +11,58 @@ int struct S::foo(This *this) {
   return 1;
 }
 
-impl trait F<int> for struct S;
+_Impl _Trait F<int> for struct S;
 
-trait F<int> *f(trait F<int> *a) {
+_Trait F<int> *f(_Trait F<int> *a) {
     return a;
 }
 
 int main() {
   struct S s;
   int num = 1;
-  trait F<int> *p = &s;
-  trait F<int> **pp = p; // expected-error {{incompatible pointer types initializing 'trait F<int> **' with an expression of type 'trait F<int> *'}}
+  _Trait F<int> *p = &s;
+  _Trait F<int> **pp = p; // expected-error {{incompatible pointer types initializing '_Trait F<int> **' with an expression of type '_Trait F<int> *'}}
 
-  trait F<int> **q = &p;
-  trait F<int> **q1 = &p;
+  _Trait F<int> **q = &p;
+  _Trait F<int> **q1 = &p;
   // compare with null
   if (q == (void*)0) {}
   if ((void*)0 == q) {}
-  // compare with trait **
+  // compare with _Trait **
   if (q != q1) {}
   if (q != &p) {}
-  // compare with trait *
-  if (q != p) {} // expected-error {{comparison of distinct pointer types ('trait F<int> **' and 'trait F<int> *')}}
-                 // expected-warning@-1 {{comparison of distinct pointer types ('trait F<int> **' and 'trait F<int> *')}}
+  // compare with _Trait *
+  if (q != p) {} // expected-error {{comparison of distinct pointer types ('_Trait F<int> **' and '_Trait F<int> *')}}
+                 // expected-warning@-1 {{comparison of distinct pointer types ('_Trait F<int> **' and '_Trait F<int> *')}}
 
   // compare with int
   if (q != num) {} // expected-warning {{comparison between pointer and integer ('struct __Trait_F<int> *' and 'int')}}
   // compare with struct S
   if (q != s) {} // expected-error {{invalid operands to binary expression ('struct __Trait_F<int> *' and 'struct S')}}
   // compare with int *
-  if (q != &num) {} // expected-warning {{comparison of distinct pointer types ('trait F<int> **' and 'int *')}}
+  if (q != &num) {} // expected-warning {{comparison of distinct pointer types ('_Trait F<int> **' and 'int *')}}
   // compare with struct S *
-  if (q != &s) {} // expected-warning {{comparison of distinct pointer types ('trait F<int> **' and 'struct S *')}}
+  if (q != &s) {} // expected-warning {{comparison of distinct pointer types ('_Trait F<int> **' and 'struct S *')}}
 
   // desugar
-  // compare with trait pointer
-  trait G * g;
-  if ((*q) != g) {} // expected-warning {{comparison of distinct pointer types ('trait F<int> *' and 'trait G *')}}
+  // compare with _Trait pointer
+  _Trait G * g;
+  if ((*q) != g) {} // expected-warning {{comparison of distinct pointer types ('_Trait F<int> *' and '_Trait G *')}}
   if ((*q) == (p) && (*q) != (p)) {}
-  // compare with non-trait pointer
+  // compare with non-_Trait pointer
   int *a;
   if ((*q) == &s) {}
-  if ((*q) == a) {} // expected-warning {{expected a pointer type which has implemented 'trait F<int>', found 'int *'}}
-  if ((*q) == s) {} // expected-error {{expected a pointer type which has implemented 'trait F<int>', found 'struct S'}}
+  if ((*q) == a) {} // expected-warning {{expected a pointer type which has implemented '_Trait F<int>', found 'int *'}}
+  if ((*q) == s) {} // expected-error {{expected a pointer type which has implemented '_Trait F<int>', found 'struct S'}}
 
-  trait F<int> ***t = &q;
-  // compare with trait pointer
-  if ((**t) != g) {} // expected-warning {{comparison of distinct pointer types ('trait F<int> *' and 'trait G *')}}
+  _Trait F<int> ***t = &q;
+  // compare with _Trait pointer
+  if ((**t) != g) {} // expected-warning {{comparison of distinct pointer types ('_Trait F<int> *' and '_Trait G *')}}
   if ((**t) == (p) && (**t) != (p)) {}
-  // compare with non-trait pointer
+  // compare with non-_Trait pointer
   if ((**t) == &s) {}
-  if ((**t) == a) {} // expected-warning {{expected a pointer type which has implemented 'trait F<int>', found 'int *'}}
-  if ((**t) == s) {} // expected-error {{expected a pointer type which has implemented 'trait F<int>', found 'struct S'}}
+  if ((**t) == a) {} // expected-warning {{expected a pointer type which has implemented '_Trait F<int>', found 'int *'}}
+  if ((**t) == s) {} // expected-error {{expected a pointer type which has implemented '_Trait F<int>', found 'struct S'}}
 
-  (*t)->foo(); // expected-error {{'trait F<int> **' cannot directly call functions}}
+  (*t)->foo(); // expected-error {{'_Trait F<int> **' cannot directly call functions}}
 }

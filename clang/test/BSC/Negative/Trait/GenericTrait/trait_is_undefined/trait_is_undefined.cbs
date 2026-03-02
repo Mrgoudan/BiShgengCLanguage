@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> {
+_Trait F<T> {
   T foo(This* this);
 };
 
@@ -8,29 +8,29 @@ int int::foo(int* this) {
   return 0;
 }
 
-impl trait F<int> for int;
+_Impl _Trait F<int> for int;
 
 struct S{
-  trait F<int>* f;
-  trait T<int>* t; // expected-error {{explicit specialization of undeclared template trait 'T'}}
-// expected-error@-1 {{'trait T' must be defined before it can be used}}
+  _Trait F<int>* f;
+  _Trait T<int>* t; // expected-error {{explicit specialization of undeclared template _Trait 'T'}}
+// expected-error@-1 {{'_Trait T' must be defined before it can be used}}
 };
 
-trait T<int>* test(){ // expected-error {{explicit specialization of undeclared template trait 'T'}}
-// expected-error@-1 {{'trait T' must be defined before it can be used}}
+_Trait T<int>* test(){ // expected-error {{explicit specialization of undeclared template _Trait 'T'}}
+// expected-error@-1 {{'_Trait T' must be defined before it can be used}}
   int a = 1;
-  trait T<int>* t = &a; // expected-error {{explicit specialization of undeclared template trait 'T'}}
-// expected-warning@-1 {{incompatible pointer types initializing 'trait T *' with an expression of type 'int *'}}
+  _Trait T<int>* t = &a; // expected-error {{explicit specialization of undeclared template _Trait 'T'}}
+// expected-warning@-1 {{incompatible pointer types initializing '_Trait T *' with an expression of type 'int *'}}
 
-  trait T<int>* t2 = ((trait T<int>*)&a); // expected-error {{explicit specialization of undeclared template trait 'T'}}
-// expected-error@-1 {{explicit specialization of undeclared template trait 'T'}}
+  _Trait T<int>* t2 = ((_Trait T<int>*)&a); // expected-error {{explicit specialization of undeclared template _Trait 'T'}}
+// expected-error@-1 {{explicit specialization of undeclared template _Trait 'T'}}
 
-  return &a; // expected-error {{expected a pointer type which has implemented 'trait T', found 'int'}}
+  return &a; // expected-error {{expected a pointer type which has implemented '_Trait T', found 'int'}}
 }
 
-trait F<int>* get(trait P<int>* t) {  // expected-error {{explicit specialization of undeclared template trait 'P'}}
-// expected-warning@-1 {{declaration of 'trait P' will not be visible outside of this function}}
-// expected-error@-2 {{'trait P' must be defined before it can be used}}
+_Trait F<int>* get(_Trait P<int>* t) {  // expected-error {{explicit specialization of undeclared template _Trait 'P'}}
+// expected-warning@-1 {{declaration of '_Trait P' will not be visible outside of this function}}
+// expected-error@-2 {{'_Trait P' must be defined before it can be used}}
   int a = 6;
   int* c = &a;
   *c = 3;

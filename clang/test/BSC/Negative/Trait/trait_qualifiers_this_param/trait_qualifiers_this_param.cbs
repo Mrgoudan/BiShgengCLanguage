@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
-trait F {
+_Trait F {
   int foo(const This* this);
   int goo(_Owned This* this); // expected-error {{type of 'This' cannot be qualified by '_Owned'}}
   int hoo(const _Owned This* this); // expected-error {{type of 'const This' cannot be qualified by '_Owned'}}
@@ -46,7 +46,7 @@ int int::moo(const int* _Owned this) {
   return 1;
 }
 
-impl trait F for int;
+_Impl _Trait F for int;
 
 int main(){
   return 0;

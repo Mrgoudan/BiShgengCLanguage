@@ -10,7 +10,7 @@ struct PollResult<T> {
     int c;
 };
 
-trait Future<T> {
+_Trait Future<T> {
     struct PollResult<T> poll(This* this, T a);
     void free(This* this);
 };
@@ -23,15 +23,15 @@ struct PollResult<int> int::poll(int* this, int a) {
 
 void int::free(int* this) {}
 
-impl trait Future<int> for int;
+_Impl _Trait Future<int> for int;
 
-trait Future<T> *f<T>(trait Future<T> *a) {
+_Trait Future<T> *f<T>(_Trait Future<T> *a) {
     return a;
 }
 
 int main() {
     int m = 0;
-    trait Future<int> *a = &m;
+    _Trait Future<int> *a = &m;
     f<int>(a);
     return 0;
 }

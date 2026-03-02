@@ -9,12 +9,12 @@
 // RUN: FileCheck --input-file=%t-rwline.c %s --check-prefix=CHECK-L
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
   int foo(This* this);
 };
 
 // CHECK-L: #line 17 "{{.*}}.cbs"
-int get(trait F* f) {
+int get(_Trait F* f) {
   return 1;
 };
 
@@ -23,12 +23,12 @@ int int::foo(int* this) {
   return 0;
 }
 
-impl trait F for int;
+_Impl _Trait F for int;
 
 // CHECK-L: #line 29 "{{.*}}.cbs"
 int main() {
   int a = 1;
-  trait F* f = &a;
+  _Trait F* f = &a;
   int b = get(f);
   return 0;
 }

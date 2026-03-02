@@ -3,17 +3,17 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 
-trait F<T> {};
+_Trait F<T> {};
 struct S {};
 struct S;
-typedef trait F<int>* (*pollFunc) (struct S s);
+typedef _Trait F<int>* (*pollFunc) (struct S s);
 
 typedef struct EQueueFunc {
     pollFunc func;
 } EQueueFunc;
 
-trait F<int>* poll(struct S s) {
-  trait F<int> *t;
+_Trait F<int>* poll(struct S s) {
+  _Trait F<int> *t;
   return t;
 }
 

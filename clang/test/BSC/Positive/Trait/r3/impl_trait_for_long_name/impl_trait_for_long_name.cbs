@@ -6,7 +6,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait Shape_Shape_Shape {
+_Trait Shape_Shape_Shape {
     int getSideLen(This* this);
 };
 
@@ -20,11 +20,11 @@ int struct Rectangle_Rectangle_Rectangle::getSideLen(struct Rectangle_Rectangle_
     return length;
 }
 
-impl trait Shape_Shape_Shape for struct Rectangle_Rectangle_Rectangle;
+_Impl _Trait Shape_Shape_Shape for struct Rectangle_Rectangle_Rectangle;
 
 int main() {
     struct Rectangle_Rectangle_Rectangle r = {.width = 2, .hight = 3};
-    trait Shape_Shape_Shape* shape = &r;
+    _Trait Shape_Shape_Shape* shape = &r;
     int len = shape->getSideLen();
     return len - 10;
 }

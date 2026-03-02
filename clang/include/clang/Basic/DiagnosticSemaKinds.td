@@ -5789,7 +5789,7 @@ def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
   "type|typedef|type alias|template|type alias template|template "
   "template argument}1 %0 cannot be referenced with a "
-  "%select{struct|interface|union|class|enum|trait}2 specifier">;
+  "%select{struct|interface|union|class|enum|_Trait}2 specifier">;
 #else
 def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "

@@ -2,19 +2,19 @@
 // RUN: %t.output
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
    void foo(This *this);
 };
 
 struct S<T> {
-  trait F* t;
+  _Trait F* t;
 };
 
 void int::foo(This *this) {}
 
-impl trait F for int;
+_Impl _Trait F for int;
 
-trait F* get1<T>(trait F* t1, trait F* t2) {
+_Trait F* get1<T>(_Trait F* t1, _Trait F* t2) {
     return t1;
 }
 
@@ -22,8 +22,8 @@ int main()
 {
     int a = 1;
     const int *p = &a;
-    trait F* t1 = p;
-    t1 = (trait F*)p;
+    _Trait F* t1 = p;
+    t1 = (_Trait F*)p;
     t1->foo();
     if (t1 != p) {
         return 1;
@@ -31,7 +31,7 @@ int main()
     struct S<int> s = { p };
     struct S<int> s1 = { .t = p };
     s.t = p;
-    trait F* p5 = get1<double>((trait F*)p, p);
+    _Trait F* p5 = get1<double>((_Trait F*)p, p);
     return 0;
 }
 

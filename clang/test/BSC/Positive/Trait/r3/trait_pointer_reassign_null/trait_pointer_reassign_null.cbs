@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-trait F {
+_Trait F {
   int foo(This* this);
 };
 
@@ -16,11 +16,11 @@ int int::foo(int *this) {
   return 2;
 };
 
-impl trait F for int;
+_Impl _Trait F for int;
 
 int main() {
   int a = 1;
-  trait F* f = &a;
+  _Trait F* f = &a;
   f = NULL;
   return 0;
 }

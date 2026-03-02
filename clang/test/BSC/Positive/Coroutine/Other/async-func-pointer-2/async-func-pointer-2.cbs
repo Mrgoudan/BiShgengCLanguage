@@ -11,7 +11,7 @@
 
 async int f() { return 0; }
 
-trait Future<int>* (*pollFunc) () = f;
+_Trait Future<int>* (*pollFunc) () = f;
 
 async void g() {
     await pollFunc();

@@ -33,9 +33,9 @@ struct PollResult<int> struct _Futuretest1::poll(__Futuretest1 *this)     {
 }
 void struct _Futuretest1::free(__Futuretest1 *this) {}
 
-impl trait Future<int> for struct _Futuretest1;
+_Impl _Trait Future<int> for struct _Futuretest1;
 
-trait Future<int>* test1(int a)     {
+_Trait Future<int>* test1(int a)     {
   struct _Futuretest1* ptr = malloc(sizeof(struct _Futuretest1));
   ptr->a = a;
   ptr->__future_state = 0;
@@ -63,9 +63,9 @@ struct PollResult<int> struct _Futuretest2::poll(__Futuretest2 *this)     {
 
 void struct _Futuretest2::free(__Futuretest2 *this) {}
 
-impl trait Future<int> for struct _Futuretest2;
+_Impl _Trait Future<int> for struct _Futuretest2;
 
-trait Future<int>* test2(int a)     {
+_Trait Future<int>* test2(int a)     {
   struct _Futuretest2* ptr = malloc(sizeof(struct _Futuretest2));
   ptr->a = a;
   ptr->__future_state = 0;
@@ -88,7 +88,7 @@ async int f(int start) {
 }
 
 int main() {
-  trait Future<int>* this = f(1);
+  _Trait Future<int>* this = f(1);
   this->poll();
   return 0;
 }

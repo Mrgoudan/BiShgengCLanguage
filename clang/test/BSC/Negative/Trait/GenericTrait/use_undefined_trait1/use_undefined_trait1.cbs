@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> {
+_Trait F<T> {
   T foo(This* this);
 };
 
 int main() {
-  trait S<int> *a; // expected-error {{explicit specialization of undeclared template trait 'S'}}
+  _Trait S<int> *a; // expected-error {{explicit specialization of undeclared template _Trait 'S'}}
   return 0;
 }

@@ -6,7 +6,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
   int foo(This* this);
 };
 
@@ -14,19 +14,19 @@ int int::foo(int *this) {
   return 2;
 };
 
-impl trait F for int;
+_Impl _Trait F for int;
 
 int traitPtrEqualTraitPtr() {
   int a = 1;
-  trait F* f = &a;
-  trait F* e = &a;
+  _Trait F* f = &a;
+  _Trait F* e = &a;
   if (f != e) {
     return 1;
   }
   if (f == e) {
     return 0;
   }
-  if ((trait F*)e != (trait F*)f) {
+  if ((_Trait F*)e != (_Trait F*)f) {
     return 1;
   }
   return 1;
@@ -35,15 +35,15 @@ int traitPtrEqualTraitPtr() {
 int traitPtrNotEqualTraitPtr() {
   int a = 1;
   int b = 1;
-  trait F* f = &a;
-  trait F* e = &b;
+  _Trait F* f = &a;
+  _Trait F* e = &b;
   if (f == e) {
     return 1;
   }
   if (f != e) {
     return 0;
   }
-  if ((trait F*)e != (trait F*)f) {
+  if ((_Trait F*)e != (_Trait F*)f) {
     return 0;
   }
   return 1;

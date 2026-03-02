@@ -13,11 +13,11 @@ int int::foo(int* this) {
   return 10;
 }
 
-impl trait F<int> for int;
+_Impl _Trait F<int> for int;
 
 int main() {
   int a = 1;
-  int b = ((trait F<int>*)&a)->foo();
+  int b = ((_Trait F<int>*)&a)->foo();
   return b - 10;
 }
 

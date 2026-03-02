@@ -2,15 +2,15 @@
 // RUN: %clang %s -o %t.output
 // RUN: %t.output
 
-trait F {
+_Trait F {
     int foo(This* this);
 };
 
-trait G {
+_Trait G {
     int goo(This* this);
 };
 
-trait H {
+_Trait H {
     double hoo(This* this);
 };
 
@@ -26,19 +26,19 @@ double double::hoo(double *this) {
     return 1.0;
 };
 
-impl trait F for int;
-impl trait G for int;
-impl trait H for double;
+_Impl _Trait F for int;
+_Impl _Trait G for int;
+_Impl _Trait H for double;
 
 int diffTraitCompareOnlyDataEqual() {
     int a = 1;
     int b = 1;
-    trait F* f = &a;
-    trait G* g = &b;
-    if (f == g) { // expected-warning {{comparison of distinct pointer types ('trait F *' and 'trait G *')}}
+    _Trait F* f = &a;
+    _Trait G* g = &b;
+    if (f == g) { // expected-warning {{comparison of distinct pointer types ('_Trait F *' and '_Trait G *')}}
         return 1;
     }
-    if (f != g) { // expected-warning {{comparison of distinct pointer types ('trait F *' and 'trait G *')}}
+    if (f != g) { // expected-warning {{comparison of distinct pointer types ('_Trait F *' and '_Trait G *')}}
         return 0;
     }
     return 1;
@@ -47,24 +47,24 @@ int diffTraitCompareOnlyDataEqual() {
 int diffTraitCompareNotEqual() {
     int a = 1;
     double b = 1.0;
-    trait F* f = &a;
-    trait H* h = &b;
-    if (f == h) { // expected-warning {{comparison of distinct pointer types ('trait F *' and 'trait H *')}}
+    _Trait F* f = &a;
+    _Trait H* h = &b;
+    if (f == h) { // expected-warning {{comparison of distinct pointer types ('_Trait F *' and '_Trait H *')}}
         return 1;
     }
-    if (f != h) { // expected-warning {{comparison of distinct pointer types ('trait F *' and 'trait H *')}}
+    if (f != h) { // expected-warning {{comparison of distinct pointer types ('_Trait F *' and '_Trait H *')}}
         return 0;
     }
     return 1;
 }
 
 int diffTraitCompareEqual() {
-    trait F* f = ((void *)0);
-    trait H* h = ((void *)0);
-    if (f != h) { // expected-warning {{comparison of distinct pointer types ('trait F *' and 'trait H *')}}
+    _Trait F* f = ((void *)0);
+    _Trait H* h = ((void *)0);
+    if (f != h) { // expected-warning {{comparison of distinct pointer types ('_Trait F *' and '_Trait H *')}}
         return 1;
     }
-    if (f == h) { // expected-warning {{comparison of distinct pointer types ('trait F *' and 'trait H *')}}
+    if (f == h) { // expected-warning {{comparison of distinct pointer types ('_Trait F *' and '_Trait H *')}}
         return 0;
     }
     return 1;

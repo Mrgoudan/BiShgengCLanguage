@@ -8,12 +8,12 @@
 
 #include <stdio.h>
 
-trait F {
+_Trait F {
     int foo(This* this);
 };
 
 int main() {
-    trait F* f = NULL;
+    _Trait F* f = NULL;
     if (f != NULL) {
       return 1;
     }

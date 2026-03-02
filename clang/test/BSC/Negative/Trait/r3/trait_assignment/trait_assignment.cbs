@@ -2,15 +2,15 @@
 
 #include <stddef.h>
 
-trait F<T> {};
+_Trait F<T> {};
 
-trait F<float>* f() {
-    trait F<float>* a = NULL;
+_Trait F<float>* f() {
+    _Trait F<float>* a = NULL;
     return a;
 }
 
 int main() {
    int m = 0;
-   trait F<int>* b = f();  // expected-error {{expected a pointer type which has implemented 'trait F<int>', found 'trait F<float> *'}}
+   _Trait F<int>* b = f();  // expected-error {{expected a pointer type which has implemented '_Trait F<int>', found '_Trait F<float> *'}}
    return 0;
 }

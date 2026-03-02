@@ -4,42 +4,42 @@
 // RUN: %clang %t-rw.c -o %t-rw.output
 // RUN: %t-rw.output
 // expected-no-diagnostics
-trait F {
+_Trait F {
     int foo(This* this);
 };
-typedef MyF1 = trait F;
-typedef trait F MyF2;
+typedef MyF1 = _Trait F;
+typedef _Trait F MyF2;
 typedef MyF3 = MyF1;
 typedef MyF2 MyF4;
 int int::foo(This* this) {
     return *this;
 }
-impl MyF1 for int;
-impl MyF2 for int;
-impl MyF3 for int;
-impl MyF4 for int;
+_Impl MyF1 for int;
+_Impl MyF2 for int;
+_Impl MyF3 for int;
+_Impl MyF4 for int;
 
-trait G<T> {
+_Trait G<T> {
     T foo(This* this);
 };
 
-typedef MyG1 = trait G<int>;
-impl MyG1 for int;
-typedef trait G<int> MyG2;
-impl MyG2 for int;
-typedef MyG3<T> = trait G<T>;
-impl MyG3<int> for int;
+typedef MyG1 = _Trait G<int>;
+_Impl MyG1 for int;
+typedef _Trait G<int> MyG2;
+_Impl MyG2 for int;
+typedef MyG3<T> = _Trait G<T>;
+_Impl MyG3<int> for int;
 
 typedef MyG4 = MyG1;
-impl MyG4 for int;
+_Impl MyG4 for int;
 typedef MyG2 MyG5;
-impl MyG5 for int;
+_Impl MyG5 for int;
 typedef MyG6<T> = MyG3<T>;
-impl MyG6<int> for int;
+_Impl MyG6<int> for int;
 typedef MyG7<T> = MyG1;
-impl MyG7<int> for int;
+_Impl MyG7<int> for int;
 typedef MyG8<T> = MyG3<int>;
-impl MyG8<int> for int;
+_Impl MyG8<int> for int;
 
 int main() {
     int a = 5;

@@ -10,15 +10,15 @@
 
 struct A {};
 
-trait B {};
+_Trait B {};
 
-impl trait B for struct A;
+_Impl _Trait B for struct A;
 
 struct A* foo() {
     return 0;
 }
 
-void bar(trait B* x) {
+void bar(_Trait B* x) {
     return;
 }
 

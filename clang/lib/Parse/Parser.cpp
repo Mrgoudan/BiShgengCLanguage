@@ -1047,9 +1047,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     return nullptr;
 
 #if ENABLE_BSC
-  case tok::kw_impl:
+  case tok::kw__Impl:
     if (getLangOpts().BSC &&
-        NextToken().isOneOf(tok::kw_trait, tok::identifier))
+        NextToken().isOneOf(tok::kw__Trait, tok::identifier))
       return ParseImplTraitDeclaration();
     goto dont_know;
 #endif

@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F {
+_Trait F {
   int foo(This* this, int a);
 };
 
-trait F* bar(trait F* i, int a) {
+_Trait F* bar(_Trait F* i, int a) {
   i->foo(42);
   return i;
 }
@@ -17,7 +17,7 @@ int struct S::foo(struct S* this) {
   return this->x;
 }
 
-impl trait F for struct S; // expected-error {{type of 'foo' conflicts with that of 'trait F'}} 
+_Impl _Trait F for struct S; // expected-error {{type of 'foo' conflicts with that of '_Trait F'}} 
                            
 
 int main() {

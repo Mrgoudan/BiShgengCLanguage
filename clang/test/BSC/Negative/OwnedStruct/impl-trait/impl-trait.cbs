@@ -5,23 +5,23 @@ _Public:
   int a;
 };
 
-trait T { 
+_Trait T { 
 };
 
-impl trait T for S;
+_Impl _Trait T for S;
 
 void test1(S* sp) {
-  trait T* t = sp;
+  _Trait T* t = sp;
 }
 
 void test2(S* _Owned sp) {
-  trait T* _Owned t = sp;
+  _Trait T* _Owned t = sp;
 } // expected-error {{field memory leak of value: `t`, t.data is leak}}
 
 void test3(S* sp) {
-  trait T* _Owned t = sp; // expected-error {{incompatible _Owned types, cannot cast '_Owned struct S *' to 'trait T *_Owned'}}
+  _Trait T* _Owned t = sp; // expected-error {{incompatible _Owned types, cannot cast '_Owned struct S *' to '_Trait T *_Owned'}}
 }
 
 void test4(S* _Owned sp) {
-  trait T* t = sp; // expected-error {{incompatible _Owned types, cannot cast '_Owned struct S *_Owned' to 'trait T *'}}
+  _Trait T* t = sp; // expected-error {{incompatible _Owned types, cannot cast '_Owned struct S *_Owned' to '_Trait T *'}}
 }

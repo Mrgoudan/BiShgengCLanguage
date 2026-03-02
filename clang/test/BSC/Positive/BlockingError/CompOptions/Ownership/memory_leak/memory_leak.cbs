@@ -14,13 +14,13 @@ _Public:
   int a;
 };
 
-trait T { 
+_Trait T { 
 };
 
-impl trait T for S;
+_Impl _Trait T for S;
 
 void test2(S* _Owned sp) {
-  trait T* _Owned t = sp;
+  _Trait T* _Owned t = sp;
 } // field memory leak of value: `t`, t.data is leak
 
 // CHECK:      struct S;

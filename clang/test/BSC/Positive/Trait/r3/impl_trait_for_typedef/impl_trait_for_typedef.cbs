@@ -6,7 +6,7 @@
 // RUN: %t-rw.output
 // expected-no-diagnostics
 
-trait F {
+_Trait F {
   int foo(This* this, int a);
 };
 
@@ -18,12 +18,12 @@ int struct S::foo(struct S* this, int a) {
   return this->x + a;
 }
 
-impl trait F for MyS;
+_Impl _Trait F for MyS;
 
 int main() {
   struct S s; 
   int a = s.foo(1);
-  trait F* f = &s;
+  _Trait F* f = &s;
   return 0;
 }
 

@@ -9,19 +9,19 @@
 #include <stdio.h>
 
 
-trait Future<T> {
+_Trait Future<T> {
     T poll(This* this);
 };
 
 int main() {
-    trait Future<int> *f = NULL;
+    _Trait Future<int> *f = NULL;
     if (f != NULL) {
         return 1;
     }
     if (f == NULL) {
         return 0;
     }
-    if (NULL == (trait Future<int> *)f) {
+    if (NULL == (_Trait Future<int> *)f) {
         return 0;
     }
     return 1;

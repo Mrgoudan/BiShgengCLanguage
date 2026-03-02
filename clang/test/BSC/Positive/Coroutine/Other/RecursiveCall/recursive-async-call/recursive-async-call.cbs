@@ -42,7 +42,7 @@ async int f() {
 // CHECK-NEXT: |   |-DeclStmt {{.*}} <line:30:1, line:33:1>
 
 int main() {
-  trait Future<int>* this = f();
+  _Trait Future<int>* this = f();
   this->poll();
   this->free();
   return 0;

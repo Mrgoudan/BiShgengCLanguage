@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-trait TR {
+_Trait TR {
   void sayHi(This* this);
   int getAns(This* this, int x);
 };
@@ -26,7 +26,7 @@ int int::getAns(int* this, int x) {
   return x;
 }
 
-impl trait TR for int;
+_Impl _Trait TR for int;
 
 // CHECK-L: #line 32 "{{.*}}.cbs"
 int main() {

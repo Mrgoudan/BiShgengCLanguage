@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-trait F<T> {
+_Trait F<T> {
   T foo(This* this, T a);
   T bar(This* this);
 };
@@ -13,5 +13,5 @@ int struct S::foo(struct S* this, int a) {
   return this->x;
 }
 
-impl trait F<int> for struct S; // expected-error {{function 'bar' in 'trait F<int>' is not implemented for 'struct S'}}
+_Impl _Trait F<int> for struct S; // expected-error {{function 'bar' in '_Trait F<int>' is not implemented for 'struct S'}}
 
