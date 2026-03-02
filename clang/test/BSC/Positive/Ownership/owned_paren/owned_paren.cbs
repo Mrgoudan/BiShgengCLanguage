@@ -1,0 +1,35 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+struct Foo {
+  int *_Owned x;
+};
+
+struct Foo *_Owned deref_paren_pointer_member_access(struct Foo *_Owned foo) {
+  int val = *(foo->x);
+  return foo;
+}
+
+struct Foo deref_paren_member_access(struct Foo foo) {
+  int val = *(foo.x);
+  return foo;
+}
+
+int *_Owned paren_deref(int *_Owned p) {
+  int val = (*p);
+  return p;
+}
+
+int *_Owned deref_paren(int *_Owned p) {
+  int val = *(p);
+  return p;
+}
+
+int *_Owned *_Owned *_Owned deref_paren_deref_paren_deref_paren(int *_Owned *_Owned *_Owned p) {
+  int val = *(*(*(p)));
+  return p;
+}
+
+int main() {
+  return 0;
+}

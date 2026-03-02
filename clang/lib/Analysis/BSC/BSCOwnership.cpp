@@ -1938,6 +1938,7 @@ void TransferFunctions::VisitUnaryOperator(UnaryOperator *UO) {
     } else {
       break;
     }
+    E = E->IgnoreParens();
   }
 
   if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
