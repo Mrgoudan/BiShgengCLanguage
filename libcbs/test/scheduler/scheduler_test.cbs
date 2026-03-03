@@ -10,7 +10,7 @@ void isComplete() {
     }
 }
 
-async void work() {
+_Async void work() {
     int a = 0;
     while (a < 100000000)
     {
@@ -20,13 +20,13 @@ async void work() {
     isComplete();
 }
 
-async void sleep_s(int time) {
+_Async void sleep_s(int time) {
     usleep(time);
 }
 
-async void taskFunc(int i) {
+_Async void taskFunc(int i) {
     printf("Task %d is running\n", i);
-    await sleep_s(1000);
+    _Await sleep_s(1000);
     // Task allocation to the queue of the current thread
     struct Scheduler::spawn(work());
     printf("Task %d is done\n", i);

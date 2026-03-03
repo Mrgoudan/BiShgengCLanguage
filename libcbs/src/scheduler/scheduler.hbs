@@ -44,7 +44,7 @@ void struct Scheduler::run();
 struct Task * struct Scheduler::spawn(_Trait Future<struct Void> * future);
 void struct Scheduler::destroy();
 
-// async void yield()
+// _Async void yield()
 _Trait Future<struct Void> *yield();
 
 #endif

@@ -8,7 +8,7 @@
 
 #include "future.hbs"
 
-extern async int f(int n);
+extern _Async int f(int n);
 
 int main() {
   _Trait Future<int>* this = f(5);

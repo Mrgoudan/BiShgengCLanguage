@@ -10,7 +10,7 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
@@ -20,13 +20,13 @@ struct Addr
     char str[10];
 };
 
-async int f(int start) {
+_Async int f(int start) {
   constexpr long myLong = 100000L;
   constexpr unsigned int myUnsignedInt = 10U;
   constexpr int myInt = 2;
   static struct Addr addr = {myInt, "hello"};
 
-  int result = await read(myInt);
+  int result = _Await read(myInt);
   return result + 5 + start;
 }
 

@@ -23,7 +23,7 @@ void bar(_Trait B* x) {
 }
 
 
-async void f() {
+_Async void f() {
     bar(foo());
 }
 

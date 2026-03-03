@@ -9,15 +9,15 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int f(int start) {
+_Async int f(int start) {
   int i = 0;
   while (i < 3)
   {
-    start = await read(i);
+    start = _Await read(i);
     i++;
   }
   int result = start;

@@ -9,23 +9,23 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int getData() {
+_Async int getData() {
   int res = 0;
   if (res == 0) {
-    int start = await read(2);
+    int start = _Await read(2);
     int a = 3;
     if (a == 3) {
-      int start = await read(3);
+      int start = _Await read(3);
     }
   } else {
-    int start = await read(2);
+    int start = _Await read(2);
     int a = 3;
     if (a == 3) {
-      int start = await read(3);
+      int start = _Await read(3);
     }
   }
   return res;

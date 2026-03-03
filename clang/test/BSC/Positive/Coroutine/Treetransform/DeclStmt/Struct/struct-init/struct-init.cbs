@@ -9,7 +9,7 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
@@ -21,11 +21,11 @@ struct Books
    int   book_id;
 };
 
-async int f(int start) {
+_Async int f(int start) {
   struct Books book1;
   struct Books book = {"C language", "RUNOOB", "programming language", 123456};
   struct Books *pbook;
-  int result = await read(1);
+  int result = _Await read(1);
   return result;
 }
 

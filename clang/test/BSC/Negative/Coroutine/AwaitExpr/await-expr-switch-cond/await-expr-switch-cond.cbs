@@ -2,9 +2,9 @@
 
 #include "../../async-func-read-opposite.hbs"
 
-async int f(int start) { 
+_Async int f(int start) { 
   int result = start;
-  switch (await read(1)) { // #1
+  switch (_Await read(1)) { // #1
     case 0:
         return 0;
     case 1:
@@ -14,7 +14,7 @@ async int f(int start) {
   }
 }
 
-// expected-error@#1 {{await expression is not allowed to appear in condition statement of switch statement}}
+// expected-error@#1 {{_Await expression is not allowed to appear in condition statement of switch statement}}
 
 int main() {
   return 0;

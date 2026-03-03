@@ -27,17 +27,17 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int f() {
-    int a = await f();
+_Async int f() {
+    int a = _Await f();
     return a;
 }
 
 
 // Declaration
-// CHECK: |-FunctionDecl {{.*}} <line:30:1, col:11> col:11 __f 'struct _Futuref *(void)'
+// CHECK: |-FunctionDecl {{.*}} <line:30:1, col:12> col:12 __f 'struct _Futuref *(void)'
 
 // Make sure that function `__f` has body.
-// CHECK: |-FunctionDecl {{.*}} <col:1, line:33:1> line:30:11 used __f 'struct _Futuref *(void)'
+// CHECK: |-FunctionDecl {{.*}} <col:1, line:33:1> line:30:12 used __f 'struct _Futuref *(void)'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:1, line:33:1>
 // CHECK-NEXT: |   |-DeclStmt {{.*}} <line:30:1, line:33:1>
 

@@ -2,13 +2,13 @@
 
 #include "future.hbs"
 
-constexpr async int test(); // expected-error {{async function does not support constexpr}} 
-constexpr async int test() { // expected-error {{async function does not support constexpr}} 
+constexpr _Async int test(); // expected-error {{_Async function does not support constexpr}} 
+constexpr _Async int test() { // expected-error {{_Async function does not support constexpr}} 
   return 42;
 }
 
-async int f(int start) {
-  int a = await test();
+_Async int f(int start) {
+  int a = _Await test();
   return a;
 }
 

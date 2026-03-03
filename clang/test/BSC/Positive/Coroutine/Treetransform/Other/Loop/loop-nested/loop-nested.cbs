@@ -9,14 +9,14 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int f(int start) {
+_Async int f(int start) {
   int i = 0;
   do {
-    start = await read(i);
+    start = _Await read(i);
     i++;
     for (int j=0; j<3; j++)
         start++;

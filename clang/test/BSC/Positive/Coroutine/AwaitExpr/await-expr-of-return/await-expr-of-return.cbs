@@ -9,20 +9,20 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int f(int start) {
+_Async int f(int start) {
 
-  int a = await read(2);
+  int a = _Await read(2);
   int b = 2;
 
   if (a == 1) {
     if (b == 3)
-        return await read(3);
+        return _Await read(3);
 
-    return await read(2);
+    return _Await read(2);
   }
 
   return start;

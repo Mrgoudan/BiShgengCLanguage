@@ -6,9 +6,9 @@ int p(int i) {
   return i;
 }
 
-async int f() {     
-    int a = await p(1); // expected-error {{the await expression's external function declaration must be modified by async or return 'Future' type}}
-    int b = await read(1);
+_Async int f() {     
+    int a = _Await p(1); // expected-error {{the _Await expression's external function declaration must be modified by _Async or return 'Future' type}}
+    int b = _Await read(1);
     return b;
 }
 

@@ -9,12 +9,12 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int f() { return 0; }
+_Async int f() { return 0; }
 
 _Trait Future<int>* (*pollFunc) () = f;
 
-async void g() {
-    await pollFunc();
+_Async void g() {
+    _Await pollFunc();
 }
 
 int main() {

@@ -2,9 +2,9 @@
 
 #include "../../async-func-read-opposite.hbs"
 
-async int f(int start) { 
-  await g(); // #1
-  int result = await read(1);
+_Async int f(int start) { 
+  _Await g(); // #1
+  int result = _Await read(1);
   return result;
 }
 

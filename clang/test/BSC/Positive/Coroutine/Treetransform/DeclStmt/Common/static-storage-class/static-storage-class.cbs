@@ -9,18 +9,18 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
 static int count = 10;
 
-async int f(int start) {
+_Async int f(int start) {
     while (count--)
     {
         start ++;
     }
-    int result = await read(2);
+    int result = _Await read(2);
     return result + 5 + start;
 }
 

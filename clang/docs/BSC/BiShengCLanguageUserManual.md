@@ -896,7 +896,7 @@ int main() {
     return 0;
 }
 ```
-6. constexpr 不允许修饰 async 函数
+6. constexpr 不允许修饰 _Async 函数
 7. constexpr 不允许支持变长参数
 8. 函数的形参不能用 constexpr 修饰
 ```c
@@ -1888,7 +1888,7 @@ void test() {
 
 ### 无栈协程简介
 
-无栈协程与有栈协程调用栈由程序员显示分配的不同，协程的调用栈由运行时系统隐式管理的，协程本身不持有自己的调用栈，在切换协程时不需要保存和恢复整个调用栈，只保存协程执行状态。它是通过 `async/await` 关键字进行定义和调用。`async` 用来修饰异步函数，`await` 实现异步函数调用。
+无栈协程与有栈协程调用栈由程序员显示分配的不同，协程的调用栈由运行时系统隐式管理的，协程本身不持有自己的调用栈，在切换协程时不需要保存和恢复整个调用栈，只保存协程执行状态。它是通过 `_Async/_Await` 关键字进行定义和调用。`_Async` 用来修饰异步函数，`_Await` 实现异步函数调用。
 
 毕昇 C 的无栈协程目标是支持异步、高并发场景，例如 Web 服务器实现高并发网络通信、异步处理请求、 Web 应用程序的数据库连接池等。
 
@@ -1933,42 +1933,42 @@ _Trait Future<T> {
 
 1. 无栈协程只允许在毕昇 C 编译单元使用
 
-2. 如果函数中使用了 `await` 关键字，那么这个函数必须用 `async` 修饰。`async` 函数内可以有 0,1...n 个 `await` 表达式
+2. 如果函数中使用了 `_Await` 关键字，那么这个函数必须用 `_Async` 修饰。`_Async` 函数内可以有 0,1...n 个 `_Await` 表达式
 
 ```c
-async int TimeOut(int t) {
+_Async int TimeOut(int t) {
     return t;
 }
 
-async int getData1() {
-    int t = await TimeOut(1000);
+_Async int getData1() {
+    int t = _Await TimeOut(1000);
     return t;
 }
 
-async int getData2() {
-    await getData1();
-    await TimeOut(1000);
-    await TimeOut(2000);
+_Async int getData2() {
+    _Await getData1();
+    _Await TimeOut(1000);
+    _Await TimeOut(2000);
     return 0;
 }
 ```
 
-3. `async` 函数声明和实现可以分开
+3. `_Async` 函数声明和实现可以分开
 
 ```c
 #include "string.h"
 
-async int ReadBuffer(char *str);
+_Async int ReadBuffer(char *str);
 
-async int GetBufferSize() {
+_Async int GetBufferSize() {
     char* Content;
     char ContentCopy[12] = "hello,word!";
     Content = ContentCopy;
-    int size = await ReadBuffer(Content);
+    int size = _Await ReadBuffer(Content);
     return size;
 }
 
-async int ReadBuffer(char *str) {
+_Async int ReadBuffer(char *str) {
     char *cstr = "hello,word!";
     if (strcmp(str, cstr) == 0)
       return sizeof(str);
@@ -1976,93 +1976,93 @@ async int ReadBuffer(char *str) {
 }
 ```
 
-4. `async` 函数支持递归调用
+4. `_Async` 函数支持递归调用
 
 ```c
-async int f(int n) {
+_Async int f(int n) {
     if (n == 0 || n == 1)
         return 1;
-    int tmp = await f(n-1);
+    int tmp = _Await f(n-1);
     return n*tmp;
 }
 ```
 
-5. `async` 关键字可以修饰成员函数
+5. `_Async` 关键字可以修饰成员函数
 
 ```c
-async void int::g(int* this);
+_Async void int::g(int* this);
 
-async int int::f() {
+_Async int int::f() {
     int i = 1;
-    await int::g(&i);
-    await i.g();
+    _Await int::g(&i);
+    _Await i.g();
     return 0;
 }
 
-async void int::g(int* this) {
+_Async void int::g(int* this) {
     _Trait Future<int>* a = read(1);
-    await a;
+    _Await a;
 }
 ```
 
-6. `async` 函数中可以出现多个不同或相同 `await` 表达式
+6. `_Async` 函数中可以出现多个不同或相同 `_Await` 表达式
 
 ```c
-async void client1() {
+_Async void client1() {
     // client1 send message...
 }
 
-async void client2() {
+_Async void client2() {
     // client2 send message...
 }
 
-async int Server(int start) {
+_Async int Server(int start) {
     // server receive message
-    await client1();
+    _Await client1();
     if (start < 20)
-        await client2();
+        _Await client2();
     return start;
 }
 ```
 
-7. `async` 函数不支持变量数组，即数组中含有变量
+7. `_Async` 函数不支持变量数组，即数组中含有变量
 
 ```c
-async int f() {
-    int *VarArray1[n]; // expected-error {{async function does not support VariableArrayType}}
-    int VarArray2[3][2][n]; // expected-error {{async function does not support VariableArrayType}}
-    int *VarArrayPtr[n][2][n][5]; // expected-error {{async function does not support VariableArrayType}}
+_Async int f() {
+    int *VarArray1[n]; // expected-error {{_Async function does not support VariableArrayType}}
+    int VarArray2[3][2][n]; // expected-error {{_Async function does not support VariableArrayType}}
+    int *VarArrayPtr[n][2][n][5]; // expected-error {{_Async function does not support VariableArrayType}}
     int Array[3]; // support
     int MultiArray[2][3][4][5]; // support
     return 0;
 }
 ```
 
-8. `await` 表达式不能出现在 if/while/for/do-while 等判断条件中
+8. `_Await` 表达式不能出现在 if/while/for/do-while 等判断条件中
 
 ```c
-async int read(int n) {
+_Async int read(int n) {
     // read data...
     return n;
 }
 
-async int getData() {
+_Async int getData() {
     int res = 0;
-    if (await read(1)) { // expected-error {{await expression is not allowed to appear in condition statement of if statement}}
-        res = await read(1);
+    if (_Await read(1)) { // expected-error {{_Await expression is not allowed to appear in condition statement of if statement}}
+        res = _Await read(1);
     }
 
     if (res == 2) { // support
-        res = await read(1);
+        res = _Await read(1);
     }
     return res;
 }
 ```
 
-9. `await` 表达式不能和“有副作用”的表达式（例如函数）并存
+9. `_Await` 表达式不能和“有副作用”的表达式（例如函数）并存
 
 ```c
-async int read(int n) {
+_Async int read(int n) {
     // read data...
     return n;
 }
@@ -2071,71 +2071,71 @@ int test(int a, int b) {
     return 42;
 }
 
-async int f() {
-    test(await read(2), await read(2)); // expected-error {{await expression is not allowed to appear in function parameters}}
-    test(t(), await read(2)); // expected-error {{await expression is not allowed to appear in function parameters}}
-    test(3, await read(2)); // support
+_Async int f() {
+    test(_Await read(2), _Await read(2)); // expected-error {{_Await expression is not allowed to appear in function parameters}}
+    test(t(), _Await read(2)); // expected-error {{_Await expression is not allowed to appear in function parameters}}
+    test(3, _Await read(2)); // support
     return 0;
 }
 ```
 
-10. `await` 表达式不能出现在复合表达式中，例如：表达式中含有 +、-、*、/、%、&、|、>>、<< 等
+10. `_Await` 表达式不能出现在复合表达式中，例如：表达式中含有 +、-、*、/、%、&、|、>>、<< 等
 
 ```c
-async int read(int n) {
+_Async int read(int n) {
     // read data...
     return n;
 }
 
-async int f() {
-    int x = await read(2) + 3; // expected-error {{await expression is not allowed to appear in binary operator expression}}
-    int y = await read(2); // support
+_Async int f() {
+    int x = _Await read(2) + 3; // expected-error {{_Await expression is not allowed to appear in binary operator expression}}
+    int y = _Await read(2); // support
     return 0;
 }
 ```
 
-11. `await` 表达式支持 `await` 多层嵌套调用
+11. `_Await` 表达式支持 `_Await` 多层嵌套调用
 
 ```c
-async int test0(int n) {
+_Async int test0(int n) {
     // read data...
     return n;
 }
 
-async int test1(int n) {
+_Async int test1(int n) {
     // ...
     return n;
 }
 
-async int test2(int n) {
+_Async int test2(int n) {
     // ...
     return n;
 }
 
-async int test3(int n1, int n2) {
+_Async int test3(int n1, int n2) {
     // ...
     return 0;
 }
 
-async int f() {
+_Async int f() {
     int start = 0;
-    int result1 = await test1(await test1(start));
-    int result2 = await test1(await test2(start));
-    int result3 = await test3(2, await test1(await test2(start)));
+    int result1 = _Await test1(_Await test1(start));
+    int result2 = _Await test1(_Await test2(start));
+    int result3 = _Await test3(2, _Await test1(_Await test2(start)));
     return result1 + result2 + result3;
 }
 ```
 
-12. `await` 表达式可以出现在 return 语句中
+12. `_Await` 表达式可以出现在 return 语句中
 
 ```c
-async int read(int n) {
+_Async int read(int n) {
     // read data...
     return n;
 }
 
-async int f() {
-    return await read(2);
+_Async int f() {
+    return _Await read(2);
 }
 ```
 
@@ -2145,11 +2145,11 @@ async int f() {
 # include "future.hbs"
 const int MAX = 3;
 
-async int read(int a) {
+_Async int read(int a) {
     return 0;
 }
 
-async int f() {
+_Async int f() {
     int *nptr = NULL;
     int  var[] = {10, 100, 200};
     int  i, *ptr;
@@ -2159,15 +2159,15 @@ async int f() {
     {
     ptr--;
     }
-    int result = await read(1);
+    int result = _Await read(1);
     result += *ptr;
     return result;
 }
 
-async void g(int start) {
+_Async void g(int start) {
     int result = start;
     for (int i = 0; i< start; i++) {
-        int a = await f();
+        int a = _Await f();
     }
 }
 
@@ -2175,7 +2175,7 @@ int main() {
     _Trait Future<int>* this1 = f();
     this1->poll();
     this1->free();
-    // 当 async 函数的返回类型是 void 时，我们需要用 struct Void 类型（会自动创建）来对 _Trait Future 实例化
+    // 当 _Async 函数的返回类型是 void 时，我们需要用 struct Void 类型（会自动创建）来对 _Trait Future 实例化
     _Trait Future<struct Void>* this2 = g(5);
     this2->poll();
     this2->free();
@@ -6341,7 +6341,7 @@ struct Student nameList[] =
     {"Sarah", 12, 88}
 };
 
-async void readName(int i) {
+_Async void readName(int i) {
     // 模拟 IO 操作，读取学生名单
     printf("name: %s, age: %d, score: %d\n", nameList[i].name, nameList[i].age, nameList[i].score);
 
@@ -6395,7 +6395,7 @@ name: John, age: 13, score: 95
 | 对外接口                                                     | 接口功能                                                     | 代码示例                                                     |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | `void struct Scheduler::init(unsigned int threadCount)`      | 用于初始化调度器，不可多次重复初始化，参数为用户需要创建的线程数 | struct Scheduler::init(4);                                   |
-| `struct Task * struct Scheduler::spawn(_Trait Future<struct Void> * future)` | 创建异步任务，并将任务放入执行队列中等待执行（目前仅接受返回类型是void的任务）。 | async void  taskFunc(int i) { <br/>    while(i < 10000) { <br/>        i = (i * 2) + 3 ; <br/>    }<br/>    printf("result: %d\n", i);<br/>}<br>struct Scheduler::spawn(taskFunc(0)); |
+| `struct Task * struct Scheduler::spawn(_Trait Future<struct Void> * future)` | 创建异步任务，并将任务放入执行队列中等待执行（目前仅接受返回类型是void的任务）。 | _Async void  taskFunc(int i) { <br/>    while(i < 10000) { <br/>        i = (i * 2) + 3 ; <br/>    }<br/>    printf("result: %d\n", i);<br/>}<br>struct Scheduler::spawn(taskFunc(0)); |
 | `void struct Scheduler::run()`                               | 执行通过 spawn 函数创建的异步任务                            | struct Scheduler::run();                                     |
 | `void struct Scheduler::destroy()`                           | 销毁调度器，释放资源                                         | struct Scheduler::destroy();                                 |
 
@@ -6405,7 +6405,7 @@ name: John, age: 13, score: 95
 
 `strcut Task`: 表示异步任务，包括任务的状态和执行上下文。通过 `struct Scheduler::spawn` 方法进行创建，创建完成后会将其放入执行队列，但不会立马执行。只有调用了 `struct Scheduler::run` 方法才会真正的执行队列中的任务。
 
-另外，我们注意到 `struct Scheduler::spawn` 方法的入参是 `_Trait Future<struct Void> *` 类型（`_Trait Future` 的定义可参考无栈协程章节），所以我们除了可以传入返回类型是 `void` 的 async 函数调用，也可以传显式返回 `_Trait Futrue<struct Void> *`  类型的函数调用，具体使用如下：
+另外，我们注意到 `struct Scheduler::spawn` 方法的入参是 `_Trait Future<struct Void> *` 类型（`_Trait Future` 的定义可参考无栈协程章节），所以我们除了可以传入返回类型是 `void` 的 _Async 函数调用，也可以传显式返回 `_Trait Futrue<struct Void> *`  类型的函数调用，具体使用如下：
 
 ```c
 #include "scheduler.hbs"
@@ -6992,8 +6992,8 @@ int main() {
 ```text
 _keyword : one of
     ....         _Impl         This
-    async        nullptr      this
-    await        _Owned        _Trait
+    _Async        nullptr      this
+    _Await        _Owned        _Trait
     _Borrow       private      _Unsafe
     constexpr    public       _Nonnull
     fat          _Safe         _Nullable
@@ -7078,12 +7078,12 @@ _postfix-expression :
 
 `_unary-expression`的产生式规则有如下变化：
 
-1. 允许使用`await`关键字修饰表达式，为`_unary-expression`新增 1 条产生式。
+1. 允许使用`_Await`关键字修饰表达式，为`_unary-expression`新增 1 条产生式。
 
 ```text
 _unary-expression :
     ....
-    await _unary-expression
+    _Await _unary-expression
 ```
 
 `_unary-operator`的产生式规则有如下变化：
@@ -7223,7 +7223,7 @@ _access-specifier :
 ```text
 _function-specifier :
     ....
-    async
+    _Async
     _safe-specifier
 ```
 

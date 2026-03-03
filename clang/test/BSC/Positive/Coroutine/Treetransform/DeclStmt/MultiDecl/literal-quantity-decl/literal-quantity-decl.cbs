@@ -9,16 +9,16 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int f(int start) {
+_Async int f(int start) {
     long myLong = 100000L;
     unsigned int myUnsignedInt = 10U;
     float myFloat = 3.14f;
     double myDouble = 3.14159;
-    int result = await read(2);
+    int result = _Await read(2);
     return result + 5 + start;
 }
 

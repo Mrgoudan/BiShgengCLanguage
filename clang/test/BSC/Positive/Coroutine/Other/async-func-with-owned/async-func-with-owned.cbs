@@ -27,13 +27,13 @@ struct Owned<T> make_owned<T>(T value) {
     return ret;
 }
 
-async int f() {
+_Async int f() {
     return 0;
 }
 
-async int foo() {
+_Async int foo() {
     struct Owned<int> q = make_owned(2);
-    int a = await f();
+    int a = _Await f();
     int * p = (int *) q.p;
     return a;
 }

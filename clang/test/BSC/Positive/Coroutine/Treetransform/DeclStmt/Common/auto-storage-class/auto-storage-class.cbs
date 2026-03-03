@@ -9,11 +9,11 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int f(int start) {
+_Async int f(int start) {
   auto int j = 1;
     {
         auto int j= 2;
@@ -21,7 +21,7 @@ async int f(int start) {
             auto int j = 3;
         }
     }
-  int result = await read(1);
+  int result = _Await read(1);
   return result;
 }
 

@@ -9,7 +9,7 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
@@ -18,13 +18,13 @@ struct Addr {
     char *addr;
 };
 
-async int f(int start) {
+_Async int f(int start) {
   int result = start;
   struct Addr addr = {.a=1,.addr = "hello"};
   char *tt = "hello";
   struct Addr addcp = {.a=1,.addr = tt};
   struct Addr *ptr = &addr;
-  int a = await read(1);
+  int a = _Await read(1);
   return result;
 }
 

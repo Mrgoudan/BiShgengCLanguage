@@ -2,12 +2,12 @@
 
 #include "../../async-func-read-opposite.hbs"
 
-async int f(int start) { 
-    int x = await read(2) + 3; // #1
+_Async int f(int start) { 
+    int x = _Await read(2) + 3; // #1
     return 42;
 }
 
-// expected-error@#1 {{await expression is not allowed to appear in binary operator expression}}
+// expected-error@#1 {{_Await expression is not allowed to appear in binary operator expression}}
 
 int main() {
   return 0;

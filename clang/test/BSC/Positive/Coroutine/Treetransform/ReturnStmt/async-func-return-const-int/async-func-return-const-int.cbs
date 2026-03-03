@@ -9,12 +9,12 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async const int f(int start) {
-    int a = await read(1);
+_Async const int f(int start) {
+    int a = _Await read(1);
     int b = 2;
 
     if(a == 1) {

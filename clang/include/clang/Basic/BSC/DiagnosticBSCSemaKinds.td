@@ -26,22 +26,22 @@ def warn_attribute_function_pointer : Warning<
 def err_attribute_zero_pointer : Error<
   "(EnhanceC) %0 attribute: The number of pointer arguments index cannot be zero">;
 
-// BSC async/await warnings and errors.
+// BSC _Async/_Await warnings and errors.
 def err_async_non_function : Error<
-  "'async' can only appear on functions">;
-def err_async_main : Error<"'main' is not allowed to be declared async">;
+  "'_Async' can only appear on functions">;
+def err_async_main : Error<"'main' is not allowed to be declared _Async">;
 def err_await_invalid_scope : Error<
-  "await expression is not allowed to appear in %0">;
+  "_Await expression is not allowed to appear in %0">;
 def err_async_func_unsupported : Error<
-  "async function does not support %0">;
+  "_Async function does not support %0">;
 def err_not_a_async_call : Error<
-  "the await expression's external function declaration must be modified by async or return 'Future' type">;
+  "the _Await expression's external function declaration must be modified by _Async or return 'Future' type">;
 def err_function_not_found : Error <
-  "'%0' was not found, you need to include %1 before using the 'async' keyword">;
+  "'%0' was not found, you need to include %1 before using the '_Async' keyword">;
 def err_await_expression_not_found: Error <
-  "await expression was not found in async function">;
+  "_Await expression was not found in _Async function">;
 def err_invalid_async_function : Error <
-  "function which returns 'Future' type should not be modified by 'async'">;
+  "function which returns 'Future' type should not be modified by '_Async'">;
 
 // BSC ownership warnings and errors.
 def err_owned_inderictOwned_type_check : Error<

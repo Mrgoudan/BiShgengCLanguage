@@ -23,7 +23,7 @@ bool DeclSpec::setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
                                     unsigned &DiagID) {
   if (FS_async_specified) {
     DiagID = diag::warn_duplicate_declspec;
-    PrevSpec = "async";
+    PrevSpec = "_Async";
     return true;
   }
   FS_async_specified = true;

@@ -54,7 +54,7 @@ void FileWriter::free(FileWriter *this) {}
 
 _Impl _Trait Future<struct Void> for FileWriter;
 
-async void createMatrix(int matrix[ROW][COL]) {
+_Async void createMatrix(int matrix[ROW][COL]) {
     int i, j, k = 0;
 
     srand((unsigned)time(NULL));
@@ -65,7 +65,7 @@ async void createMatrix(int matrix[ROW][COL]) {
     }
 }
 
-async void multiMatrix(int matrix1[ROW][COL], int matrix2[ROW][COL], int result[ROW][COL]) {
+_Async void multiMatrix(int matrix1[ROW][COL], int matrix2[ROW][COL], int result[ROW][COL]) {
     for (int i = 0; i < ROW; i++) {
         for (int j = 0; j < COL; j++) {
             int sum = 0;
@@ -77,16 +77,16 @@ async void multiMatrix(int matrix1[ROW][COL], int matrix2[ROW][COL], int result[
     }
 }
 
-async void matrixCalculation() {
+_Async void matrixCalculation() {
     char str[COL + 2];
     int matrix1[ROW][COL];
     int matrix2[ROW][COL];
     int result[ROW][COL];
     char buffer[BUFFER_SIZE] = {0};
 
-    await createMatrix(matrix1);
-    await createMatrix(matrix2);
-    await multiMatrix(matrix1, matrix2, result);
+    _Await createMatrix(matrix1);
+    _Await createMatrix(matrix2);
+    _Await multiMatrix(matrix1, matrix2, result);
 
     FILE *file = fopen("./matrix.txt", "w");
     if (file == NULL) {
@@ -100,7 +100,7 @@ async void matrixCalculation() {
             k += sprintf(&str[k], "%d ", result[i][j]);
         }
         str[k++] = '\0';
-        await fileWriter(file, buffer);
+        _Await fileWriter(file, buffer);
         k = 0;
     }
 
@@ -124,7 +124,7 @@ int main() {
     if (g_noise.initCost > 0)
         printf("scheduler init cost: %lu\n", g_noise.initCost); // 初始化调度器
     if (g_noise.createTaskCost > 0)
-        printf("scheduler creat async task cost: %lu\n", g_noise.createTaskCost / g_noise.createTaskCount); // 创建异步任务
+        printf("scheduler creat _Async task cost: %lu\n", g_noise.createTaskCost / g_noise.createTaskCount); // 创建异步任务
     if (g_noise.freeCount > 0)
         printf("scheduler free cost: %lu\n", g_noise.freeCost / g_noise.freeCount); // 销毁异步任务
     if (g_noise.pushCost > 0)

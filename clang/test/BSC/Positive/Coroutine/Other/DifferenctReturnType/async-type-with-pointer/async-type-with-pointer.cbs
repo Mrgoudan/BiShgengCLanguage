@@ -9,19 +9,19 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int* f() {
+_Async int* f() {
     int a = 1;
     int* b = &a;
     int c;
     if(a == 1) {
         if (*b == 3){
-            int c = await read(3);
+            int c = _Await read(3);
         }
-        int c = await read(2);
+        int c = _Await read(2);
     }
     int* d = &c;
     return d;

@@ -3055,7 +3055,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   if (!FD->isAsyncSpecified()) {
     if (AwaitFinder.GetAwaitExprNum() != 0) {
       Diag(FD->getBeginLoc(), diag::err_await_invalid_scope)
-          << "non-async function.";
+          << "non-_Async function.";
     }
     return Decls;
   }

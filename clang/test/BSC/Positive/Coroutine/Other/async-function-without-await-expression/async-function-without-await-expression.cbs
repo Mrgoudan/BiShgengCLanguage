@@ -9,12 +9,12 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int f() {
+_Async int f() {
     return 0;
 }
 
-async int g() {
-  return await f();
+_Async int g() {
+  return _Await f();
 }
 
 int main() {

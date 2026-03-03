@@ -2,20 +2,20 @@
 
 #include "../../../async-func-read-opposite.hbs"
 
-static async int f(int start); // expected-error {{async function does not support static declaration}} 
+static _Async int f(int start); // expected-error {{_Async function does not support static declaration}} 
 
-async int test() {
+_Async int test() {
   return 42;
 }
 
-async int g() {
-  int tmp = await f(3);
+_Async int g() {
+  int tmp = _Await f(3);
   return 42;
 }
 
-static async int f(int start) {
+static _Async int f(int start) {
   start = 3;
-  int a = await test();
+  int a = _Await test();
   return a + start;
 }
 

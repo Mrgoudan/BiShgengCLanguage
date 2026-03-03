@@ -9,20 +9,20 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int int::g(int start) {
+_Async int int::g(int start) {
     return 0;
 }
 
-async int int::q(int* this) {
+_Async int int::q(int* this) {
     return 0;
 }
 
 _Trait Future<int>* (*CallBack)(int) = int::g;
 _Trait Future<int>* (*CallBack2)(int*) = int::q;
 
-async int f(int start) {
-  int result = await CallBack(1);
-  result = await CallBack2(&result);
+_Async int f(int start) {
+  int result = _Await CallBack(1);
+  result = _Await CallBack2(&result);
   return result;
 }
 

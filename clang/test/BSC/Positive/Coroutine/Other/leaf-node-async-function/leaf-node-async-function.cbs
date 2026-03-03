@@ -9,18 +9,18 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-static async int test() {
+static _Async int test() {
   return 42;
 }
 
-async int f(int start) {
+_Async int f(int start) {
   start = 3;
-  int a = await test();
+  int a = _Await test();
   return a + start;
 }
 
-async int g() {
-  int tmp = await f(3);
+_Async int g() {
+  int tmp = _Await f(3);
   return 42;
 }
 

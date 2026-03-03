@@ -468,8 +468,8 @@ KEYWORD(__auto_type                 , KEYALL)
 
 #if ENABLE_BSC
 // BSC keywords
-KEYWORD(async                       , KEYBSC)
-KEYWORD(await                       , KEYBSC)
+KEYWORD(_Async                      , KEYBSC)
+KEYWORD(_Await                      , KEYBSC)
 KEYWORD(_Owned                       , KEYBSC)
 KEYWORD(_Borrow                     , KEYBSC)
 KEYWORD(_Trait                      , KEYBSC)

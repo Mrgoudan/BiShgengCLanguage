@@ -10,10 +10,10 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-static async int f(int n) {
+static _Async int f(int n) {
   if (n == 0 || n == 1)
     return 1;
-  int tmp = await f(n-1);
+  int tmp = _Await f(n-1);
   return n * tmp;
 }
 

@@ -9,16 +9,16 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
 enum week{ Mon = 1, Tues, Wed, Thurs, Fri, Sat, Sun };
 enum week a = Mon, b = Wed, c = Sat;
 
-async int f(int start) {
+_Async int f(int start) {
   start = Mon;
-  int result = await read(1);
+  int result = _Await read(1);
   return result;
 }
 

@@ -9,13 +9,13 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int f(int n) {
-  int tmp1 = await read(n-1);
-  int tmp2 = await read(n);
+_Async int f(int n) {
+  int tmp1 = _Await read(n-1);
+  int tmp2 = _Await read(n);
   return tmp2 + tmp1 + 42;
 }
 

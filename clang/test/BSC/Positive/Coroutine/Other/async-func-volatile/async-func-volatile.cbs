@@ -9,11 +9,11 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async volatile int f() {
+_Async volatile int f() {
     int a = 1;
     int b = a - 1;
     int n[10];

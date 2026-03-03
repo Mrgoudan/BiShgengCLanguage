@@ -9,20 +9,20 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
-async int g();
+_Async int g();
 
-async int f() {
-    int a = await g();
+_Async int f() {
+    int a = _Await g();
     return a;
 }
 
-async int g() {
+_Async int g() {
     _Trait Future<int>* a = read(1);
-    await a;
+    _Await a;
     return 0;
 }
 

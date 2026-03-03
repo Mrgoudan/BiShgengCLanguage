@@ -2,9 +2,9 @@
 
 #include "../../async-func-read-opposite.hbs"
 
-_Trait Future<int>* f() { // expected-error {{await expression is not allowed to appear in non-async function.}}
+_Trait Future<int>* f() { // expected-error {{_Await expression is not allowed to appear in non-_Async function.}}
     _Trait Future<int>*f;
-    int a = await read(1);
+    int a = _Await read(1);
     return f;
 }
 

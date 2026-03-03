@@ -19,7 +19,7 @@ struct B {
 
 _Impl _Trait A for struct B;
 
-async int foo() {
+_Async int foo() {
     struct B b;
 
     struct B* _b = &b;

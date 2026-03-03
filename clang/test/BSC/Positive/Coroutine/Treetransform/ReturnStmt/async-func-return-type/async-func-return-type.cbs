@@ -9,7 +9,7 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
@@ -72,15 +72,15 @@ _Trait Future<int>* test2(int a)     {
   return ptr;
 }
 
-async int f(int start) {
-    int a = await read(1);
+_Async int f(int start) {
+    int a = _Await read(1);
     int b = 2;
 
     if(a == 1) {
-      b = await test1(2);
+      b = _Await test1(2);
       if (b == 3)
           return 1;
-      else b = await test2(3);
+      else b = _Await test2(3);
       return 3;
     }
 

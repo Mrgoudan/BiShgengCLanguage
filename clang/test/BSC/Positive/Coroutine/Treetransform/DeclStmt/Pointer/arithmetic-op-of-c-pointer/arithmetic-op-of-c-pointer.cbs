@@ -9,13 +9,13 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
 const int MAX = 3;
 
-async int f(int start) {
+_Async int f(int start) {
   int *nptr = NULL;
   int  var[] = {10, 100, 200};
   int  i, *ptr;
@@ -25,7 +25,7 @@ async int f(int start) {
   {
     ptr--;
   }
-  int result = await read(1);
+  int result = _Await read(1);
   return result;
 }
 

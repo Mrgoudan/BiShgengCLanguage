@@ -9,19 +9,19 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 
 int p;
 int t;
 
-async int f(int start) {
+_Async int f(int start) {
   extern int p;
   extern int t;
   p = 3;
   t = 4;
-  int x = await read(2);
+  int x = _Await read(2);
   return 42;
 }
 

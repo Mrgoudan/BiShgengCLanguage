@@ -1071,7 +1071,7 @@ IdentifierInfo *Parser::ParseObjCSelectorPiece(SourceLocation &SelectorLoc) {
   case tok::kw_if:
   case tok::kw_inline:
   #if ENABLE_BSC
-  case tok::kw_async:
+  case tok::kw__Async:
   #endif
   case tok::kw_int:
   case tok::kw_long:

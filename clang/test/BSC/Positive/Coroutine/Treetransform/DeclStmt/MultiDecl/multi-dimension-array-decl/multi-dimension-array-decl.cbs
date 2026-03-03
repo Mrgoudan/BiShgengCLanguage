@@ -9,17 +9,17 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async int read(int a) {
+_Async int read(int a) {
   return 0;
 }
 struct Addr {
     int a;
 };
 
-async int f() {
+_Async int f() {
   int a[5][3][2] = {0};
   struct Addr addr[2][3][4][5];
-  int x = await read(2);
+  int x = _Await read(2);
   return 42;
 }
 

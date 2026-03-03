@@ -16,9 +16,9 @@ typedef struct EQueueFunc {
 } EQueueFunc;
 
 
-async void f() { // triger point 2, do not change
+_Async void f() { // triger point 2, do not change
     EQueueFunc f;
-    await f.func();
+    _Await f.func();
 }
 
 int main() {

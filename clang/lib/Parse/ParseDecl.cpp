@@ -4479,7 +4479,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
     // safe-specifier:
 #if ENABLE_BSC
-    case tok::kw_async:
+    case tok::kw__Async:
       isInvalid = DS.setFunctionSpecAsync(Loc, PrevSpec, DiagID);
       break;
     case tok::kw__Safe:
@@ -5853,7 +5853,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     // function-specifier
   case tok::kw_inline:
 #if ENABLE_BSC
-  case tok::kw_async:
+  case tok::kw__Async:
   case tok::kw__Safe:
   case tok::kw__Unsafe:
   // BSC conditional support.

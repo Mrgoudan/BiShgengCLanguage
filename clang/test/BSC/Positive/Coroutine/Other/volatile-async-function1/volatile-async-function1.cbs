@@ -7,17 +7,17 @@
 #include "future.hbs"
 #include <stdlib.h>
 
-async volatile char g(char x) {
-    char a = await g(1);
+_Async volatile char g(char x) {
+    char a = _Await g(1);
     switch (1) {
         case 1:
-            return await g(2);
+            return _Await g(2);
             break;
         case 2:
-            return await g(3);
+            return _Await g(3);
             break;
         default:
-            return await g(4);
+            return _Await g(4);
     }
     return 0;
 }

@@ -1497,7 +1497,7 @@ ExprResult Parser::ParseCastExpression(
   }
 
 #if ENABLE_BSC
-  case tok::kw_await: { // unary-expression: 'await' cast-expression
+  case tok::kw__Await: { // unary-expression: 'await' cast-expression
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     SourceLocation AwaitLoc = ConsumeToken();
