@@ -715,8 +715,9 @@ void ActionExtract::VisitUnaryAddrConstDeref(UnaryOperator *UO) {
     return;
   }
   if (Sources[0]->ty->isPointerType()) {
-    std::unique_ptr<Path> Deref = std::make_unique<Path>(
-        std::move(Sources[0]), "*", UO->getType(), UO->getEndLoc());
+    std::unique_ptr<Path> Deref =
+        std::make_unique<Path>(std::move(Sources[0]), "*",
+                               UO->getType()->getPointeeType(), UO->getEndLoc());
     Sources[0] = std::move(Deref);
   }
 }
@@ -736,8 +737,9 @@ void ActionExtract::VisitUnaryAddrMutDeref(UnaryOperator *UO) {
   // Note that in some cases such as `&mut *&p`, there is no need to add
   // dereference, as it allows for more accurate analysis.
   if (Sources[0]->ty->isPointerType()) {
-    std::unique_ptr<Path> Deref = std::make_unique<Path>(
-        std::move(Sources[0]), "*", UO->getType(), UO->getEndLoc());
+    std::unique_ptr<Path> Deref =
+        std::make_unique<Path>(std::move(Sources[0]), "*",
+                               UO->getType()->getPointeeType(), UO->getEndLoc());
     Sources[0] = std::move(Deref);
   }
 }
@@ -1680,8 +1682,7 @@ void RegionCheck::EnsureBorrowSource(Point SuccPoint,
       return;
     }
     case Path::PathType::Extension: {
-      if (prefix->base->ty.isBorrowQualified()) {
-        assert(prefix->base->D != nullptr && "expected non nullptr!");
+      if (prefix->base->ty.isBorrowQualified() && prefix->base->D != nullptr) {
         RegionName RefRegionName = getRegionName(prefix->base->D);
         RegionVariable BorrowRV = getRegionVariable(BorrowRegionName);
         RegionVariable RefRV = getRegionVariable(RefRegionName);
