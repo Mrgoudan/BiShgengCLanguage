@@ -13,15 +13,15 @@ extern BSCBadAllocHandler bsc_bad_alloc_handler;
 extern BSCOutOfBoundHandler bsc_out_of_bound_handler;
 extern BSCOverflowHandler bsc_overflow_handler;
 
-void default_bad_alloc_handler(size_t size);
-void default_out_of_bound_handler(size_t len, size_t index);
-void default_overflow_handler();
-void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
+_Noreturn void default_bad_alloc_handler(size_t size);
+_Noreturn void default_out_of_bound_handler(size_t len, size_t index);
+_Noreturn void default_overflow_handler();
+_Noreturn void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
 
-_Safe void bsc_unwrap_failed(void);
+_Safe _Noreturn void bsc_unwrap_failed(void);
 
-_Safe void bsc_refcell_mut_borrow_failed(void);
-_Safe void bsc_refcell_immut_borrow_failed(void);
+_Safe _Noreturn void bsc_refcell_mut_borrow_failed(void);
+_Safe _Noreturn void bsc_refcell_immut_borrow_failed(void);
 
 _Safe void safe_free(void * _Nullable _Owned p);
 
