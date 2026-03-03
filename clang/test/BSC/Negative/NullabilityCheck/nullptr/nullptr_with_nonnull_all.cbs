@@ -1,8 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -nullability-check=all -fsyntax-only -verify %s
 
 // Test that _Nonnull correctly rejects nullptr assignments and usage
-// Note: In regular (non-_Safe) code, _Nonnull only produces warnings for function calls/returns,
-// but in safe zones it produces errors for all _Nonnull violations
+// with -nullability-check=all
 
 // _Nonnull in function parameters
 void take_nonnull(int * _Nonnull p) {
@@ -10,17 +9,17 @@ void take_nonnull(int * _Nonnull p) {
 }
 
 void test_nonnull_args(void) {
-  take_nonnull(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  take_nonnull((int *)nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  take_nonnull(nullptr); // expected-error {{cannot pass nullable pointer argument}}
+  take_nonnull((int *)nullptr); // expected-error {{cannot pass nullable pointer argument}}
 }
 
 // _Nonnull function return
 int * _Nonnull return_nonnull_nullptr(void) {
-  return nullptr; // expected-warning {{null returned from function that requires a non-null return value}}
+  return nullptr; // expected-error {{cannot return nullable pointer type}}
 }
 
 void * _Nonnull return_void_nonnull_nullptr(void) {
-  return (void *)nullptr; // expected-warning {{null returned from function that requires a non-null return value}}
+  return (void *)nullptr; // expected-error {{cannot return nullable pointer type}}
 }
 
 // _Nonnull with _Borrow parameter
@@ -29,11 +28,11 @@ void take_nonnull_borrow(int * _Nonnull _Borrow p) {
 }
 
 void test_nonnull_borrow_args(void) {
-  take_nonnull_borrow(nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
-  take_nonnull_borrow((int * _Borrow)nullptr); // expected-warning {{null passed to a callee that requires a non-null argument}}
+  take_nonnull_borrow(nullptr); // expected-error {{cannot pass nullable pointer argument}}
+  take_nonnull_borrow((int * _Borrow)nullptr);
 }
 
-// _Nonnull in safe zone - produces ERROR not warning
+// _Nonnull in safe zone
 _Safe void test_safe_nonnull_assignment(void) {
   int * _Nonnull p1 = (int *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
   void * _Nonnull p2 = (void *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
@@ -49,7 +48,6 @@ _Safe void test_safe_nonnull_const(void) {
   (void)cp;
 }
 
-// _Nonnull with volatile in safe zone
 _Safe void test_safe_nonnull_volatile(void) {
   volatile int * _Nonnull vp = (volatile int *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
   (void)vp;

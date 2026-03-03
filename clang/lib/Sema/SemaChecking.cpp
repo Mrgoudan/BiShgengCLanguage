@@ -5486,6 +5486,12 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
 static void CheckNonNullArgument(Sema &S,
                                  const Expr *ArgExpr,
                                  SourceLocation CallSiteLoc) {
+#if ENABLE_BSC
+  // Suppress Clang's warning;
+  // BSC's CFG-based check produces errors when applicable.
+  if (S.getLangOpts().BSC)
+    return;
+#endif
   if (CheckNonNullExpr(S, ArgExpr))
     S.DiagRuntimeBehavior(CallSiteLoc, ArgExpr,
                           S.PDiag(diag::warn_null_arg)
@@ -11873,7 +11879,13 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
                          const AttrVec *Attrs,
                          const FunctionDecl *FD) {
   // Check if the return value is null but should not be.
+#if ENABLE_BSC
+  // Suppress Clang's warning;
+  // BSC's CFG-based check produces errors when applicable.
+  if (!getLangOpts().BSC && ((Attrs && hasSpecificAttr<ReturnsNonNullAttr>(*Attrs)) ||
+#else
   if (((Attrs && hasSpecificAttr<ReturnsNonNullAttr>(*Attrs)) ||
+#endif
        (!isObjCMethod && isNonNullType(Context, lhsType))) &&
       CheckNonNullExpr(*this, RetValExp))
     Diag(ReturnLoc, diag::warn_null_ret)

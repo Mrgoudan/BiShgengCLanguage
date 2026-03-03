@@ -1,0 +1,57 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that _Nonnull correctly rejects nullptr assignments and usage.
+// With default -nullability-check=safeonly, Clang's warn_null_arg/warn_null_ret
+// are suppressed in non-safe zone per BSC spec. In safe zones, BSC produces
+// errors for _Nonnull violations.
+
+// _Nonnull in function parameters
+void take_nonnull(int * _Nonnull p) {
+  (void)p;
+}
+
+void test_nonnull_args(void) {
+  take_nonnull(nullptr);
+  take_nonnull((int *)nullptr);
+}
+
+// _Nonnull function return
+int * _Nonnull return_nonnull_nullptr(void) {
+  return nullptr;
+}
+
+void * _Nonnull return_void_nonnull_nullptr(void) {
+  return (void *)nullptr;
+}
+
+// _Nonnull with _Borrow parameter
+void take_nonnull_borrow(int * _Nonnull _Borrow p) {
+  (void)p;
+}
+
+void test_nonnull_borrow_args(void) {
+  take_nonnull_borrow(nullptr);
+  take_nonnull_borrow((int * _Borrow)nullptr);
+}
+
+// _Nonnull in safe zone - produces ERROR
+_Safe void test_safe_nonnull_assignment(void) {
+  int * _Nonnull p1 = (int *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  void * _Nonnull p2 = (void *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  char * _Nonnull p3 = (char *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  (void)p1;
+  (void)p2;
+  (void)p3;
+}
+
+// _Nonnull with const in safe zone
+_Safe void test_safe_nonnull_const(void) {
+  const int * _Nonnull cp = (const int *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  (void)cp;
+}
+
+// _Nonnull with volatile in safe zone
+_Safe void test_safe_nonnull_volatile(void) {
+  volatile int * _Nonnull vp = (volatile int *)nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  (void)vp;
+}
