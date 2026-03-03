@@ -45,3 +45,16 @@ _Safe int** _Owned test_ptr_level1(int** _Owned p); // expected-error {{function
 
 _Unsafe int*** test_ptr_level2(int*** p); // expected-note {{previous declaration is here}}
 _Safe int** _Owned test_ptr_level2(int** _Owned p); // expected-error {{function 'test_ptr_level2' has incompatible _Safe and _Unsafe declarations}}
+
+// _Safe redeclaration may not drop qualifiers present in the unsafe declaration.
+int* _Borrow test_drop_borrow_param(int* _Borrow a); // expected-note {{previous declaration is here}}
+_Safe int* test_drop_borrow_param(int* a); // expected-error {{function 'test_drop_borrow_param' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Owned test_drop_owned_param(int* _Owned a); // expected-note {{previous declaration is here}}
+_Safe int* test_drop_owned_param(int* a); // expected-error {{function 'test_drop_owned_param' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Borrow test_drop_borrow_ret(int* _Borrow a); // expected-note {{previous declaration is here}}
+_Safe int* test_drop_borrow_ret(int* _Borrow a); // expected-error {{function 'test_drop_borrow_ret' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Owned test_drop_owned_ret(int* _Owned a); // expected-note {{previous declaration is here}}
+_Safe int* test_drop_owned_ret(int* _Owned a); // expected-error {{function 'test_drop_owned_ret' has incompatible _Safe and _Unsafe declarations}}

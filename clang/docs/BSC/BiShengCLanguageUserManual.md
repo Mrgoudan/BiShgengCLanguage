@@ -2496,9 +2496,13 @@ int main() { return 0; }
 
    **返回类型兼容**:
 
-   - `_Unsafe T*` ⟷ `_Safe T* _Owned`: 裸指针限定符需匹配(除`_Owned`外)
+   - `_Unsafe T*` → `_Safe T* _Owned`: `_Safe`声明可以为裸指针添加`_Owned`限定符
 
-   - `_Unsafe T*` ⟷ `_Safe T* _Borrow`: 裸指针限定符需匹配(除`_Borrow`外)
+   - `_Unsafe T*` → `_Safe T* _Borrow`: `_Safe`声明可以为裸指针添加`_Borrow`限定符
+
+   - `_Unsafe T* _Owned` → `_Safe T* _Owned`: 必须保留`_Owned`限定符
+
+   - `_Unsafe T* _Borrow` → `_Safe T* _Borrow`: 必须保留`_Borrow`限定符
 
    - `_Safe T* _Owned` ⟷ `_Safe T* _Borrow`: **不兼容**
 
@@ -2506,21 +2510,32 @@ int main() { return 0; }
 
    - 参数数量、省略号使用必须一致
 
-   - 对应参数类型兼容(移除限定符后),但**`_Owned`参数与`_Borrow`参数不兼容**
+   - `_Safe`声明只能为参数**添加**`_Owned`或`_Borrow`限定符，不能**移除**已有的限定符
+
+   - **`_Owned`参数与`_Borrow`参数不兼容**
 
    **示例**:
    ```c
-   // ok: 混合模式兼容
+   // ok: _Safe声明添加_Owned限定符
    _Unsafe int* foo(int* p);
    _Safe int* _Owned foo(int* _Owned p);
-   
-   // ok: 返回类型兼容
-   _Unsafe void* bar(void);
-   _Safe void* _Owned bar(void);
+
+   // ok: _Safe声明添加_Borrow限定符
+   _Unsafe int* bar(int* p);
+   _Safe int* _Borrow bar(int* _Borrow p);
+
+   // error: _Safe声明移除了unsafe声明中的_Borrow限定符
+   int* _Borrow baz(int* _Borrow p);
+   _Safe int* baz(int* p);
+
+   // error: _Safe声明移除了unsafe声明中的_Owned限定符
+   int* _Owned qux(int* _Owned p);
+   _Safe int* qux(int* p);
+
    // error: 参数owned与borrow不兼容
-   _Unsafe int* baz(int* p);
-   _Safe int* _Borrow baz(int* _Owned p);
-   
+   _Unsafe int* bad(int* p);
+   _Safe int* _Borrow bad(int* _Owned p);
+
    // ok: 相同修饰符,类型完全相同
    _Safe int* _Owned fiz(int* _Owned p);
    _Safe int* _Owned fiz(int* _Owned q);

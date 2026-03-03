@@ -113,32 +113,27 @@ bool Type::checkFunctionProtoType(SafeZoneSpecifier SZS) const {
 
 namespace clang {
 
-/// Helper: Check if owned/borrow qualifiers are compatible between two types
-/// for heterogeneous redeclarations.
-///
-/// Returns true unless one type has 'owned' and the other has 'borrow'.
-/// This handles:
-/// - Arrays (treated as raw pointers with no qualifiers)
-/// - Pointers with no qualifiers (raw)
-/// - Pointers with owned qualifier
-/// - Pointers with borrow qualifier
-///
-/// Compatible cases:
-///   raw ⟷ raw, raw ⟷ owned, raw ⟷ borrow, owned ⟷ owned, borrow ⟷ borrow
-///   array ⟷ any (arrays are treated as raw)
-///
-/// Incompatible case:
-///   owned ⟷ borrow
-static bool AreOwnedBorrowQualifiersCompatible(QualType Type1, QualType Type2) {
-  // Extract owned/borrow status only for pointer types.
-  // Arrays and other non-pointer types are treated as having no qualifiers.
-  bool Type1IsOwned = Type1->isPointerType() && Type1.isOwnedQualified();
-  bool Type1IsBorrow = Type1->isPointerType() && Type1.isBorrowQualified();
-  bool Type2IsOwned = Type2->isPointerType() && Type2.isOwnedQualified();
-  bool Type2IsBorrow = Type2->isPointerType() && Type2.isBorrowQualified();
+/// Check owned/borrow qualifier compatibility for heterogeneous redeclarations.
+/// UnsafeType is the unsafe decl, SafeType is the _Safe redeclaration.
+/// The _Safe redeclaration may only add qualifiers, not remove them.
+static bool AreOwnedBorrowQualifiersCompatible(QualType UnsafeType,
+                                               QualType SafeType) {
+  bool UnsafeIsOwned =
+      UnsafeType->isPointerType() && UnsafeType.isOwnedQualified();
+  bool UnsafeIsBorrow =
+      UnsafeType->isPointerType() && UnsafeType.isBorrowQualified();
+  bool SafeIsOwned = SafeType->isPointerType() && SafeType.isOwnedQualified();
+  bool SafeIsBorrow = SafeType->isPointerType() && SafeType.isBorrowQualified();
 
-  // The ONLY incompatible combination: owned ⟷ borrow
-  return !((Type1IsOwned && Type2IsBorrow) || (Type1IsBorrow && Type2IsOwned));
+  // Safe redecl must not drop a qualifier present in the unsafe decl.
+  if (UnsafeIsOwned && !SafeIsOwned)
+    return false;
+  if (UnsafeIsBorrow && !SafeIsBorrow)
+    return false;
+  // owned ⟷ borrow is always incompatible.
+  if ((SafeIsOwned && UnsafeIsBorrow) || (SafeIsBorrow && UnsafeIsOwned))
+    return false;
+  return true;
 }
 
 /// Check if two function types are compatible for heterogeneous redeclarations
