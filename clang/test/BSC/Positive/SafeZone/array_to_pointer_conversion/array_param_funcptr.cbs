@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+//
+// In C (C99 6.7.5.3p7), a function parameter declared as "array of type" is
+// automatically adjusted to "pointer to type". Therefore, the following pairs
+// of function signatures are type-compatible:
+//   void f(int arr[3])  ==  void f(int *arr)
+// Assigning function pointers between these two forms must be allowed.
+
+_Safe void test10(int arr[3]) {}
+_Safe void test11(int *arr) {}
+
+_Safe void (*p10)(int arr[3]);
+_Safe void (*p11)(int *arr);
+
+_Safe int main(void) {
+    p10 = test11;  // ok: int* == int[3] (array param decays to pointer)
+    p11 = test10;  // ok: int[3] == int* (array param decays to pointer)
+    return 0;
+}

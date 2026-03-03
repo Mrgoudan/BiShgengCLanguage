@@ -2634,6 +2634,22 @@ int main() {
 }
 ```
 
+函数参数中声明为数组类型的形参与对应的指针类型形参等价，函数指针赋值时两者可以互换：
+
+```c
+_Safe void test10(int arr[3]) {}
+_Safe void test11(int *arr) {}
+
+_Safe void (*p10)(int arr[3]) = nullptr;
+_Safe void (*p11)(int *arr) = nullptr;
+
+_Safe int main(void) {
+    p10 = test11;  // ok: int arr[3] 与 int *arr 等价
+    p11 = test10;  // ok: int *arr 与 int arr[3] 等价
+    return 0;
+}
+```
+
 10. `_Safe`修饰泛型函数时，会对泛型每个实例化版本也做`_Safe`检查。
 
 ```c
