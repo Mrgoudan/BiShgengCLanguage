@@ -369,8 +369,9 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
     return true;
   }
 
-  // Allow dependent types to bypass borrow checks, defer to instantiation
-  if (RHSCanType->isDependentType()) {
+  // Defer borrow compatibility checks for dependent types to instantiation,
+  // where concrete types are available for a precise check.
+  if (RHSCanType->isDependentType() || LHSCanType->isDependentType()) {
     return true;
   }
 
@@ -455,6 +456,11 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
   QualType LHSCanType = LHSType.getCanonicalType().getUnqualifiedType();
   SourceLocation ExprLoc = RHSExpr->getBeginLoc();
   bool Res = true;
+
+  // Defer borrow compatibility checks for dependent types to instantiation,
+  // where concrete types are available for a precise check.
+  if (RHSCanType->isDependentType() || LHSCanType->isDependentType())
+    return true;
 
   if (LHSCanType.isBorrowQualified() || RHSCanType.isBorrowQualified()) {
     if (TraitDecl *TD = TryDesugarTrait(LHSCanType)) {

@@ -1,0 +1,120 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// ---------------------------------------------------------------------------
+// Test that casting T *_Borrow to B *_Borrow is checked at instantiation time.
+// Different concrete types must be rejected; same concrete type must be allowed.
+// ---------------------------------------------------------------------------
+
+// --- Two independent type params, mutable borrow (T=int, B=float) ---
+_Safe void test_two_params<T, B>(T *_Borrow a, B *_Borrow b) {
+    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    _Unsafe a = (T *_Borrow)b;  // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
+}
+
+// --- Two independent type params, mutable borrow (T=int*, B=float*) ---
+// T *_Borrow becomes int **_Borrow; cast checks pointee types int* vs float*.
+_Safe void test_two_ptr_params<T, B>(T *_Borrow a, B *_Borrow b) {
+    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int **_Borrow' to 'float **_Borrow'}}
+    _Unsafe a = (T *_Borrow)b;  // expected-error {{incompatible borrow types, cannot cast 'float **_Borrow' to 'int **_Borrow'}}
+}
+
+// --- Two independent type params, const borrow ---
+_Safe void test_two_params_const<T, B>(const T *_Borrow a, const B *_Borrow b) {
+    _Unsafe b = (const B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'const float *_Borrow'}}
+    _Unsafe a = (const T *_Borrow)b;  // expected-error {{incompatible borrow types, cannot cast 'const float *_Borrow' to 'const int *_Borrow'}}
+}
+
+// --- Single type param: T *_Borrow -> T *_Borrow is always valid ---
+_Safe void test_same_param<T>(T *_Borrow a) {
+    T *_Borrow c = (T *_Borrow)a;  // ok
+}
+
+// --- Three type params: T!=B errors, B==C is ok ---
+_Safe void test_three_params<T, B, C>(T *_Borrow a, B *_Borrow b, C *_Borrow c) {
+    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    _Unsafe c = (C *_Borrow)b;  // ok: B=float, C=float
+}
+
+// --- Const/mutable mismatch across params ---
+_Safe void test_const_mutable_mismatch<T, B>(T *_Borrow a, const B *_Borrow b) {
+    _Unsafe b = (const B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'const float *_Borrow'}}
+}
+
+// --- One concrete type, one generic param ---
+_Safe void test_concrete_vs_generic<T>(int *_Borrow a, T *_Borrow b) {
+    _Unsafe b = (T *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+}
+
+// ---------------------------------------------------------------------------
+// T and B are themselves borrow pointer types passed directly as type params.
+// The cast (B)a casts between the full T and B types.
+// ---------------------------------------------------------------------------
+
+// Instantiated with T=int *_Borrow, B=float *_Borrow.
+_Unsafe void test_borrow_direct<T, B>(T a, B b) {
+    b = (B)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    a = (T)b;  // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
+}
+
+// Same type: ok.
+_Unsafe void test_direct_same<T>(T a) {
+    T c = (T)a;  // ok
+}
+
+int *_Owned safe_malloc(int n);
+void safe_free(void *_Owned p);
+
+void test() {
+    int x = 0;
+    float y = 0.0f;
+    int *_Borrow a = &_Mut x;
+    float *_Borrow b = &_Mut y;
+
+    // --- Scalar type params ---
+
+    // Different types: errors at instantiation.
+    test_two_params<int, float>(a, b);             // expected-note {{in instantiation of function template specialization 'test_two_params<int, float>' requested here}}
+    test_two_params_const<int, float>(a, b);       // expected-note {{in instantiation of function template specialization 'test_two_params_const<int, float>' requested here}}
+    test_three_params<int, float, float>(a, b, b); // expected-note {{in instantiation of function template specialization 'test_three_params<int, float, float>' requested here}}
+    test_const_mutable_mismatch<int, float>(a, b); // expected-note {{in instantiation of function template specialization 'test_const_mutable_mismatch<int, float>' requested here}}
+    test_concrete_vs_generic<float>(a, b);         // expected-note {{in instantiation of function template specialization 'test_concrete_vs_generic<float>' requested here}}
+
+    // Same type: all ok.
+    test_two_params<int, int>(a, a);
+    test_two_params_const<int, int>(a, a);
+    test_same_param<int>(a);
+    test_three_params<int, int, int>(a, a, a);
+    test_concrete_vs_generic<int>(a, a);
+
+    // --- Pointer type params (T=int*, B=float*): borrow of pointer-to-T ---
+    int x1 = 0;
+    float y1 = 0.0f;
+    int *p = &x1;
+    float *q = &y1;
+    int **_Borrow pa = &_Mut p;
+    float **_Borrow pb = &_Mut q;
+
+    // T *_Borrow where T=int* vs B=float*: error (int** borrow vs float** borrow).
+    test_two_ptr_params<int *, float *>(pa, pb);   // expected-note {{in instantiation of function template specialization 'test_two_ptr_params<int *, float *>' requested here}}
+    // Same pointer type: ok.
+    test_same_param<int *>(pa);
+    test_two_ptr_params<int *, int *>(pa, pa);
+
+    // --- Owned pointer type params ---
+    int *_Owned op = safe_malloc(1);
+    int *_Owned *_Borrow opa = &_Mut op;
+
+    // Same owned type: ok.
+    test_same_param<int *_Owned>(opa);
+
+    // --- T and B are themselves borrow pointer types ---
+
+    // Different borrow types: error.
+    test_borrow_direct<int *_Borrow, float *_Borrow>(a, b); // expected-note {{in instantiation of function template specialization 'test_borrow_direct<int *_Borrow, float *_Borrow>' requested here}}
+    // Same borrow type: ok.
+    test_direct_same<int *_Borrow>(a);
+
+    // Same owned type: ok.
+    test_direct_same<int *_Owned>(op);
+
+}
