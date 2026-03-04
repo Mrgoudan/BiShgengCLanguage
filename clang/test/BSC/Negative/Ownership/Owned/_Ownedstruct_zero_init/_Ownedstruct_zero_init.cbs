@@ -1,0 +1,65 @@
+// RUN: %clang_cc1 -verify %s
+
+struct S {
+  int a;
+  int *_Owned _Nullable p;
+};
+
+struct N {
+  int a;
+  int *_Owned _Nonnull p;
+};
+struct Wrapper {
+  struct S s1;
+  struct S s2;
+};
+struct T {
+  int a;
+  int* _Nonnull p;
+};
+
+// _Nonnull can't be zero init
+_Safe void test(void){
+  int* _Nonnull p2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct T t2={0}; // expected-error {{`t2.p` is a _Nonnull pointer and must be properly initialized.}}
+}
+
+_Safe int *_Owned getptr(void);
+_Safe void consume(int *_Owned);
+
+_Safe void test_initializations(void) {
+  struct N n = {0};
+
+  // C89-style initialization
+  struct S i_all = {1, nullptr};
+  struct S i_zero = {0};         // Implicit null for p
+  struct S i_empty = {};         // GNU C / C23 empty init
+
+  // C99 designated initializers
+  struct S d_all = {.a = 1, .p = nullptr};
+  struct S d_a = {.a = 1};       // expected-error {{incomplete initialization is forbidden in the safe zone}}
+  struct S d_p = {.p = nullptr};
+
+  // Nested struct initialization
+  struct Wrapper w_zero = {0};   // Implicit null for s1.p and s2.p
+  struct Wrapper w_nested = {
+    .s1 = {.a = 1},              // expected-error {{incomplete initialization is forbidden in the safe zone}}
+    .s2 = {2, nullptr}
+  };
+
+  // Array of structs
+  struct S arr[3] = { // expected-error {{type of array cannot qualified by '_Owned'(even indirectly), 'struct S' contains '_Owned' type}}
+    {0},                       
+    {.a = 1}      // expected-error {{incomplete initialization is forbidden in the safe zone}}
+  };
+
+  // Verify ownership tracking
+  i_empty.p = getptr();
+  consume(i_empty.p);
+
+  d_a.p = getptr();
+  consume(d_a.p);
+
+  w_nested.s1.p = getptr();
+  consume(w_nested.s1.p);
+}

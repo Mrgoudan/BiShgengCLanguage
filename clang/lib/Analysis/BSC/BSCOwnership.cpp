@@ -2232,7 +2232,8 @@ void TransferFunctions::HandleNullInitListExpr(VarDecl *VD, RecordDecl *RD, Init
     Expr *FieldInit = Inits[FD->getFieldIndex()];
     std::string memberField = FD->getNameAsString();
     std::string newFullFieldName = fullFieldName.empty() ? memberField : fullFieldName + "." + memberField;
-    if (FieldInit->isNullExpr(OS.ctx)) {
+    // allow ImplicitValueInit, e.g. struct S s = {0}
+    if (FieldInit->isNullExpr(OS.ctx) || isa<ImplicitValueInitExpr>(FieldInit)) {
       if (stat.SAllOwnedFields[VD].count(newFullFieldName)) {
         stat.SOwnedOwnedFields[VD].erase(newFullFieldName);
         stat.SNullOwnedFields[VD].insert(newFullFieldName);

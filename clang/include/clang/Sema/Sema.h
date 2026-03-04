@@ -3133,6 +3133,14 @@ private:
   /// Header Unit, helper for ActOnStartOfTranslationUnit() only.
   void HandleStartOfHeaderUnit();
 
+#if ENABLE_BSC
+  // global nullability check
+  const NamedDecl *FindNonnull(QualType T, const NamedDecl *D);
+  NullabilityKind GetExprNK(Expr *E);
+  void CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init, 
+                 std::string Path, bool IsInsideStruct);
+#endif
+
 public:
   /// The parser has processed a module-declaration that begins the definition
   /// of a module interface or implementation.

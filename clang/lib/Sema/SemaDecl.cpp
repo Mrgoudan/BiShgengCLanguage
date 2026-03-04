@@ -14521,6 +14521,128 @@ void Sema::CheckStaticLocalForDllExport(VarDecl *VD) {
   }
 }
 
+#if ENABLE_BSC
+// checking tool in BSCNullabilityCheck.cpp
+namespace clang{
+NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx);
+} // namespace clang
+
+const NamedDecl *Sema::FindNonnull(QualType T,  const NamedDecl *D) {
+  if (getDefNullability(T, Context) == NullabilityKind::NonNull)
+    return D;
+  if (const ArrayType *AT = Context.getAsArrayType(T))
+    // recursive function call
+    return FindNonnull(AT->getElementType(), D);
+  if (const RecordDecl *RD = T->getAsRecordDecl()) {
+    for (const FieldDecl *FD : RD->fields()) {
+      if (const NamedDecl *Found = FindNonnull(FD->getType(), FD))
+        return Found;
+    }
+  }
+  return nullptr;
+}
+
+NullabilityKind Sema::GetExprNK(Expr *E) {
+  if (getDefNullability(E->getType(), Context) == NullabilityKind::NonNull)
+    return NullabilityKind::NonNull;
+  if (E->isNullPointerConstant(Context, Expr::NPC_ValueDependentIsNull))
+    return NullabilityKind::Nullable;
+
+  E = E->IgnoreParenImpCasts();
+
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_AddrOf)
+      return NullabilityKind::NonNull;
+  }
+  if (isa<StringLiteral>(E) || E->getType()->isArrayType() ||
+      E->getType()->isFunctionType()) {
+    return NullabilityKind::NonNull;
+  }
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (auto *RefVD = dyn_cast<VarDecl>(DRE->getDecl()))
+      return getDefNullability(RefVD->getType(), Context);
+  } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (auto *RefFD = dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      return getDefNullability(RefFD->getType(), Context);
+  }
+  return getDefNullability(E->getType(), Context);
+}
+
+void Sema::CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init, 
+                     std::string Path, bool IsInsideStruct) {
+  if (!Init)
+    return;
+
+  // pointer type
+  if (TargetType->isPointerType()) {
+    if (getDefNullability(TargetType, Context) == NullabilityKind::NonNull) {
+      bool IsNullConst = Init->isNullPointerConstant(
+          Context, Expr::NPC_ValueDependentIsNull);
+      bool IsImplicit = isa<ImplicitValueInitExpr>(Init);
+
+      // struct init in '{0}'
+      if (IsImplicit || (IsInsideStruct && IsNullConst)) {
+        Diag(Loc, diag::err_nonnull_init_by_default) << Path; 
+      }
+      else if (IsNullConst ||
+               GetExprNK(Init) != NullabilityKind::NonNull) {
+        Diag(Loc, diag::err_nonnull_assigned_by_nullable);
+      }
+    }
+    return;
+  }
+
+  // init list {...}, recurse into fields/elements
+  if (auto *ILE = dyn_cast<InitListExpr>(Init->IgnoreParenImpCasts())) {
+    InitListExpr *SemanticILE =
+        ILE->isSemanticForm() ? ILE : ILE->getSemanticForm();
+    if (!SemanticILE)
+      SemanticILE = ILE;
+
+    if (const RecordType *RT = TargetType->getAs<RecordType>()) {
+      unsigned Idx = 0;
+      for (FieldDecl *FD : RT->getDecl()->fields()) {
+        if (FD->isUnnamedBitfield())
+          continue;
+
+        std::string FieldPath = Path + "." + FD->getNameAsString();
+
+        if (Idx < SemanticILE->getNumInits()) {
+          Expr *ChildInit = SemanticILE->getInit(Idx);
+          SourceLocation ChildLoc = ChildInit->getBeginLoc();
+          if (ChildLoc.isInvalid())
+            ChildLoc = Loc;
+
+          CheckInit(ChildLoc, FD->getType(), ChildInit, FieldPath, true);
+          Idx++;
+        } else {
+          if (const NamedDecl *Bad = FindNonnull(FD->getType(), FD))
+            Diag(Loc, diag::err_nonnull_init_by_default) << FieldPath;
+        }
+      }
+    } else if (const ArrayType *AT = Context.getAsArrayType(TargetType)) {
+      QualType ElemTy = AT->getElementType();
+      for (unsigned i = 0; i < SemanticILE->getNumInits(); ++i) {
+        Expr *ChildInit = SemanticILE->getInit(i);
+        SourceLocation ChildLoc = ChildInit->getBeginLoc();
+        if (ChildLoc.isInvalid())
+          ChildLoc = Loc;
+
+        CheckInit(ChildLoc, ElemTy, ChildInit, Path + "[]", true); 
+      }
+      if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+        if (SemanticILE->getNumInits() < CAT->getSize().getZExtValue()) {
+          if (FindNonnull(ElemTy, nullptr)) {
+            Diag(Loc, diag::err_nonnull_init_by_default) << (Path + "[]");
+          }
+        }
+      }
+    }
+  }
+}
+#endif
+
 /// FinalizeDeclaration - called by ParseDeclarationAfterDeclarator to perform
 /// any semantic actions necessary after any initializer has been attached.
 void Sema::FinalizeDeclaration(Decl *ThisDecl) {
@@ -14546,28 +14668,22 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
-  // forbid uninitialized global Nonnull pointer
-  if (getLangOpts().BSC && !VD->hasInit()) {
-    // FieldDecl or VarDecl
-    auto FindNonnullDecl = [&](auto &Self, QualType T, const NamedDecl *D) -> const NamedDecl * {
-      if (auto K = T->getNullability(Context)) {
-        if (*K == NullabilityKind::NonNull) return D;
-      }
-      if (const ArrayType *AT = Context.getAsArrayType(T)) {
-        return Self(Self, AT->getElementType(), D);
-      }
-      if (const RecordDecl *RD = T->getAsRecordDecl()) {
-        for (const FieldDecl *FD : RD->fields()) {
-          if (const NamedDecl *Found = Self(Self, FD->getType(), FD))
-            return Found;
-        }
-      }
-      return nullptr;
-    };
+  // nullability-check=all, forbid uninitialized global Nonnull pointer 
+if (getLangOpts().BSC && VD && VD->isFileVarDecl() &&
+      getLangOpts().getNullabilityCheck() == LangOptions::NC_ALL &&
+      !VD->isInvalidDecl()) {
 
-    if (const NamedDecl *BadDecl = FindNonnullDecl(FindNonnullDecl, VD->getType(), VD)) {
-      Diag(VD->getLocation(), diag::err_nonnull_init_by_default)
-          << BadDecl->getDeclName();
+    // Final check
+    if (!VD->hasInit()) {
+      if (const NamedDecl *BadDecl =
+              FindNonnull(VD->getType(), VD)) {
+        Diag(VD->getLocation(), diag::err_nonnull_init_by_default)
+            << BadDecl->getDeclName();
+      }
+    } else {
+      // Start from variable name, not inside struct
+      CheckInit(VD->getLocation(), VD->getType(), VD->getInit(),
+                VD->getNameAsString(), false);
     }
   }
 #endif

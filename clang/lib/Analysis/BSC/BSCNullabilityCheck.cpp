@@ -138,7 +138,9 @@ public:
 };
 } // namespace
 
-static NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
+namespace clang{
+// basic tool for CFG check and global Nullability check
+NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
   QualType CanQT = QT.getCanonicalType();
   if (CanQT->isPointerType()) {
     Optional<NullabilityKind> Kind = QT->getNullability(Ctx);
@@ -152,6 +154,7 @@ static NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
   }
   return NullabilityKind::Unspecified;
 }
+} // namespace clang
 
 static void VisitMEForFieldPath(Expr *E, FieldPath &FP) {
   if (auto ME = dyn_cast<MemberExpr>(E)) {
