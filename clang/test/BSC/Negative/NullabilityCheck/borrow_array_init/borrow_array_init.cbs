@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+// Test: array of _Borrow/_Nonnull pointers with partial initialization.
+// _Borrow implies _Nonnull; trailing elements are implicitly NULL.
+
+// --- Negative: partial init errors with -nullability-check=all ---
+
+void case_partial_borrow(int *_Borrow p, int *_Borrow q) {
+  // OK: all elements explicitly initialized
+  int *_Borrow arr1[2] = {p, q};
+
+  // expected-error@+1 {{`arr2` is a _Nonnull pointer and must be properly initialized.}}
+  int *_Borrow arr2[2] = {p};
+
+  // expected-error@+1 {{`arr3` is a _Nonnull pointer and must be properly initialized.}}
+  int *_Borrow arr3[3] = {p};
+
+  // OK: single-element array fully initialized
+  int *_Borrow arr4[1] = {p};
+}
+
+void case_partial_nonnull(int *_Nonnull p, int *_Nonnull q) {
+  // OK: all elements explicitly initialized
+  int *_Nonnull arr1[2] = {p, q};
+
+  // expected-error@+1 {{`arr2` is a _Nonnull pointer and must be properly initialized.}}
+  int *_Nonnull arr2[2] = {p};
+}
+
+// --- Positive: _Nullable array elements are fine with partial init ---
+
+void case_nullable(int *_Nullable p) {
+  // OK: _Nullable pointers may be null, so implicit zero-init is allowed
+  int *_Nullable arr1[2] = {p};
+  int *_Nullable arr2[3] = {};
+}

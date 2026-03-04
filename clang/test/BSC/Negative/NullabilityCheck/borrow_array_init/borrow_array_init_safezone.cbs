@@ -1,0 +1,28 @@
+// RUN: %clang_cc1 -verify %s
+
+// Test: without -nullability-check=all, errors are only reported inside _Safe zones.
+
+void case_safezone(int *_Borrow p, int *_Borrow q) {
+  // Outside safe zone: no error without -nullability-check=all
+  int *_Borrow arr_unsafe[2] = {p};
+
+  _Safe {
+    // Inside safe zone: error even without -nullability-check=all
+    // expected-error@+1 {{`arr_safe` is a _Nonnull pointer and must be properly initialized.}}
+    int *_Borrow arr_safe[2] = {p};
+
+    // OK inside safe zone: fully initialized
+    int *_Borrow arr_ok[2] = {p, q};
+  }
+}
+
+// --- Positive: _Nullable array elements are fine anywhere ---
+
+void case_nullable(int *_Nullable p) {
+  // OK: _Nullable may be null, so implicit zero-init is always allowed
+  int *_Nullable arr1[2] = {p};
+
+  _Safe {
+    int *_Nullable arr2[2] = {p};
+  }
+}

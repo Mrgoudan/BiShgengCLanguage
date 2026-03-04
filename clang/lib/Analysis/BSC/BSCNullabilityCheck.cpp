@@ -133,6 +133,8 @@ public:
                               InitListExpr *InitList, std::string FieldPrefix);
   void HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                              InitListExpr *InitList, std::string FieldPrefix);
+  void HandleArrayInit(DeclStmt *DS, VarDecl *VD, const ArrayType *AT,
+                       InitListExpr *ILE);
 };
 } // namespace
 
@@ -345,6 +347,9 @@ void TransferFunctions::HandleVarDeclInit(DeclStmt *DS, VarDecl *VD) {
                dyn_cast<RecordType>(VD->getType().getCanonicalType())) {
     if (RecordDecl *RD = RecTy->getDecl())
       HandleRecordInit(DS, VD, RD);
+  } else if (auto *AT = VD->getType()->getAsArrayTypeUnsafe()) {
+    if (auto *ILE = dyn_cast<InitListExpr>(VD->getInit()))
+      HandleArrayInit(DS, VD, AT, ILE);
   }
 }
 
@@ -389,6 +394,76 @@ void TransferFunctions::HandleRecordInit(DeclStmt *DS, VarDecl *VD,
         HandleNestedStructInit(DS, VD, RD, InitListE, "");
       if (RD->isUnion())
         HandleNestedUnionInit(DS, VD, RD, InitListE, "");
+    }
+  }
+}
+
+void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
+                                        const ArrayType *AT,
+                                        InitListExpr *ILE) {
+  QualType ElemTy = AT->getElementType();
+  unsigned NumInits = ILE->getNumInits();
+
+  // Determine array size for constant-size arrays.
+  unsigned ArraySize = 0;
+  bool HasKnownSize = false;
+  if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+    ArraySize = (unsigned)CAT->getSize().getZExtValue();
+    HasKnownSize = true;
+  }
+
+  // Check explicitly provided initializers.
+  for (unsigned i = 0; i < NumInits; ++i) {
+    Expr *ElemInit = ILE->getInit(i)->IgnoreParenImpCasts();
+    while (true) {
+      if (auto *CSE = dyn_cast<CStyleCastExpr>(ElemInit)) {
+        ElemInit = CSE->getSubExpr()->IgnoreParenImpCasts();
+        continue;
+      }
+      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(ElemInit)) {
+        if (Expr *Sub = CLE->getInitializer()) {
+          ElemInit = Sub->IgnoreParenImpCasts();
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (ElemTy->isPointerType()) {
+      NullabilityKind LHSKind = getDefNullability(ElemTy, Ctx);
+      NullabilityKind RHSKind = getExprPathNullability(ElemInit);
+      if (LHSKind == NullabilityKind::NonNull &&
+          RHSKind != NullabilityKind::NonNull && ShouldReportNullPtrError(DS)) {
+        NullabilityCheckDiagInfo DI(VD->getBeginLoc(), NonnullInitByDefault,
+                                    VD->getNameAsString());
+        Reporter.addDiagInfo(DI);
+        return;
+      }
+    } else if (auto NestedRecTy =
+                   dyn_cast<RecordType>(ElemTy.getCanonicalType())) {
+      if (RecordDecl *NestedRD = NestedRecTy->getDecl()) {
+        if (auto *NestedILE = dyn_cast<InitListExpr>(ElemInit)) {
+          if (NestedRD->isStruct())
+            HandleNestedStructInit(DS, VD, NestedRD, NestedILE, "");
+          if (NestedRD->isUnion())
+            HandleNestedUnionInit(DS, VD, NestedRD, NestedILE, "");
+        }
+      }
+    } else if (auto *NestedAT = ElemTy->getAsArrayTypeUnsafe()) {
+      if (auto *NestedILE = dyn_cast<InitListExpr>(ElemInit))
+        HandleArrayInit(DS, VD, NestedAT, NestedILE);
+    }
+  }
+
+  // Check implicitly zero-initialized trailing elements.
+  if (HasKnownSize && NumInits < ArraySize) {
+    if (ElemTy->isPointerType()) {
+      if (getDefNullability(ElemTy, Ctx) == NullabilityKind::NonNull &&
+          ShouldReportNullPtrError(DS)) {
+        NullabilityCheckDiagInfo DI(VD->getBeginLoc(), NonnullInitByDefault,
+                                    VD->getNameAsString());
+        Reporter.addDiagInfo(DI);
+      }
     }
   }
 }
