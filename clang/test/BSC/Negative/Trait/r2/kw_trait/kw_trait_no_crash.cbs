@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -verify %s
+// Verify that using the old 'trait' keyword (now an identifier) produces a
+// proper diagnostic and does not crash the compiler.
+
+#include <stdint.h>
+struct S<T>{
+    T a;
+};
+impl trait F<S<int8_t>> for double; // expected-error {{unknown type name 'impl'}} \
+                                    // expected-error {{expected ';' after top level declarator}}
+trait F<T>* get<T>(trait F<T>* t){ // expected-error {{unknown type name 'trait'}} \
+                                   // expected-error {{expected ';' at end of declaration}} \
+                                   // expected-warning {{type specifier missing, defaults to 'int'}} \
+                                   // expected-error {{unknown type name 'trait'}} \
+                                   // expected-error {{expected ')'}} \
+                                   // expected-note {{to match this '('}}
+    return t; // expected-error {{use of undeclared identifier 't'}}
+}
+int foo(){
+    trait F<S<int8_t>> *p1=&b; // expected-error {{expected ';' after expression}} \
+                               // expected-error {{expected expression}}
+    return 0;
+}

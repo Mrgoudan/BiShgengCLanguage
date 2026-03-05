@@ -104,29 +104,62 @@ bool Parser::IsBSCStaticMemberFunctionCall() {
     if (Tok.isOneOf(tok::kw_struct, tok::kw_union)) {
       ParsedAttributes Attributes(AttrFactory);
       TryParseBSCGenericClassSpecifier(Attributes);
+      if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon))
+        return true;
     } else {
-      IdentifierInfo &II = *Tok.getIdentifierInfo();
-      TemplateTy Template;
-      UnqualifiedId TemplateName;
-      TemplateName.setIdentifier(&II, Tok.getLocation());
-      CXXScopeSpec SS;
-      bool MemberOfUnknownSpecialization;
-      if (TemplateNameKind TNK =
-              Actions.isTemplateName(getCurScope(), SS,
-                                     /*hasTemplateKeyword=*/false, TemplateName,
-                                     /*ObjectType=*/nullptr,
-                                     /*EnteringContext=*/false, Template,
-                                     MemberOfUnknownSpecialization)) {
-        if (TNK == TNK_Type_template) {
-          ConsumeToken();
-          if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
-                                      TemplateName, false))
-            return false;
+      // Use lookahead to find the matching '>' and check if '::' follows,
+      // without consuming any tokens.  Previous code consumed the identifier
+      // and called AnnotateTemplateIdToken here, which left the token stream
+      // mutated when '::' was not found, causing a crash.
+      int Offset = 1; // LookAhead(0) is '<', start scanning from LookAhead(1)
+      int Depth = 1;
+      bool Found = false;
+      while (Depth > 0) {
+        Token T = PP.LookAhead(Offset);
+        if (T.is(tok::eof))
+          break;
+        if (T.is(tok::less))
+          Depth++;
+        else if (T.is(tok::greater)) {
+          Depth--;
+          if (Depth == 0) {
+            Found = true;
+            break;
+          }
+        } else if (T.is(tok::greatergreater)) {
+          Depth -= 2;
+          if (Depth <= 0) {
+            Found = (Depth == 0);
+            break;
+          }
         }
+        Offset++;
+      }
+      if (Found && PP.LookAhead(Offset + 1).is(tok::coloncolon)) {
+        // Now we know '::' follows — consume and annotate.
+        IdentifierInfo &II = *Tok.getIdentifierInfo();
+        TemplateTy Template;
+        UnqualifiedId TemplateName;
+        TemplateName.setIdentifier(&II, Tok.getLocation());
+        CXXScopeSpec SS;
+        bool MemberOfUnknownSpecialization;
+        if (TemplateNameKind TNK =
+                Actions.isTemplateName(getCurScope(), SS,
+                                       /*hasTemplateKeyword=*/false, TemplateName,
+                                       /*ObjectType=*/nullptr,
+                                       /*EnteringContext=*/false, Template,
+                                       MemberOfUnknownSpecialization)) {
+          if (TNK == TNK_Type_template) {
+            ConsumeToken();
+            if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
+                                        TemplateName, false))
+              return false;
+          }
+        }
+        if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon))
+          return true;
       }
     }
-    if (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon))
-      return true;
   }
   return false;
 }

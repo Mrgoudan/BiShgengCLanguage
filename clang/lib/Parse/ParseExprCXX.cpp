@@ -3201,7 +3201,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
           (getLangOpts().BSC && Tok.is(tok::less))) {
         // TODO: we should refactoring check logic, abandon assert.
         assert(Tok.is(tok::less) && "expected 'less' token");
-        while (!Tok.is(tok::greater)) {
+        while (!Tok.is(tok::greater) && !Tok.is(tok::eof)) {
           ConsumeToken();
         }
         if (Tok.is(tok::greater)) {
@@ -3209,7 +3209,11 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
         } else {
           Diag(Tok.getLocation(), diag::err_expected_comma_greater);
         }
-        assert(Tok.isOneOf(tok::l_paren, tok::equal) && "expected 'l_paren' or 'equal' token");
+        if (!Tok.isOneOf(tok::l_paren, tok::equal)) {
+          Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
+          SkipUntil(tok::r_brace, tok::semi, StopAtSemi | StopBeforeMatch);
+          return true;
+        }
       }
 #endif
 
