@@ -53,7 +53,7 @@ void test() {
   p1->num = 1; // legal
   a = p1->num; // legal
 
-  p1->p = __take_from_raw(&a); // legal
+  p1->p = __take_from_raw(&a); // expected-error {{assign to _Owned value by dereferencing _Borrow}}
   b = p1->p; // expected-error {{_Borrow type does not allow move ownership}}
 
   foo(p1->p); // expected-error {{memory leak because temporary variable 'foo(p1->p)' is _Owned or indirect _Owned type, please fix it}}

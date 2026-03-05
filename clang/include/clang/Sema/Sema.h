@@ -12435,6 +12435,9 @@ public:
   bool CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType);
   void CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
                                        StringRef Env);
+  /// Check whether E's result is an owned pointer type by dereferencing
+  /// borrow pointer(s), no matter of the number of levels of indirection.
+  bool IsDerefBorrowToOwnedPointer(const Expr *E) const;
   QualType GetBorrowAddressOperandQualType(QualType resultType,
                                            ExprResult &Input,
                                            const Expr *InputExpr,

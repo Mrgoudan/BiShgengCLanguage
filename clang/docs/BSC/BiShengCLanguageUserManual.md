@@ -3668,12 +3668,24 @@ int main() {
 | ---- | ---- | ---- |
 | p是immut借用 | *p = expr; 不允许 | *p = expr; 不允许 |
 | | o = *p; 允许 | o = *p; 不允许|
-| p是mut借用 | *p = expr; 允许 | *p = expr; 允许 |
+| p是mut借用 | *p = expr; 允许 | *p = expr; 不允许 |
 | | o = *p; 允许 | o = *p; 不允许|
 
 上表中 move / copy 语义分别指： `T`是`_Owned`修饰的类型和`T`是其它类型。
 
 注：上表中的赋值操作的权限，可同样应用于函数的传参和返回场景。
+
+如果 `T` 是 `_Owned` 指针，不能通过这个 `_Owned` 指针的借用对它赋值，
+而需要使用 `safe_swap` 换出旧的 `_Owned` 指针
+
+```c
+#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe int *_Owned replace(int *_Owned *_Borrow dst, int *_Owned val) {
+  safe_swap(dst, &_Mut val);
+  return val;
+}
+```
 
 #### 3.2.8. 借用变量的成员访问
 
@@ -3687,12 +3699,14 @@ int main() {
 | ---- | ---- | ---- |
 | p是immut借用 | p->field = expr; 不允许 | p->field = expr; 不允许 |
 | | o = p->field; 允许 | o = p->field; 不允许|
-| p是mut借用 | p->field = expr; 允许 | p->field = expr; 允许 |
+| p是mut借用 | p->field = expr; 允许 | p->field = expr; 不允许 |
 | | o = p->field; 允许 | o = p->field; 不允许|
 
 上表中 move / copy 语义分别指： T 是 _Owned 修饰的类型和 T 是其它类型。
 
 注：上表中的赋值操作的权限，可同样应用于函数的传参和返回场景。
+
+和上一节类似，如果 `p->field` 是 `_Owned` 指针，同样不能直接赋值，需要使用 `safe_swap` 换出旧的指针
 
 ##### 3.2.8.2. 调用成员函数
 
