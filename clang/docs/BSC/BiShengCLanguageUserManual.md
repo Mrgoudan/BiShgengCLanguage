@@ -2858,12 +2858,31 @@ int main() {
 
 17. 安全区内不允许使用取地址符`&`（允许对函数取地址），只允许`&_Const`，`&_Mut`取借用。
 
-    安全区内不允许解引用裸指针类型，但可以解引用`_Owned`指针类型和`_Borrow`指针类型。
+    安全区内不允许解引用裸指针，但可以解引用`_Owned`指针、`_Borrow`指针和非空函数指针。
+```C
+
+_Safe int inc(int a) { return a + 1; }
+
+_Safe int test1(unary_f _Nonnull f) {
+  return (*f)(1);  // ok: _Nonnull 函数指针
+}
+
+_Safe int test2(unary_f f) {
+  if (f != nullptr) {
+    return (*f)(1);  // ok: 判空后确认为非空
+  }
+  return 0;
+}
+```
+
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 
-void test() {
+typedef _Safe int (*unary_f)(int);
+_Safe int inc(int a) { return a + 1; }
+
+void test(unary_f _Nonnull fn) {
   _Safe {
     int a = 10;
     
@@ -2876,11 +2895,13 @@ void test() {
 
     int *_Borrow f = &_Mut a;
     int g = *f; // ok: 允许解引用borrow指针
+
+    int h = (*fn)(1);  // ok: 允许解引用函数指针
   }
 }
 
 int main() {
-  test();
+  test(inc);
   return 0;
 }
 ```
@@ -5218,13 +5239,14 @@ _Safe int main(void) {
 ### 指针变量的 Nullability
 指针变量的默认 Nullability 跟 qualifier 和指针类型有关：
 1. 如果有 qualifier(`_Nonnull`或`_Nullable`)修饰，以这个为准
-2. 如果没有 qualifier 修饰，裸指针默认是 Nullable 的，`_Owned` 和 `_Borrow` 指针默认是 Nonnull 的
+2. 如果没有 qualifier 修饰，裸指针（包括函数指针）默认是 Nullable 的，`_Owned` 和 `_Borrow` 指针默认是 Nonnull 的
 ```C
 // Nullable 指针：
 int *_Nullable p1 = nullptr;
 int *_Borrow _Nullable p2 = nullptr;
 int *_Owned _Nullable p3 = nullptr;
 int *p4 = nullptr;
+int (*p5)(int) = nullptr;
 // Nonnull 指针：
 int *_Nonnull p5 = &a;
 int *_Borrow _Nonnull p6 = &_Mut a;

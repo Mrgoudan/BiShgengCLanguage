@@ -1126,6 +1126,9 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
     if (!T.isNull() && T->isPointerType() &&
         !T.getCanonicalType().isOwnedQualified() &&
         !T.getCanonicalType().isBorrowQualified()) {
+      // Allow dereferencing function pointers.
+      if (T->isFunctionPointerType())
+        break;
       // Allow dereferencing string literals, __FUNCTION__, and ternary string
       // expressions for borrow conversion.
       if (!IsStringLiteralExpr(InputExpr)) {

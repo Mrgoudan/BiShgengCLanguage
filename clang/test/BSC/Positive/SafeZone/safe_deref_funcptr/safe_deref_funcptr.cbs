@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+//
+// Safe zone should allow dereferencing non-null function pointers.
+// - _Nonnull function pointer: allowed
+// - function pointer after null check (if (f)): allowed
+
+typedef _Safe int (*unary_f)(int);
+
+_Safe int inc(int a) {
+    return a + 1;
+}
+
+_Safe int test1(unary_f _Nonnull f) {
+    return (*f)(1); // ok: _Nonnull function pointer
+}
+
+_Safe int test2(unary_f f) {
+    if (f != nullptr) {
+        return (*f)(1); // ok: proven non-null by control flow
+    }
+    return 0;
+}
+
+int main(void) {
+    test1(inc);
+    test2(inc);
+    return 0;
+}
