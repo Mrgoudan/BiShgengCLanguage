@@ -118,11 +118,15 @@ def err_constexpr_if_cond_expr_unsupported_type : Error<
 // BSC safe scope warnings and errors.
 def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
 def err_unsafe_implicit_cast : Error<"implicit conversion from type %0 to %1 is forbidden in the safe zone; please use explicit cast or other means instead">;
+def note_unsafe_cast_implicit_conversion : Note<
+  "source type %0 is implicit converted from type %1">;
 def note_inc_dec_void_in_safe_zone : Note<
   "prefix/postfix '++' and '--' in safe zone produce void; use only for side effect">;
 def err_return_inc_dec_void_in_safe_zone : Error<
   "result of '++' or '--' cannot be used as return value in safe zone; move the increment/decrement out of the return statement (or add an explicit cast to void to suppress)">;
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
+def note_unsafe_to_safe_function_pointer : Note<
+  "assigning an unsafe function pointer to a safe function pointer type is not allowed">;
 def err_safe_function : Error<"%0 is forbidden in the _Safe function">;
 def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;
 def err_bsc_generic_heterogeneous_redecl : Error<"generic function %0 cannot have both _Safe and _Unsafe declarations">;

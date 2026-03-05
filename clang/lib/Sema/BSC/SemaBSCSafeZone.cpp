@@ -516,6 +516,7 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
       // Emit error with proper type strings that include safe/unsafe specifiers
       Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
           << Context.getPointerType(QualType(RSHFuncType, 0)) << DestType;
+      Diag(SrcExpr->getBeginLoc(), diag::note_unsafe_to_safe_function_pointer);
       return false;
     }
 
@@ -578,7 +579,9 @@ static bool EnumDestContainsAllValuesOfSource(const EnumDecl *DestED,
 /// Get the type to use in diagnostics for a source expression. Looks through
 /// SafeExpr, ImplicitCastExpr, ParenExpr; for enum constants and enum-typed
 /// variables returns the enum type so the message shows "enum X" instead of "int".
-static QualType getDiagnosticSourceType(Expr *E, ASTContext &Context) {
+static QualType getDiagnosticSourceType(Expr *E, ASTContext &Context,
+                                        bool &HasImplicitCast) {
+  HasImplicitCast = false;
   if (!E)
     return QualType();
   E = E->IgnoreParens();
@@ -589,6 +592,7 @@ static QualType getDiagnosticSourceType(Expr *E, ASTContext &Context) {
     }
     if (auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       E = ICE->getSubExpr();
+      HasImplicitCast = true;
       continue;
     }
     if (auto *PE = dyn_cast<ParenExpr>(E)) {
@@ -903,19 +907,22 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   }
 
   if (!IsSafeBehavior) {
-    QualType DiagSrcType = SrcType;
-    if (SrcType->isIntegerType() || SrcType->isEnumeralType()) {
-      QualType Preferred = getDiagnosticSourceType(E, Context);
-      if (Preferred->isEnumeralType())
-        DiagSrcType = Preferred;
-    }
     if (!IsExplicitCast && IsExplicitConversionAllowed) {
-      Diag(E->getExprLoc(), diag::err_unsafe_implicit_cast) << DiagSrcType
+      Diag(E->getExprLoc(), diag::err_unsafe_implicit_cast) << SrcType
                                                             << DestType;
     } else {
-      Diag(E->getExprLoc(), diag::err_unsafe_cast) << DiagSrcType << DestType;
-      if (DiagSrcType->isVoidType() && IsSafeZoneIncDecVoidExpr(E))
+      Diag(E->getExprLoc(), diag::err_unsafe_cast) << SrcType << DestType;
+      if (SrcType->isVoidType() && IsSafeZoneIncDecVoidExpr(E))
         Diag(E->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
+    }
+    bool hasImplicitCast = false;
+    QualType DiagSrcType = getDiagnosticSourceType(E, Context, hasImplicitCast);
+    if (!DiagSrcType.isNull() && DiagSrcType != SrcType) {
+      if (hasImplicitCast ||
+          (SrcType->isIntegerType() && DiagSrcType->isEnumeralType())) {
+        Diag(E->getExprLoc(), diag::note_unsafe_cast_implicit_conversion)
+            << SrcType << DiagSrcType;
+      }
     }
   }
   return IsSafeBehavior;
