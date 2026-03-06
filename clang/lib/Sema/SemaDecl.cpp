@@ -6547,10 +6547,10 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   #if ENABLE_BSC
   } else if (D.getBSCScopeSpec().isNotEmpty() &&
              !D.getBSCScopeSpec().getExtendedType().isNull()) {
-    DC = getASTContext().BSCDeclContextMap[D.getBSCScopeSpec()
-                                               .getExtendedType()
-                                               .getCanonicalType()
-                                               .getTypePtr()];
+    auto it = getASTContext().BSCDeclContextMap.find(
+        D.getBSCScopeSpec().getExtendedType().getCanonicalType().getTypePtr());
+    if (it != getASTContext().BSCDeclContextMap.end())
+      DC = it->second;
   #endif
   }
 

@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -verify %s
+
+safe T struct MyStruct<T>::foo_a(T a) {
+// expected-error@-1 {{unknown type name 'safe'}}
+// expected-error@-2 {{no template named 'MyStruct'}}
+// expected-error@-3 {{explicit specialization of undeclared template struct 'MyStruct'}}
+// expected-error@-4 {{cannot combine with previous 'type-name' declaration specifier}}
+    return a;
+}
+
+union U<T>{
+    int m;
+    T a;
+};
+
+safe T union U<T>::foo(union U<T> *this, int m)
+// expected-error@-1 {{unknown type name 'safe'}}
+// expected-error@-2 {{cannot combine with previous 'type-name' declaration specifier}}
+// expected-error@-3 {{type of parameter 'this' is wrong}}
+{
+    this->a = this->a + (T)m;
+    return this->a;
+}
+
+struct S<T>{
+    T a;
+    int b;
+};
+
+safe T struct S<T>::foo(struct S<T> *this, struct S<T> m)
+// expected-error@-1 {{unknown type name 'safe'}}
+// expected-error@-2 {{cannot combine with previous 'type-name' declaration specifier}}
+// expected-error@-3 {{type of parameter 'this' is wrong}}
+{
+    this->a = this->a + m.a;
+    return this->a;
+}
