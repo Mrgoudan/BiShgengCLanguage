@@ -37,8 +37,23 @@ void test4(int* raw_i, float* raw_f, int* _Owned owned_i, float* _Owned owned_f)
     pair_safe(owned_i, owned_f);     // Calls _Safe version
 }
 
-// Test 5: Unsafe context prefers _Safe when constraints match
-void test5_unsafe(int* _Owned owned_p, int* raw_p) {
+// Test 5: Function-to-function-pointer decay with heterogeneous declarations
+typedef int(*func)(int, int);
+void f1(func f);
+_Safe void f1(func f);
+
+int add(int a, int b) {
+    return a + b;
+}
+
+void test5_func_decay(void) {
+    f1(add);           // Pass function (decays to function pointer)
+    func fp = add;
+    f1(fp);            // Pass function pointer directly
+}
+
+// Test 6: Unsafe context prefers _Safe when constraints match
+void test6_unsafe(int* _Owned owned_p, int* raw_p) {
     _Unsafe {
         process_safe(owned_p);   // Prefers _Safe version (constraints match)
         process_unsafe(raw_p);   // Falls back to _Unsafe version

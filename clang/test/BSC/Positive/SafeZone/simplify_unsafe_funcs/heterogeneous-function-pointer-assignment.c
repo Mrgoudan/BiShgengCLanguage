@@ -144,3 +144,20 @@ void test13_mixed_const(void) {
     safe_ptr = process_mixed_const;    // Assigns _Safe version
     unsafe_ptr = process_mixed_const;  // Assigns _Unsafe or _Safe version
 }
+
+// Test 14: Top-level const on _Borrow pointer params should be ignored for
+// function type compatibility (C standard: top-level param qualifiers are
+// irrelevant for function type matching).
+typedef _Safe unsigned int (*Hook)(const unsigned int * _Borrow buff, unsigned int * const _Borrow a);
+typedef _Safe unsigned int (*Algo)(const unsigned int * _Borrow buff, unsigned int * _Borrow a);
+
+_Safe unsigned int cal(const unsigned int * _Borrow buff, unsigned int * const _Borrow a);
+_Safe unsigned int flash(Algo chk) { return 0; }
+
+_Safe void test14_toplevel_const_borrow(void) {
+    flash(cal);        // Pass function (top-level const on param should be ignored)
+    Hook h = cal;      // Assign to function pointer with const _Borrow param
+    Algo a = cal;      // Assign to function pointer without const on _Borrow param
+    flash(h);          // Pass Hook-typed function pointer
+    flash(a);          // Pass Algo-typed function pointer
+}

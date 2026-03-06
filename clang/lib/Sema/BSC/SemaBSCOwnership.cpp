@@ -610,6 +610,8 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
   }
   
   auto BorrowParamTypesMatch = [&](QualType Dest, QualType Src) -> bool {
+    Dest = Dest.getUnqualifiedType();
+    Src = Src.getUnqualifiedType();
     if (!DoPointerTypesSatisfyAssignmentConstraintsStrict(Dest, Src))
       return false;
     // For pointer params, additionally require that the pointee types match

@@ -301,6 +301,12 @@ static bool DoPointerTypesSatisfyAssignmentConstraintsImpl(
     SrcIsPtr = true;  // Treat arrays as pointers for this check
   }
 
+  if (Src->isFunctionType() && DestIsPtr &&
+      Dest->getPointeeType()->isFunctionType()) {
+    Src = S.Context.getPointerType(Src);
+    SrcIsPtr = true;
+  }
+
   if (!DestIsPtr && !SrcIsPtr) {
     // For non-pointer types:
     // - Function calls: allow implicit conversions (int->char, etc.)
