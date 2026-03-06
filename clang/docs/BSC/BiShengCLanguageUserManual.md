@@ -910,12 +910,12 @@ constexpr int foo2(constexpr int a) { //error
 ```
 ------
 
-### type _Trait
+### type trait
 
-type _Trait 可以看作是一个编译期计算返回值的 constexpr 函数。
-BSC标准库中提供了一系列 type _Trait 泛型函数，使用时需要导入头文件 bsc_type_traits.hbs
+type trait 可以看作是一个编译期计算返回值的 constexpr 函数。
+BSC标准库中提供了一系列 type trait 泛型函数，使用时需要导入头文件 bsc_type_traits.hbs
 
-目前实现的 type _Trait 函数有：
+目前实现的 type trait 函数有：
 ```c
 // 判断类型的分类
 constexpr bool is_integral<T>();
@@ -993,7 +993,7 @@ int main() {
 }
 ```
 
-type _Trait 函数可以在泛型函数和泛型结构体的成员函数中使用
+type trait 函数可以在泛型函数和泛型结构体的成员函数中使用
 ```c
 #include<stdio.h>
 #include<bsc_type_traits.hbs>
@@ -1026,7 +1026,7 @@ int main() {
 }
 ```
 
-type _Trait 函数也可用于静态断言中
+type trait 函数也可用于静态断言中
 ```c
 #include<bsc_type_traits.hbs>
 
@@ -4875,7 +4875,7 @@ int main() {
 `_Owned struct` 与 `struct` 类似，允许扩展成员函数（详见成员函数章节）。
 
 #### 访问控制控制权限
-`_Owned struct` 定义体内，允许成员指定可见性分为 `public` 和 `private`, 默认为 `private`。只有 `_Owned struct` 定义体内部的成员函数有权访问 `private` 和 `public`成员，在`_Owned struct` 外部（包括扩展成员函数）, 只能访问 `public` 成员。示例：
+`_Owned struct` 定义体内，允许成员指定可见性分为 `_Public` 和 `_Private`, 默认为 `_Private`。只有 `_Owned struct` 定义体内部的成员函数有权访问 `_Private` 和 `_Public`成员，在`_Owned struct` 外部（包括扩展成员函数）, 只能访问 `_Public` 成员。示例：
 
 ```c
 _Owned struct A{
@@ -4892,7 +4892,7 @@ int A::f(A* this) {
 ```
 
 ### 创建 `_Owned struct`实例
-`_Owned struct` 允许使用 `struct initializer` 语法创建实例，也允许单独对每个成员变量初始化（如果成员变量是 `public`, 此时与 `struct` 一样单独跟踪每个成员的初始化状态，但是需要在安全区状态下保证在发生 `move`、传参、析构和返回等场景下该变量一定已经完整初始化, 非安全区不做保证。同时为了方便 **`_Owned struct` 类型在声明、定义时不携带 `_Owned struct` 关键字**。
+`_Owned struct` 允许使用 `struct initializer` 语法创建实例，也允许单独对每个成员变量初始化（如果成员变量是 `_Public`, 此时与 `struct` 一样单独跟踪每个成员的初始化状态，但是需要在安全区状态下保证在发生 `move`、传参、析构和返回等场景下该变量一定已经完整初始化, 非安全区不做保证。同时为了方便 **`_Owned struct` 类型在声明、定义时不携带 `_Owned struct` 关键字**。
 
 ## 运算符重载
 
@@ -4958,7 +4958,7 @@ struct square squareAdd(struct square s1, struct square s2){
 | -------------- | ------------------------------------------------------------ |
 | 双目算术运算符 | + (加)，- (减)，* (乘)，/ (除)，% (取模)                     |
 | 关系运算符     | == (等于)，!= (不等于)，< (小于)，> (大于)，<= (小于等于)，>= (大于等于) |
-| 位运算符       | \| (按位或)，& (按位与)，~ (按位取反)，^ (按位异或),，<< (左移)，>> (右移) |
+| 位运算符       | \| (按位或)，& (按位与)，~ (按位取反)，^ (按位异或)，<< (左移)，>> (右移) |
 | 单目运算符     | \+ (正)，- (负)，* (解引用)                                  |
 | 成员访问运算符 | ->                                                           |
 | 索引运算符     | []                                                           |
@@ -4968,8 +4968,8 @@ struct square squareAdd(struct square s1, struct square s2){
 | 运算符                        | 入参要求                                               | 返回值要求                                   |
 | -------------------------- | -------------------------------------------------- | --------------------------------------- |
 | 关系运算符                      | 只允许有两个入参, 且至少有一个参数是用户自定义类型，如结构体、枚举。                | 返回值类型必须是_Bool类型                         |
-| *(解引用), <br />-> (成员访问运算符) | 只允许有一个入参,且第一个参数为用户自定义类型的指针类型，包括裸指针、可变借用指针、不可变借用指针。 | 返回值类型必须是指针类型，包括裸指针、可变借用指针、不可变借用指针、Rc指针。 |
-| [] (索引运算符)                 | 只允许有两个入参,且第一个参数为用户自定义类型的指针类型，包括裸指针、可变借用指针、不可变借用指针。 | 返回值类型必须是指针类型，包括裸指针、可变借用指针、不可变借用指针、Rc指针。 |
+| *(解引用), <br />-> (成员访问运算符) | 只允许有一个入参，且第一个参数为用户自定义类型的指针类型，包括裸指针、可变借用指针、不可变借用指针。 | 返回值类型必须是指针类型，包括裸指针、可变借用指针、不可变借用指针、Rc指针。 |
+| [] (索引运算符)                 | 只允许有两个入参，且第一个参数为用户自定义类型的指针类型，包括裸指针、可变借用指针、不可变借用指针。 | 返回值类型必须是指针类型，包括裸指针、可变借用指针、不可变借用指针、Rc指针。 |
 | 其他                         | 单目运算符只允许有一个入参, 双目运算符值只允许有两个入参。函数至少有一个入参是用户自定义类型。   | 无                                       |
 
 - 关系运算符重载代码示例
@@ -5857,7 +5857,7 @@ void use_option() {
 
 这个例子中首先定义了一个函数`string_find`，对`String`的`find`方法进行了封装，用于处理找到字符k和没有找到字符k的情况。接下来在使用处，可以使用`is_some`方法处理返回的`Option<size_t>`类型的值，从而获取里面的数据或者不做处理。这种写法可以安全地处理一些函数的返回值，提高程序的安全性。
 
-`Option`是一个owned struct类型的数据结构，因此其自带析构函数，可以安全地释放其所占用的内存空间，无需使用者进行手动内存释放。
+`Option`是一个 _Owned struct类型的数据结构，因此其自带析构函数，可以安全地释放其所占用的内存空间，无需使用者进行手动内存释放。
 
 注意：在使用`Option<T>`时，需要保证 T 是 copy 语义的类型或 _Owned struct 类型，否则会编译期报错，因为对于其它类型，编译器无法知道应该如何清理内存。
 
@@ -6537,7 +6537,7 @@ int main() {
 支持毕昇c的基础调试功能；源源变换到标准c后，依旧支持对源文件的调试能力，方便程序调优与问题定位。
 
 ### 直接调试毕昇c源文件
-这里的调试主要指gdb调试，能够设置断点，打印基础变量的值。标准c原有的类型，支持正确打印变量的值，毕昇c新增类型，如owned struct，泛型等，调试时也能正确打印。
+这里的调试主要指gdb调试，能够设置断点，打印基础变量的值。标准c原有的类型，支持正确打印变量的值，毕昇c新增类型，如 _Owned struct，泛型等，调试时也能正确打印。
 
 下面是一个例子：
 ```c
@@ -6932,7 +6932,7 @@ int main() {
   该调试特性支持的功能与问题，汇总如下：
 - 调试的对象是变换后的标准c，不改其运行逻辑、变量信息等。
 - 调试中显示的代码位置指向原始cbs文件，支持多源文件的调试跳转。
-- 当源源变换前后代码行数存在差异、无法逐行映射时，例如owned struct析构函数、trait等会生成新代码的特性，显示的调试位置可能不准确，需要开发者注意。
+- 当源源变换前后代码行数存在差异、无法逐行映射时，例如 _Owned struct析构函数、 _Trait 等会生成新代码的特性，显示的调试位置可能不准确，需要开发者注意。
 
 ## 编译错误屏蔽
 
@@ -6944,11 +6944,11 @@ int main() {
 
 - 使用编译选项屏蔽错误：毕昇 C 编译器新增了 `-Eno-xxx` 错误屏蔽编译选项。这里的`xxx`代表具体的**错误类型标识**。
 
-  示例: 对于如下代码，使用毕昇编译器编译时会上报注释中所述错误，我们通过在编译命令中添加 `-Eno-repeated-_Borrow`可关闭此类错误提示。
+  示例: 对于如下代码，使用毕昇编译器编译时会上报注释中所述错误，我们通过在编译命令中添加 `-Eno-repeated-borrow`可关闭此类错误提示。
 
   ```c++
   // file: test1.cbs
-  // clang -Eno-repeated-_Borrow test1.cbs
+  // clang -Eno-repeated-borrow test1.cbs
   void use(int * _Borrow a){}
   int main() {
     int local = 1;
@@ -6998,26 +6998,26 @@ int main() {
 | assign-nullable      | "cannot access member through nullable pointer"              |
 | assign-nonnull       | "nonnull pointer cannot be assigned by nullable pointer"     |
 | bsc-nullability      | 可屏蔽所有 Nullability 数据流分析过程的报错，<br />包括 deref-nullable、pass-nullable、return-nullable、cast-nullable、<br />assign-nullable、assign-nonnull 错误类型标识。 |
-| use-moved-_Owned      | "use of moved value: \`%0\`“<br />"use of partially moved value: \`%0\`, %1 moved"<br />"use of all moved value: \`%0\`" |
-| use-uninit-_Owned     | "use of uninitialized value: \`%0\`"<br />"use of possibly uninitialized value: \`%0\`" |
+| use-moved-owned      | "use of moved value: \`%0\`“<br />"use of partially moved value: \`%0\`, %1 moved"<br />"use of all moved value: \`%0\`" |
+| use-uninit-owned     | "use of uninitialized value: \`%0\`"<br />"use of possibly uninitialized value: \`%0\`" |
 | init-nonnull    | "`%0` is a _Nonnull pointer and must be properly initialized." |
-| use-_Owned            | 包括use-moved-_Owned、use-uninit-_Owned 错误类型标识可屏蔽的错误日志 |
-| assign-moved-_Owned   | "assign to partially moved value: \`%0\`, %1 moved"<br />"assign to possibly partially moved value: \`%0\`, %1 possibly moved"<br />"assign to all moved value: \`%0\`"<br />"assign to part of moved value: \`%0\`" |
-| assign-uninit-_Owned  | "assign to part of uninitialized value: \`%0\`"              |
-| assign-_Owned         | "assign to _Owned value: \`%0\`"<br />"assign to part of _Owned value: \`%0\`"<br />"assign to subfield _Owned value: \`%0\`, %1 _Owned"<br />还包括assign-moved-_Owned、assign-uninit-_Owned 错误类型标识可屏蔽的错误日志 |
-| cast-moved-_Owned     | "invalid cast to `void * _Owned` of moved value: \`%0\`"      |
-| cast-_Owned           | "invalid cast to `void * _Owned` of _Owned value: \`%0\`"<br />"invalid cast to `void * _Owned` of uninit value: \`%0\`"<br />"invalid cast to `void * _Owned` of not all moved value: \`%0\`, %1 _Owned"<br />"invalid cast to `void * _Owned` of moved value:\`%0\`" |
+| use-owned            | 包括use-moved-owned、use-uninit-owned 错误类型标识可屏蔽的错误日志 |
+| assign-moved-owned   | "assign to partially moved value: \`%0\`, %1 moved"<br />"assign to possibly partially moved value: \`%0\`, %1 possibly moved"<br />"assign to all moved value: \`%0\`"<br />"assign to part of moved value: \`%0\`" |
+| assign-uninit-owned  | "assign to part of uninitialized value: \`%0\`"              |
+| assign-owned         | "assign to _Owned value: \`%0\`"<br />"assign to part of _Owned value: \`%0\`"<br />"assign to subfield _Owned value: \`%0\`, %1 _Owned"<br />还包括assign-moved-owned、assign-uninit-owned 错误类型标识可屏蔽的错误日志 |
+| cast-moved-owned     | "invalid cast to `void * _Owned` of moved value: \`%0\`"      |
+| cast-owned           | "invalid cast to `void * _Owned` of _Owned value: \`%0\`"<br />"invalid cast to `void * _Owned` of uninit value: \`%0\`"<br />"invalid cast to `void * _Owned` of not all moved value: \`%0\`, %1 _Owned"<br />"invalid cast to `void * _Owned` of moved value:\`%0\`" |
 | check-memory-leak    | "field memory leak of value: `%0`, %1 leak"<br />"memory leak of value: `%0` |
-| destruct-_Owned-struct    | "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually |
+| destruct-owned-struct    | "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually |
 | partially-moved-struct    | "partially moved _Owned struct:`%0` at scope end, %1 moved |
-| bsc-ownership        | 可屏蔽所有 _Owned 数据流分析过程的报错，<br />包括 use-_Owned、assign-_Owned、cast-_Owned、check-memory-leak 错误类型标识可屏蔽的错误日志。 |
+| bsc-ownership        | 可屏蔽所有 _Owned 数据流分析过程的报错，<br />包括 use-owned、assign-owned、cast-owned、check-memory-leak 错误类型标识可屏蔽的错误日志。 |
 | assign-borrowed      | "cannot assign to \`%0\` because it is borrowed"             |
 | move-borrowed        | "cannot move out of \`%0\` because it is borrowed"           |
 | use-mutably-borrowed | "cannot use \`%0\` because it was mutably borrowed"          |
-| repeated-_Borrow      | "cannot _Borrow \`%0\` as mutable more than once at a time"<br />"cannot _Borrow \`%0\` as immutable because it is also borrowed as mutable"<br />"cannot _Borrow \`%0\` as mutable because it is also borrowed as immutable" |
-| return-local-_Borrow  | "cannot return reference to local variable \`%0\`"           |
-| short-life-_Borrow    | "\`%0\` does not live long enough"                           |
-| bsc-_Borrow           | 可屏蔽所有 _Borrow 数据流分析过程的报错，<br />包括assign-borrowed、move-borrowed、use-mutably-borrowed、<br />repeated-_Borrow、return-local-_Borrow、short-life-borrow错误类型标识可屏蔽的错误日志。 |
+| repeated-borrow      | "cannot _Borrow \`%0\` as mutable more than once at a time"<br />"cannot _Borrow \`%0\` as immutable because it is also borrowed as mutable"<br />"cannot _Borrow \`%0\` as mutable because it is also borrowed as immutable" |
+| return-local-borrow  | "cannot return reference to local variable \`%0\`"           |
+| short-life-borrow    | "\`%0\` does not live long enough"                           |
+| bsc-borrow           | 可屏蔽所有 _Borrow 数据流分析过程的报错，<br />包括assign-borrowed、move-borrowed、use-mutably-borrowed、<br />repeated-borrow、return-local-borrow、short-life-borrow错误类型标识可屏蔽的错误日志。 |
 | bsc-safety-check     | 可屏蔽所有 Nullability、_Owned、_Borrow 数据流分析过程的报错，<br />包括bsc-nullability、bsc-ownership、bsc-borrow错误类型标识可屏蔽的错误日志。 |
 
 
@@ -7032,7 +7032,7 @@ int main() {
 
 在本章中使用的语法符号中，采用与 C11 标准规范中类似的表示方式：
 
-- 使用前下划线（_）表示语法类别（即非终结符，`_Nonnull`和`_Nullable`除外，他们是终结符），没有前下划线则表示字面量和字符集合（即终结符）；
+- 使用前下划线（_）加小写字母表示语法类别（即非终结符），前下划线加大写字母或没有前下划线则表示字面量和字符集合（即终结符）；
 - 在代码块的第一行，非终结符后接冒号（:）表示非终结符的具体定义（即产生式规则）；
 - 除了以“one of”开头外，其他的可选定义都列在不同的行中，可选的非终结符使用后缀“_opt”表示；
 - 对于向 C11 已有的语法类别中新增语法，使用“....”表示省略已有的语法规则。
@@ -7053,10 +7053,10 @@ int main() {
 ```text
 _keyword : one of
     ....         _Impl         This
-    _Async        nullptr      this
-    _Await        _Owned        _Trait
-    _Borrow       private      _Unsafe
-    constexpr    public       _Nonnull
+    _Async       nullptr       this
+    _Await       _Owned        _Trait
+    _Borrow      _Private      _Unsafe
+    constexpr    _Public       _Nonnull
     fat          _Safe         _Nullable
 ```
 
@@ -7084,7 +7084,7 @@ _keyword : one of
 
 ```text
 _punctuator : one of
-    ....         &fat         ::
+    ....          &fat         ::
     &_Const       &_Mut
     &_Const *     &_Mut *
 ```
@@ -7273,8 +7273,8 @@ _safe-specifier :
 
 ```text
 _access-specifier :
-    public
-    private
+    _Public
+    _Private
 ```
 
 `_function-specifier`的产生式规则有如下变化：
@@ -7305,7 +7305,6 @@ _direct-declarator :
     ....
     _identifier _template-declaration_opt
     _nested-name-specifier
-int main(void) {
     _direct-declarator _identifier _template-declaration_opt ( _parameter-type-list )
 ```
 
