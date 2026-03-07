@@ -6659,8 +6659,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
         SourceLocation IdLoc = SwitchTok.getLocation();
         Result.setIdentifier(Id, IdLoc);
         BSCGenericLookAhead++;
+        D.SetRangeEnd(D.getName().getSourceRange().getEnd());
+      } else {
+        Diag(SwitchTok, diag::err_expected) << tok::identifier;
+        D.SetIdentifier(nullptr, SwitchTok.getLocation());
+        ConsumeToken();
       }
-      D.SetRangeEnd(D.getName().getSourceRange().getEnd());
       goto PastIdentifier;
     }
 #endif
