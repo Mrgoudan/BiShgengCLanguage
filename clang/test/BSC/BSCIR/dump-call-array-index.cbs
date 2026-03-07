@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of function call as array index: arr[get_index()] = 42.
+
+// The call must be a terminator, evaluated before the array store.
+int get_index(void);
+
+// CHECK-LABEL: fn test_call_array_index
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = call get_index() -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_2)
+// CHECK-NEXT:   _1[_3] = const 42
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_call_array_index(void) {
+    int arr[10];
+    arr[get_index()] = 42;
+}

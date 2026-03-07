@@ -1,0 +1,56 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of for-loop where init, condition, and increment ALL
+
+// contain function calls. This is the most complex loop pattern. Each call
+// must be a block terminator. The init call runs once; condition and increment
+// calls run every iteration.
+int get_start(void);
+int check_end(int i);
+int advance(int i);
+void body(int i);
+//
+// Init: get_start() called once before the loop.
+//
+// Condition: check_end(i) called every iteration.
+//
+// Branch on condition result.
+//
+// Body: body(i) called inside the loop.
+//
+// Increment: advance(i) called after body, before next condition check.
+
+// CHECK-LABEL: fn test_for_all_call
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = call get_start() -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = call check_end(copy(_1)) -> bb6
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _4 = call body(copy(_1)) -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _5 = call advance(copy(_1)) -> bb7
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb6: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb3, otherwise: bb5]
+// CHECK-NEXT: }
+// CHECK:      bb7: {{[{]}}
+// CHECK-NEXT:   _1 = copy(_5)
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+void test_for_all_call(void) {
+    for (int i = get_start(); check_end(i); i = advance(i)) {
+        body(i);
+    }
+}

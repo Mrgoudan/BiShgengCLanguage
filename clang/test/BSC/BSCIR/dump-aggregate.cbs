@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of struct aggregate initialization.
+
+struct Point { int x; int y; };
+
+// CHECK-LABEL: fn test_aggregate
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _4 = Aggregate(Point, {{[{]}}copy(_1), copy(_2){{[}]}})
+// CHECK-NEXT:   _3 = copy(_4)
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+struct Point test_aggregate(int a, int b) {
+    struct Point p = {a, b};
+    return p;
+}

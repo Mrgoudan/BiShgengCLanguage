@@ -16,6 +16,9 @@
 #include "TreeTransform.h"
 #include "clang/AST/BSC/WalkerBSC.h"
 #include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
+#include "clang/Analysis/Analyses/BSC/BSCIR.h"
+#include "clang/Analysis/Analyses/BSC/BSCIRBuilder.h"
+#include "clang/Analysis/Analyses/BSC/BSCIRDump.h"
 #include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
 #include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
@@ -280,7 +283,19 @@ void Sema::BSCDataflowAnalysis(const Decl *D) {
     }
   }
   bool RequireCFGAnalysis = RequireNullabilityCheck || RequireBorrowCheck;
-  if (RequireCFGAnalysis && FD && AC.getCFG()) { // Only build the CFG when needed.
+  bool DumpBSCIR = getLangOpts().DumpBSCIR;
+
+  // -dump-bscir: dump BSCIR only, no analyses
+  if (DumpBSCIR && FD && FD->getBody()) {
+    bscir::BSCIRBuilder Builder(Context, *FD);
+    auto Body = Builder.build();
+    if (Body)
+      bscir::dumpBody(*Body, llvm::outs());
+    return;
+  }
+
+
+  if (RequireCFGAnalysis && FD && AC.getCFG()) {
     // Step one: Run NullabilityCheck
     unsigned NumNullabilityCheckErrorsInCurrFD = 0;
     if (RequireNullabilityCheck) {

@@ -1,0 +1,73 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test: pre/post increment must use a constant matching the operand type,
+// not a hardcoded APInt(32, 1).
+
+// =========================================================================
+// Case 1: Pointer increment.
+// p++ on int* should use a constant of type int* (pointer arithmetic),
+// not an integer 1. In BSCIR, this is modeled as
+// BinOp(+, copy(p), const 1 : int*) or similar typed constant.
+// =========================================================================
+
+// CHECK-LABEL: fn test_ptr_increment
+// For pointer types, the constant should NOT be an i32 — it should match
+// the pointer type. After fix, the constant will have the correct type.
+// CHECK: BinOp(+, copy(_1), const 1)
+void test_ptr_increment(int *p) {
+    p++;
+}
+
+// =========================================================================
+// Case 2: char increment.
+// ++c on char (typically 8-bit) should use APInt with the char's bit width.
+// BUG: uses APInt(32, 1) regardless — width mismatch.
+// =========================================================================
+
+// CHECK-LABEL: fn test_char_increment
+// CHECK: BinOp(+, copy(_1), const 1)
+char test_char_increment(char c) {
+    return ++c;
+}
+
+// =========================================================================
+// Case 3: short increment.
+// =========================================================================
+
+// CHECK-LABEL: fn test_short_increment
+// CHECK: BinOp(+, copy(_1), const 1)
+short test_short_increment(short s) {
+    return ++s;
+}
+
+// =========================================================================
+// Case 4: long long increment.
+// n++ on long long (64-bit) should use APInt(64, 1).
+// BUG: uses APInt(32, 1) — width mismatch.
+// =========================================================================
+
+// CHECK-LABEL: fn test_long_long_increment
+// CHECK: BinOp(+, copy(_1), const 1)
+long long test_long_long_increment(long long n) {
+    return n++;
+}
+
+// =========================================================================
+// Case 5: unsigned increment.
+// =========================================================================
+
+// CHECK-LABEL: fn test_unsigned_increment
+// CHECK: BinOp(+, copy(_1), const 1)
+unsigned test_unsigned_increment(unsigned u) {
+    return u++;
+}
+
+// =========================================================================
+// Case 6: Decrement (should also use correct type).
+// =========================================================================
+
+// CHECK-LABEL: fn test_decrement
+// CHECK: BinOp(-, copy(_1), const 1)
+int test_decrement(int x) {
+    return --x;
+}

@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that CompoundLiteralExpr lowers through its inner InitListExpr,
+// producing Aggregate instead of nop + const(void).
+
+typedef struct S { int a; int b; } S;
+_Safe void use_s(S s);
+
+// Direct assignment from compound literal.
+// CHECK-LABEL: fn test_compound_literal
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _2 = Aggregate(S, {{[{]}}const 1, const 2{{[}]}}) [safe]
+// CHECK-NEXT:   _1 = copy(_2) [safe]
+// CHECK-NOT:    nop
+_Safe void test_compound_literal(void) {
+    S s = (S){1, 2};
+    use_s(s);
+}
+
+// Compound literal passed as function argument.
+// CHECK-LABEL: fn test_compound_literal_arg
+// CHECK:      bb0: {
+// CHECK-NEXT:   _1 = Aggregate(S, {{[{]}}const 3, const 4{{[}]}}) [safe]
+// CHECK-NEXT:   _2 = call use_s(copy(_1)) -> bb1 [safe]
+// CHECK-NOT:    nop
+_Safe void test_compound_literal_arg(void) {
+    use_s((S){3, 4});
+}
+
+// Compound literal with partial init (implicit zero for missing fields).
+// CHECK-LABEL: fn test_compound_literal_partial
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _2 = Aggregate(S, {{[{]}}const 5, const(int){{[}]}}) [safe]
+// CHECK-NEXT:   _1 = copy(_2) [safe]
+// CHECK-NOT:    nop
+_Safe void test_compound_literal_partial(void) {
+    S s = (S){5};
+    use_s(s);
+}

@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of &_Mut borrow expressions to Rvalue::Ref.
+
+
+// CHECK-LABEL: fn test_borrow
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _1 = const 42 [safe]
+// CHECK-NEXT:   StorageLive(_2) [safe]
+// CHECK-NEXT:   _3 = &_Mut _1 [safe]
+// CHECK-NEXT:   _2 = copy(_3) [safe]
+// CHECK-NEXT:   (*_2) = const 100 [safe]
+// CHECK-NEXT:   StorageDead(_2) [safe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   return [safe]
+// CHECK-NEXT: }
+_Safe void test_borrow(void) {
+    int x = 42;
+    int *_Borrow p = &_Mut x;
+    *p = 100;
+}

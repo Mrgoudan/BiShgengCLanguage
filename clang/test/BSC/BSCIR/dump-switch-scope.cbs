@@ -1,0 +1,78 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test: switch body compound statement must push its own scope.
+// Declarations inside case regions (without explicit braces) should get
+// StorageDead at switch exit, not at function exit.
+
+// =========================================================================
+// Case 1: Declaration without braces in case region.
+// The variable y is declared directly in a case body (no { }).
+// StorageDead(y) must appear BEFORE StorageLive(z).
+// BUG: y leaks into enclosing scope — StorageDead at function exit.
+// =========================================================================
+
+// CHECK-LABEL: fn test_switch_decl_no_braces
+// CHECK:       StorageDead(_2)
+// CHECK-NEXT:  StorageLive(_3)
+// CHECK-NEXT:  _3 = const 99
+void test_switch_decl_no_braces(int x) {
+    switch (x) {
+    case 0:
+        ;           // empty stmt as case sub-statement
+        int y = 1;  // declaration in case region body
+        break;
+    default:
+        break;
+    }
+    int z = 99;
+}
+
+// =========================================================================
+// Case 2: Multiple declarations across different case regions.
+// Both a and b should be dead at switch exit.
+// =========================================================================
+
+// CHECK-LABEL: fn test_switch_multi_decl
+// CHECK:       StorageDead(_3)
+// CHECK-NEXT:  StorageDead(_2)
+// CHECK-NEXT:  StorageLive(_4)
+// CHECK-NEXT:  _4 = const 42
+void test_switch_multi_decl(int x) {
+    switch (x) {
+    case 0:
+        ;
+        int a = 10;
+        break;
+    case 1:
+        ;
+        int b = 20;
+        break;
+    default:
+        break;
+    }
+    int r = 42;
+}
+
+// =========================================================================
+// Case 3: Fallthrough with declaration.
+// Variable declared in case 0 region, falls through to case 1.
+// StorageDead must still appear at switch exit.
+// =========================================================================
+
+// CHECK-LABEL: fn test_switch_fallthrough_decl
+// CHECK:       StorageDead(_2)
+// CHECK-NEXT:  StorageLive(_3)
+// CHECK-NEXT:  _3 = const 77
+void test_switch_fallthrough_decl(int x) {
+    switch (x) {
+    case 0:
+        ;
+        int v = 5;
+        // fallthrough
+    case 1:
+        break;
+    default:
+        break;
+    }
+    int w = 77;
+}

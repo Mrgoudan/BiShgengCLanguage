@@ -1,0 +1,53 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of integer, float, and char literals.
+
+
+// CHECK-LABEL: fn test_int_literal
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _1 = const 42
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_int_literal(void) {
+    int x = 42;
+    return x;
+}
+
+// CHECK-LABEL: fn test_float_literal
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _1 = const 3.1400000000000001f
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+double test_float_literal(void) {
+    double d = 3.14;
+    return d;
+}
+
+// CHECK-LABEL: fn test_char_literal
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Cast(const 65 as char)
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+char test_char_literal(void) {
+    char c = 'A';
+    return c;
+}

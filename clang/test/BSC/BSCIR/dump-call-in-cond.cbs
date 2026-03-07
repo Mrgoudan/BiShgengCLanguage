@@ -1,0 +1,64 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of function calls in if-conditions.
+
+// Per BSCIR design: calls in conditions must be block terminators, evaluated
+// before the comparison and switchInt.
+int pred(int x);
+int foo(int x);
+int bar(int x);
+// --- Single call in condition ---
+
+// CHECK-LABEL: fn test_single_call_cond
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = call pred(copy(_1)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(>, copy(_2), const 0)
+// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb3, otherwise: bb4]
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = const 0
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_single_call_cond(int x) {
+    if (pred(x) > 0)
+        return 1;
+    return 0;
+}
+// --- Two calls in condition ---
+
+// CHECK-LABEL: fn test_two_calls_cond
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = call foo(copy(_1)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = call bar(copy(_1)) -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _4 = BinOp(>, copy(_2), copy(_3))
+// CHECK-NEXT:   switchInt(copy(_4)) -> [1: bb4, otherwise: bb5]
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   _0 = const 0
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_two_calls_cond(int x) {
+    if (foo(x) > bar(x))
+        return 1;
+    return 0;
+}

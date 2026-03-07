@@ -1,0 +1,50 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of ImplicitValueInitExpr: empty, zero, and partial
+// initializer lists should produce Aggregate with typed constants and no nops.
+
+struct Pair { int a; int b; };
+
+// Empty init list: both fields are ImplicitValueInitExpr.
+// CHECK-LABEL: fn test_empty_init
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Aggregate(Pair, {{[{]}}const(int), const(int){{[}]}})
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NOT:    nop
+_Safe void test_empty_init(void) {
+    struct Pair p = {};
+}
+
+// Zero init: first field explicit, second implicit.
+// CHECK-LABEL: fn test_zero_init
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Aggregate(Pair, {{[{]}}const 0, const(int){{[}]}})
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NOT:    nop
+_Safe void test_zero_init(void) {
+    struct Pair p = {0};
+}
+
+// Partial designated init: .b explicit, .a implicit.
+// CHECK-LABEL: fn test_partial_designated
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Aggregate(Pair, {{[{]}}const(int), const 42{{[}]}})
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NOT:    nop
+_Safe void test_partial_designated(void) {
+    struct Pair p = {.b = 42};
+}
+
+// Full explicit init: no ImplicitValueInitExpr at all.
+// CHECK-LABEL: fn test_full_init
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Aggregate(Pair, {{[{]}}const 1, const 2{{[}]}})
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NOT:    nop
+_Safe void test_full_init(void) {
+    struct Pair p = {1, 2};
+}

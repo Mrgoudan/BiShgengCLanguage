@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of nested function calls as arguments: baz(foo(x), bar(x)).
+
+// Per BSCIR design: each call is a block terminator. Inner calls must complete
+// (in separate blocks) before the outer call fires. Arguments to the outer
+// call are operands referencing pre-computed temporaries.
+int foo(int x);
+int bar(int x);
+int baz(int a, int b);
+//
+// foo(x) is evaluated first in its own block.
+//
+// bar(x) is evaluated next in a separate block.
+//
+// baz() fires last with pre-computed results as operands.
+
+// CHECK-LABEL: fn test_nested_call_args
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = call foo(copy(_1)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = call bar(copy(_1)) -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _4 = call baz(copy(_2), copy(_3)) -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_4)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_nested_call_args(int x) {
+    return baz(foo(x), bar(x));
+}

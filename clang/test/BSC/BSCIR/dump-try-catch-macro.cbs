@@ -1,0 +1,89 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of a TRY/CATCH macro pattern inside a _Safe function.
+//
+// TRY expands to two unsigned int declarations initialized to 0.
+// CATCH expands to `if (__errorcode != 0)` (the error handler guard).
+// Macros are preprocessed away before BSCIR is built — the IR sees plain C
+// declarations and an if-statement with no trace of macro boundaries.
+//
+// After preprocessing, test_try_catch expands to:
+//
+//   unsigned int __errorcode = 0;          // _1
+//   unsigned int __status = 0;             // _3  (cast temps _2, _4 emitted for `= 0`)
+//   {                                      // TRY body block — no new locals declared
+//     __status = do_work();                // call terminator ends bb0 → bb2
+//     if (__status != 0)                   // _6=Cast(0), _7=BinOp(!=,...), switchInt
+//       __errorcode = __status;            // bb3: assign, goto → bb4
+//   }
+//   if (__errorcode != 0) {               // CATCH guard — _8=Cast(0), _9=BinOp(!=,...), switchInt
+//     return __errorcode;                  // bb5: _0=copy(_1), StorageDead, goto → bb1
+//   }
+//   return __status;                       // bb6: _0=copy(_3), StorageDead, goto → bb1
+//
+// Locals emitted:
+//   _1: __errorcode         _2: temp for Cast(0→uint) init of _1
+//   _3: __status            _4: temp for Cast(0→uint) init of _3
+//   _5: temp for do_work()  _6: temp for Cast(0→uint) in __status!=0
+//   _7: int temp for BinOp(!=) result (comparison returns int)
+//   _8: temp for Cast(0→uint) in __errorcode!=0
+//   _9: int temp for BinOp(!=) result
+
+#define TRY \
+    unsigned int __errorcode = 0; \
+    unsigned int __status = 0;
+
+#define CATCH \
+    if (__errorcode != 0)
+
+_Safe unsigned int do_work(void);
+
+// CHECK-LABEL: fn test_try_catch
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _2 = Cast(const 0 as unsigned int) [safe]
+// CHECK-NEXT:   _1 = copy(_2) [safe]
+// CHECK-NEXT:   StorageLive(_3) [safe]
+// CHECK-NEXT:   _4 = Cast(const 0 as unsigned int) [safe]
+// CHECK-NEXT:   _3 = copy(_4) [safe]
+// CHECK-NEXT:   _5 = call do_work() -> bb2 [safe]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return [safe]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_5) [safe]
+// CHECK-NEXT:   _6 = Cast(const 0 as unsigned int) [safe]
+// CHECK-NEXT:   _7 = BinOp(!=, copy(_3), copy(_6)) [safe]
+// CHECK-NEXT:   switchInt(copy(_7)) -> [1: bb3, otherwise: bb4] [safe]
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _1 = copy(_3) [safe]
+// CHECK-NEXT:   goto -> bb4 [safe]
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _8 = Cast(const 0 as unsigned int) [safe]
+// CHECK-NEXT:   _9 = BinOp(!=, copy(_1), copy(_8)) [safe]
+// CHECK-NEXT:   switchInt(copy(_9)) -> [1: bb5, otherwise: bb6] [safe]
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1) [safe]
+// CHECK-NEXT:   StorageDead(_3) [safe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   goto -> bb1 [safe]
+// CHECK-NEXT: }
+// CHECK:      bb6: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_3) [safe]
+// CHECK-NEXT:   StorageDead(_3) [safe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   goto -> bb1 [safe]
+// CHECK-NEXT: }
+_Safe unsigned int test_try_catch(void) {
+    TRY {
+        __status = do_work();
+        if (__status != 0) __errorcode = __status;
+    } CATCH {
+        return __errorcode;
+    }
+    return __status;
+}

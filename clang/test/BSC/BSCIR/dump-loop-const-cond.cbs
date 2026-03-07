@@ -1,0 +1,75 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test constant-condition folding in loops: while(1), while(0), for(;1;),
+// do{}while(0), and non-constant conditions like ptr == nullptr.
+
+// --- while(1): constant-true folds to goto, no switchInt ---
+// CHECK-LABEL: fn test_while_true
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _1 = const 1
+// CHECK-NOT:    switchInt
+// CHECK:      goto -> bb1
+_Safe int test_while_true(void) {
+    int x;
+    while (1) {
+        x = 1;
+        return x;
+    }
+}
+
+// --- while(0): constant-false skips body, goes to exit ---
+// CHECK-LABEL: fn test_while_false
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK-NOT:    switchInt
+_Safe int test_while_false(void) {
+    int x;
+    while (0) {
+        x = 2;
+    }
+    return 1;
+}
+
+// --- for(;1;): constant-true folds to goto ---
+// CHECK-LABEL: fn test_for_true
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NOT:    switchInt
+_Safe int test_for_true(void) {
+    for (int i = 0; 1; i++) {
+        return i;
+    }
+}
+
+// --- do{}while(0): constant-false exits after one iteration ---
+// CHECK-LABEL: fn test_dowhile_false
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _1 = const 42
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   goto -> bb2
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK-NOT:    switchInt
+_Safe int test_dowhile_false(void) {
+    do {
+        int y;
+        y = 42;
+    } while (0);
+    return 1;
+}
+
+// --- ptr == nullptr: NOT a constant, must produce switchInt ---
+// CHECK-LABEL: fn test_ptr_null_cmp
+// CHECK:      _2 = BinOp(==, copy(_1), const(void))
+// CHECK-NEXT: switchInt(copy(_2)) -> [1: bb3, otherwise: bb4]
+_Safe int test_ptr_null_cmp(int * _Borrow _Nullable p) {
+    while (p == nullptr) {
+        return 0;
+    }
+    return 1;
+}

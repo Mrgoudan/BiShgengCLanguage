@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR move semantics: _Owned pointers use move() not copy().
+
+void sink(int *_Owned p);
+
+// CHECK-LABEL: fn test_move
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = move(_1)
+// CHECK-NEXT:   _3 = call sink(move(_2)) -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_move(int *_Owned p) {
+    int *_Owned q = p;
+    sink(q);
+}

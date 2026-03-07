@@ -1,0 +1,27 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of field access on function return value.
+
+// Per BSCIR design: the call is a terminator writing to a temporary, then
+// field access is a place projection (not another call).
+struct S { int val; };
+struct S make_s(int x);
+
+// CHECK-LABEL: fn test_call_field
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _3 = call make_s(copy(_1)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _2 = copy(_3)
+// CHECK-NEXT:   _0 = copy(_2.val)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_call_field(int x) {
+    struct S s = make_s(x);
+    return s.val;
+}

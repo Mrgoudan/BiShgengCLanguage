@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of while-loop with function call in condition.
+
+// Per BSCIR design: the call must be re-evaluated every iteration. The back-edge
+// must go to the block containing the call, not past it.
+int has_more(void);
+void process(void);
+//
+// The condition call is in its own block (loop header).
+//
+// The call result feeds into switchInt.
+//
+// The loop body calls process() and loops back to the condition call.
+
+// CHECK-LABEL: fn test_while_call_cond
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _1 = call has_more() -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _2 = call process() -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, otherwise: bb1]
+// CHECK-NEXT: }
+void test_while_call_cond(void) {
+    while (has_more()) {
+        process();
+    }
+}

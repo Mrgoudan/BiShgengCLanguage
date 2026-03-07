@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of for-loop with function call in increment expression.
+
+// The increment call is a terminator in its own block, executed after the body
+// and before the next condition check.
+int next_val(int i);
+//
+// The increment call must be a terminator.
+//
+// The call result is assigned back to the loop variable.
+//
+// The condition check uses BinOp + switchInt.
+
+// CHECK-LABEL: fn test_for_incr_call
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(<, copy(_2), copy(_1))
+// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _4 = call next_val(copy(_2)) -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _2 = copy(_4)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+void test_for_incr_call(int n) {
+    for (int i = 0; i < n; i = next_val(i)) {
+        // body
+    }
+}

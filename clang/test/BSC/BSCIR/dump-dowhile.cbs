@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of do-while loop: body executes before condition check.
+
+
+// CHECK-LABEL: fn test_dowhile
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(+, copy(_2), copy(_1))
+// CHECK-NEXT:   _2 = copy(_3)
+// CHECK-NEXT:   _4 = copy(_1)
+// CHECK-NEXT:   _5 = BinOp(-, copy(_1), const 1)
+// CHECK-NEXT:   _1 = copy(_5)
+// CHECK-NEXT:   _6 = BinOp(>, copy(_1), const 0)
+// CHECK-NEXT:   switchInt(copy(_6)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_dowhile(int n) {
+    int sum = 0;
+    do {
+        sum += n;
+        n--;
+    } while (n > 0);
+    return sum;
+}

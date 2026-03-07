@@ -1,0 +1,90 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of VAArgExpr: va_arg produces a typed constant
+// assignment (no nop), and va_list is treated as implicitly initialized.
+
+typedef __builtin_va_list va_list;
+#define va_start(ap, param) __builtin_va_start(ap, param)
+#define va_arg(ap, type) __builtin_va_arg(ap, type)
+#define va_end(ap) __builtin_va_end(ap)
+
+// CHECK-LABEL: fn test_va_arg
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_2) [safe]
+// CHECK-NEXT:   _2 = const 0 [safe]
+// CHECK-NEXT:   StorageLive(_3) [unsafe]
+// CHECK-NEXT:   _4 = Cast(copy(_3) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _5 = call __builtin_va_start(copy(_4), copy(_1)) -> bb2 [unsafe]
+// CHECK:      bb2: {
+// CHECK-NEXT:   _6 = Cast(copy(_3) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _7 = const(int) [unsafe]
+// CHECK-NEXT:   _2 = copy(_7) [unsafe]
+// CHECK-NEXT:   _8 = Cast(copy(_3) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _9 = call __builtin_va_end(copy(_8)) -> bb3 [unsafe]
+// CHECK-NOT:    nop
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_arg(const char *_Borrow fmt, ...) {
+    int result = 0;
+    _Unsafe {
+        va_list args;
+        va_start(args, fmt);
+        result = va_arg(args, int);
+        va_end(args);
+    }
+    return result;
+}
+
+// Multiple va_arg calls produce separate typed constants.
+// CHECK-LABEL: fn test_va_arg_multi
+// CHECK:      bb2: {
+// CHECK-NEXT:   _7 = Cast(copy(_4) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _8 = const(int) [unsafe]
+// CHECK-NEXT:   _2 = copy(_8) [unsafe]
+// CHECK-NEXT:   _9 = Cast(copy(_4) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _10 = const(int) [unsafe]
+// CHECK-NEXT:   _3 = copy(_10) [unsafe]
+// CHECK-NOT:    nop
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_arg_multi(const char *_Borrow fmt, ...) {
+    int a = 0;
+    int b = 0;
+    _Unsafe {
+        va_list args;
+        va_start(args, fmt);
+        a = va_arg(args, int);
+        b = va_arg(args, int);
+        va_end(args);
+    }
+    return a + b;
+}
+
+// va_list declared in _Safe zone with zero-init: StorageLive is [safe], no nop.
+// CHECK-LABEL: fn test_va_safe_zone
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_2) [safe]
+// CHECK-NEXT:   _3 = Cast(const 0 as unsigned int) [safe]
+// CHECK-NEXT:   _4 = Aggregate(__va_list_tag, {copy(_3), const(unsigned int), const(void *), const(void *)}) [safe]
+// CHECK-NEXT:   _5 = Aggregate(?, {copy(_4)}) [safe]
+// CHECK-NEXT:   _2 = copy(_5) [safe]
+// CHECK-NEXT:   StorageLive(_6) [safe]
+// CHECK-NEXT:   _6 = const 0 [safe]
+// CHECK-NEXT:   _7 = Cast(copy(_2) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _8 = call __builtin_va_start(copy(_7), copy(_1)) -> bb2 [unsafe]
+// CHECK:      bb2: {
+// CHECK-NEXT:   _9 = Cast(copy(_2) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _10 = const(int) [unsafe]
+// CHECK-NEXT:   _6 = copy(_10) [unsafe]
+// CHECK-NEXT:   _11 = Cast(copy(_2) as struct __va_list_tag *) [unsafe]
+// CHECK-NEXT:   _12 = call __builtin_va_end(copy(_11)) -> bb3 [unsafe]
+// CHECK-NOT:    nop
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_safe_zone(const char *_Borrow fmt, ...) {
+    va_list args = {0};
+    int result = 0;
+    _Unsafe {
+        va_start(args, fmt);
+        result = va_arg(args, int);
+        va_end(args);
+    }
+    return result;
+}

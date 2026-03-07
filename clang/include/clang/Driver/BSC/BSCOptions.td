@@ -2,6 +2,9 @@ def rewrite_bsc : Flag<["-"], "rewrite-bsc">, Flags<[CC1Option]>, Group<Action_G
   HelpText<"Rewrite BSC source to C">;
 def rewrite_bsc_line : Flag<["-"], "line">, Flags<[CC1Option]>,
   HelpText<"Insert line info when rewrite BSC">;
+def dump_bscir : Flag<["-"], "dump-bscir">, Flags<[CC1Option]>,
+  HelpText<"Dump BSCIR intermediate representation for debugging">,
+  MarshallingInfoFlag<LangOpts<"DumpBSCIR">>;
 def nullability_check : Joined<["-"], "nullability-check=">, Flags<[CC1Option]>,
   HelpText<"Select Nullability Check Enable Zone">,
   Values<"safeonly,all">, NormalizedValuesScope<"LangOptions">,

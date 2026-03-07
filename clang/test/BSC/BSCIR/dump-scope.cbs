@@ -1,0 +1,30 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR StorageLive/StorageDead ordering for nested scopes.
+
+// Inner scope variables get StorageDead before outer scope variables.
+
+// CHECK-LABEL: fn test_scope_cleanup
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _1 = const 1
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 2
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _3 = const 3
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   StorageLive(_4)
+// CHECK-NEXT:   _4 = const 4
+// CHECK-NEXT:   StorageDead(_4)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_scope_cleanup(void) {
+    int x = 1;
+    {
+        int y = 2;
+        int z = 3;
+    }
+    int w = 4;
+}

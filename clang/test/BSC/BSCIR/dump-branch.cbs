@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR branching: if/else produces switchInt terminator.
+
+
+// CHECK-LABEL: fn max
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(>, copy(_1), copy(_2))
+// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int max(int a, int b) {
+    if (a > b)
+        return a;
+    return b;
+}

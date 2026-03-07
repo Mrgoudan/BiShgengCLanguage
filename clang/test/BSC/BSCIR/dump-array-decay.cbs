@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of array-to-pointer decay when passing array to function.
+
+void takes_ptr(int *p);
+
+// CHECK-LABEL: fn test_array_decay
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Cast(copy(_1) as int *)
+// CHECK-NEXT:   _3 = call takes_ptr(copy(_2)) -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_array_decay(void) {
+    int arr[5];
+    takes_ptr(arr);
+}

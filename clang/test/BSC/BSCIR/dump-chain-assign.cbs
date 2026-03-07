@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of chained assignment (a = b = c = 42).
+
+
+// CHECK-LABEL: fn test_chain_assign
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _3 = const 42
+// CHECK-NEXT:   _2 = copy(_3)
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_chain_assign(void) {
+    int a, b, c;
+    a = b = c = 42;
+}

@@ -1,0 +1,55 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of for-loop with function call in init expression.
+
+// Per BSCIR design: the call must be a block terminator, executed before
+// the loop condition check. The loop back-edge must NOT re-execute the init.
+int get_start(void);
+//
+// The call to get_start() must be a terminator in its own block.
+//
+// The init result is assigned to the loop variable.
+//
+// The loop condition must use switchInt.
+//
+// The loop body increments and jumps back to the condition, not the init.
+
+// CHECK-LABEL: fn test_for_init_call
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _4 = call get_start() -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_4)
+// CHECK-NEXT:   goto -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _5 = BinOp(<, copy(_3), copy(_1))
+// CHECK-NEXT:   switchInt(copy(_5)) -> [1: bb4, otherwise: bb5]
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _6 = BinOp(+, copy(_2), copy(_3))
+// CHECK-NEXT:   _2 = copy(_6)
+// CHECK-NEXT:   _7 = copy(_3)
+// CHECK-NEXT:   _8 = BinOp(+, copy(_3), const 1)
+// CHECK-NEXT:   _3 = copy(_8)
+// CHECK-NEXT:   goto -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_for_init_call(int n) {
+    int sum = 0;
+    for (int i = get_start(); i < n; i++) {
+        sum += i;
+    }
+    return sum;
+}

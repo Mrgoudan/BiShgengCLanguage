@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of do-while loop with function call in condition.
+
+// The body executes first, then the condition call, then switchInt.
+int has_more(void);
+void process(void);
+//
+// Body call executes.
+//
+// Condition call is a terminator after the body.
+
+// CHECK-LABEL: fn test_dowhile_call_cond
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _1 = call process() -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _2 = call has_more() -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb1]
+// CHECK-NEXT: }
+void test_dowhile_call_cond(void) {
+    do {
+        process();
+    } while (has_more());
+}

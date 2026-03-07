@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of noreturn function calls: diverge terminator.
+
+__attribute__((noreturn)) void my_exit(int code);
+
+// CHECK-LABEL: fn test_noreturn
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = BinOp(<, copy(_1), const 0)
+// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = call my_exit(const 1) -> diverge
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_noreturn(int x) {
+    if (x < 0)
+        my_exit(1);
+    return x;
+}

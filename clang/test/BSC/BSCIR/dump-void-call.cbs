@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of void function call (call as terminator with no
+
+// meaningful return value).
+void side_effect(int x);
+
+// CHECK-LABEL: fn test_void_call
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = call side_effect(copy(_1)) -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_void_call(int x) {
+    side_effect(x);
+}

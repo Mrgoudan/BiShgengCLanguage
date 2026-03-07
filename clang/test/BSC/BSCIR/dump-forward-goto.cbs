@@ -1,0 +1,55 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of forward goto: no spurious StorageDead when
+// the goto target is in the same scope as the goto.
+
+// Forward goto to label in the same scope — no cleanup needed.
+// CHECK-LABEL: fn test_forward_goto_same_scope
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _1 = const 1 [safe]
+// CHECK-NEXT:   goto -> bb2 [safe]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return [safe]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1) [safe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   goto -> bb1 [safe]
+// CHECK-NEXT: }
+_Safe int test_forward_goto_same_scope(void) {
+    int x = 1;
+    goto done;
+done:
+    return x;
+}
+
+// Forward goto from inner scope to label in enclosing scope — should only
+// clean up the inner scope locals, NOT the outer scope locals.
+// CHECK-LABEL: fn test_forward_goto_inner_to_outer
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _1 = const 1 [safe]
+// CHECK-NEXT:   StorageLive(_2) [safe]
+// CHECK-NEXT:   _2 = const 2 [safe]
+// CHECK-NEXT:   StorageDead(_2) [safe]
+// CHECK-NEXT:   goto -> bb2 [safe]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return [safe]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1) [safe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   goto -> bb1 [safe]
+// CHECK-NEXT: }
+_Safe int test_forward_goto_inner_to_outer(void) {
+    int x = 1;
+    {
+        int y = 2;
+        goto done;
+    }
+done:
+    return x;
+}

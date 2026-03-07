@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of function call as operand in compound assignment:
+
+// a += foo(x). The call must complete before the BinOp and store.
+int foo(int x);
+
+// CHECK-LABEL: fn test_call_compound_assign
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   _3 = call foo(copy(_1)) -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   _4 = BinOp(+, copy(_2), copy(_3))
+// CHECK-NEXT:   _2 = copy(_4)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_call_compound_assign(int x) {
+    int a = 0;
+    a += foo(x);
+}

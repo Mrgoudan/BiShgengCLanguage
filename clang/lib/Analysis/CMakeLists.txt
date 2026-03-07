@@ -7,6 +7,10 @@ add_clang_library(clangAnalysis
   AnalysisDeclContext.cpp
   BodyFarm.cpp
   BSC/BSCBorrowChecker.cpp
+  BSC/BSCIR.cpp
+  BSC/BSCIRBuilder.cpp
+  BSC/BSCIRDataflow.cpp
+  BSC/BSCIRDump.cpp
   BSC/BSCNullabilityCheck.cpp
   BSC/BSCOwnership.cpp
   CalledOnceCheck.cpp

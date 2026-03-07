@@ -1,0 +1,101 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of switch statement: multiple case targets.
+
+
+// CHECK-LABEL: fn test_switch
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb2, 1: bb3, otherwise: bb4]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = const 10
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = const 20
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = const 30
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_switch(int x) {
+    switch (x) {
+    case 0: return 10;
+    case 1: return 20;
+    default: return 30;
+    }
+}
+// Verify that case 0 block gotos case 1 block (fall-through), not exit.
+
+// CHECK-LABEL: fn test_switch_fallthrough
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb3, 1: bb4, otherwise: bb5]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _2 = const 1
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _2 = const 2
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   _2 = const 3
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+int test_switch_fallthrough(int x) {
+    int y = 0;
+    switch (x) {
+    case 0: y = 1;        // falls through to case 1
+    case 1: y = 2; break;
+    default: y = 3;
+    }
+    return y;
+}
+// map to the same block.
+
+// CHECK-LABEL: fn test_switch_shared_labels
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   switchInt(copy(_1)) -> [2: bb3, 3: bb3, otherwise: bb4]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _2 = const 4
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _2 = const 5
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+int test_switch_shared_labels(int x) {
+    int y = 0;
+    switch (x) {
+    case 2:
+    case 3: y = 4; break;
+    default: y = 5;
+    }
+    return y;
+}

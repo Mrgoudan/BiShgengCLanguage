@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of compound bitwise assignments: &=, |=, ^=, <<=, >>=.
+
+
+// CHECK-LABEL: fn test_compound_bitwise
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = BinOp(&, copy(_1), const 255)
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NEXT:   _3 = BinOp(|, copy(_1), const 16)
+// CHECK-NEXT:   _1 = copy(_3)
+// CHECK-NEXT:   _4 = BinOp(^, copy(_1), const 1)
+// CHECK-NEXT:   _1 = copy(_4)
+// CHECK-NEXT:   _5 = BinOp(<<, copy(_1), const 2)
+// CHECK-NEXT:   _1 = copy(_5)
+// CHECK-NEXT:   _6 = BinOp(>>, copy(_1), const 1)
+// CHECK-NEXT:   _1 = copy(_6)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_compound_bitwise(int x) {
+    x &= 0xFF;
+    x |= 0x10;
+    x ^= 0x01;
+    x <<= 2;
+    x >>= 1;
+}

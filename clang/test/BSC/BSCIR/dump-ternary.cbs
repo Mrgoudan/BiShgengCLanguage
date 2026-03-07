@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of the conditional (ternary) operator.
+
+// The ternary must branch: condition evaluated, then SwitchInt to separate
+// blocks for true/false, each assigning to a shared result temporary.
+
+// CHECK-LABEL: fn test_ternary
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = BinOp(>, copy(_1), const 0)
+// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = const 1
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _4 = UnaryOp(-, const 1)
+// CHECK-NEXT:   _3 = copy(_4)
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_ternary(int x) {
+    return x > 0 ? 1 : -1;
+}

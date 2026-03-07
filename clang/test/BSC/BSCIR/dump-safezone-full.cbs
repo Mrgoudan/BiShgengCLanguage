@@ -1,0 +1,39 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR safe zone annotations: [safe] on _Safe funcs, [unsafe] inside
+
+// _Unsafe blocks, and mixed zones.
+
+// CHECK-LABEL: fn test_safe_func
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _1 = const 1 [safe]
+// CHECK-NEXT:   StorageLive(_2) [safe]
+// CHECK-NEXT:   _3 = BinOp(+, copy(_1), const 2) [safe]
+// CHECK-NEXT:   _2 = copy(_3) [safe]
+// CHECK-NEXT:   StorageDead(_2) [safe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   return [safe]
+// CHECK-NEXT: }
+_Safe void test_safe_func(void) {
+    int x = 1;
+    int y = x + 2;
+}
+
+// CHECK-LABEL: fn test_unsafe_block
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _1 = const 1 [safe]
+// CHECK-NEXT:   StorageLive(_2) [unsafe]
+// CHECK-NEXT:   _3 = &_1 [unsafe]
+// CHECK-NEXT:   _2 = copy(_3) [unsafe]
+// CHECK-NEXT:   StorageDead(_2) [unsafe]
+// CHECK-NEXT:   StorageDead(_1) [safe]
+// CHECK-NEXT:   return [safe]
+// CHECK-NEXT: }
+_Safe void test_unsafe_block(void) {
+    int x = 1;
+    _Unsafe {
+        int *p = &x;
+    }
+}

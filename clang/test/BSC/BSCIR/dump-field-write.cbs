@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of multi-field write through pointer (deref + field).
+
+struct Point { int x; int y; };
+
+// CHECK-LABEL: fn test_field_write
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   (*_1).x = const 10
+// CHECK-NEXT:   (*_1).y = const 20
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_field_write(struct Point *p) {
+    p->x = 10;
+    p->y = 20;
+}

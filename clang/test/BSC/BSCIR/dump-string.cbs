@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of string literals (array-to-pointer decay via Cast).
+
+
+// CHECK-LABEL: fn test_string
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = Cast(const "hello" as char *)
+// CHECK-NEXT:   _1 = copy(_2)
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+const char *test_string(void) {
+    const char *s = "hello";
+    return s;
+}

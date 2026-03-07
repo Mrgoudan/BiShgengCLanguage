@@ -1,0 +1,25 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that function calls are terminators (not statements) in BSCIR.
+
+// Nested calls foo(bar(x)) decompose into separate blocks.
+int bar(int x);
+int foo(int x);
+
+// CHECK-LABEL: fn test_nested_call
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = call bar(copy(_1)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = call foo(copy(_2)) -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_nested_call(int x) {
+    return foo(bar(x));
+}

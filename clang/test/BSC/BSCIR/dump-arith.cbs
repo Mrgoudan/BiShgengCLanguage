@@ -1,0 +1,103 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of all arithmetic, comparison, and unary operators.
+
+
+// CHECK-LABEL: fn test_add
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(+, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_add(int a, int b) { return a + b; }
+
+// CHECK-LABEL: fn test_sub
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(-, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_sub(int a, int b) { return a - b; }
+
+// CHECK-LABEL: fn test_mul
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(*, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_mul(int a, int b) { return a * b; }
+
+// CHECK-LABEL: fn test_div
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(/, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_div(int a, int b) { return a / b; }
+
+// CHECK-LABEL: fn test_mod
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(%, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_mod(int a, int b) { return a % b; }
+
+// CHECK-LABEL: fn test_gt
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(>, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_gt(int a, int b) { return a > b; }
+
+// CHECK-LABEL: fn test_eq
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = BinOp(==, copy(_1), copy(_2))
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_eq(int a, int b) { return a == b; }
+
+// CHECK-LABEL: fn test_not
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = UnaryOp(!, copy(_1))
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_not(int a) { return !a; }
+
+// CHECK-LABEL: fn test_neg
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = UnaryOp(-, copy(_1))
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_neg(int a) { return -a; }

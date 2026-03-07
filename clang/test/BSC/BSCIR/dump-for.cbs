@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of for loops with init, condition, increment.
+
+
+// CHECK-LABEL: fn test_for
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _3 = const 0
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _4 = BinOp(<, copy(_3), copy(_1))
+// CHECK-NEXT:   switchInt(copy(_4)) -> [1: bb3, otherwise: bb4]
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _5 = BinOp(+, copy(_2), copy(_3))
+// CHECK-NEXT:   _2 = copy(_5)
+// CHECK-NEXT:   _6 = copy(_3)
+// CHECK-NEXT:   _7 = BinOp(+, copy(_3), const 1)
+// CHECK-NEXT:   _3 = copy(_7)
+// CHECK-NEXT:   goto -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_for(int n) {
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+        sum += i;
+    }
+    return sum;
+}

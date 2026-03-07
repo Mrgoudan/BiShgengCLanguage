@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of logical operators && and || with short-circuit.
+
+// Both must produce SwitchInt branching, never BinOp(&&/||).
+
+// CHECK-LABEL: fn test_land
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = const 0
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_2)
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_land(int a, int b) { return a && b; }
+
+// CHECK-LABEL: fn test_lor
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = const 1
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_2)
+// CHECK-NEXT:   goto -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_lor(int a, int b) { return a || b; }

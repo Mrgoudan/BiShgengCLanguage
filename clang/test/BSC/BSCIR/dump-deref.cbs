@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of pointer dereference: single and double.
+
+
+// CHECK-LABEL: fn test_deref
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = copy(_1)
+// CHECK-NEXT:   _0 = copy((*_2))
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_deref(int *p) {
+    return *p;
+}
+
+// CHECK-LABEL: fn test_double_deref
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = copy(_1)
+// CHECK-NEXT:   _3 = copy((*_2))
+// CHECK-NEXT:   _0 = copy((*_3))
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_double_deref(int **pp) {
+    return **pp;
+}
+
+// CHECK-LABEL: fn test_deref_assign
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   (*_1) = const 42
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_deref_assign(int *p) {
+    *p = 42;
+}

@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of null pointer via (void *)0 cast.
+
+
+// CHECK-LABEL: fn test_null_ptr
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _1 = Cast(const 0 as void *)
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void *test_null_ptr(void) {
+    return (void *)0;
+}

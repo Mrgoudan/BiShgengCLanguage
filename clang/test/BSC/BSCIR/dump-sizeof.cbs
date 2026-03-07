@@ -1,0 +1,47 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of sizeof expressions.
+
+struct S { int x; int y; };
+
+// CHECK-LABEL: fn test_sizeof_type
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _1 = sizeof(int)
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+unsigned long test_sizeof_type(void) {
+    return sizeof(int);
+}
+
+// CHECK-LABEL: fn test_sizeof_struct
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _1 = sizeof(struct S)
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+unsigned long test_sizeof_struct(void) {
+    return sizeof(struct S);
+}
+
+// CHECK-LABEL: fn test_sizeof_expr
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _2 = sizeof(int[10])
+// CHECK-NEXT:   _0 = copy(_2)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+unsigned long test_sizeof_expr(void) {
+    int arr[10];
+    return sizeof(arr);
+}

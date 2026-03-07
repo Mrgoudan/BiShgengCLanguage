@@ -1,0 +1,60 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test: for-loop init declarations must be scoped to the for statement.
+// Per C99 §6.8.5, the scope of a declaration in for-init extends through
+// the entire for statement and no further. StorageDead for the init variable
+// must appear immediately after the loop exits, before any subsequent code.
+
+// =========================================================================
+// Case 1: StorageDead for init var must appear before subsequent declarations.
+// BUG: currently StorageDead(_1) appears AFTER StorageDead(_5), at function
+// exit — i.e., the init variable leaks into the enclosing scope.
+// =========================================================================
+
+// CHECK-LABEL: fn test_for_init_scope
+//
+// Exit block: StorageDead(i) MUST come before StorageLive(x).
+// CHECK:      StorageDead(_1)
+// CHECK-NEXT: StorageLive(_5)
+// CHECK-NEXT: _5 = const 10
+void test_for_init_scope(void) {
+    for (int i = 0; i < 5; i++) {
+    }
+    int x = 10;
+}
+
+// =========================================================================
+// Case 2: Two consecutive for-loops. First loop's init variable must be
+// dead before the second loop's init starts.
+// =========================================================================
+
+// CHECK-LABEL: fn test_consecutive_for_init
+//
+// Between the two loops: StorageDead(i) MUST come before StorageLive(j).
+// CHECK:      StorageDead(_1)
+// CHECK-NEXT: StorageLive(_5)
+// CHECK-NEXT: _5 = const 0
+void test_consecutive_for_init(void) {
+    for (int i = 0; i < 5; i++) {
+    }
+    for (int j = 0; j < 5; j++) {
+    }
+}
+
+// =========================================================================
+// Case 3: break exits the for-loop. The break target (exit block) must
+// contain StorageDead for the init variable.
+// =========================================================================
+
+// CHECK-LABEL: fn test_for_break_init
+//
+// After break lands at exit: StorageDead(i) MUST come before StorageLive(y).
+// CHECK:      StorageDead(_1)
+// CHECK-NEXT: StorageLive(_5)
+// CHECK-NEXT: _5 = const 20
+void test_for_break_init(void) {
+    for (int i = 0; i < 10; i++) {
+        break;
+    }
+    int y = 20;
+}

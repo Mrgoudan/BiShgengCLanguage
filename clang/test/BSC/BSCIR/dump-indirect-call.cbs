@@ -1,0 +1,42 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test: indirect calls through function pointers must preserve callee info.
+// The callee operand should reference the function pointer local, not an
+// empty constant.
+
+typedef int (*fn_ptr)(int);
+typedef void (*void_fn)(void);
+
+// =========================================================================
+// Case 1: Simple indirect call through function pointer parameter.
+// BUG: callee is "const(fn_ptr)" — the function pointer local _1 is lost.
+// Expected: call copy(_1)(copy(_2)) -> bb...
+// =========================================================================
+
+// CHECK-LABEL: fn test_indirect_call
+// CHECK: call copy(_1)(copy(_2)) -> bb
+int test_indirect_call(fn_ptr f, int x) {
+    return f(x);
+}
+
+// =========================================================================
+// Case 2: Indirect call with no arguments.
+// =========================================================================
+
+// CHECK-LABEL: fn test_indirect_call_void
+// CHECK: call copy(_1)() -> bb
+void test_indirect_call_void(void_fn g) {
+    g();
+}
+
+// =========================================================================
+// Case 3: Indirect call with multiple arguments.
+// =========================================================================
+
+typedef int (*binary_fn)(int, int);
+
+// CHECK-LABEL: fn test_indirect_call_multi
+// CHECK: call copy(_1)(copy(_2), copy(_3)) -> bb
+int test_indirect_call_multi(binary_fn h, int a, int b) {
+    return h(a, b);
+}

@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of variable declarations with/without init, parameters,
+
+// and local table listing.
+
+// CHECK-LABEL: fn test_decl_with_init
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _1 = const 10
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 20
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_decl_with_init(void) {
+    int x = 10;
+    int y = 20;
+}
+
+// CHECK-LABEL: fn test_params
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int test_params(int a, int b, int c) {
+    return a;
+}

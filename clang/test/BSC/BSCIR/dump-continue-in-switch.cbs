@@ -1,0 +1,279 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test: continue inside a switch nested in a loop.
+// continue must target the enclosing loop, skipping the switch's breakable scope.
+
+// ---------------------------------------------------------------------------
+// Case 1: continue in switch-inside-while
+//   case 0: continue → skips sum+=10, jumps to while condition
+//   case 1: break   → falls to sum+=10, then loops
+//   default:         → falls to sum+=10, then loops
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn test_continue_in_switch_while
+
+// Entry: init i=0, sum=0, jump to condition.
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _3 = const 0
+// CHECK-NEXT:   goto -> bb[[COND:[0-9]+]]
+// CHECK-NEXT: }
+
+// CHECK:      bb1: {
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+
+// While condition: i < 10 → body or exit.
+// CHECK:      bb[[COND]]: {
+// CHECK-NEXT:   _4 = BinOp(<, copy(_2), const 10)
+// CHECK-NEXT:   switchInt(copy(_4)) -> [1: bb[[BODY:[0-9]+]], otherwise: bb[[EXIT:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Switch dispatch. case 0 (continue) → bb[[COND]] directly.
+// case 1 and default → their own blocks with post-switch code.
+// CHECK:      bb[[BODY]]: {
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb[[COND]], 1: bb[[CASE1:[0-9]+]], otherwise: bb[[DEFAULT:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Exit: return sum.
+// CHECK:      bb[[EXIT]]: {
+// CHECK-NEXT:   _0 = copy(_3)
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+
+// Post-switch block: sum += 10; i += 1; back to condition.
+// CHECK:      bb[[POST:[0-9]+]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_3), const 10)
+// CHECK-NEXT:   _3 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_2), const 1)
+// CHECK-NEXT:   _2 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[COND]]
+// CHECK-NEXT: }
+
+// case 1: sum += 1; break → post-switch.
+// CHECK:      bb[[CASE1]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_3), const 1)
+// CHECK-NEXT:   _3 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[POST]]
+// CHECK-NEXT: }
+
+// default: sum += 2; fall-through → post-switch.
+// CHECK:      bb[[DEFAULT]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_3), const 2)
+// CHECK-NEXT:   _3 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[POST]]
+// CHECK-NEXT: }
+
+// No unreachable — continue must produce a goto.
+// CHECK-NOT: unreachable
+int test_continue_in_switch_while(int x) {
+    int i = 0;
+    int sum = 0;
+    while (i < 10) {
+        switch (x) {
+        case 0:
+            continue;  // → bb[[COND]], skipping sum += 10
+        case 1:
+            sum += 1;
+            break;
+        default:
+            sum += 2;
+        }
+        sum += 10;
+        i += 1;
+    }
+    return sum;
+}
+
+
+// ---------------------------------------------------------------------------
+// Case 2: continue in switch-inside-for
+//   continue must target the for-increment block, not the condition.
+//   case 0: continue → skips sum+=100, jumps to i+=1 (increment)
+//   default: break   → executes sum+=100, then falls to increment
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn test_continue_in_switch_for
+
+// Entry: init i=0, sum=0, jump to for-condition.
+// CHECK:      bb{{[0-9]+}}: {
+// CHECK:        goto -> bb[[FCOND:[0-9]+]]
+// CHECK-NEXT: }
+
+// For condition: i < 10 → body or exit.
+// CHECK:      bb[[FCOND]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(<, copy(_2), const 10)
+// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [1: bb[[FBODY:[0-9]+]], otherwise: bb[[FEXIT:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Switch dispatch. case 0 (continue) → for-increment directly.
+// CHECK:      bb[[FBODY]]: {
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb[[FINCR:[0-9]+]], otherwise: bb[[FDEF:[0-9]+]]]
+// CHECK-NEXT: }
+
+// For-increment: i += 1, back to condition.
+// CHECK:      bb[[FINCR]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_2), const 1)
+// CHECK-NEXT:   _2 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[FCOND]]
+// CHECK-NEXT: }
+
+// default: sum += 100; break → post-switch → falls to increment.
+// CHECK:      bb[[FDEF]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_3), const 100)
+// CHECK-NEXT:   _3 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[FINCR]]
+// CHECK-NEXT: }
+
+// CHECK-NOT: unreachable
+int test_continue_in_switch_for(int x) {
+    int i = 0;
+    int sum = 0;
+    for (i = 0; i < 10; i += 1) {
+        switch (x) {
+        case 0:
+            continue;  // → for-increment (i += 1), skipping sum += 100
+        default:
+            break;
+        }
+        sum += 100;
+    }
+    return sum;
+}
+
+
+// ---------------------------------------------------------------------------
+// Case 3: continue in switch-inside-do-while
+//   continue must target the do-while condition, not the body.
+//   case 0: continue → skips i+=1, jumps to condition
+//   default: falls through to i += 1, then condition
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn test_continue_in_switch_dowhile
+
+// Entry: init i=0, jump to do-body.
+// CHECK:      bb{{[0-9]+}}: {
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = const 0
+// CHECK-NEXT:   goto -> bb[[DBODY:[0-9]+]]
+// CHECK-NEXT: }
+
+// Do-body: switch on x. case 0 (continue) → condition directly.
+// CHECK:      bb[[DBODY]]: {
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb[[DCOND:[0-9]+]], otherwise: bb[[DDEF:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Do-while condition: i < 10 → loop back to body or exit.
+// CHECK:      bb[[DCOND]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(<, copy(_2), const 10)
+// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [1: bb[[DBODY]], otherwise: bb{{[0-9]+}}]
+// CHECK-NEXT: }
+
+// default: i += 1; falls to condition.
+// CHECK:      bb[[DDEF]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_2), const 1)
+// CHECK-NEXT:   _2 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[DCOND]]
+// CHECK-NEXT: }
+
+// CHECK-NOT: unreachable
+int test_continue_in_switch_dowhile(int x) {
+    int i = 0;
+    do {
+        switch (x) {
+        case 0:
+            continue;  // → do-while condition, skipping i += 1
+        default:
+            i += 1;
+        }
+    } while (i < 10);
+    return i;
+}
+
+
+// ---------------------------------------------------------------------------
+// Case 4: continue in doubly-nested switch inside while
+//   The inner switch's continue must skip both switches and jump to while cond.
+//   y==1, z==10: continue → while cond (skips sum+=999)
+//   y==1, z!=10: inner break → sum+=50 → outer break → sum+=999 → while cond
+//   y!=1:        default  → i+=1 → sum+=999 → while cond
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn test_continue_nested_switch
+
+// Entry: init i=0, sum=0, jump to while condition.
+// CHECK:      bb{{[0-9]+}}: {
+// CHECK:        goto -> bb[[NCOND:[0-9]+]]
+// CHECK-NEXT: }
+
+// While condition: i < 5 → body or exit.
+// CHECK:      bb[[NCOND]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(<, copy(_3), const 5)
+// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [1: bb[[NBODY:[0-9]+]], otherwise: bb[[NEXIT:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Outer switch: y==1 → inner switch block, default → i+=1 block.
+// CHECK:      bb[[NBODY]]: {
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb[[OUTER1:[0-9]+]], otherwise: bb[[ODEF:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Exit: return sum.
+// CHECK:      bb[[NEXIT]]: {
+// CHECK-NEXT:   _0 = copy(_4)
+// CHECK-NEXT:   StorageDead(_4)
+// CHECK-NEXT:   StorageDead(_3)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+
+// Post-switch: sum += 999; back to condition.
+// CHECK:      bb[[NPOST:[0-9]+]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_4), const 999)
+// CHECK-NEXT:   _4 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[NCOND]]
+// CHECK-NEXT: }
+
+// Inner switch: z==10 (continue) → bb[[NCOND]] directly. z!=10 → inner default.
+// CHECK:      bb[[OUTER1]]: {
+// CHECK-NEXT:   switchInt(copy(_2)) -> [10: bb[[NCOND]], otherwise: bb[[IDEF:[0-9]+]]]
+// CHECK-NEXT: }
+
+// Outer default: i += 1; → post-switch (sum+=999).
+// CHECK:      bb[[ODEF]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_3), const 1)
+// CHECK-NEXT:   _3 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[NPOST]]
+// CHECK-NEXT: }
+
+// Inner default: sum += 50; outer break → post-switch (sum+=999).
+// CHECK:      bb[[IDEF]]: {
+// CHECK-NEXT:   _{{[0-9]+}} = BinOp(+, copy(_4), const 50)
+// CHECK-NEXT:   _4 = copy(_{{[0-9]+}})
+// CHECK-NEXT:   goto -> bb[[NPOST]]
+// CHECK-NEXT: }
+
+// CHECK-NOT: unreachable
+int test_continue_nested_switch(int y, int z) {
+    int i = 0;
+    int sum = 0;
+    while (i < 5) {
+        switch (y) {
+        case 1:
+            switch (z) {
+            case 10:
+                continue;  // → while cond, skipping sum += 999
+            default:
+                sum += 50;
+                break;
+            }
+            break;
+        default:
+            i += 1;
+        }
+        sum += 999;
+    }
+    return sum;
+}

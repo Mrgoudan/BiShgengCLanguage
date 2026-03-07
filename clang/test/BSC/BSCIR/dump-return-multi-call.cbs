@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of return with multiple nested calls as arguments:
+
+// add3(foo(x), bar(x), foo(bar(x))). All calls decompose into separate blocks.
+int foo(int x);
+int bar(int x);
+int add3(int a, int b, int c);
+//
+// Each call is a separate block terminator.
+//
+// The outer call fires last with all pre-computed args.
+//
+
+// CHECK-LABEL: fn test_return_multi_call
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _2 = call foo(copy(_1)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = call bar(copy(_1)) -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _4 = call bar(copy(_1)) -> bb4
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _5 = call foo(copy(_4)) -> bb5
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   _6 = call add3(copy(_2), copy(_3), copy(_5)) -> bb6
+// CHECK-NEXT: }
+// CHECK:      bb6: {{[{]}}
+// CHECK-NEXT:   _0 = copy(_6)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int test_return_multi_call(int x) {
+    return add3(foo(x), bar(x), foo(bar(x)));
+}

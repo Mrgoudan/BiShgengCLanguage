@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of function call in RHS of dereference assignment:
+
+// *p = compute(x). The call must be a terminator, completing before the store.
+int compute(int x);
+
+// CHECK-LABEL: fn test_call_deref_assign
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _3 = call compute(copy(_2)) -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   (*_1) = copy(_3)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_call_deref_assign(int *p, int x) {
+    *p = compute(x);
+}
