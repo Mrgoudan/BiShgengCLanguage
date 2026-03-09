@@ -1876,6 +1876,7 @@ public:
       : OS(os), stat(Stat), reporter(reporter) {}
 
   void VisitBinaryOperator(BinaryOperator *BO);
+  void VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE);
   void VisitCallExpr(CallExpr *CE);
   void VisitCStyleCastExpr(CStyleCastExpr *CSCE);
   void VisitDeclRefExpr(DeclRefExpr *DRE);
@@ -2040,6 +2041,13 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
     Visit(*it);
     op = None;
   }
+}
+
+/// UnaryExprOrTypeTraitExpr - expression with either a type or (unevaluated) expression operand.
+/// Used for sizeof/alignof (C99 6.5.3.4) and vec_step (OpenCL 1.1 6.11.12).
+/// 'alignof/_Alignof' applied to an expression is a GNU extension.
+void TransferFunctions::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr* UE) {
+  return;
 }
 
 void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {

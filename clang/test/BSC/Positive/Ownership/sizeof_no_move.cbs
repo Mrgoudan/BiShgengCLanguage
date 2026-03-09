@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+typedef struct tag_S {int * _Owned _Nullable p;} S;
+_Safe void bar(int *_Owned _Nullable resPara);
+_Safe void bar2(S*_Borrow, unsigned);
+
+_Safe void test1(void) {
+  S s = {.p = nullptr};
+  bar2(&_Mut s, sizeof(s));
+  bar(s.p);
+}
+
+_Safe void test2(void) {
+  S s = {.p = nullptr};
+  bar2(&_Mut s, sizeof(S));
+  bar(s.p);
+}
