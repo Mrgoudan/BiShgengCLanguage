@@ -377,6 +377,15 @@ bool Parser::isNotExpressionStart() {
       K == tok::kw_if   || K == tok::kw_else  ||
       K == tok::kw_goto || K == tok::kw_try)
     return true;
+#if ENABLE_BSC
+  // _Safe(expr) and _Unsafe(expr) are valid expressions
+  // _Safe and _Unsafe are also declaration specifiers.
+  // We should prevent them falling into declaration specifier case.
+  if (getLangOpts().BSC &&
+      (K == tok::kw__Safe || K == tok::kw__Unsafe) &&
+      NextToken().is(tok::l_paren))
+    return false;
+#endif
   // If this is a decl-specifier, we can't be at the start of an expression.
   return isKnownToBeDeclarationSpecifier();
 }

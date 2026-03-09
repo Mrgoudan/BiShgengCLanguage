@@ -42,6 +42,10 @@ _Safe void test_safe_stmt6(void) {
     test_safe_stmt5(_Unsafe(test_safe_stmt4()));
 }
 
+int test_safe_stmt7(void) {
+    return (1, _Unsafe(0));
+}
+
 int main() {
     test_safe_stmt1();
     test_safe_stmt2();
@@ -84,6 +88,10 @@ int main() {
 // CHECK-EMPTY: 
 // CHECK:      void test_safe_stmt6(void) {
 // CHECK-NEXT:     test_safe_stmt5((test_safe_stmt4()));
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      int test_safe_stmt7(void) {
+// CHECK-NEXT:     return (1 , (0));
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      int main() {

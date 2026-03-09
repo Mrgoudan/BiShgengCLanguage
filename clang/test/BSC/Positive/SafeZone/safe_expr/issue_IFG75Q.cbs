@@ -1,0 +1,30 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+constexpr _Safe _Bool dummy_check<T>(void) {return 1;}
+
+_Safe void bar(int *p) {
+  int * _Borrow pb = (dummy_check<typeof(p)>(), _Unsafe(((int* _Borrow)(int*)(p))));
+  (void) pb;
+}
+
+int main() { return 0; }
+
+// CHECK:      static _Bool dummy_check_int_P(void);
+// CHECK-EMPTY: 
+// CHECK:      void bar(int *p) {
+// CHECK-NEXT:   int * pb = (1 , (((int *)(int *)(p))));
+// CHECK-NEXT:   (void)pb;
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
+// CHECK:      int main() { return 0; }
+// CHECK-EMPTY: 
+// CHECK:      static _Bool dummy_check_int_P(void) {
+// CHECK-NEXT:   return 1;
+// CHECK-NEXT: }
+// CHECK-EMPTY: 
