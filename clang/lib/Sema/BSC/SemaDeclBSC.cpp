@@ -437,9 +437,10 @@ public:
     NullStmt *NS = new (getSema().Context) NullStmt(Sub->getBeginLoc());
     CS->setSubStmt(NS);
     replacedNodesMap.Insert(NS, Sub);
+    Stmts.push_back(CS);
+
     StmtResult ResSub = getDerived().TransformStmt(Sub);
-    Stmts.push_back(ResSub.get());
-    return CS;
+    return ResSub;
   }
 
   StmtResult TransformCompoundStmt(CompoundStmt *CS) {
@@ -486,9 +487,10 @@ public:
     NullStmt *NS = new (getSema().Context) NullStmt(Sub->getBeginLoc());
     DS->setSubStmt(NS);
     replacedNodesMap.Insert(NS, Sub);
+    Stmts.push_back(DS);
+
     StmtResult ResSub = getDerived().TransformStmt(Sub);
-    Stmts.push_back(ResSub.get());
-    return DS;
+    return ResSub;
   }
 
   // Transform DoStmt which has the form `do body while (cond)` into
@@ -593,9 +595,10 @@ public:
     NullStmt *NS = new (getSema().Context) NullStmt(Sub->getBeginLoc());
     LS->setSubStmt(NS);
     replacedNodesMap.Insert(NS, Sub);
+    Stmts.push_back(LS);
+
     StmtResult ResSub = getDerived().TransformStmt(Sub);
-    Stmts.push_back(ResSub.get());
-    return LS;
+    return ResSub;
   }
 
   StmtResult TransformReturnStmt(ReturnStmt *RS) {
