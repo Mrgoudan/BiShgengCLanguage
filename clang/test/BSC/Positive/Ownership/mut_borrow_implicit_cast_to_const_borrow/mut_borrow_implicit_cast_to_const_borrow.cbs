@@ -1,0 +1,103 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+typedef struct {
+  const int *_Borrow p;
+} S1;
+
+typedef struct {
+  int *_Borrow p;
+} S2;
+
+void foo(const int *_Borrow p) {
+  (void)*p;
+}
+
+void bar<T>(T t1, const T *_Borrow t2) {
+}
+
+T baz<T>(T t) {
+  return t;
+}
+
+void test1() {
+  int a = 1;
+  int *_Borrow p = &_Mut a;
+  const int *_Borrow q = p;
+  S1 s1 = { .p = p };
+  S1 s2 = { .p = &_Mut *p };
+  S1 s3 = { .p = &_Mut (int) {2} };
+}
+
+void test2() {
+  int a = 1;
+  int *_Borrow p = &_Mut a;
+  const int *_Borrow q = nullptr;
+  q = p;
+  q = &_Mut (int) {2};
+  S1 s = { .p = nullptr };
+  s = (S1) { .p = p };
+}
+
+void test3() {
+  int a = 1;
+  int *_Borrow p = &_Mut a;
+  foo(p);
+  foo(&_Mut (int) {2});
+  S1 s = { .p = p };
+  foo(s.p);
+}
+
+const int *_Borrow test4(int *_Borrow p) {
+  return p;
+}
+
+const int *_Borrow test5(S1 s) {
+  return s.p;
+}
+
+void test6(S2 s2) {
+  S1 s1 = { .p = s2.p };
+  int a = *(s1.p);
+  *(s2.p) = 2;
+}
+
+void test7() {
+  int a = 1;
+  int *_Borrow p = &_Mut a;
+  bar(1, p);
+}
+
+const int *_Borrow test8(int *_Borrow p) {
+  return baz(p);
+}
+
+void test9(int c) {
+  int a = 1;
+  int b = 2;
+  int *_Borrow p1 = &_Mut a;
+  int *_Borrow p2 = &_Mut b;
+  const int *_Borrow q = c == 3 ? p1 : p2;
+  S1 s = { .p = c == 3 ? p1 : p2 };
+}
+
+const int *_Borrow test10(int *_Borrow p) {
+  return &_Mut *p;
+}
+
+const int *_Borrow test11(S2 s) {
+  return &_Mut *s.p;
+}
+
+S1 test12(int *_Borrow p) {
+  return (S1) { .p = p };
+}
+
+S1 test13(S2 s) {
+  return (S1) { .p = s.p };
+}
+
+int main(void) {
+  return 0;
+}

@@ -4318,14 +4318,32 @@ int main() {
 }
 ```
 
-**可变借用自动重借用为不可变借用**
+**可变借用隐式转换为不可变借用**
 
-可变借用给不可变借用赋值时，自动插入 `&_Const *` 操作符
+即可变借用 T *_Borrow 类型可隐式转换为不可变借用 const T *_Borrow 类型，由编译器自动插入 `&_Const *` 操作符。
+
+允许在以下四种位置发生该隐式类型转换：
+
+1. 变量声明语句
+2. 变量赋值表达式
+3. 函数调用表达式传参
+4. 函数的返回语句
+
+给出一些示例如下：
 
 ```C
-void foo(int *_Borrow ref) {
-  const int *_Borrow cref = ref;
-  const int *_Borrow equivalent = &_Const *ref;
+void foo(const int *_Borrow);
+
+void test1() {
+  int a = 1;
+  int *_Borrow p = &_Mut a;
+  const int *_Borrow q = p; // ok
+  q = p; // ok
+  foo(p); // ok
+}
+
+const int *_Borrow test2(int *_Borrow p) {
+  return p; // ok
 }
 ```
 
