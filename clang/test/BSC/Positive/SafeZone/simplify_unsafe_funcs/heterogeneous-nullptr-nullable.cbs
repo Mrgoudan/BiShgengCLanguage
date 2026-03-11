@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+// Test that nullptr matches _Nullable pointer parameters in heterogeneous
+// _Safe/_Unsafe overload resolution.
+
+typedef struct A {
+    int a;
+} A;
+
+// Test 1: nullptr matches _Nullable _Borrow parameter
+void foo(const A* a);
+_Safe void foo(const A* _Borrow _Nullable a);
+
+_Safe void test_nullable_borrow(void) {
+    foo(nullptr);
+}
+
+// Test 2: nullptr matches _Nullable _Owned parameter
+void bar(int* p);
+_Safe void bar(int* _Owned _Nullable p);
+
+_Safe void test_nullable_owned(void) {
+    bar(nullptr);
+}
+
+// Test 3: Multiple parameters, one is nullptr
+void baz(int* p, float* q);
+_Safe void baz(int* _Borrow p, float* _Borrow _Nullable q);
+
+_Safe void test_mixed(int* _Borrow bp) {
+    baz(bp, nullptr);
+}

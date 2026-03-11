@@ -318,6 +318,10 @@ static bool DoPointerTypesSatisfyAssignmentConstraintsImpl(
     }
   }
 
+  // nullptr_t is compatible with any pointer type.
+  if (DestIsPtr && Src->isNullPtrType())
+    return true;
+
   // If only one is a pointer (after considering array decay), they're incompatible.
   if (DestIsPtr != SrcIsPtr)
     return false;
