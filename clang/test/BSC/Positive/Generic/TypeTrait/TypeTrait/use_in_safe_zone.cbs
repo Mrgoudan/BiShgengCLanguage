@@ -1,0 +1,35 @@
+// RUN: %clang %s -g -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include "bsc_type_traits.hbs"
+_Safe void test(void) {
+    (void)is_integral<int>();
+    (void)is_floating_point<int>();
+    (void)is_void<int>();
+    (void)is_signed<int>();
+    (void)is_unsigned<int>;
+    (void)is_const<int>();
+    (void)is_volatile<int>();
+    (void)is_move_semantic<int>();
+    (void)is_owned_pointer<int>();
+    (void)is_owned_struct<int>();
+    (void)is_array<int>();
+    (void)is_function<int>();
+    (void)is_pointer<int>();
+    (void)is_struct<int>();
+    (void)is_enum<int>();
+    (void)is_union<int>();
+    (void)is_same<int, int>();
+    (void)is_convertible<int, int>();
+    (void)rank<int>();
+    (void)extent<int, 0>();
+}
+
+int main() {
+    test();
+    return 0;
+}
