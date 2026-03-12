@@ -1,0 +1,65 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+
+void exhaust(int *_Owned _Nullable);
+
+void take_bool(_Bool);
+
+void owned_operators(int *_Owned _Nullable p, int *_Owned _Nullable q) {
+    if (!p) {
+    }
+    if (p && q) {
+        take_bool(p);
+    }
+    if (p || q) {
+        _Bool flag = p;
+        flag = q;
+    }
+    exhaust(p);
+    exhaust(q);
+}
+
+void owned_control_flow(int *_Owned _Nullable p) {
+    if (p) {
+    }
+    while (p) {
+        break;
+    }
+    do {
+        break;
+    } while(p);
+    for (;p;) {
+        break;
+    }
+    int x = p ? 2 : 1;
+    exhaust(p);
+}
+
+void borrow_operators(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
+    if (!p) {
+    }
+    if (p && q) {
+        take_bool(p);
+    }
+    if (p || q) {
+        _Bool flag = p;
+        flag = q;
+    }
+}
+
+_Bool borrow_control_flow(int *_Borrow _Nullable p) {
+    if (p) {
+    }
+    while (p) {
+        break;
+    }
+    do {
+        break;
+    } while(p);
+    for (;p;) {
+        break;
+    }
+    int x = p ? 2 : 1;
+    return p;
+}

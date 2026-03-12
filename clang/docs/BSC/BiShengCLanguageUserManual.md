@@ -3477,6 +3477,59 @@ int main() {
 }
 ```
 
+12. _Owned 指针可以使用逻辑运算符。
+
+```c
+void logical_not(int *_Owned _Nullable p) {
+  if (!p) { // equivalent: p == nullptr
+  }
+}
+void logical_and(int *_Owned _Nullable p, int *_Owned _Nullable q) {
+  if (p && q) { // equivalent: (p != nullptr) && (q != nullptr)
+  }
+}
+void logical_or(int *_Owned _Nullable p, int *_Owned _Nullable q) {
+  if (p || q) { // equivalent: (p != nullptr) || (q != nullptr)
+  }
+}
+```
+
+13. 允许 _Owned 指针作为 if while do-while for 语句和三元表达式的条件，不允许作为 switch 的条件。
+
+```c
+void foo(int *_Owned _Nullable p) {
+  if (p) { // equivalent: p != nullptr
+  }
+  while (p) { // equivalent: p!= nullptr
+  }
+  do {
+  } while (p); // equivalent: p != nullptr
+
+  for (;p;) { // equivalent: p != nullptr
+  }
+  swtich (p) { // error
+  default:
+    break;
+  }
+  int x = p ? 2 : 1; // equivalent: p != nullptr ? 2 : 1
+}
+```
+
+14. 允许在变量初始化、变量赋值和函数传参中将 _Owned 指针隐式转换为 _Bool，不会消耗其指向内容的所有权。
+
+```c
+void foo(int *_Owned _Nullable p) {
+  _Bool flag = p; // equivalent: _Bool flag = p != nullptr;
+}
+void bar(int *_Owned _Nullable p, _Bool flag) {
+  flag = p; // equivalent: flag = p != nullptr;
+}
+void use(_Bool);
+void baz(int *_Owned _Nullable p) {
+  use(p); // equivalent: use(p != nullptr);
+}
+```
+
 #### 3. 所有权状态转移规则
 
 在对所有权特性的语法和部分语义有了解后，本节将对所有权的状态转移规则进行详细阐述。
@@ -4607,6 +4660,24 @@ int main() {
 }
 ```
 
+6. 允许在变量初始化、变量赋值、函数传参和返回中将 _Borrow 指针隐式转换为 _Bool
+
+```c
+void foo(int *_Borrow _Nullable p) {
+  _Bool flag = p; // equivalent: _Bool flag = p != nullptr;
+}
+void bar(int *_Borrow _Nullable p, _Bool flag) {
+  flag = p; // equivalent: flag = p != nullptr;
+}
+void use(_Bool);
+void baz(int *_Borrow _Nullable p) {
+  use(p); // equivalent: use(p != nullptr);
+}
+_Bool foobar (int *_Borrow _Nullable p) {
+  return p; // equivalent: return p != nullptr;
+}
+```
+
 注意:允许同类型的借用之间的转换(可变到可变,只读到只读)。
 
 #### 10. 借用的其它规则
@@ -4759,6 +4830,27 @@ int main() {
 ```
 
 17. 不允许对函数做可变借用，只能做只读借用。
+
+18. 允许 _Borrow 指针作为 `if` `while` `do-while` `for` 语句和三元表达式的条件，不允许作为 `switch` 语句的条件
+
+```c
+void foo(int *_Borrow _Nullable p) {
+  if (p) { // equivalent: p != nullptr
+  }
+  while (p) { // equivalent: p != nullptr
+  }
+  do {
+  } while (p); // equivalent: p != nullptr
+
+  for (;p;) { // equivalent: p != nullptr
+  }
+  switch (p) { // error
+  default: 
+    break;
+  }
+  int x = p ? 2 : 1; // equivalent: p != nullptr ? 2 : 1;
+}
+```
 
 ## _Owned struct 类型
 

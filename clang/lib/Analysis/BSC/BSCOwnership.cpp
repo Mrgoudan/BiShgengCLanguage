@@ -1994,7 +1994,9 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     Expr *LHS = BO->getLHS();
     Expr *RHS = BO->getRHS();
 
-    op = Move;
+    // _Bool assignment observes null-ness without ownership exhaustion
+    op =
+        LHS->IgnoreParenImpCasts()->getType()->isBooleanType() ? GetAddr : Move;
     Visit(RHS);
     op = None;
 
@@ -2037,8 +2039,10 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
   isHandlingCallExpr = false;
 
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
-    op = Move;
-    Visit(*it);
+    Expr *Arg = *it;
+    // Passing to _Bool parameter should not consume ownership
+    op = Arg->getType()->isBooleanType() ? GetAddr : Move;
+    Visit(Arg);
     op = None;
   }
 }
@@ -2155,7 +2159,8 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
           stat.setToOwned(VD);
         }
         // handle the init expr if it is not CallExpr
-        op = Move;
+        // _Bool initialization observes null-ness without ownership exhaustion
+        op = VQT->isBooleanType() ? GetAddr : Move;
         Visit(Init);
         op = None;
       }
@@ -2203,7 +2208,12 @@ void TransferFunctions::VisitInitListExpr(InitListExpr *ILE) {
 
 void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   if (Expr *RV = RS->getRetValue()) {
-    op = Move;
+    const FunctionDecl *FD =
+        dyn_cast<FunctionDecl>(OS.analysisContext.getDecl());
+    // Functions returning integers(including _Bool) cannot consume ownership
+    bool ReturningInteger =
+        FD != nullptr && FD->getReturnType()->isIntegerType();
+    op = ReturningInteger ? GetAddr : Move;
     Visit(RV);
     op = None;
   }

@@ -16305,21 +16305,42 @@ static void DiagnoseShiftCompare(Sema &S, SourceLocation OpLoc,
 
 #if ENABLE_BSC
 static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
-                                    SourceLocation OpLoc, Expr *LHSExpr,
-                                    Expr *RHSExpr) {
-  if (!(BinaryOperator::isComparisonOp(Opc) || Opc == BO_Assign)) {
+                                         SourceLocation OpLoc, Expr *LHSExpr,
+                                         Expr *RHSExpr) {
+  switch (Opc) {
+  case BO_EQ:
+  case BO_NE:
+  case BO_LT:
+  case BO_LE:
+  case BO_GT:
+  case BO_GE:
+  case BO_Assign:
+  case BO_LAnd:
+  case BO_LOr:
+    return;
+  default:
     Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_binOp)
-    << LHSExpr->getType() << RHSExpr->getType()
-    << LHSExpr->getSourceRange() << RHSExpr->getSourceRange();
+        << LHSExpr->getType() << RHSExpr->getType() << LHSExpr->getSourceRange()
+        << RHSExpr->getSourceRange();
+    return;
   }
 }
 
 static void DiagnoseOwnedPointerUnaryOp(Sema &Self, UnaryOperatorKind Opc,
-                                    SourceLocation OpLoc, Expr *Input) {
-  if (Opc != UO_AddrOf && Opc != UO_Deref && Opc != UO_AddrMut &&
-      Opc != UO_AddrConst && Opc != UO_AddrMutDeref && Opc != UO_AddrConstDeref) {
+                                        SourceLocation OpLoc, Expr *Input) {
+  switch (Opc) {
+  case UO_AddrOf:
+  case UO_Deref:
+  case UO_AddrMut:
+  case UO_AddrConst:
+  case UO_AddrMutDeref:
+  case UO_AddrConstDeref:
+  case UO_LNot:
+    return;
+  default:
     Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_unaOp)
-    << Input->getType() << Input->getSourceRange();
+        << Input->getType() << Input->getSourceRange();
+    return;
   }
 }
 #endif

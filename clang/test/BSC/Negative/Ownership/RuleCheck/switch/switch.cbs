@@ -224,3 +224,14 @@ void func9(int n) {
         }
     }
 } // expected-error {{memory leak of value: `a`}} expected-error {{memory leak of value: `b`}}
+
+void ptr_cannot_switch(int *_Owned _Nullable p, int *_Borrow _Nullable q) {
+    switch(p) { // expected-error {{statement requires expression of integer type ('int *_Owned _Nullable' invalid)}}
+    default:
+        break;
+    }
+    switch(q) { // expected-error {{statement requires expression of integer type ('int *_Borrow _Nullable' invalid)}}
+    default:
+        break;
+    }
+}

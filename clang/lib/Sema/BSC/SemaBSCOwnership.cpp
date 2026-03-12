@@ -218,6 +218,12 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   bool IsTraitImplType = (LHSCanType->isTraitType() || RHSCanType->isTraitType());
 
+  // _Bool <- T *_Owned // legal, doesn't consume ownership
+  if (RHSPtrType && RHSCanType.isOwnedQualified() &&
+      LHSCanType->isBooleanType()) {
+    return true;
+  }
+
   // owned to owned cases:
   // int* owned  <->  int* owned   // legal
   // int* owned  <->  float* owned // illegal
@@ -544,6 +550,12 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
 
     if (!Context.hasSameType(LHSCanType, RHSCanType))
       Res = false;
+
+    // _Bool <- T *_Borrow is allowed
+    if (RHSCanType->isPointerType() && RHSCanType.isBorrowQualified() &&
+        LHSCanType->isBooleanType()) {
+      Res = true;
+    }
   } else {
     Res = CheckBorrowQualTypeAssignment(LHSType, RHSCanType, ExprLoc);
   }
