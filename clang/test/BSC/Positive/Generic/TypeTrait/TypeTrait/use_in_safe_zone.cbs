@@ -17,6 +17,9 @@ _Safe void test(void) {
     (void)is_move_semantic<int>();
     (void)is_owned_pointer<int>();
     (void)is_owned_struct<int>();
+    (void)is_borrow<int>();
+    (void)is_mut_borrow<int>();
+    (void)is_immut_borrow<int>();
     (void)is_array<int>();
     (void)is_function<int>();
     (void)is_pointer<int>();

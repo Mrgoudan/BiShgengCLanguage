@@ -1,0 +1,108 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+#include "bsc_type_traits.hbs"
+typedef int MyInt;
+typedef int arr1[];
+typedef int arr2[3];
+typedef struct G { int a; } G;
+_Owned struct S { int a; };
+typedef enum E { Mon=1, Tue, Wed } E;
+typedef union U { int a; } U;
+typedef int *_Owned OwnedInt;
+typedef int *_Borrow MutBorrowInt;
+typedef const int *_Borrow ImmutBorrowInt;
+typedef struct SB { int *_Borrow a; } SB;
+
+int test_is_borrow() {
+    _Static_assert(is_borrow<void>() == false, "fail");
+    _Static_assert(is_borrow<void *>() == false, "fail");
+    _Static_assert(is_borrow<int>() == false, "fail");
+    _Static_assert(is_borrow<int *>() == false, "fail");
+    _Static_assert(is_borrow<arr1>() == false, "fail");
+    _Static_assert(is_borrow<arr2>() == false, "fail");
+    _Static_assert(is_borrow<S>() == false, "fail");
+    _Static_assert(is_borrow<G>() == false, "fail");
+    _Static_assert(is_borrow<E>() == false, "fail");
+    _Static_assert(is_borrow<U>() == false, "fail");
+    _Static_assert(is_borrow<SB>() == false, "fail");
+    _Static_assert(is_borrow<int *_Owned>() == false, "fail");
+    _Static_assert(is_borrow<OwnedInt>() == false, "fail");
+    _Static_assert(is_borrow<void *_Borrow>() == true, "fail");
+    _Static_assert(is_borrow<const void *_Borrow>() == true, "fail");
+    _Static_assert(is_borrow<int *_Borrow>() == true, "fail");
+    _Static_assert(is_borrow<MutBorrowInt>() == true, "fail");
+    _Static_assert(is_borrow<ImmutBorrowInt>() == true, "fail");
+    return 0;
+}
+
+int test_is_mut_borrow() {
+    _Static_assert(is_mut_borrow<void>() == false, "fail");
+    _Static_assert(is_mut_borrow<void *>() == false, "fail");
+    _Static_assert(is_mut_borrow<int>() == false, "fail");
+    _Static_assert(is_mut_borrow<int *>() == false, "fail");
+    _Static_assert(is_mut_borrow<arr1>() == false, "fail");
+    _Static_assert(is_mut_borrow<arr2>() == false, "fail");
+    _Static_assert(is_mut_borrow<S>() == false, "fail");
+    _Static_assert(is_mut_borrow<G>() == false, "fail");
+    _Static_assert(is_mut_borrow<E>() == false, "fail");
+    _Static_assert(is_mut_borrow<U>() == false, "fail");
+    _Static_assert(is_mut_borrow<SB>() == false, "fail");
+    _Static_assert(is_mut_borrow<int *_Owned>() == false, "fail");
+    _Static_assert(is_mut_borrow<OwnedInt>() == false, "fail");
+    _Static_assert(is_mut_borrow<const void *_Borrow>() == false, "fail");
+    _Static_assert(is_mut_borrow<ImmutBorrowInt>() == false, "fail");
+    _Static_assert(is_mut_borrow<void *_Borrow>() == true, "fail");
+    _Static_assert(is_mut_borrow<int *_Borrow>() == true, "fail");
+    _Static_assert(is_mut_borrow<MutBorrowInt>() == true, "fail");
+    return 0;
+}
+
+int test_is_immut_borrow() {
+    _Static_assert(is_immut_borrow<void>() == false, "fail");
+    _Static_assert(is_immut_borrow<void *>() == false, "fail");
+    _Static_assert(is_immut_borrow<int>() == false, "fail");
+    _Static_assert(is_immut_borrow<int *>() == false, "fail");
+    _Static_assert(is_immut_borrow<arr1>() == false, "fail");
+    _Static_assert(is_immut_borrow<arr2>() == false, "fail");
+    _Static_assert(is_immut_borrow<S>() == false, "fail");
+    _Static_assert(is_immut_borrow<G>() == false, "fail");
+    _Static_assert(is_immut_borrow<E>() == false, "fail");
+    _Static_assert(is_immut_borrow<U>() == false, "fail");
+    _Static_assert(is_immut_borrow<SB>() == false, "fail");
+    _Static_assert(is_immut_borrow<int *_Owned>() == false, "fail");
+    _Static_assert(is_immut_borrow<OwnedInt>() == false, "fail");
+    _Static_assert(is_immut_borrow<void *_Borrow>() == false, "fail");
+    _Static_assert(is_immut_borrow<int *_Borrow>() == false, "fail");
+    _Static_assert(is_immut_borrow<MutBorrowInt>() == false, "fail");
+    _Static_assert(is_immut_borrow<const void *_Borrow>() == true, "fail");
+    _Static_assert(is_immut_borrow<ImmutBorrowInt>() == true, "fail");
+    return 0;
+}
+
+int main() {
+    test_is_borrow();
+    test_is_mut_borrow();
+    test_is_immut_borrow();
+    return 0;
+}
+
+// CHECK: _Bool is_borrow_void(void);
+// CHECK: _Bool is_borrow_void_P(void);
+// CHECK: _Bool is_borrow_int(void);
+// CHECK: _Bool is_borrow_int_P(void);
+// CHECK: _Bool is_borrow_intLBRB(void);
+// CHECK: _Bool is_borrow_intLB3RB(void);
+// CHECK: _Bool is_borrow_struct_S(void);
+// CHECK: _Bool is_borrow_struct_G(void);
+// CHECK: _Bool is_borrow_enum_E(void);
+// CHECK: _Bool is_borrow_union_U(void);
+// CHECK: _Bool is_borrow_struct_SB(void);
+// CHECK: _Bool is_borrow_int_P_Owned(void);
+// CHECK: _Bool is_borrow_void_P_Borrow(void);
+// CHECK: _Bool is_borrow_int_P_Borrow(void);
+// CHECK: _Bool is_borrow_const_int_P_Borrow(void);

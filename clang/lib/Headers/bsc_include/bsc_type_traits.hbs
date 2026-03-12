@@ -73,6 +73,34 @@ _Safe constexpr bool is_owned_struct<T>(void) {
     return __is_owned_struct(T);
 }
 
+_Safe constexpr bool is_borrow<T>(void) {
+    if constexpr(!is_pointer<T>()) {
+        return false;
+    } else if constexpr(is_owned_pointer<T>()) {
+        return false;
+    } else {
+        return __is_same(T, T _Borrow);
+    }
+}
+
+typedef __remove_pointer<T> = __typeof(*(T)nullptr);
+
+_Safe constexpr bool is_immut_borrow<T>(void) {
+    if constexpr(!is_borrow<T>()) {
+        return false;
+    } else {
+        return is_const<__remove_pointer<T>>();
+    }
+}
+
+_Safe constexpr bool is_mut_borrow<T>(void) {
+    if constexpr(!is_borrow<T>()) {
+        return false;
+    } else {
+        return !is_const<__remove_pointer<T>>();
+    }
+}
+
 _Safe constexpr bool is_void<T>(void) {
     return __is_void(T);
 }
