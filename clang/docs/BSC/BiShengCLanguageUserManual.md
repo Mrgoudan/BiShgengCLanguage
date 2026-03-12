@@ -938,6 +938,7 @@ constexpr bool is_owned_struct<T>();
 constexpr bool is_borrow<T>();
 constexpr bool is_immut_borrow<T>();
 constexpr bool is_mut_borrow<T>();
+constexpr bool is_trivial_data<T>();
 constexpr size_t rank<T>();
 constexpr size_t extent<T, size_t N>();
 //判断类型的关系

@@ -105,6 +105,11 @@ _Safe constexpr bool is_void<T>(void) {
     return __is_void(T);
 }
 
+// Trivial Type Trait
+_Safe constexpr bool is_trivial_data<T>(void) {
+    return __is_trivial_data(T);
+}
+
 // Binary Type Traits
 _Safe constexpr bool is_same<T1, T2>(void) {
     return __is_same(T1, T2);

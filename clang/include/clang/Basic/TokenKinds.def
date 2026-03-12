@@ -600,6 +600,7 @@ TYPE_TRAIT_1(__is_struct, IsStruct, KEYBSC)
 TYPE_TRAIT_1(__is_move_semantic, IsMoveSemantic, KEYBSC)
 TYPE_TRAIT_1(__is_owned_pointer, IsOwnedPointer, KEYBSC)
 TYPE_TRAIT_1(__is_owned_struct, IsOwnedStruct, KEYBSC)
+TYPE_TRAIT_1(__is_trivial_data, IsTrivialData, KEYBSC)
 #else
 TYPE_TRAIT_1(__is_const, IsConst, KEYCXX)
 TYPE_TRAIT_1(__is_volatile, IsVolatile, KEYCXX)

@@ -302,6 +302,39 @@ bool Type::isMoveSemanticType() const {
   return false;
 }
 
+bool Type::isTrivialDataType(bool AllowIncompleteType) const {
+  if (CanonicalType.isBorrowQualified() || CanonicalType.isOwnedQualified()) {
+    return false;
+  }
+  if (CanonicalType->isOwnedStructureType()) {
+    return false;
+  }
+  if (CanonicalType->isPointerType()) {
+    return false;
+  }
+  if (const auto *ArrTy = dyn_cast<ArrayType>(CanonicalType)) {
+    QualType ET = ArrTy->getElementType().getCanonicalType();
+    return ET->isTrivialDataType(true);
+  }
+  if (!AllowIncompleteType && CanonicalType->isIncompleteType())
+    return false;
+
+  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
+    if (RecordDecl *RD = RecTy->getDecl()) {
+      for (FieldDecl *FD : RD->fields()) {
+        QualType FQT = FD->getType().getCanonicalType();
+        if (FQT.isBorrowQualified() || FQT.isOwnedQualified()) {
+          return false;
+        }
+        if (!FQT->isTrivialDataType(true)) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 void RecordType::initOwnedStatus() const {
   if (hasOwn != ownedStatus::unInitOwned)
     return;

@@ -1,0 +1,56 @@
+// RUN: %clang %s -g -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include "bsc_type_traits.hbs"
+typedef int MyInt;
+typedef int Arr1[];
+typedef int Arr2[3];
+typedef struct G { int a; } G;
+_Owned struct S { int a; };
+struct I;
+typedef enum E { Mon=1, Tue, Wed } E;
+typedef union U { int a; } U;
+typedef int *_Owned OwnedInt;
+typedef int *_Borrow MutBorrowInt;
+typedef const int *_Borrow ImmutBorrowInt;
+typedef struct R1 { int *_Owned a; } R1;
+typedef struct R2 { R1 *_Owned a; } R2;
+typedef G *_Borrow ArrB1[];
+typedef G *_Borrow ArrB2[3];
+
+int test_is_trivial_data() {
+    _Static_assert(is_trivial_data<void>() == false, "fail");
+    _Static_assert(is_trivial_data<void *>() == false, "fail");
+    _Static_assert(is_trivial_data<int>() == true, "fail");
+    _Static_assert(is_trivial_data<int *>() == false, "fail");
+    _Static_assert(is_trivial_data<Arr1>() == true, "fail");
+    _Static_assert(is_trivial_data<Arr2>() == true, "fail");
+    _Static_assert(is_trivial_data<S>() == false, "fail");
+    _Static_assert(is_trivial_data<G>() == true, "fail");
+    _Static_assert(is_trivial_data<E>() == true, "fail");
+    _Static_assert(is_trivial_data<U>() == true, "fail");
+    _Static_assert(is_trivial_data<struct I>() == false, "fail");
+    _Static_assert(is_trivial_data<int *_Owned>() == false, "fail");
+    _Static_assert(is_trivial_data<OwnedInt>() == false, "fail");
+    _Static_assert(is_trivial_data<const void *_Borrow>() == false, "fail");
+    _Static_assert(is_trivial_data<ImmutBorrowInt>() == false, "fail");
+    _Static_assert(is_trivial_data<void *_Borrow>() == false, "fail");
+    _Static_assert(is_trivial_data<int *_Borrow>() == false, "fail");
+    _Static_assert(is_trivial_data<MutBorrowInt>() == false, "fail");
+    _Static_assert(is_trivial_data<R1>() == false, "fail");
+    _Static_assert(is_trivial_data<R2>() == false, "fail");
+    _Static_assert(is_trivial_data<ArrB1>() == false, "fail");
+    _Static_assert(is_trivial_data<ArrB2>() == false, "fail");
+    _Static_assert(is_trivial_data<G[]>() == true, "fail");
+    _Static_assert(is_trivial_data<G[3]>() == true, "fail");
+    return 0;
+}
+
+int main() {
+    test_is_trivial_data();
+    return 0;
+}
