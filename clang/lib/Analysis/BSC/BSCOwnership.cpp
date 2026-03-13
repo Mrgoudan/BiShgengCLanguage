@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Expr.h"
 #if ENABLE_BSC
 
 #include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
@@ -66,6 +65,7 @@ struct NullCheckInfo {
     if (const auto *ME = dyn_cast<MemberExpr>(TrimCond)) {
       const Expr *PtrExpr = ME->IgnoreParenImpCasts();
       presentCheckedExprs.insert(PtrExpr);
+      return;
     }
 
     // if (!p) { ... } else { /* p is null */ }
