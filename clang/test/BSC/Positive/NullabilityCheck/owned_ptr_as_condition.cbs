@@ -1,0 +1,50 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+_Safe void consume(int *_Owned _Nullable);
+
+struct Foo {
+    int *_Owned _Nullable p;
+};
+
+_Safe void reference(int *_Owned _Nullable p) {
+    if (p != nullptr) {
+        consume(p);
+    }
+}
+
+_Safe void reference_not(int *_Owned _Nullable p, int x) {
+    if (p == nullptr) {
+        ++x;
+    } else {
+        consume(p);
+    }
+}
+
+_Safe void basic(int *_Owned _Nullable p) {
+    if (p) {
+        consume(p);
+    }
+}
+
+_Safe void logical_not(int *_Owned _Nullable p, int x) {
+    if (!p) {
+        ++x;
+    } else {
+        consume(p);
+    }
+}
+
+_Safe void member(struct Foo foo) {
+    if (foo.p) {
+        consume(foo.p);
+    }
+} 
+
+_Safe void member_not(struct Foo foo, int x) {
+    if (!foo.p) {
+        ++x;
+    } else {
+        consume(foo.p);
+    }
+}
