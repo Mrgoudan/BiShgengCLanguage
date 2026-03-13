@@ -16,7 +16,7 @@ extern BSCOverflowHandler bsc_overflow_handler;
 _Noreturn void default_bad_alloc_handler(size_t size);
 _Noreturn void default_out_of_bound_handler(size_t len, size_t index);
 _Noreturn void default_overflow_handler();
-_Noreturn void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
+void set_bsc_bad_alloc_handler(BSCBadAllocHandler handler);
 
 _Safe _Noreturn void bsc_unwrap_failed(void);
 
