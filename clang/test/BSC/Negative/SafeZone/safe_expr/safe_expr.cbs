@@ -46,10 +46,10 @@ _Safe void setNum(int b) {
 }
 
 _Safe void test_safe_expr4(void) {
-    setNum(getNum());                       // expected-error {{unsafe function call is forbidden in the safe zone}}
+    setNum(getNum());                       // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     setNum(_Unsafe(getNum()));               // ok
     _Unsafe {
         setNum(getNum());                   // ok
-        setNum(_Safe(getNum()));             // expected-error {{unsafe function call is forbidden in the safe zone}}
+        setNum(_Safe(getNum()));             // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     }
 }

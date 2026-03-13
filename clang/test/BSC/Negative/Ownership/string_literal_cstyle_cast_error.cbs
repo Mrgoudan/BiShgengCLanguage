@@ -4,12 +4,12 @@
 // Explicit casts are not auto-converted to avoid _Borrow checker issues
 
 void test_cstyle_cast() {
-  const char* _Borrow p = (const char*)"hello";  // expected-error {{incompatible borrow types, cannot cast 'const char *' to 'const char *_Borrow'}}
+  const char* _Borrow p = (const char*)"hello";  // expected-error {{incompatible _Borrow types, cannot cast 'const char *' to 'const char *_Borrow'}}
 }
 
 void test_cstyle_cast_in_init() {
-  const char* _Borrow arr[] = { (const char*)"one", (const char*)"two" };  // expected-error {{incompatible borrow types, cannot cast 'const char *' to 'const char *_Borrow'}}
-                                                                           // expected-error@-1 {{incompatible borrow types, cannot cast 'const char *' to 'const char *_Borrow'}}
+  const char* _Borrow arr[] = { (const char*)"one", (const char*)"two" };  // expected-error {{incompatible _Borrow types, cannot cast 'const char *' to 'const char *_Borrow'}}
+                                                                           // expected-error@-1 {{incompatible _Borrow types, cannot cast 'const char *' to 'const char *_Borrow'}}
 }
 
 int main() {

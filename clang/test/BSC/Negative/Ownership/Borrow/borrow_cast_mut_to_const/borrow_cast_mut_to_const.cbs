@@ -8,7 +8,7 @@ void test_basic_cast_mut_to_const() {
   int *_Borrow p = &_Mut local;
 
   // ERROR: Cannot cast mutable _Borrow to const _Borrow
-  const int *_Borrow b = (const int *_Borrow)p;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'const int *_Borrow'}}
+  const int *_Borrow b = (const int *_Borrow)p;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'const int *_Borrow'}}
 
   *p = 1;
 }
@@ -18,7 +18,7 @@ void test_basic_cast_const_to_mut() {
   const int *_Borrow c = &_Const local;
 
   // ERROR: Cannot cast const _Borrow to mutable _Borrow
-  int *_Borrow m = (int *_Borrow)c;  // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+  int *_Borrow m = (int *_Borrow)c;  // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
 
   *m = 20;  // Would violate const safety if allowed
 }
@@ -28,7 +28,7 @@ void test_explicit_cast_mut_to_const() {
   int *_Borrow mut_ptr = &_Mut x;
 
   // ERROR: Explicit cast from mut to const should fail
-  const int *_Borrow const_ptr = (const int *_Borrow)mut_ptr;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'const int *_Borrow'}}
+  const int *_Borrow const_ptr = (const int *_Borrow)mut_ptr;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'const int *_Borrow'}}
 }
 
 void test_explicit_cast_const_to_mut() {
@@ -36,7 +36,7 @@ void test_explicit_cast_const_to_mut() {
   const int *_Borrow const_ptr = &_Const y;
 
   // ERROR: Explicit cast from const to mut should fail
-  int *_Borrow mut_ptr = (int *_Borrow)const_ptr;  // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+  int *_Borrow mut_ptr = (int *_Borrow)const_ptr;  // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
 }
 
 void test_nested_pointer_cast_mut_to_const() {
@@ -45,7 +45,7 @@ void test_nested_pointer_cast_mut_to_const() {
   int **_Borrow pp = &_Mut val_ptr;
 
   // ERROR: Cannot cast mutable _Borrow of pointer-to-pointer to const _Borrow
-  int *const *_Borrow cpp = (int *const *_Borrow)pp;  // expected-error {{incompatible borrow types, cannot cast 'int **_Borrow' to 'int *const *_Borrow'}}
+  int *const *_Borrow cpp = (int *const *_Borrow)pp;  // expected-error {{incompatible _Borrow types, cannot cast 'int **_Borrow' to 'int *const *_Borrow'}}
 }
 
 void test_nested_pointer_cast_const_to_mut() {
@@ -54,8 +54,8 @@ void test_nested_pointer_cast_const_to_mut() {
   const int *const *_Borrow cpp = &_Const val_ptr;
 
   // ERROR: Cannot cast const _Borrow of pointer-to-pointer to mutable _Borrow
-  const int **_Borrow pp = (const int **_Borrow)cpp;  // expected-error {{incompatible borrow types, cannot cast 'const int *const *_Borrow' to 'const int **_Borrow'}}
-  int *const *_Borrow pp2 = (int *const *_Borrow)cpp;  // expected-error {{incompatible borrow types, cannot cast 'const int *const *_Borrow' to 'int *const *_Borrow'}}
+  const int **_Borrow pp = (const int **_Borrow)cpp;  // expected-error {{incompatible _Borrow types, cannot cast 'const int *const *_Borrow' to 'const int **_Borrow'}}
+  int *const *_Borrow pp2 = (int *const *_Borrow)cpp;  // expected-error {{incompatible _Borrow types, cannot cast 'const int *const *_Borrow' to 'int *const *_Borrow'}}
 }
 
 void test_struct_pointer_cast_mut_to_const() {
@@ -68,7 +68,7 @@ void test_struct_pointer_cast_mut_to_const() {
   struct Point *_Borrow mut_p = &_Mut p;
 
   // ERROR: Cannot cast mutable _Borrow of struct to const _Borrow
-  const struct Point *_Borrow const_p = (const struct Point *_Borrow)mut_p;  // expected-error {{incompatible borrow types, cannot cast 'struct Point *_Borrow' to 'const struct Point *_Borrow'}}
+  const struct Point *_Borrow const_p = (const struct Point *_Borrow)mut_p;  // expected-error {{incompatible _Borrow types, cannot cast 'struct Point *_Borrow' to 'const struct Point *_Borrow'}}
 }
 
 void test_struct_pointer_cast_const_to_mut() {
@@ -81,7 +81,7 @@ void test_struct_pointer_cast_const_to_mut() {
   const struct Point *_Borrow const_p = &_Const p;
 
   // ERROR: Cannot cast const _Borrow of struct to mutable _Borrow
-  struct Point *_Borrow mut_p = (struct Point *_Borrow)const_p;  // expected-error {{incompatible borrow types, cannot cast 'const struct Point *_Borrow' to 'struct Point *_Borrow'}}
+  struct Point *_Borrow mut_p = (struct Point *_Borrow)const_p;  // expected-error {{incompatible _Borrow types, cannot cast 'const struct Point *_Borrow' to 'struct Point *_Borrow'}}
 }
 
 void test_allowed_casts() {

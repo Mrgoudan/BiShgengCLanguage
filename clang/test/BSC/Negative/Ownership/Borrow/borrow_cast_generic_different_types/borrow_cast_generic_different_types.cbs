@@ -7,21 +7,21 @@
 
 // --- Two independent type params, mutable borrow (T=int, B=float) ---
 _Safe void test_two_params<T, B>(T *_Borrow a, B *_Borrow b) {
-    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
-    _Unsafe a = (T *_Borrow)b;  // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
+    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    _Unsafe a = (T *_Borrow)b;  // expected-error {{incompatible _Borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
 }
 
 // --- Two independent type params, mutable borrow (T=int*, B=float*) ---
 // T *_Borrow becomes int **_Borrow; cast checks pointee types int* vs float*.
 _Safe void test_two_ptr_params<T, B>(T *_Borrow a, B *_Borrow b) {
-    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int **_Borrow' to 'float **_Borrow'}}
-    _Unsafe a = (T *_Borrow)b;  // expected-error {{incompatible borrow types, cannot cast 'float **_Borrow' to 'int **_Borrow'}}
+    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible _Borrow types, cannot cast 'int **_Borrow' to 'float **_Borrow'}}
+    _Unsafe a = (T *_Borrow)b;  // expected-error {{incompatible _Borrow types, cannot cast 'float **_Borrow' to 'int **_Borrow'}}
 }
 
 // --- Two independent type params, const borrow ---
 _Safe void test_two_params_const<T, B>(const T *_Borrow a, const B *_Borrow b) {
-    _Unsafe b = (const B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'const float *_Borrow'}}
-    _Unsafe a = (const T *_Borrow)b;  // expected-error {{incompatible borrow types, cannot cast 'const float *_Borrow' to 'const int *_Borrow'}}
+    _Unsafe b = (const B *_Borrow)a;  // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'const float *_Borrow'}}
+    _Unsafe a = (const T *_Borrow)b;  // expected-error {{incompatible _Borrow types, cannot cast 'const float *_Borrow' to 'const int *_Borrow'}}
 }
 
 // --- Single type param: T *_Borrow -> T *_Borrow is always valid ---
@@ -31,18 +31,18 @@ _Safe void test_same_param<T>(T *_Borrow a) {
 
 // --- Three type params: T!=B errors, B==C is ok ---
 _Safe void test_three_params<T, B, C>(T *_Borrow a, B *_Borrow b, C *_Borrow c) {
-    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    _Unsafe b = (B *_Borrow)a;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
     _Unsafe c = (C *_Borrow)b;  // ok: B=float, C=float
 }
 
 // --- Const/mutable mismatch across params ---
 _Safe void test_const_mutable_mismatch<T, B>(T *_Borrow a, const B *_Borrow b) {
-    _Unsafe b = (const B *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'const float *_Borrow'}}
+    _Unsafe b = (const B *_Borrow)a;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'const float *_Borrow'}}
 }
 
 // --- One concrete type, one generic param ---
 _Safe void test_concrete_vs_generic<T>(int *_Borrow a, T *_Borrow b) {
-    _Unsafe b = (T *_Borrow)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    _Unsafe b = (T *_Borrow)a;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
 }
 
 // ---------------------------------------------------------------------------
@@ -52,8 +52,8 @@ _Safe void test_concrete_vs_generic<T>(int *_Borrow a, T *_Borrow b) {
 
 // Instantiated with T=int *_Borrow, B=float *_Borrow.
 _Unsafe void test_borrow_direct<T, B>(T a, B b) {
-    b = (B)a;  // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
-    a = (T)b;  // expected-error {{incompatible borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
+    b = (B)a;  // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'float *_Borrow'}}
+    a = (T)b;  // expected-error {{incompatible _Borrow types, cannot cast 'float *_Borrow' to 'int *_Borrow'}}
 }
 
 // Same type: ok.

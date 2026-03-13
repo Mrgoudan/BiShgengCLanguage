@@ -14,14 +14,14 @@ _Safe int (*q)(int , int) = sub;
 _Safe int main(void) {
   int a = 1;
   int b = 2;
-  int c = add(a, b);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int c = add(a, b);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   int d = sub(a, b); 
-  int g = p(a, b);    // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int g = p(a, b);    // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   int h = q(a, b);
   _Safe {
-    int e = add(a, b);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+    int e = add(a, b);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     int f = sub(a, b);
-    int g = p(a, b);    // expected-error {{unsafe function call is forbidden in the safe zone}}
+    int g = p(a, b);    // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     int h = q(a, b);
   };
   _Unsafe {

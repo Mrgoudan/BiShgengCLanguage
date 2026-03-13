@@ -22,10 +22,10 @@ int test() {
   float *_Borrow p7 = &_Mut b;
   if (p3 == p4) {} // legal
   if (p5 != p6) {} // legal
-  if (p3 == p5) {} // expected-error {{incompatible borrow types, 'const int *_Borrow' and 'int *_Borrow' cannot be compared}}
-  if (p3 == p7) {} // expected-error {{incompatible borrow types, 'float *_Borrow' and 'int *_Borrow' cannot be compared}}
+  if (p3 == p5) {} // expected-error {{incompatible _Borrow types, 'const int *_Borrow' and 'int *_Borrow' cannot be compared}}
+  if (p3 == p7) {} // expected-error {{incompatible _Borrow types, 'float *_Borrow' and 'int *_Borrow' cannot be compared}}
   if (p3 >= &_Mut a) {} // legal
-  if (p5 < &a) {} // expected-error {{incompatible borrow types, 'int *' and 'const int *_Borrow' cannot be compared}}
+  if (p5 < &a) {} // expected-error {{incompatible _Borrow types, 'int *' and 'const int *_Borrow' cannot be compared}}
 
   if (sizeof(int * _Borrow) != sizeof(int *)) { return 1; }
   if (_Alignof(int * _Borrow) != _Alignof(int *)) { return 1; }

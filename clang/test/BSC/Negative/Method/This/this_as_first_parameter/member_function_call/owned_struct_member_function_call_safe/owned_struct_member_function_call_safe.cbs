@@ -99,7 +99,7 @@ _Safe void test_This_pointer_borrow_actual_param(void) {
 
 _Safe void test_const_This_pointer_borrow_actual_param(void) {
   Bar bar = {.a = 1};
-  const Bar *_Borrow c_bar_mut = &_Const bar; // incompatible borrow types, cannot cast 'const _Owned struct Bar *_Borrow'
+  const Bar *_Borrow c_bar_mut = &_Const bar; // incompatible _Borrow types, cannot cast 'const _Owned struct Bar *_Borrow'
   int a = c_bar_mut->getA();  // expected-error {{incompatible conversion from pointer type 'const _Owned struct Bar *_Borrow' to non-pointer type '_Owned struct Bar' in member function call}}
   int b = c_bar_mut->getB();  // expected-error {{incompatible conversion from const type 'const _Owned struct Bar *_Borrow' to non-const type '_Owned struct Bar *' in member function call}}
   int b2 = c_bar_mut->getB_2(); // expect error, function getB_2 is error

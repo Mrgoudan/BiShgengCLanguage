@@ -7685,12 +7685,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall->getCallee()->IsDesugaredBSCMethodCall = Fn->IsDesugaredBSCMethodCall;
     TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
     if (getLangOpts().BSC) {
-      // unsafe function call is forbidden in the safe zone
+      // _Unsafe function call is forbidden in the safe zone
       if (IsInSafeZone() &&
           (Fn->getType()->checkFunctionProtoType(SZ_None) ||
            Fn->getType()->checkFunctionProtoType(SZ_Unsafe))) {
         Diag(Fn->getBeginLoc(), diag::err_unsafe_action)
-            << "unsafe function call";
+            << "_Unsafe function call";
       }
     }
 #endif

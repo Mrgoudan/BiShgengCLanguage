@@ -9,9 +9,9 @@ void test() {
   const int * _Borrow p2 = (const int * _Borrow)&a; // legal
   p1 = (int * _Borrow)&a; // legal
   p2 = (const int * _Borrow)&a; // legal
-  p1 = p; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'int *_Borrow'}}
-  p = p1; // expected-error {{incompatible borrow types, cannot cast 'int *_Borrow' to 'int *'}}
-  p1 = p2; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+  p1 = p; // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'int *_Borrow'}}
+  p = p1; // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow' to 'int *'}}
+  p1 = p2; // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
   p2 = p1; // allow re-borrowing
 
   // T * _Borrow --> T *

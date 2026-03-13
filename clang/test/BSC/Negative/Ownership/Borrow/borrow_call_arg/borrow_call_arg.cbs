@@ -12,5 +12,5 @@ _Owned struct S {
 };
 
 void test(Rc<S> rc) {
-    Weak<int> wk1 = Weak<int>::new(&_Const rc); // expected-error {{incompatible borrow types, cannot cast 'const _Owned Rc<_Owned struct S> *_Borrow' to 'const _Owned Rc<int> *_Borrow'}}
+    Weak<int> wk1 = Weak<int>::new(&_Const rc); // expected-error {{incompatible _Borrow types, cannot cast 'const _Owned Rc<_Owned struct S> *_Borrow' to 'const _Owned Rc<int> *_Borrow'}}
 }

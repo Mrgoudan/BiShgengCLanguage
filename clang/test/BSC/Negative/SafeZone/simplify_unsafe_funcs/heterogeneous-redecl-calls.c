@@ -6,7 +6,7 @@ _Unsafe void unsafe_only(void);
 _Unsafe void func(void);
 
 _Safe void test_safe_cannot_call_unsafe(void) {
-  unsafe_only();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  unsafe_only();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }
 
 // Multiple _Unsafe-only functions
@@ -14,10 +14,10 @@ _Unsafe int unsafe_compute(int x);
 _Unsafe float unsafe_process(float y);
 
 _Safe void test_multiple_unsafe_calls(void) {
-  int a = unsafe_compute(5);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int a = unsafe_compute(5);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)a;
 
-  float b = unsafe_process(3.14f);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  float b = unsafe_process(3.14f);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)b;
 }
 
@@ -25,12 +25,12 @@ _Safe void test_multiple_unsafe_calls(void) {
 void test_nested_safe_context(void) {
   _Unsafe {
     _Safe {
-      unsafe_only();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+      unsafe_only();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     }
   }
 }
 
 // Safe function trying to call _Unsafe-only
 _Safe void safe_func_calls_unsafe(void) {
-  func();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  func();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }

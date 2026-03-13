@@ -5,7 +5,7 @@
 _Unsafe void unsafe_only(void);
 
 _Safe void test_safe_calls_unsafe(void) {
-  unsafe_only();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  unsafe_only();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }
 
 // Multiple _Unsafe-only calls
@@ -14,13 +14,13 @@ _Unsafe float unsafe_process(float y);
 _Unsafe void unsafe_action(void);
 
 _Safe void test_multiple_unsafe(void) {
-  int a = unsafe_compute(10);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int a = unsafe_compute(10);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)a;
 
-  float b = unsafe_process(3.14f);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  float b = unsafe_process(3.14f);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)b;
 
-  unsafe_action();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  unsafe_action();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }
 
 // Nested _Safe contexts
@@ -29,14 +29,14 @@ _Unsafe void nested_unsafe(void);
 void test_nested_safe(void) {
   _Unsafe {
     _Safe {
-      nested_unsafe();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+      nested_unsafe();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     }
   }
 }
 
 _Safe void test_safe_with_safe_block(void) {
   _Safe {
-    nested_unsafe();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+    nested_unsafe();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   }
 }
 
@@ -44,7 +44,7 @@ _Safe void test_safe_with_safe_block(void) {
 _Unsafe int unsafe_get_value(void);
 
 _Safe void test_unsafe_conditional(int flag) {
-  int result = flag ? unsafe_get_value() : 0;  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int result = flag ? unsafe_get_value() : 0;  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)result;
 }
 
@@ -53,14 +53,14 @@ _Unsafe int unsafe_has_more(void);
 _Unsafe void unsafe_process_next(void);
 
 _Safe void test_unsafe_while(void) {
-  while (unsafe_has_more()) {  // expected-error {{unsafe function call is forbidden in the safe zone}}
-    unsafe_process_next();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  while (unsafe_has_more()) {  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
+    unsafe_process_next();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   }
 }
 
 _Safe void test_unsafe_for(void) {
-  for (int i = 0; i < unsafe_has_more(); i++) {  // expected-error {{unsafe function call is forbidden in the safe zone}}
-    unsafe_process_next();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  for (int i = 0; i < unsafe_has_more(); i++) {  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
+    unsafe_process_next();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   }
 }
 
@@ -68,9 +68,9 @@ _Safe void test_unsafe_for(void) {
 _Unsafe int unsafe_get_code(void);
 
 _Safe void test_unsafe_switch(void) {
-  switch (unsafe_get_code()) {  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  switch (unsafe_get_code()) {  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     case 1:
-      unsafe_action();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+      unsafe_action();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
       break;
     default:
       break;
@@ -81,7 +81,7 @@ _Safe void test_unsafe_switch(void) {
 _Unsafe long unsafe_get_long(void);
 
 _Safe void test_unsafe_cast(void) {
-  int x = (int)unsafe_get_long();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int x = (int)unsafe_get_long();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)x;
 }
 
@@ -90,8 +90,8 @@ _Unsafe int unsafe_increment(void);
 
 _Safe void test_unsafe_compound(void) {
   int counter = 0;
-  counter += unsafe_increment();  // expected-error {{unsafe function call is forbidden in the safe zone}}
-  counter -= unsafe_increment();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  counter += unsafe_increment();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
+  counter -= unsafe_increment();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)counter;
 }
 
@@ -100,7 +100,7 @@ _Unsafe int unsafe_op1(int x);
 _Unsafe int unsafe_op2(int x);
 
 _Safe void test_unsafe_complex(void) {
-  int result = unsafe_op1(10) + unsafe_op2(20);  // expected-error {{unsafe function call is forbidden in the safe zone}} expected-error {{unsafe function call is forbidden in the safe zone}}
+  int result = unsafe_op1(10) + unsafe_op2(20);  // expected-error {{_Unsafe function call is forbidden in the safe zone}} expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)result;
 }
 
@@ -109,7 +109,7 @@ _Unsafe int unsafe_compute_fp(int x);
 
 _Safe void test_unsafe_indirect(void) {
   int (*fp)(int) = unsafe_compute_fp;
-  int result = fp(42);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int result = fp(42);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)result;
 }
 
@@ -119,7 +119,7 @@ _Unsafe int unsafe_macro_func(int x);
 #define CALL_UNSAFE_MACRO(x) unsafe_macro_func(x)
 
 _Safe void test_unsafe_macro(void) {
-  int result = CALL_UNSAFE_MACRO(123);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int result = CALL_UNSAFE_MACRO(123);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)result;
 }
 
@@ -128,7 +128,7 @@ _Unsafe int unsafe_get_index(void);
 
 _Safe void test_unsafe_subscript(void) {
   int arr[10] = {0};
-  int value = arr[unsafe_get_index()];  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int value = arr[unsafe_get_index()];  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)value;
 }
 
@@ -137,7 +137,7 @@ _Unsafe int unsafe_get_offset(void);
 
 _Safe void test_unsafe_ptr_arith(void) {
   int arr[10] = {0};
-  int* p = arr + unsafe_get_offset();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int* p = arr + unsafe_get_offset();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)p;
 }
 
@@ -145,7 +145,7 @@ _Safe void test_unsafe_ptr_arith(void) {
 _Unsafe int unsafe_sizeof_func(void);
 
 _Safe void test_unsafe_sizeof(void) {
-  int size = sizeof(unsafe_sizeof_func());  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int size = sizeof(unsafe_sizeof_func());  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)size;
 }
 
@@ -154,21 +154,21 @@ _Safe void safe_consumer(int x);
 _Unsafe int unsafe_producer(void);
 
 _Safe void test_unsafe_argument(void) {
-  safe_consumer(unsafe_producer());  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  safe_consumer(unsafe_producer());  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }
 
 // Unsafe in return
 _Unsafe int unsafe_return_value(void);
 
 _Safe int test_unsafe_return(void) {
-  return unsafe_return_value();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  return unsafe_return_value();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }
 
 // Unsafe in initializers
 _Unsafe int unsafe_initializer_value(void);
 
 _Safe void test_unsafe_initializer(void) {
-  int x = unsafe_initializer_value();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int x = unsafe_initializer_value();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)x;
 }
 
@@ -180,7 +180,7 @@ struct Container {
 _Unsafe struct Container unsafe_get_container(void);
 
 _Safe void test_unsafe_member(void) {
-  int val = unsafe_get_container().value;  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  int val = unsafe_get_container().value;  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)val;
 }
 
@@ -190,7 +190,7 @@ _Unsafe int unsafe_chain2(int x);
 _Unsafe int unsafe_chain3(int x);
 
 _Safe void test_chained_unsafe(void) {
-  int result = unsafe_chain3(unsafe_chain2(unsafe_chain1(10)));  // expected-error {{unsafe function call is forbidden in the safe zone}} expected-error {{unsafe function call is forbidden in the safe zone}} expected-error {{unsafe function call is forbidden in the safe zone}}
+  int result = unsafe_chain3(unsafe_chain2(unsafe_chain1(10)));  // expected-error {{_Unsafe function call is forbidden in the safe zone}} expected-error {{_Unsafe function call is forbidden in the safe zone}} expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)result;
 }
 
@@ -199,7 +199,7 @@ _Unsafe int unsafe_comma1(void);
 _Unsafe int unsafe_comma2(void);
 
 _Safe void test_unsafe_comma(void) {
-  int result = (unsafe_comma1(), unsafe_comma2());  // expected-error {{unsafe function call is forbidden in the safe zone}} expected-error {{unsafe function call is forbidden in the safe zone}}
+  int result = (unsafe_comma1(), unsafe_comma2());  // expected-error {{_Unsafe function call is forbidden in the safe zone}} expected-error {{_Unsafe function call is forbidden in the safe zone}}
   (void)result;
 }
 

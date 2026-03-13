@@ -47,8 +47,8 @@ int main() {
   _Trait F* f = p;
   _Safe {
     f->goo();    // expected-error {{'->' operator used by raw pointer type is forbidden in the safe zone}}
-                    // expected-error@-1 {{unsafe function call is forbidden in the safe zone}}
-    int::foo(p); // expected-error {{unsafe function call is forbidden in the safe zone}}
+                    // expected-error@-1 {{_Unsafe function call is forbidden in the safe zone}}
+    int::foo(p); // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   }
   return 0;
 }

@@ -6,7 +6,7 @@ _Unsafe void unsafe_only(void);
 
 void test1(void) {
     _Safe {
-        unsafe_only();  // expected-error {{unsafe function call is forbidden in the safe zone}}
+        unsafe_only();  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     }
 }
 
@@ -15,7 +15,7 @@ _Unsafe void modify_data(int* p);
 _Safe void modify_data(int* _Borrow p);
 
 void test2(const int* _Borrow const_borrow) {
-    modify_data(const_borrow);  // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+    modify_data(const_borrow);  // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
 }
 
 // Test 3: Owned/_Borrow mismatch
@@ -56,7 +56,7 @@ _Safe void process_owned(int* _Owned p);
 
 void test7(int* raw_p) {
     _Safe {
-        process_raw(raw_p);  // expected-error {{unsafe function call is forbidden in the safe zone}}
+        process_raw(raw_p);  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
     }
 }
 

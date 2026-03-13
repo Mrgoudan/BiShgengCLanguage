@@ -13,7 +13,7 @@ _Safe T struct MyStruct<T>::foo_b(T a) {
 }
 
 _Safe void struct MyStruct<T>::foo_c(T a) {
-  a();                                       // expected-error{{unsafe function call is forbidden in the safe zone}}
+  a();                                       // expected-error{{_Unsafe function call is forbidden in the safe zone}}
   _Unsafe {
     a();
   }

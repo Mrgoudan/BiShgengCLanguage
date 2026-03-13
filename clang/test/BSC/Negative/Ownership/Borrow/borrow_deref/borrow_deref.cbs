@@ -64,7 +64,7 @@ void test1<T>(){
 
 void test2<T>(){
     struct s<T> *a;
-    int * _Borrow g = &_Mut *a; // expected-error {{incompatible borrow types, cannot cast 's<int> *_Borrow' to 'int *_Borrow'}}
+    int * _Borrow g = &_Mut *a; // expected-error {{incompatible _Borrow types, cannot cast 's<int> *_Borrow' to 'int *_Borrow'}}
 }
 
 void test3<T>(){
@@ -74,7 +74,7 @@ void test3<T>(){
 
 void test4<T>(){
     struct s<T> *a;
-    const int * _Borrow g = &_Const *a; // expected-error {{incompatible borrow types, cannot cast 'const s<int> *_Borrow' to 'const int *_Borrow'}}
+    const int * _Borrow g = &_Const *a; // expected-error {{incompatible _Borrow types, cannot cast 'const s<int> *_Borrow' to 'const int *_Borrow'}}
 }
 
 void test() {

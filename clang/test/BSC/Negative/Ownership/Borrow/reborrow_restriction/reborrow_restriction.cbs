@@ -31,9 +31,9 @@ int *_Owned ret_own();
 
 
 void raw2immutable(int *ptr) {
-    const int *_Borrow cref = ptr; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
-    accept_immutable(ptr); // expected-error {{incompatible borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
-    const int *_Borrow cref2 = ret_raw(); // expected-error {{incompatible borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
+    const int *_Borrow cref = ptr; // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
+    accept_immutable(ptr); // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
+    const int *_Borrow cref2 = ret_raw(); // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'const int *_Borrow'}}
 }
 
 int *_Owned own2immutable(int *_Owned ptr) {
@@ -44,16 +44,16 @@ int *_Owned own2immutable(int *_Owned ptr) {
 }
 
 void immutable2mutable(const int *_Borrow cref) {
-    int *_Borrow ref = cref; // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
-    accept_mutable(cref); // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+    int *_Borrow ref = cref; // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+    accept_mutable(cref); // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
     int dummy = 0;
-    int *_Borrow ref2 = ret_immutable(&_Const dummy); // expected-error {{incompatible borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
+    int *_Borrow ref2 = ret_immutable(&_Const dummy); // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}
 }
 
 void raw2mutable(int *ptr) {
-    int *_Borrow ref = ptr; // expected-error {{incompatible borrow types, cannot cast 'int *' to 'int *_Borrow'}}
-    accept_mutable(ptr); // expected-error {{incompatible borrow types, cannot cast 'int *' to 'int *_Borrow'}}
-    int *_Borrow ref2 = ret_raw(); // expected-error {{incompatible borrow types, cannot cast 'int *' to 'int *_Borrow'}}
+    int *_Borrow ref = ptr; // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'int *_Borrow'}}
+    accept_mutable(ptr); // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'int *_Borrow'}}
+    int *_Borrow ref2 = ret_raw(); // expected-error {{incompatible _Borrow types, cannot cast 'int *' to 'int *_Borrow'}}
 }
 
 int *_Owned own2mutable(int *_Owned ptr) {

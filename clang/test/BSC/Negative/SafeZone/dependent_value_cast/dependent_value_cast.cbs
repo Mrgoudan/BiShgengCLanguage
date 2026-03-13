@@ -11,7 +11,7 @@ _Safe void test2<T>(void) {
 }
 
 _Safe void test3<T>(void) {
-  T * addr = (T *)malloc(sizeof(T));  // expected-error {{unsafe function call is forbidden in the safe zone}}
+  T * addr = (T *)malloc(sizeof(T));  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
   // expected-error@-1 {{conversion from type 'void *' to 'T *' is forbidden in the safe zone}}
 }
 

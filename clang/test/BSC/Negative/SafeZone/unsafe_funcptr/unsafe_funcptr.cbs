@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -verify %s
 //
-// Unsafe function call is forbidden in the safe zone
+// _Unsafe function call is forbidden in the safe zone
 
 typedef int (*unary_f)(int);
 
 _Safe int test(unary_f _Nonnull f) {
-    return (*f)(1); // expected-error {{unsafe function call is forbidden in the safe zone}}
+    return (*f)(1); // expected-error {{_Unsafe function call is forbidden in the safe zone}}
 }

@@ -35,7 +35,7 @@ _Safe int* foo_b<T>(int* a, T b) {
 }
 
 _Safe T moo_a<T>(T a) {
-  a();       // expected-error{{unsafe function call is forbidden in the safe zone}}
+  a();       // expected-error{{_Unsafe function call is forbidden in the safe zone}}
   return a;
 }
 
@@ -45,23 +45,23 @@ _Safe T moo_b<T>(T a) {
 }
 
 _Safe T moo_c<T>(T a) {
-  a();         // expected-error{{unsafe function call is forbidden in the safe zone}}
+  a();         // expected-error{{_Unsafe function call is forbidden in the safe zone}}
   _Unsafe {
     a();       // ok
     _Safe {
-      a();     // expected-error{{unsafe function call is forbidden in the safe zone}}
+      a();     // expected-error{{_Unsafe function call is forbidden in the safe zone}}
     }
     _Unsafe {
       a();     // ok
     }
   }
   _Safe {
-    a();       // expected-error{{unsafe function call is forbidden in the safe zone}}
+    a();       // expected-error{{_Unsafe function call is forbidden in the safe zone}}
     _Unsafe {
       a();     // ok
     }
     _Safe {
-      a();     // expected-error{{unsafe function call is forbidden in the safe zone}}
+      a();     // expected-error{{_Unsafe function call is forbidden in the safe zone}}
     }
   }
   return a;

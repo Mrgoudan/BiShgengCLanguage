@@ -70,9 +70,9 @@ def err_safe_mut : Error<"global or static variables are not allowed to be mutab
 def err_move_borrow : Error<"_Borrow type does not allow move ownership">;
 def err_typecheck_invalid_borrow_not_pointer : Error<"_Borrow type requires a pointer or reference (%0 is invalid)">;
 def err_borrow_qualcheck_incompatible : Error<
-  "incompatible borrow types, cannot cast %0 to %1">;
+  "incompatible _Borrow types, cannot cast %0 to %1">;
 def err_borrow_qualcheck_compare : Error<
-  "incompatible borrow types, %0 and %1 cannot be compared">;
+  "incompatible _Borrow types, %0 and %1 cannot be compared">;
 def err_typecheck_borrow_func : Error<"no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified">;
 def err_typecheck_borrow_subscript : Error<"subscript of _Borrow pointer is not allowed">;
 def err_owned_and_borrow_conflict : Error<"cannot combine '_Owned' and '_Borrow' qualifiers on the same type">;
