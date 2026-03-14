@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -internal-isystem %S/../../../../../lib/Headers/bsc_include -verify %s
+
+// Test that compiler doesn't crash on recursive struct definitions.
+// struct A { struct A a; } is invalid (field has incomplete type) - compiler
+// must reject it. With cycle detection in isTrivialDataType/isMoveSemanticType,
+// the compiler should not stack overflow during error recovery or diagnostics.
+
+#include "bsc_type_traits.hbs"
+struct A { struct A a; }; // expected-error {{field has incomplete type 'struct A'}}
+// expected-note@-1 {{definition of 'struct A' is not complete until the closing '}'}}
+
+struct B { struct C c; }; // expected-error {{field has incomplete type 'struct C'}}
+// expected-note@-1 {{forward declaration of 'struct C'}}
+struct C { struct B b; };
+
+int main() {
+  (void)is_move_semantic<struct A>();
+  (void)is_move_semantic<struct B>();
+  (void)is_move_semantic<struct C>();
+  (void)is_trivial_data<struct A>();
+  (void)is_trivial_data<struct B>();
+  (void)is_trivial_data<struct C>();
+}

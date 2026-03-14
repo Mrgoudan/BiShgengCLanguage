@@ -15,6 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 
@@ -284,55 +285,72 @@ bool Type::isOwnedTemplateSpecializationType() const {
 //     struct S5 { S1* s};
 //     struct S6 { int *owned * p};
 // @endcode
-bool Type::isMoveSemanticType() const {
+namespace {
+bool isMoveSemanticTypeImpl(QualType QT, llvm::SmallPtrSetImpl<const RecordType *> &Visited) {
   // Owned pointer or owned struct is owned qualified.
-  if (CanonicalType.isOwnedQualified())
+  if (QT.isOwnedQualified())
     return true;
-  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
-    if (RecordDecl *RD = RecTy->getDecl()) {
-      for (FieldDecl *FD : RD->fields()) {
-        QualType FQT = FD->getType().getCanonicalType();
-        if (FQT.isOwnedQualified())
+  if (const auto *RecTy = dyn_cast<RecordType>(QT)) {
+    if (!RecTy->getDecl())
+      return false;
+    if (!Visited.insert(RecTy).second)
+      return false; // Cycle detected.
+    for (FieldDecl *FD : RecTy->getDecl()->fields()) {
+      QualType FQT = FD->getType().getCanonicalType();
+      if (FQT.isOwnedQualified())
+        return true;
+      if (isa<RecordType>(FQT)) {
+        if (isMoveSemanticTypeImpl(FQT, Visited))
           return true;
-        else if (isa<RecordType>(FQT))
-          return FQT->isMoveSemanticType();
       }
     }
   }
   return false;
 }
+} // namespace
 
-bool Type::isTrivialDataType(bool AllowIncompleteType) const {
-  if (CanonicalType.isBorrowQualified() || CanonicalType.isOwnedQualified()) {
+bool Type::isMoveSemanticType() const {
+  llvm::SmallPtrSet<const RecordType *, 8> Visited;
+  return isMoveSemanticTypeImpl(CanonicalType, Visited);
+}
+
+namespace {
+bool isTrivialDataTypeImpl(QualType QT, llvm::SmallPtrSetImpl<const RecordType *> &Visited) {
+  if (QT->isPointerType()) {
     return false;
   }
-  if (CanonicalType->isOwnedStructureType()) {
-    return false;
-  }
-  if (CanonicalType->isPointerType()) {
-    return false;
-  }
-  if (const auto *ArrTy = dyn_cast<ArrayType>(CanonicalType)) {
+  if (const auto *ArrTy = dyn_cast<ArrayType>(QT)) {
     QualType ET = ArrTy->getElementType().getCanonicalType();
-    return ET->isTrivialDataType(true);
+    return isTrivialDataTypeImpl(ET, Visited);
   }
-  if (!AllowIncompleteType && CanonicalType->isIncompleteType())
+  if (QT->isIncompleteType())
     return false;
 
-  if (const auto *RecTy = dyn_cast<RecordType>(CanonicalType)) {
+  if (const auto *RecTy = dyn_cast<RecordType>(QT)) {
+    if (!Visited.insert(RecTy).second)
+      return false; // Cycle detected.
     if (RecordDecl *RD = RecTy->getDecl()) {
       for (FieldDecl *FD : RD->fields()) {
         QualType FQT = FD->getType().getCanonicalType();
         if (FQT.isBorrowQualified() || FQT.isOwnedQualified()) {
           return false;
         }
-        if (!FQT->isTrivialDataType(true)) {
+        if (!isTrivialDataTypeImpl(FQT, Visited)) {
           return false;
         }
       }
     }
   }
   return true;
+}
+} // namespace
+
+bool Type::isTrivialDataType() const {
+  if (CanonicalType.isBorrowQualified() || CanonicalType.isOwnedQualified()) {
+    return false;
+  }
+  llvm::SmallPtrSet<const RecordType *, 8> Visited;
+  return isTrivialDataTypeImpl(CanonicalType, Visited);
 }
 
 void RecordType::initOwnedStatus() const {

@@ -1,0 +1,35 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include "bsc_type_traits.hbs"
+struct S<T> { T a; };
+_Owned struct A { _Public: int a; };
+typedef struct B { int *_Owned a; } B;
+typedef struct C { A a; } C;
+typedef struct D { B b; } D;
+// Struct with non-move-semantic field first, then move-semantic field.
+// is_move_semantic must check all fields, not return on first RecordType.
+struct B_empty {};
+struct C_owned { int *_Owned a; };
+typedef struct A_mixed { struct B_empty b; struct C_owned c; } A_mixed;
+typedef int *_Owned OwnedInt;
+
+int main() {
+    struct S<A> s3; // TODO: need explicit instantiation currently, should fix this later
+    (void)s3;
+    _Static_assert(is_move_semantic<int *_Owned>() == true, "fail");
+    _Static_assert(is_move_semantic<A>() == true, "fail");
+    _Static_assert(is_move_semantic<struct B>() == true, "fail");
+    _Static_assert(is_move_semantic<B>() == true, "fail");
+    _Static_assert(is_move_semantic<D>() == true, "fail");
+    _Static_assert(is_move_semantic<A *>() == false, "fail");
+    _Static_assert(is_move_semantic<struct S<A>>() == true, "fail");
+    _Static_assert(is_move_semantic<struct S<int>>() == false, "fail");
+    _Static_assert(is_move_semantic<C>() == true, "fail");
+    _Static_assert(is_move_semantic<A_mixed>() == true, "fail");
+    return 0;
+}

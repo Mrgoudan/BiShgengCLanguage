@@ -2282,7 +2282,7 @@ public:
   bool isOwnedStructureType() const;
   bool isOwnedTemplateSpecializationType() const;
   bool isMoveSemanticType() const;
-  bool isTrivialDataType(bool AllowIncompleteType = false) const;
+  bool isTrivialDataType() const;
   #endif
   bool isClassType() const;
   bool isStructureType() const;
