@@ -336,6 +336,11 @@ public:
     }
     return false;
   }
+  
+  // nullptr visit
+  bool VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E) {
+      return true;
+  }
 
 
 protected:

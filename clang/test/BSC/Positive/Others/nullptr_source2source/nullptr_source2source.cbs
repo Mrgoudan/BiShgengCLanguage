@@ -1,0 +1,54 @@
+// RUN: %clang -Wno-nullptr_source2source -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+
+// expected-no-diagnostics
+
+int *foo() {
+  int *a = nullptr;
+  return nullptr;
+}
+
+T bar<T>(T t) { 
+  return t; 
+}
+
+int* test2(){
+  return bar<int*>(nullptr);
+}
+
+void *test3() {
+  void *p = nullptr;
+  return nullptr;
+}
+
+int *a = nullptr;
+
+int *test4() {
+  return 1 ? a : nullptr;
+}
+
+// CHECK: static int *bar_int_P(int *t);
+
+// CHECK: int *foo(void) {
+// CHECK-NEXT: int *a = 0;
+// CHECK-NEXT: return 0;
+// CHECK-NEXT: }
+ 
+// CHECK: int *test2(void) {
+// CHECK-NEXT: return bar_int_P(0);
+// CHECK-NEXT: }
+
+// CHECK: void *test3(void) {
+// CHECK-NEXT: void *p = 0;
+// CHECK-NEXT: return 0;
+// CHECK-NEXT: }
+
+// CHECK: int *a = 0;
+ 
+// CHECK: int *test4(void) {
+// CHECK-NEXT: return 1 ? a : 0;
+// CHECK-NEXT: }
+ 
+// CHECK: static int *bar_int_P(int *t) {
+// CHECK-NEXT: return t;
+// CHECK-NEXT: }
