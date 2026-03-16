@@ -4765,10 +4765,8 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsMemberPointer:
 #if ENABLE_BSC
   case UTT_IsStruct:
-  case UTT_IsMoveSemantic:
   case UTT_IsOwnedPointer:
   case UTT_IsOwnedStruct:
-  case UTT_IsTrivialData:
 #endif
     // Fall-through
 
@@ -4839,6 +4837,10 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsNothrowDestructible:
   case UTT_IsTriviallyDestructible:
   case UTT_HasUniqueObjectRepresentations:
+#if ENABLE_BSC
+  case UTT_IsMoveSemantic:
+  case UTT_IsTrivialData:
+#endif
     if (ArgTy->isIncompleteArrayType() || ArgTy->isVoidType())
       return true;
 

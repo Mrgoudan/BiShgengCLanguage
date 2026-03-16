@@ -19,8 +19,6 @@ typedef struct A_mixed { struct B_empty b; struct C_owned c; } A_mixed;
 typedef int *_Owned OwnedInt;
 
 int main() {
-    struct S<A> s3; // TODO: need explicit instantiation currently, should fix this later
-    (void)s3;
     _Static_assert(is_move_semantic<int *_Owned>() == true, "fail");
     _Static_assert(is_move_semantic<A>() == true, "fail");
     _Static_assert(is_move_semantic<struct B>() == true, "fail");

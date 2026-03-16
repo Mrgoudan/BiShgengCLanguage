@@ -1,0 +1,23 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+#include "bsc_type_traits.hbs"
+
+struct A<T> { T a; };
+struct B<T> { T a; };
+
+int main() {
+  // is_move_semantic: must be consistent before/after instantiation
+  constexpr _Bool mb = is_move_semantic<struct B<int *_Owned>>();
+  A<int *_Owned> a;
+  constexpr _Bool ma = is_move_semantic<struct A<int *_Owned>>();
+  _Static_assert(mb == ma, "fail");
+
+  // is_trivial_data: same consistency requirement
+  constexpr _Bool tb = is_trivial_data<struct B<int>>();
+  A<int> a2;
+  constexpr _Bool ta = is_trivial_data<struct A<int>>();
+  _Static_assert(tb == ta, "is_trivial_data fail");
+
+  return 0;
+}

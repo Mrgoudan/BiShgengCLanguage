@@ -917,6 +917,28 @@ struct S1 { int a; };
 struct S2 { int *_Owned p; };
 is_move_semantic<struct S1>() == false;
 is_move_semantic<struct S2>() == true;
+// 不完整的结构体的 move 语义无意义，报错
+struct I;
+is_move_semantic<struct I>(); // error: incomplete type 'struct I' used in type trait expression
+
+constexpr bool is_trivial_data<T>(); // 判断类型 T 是否是平凡数据类型
+// 我们认为平凡数据类型是不包含以下内容的类型：
+//   1. 裸指针、_Owned 指针、_Borrow 指针
+//   2. _Owned 结构体
+is_trivial_data<int *_Owned>() == false;
+_Owned struct S {};
+is_trivial_data<S>() == false;
+struct S1 { int a; };
+struct S2 { int *_Owned p; };
+struct S3 { int *_Borrow p; };
+struct S4 { int * p; };
+is_trivial_data<struct S1>() == true;
+is_trivial_data<struct S2>() == false;
+is_trivial_data<struct S3>() == false;
+is_trivial_data<struct S4>() == false;
+// 不完整的结构体的是否是平凡数据无意义，报错
+struct I;
+is_trivial_data<struct I>(); // error: incomplete type 'struct I' used in type trait expression
 
 constexpr size_t rank<T>(); //可用于计算数组的维数，如
 rank<int>() == 0;

@@ -11,7 +11,6 @@ typedef int Arr1[];
 typedef int Arr2[3];
 typedef struct G { int a; } G;
 _Owned struct S { int a; };
-struct I;
 typedef enum E { Mon=1, Tue, Wed } E;
 typedef union U { int a; } U;
 typedef int *_Owned OwnedInt;
@@ -33,7 +32,6 @@ int test_is_trivial_data() {
     _Static_assert(is_trivial_data<G>() == true, "fail");
     _Static_assert(is_trivial_data<E>() == true, "fail");
     _Static_assert(is_trivial_data<U>() == true, "fail");
-    _Static_assert(is_trivial_data<struct I>() == false, "fail");
     _Static_assert(is_trivial_data<int *_Owned>() == false, "fail");
     _Static_assert(is_trivial_data<OwnedInt>() == false, "fail");
     _Static_assert(is_trivial_data<const void *_Borrow>() == false, "fail");
