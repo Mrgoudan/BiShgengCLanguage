@@ -1098,81 +1098,6 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
   return VisitVarDecl(D, /*InstantiatingVarTemplate=*/false);
 }
 
-#if ENABLE_BSC
-static bool CheckBorrowPartialInit(Sema &SemaRef, QualType T, Expr *Init,
-                                  SourceLocation Loc) {
-  // if the type does not contain borrow,skip
-  if (!T.hasBorrow())
-    return true;
-
-  // type has borrow but not init
-  if (!Init) {
-    SemaRef.Diag(Loc, diag::err_borrow_not_init);
-    return false;
-  }
-
-  // handle record types
-  if (const RecordType *RT = T->getAs<RecordType>()) {
-    RecordDecl *RD = RT->getDecl();
-
-    // Only handle init-list initialization here: {.a = 1} or {1, 2}.
-    if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
-      unsigned InitIndex = 0;
-
-      for (FieldDecl *FD : RD->fields()) {
-        // Skip unnamed bitfields.
-        if (FD->isUnnamedBitfield())
-          continue;
-
-        Expr *FieldInit = nullptr;
-
-        // Try designated init first (e.g. {.a = 1}).
-        bool FoundDesignator = false;
-        for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
-          Expr *E = ILE->getInit(i);
-          if (auto *DIE = dyn_cast<DesignatedInitExpr>(E)) {
-            // Minimal field designator matching.
-            for (const auto &Desig : DIE->designators()) {
-              if (Desig.isFieldDesignator() &&
-                  Desig.getFieldName() == FD->getIdentifier()) {
-                FieldInit = DIE->getInit();
-                FoundDesignator = true;
-                break;
-              }
-            }
-          }
-          if (FoundDesignator)
-            break;
-        }
-
-        // If not designated, try positional init (simple case only).
-        if (!FoundDesignator && !ILE->hadArrayRangeDesignator()) {
-          if (InitIndex < ILE->getNumInits() &&
-              !isa<DesignatedInitExpr>(ILE->getInit(InitIndex))) {
-            FieldInit = ILE->getInit(InitIndex);
-            InitIndex++;
-          }
-        }
-
-        // borrow not init
-        if (FD->getType().hasBorrow() && !FieldInit) {
-          SemaRef.Diag(Loc, diag::err_borrow_not_init);
-          return false;
-        }
-
-        // Recursively handle nested struct
-        if (FieldInit) {
-          if (!CheckBorrowPartialInit(SemaRef, FD->getType(), FieldInit, Loc))
-            return false;
-        }
-      }
-    }
-  }
-
-  return true;
-}
-#endif
-
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                                              bool InstantiatingVarTemplate,
                                              ArrayRef<BindingDecl*> *Bindings) {
@@ -1218,38 +1143,20 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                           DI, D->getStorageClass());
 
 #if ENABLE_BSC
-  Var->setDefInTopLevelSwitchBlock(D->isDefInTopLevelSwitchBlock());
-
-  QualType T = Var->getType().getCanonicalType();
-  if (T.isOwnedQualified() &&
-      T->isArrayType()) {
-    // diag::err_owned_inderictOwned_type_check uses a %select{...}0 in the .td
-    // definition, so argument #0 is required to choose (ownedQualified here).
-    enum { ownedQualified };
-    StringRef Env = "template instantiation";
-    SemaRef.Diag(Var->getBeginLoc(), diag::err_owned_inderictOwned_type_check)
-        << ownedQualified << "_Owned" << Env;
-  }
-
-  // check borrow struct init
+  // Check invalid _Owned-qualified array types after template argument
+  // substitution.
   if (SemaRef.getLangOpts().BSC) {
-    QualType VarType = DI->getType();
+    Var->setDefInTopLevelSwitchBlock(D->isDefInTopLevelSwitchBlock());
 
-    // forbid S<T * borrow> s2, totally not init
-    if (VarType.hasBorrow()) {
-      if (!D->hasInit()) {
-        SemaRef.Diag(D->getLocation(), diag::err_borrow_not_init);
-        Var->setInvalidDecl();
-        return Var;
-      }
-      // partial Init
-      else {
-        if (!CheckBorrowPartialInit(SemaRef, VarType, D->getInit(),
-                                    D->getLocation())) {
-          Var->setInvalidDecl();
-          return Var;
-        }
-      }
+    QualType T = Var->getType().getCanonicalType();
+    if (T.isOwnedQualified() && T->isArrayType()) {
+      // diag::err_owned_inderictOwned_type_check uses a %select{...}0 in the
+      // .td definition, so argument #0 is required to choose (ownedQualified
+      // here).
+      enum { ownedQualified };
+      StringRef Env = "template instantiation";
+      SemaRef.Diag(Var->getBeginLoc(), diag::err_owned_inderictOwned_type_check)
+          << ownedQualified << "_Owned" << Env;
     }
   }
 #endif

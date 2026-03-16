@@ -11,20 +11,20 @@ struct R_wrap {
 void test() {
   int a = 1;
   int b = 1;
-  int * _Borrow b1; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  const int * _Borrow b2; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  int * _Borrow * b3; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  int * _Borrow b1;
+  const int * _Borrow b2;
+  int * _Borrow * b3;
   int * _Borrow b4 = &_Mut a; // legal
   const int * _Borrow b5 = &_Const b; // legal
   int _Borrow * b6 = &_Mut a; // expected-error {{_Borrow type requires a pointer or reference ('int' is invalid)}}
                             // expected-error@-1 {{incompatible _Borrow types, cannot cast 'int *_Borrow' to '_Borrow int *'}}
-  struct R r; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  struct R *pr; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  struct R **ppr; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  struct R_wrap rw; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  struct R_wrap *prw; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-  struct R r1 = { .num = 1 }; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  struct R r;
+  struct R *pr;
+  struct R **ppr;
+  struct R_wrap rw;
+  struct R_wrap *prw;
+  struct R r1 = { .num = 1 }; // legal
   struct R r2 = { 1, b1, b2 }; // legal
   struct R r3 = { .p1 = b1, .p2 = b2}; // legal
-  struct R r4 = { 1, b1 }; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  struct R r4 = { 1, b1 }; // legal
 }

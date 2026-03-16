@@ -14,8 +14,5 @@ def err_inconsistent_tag_name : Error<"inconsistent tag before struct name">;
 def err_extended_type_not_generic_typealias : Error<"extended type of a BSC member function cannot be a generic typealias">;
 def err_generic_typealias_not_within_function : Error<"BSC generic typealias cannot be declared within a function">;
 
-// BSC ownership warnings and errors.
-def err_borrow_not_init : Error<"variable declarations of _Borrow qualified must be initialized">;
-
 // BSC operator overload errors.
 def err_unsupport_overload_type : Error<"unsupported operator type">;

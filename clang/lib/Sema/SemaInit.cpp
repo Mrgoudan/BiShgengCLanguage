@@ -2320,15 +2320,6 @@ void InitListChecker::CheckStructUnionTypes(
     }
   }
 
-#if ENABLE_BSC
-  // check is a complete initialization struct type in the safe zone.
-  // allow initialization by '{0}' and '{}'.
-  // For types without pointers, partial initialization is allowed.
-  if (Index >= IList->getNumInits() && SemaRef.IsInSafeZone() && !VerifyOnly &&
-      !DeclType->isUnionType() && Field != FieldEnd)
-    SemaRef.DiagnoseIncompleteInitStructTypeInSafeZone(IList, DeclType);
-#endif
-
   if (Field == FieldEnd || !Field->getType()->isIncompleteArrayType() ||
       Index >= IList->getNumInits())
     return;

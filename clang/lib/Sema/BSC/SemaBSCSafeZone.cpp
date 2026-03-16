@@ -987,10 +987,7 @@ bool Sema::IsUnsafeType(QualType Type) {
 
 // Check if a type can be left uninitialized in safe zones.
 // Returns true if the type is allowed to be uninitialized.
-// Allowed types:
-// - Bool type (_Bool)
-// - Non-pointer types (int, float, char, etc.)
-// - Struct/union types that do not contain pointer fields
+// owned struct and struct with owned struct fields must be initialized.
 bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
   if (Type.isNull())
     return false;
@@ -1001,9 +998,9 @@ bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
   if (CanonType->isBooleanType())
     return true;
 
-  // All pointer types (including function pointers) must be initialized
+  // All pointer types (including function pointers) can be uninitialized
   if (CanonType->isPointerType()) {
-    return false;
+    return true;
   }
 
   // forbid owned struct
@@ -1025,11 +1022,6 @@ bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
       const clang::Type *TyPtr = CurType.getTypePtr();
       if (!Visited.insert(TyPtr).second)
         continue;
-
-      // If we find any pointer field (including function pointers), the struct/union cannot be uninitialized
-      if (CurType->isPointerType()) {
-        return false;
-      }
 
       // Recursively check struct members
       if (CurType->isStructureType() || CurType->isUnionType()) {
@@ -1157,44 +1149,6 @@ void Sema::DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
   }
 }
 #endif
-
-void Sema::DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
-                                                       QualType DeclType) {
-  // For types that can be uninitialized (types without pointers),
-  // partial initialization is allowed
-  if (CanBeUninitializedInSafeZone(DeclType)) {
-    return;
-  }
-
-  // allow initialization by '{0}' and '{}'.
-  bool IsInitToZero = false;
-  if (IList->getNumInits() == 1) {
-    Expr *Init = IList->getInit(0);
-    if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Init))
-      Init = ICE->getSubExpr();
-    if (const auto *IL = dyn_cast<IntegerLiteral>(Init)) {
-      IsInitToZero = IL->getValue().isZero();
-    }
-  } else if (IList->getNumInits() == 0) {
-    IsInitToZero = true;
-  }
-
-  if (!IsInitToZero) {
-    Diag(IList->getBeginLoc(), diag::err_unsafe_action)
-        << "incomplete initialization";
-  }
-}
-
-void Sema::DiagnoseUnionTypeInSafeZone(SourceLocation Loc, QualType Type){
-  if (!IsInSafeZone())
-    return;
-
-  if (CanBeUninitializedInSafeZone(Type))
-    return;
-
-  Diag(Loc, diag::err_unsafe_action)
-      << "union type";
-}
 
 void Sema::PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec) {
   getCurFunction()->InsCompoundSafeZone.push_back(

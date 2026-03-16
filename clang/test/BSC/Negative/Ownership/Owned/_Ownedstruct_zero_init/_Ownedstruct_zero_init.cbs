@@ -37,20 +37,20 @@ _Safe void test_initializations(void) {
 
   // C99 designated initializers
   struct S d_all = {.a = 1, .p = nullptr};
-  struct S d_a = {.a = 1};       // expected-error {{incomplete initialization is forbidden in the safe zone}}
+  struct S d_a = {.a = 1};
   struct S d_p = {.p = nullptr};
 
   // Nested struct initialization
   struct Wrapper w_zero = {0};   // Implicit null for s1.p and s2.p
   struct Wrapper w_nested = {
-    .s1 = {.a = 1},              // expected-error {{incomplete initialization is forbidden in the safe zone}}
+    .s1 = {.a = 1},
     .s2 = {2, nullptr}
   };
 
   // Array of structs
   struct S arr[3] = { // expected-error {{type of array cannot qualified by '_Owned'(even indirectly), 'struct S' contains '_Owned' type}}
     {0},                       
-    {.a = 1}      // expected-error {{incomplete initialization is forbidden in the safe zone}}
+    {.a = 1}
   };
 
   // Verify ownership tracking

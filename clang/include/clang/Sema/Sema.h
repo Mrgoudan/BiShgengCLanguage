@@ -12385,7 +12385,7 @@ public:
                                                              ExprResult &RHS);
 
   // BiShengC safety feature related APIs
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType);
   bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
@@ -12435,9 +12435,6 @@ public:
   void DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
                                                QualType BaseType);
 #endif
-  void DiagnoseIncompleteInitStructTypeInSafeZone(InitListExpr *IList,
-                                                   QualType DeclType);
-  void DiagnoseUnionTypeInSafeZone(SourceLocation Loc, QualType Type);
   void PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec);
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;

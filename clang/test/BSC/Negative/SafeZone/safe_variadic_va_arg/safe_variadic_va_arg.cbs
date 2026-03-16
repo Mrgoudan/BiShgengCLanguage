@@ -15,7 +15,7 @@ _Safe int test_va_list_param(va_list args) {
 // va_list variable in _Safe block - triggers uninitialized error (arrays cannot be initialized)
 void test_va_list_variable_in_safe_block(void) {
     _Safe {
-        va_list args;  // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+        va_list args;
     }
 }
 

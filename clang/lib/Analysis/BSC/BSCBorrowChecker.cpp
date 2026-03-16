@@ -542,32 +542,31 @@ void ActionExtract::VisitDeclRefExpr(DeclRefExpr *DRE) {
 void ActionExtract::VisitDeclStmt(DeclStmt *DS) {
   // Note: The construction of CFG ensures that there is only one VarDecl in
   // the DeclStmt.
-  for (Decl *D : DS->decls()) {
-    if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+  Decl *D = DS->getSingleDecl();
+  if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+    Dest = std::make_unique<Path>(VD->getName().str(), VD->getType(),
+                                  VD->getLocation());
+    if (IsTrackedType(VD->getType())) {
+      RNL = rc.getRegionName(VD);
+    }
+    if (Expr *Init = VD->getInit()) {
       if ((VD->getType()->isStructureType() || VD->getType()->isArrayType()) &&
           IsTrackedType(VD->getType()) &&
-          isa<InitListExpr, CompoundLiteralExpr>(VD->getInit())) {
+          isa<InitListExpr, CompoundLiteralExpr>(Init)) {
         BuildOnGet = false;
-        Dest = std::make_unique<Path>(VD->getName().str(), VD->getType(),
-                                      VD->getLocation());
-        RNL = rc.getRegionName(VD);
-        Visit(VD->getInit());
+        Visit(Init);
       } else {
         Kind = Action::Assign;
-        Dest = std::make_unique<Path>(VD->getName().str(), VD->getType(),
-                                      VD->getLocation());
-        if (IsTrackedType(VD->getType()))
-          RNL = rc.getRegionName(VD);
-        if (VD->hasInit()) {
-          Sources.clear();
-          op = RHS;
-          Visit(VD->getInit());
-        }
+        Sources.clear();
+        op = RHS;
+        Visit(Init);
         // Handle cases like `int *borrow p = (int *borrow)NULL` and
         // `int *borrow p = (int *borrow)q`.
         if (RNL.isInvalid() || RNR.isInvalid() || Sources.empty())
           Kind = Action::Init;
       }
+    } else {
+      Kind = Action::Init;
     }
   }
 }

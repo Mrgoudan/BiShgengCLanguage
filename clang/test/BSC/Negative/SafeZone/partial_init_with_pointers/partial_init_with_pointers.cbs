@@ -16,7 +16,7 @@ union UnionWithPointer {
 _Safe int main(void) {
   // error: struct with pointer fields cannot be partially initialized
   // int * _Owned ptr= safe_malloc(4);
-  struct StructWithPointer s1 = {.ptr=safe_malloc(4)};  // expected-error {{incomplete initialization is forbidden in the safe zone}}
+  struct StructWithPointer s1 = {.ptr=safe_malloc(4)};
 
   // ok: union will never be partially initialized
   union UnionWithPointer u1 = {.value=0};
@@ -28,5 +28,6 @@ _Safe int main(void) {
   int *a  = _Unsafe((int*)malloc(sizeof(int)));
   union UnionWithPointer u2 = {.ptr=a};
 
-  return 0;
+  return 0; // expected-error {{field memory leak of value: `s2`, s2.ptr is leak}}
+            // expected-error@-1 {{field memory leak of value: `s1`, s1.ptr is leak}}
 }

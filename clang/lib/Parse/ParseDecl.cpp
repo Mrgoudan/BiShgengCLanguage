@@ -2544,44 +2544,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         Actions.AddInitializerToDecl(ThisDecl, Init.get(),
                                      /*DirectInit=*/false);
     }
-#if ENABLE_BSC
-    VarDecl *VD = dyn_cast_or_null<VarDecl>(ThisDecl);
-    if (getLangOpts().BSC && VD) {
-      if (VD->getType()->getAs<RecordType>()) {
-        if (const auto *ILE = dyn_cast_or_null<InitListExpr>(VD->getInit())) {
-          // Recursively check for any ImplicitValueInitExpr with borrow qualifiers
-          std::function<bool(const Expr*)> hasImplicitBorrowInit;
-          hasImplicitBorrowInit = [&](const Expr* E) -> bool {
-            if (!E) return false;
-
-            // Found an implicitly value-initialized field with borrow
-            if (dyn_cast_or_null<ImplicitValueInitExpr>(E)) {
-              return E->getType().hasBorrow();
-            }
-
-            // Recursively check nested InitListExpr for implicit inits
-            if (const auto *NestedILE = dyn_cast_or_null<InitListExpr>(E)) {
-              for (const auto *Init : NestedILE->inits()) {
-                if (hasImplicitBorrowInit(Init)) {
-                  return true;
-                }
-              }
-            }
-
-            return false;
-          };
-
-          // Check all initializers
-          for (const auto *Init : ILE->inits()) {
-            if (hasImplicitBorrowInit(Init)) {
-              Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
-              break;
-            }
-          }
-        }
-      }
-    }
-#endif
     break;
   }
   case InitKind::CXXDirect: {
@@ -2671,28 +2633,19 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
     if (getLangOpts().BSC && VD) {
       QualType T = VD->getType();
-      bool IsSafeToCheckBorrow = true;
-
       if (T->isIncompleteType()) {
-        IsSafeToCheckBorrow = false; 
         // Identify non-dependent class template specializations.
-        auto *Spec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(T->getAsRecordDecl());
-        if (Spec && !T->isDependentType() && T->getAs<TemplateSpecializationType>()) {
+        auto *Spec = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+            T->getAsRecordDecl());
+        if (Spec && !T->isDependentType() &&
+            T->getAs<TemplateSpecializationType>()) {
           if (!Spec->hasDefinition()) {
             // Force implicit instantiation.
             Actions.InstantiateClassTemplateSpecialization(
-                VD->getLocation(), Spec, TSK_ImplicitInstantiation, /*Complain=*/false);
-          }
-          if (Spec->hasDefinition() && !Spec->isInvalidDecl()) {
-            IsSafeToCheckBorrow = true; 
+                VD->getLocation(), Spec, TSK_ImplicitInstantiation,
+                /*Complain=*/false);
           }
         }
-      }
-      // Ensure the RecordDecl is fully defined before querying borrow.
-      if (IsSafeToCheckBorrow) {
-          if (T.hasBorrow()) { 
-            Diag(VD->getBeginLoc(), diag::err_borrow_not_init);
-          }
       }
     }
 #endif

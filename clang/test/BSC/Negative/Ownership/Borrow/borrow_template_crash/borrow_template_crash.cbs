@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -xbsc -fsyntax-only -verify %s
+// expected-no-diagnostics
 
 struct Simple {
     int *_Borrow p;
@@ -18,9 +19,9 @@ struct Nested {
 };
 
 void test_crash() {
-    struct Simple s; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-    struct Pair<int, char> p; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-    struct Nested n; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-    struct Container<struct Simple> c; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
-    struct Container<struct Pair<int, int>> cp; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+    struct Simple s;
+    struct Pair<int, char> p;
+    struct Nested n;
+    struct Container<struct Simple> c;
+    struct Container<struct Pair<int, int>> cp;
 }

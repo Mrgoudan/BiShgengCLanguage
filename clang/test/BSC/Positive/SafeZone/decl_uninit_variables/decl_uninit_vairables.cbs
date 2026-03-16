@@ -1,0 +1,76 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+typedef struct {
+    int *_Owned _Nullable p;
+    int *_Borrow _Nullable q;
+} S;
+
+typedef struct {
+    S s;
+    int a;
+} T;
+
+_Safe void test1(void) {
+    int *_Owned _Nullable p1;
+    int *_Borrow _Nullable q1;
+    p1 = nullptr;
+    q1 = nullptr;
+    int *_Owned _Nullable p2 = nullptr;
+    int *_Borrow _Nullable q2 = nullptr;
+}
+
+_Safe int *_Owned test2(int *_Owned para1) {
+    int *_Owned p1;
+    int *_Borrow q1;
+    p1 = para1;
+    q1 = &_Mut (int) {1};
+    return p1;
+}
+
+_Safe void test3(void) {
+    S s1;
+    s1.p = nullptr;
+    s1.q = nullptr;
+
+    S s2 = {nullptr, nullptr};
+    S s3 = { .q = nullptr };
+
+    // FIXME: ownership bug
+    // S s4;
+    // s4 = (S) {};
+
+    // FIXME: ownership bug
+    // S s5;
+    // s5 = (S) {nullptr, nullptr};
+
+    // FIXME: ownership bug
+    // S s6;
+    // s6 = (S) {nullptr};
+}
+
+_Safe void test4(void) {
+    T t1;
+    t1.s.p = nullptr;
+    t1.s.q = nullptr;
+    t1.a = 0;
+
+    T t2 = { {nullptr, nullptr}, 0 };
+    T t3 = { .s = {nullptr, nullptr}, .a = 0 };
+
+    // FIXME: ownership bug
+    // T t4;
+    // t4 = (T) {};
+
+    // FIXME: ownership bug
+    // T t5;
+    // t5 = (T) {{}, 0};
+
+    // FIXME: ownership bug
+    // T t6;
+    // t6 = (T) {.s = {nullptr, nullptr}, .a = 0};
+
+    // FIXME: ownership bug
+    // T t7;
+    // t7 = (T) {.s = {nullptr}, .a = 0};
+}

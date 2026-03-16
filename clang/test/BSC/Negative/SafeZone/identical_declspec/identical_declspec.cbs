@@ -37,7 +37,6 @@ int (*pfun)(int x, int y);
 int main() {
   _Unsafe int (*qq)(int x, int y); // expected-note {{previous definition is here}}
   _Safe int (*qq)(int x, int y);   // expected-error {{redefinition of 'qq' with a different type: '_Safe int (*)(int, int)' vs 'int (*)(int, int)'}}
-                                  // expected-error@-1 {{uninitialized declarator is forbidden in the safe zone}}
 
   sapfun = safun;
   sapfun = unfun;  // expected-error {{conversion from type 'int (*)(int, int)' to '_Safe int (*)(int, int)' is forbidden}}

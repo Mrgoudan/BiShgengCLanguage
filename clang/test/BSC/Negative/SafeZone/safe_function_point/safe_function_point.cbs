@@ -19,7 +19,7 @@ int main() {
   p = add;      //ok
   TP tp = add;  // ok
 
-  _Safe int (*pa)(int a);             // expected-error {{uninitialized declarator is forbidden in the safe zone}}
+  _Safe int (*pa)(int a);
   pa = add;                          // expected-error {{conversion from type '_Safe int (*)(int, int)' to '_Safe int (*)(int)' is forbidden}}
 
   _Safe int (*pp)(double a, double b) = dadd2;

@@ -1,15 +1,17 @@
 // RUN: %clang_cc1 -verify -verify-ignore-unexpected %s
+// expected-no-diagnostics
+
 struct S<T> {
   int a;
   T b;
 };
 
 S<T> test1<T>() {
-  S<T> s; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  S<T> s;
   return s;
 }
 S<T> test2<T>(T t) {
-  S<T> s; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  S<T> s;
   return s;
 }
 void fun() {
@@ -18,7 +20,7 @@ void fun() {
 }
 
 S<T> test3<T>() {
-  S<T> s = {.a =1}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  S<T> s = {.a =1};
   return s;
 }
 void fun2() {
@@ -35,7 +37,7 @@ struct Outer1<T> {
 };
 
 Outer1<T> nest1<T>() {
-  Outer1<T> o; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer1<T> o;
   return o;
 }
 void nest1_use() {
@@ -43,7 +45,7 @@ void nest1_use() {
 }
 
 Outer1<T> nest2<T>() {
-  Outer1<T> o = {.tag = 1}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer1<T> o = {.tag = 1};
   return o;
 }
 void nest2_use() {
@@ -51,7 +53,7 @@ void nest2_use() {
 }
 
 Outer1<T> nest3<T>() {
-  Outer1<T> o = {.tag = 1, .inner = {.a = 7}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer1<T> o = {.tag = 1, .inner = {.a = 7}};
   return o;
 }
 void nest3_use() {
@@ -66,7 +68,7 @@ struct Outer2<T> {
 };
 
 Outer2<T> nest4<T>() {
-  Outer2<T> o = {.x = 0, .left = {.a = 1}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer2<T> o = {.x = 0, .left = {.a = 1}};
   return o;
 }
 void nest4_use() {
@@ -85,7 +87,7 @@ struct Outer3<T> {
 };
 
 Outer3<T> nest5<T>() {
-  Outer3<T> x = {.o = 1, .mid = {.m = 2}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer3<T> x = {.o = 1, .mid = {.m = 2}};
   return x;
 }
 void nest5_use() {
@@ -94,7 +96,7 @@ void nest5_use() {
 
 /* initialization goes deep but still missing the _Borrow field */
 Outer3<T> nest6<T>() {
-  Outer3<T> x = {.o = 1, .mid = {.m = 2, .inner = {.a = 9}}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer3<T> x = {.o = 1, .mid = {.m = 2, .inner = {.a = 9}}};
   return x;
 }
 void nest6_use() {
@@ -116,7 +118,7 @@ struct Outer4<T> {
 };
 
 Outer4<T> nest7<T>() {
-  Outer4<T> o = {.k = 1}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer4<T> o = {.k = 1};
   return o;
 }
 void nest7_use() {
@@ -124,7 +126,7 @@ void nest7_use() {
 }
 
 Outer4<T> nest8<T>() {
-  Outer4<T> o = {.k = 1, .w = {.s = {.a = 1}}}; // expected-error {{variable declarations of _Borrow qualified must be initialized}}
+  Outer4<T> o = {.k = 1, .w = {.s = {.a = 1}}};
   return o;
 }
 void nest8_use() {
