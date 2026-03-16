@@ -146,20 +146,8 @@ void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
 }
 
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
-  if ((LHSType.isBorrowQualified() && LHSType->isPointerType() &&
-       RHSType.isOwnedQualified() && RHSType->isPointerType()) ||
-      (RHSType.isBorrowQualified() && RHSType->isPointerType() &&
-       LHSType.isOwnedQualified() && LHSType->isPointerType())) {
-    return false;
-  }
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
-
-  // Allow owned pointer to be cast from nullptr_t
-  if (LHSCanType.isOwnedQualified() && LHSCanType->isPointerType() &&
-      RHSCanType->isNullPtrType()) {
-    return true;
-  }
 
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
@@ -179,25 +167,34 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   // 'float* owned' <->  'void* owned'                    // pointer to diff type but voidpointer same owned
   // 'float* owned' <->  'void*'                          // diff type but voidpointer diff owned
   // 'int** owned'' <->  const int** owned'
+  // <integral type><--  'T* owned' // owned pointer can be cast to integral type, but not the opposite
 
   // illegal cases:
   // 'float owned'  <->  'int owned'    // diff type
   // 'float* owned' <->  'int* owned'   // diff type same owned
   // 'owned float*' <->  'owned int*'   // pointer to diff type same owned
-  // 'int'          <->  'void* owned'  //
   // 'int *owned'   <->  'int *borrow'  // should use borrow operators instead
 
-  if (IsSameType) {
+  if (IsPointer) {
+    // Disallow conversion between owned and borrow pointers
+    if ((LHSCanType.isBorrowQualified() && RHSCanType.isOwnedQualified()) ||
+        (LHSCanType.isOwnedQualified() && RHSCanType.isBorrowQualified())) {
+      return false;
+    }
+    // Allow owned pointer to be cast from nullptr_t
+    if (LHSCanType.isOwnedQualified() && RHSCanType->isNullPtrType()) {
+      return true;
+    }
+    return LHSCanType.getTypePtr()->isVoidPointerType() ||
+           RHSCanType.getTypePtr()->isVoidPointerType() ||
+           CheckOwnedQualTypeCStyleCast(LHSPtrType->getPointeeType(),
+                                        RHSPtrType->getPointeeType());
+  }
+  if (LHSCanType->isIntegerType() && RHSCanType.isOwnedQualified() &&
+      RHSCanType->isPointerType()) {
     return true;
   }
-  if (IsPointer) {
-    if (LHSCanType.getTypePtr()->isVoidPointerType() || RHSCanType.getTypePtr()->isVoidPointerType()) {
-      return true;
-    } else {
-      return CheckOwnedQualTypeCStyleCast(LHSPtrType->getPointeeType(), RHSPtrType->getPointeeType());
-    }
-  }
-  return false;
+  return IsSameType;
 }
 
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc) {
@@ -406,7 +403,10 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   if (IsSameType) {
     return true;
   }
-
+  if (LHSCanType->isIntegerType() && RHSCanType.isBorrowQualified() &&
+      RHSCanType->isPointerType()) {
+    return true;
+  }
   if (!IsPointer)
     return false;
   if (LHSCanType->isVoidPointerType())

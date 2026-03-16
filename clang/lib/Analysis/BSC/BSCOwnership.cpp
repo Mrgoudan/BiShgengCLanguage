@@ -2177,10 +2177,15 @@ void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
     else {
       Visit(CSCE->getSubExpr());
     }
-
-  } else {
-    Visit(CSCE->getSubExpr());
+    return;
   }
+  Operation SavedOp = op;
+  // Casting to an integer type doesn't consume ownership
+  if (CSCE->getType()->isIntegerType()) {
+    op = GetAddr;
+  }
+  Visit(CSCE->getSubExpr());
+  op = SavedOp;
 }
 
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {

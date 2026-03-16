@@ -1,0 +1,120 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-everything %s
+// expected-no-diagnostics
+
+void exhaust<T>(T *_Owned _Nullable);
+
+void explicit_cast(int *_Owned _Nullable p) {
+    char char_val = (char)p;
+    unsigned char unsigned_char_val = (unsigned char)p;
+    signed char signed_char_val = (signed char)p;
+    short short_val = (short)p;
+    unsigned short unsigned_short_val = (unsigned short)p;
+    int int_val = (int)p;
+    unsigned int unsigned_int_val = (unsigned int)p;
+    long long_val = (long)p;
+    unsigned long unsigned_long_val = (unsigned long)p;
+    long long long_long_val = (long long)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)p;
+    exhaust(p);
+}
+
+void void_explicit_cast(void *_Owned _Nullable p) {
+    char char_val = (char)p;
+    unsigned char unsigned_char_val = (unsigned char)p;
+    signed char signed_char_val = (signed char)p;
+    short short_val = (short)p;
+    unsigned short unsigned_short_val = (unsigned short)p;
+    int int_val = (int)p;
+    unsigned int unsigned_int_val = (unsigned int)p;
+    long long_val = (long)p;
+    unsigned long unsigned_long_val = (unsigned long)p;
+    long long long_long_val = (long long)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)p;
+    exhaust(p);
+}
+
+void generic_explicit_cast<T>(T *_Owned _Nullable p) {
+    char char_val = (char)p;
+    unsigned char unsigned_char_val = (unsigned char)p;
+    signed char signed_char_val = (signed char)p;
+    short short_val = (short)p;
+    unsigned short unsigned_short_val = (unsigned short)p;
+    int int_val = (int)p;
+    unsigned int unsigned_int_val = (unsigned int)p;
+    long long_val = (long)p;
+    unsigned long unsigned_long_val = (unsigned long)p;
+    long long long_long_val = (long long)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)p;
+    exhaust(p);
+}
+
+void generic_explicit_multicast1<T, U>(T *_Owned _Nullable p, U dummy) {
+    U u_val1 = (U)(char)p;
+    U u_val2 = (U)(unsigned char)p;
+    U u_val3 = (U)(signed char)p;
+    U u_val4 = (U)(short)p;
+    U u_val5 = (U)(unsigned short)p;
+    U u_val6 = (U)(int)p;
+    U u_val7 = (U)(unsigned int)p;
+    U u_val8 = (U)(long)p;
+    U u_val9 = (U)(unsigned long)p;
+    U u_val10 = (U)(long long)p;
+    U u_val11 = (U)(unsigned long long)p;
+    exhaust(p);
+}
+
+void generic_instantiation() {
+    generic_explicit_cast((void *_Owned) nullptr);
+    generic_explicit_cast((char *_Owned) nullptr);
+    generic_explicit_cast((unsigned char *_Owned) nullptr);
+    generic_explicit_cast((signed char *_Owned) nullptr);
+    generic_explicit_cast((short *_Owned) nullptr);
+    generic_explicit_cast((unsigned short *_Owned) nullptr);
+    generic_explicit_cast((int *_Owned) nullptr);
+    generic_explicit_cast((unsigned int *_Owned) nullptr);
+    generic_explicit_cast((long *_Owned) nullptr);
+    generic_explicit_cast((unsigned long *_Owned) nullptr);
+    generic_explicit_cast((long long *_Owned) nullptr);
+    generic_explicit_cast((unsigned long long *_Owned) nullptr);
+
+    generic_explicit_multicast1((char *_Owned) nullptr, (char) 0);
+    generic_explicit_multicast1((unsigned char *_Owned) nullptr, (unsigned char) 0);
+    generic_explicit_multicast1((signed char *_Owned) nullptr, (signed char) 0);
+    generic_explicit_multicast1((short *_Owned) nullptr, (short) 0);
+    generic_explicit_multicast1((unsigned short *_Owned) nullptr, (unsigned short) 0);
+    generic_explicit_multicast1((int *_Owned) nullptr, (int) 0);
+    generic_explicit_multicast1((unsigned int *_Owned) nullptr, (unsigned int) 0);
+    generic_explicit_multicast1((long *_Owned) nullptr, (long) 0);
+    generic_explicit_multicast1((unsigned long *_Owned) nullptr, (unsigned long) 0);
+    generic_explicit_multicast1((long long *_Owned) nullptr, (long long) 0);
+    generic_explicit_multicast1((unsigned long long *_Owned) nullptr, (unsigned long long) 0);
+}
+
+void multicast_void_integer() {
+    char val1 = (char) (void *_Owned _Nullable) nullptr;
+    unsigned char val2 = (unsigned char) (void *_Owned _Nullable) nullptr;
+    signed char val3 = (signed char) (void *_Owned _Nullable) nullptr;
+    short val4 = (short) (void *_Owned _Nullable) nullptr;
+    unsigned short val5 = (unsigned short) (void *_Owned _Nullable) nullptr;
+    int val6 = (int) (void *_Owned _Nullable) nullptr;
+    unsigned int val7 = (unsigned int) (void *_Owned _Nullable) nullptr;
+    long val8 = (long) (void *_Owned _Nullable) nullptr;
+    unsigned long val9 = (unsigned long) (void *_Owned _Nullable) nullptr;
+    long long val10 = (long long) (void *_Owned _Nullable) nullptr;
+    unsigned long long val11 = (unsigned long long) (void *_Owned _Nullable) nullptr;
+}
+
+void multicast_integer_ptr() {
+    char* ptr1 = (char*) (char) nullptr;
+    unsigned char* ptr2 = (unsigned char*) (unsigned char) nullptr;
+    signed char* ptr3 = (signed char*) (signed char) nullptr;
+    short* ptr4 = (short*) (short) nullptr;
+    unsigned short* ptr5 = (unsigned short*) (unsigned short) nullptr;
+    int* ptr6 = (int*) (int) nullptr;
+    unsigned int* ptr7 = (unsigned int*) (unsigned int) nullptr;
+    long* ptr8 = (long*) (long) nullptr;
+    unsigned long* ptr9 = (unsigned long*) (unsigned long) nullptr;
+    long long* ptr10 = (long long*) (long long) nullptr;
+    unsigned long long* ptr11 = (unsigned long long*) (unsigned long long) nullptr;
+}
+

@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -verify %s
+
+void explicit_cast(int *_Owned _Nullable p) {
+    char char_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'char'}}
+    unsigned char unsigned_char_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'unsigned char'}}
+    signed char signed_char_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'signed char'}}
+    short short_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'short'}}
+    unsigned short unsigned_short_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'unsigned short'}}
+    int int_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'int'}}
+    unsigned int unsigned_int_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'unsigned int'}}
+    long long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'long'}}
+    unsigned long unsigned_long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'unsigned long'}}
+    long long long_long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'long long'}}
+    unsigned long long unsigned_long_long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _Nullable' to 'unsigned long long'}}
+}
+
+void void_explicit_cast(void *_Owned _Nullable p) {
+    char char_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'char'}}
+    unsigned char unsigned_char_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'unsigned char'}}
+    signed char signed_char_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'signed char'}}
+    short short_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'short'}}
+    unsigned short unsigned_short_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'unsigned short'}}
+    int int_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'int'}}
+    unsigned int unsigned_int_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'unsigned int'}}
+    long long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'long'}}
+    unsigned long unsigned_long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'unsigned long'}}
+    long long long_long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'long long'}}
+    unsigned long long unsigned_long_long_val = p; // expected-error {{incompatible _Owned types, cannot cast 'void *_Owned _Nullable' to 'unsigned long long'}}
+}

@@ -1,0 +1,112 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-everything %s
+// expected-no-diagnostics
+
+void explicit_cast(int *_Borrow _Nullable p) {
+    char char_val = (char)p;
+    unsigned char unsigned_char_val = (unsigned char)p;
+    signed char signed_char_val = (signed char)p;
+    short short_val = (short)p;
+    unsigned short unsigned_short_val = (unsigned short)p;
+    int int_val = (int)p;
+    unsigned int unsigned_int_val = (unsigned int)p;
+    long long_val = (long)p;
+    unsigned long unsigned_long_val = (unsigned long)p;
+    long long long_long_val = (long long)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)p;
+}
+
+void void_explicit_cast(void *_Borrow _Nullable p) {
+    char char_val = (char)p;
+    unsigned char unsigned_char_val = (unsigned char)p;
+    signed char signed_char_val = (signed char)p;
+    short short_val = (short)p;
+    unsigned short unsigned_short_val = (unsigned short)p;
+    int int_val = (int)p;
+    unsigned int unsigned_int_val = (unsigned int)p;
+    long long_val = (long)p;
+    unsigned long unsigned_long_val = (unsigned long)p;
+    long long long_long_val = (long long)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)p;
+}
+
+void generic_explicit_cast<T>(T *_Borrow _Nullable p) {
+    char char_val = (char)p;
+    unsigned char unsigned_char_val = (unsigned char)p;
+    signed char signed_char_val = (signed char)p;
+    short short_val = (short)p;
+    unsigned short unsigned_short_val = (unsigned short)p;
+    int int_val = (int)p;
+    unsigned int unsigned_int_val = (unsigned int)p;
+    long long_val = (long)p;
+    unsigned long unsigned_long_val = (unsigned long)p;
+    long long long_long_val = (long long)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)p;
+}
+
+void generic_explicit_multicast1<T, U>(T *_Borrow _Nullable p, U dummy) {
+    U u_val1 = (U)(char)p;
+    U u_val2 = (U)(unsigned char)p;
+    U u_val3 = (U)(signed char)p;
+    U u_val4 = (U)(short)p;
+    U u_val5 = (U)(unsigned short)p;
+    U u_val6 = (U)(int)p;
+    U u_val7 = (U)(unsigned int)p;
+    U u_val8 = (U)(long)p;
+    U u_val9 = (U)(unsigned long)p;
+    U u_val10 = (U)(long long)p;
+    U u_val11 = (U)(unsigned long long)p;
+}
+
+void generic_explicit_multicast2<T>(T *_Borrow _Nullable p) {
+    char char_val = (char)(void *_Borrow _Nullable)p;
+    unsigned char unsigned_char_val = (unsigned char)(void *_Borrow _Nullable)p;
+    signed char signed_char_val = (signed char)(void *_Borrow _Nullable)p;
+    short short_val = (short)(void *_Borrow _Nullable)p;
+    unsigned short unsigned_short_val = (unsigned short)(void *_Borrow _Nullable)p;
+    int int_val = (int)(void *_Borrow _Nullable)p;
+    unsigned int unsigned_int_val = (unsigned int)(void *_Borrow _Nullable)p;
+    long long_val = (long)(void *_Borrow _Nullable)p;
+    unsigned long unsigned_long_val = (unsigned long)(void *_Borrow _Nullable)p;
+    long long long_long_val = (long long)(void *_Borrow _Nullable)p;
+    unsigned long long unsigned_long_long_val = (unsigned long long)(void *_Borrow _Nullable)p;
+}
+
+void generic_instantiation() {
+    generic_explicit_cast((void *_Borrow) nullptr);
+    generic_explicit_cast((char *_Borrow) nullptr);
+    generic_explicit_cast((unsigned char *_Borrow) nullptr);
+    generic_explicit_cast((signed char *_Borrow) nullptr);
+    generic_explicit_cast((short *_Borrow) nullptr);
+    generic_explicit_cast((unsigned short *_Borrow) nullptr);
+    generic_explicit_cast((int *_Borrow) nullptr);
+    generic_explicit_cast((unsigned int *_Borrow) nullptr);
+    generic_explicit_cast((long *_Borrow) nullptr);
+    generic_explicit_cast((unsigned long *_Borrow) nullptr);
+    generic_explicit_cast((long long *_Borrow) nullptr);
+    generic_explicit_cast((unsigned long long *_Borrow) nullptr);
+
+    generic_explicit_multicast1((char *_Borrow) nullptr, (char) 0);
+    generic_explicit_multicast1((unsigned char *_Borrow) nullptr, (unsigned char) 0);
+    generic_explicit_multicast1((signed char *_Borrow) nullptr, (signed char) 0);
+    generic_explicit_multicast1((short *_Borrow) nullptr, (short) 0);
+    generic_explicit_multicast1((unsigned short *_Borrow) nullptr, (unsigned short) 0);
+    generic_explicit_multicast1((int *_Borrow) nullptr, (int) 0);
+    generic_explicit_multicast1((unsigned int *_Borrow) nullptr, (unsigned int) 0);
+    generic_explicit_multicast1((long *_Borrow) nullptr, (long) 0);
+    generic_explicit_multicast1((unsigned long *_Borrow) nullptr, (unsigned long) 0);
+    generic_explicit_multicast1((long long *_Borrow) nullptr, (long long) 0);
+    generic_explicit_multicast1((unsigned long long *_Borrow) nullptr, (unsigned long long) 0);
+
+    generic_explicit_multicast2((void *_Borrow) nullptr);
+    generic_explicit_multicast2((char *_Borrow) nullptr);
+    generic_explicit_multicast2((unsigned char *_Borrow) nullptr);
+    generic_explicit_multicast2((signed char *_Borrow) nullptr);
+    generic_explicit_multicast2((short *_Borrow) nullptr);
+    generic_explicit_multicast2((unsigned short *_Borrow) nullptr);
+    generic_explicit_multicast2((int *_Borrow) nullptr);
+    generic_explicit_multicast2((unsigned int *_Borrow) nullptr);
+    generic_explicit_multicast2((long *_Borrow) nullptr);
+    generic_explicit_multicast2((unsigned long *_Borrow) nullptr);
+    generic_explicit_multicast2((long long *_Borrow) nullptr);
+    generic_explicit_multicast2((unsigned long long *_Borrow) nullptr);
+}
