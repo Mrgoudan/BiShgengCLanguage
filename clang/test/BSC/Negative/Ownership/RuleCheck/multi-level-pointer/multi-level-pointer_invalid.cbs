@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -verify %s
+
+void write_error_1(int * _Owned * _Owned * _Owned a) {
+    ***a = 5;
+}// expected-error {{memory leak of value: `a`}} expected-error {{field memory leak of value: `a`, *a, **a are leak}}
+
+void write_error_2(_Owned int * _Owned * _Owned * _Owned a) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned b = a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned c = a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+}
+
+void write_error_3(_Owned int * _Owned * _Owned * _Owned a) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned b = a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned c = b; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    _Owned int * _Owned * _Owned * _Owned d = b; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+}

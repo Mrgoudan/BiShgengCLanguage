@@ -2,45 +2,40 @@
 
 void func1() {
     int num = 1;
-    int _Owned * a;         // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
-    a = (_Owned int *)&num;
-}
-void func2() {
-    int num = 1;
     int * _Owned a;
     a = (int * _Owned)&num;
-} 
+} // expected-error {{memory leak of value: `a`}}
+
+void func2(int * _Owned a) {
+    {
+        int * p = (int *)a;
+    }
+}
 
 void func3(int * _Owned a) {
     {
         int * p = (int *)a;
     }
+    {
+        int * _Owned q = (int * _Owned)a; // expected-error {{use of moved value: `a`}}
+    } // expected-error {{memory leak of value: `q`}}
 }
 
 void func4(int * _Owned a) {
     {
         int * p = (int *)a;
+        {
+            int * _Owned q = (int * _Owned)p;
+        } // expected-error {{memory leak of value: `q`}}
     }
-    {
-        int * _Owned q = (int * _Owned)a; 
-    } 
 }
 
 void func5(int * _Owned a) {
-    {
-        int * p = (int *)a;
-        {
-            int * _Owned q = (int * _Owned)p;
-        } 
-    }
-}
-
-void func6(int * _Owned a) {
     {
         int *p = (int *)a;
         {
             int * _Owned q = (int * _Owned)p;
             {}
-        } 
+        } // expected-error {{memory leak of value: `q`}}
     }
 }
