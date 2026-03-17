@@ -15,6 +15,7 @@
 #include "clang/AST/BSC/ExprBSC.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Linkage.h"
+#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 
@@ -34,6 +35,15 @@ bool Expr::isNullExpr(ASTContext &Ctx) const {
     return ICE->getSubExpr()->isNullExpr(Ctx);
   } else if (const ParenExpr *PE = dyn_cast<ParenExpr>(this)) {
     return PE->getSubExpr()->isNullExpr(Ctx);
+  } else if (const CallExpr *CE = dyn_cast<CallExpr>(this)) {
+    if (const FunctionDecl *FD = CE->getDirectCallee()) {
+      if (CE->getNumArgs() == 1) {
+        auto BuiltinID = FD->getBuiltinID();
+        if (BuiltinID == Builtin::BI__take_from_raw) {
+          return CE->getArg(0)->isNullExpr(Ctx);
+        }
+      }
+    }
   } else if (Optional<llvm::APSInt> I = this->getIntegerConstantExpr(Ctx)) {
     if (*I == 0)
       return true;

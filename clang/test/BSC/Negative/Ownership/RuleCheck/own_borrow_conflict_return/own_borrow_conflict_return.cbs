@@ -2,7 +2,8 @@
 
 int *_Owned _Borrow get_resource() { //#1
     static int resource = 42;
-    return __take_from_raw(&resource); // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned _Nullable' to 'int *_Owned _Borrow'}}
+    return (int *_Owned _Borrow)&resource; // expected-error {{cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer}}
+    // expected-error@-1 {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
 }
 
 // expected-error@#1 {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}

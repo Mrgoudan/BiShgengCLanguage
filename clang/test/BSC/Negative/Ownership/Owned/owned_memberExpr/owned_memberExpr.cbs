@@ -11,7 +11,7 @@ struct A {
 };
 
 int * _Owned foo(_Owned int* a) { // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
-    return a; // expected-error {{incompatible _Owned types, cannot cast '_Owned int *' to 'int *_Owned'}} // expected-warning {{address of stack memory associated with parameter 'a' returned}}
+    return (int* _Owned)a; // expected-error {{cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer}}
 }
 
 void test2() {

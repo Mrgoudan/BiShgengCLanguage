@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -verify %s
-// expected-no-diagnostics
 
 // Test that _Owned qualifiers are allowed on template type parameters.
 // Like C++ const qualifier, both "T _Owned" and "_Owned T" apply _Owned to the complete type T.
@@ -13,39 +12,31 @@
 // - If T is instantiated with a non-pointer type (e.g., int), semantic errors occur at usage
 //
 // This follows C++'s behavior where "const T" with T=int* gives "int* const", not "const int*"
-_Owned T Func_1<T>(T t)
+void Func_1<T>()
 {
-    T _Owned tmp = t;
-    return tmp;
-}
-
-void consume_owned(int* _Owned p) {
-    int* p2 = __move_to_raw(p);
-    return;
+    _Static_assert(__is_same(T _Owned, _Owned T), "fail");
+    T _Owned a; // expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+    (void)a;
 }
 
 void test() {
-    int a = 10;
-    int* _Owned p1 = __take_from_raw(&a);
-    consume_owned(p1);
+    Func_1<int*>();
     return;
 }
 
 
 void test2() {
-    int a = 10;
-    int* _Owned p1 = Func_1<int* _Owned>(__take_from_raw(&a));
-    consume_owned(p1);
-    return;
+    Func_1<int* _Owned>();
 }
 
 typedef int* _Owned ownedIntPtr;
 
 void test3() {
-    int a = 10;
-    int* _Owned p1 = Func_1<ownedIntPtr>(__take_from_raw(&a));
-    consume_owned(p1);
-    return;
+    Func_1<ownedIntPtr>();
+}
+
+void test4() {
+    Func_1<int>(); // expected-note {{in instantiation of function template specialization 'Func_1<int>' requested here}}
 }
 
 int main() {
