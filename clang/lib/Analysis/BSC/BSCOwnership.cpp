@@ -1273,7 +1273,10 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkSFieldUse(
                           VD->getNameAsString() + "." + fullFieldName));
   }
 
-  if (SAllOwnedFields[VD].count(fullFieldName) && !SOwnedOwnedFields[VD].count(fullFieldName) && diags.empty()) {
+  if (SAllOwnedFields[VD].count(fullFieldName) &&
+      !(SOwnedOwnedFields[VD].count(fullFieldName) ||
+       SNullOwnedFields[VD].count(fullFieldName)) &&
+      diags.empty()) {
     diags.push_back(
         OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfMoved,
                           VD->getNameAsString() + "." + fullFieldName));
