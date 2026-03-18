@@ -1,0 +1,14 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+struct SI { int a; int b; };
+void foo1() {
+  struct SI *arr[2] = {0};
+  (void)&_Mut arr[0]->a;
+  (void)&_Mut arr[1]->b;
+}
+
+int main() {
+  foo1();
+  return 0;
+}

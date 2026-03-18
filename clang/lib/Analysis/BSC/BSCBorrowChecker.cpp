@@ -491,33 +491,46 @@ void ActionExtract::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
 }
 
 void ActionExtract::VisitDeclRefExpr(DeclRefExpr *DRE) {
+  auto DREType = DRE->getType();
   if (op == LHS) {
     Dest = std::make_unique<Path>(DRE->getDecl()->getName().str(),
-                                  DRE->getType(), DRE->getLocation());
+                                  DREType, DRE->getLocation());
     if (isArrow) {
+      QualType PT;
+      if (DREType->isArrayType()) {
+        PT = DREType;
+      } else {
+        PT = DREType->getPointeeType();
+      }
       Dest = std::make_unique<Path>(std::move(Dest), "*",
-                                    DRE->getType()->getPointeeType(),
+                                    PT,
                                     DRE->getLocation());
     }
-    if (IsTrackedType(DRE->getType())) {
+    if (IsTrackedType(DREType)) {
       RNL = rc.getRegionName(DRE->getDecl());
     }
   } else if (op == RHS) {
     Src = std::make_unique<Path>(DRE->getDecl()->getName().str(),
-                                 DRE->getType(), DRE->getLocation());
+                                 DREType, DRE->getLocation());
     // Decl of DeclRefExpr is for reborrow constraints.
-    if (DRE->getType().isBorrowQualified()) {
+    if (DREType.isBorrowQualified()) {
       Src->setDecl(DRE->getDecl());
-    } else if (IsTrackedType(DRE->getType())) {
+    } else if (IsTrackedType(DREType)) {
       Src->setDecl(DRE->getDecl());
       D = DRE->getDecl();
     }
-    if (Kind == Action::Assign && IsTrackedType(DRE->getType())) {
+    if (Kind == Action::Assign && IsTrackedType(DREType)) {
       RNR = rc.getRegionName(DRE->getDecl());
     }
     if (isArrow) {
+      QualType PT;
+      if (DREType->isArrayType()) {
+        PT = DREType;
+      } else {
+        PT = DREType->getPointeeType();
+      }
       Src = std::make_unique<Path>(std::move(Src), "*",
-                                   DRE->getType()->getPointeeType(),
+                                   PT,
                                    DRE->getLocation());
     }
     if (pathDepth == 0)
