@@ -229,21 +229,6 @@ def err_ownership_owned_struct_not_properly_freed : Error<
   "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually">,
   InGroup<DestructOwnedStruct>;
 
-// BSC Borrow Checker errors.
-def err_borrow_live_longer_than_target_var : Error<
-  "borrow pointer variable '%0' lives longer than target variable">;
-def err_at_most_one_mut_borrow : Error<
-  "There should be at most one mutable borrow targeting to '%0' at the same time">;
-def err_return_value_borrow_local : Error<
-  "Return value cannot be a borrow from local variable '%0'">;
-def err_modify_after_be_borrow : Error<
-  "Can not modify '%0' because be borrowed">;
-def err_read_after_be_mut_borrow : Error<
-  "Can not read '%0' because be mut borrowed">;
-def note_previous_borrow : Note<"previous borrow is here">;
-def err_use_expired_borrow_var : Error<
-  "Can not use '%0' because expired">;
-
 // New BSC Borrow Checker errors.
 def err_borrow_assign_when_borrowed : Error<
   "cannot assign to `%0` because it is borrowed">,
