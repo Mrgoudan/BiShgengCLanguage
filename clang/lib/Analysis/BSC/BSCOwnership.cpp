@@ -16,7 +16,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang;
 using namespace std;
@@ -2440,16 +2439,8 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block, const CFGBlock *cur,
                                  Ownership::OwnershipStatus &status) {
   if (!block || !cur)
     return;
-  Stmt *TermStmt = const_cast<Stmt *>(cur->getTerminatorStmt());
-  if (!TermStmt) {
-    return;
-  }
-  const Expr *Cond = nullptr;
-  llvm::TypeSwitch<Stmt *>(TermStmt)
-      .Case<IfStmt>([&](IfStmt *IS) { Cond = IS->getCond(); })
-      .Case<WhileStmt>([&](WhileStmt *WS) { Cond = WS->getCond(); })
-      .Case<DoStmt>([&](DoStmt *DS) { Cond = DS->getCond(); })
-      .Default([&](Stmt *S) { Cond = nullptr; });
+  const Expr *Cond =
+      dyn_cast_or_null<Expr>(cur->getTerminatorCondition(false));
   if (!Cond) {
     return;
   }

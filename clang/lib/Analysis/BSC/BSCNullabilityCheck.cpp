@@ -874,14 +874,14 @@ NullabilityCheckImpl::runOnBlock(const CFGBlock *block, StatusVD statusVD,
 
   // Here we will handle the condition in IfStmt, or other branch stmts
   // which will change the nullability of VarDecl or FiledPath.
-  if (const Stmt *TS = block->getTerminatorStmt()) {
-    if (isa<IfStmt>(TS) || isa<WhileStmt>(TS) || isa<DoStmt>(TS) ||
-        isa<BinaryOperator>(TS)) {
-      const CFGElement &elem = *(block->rbegin());
-      if (elem.getAs<CFGStmt>()) {
-        const Stmt *S = elem.castAs<CFGStmt>().getStmt();
-        TF.PassConditionStatusToSuccBlocks(const_cast<Stmt *>(S));
-      }
+  // Limit block's successor to 2 to ensure compatibility of existing 
+  // implementation of PassConditionStatusToSuccBlocks, which assumes the first
+  // successor is true branch and the second successor is false branch.
+  if (block->getTerminatorCondition() && block->succ_size() == 2) {
+    const CFGElement &elem = *(block->rbegin());
+    if (elem.getAs<CFGStmt>()) {
+      const Stmt *S = elem.castAs<CFGStmt>().getStmt();
+      TF.PassConditionStatusToSuccBlocks(const_cast<Stmt *>(S));
     }
   }
   return std::make_pair(statusVD, statusFP);

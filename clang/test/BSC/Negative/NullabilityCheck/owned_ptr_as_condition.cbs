@@ -1,0 +1,91 @@
+// RUN: %clang_cc1 -verify %s
+
+_Safe void consume(int *_Owned _Nullable);
+
+struct Foo {
+    int *_Owned _Nullable p;
+};
+
+_Safe void reference(int *_Owned _Nullable p) {
+    if (p == nullptr) {
+        consume(p);
+    }
+} // expected-error {{memory leak of value: `p`}}
+
+_Safe void reference_not(int *_Owned _Nullable p, int x) {
+    if (p != nullptr) {
+        ++x;
+    } else {
+        consume(p);
+    }
+} // expected-error {{memory leak of value: `p`}}
+
+
+_Safe void logical_not(int *_Owned _Nullable p) {
+    if (!p) {
+        consume(p);
+    }
+} // expected-error {{memory leak of value: `p`}}
+
+_Safe void basic(int *_Owned _Nullable p, int x) {
+    if (p) {
+        ++x;
+    } else {
+        consume(p);
+    }
+} // expected-error {{memory leak of value: `p`}}
+
+_Safe void member_not(struct Foo foo) {
+    if (!foo.p) {
+        consume(foo.p); // expected-error {{use of moved value: `foo.p`}}
+    }
+} // expected-error {{field memory leak of value: `foo`, foo.p is leak}}
+
+_Safe void member(struct Foo foo, int x) {
+    if (foo.p) {
+        ++x;
+    } else {
+        consume(foo.p); // expected-error {{use of moved value: `foo.p`}}
+    }
+} // expected-error {{field memory leak of value: `foo`, foo.p is leak}}
+
+_Safe void ternary(int *_Owned _Nullable p, int x) {
+    x = (nullptr == p) ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (nullptr == p) ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p == nullptr) ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p == nullptr) ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (nullptr != p) ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (nullptr != p) ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p != nullptr) ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p != nullptr) ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    
+    x = !p ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = !p ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = !p ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = !p ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    consume(p);
+}
+
+_Safe void ternary_borrow(int *_Borrow _Nullable p, int x) {
+    x = (nullptr == p) ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (nullptr == p) ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p == nullptr) ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p == nullptr) ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (nullptr != p) ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (nullptr != p) ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p != nullptr) ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = (p != nullptr) ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    
+    x = !p ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = !p ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = !p ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = !p ? (*p += 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p = 1); // expected-error {{nullable pointer cannot be dereferenced}}
+    x = p ? 0 : (*p += 1); // expected-error {{nullable pointer cannot be dereferenced}}
+}

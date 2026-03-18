@@ -48,3 +48,44 @@ _Safe void member_not(struct Foo foo, int x) {
         consume(foo.p);
     }
 }
+
+_Safe void ternary(int *_Owned _Nullable p, int x) {
+    x = (nullptr != p) ? (*p = 1) : 0;
+    x = (nullptr != p) ? (*p += 1) : 0;
+    x = (p != nullptr) ? (*p = 1) : 0;
+    x = (p != nullptr) ? (*p += 1) : 0;
+    x = (nullptr == p) ? 0 : (*p = 1);
+    x = (nullptr == p) ? 0 : (*p += 1);
+    x = (p == nullptr) ? 0 : (*p = 1);
+    x = (p == nullptr) ? 0 : (*p += 1);
+    
+    x = p ? (*p = 1) : 0;
+    x = p ? (*p += 1) : 0;
+    x = p ? (*p = 1) : 0;
+    x = p ? (*p += 1) : 0;
+    x = !p ? 0 : (*p = 1);
+    x = !p ? 0 : (*p += 1);
+    x = !p ? 0 : (*p = 1);
+    x = !p ? 0 : (*p += 1);
+    consume(p);
+}
+
+_Safe void ternary_borrow(int *_Borrow _Nullable p, int x) {
+    x = (nullptr != p) ? (*p = 1) : 0;
+    x = (nullptr != p) ? (*p += 1) : 0;
+    x = (p != nullptr) ? (*p = 1) : 0;
+    x = (p != nullptr) ? (*p += 1) : 0;
+    x = (nullptr == p) ? 0 : (*p = 1);
+    x = (nullptr == p) ? 0 : (*p += 1);
+    x = (p == nullptr) ? 0 : (*p = 1);
+    x = (p == nullptr) ? 0 : (*p += 1);
+    
+    x = p ? (*p = 1) : 0;
+    x = p ? (*p += 1) : 0;
+    x = p ? (*p = 1) : 0;
+    x = p ? (*p += 1) : 0;
+    x = !p ? 0 : (*p = 1);
+    x = !p ? 0 : (*p += 1);
+    x = !p ? 0 : (*p = 1);
+    x = !p ? 0 : (*p += 1);
+}
