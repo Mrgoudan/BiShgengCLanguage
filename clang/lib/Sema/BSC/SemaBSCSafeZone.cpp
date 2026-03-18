@@ -13,7 +13,6 @@
 #if ENABLE_BSC
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -712,31 +711,6 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
   return SrcCanPtr == DstCanPtr;
 }
 
-bool IsExplicitOwnershipTransferBuiltin(const Expr *E, unsigned &BuiltinID) {
-  const Expr *Stripped = E ? E->IgnoreParenImpCasts() : nullptr;
-  if (!Stripped)
-    return false;
-
-  if (const auto *CE = dyn_cast<CallExpr>(Stripped)) {
-    const FunctionDecl *FD = CE->getDirectCallee();
-    if (!FD || CE->getNumArgs() != 1)
-      return false;
-    BuiltinID = FD->getBuiltinID();
-    return BuiltinID == Builtin::BI__move_to_raw ||
-           BuiltinID == Builtin::BI__take_from_raw;
-  }
-
-  // During error recovery the initializer may be wrapped in a RecoveryExpr.
-  // Keep walking subexpressions to find the builtin call.
-  for (const Stmt *Child : Stripped->children()) {
-    if (const auto *ChildExpr = dyn_cast_or_null<Expr>(Child)) {
-      if (IsExplicitOwnershipTransferBuiltin(ChildExpr, BuiltinID))
-        return true;
-    }
-  }
-  return false;
-}
-
 } // namespace
 
 bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
@@ -781,15 +755,6 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   if (DestType->isTraitPointerType() && !SrcType->isTraitPointerType()) {
     return true;
   }
-
-  // Ownership transfer via explicit builtins should not be blocked by generic
-  // safe-zone pointer conversion checks. Ownership/nullability compatibility is
-  // validated in dedicated semantic checks.
-  unsigned TransferBuiltinID = 0;
-  if (DestType->isPointerType() &&
-      IsExplicitOwnershipTransferBuiltin(E, TransferBuiltinID))
-    return true;
-
   if (SrcType->isPointerType() && DestType->isPointerType()) {
     QualType SrcCanType = SrcType.getCanonicalType();
     QualType DestCanType = DestType.getCanonicalType();

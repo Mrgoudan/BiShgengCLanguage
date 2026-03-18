@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -verify %s
+
+_Safe int *get_raw(void);
+_Safe int *_Owned get_owned(void);
+
+_Safe void test_builtin_forbidden_in_safe_zone(void) {
+  int *_Owned p = get_owned();
+  int *raw = get_raw();
+  int *x = __move_to_raw(p);         // expected-error {{__move_to_raw is forbidden in the safe zone}}
+  int *_Owned y = __take_from_raw(raw); // expected-error {{__take_from_raw is forbidden in the safe zone}}
+  (void)x;
+  (void)y;
+}
+
+_Safe void test_no_recursive_bypass(void) {
+  int *raw = get_raw();
+  int *_Owned p = (_Unsafe(__take_from_raw(raw)), raw); // expected-warning {{left operand of comma operator has no effect}} expected-error {{invalid operands to binary expression}} expected-error {{conversion from type 'int *' to 'int *_Owned' is forbidden in the safe zone}}
+  (void)p;
+}

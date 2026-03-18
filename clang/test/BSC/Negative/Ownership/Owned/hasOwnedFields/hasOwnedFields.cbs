@@ -33,9 +33,9 @@ struct S2 {
 
 _Safe struct S2* _Owned foo(struct S1* _Owned ptr) {
   _Unsafe {
-    struct S1 * p1 = (struct S1*)ptr;
+    struct S1 * p1 = __move_to_raw(ptr);
     struct S2 * p2 = (struct S2*)p1;
-    return (struct S2 * _Owned)p2;
+    return __take_from_raw(p2);
   }
 }
 

@@ -21,6 +21,11 @@
 #include "clang/Sema/Sema.h"
 
 namespace clang {
+/// Returns the default nullability semantics for BSC pointers:
+/// explicit _Nonnull/_Nullable if present, otherwise owned/borrow -> nonnull
+/// and raw pointer -> nullable.
+NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx);
+
 enum NullabilityCheckDiagKind {
   NonnullAssignedByNullable,
   PassNullableArgument,

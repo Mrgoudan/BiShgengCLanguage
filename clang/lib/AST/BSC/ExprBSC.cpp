@@ -39,7 +39,8 @@ bool Expr::isNullExpr(ASTContext &Ctx) const {
     if (const FunctionDecl *FD = CE->getDirectCallee()) {
       if (CE->getNumArgs() == 1) {
         auto BuiltinID = FD->getBuiltinID();
-        if (BuiltinID == Builtin::BI__take_from_raw) {
+        if (BuiltinID == Builtin::BI__take_from_raw ||
+            BuiltinID == Builtin::BI__move_to_raw) {
           return CE->getArg(0)->isNullExpr(Ctx);
         }
       }

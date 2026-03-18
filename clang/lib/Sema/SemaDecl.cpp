@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #if ENABLE_BSC
+#include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
 #include "clang/AST/BSC/DeclBSC.h"
 #endif
 #include "clang/AST/CXXInheritance.h"
@@ -14522,11 +14523,6 @@ void Sema::CheckStaticLocalForDllExport(VarDecl *VD) {
 }
 
 #if ENABLE_BSC
-// checking tool in BSCNullabilityCheck.cpp
-namespace clang{
-NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx);
-} // namespace clang
-
 const NamedDecl *Sema::FindNonnull(QualType T,  const NamedDecl *D) {
   if (getDefNullability(T, Context) == NullabilityKind::NonNull)
     return D;

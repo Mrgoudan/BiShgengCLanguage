@@ -2383,8 +2383,8 @@ _Safe int main(void) {
 基本类型不一致时，只允许`void * _Owned`类型与`T * _Owned`类型之间的相互强制转换；
 
     **显式所有权转移接口**（内置函数）：
-    - `__move_to_raw(p)`：将 `_Owned` 指针 `p` 转为裸指针并转移所有权，返回的裸指针与入参具有相同的 Nullability，返回类型不保留指针本身的 `const`/`volatile`/`restrict`。
-    - `__take_from_raw(p)`：将裸指针 `p` 转为 `_Owned` 指针并取得其所指对象的所有权，返回的 `_Owned` 指针与入参具有相同的 Nullability，返回类型不保留指针本身的 `const`/`volatile`/`restrict`。
+    - `__move_to_raw(p)`：将 `_Owned` 指针 `p` 转为裸指针并转移所有权，返回的裸指针与入参具有相同的 Nullability。
+    - `__take_from_raw(p)`：将裸指针 `p` 转为 `_Owned` 指针并取得其所指对象的所有权，返回的 `_Owned` 指针与入参具有相同的 Nullability。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2416,6 +2416,21 @@ int main() {
   foo(raw_ptr); // 使用 raw_ptr
   safe_free((void *_Owned)p);
   return 0;
+}
+```
+
+```c
+// _Owned 与裸指针转换函数保留入参指针的 Nullability
+#include "bishengc_safety.hbs"
+int main() {
+  int * p1 = malloc(sizeof(int));
+  if (p1 != nullptr) {
+    int * _Owned p2 = __take_from_raw(p1); // p1 判非空后 __take_from_raw(p1) 可以赋值给非空的 p2
+    safe_free((void*_Owned)p2);
+  }
+  p1 = malloc(sizeof(int));
+  int * _Owned p3 = __take_from_raw(p1); // p1 未判空，空指针检查启用时此处报错
+  safe_free((void*_Owned)p3);
 }
 ```
 

@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -verify %s
+
+void test_move_to_raw_bad_type(int *raw, int v, int *_Borrow b) {
+  __move_to_raw(raw); // expected-error {{argument must be an _Owned pointer type}}
+  __move_to_raw(v);   // expected-error {{argument must be an _Owned pointer type}}
+  __move_to_raw(b);   // expected-error {{argument must be an _Owned pointer type}}
+}
+
+void test_take_from_raw_bad_type(int *_Owned o, int v, int *_Borrow b) {
+  __take_from_raw(o); // expected-error {{argument must be a raw pointer type}}
+  __take_from_raw(v); // expected-error {{argument must be a raw pointer type}}
+  __take_from_raw(b); // expected-error {{argument must be a raw pointer type}}
+}
+
+void test_move_to_raw_bad_arg_count(int *_Owned o1, int *_Owned o2) {
+  __move_to_raw();       // expected-error {{too few arguments to function call, expected 1, have 0}}
+  __move_to_raw(o1, o2); // expected-error {{too many arguments to function call, expected 1, have 2}}
+}
+
+void test_take_from_raw_bad_arg_count(int *p1, int *p2) {
+  __take_from_raw();      // expected-error {{too few arguments to function call, expected 1, have 0}}
+  __take_from_raw(p1, p2); // expected-error {{too many arguments to function call, expected 1, have 2}}
+}

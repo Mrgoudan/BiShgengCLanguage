@@ -36,6 +36,9 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
+#if ENABLE_BSC
+#include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
+#endif
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
@@ -149,21 +152,11 @@ static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
 }
 
 #if ENABLE_BSC
-static NullabilityKind getBSCEffectiveNullability(QualType QT, ASTContext &Ctx) {
-  Optional<NullabilityKind> Kind = QT->getNullability(Ctx);
-  if (Kind) {
-    if (*Kind == NullabilityKind::NullableResult)
-      return NullabilityKind::Nullable;
-    return *Kind;
-  }
-
-  QualType CanQT = QT.getCanonicalType();
-  if (!CanQT->isPointerType())
-    return NullabilityKind::Unspecified;
-
-  if (CanQT.isOwnedQualified() || CanQT.isBorrowQualified())
-    return NullabilityKind::NonNull;
-  return NullabilityKind::Nullable;
+static NullabilityKind getBSCDefNullability(QualType QT, ASTContext &Ctx) {
+  Optional<NullabilityKind> Explicit = QT->getNullability(Ctx);
+  if (Explicit && *Explicit == NullabilityKind::NullableResult)
+    return NullabilityKind::Nullable;
+  return getDefNullability(QT, Ctx);
 }
 
 static QualType applyNullabilityToType(QualType QT, NullabilityKind NK,
@@ -2110,6 +2103,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
 #if ENABLE_BSC
   case Builtin::BI__move_to_raw: {
+    if (getLangOpts().BSC && IsInSafeZone()) {
+      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
+                       << "__move_to_raw");
+    }
     if (checkArgCount(*this, TheCall, 1))
       return ExprError();
     QualType ArgTy = TheCall->getArg(0)->getType();
@@ -2118,19 +2115,21 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                             diag::err_bsc_move_to_raw_not_owned)
                        << ArgTy);
     }
-    NullabilityKind SrcNullability =
-        getBSCEffectiveNullability(ArgTy, Context);
+    NullabilityKind SrcNullability = getBSCDefNullability(ArgTy, Context);
     QualType ResultTy = ArgTy.getUnqualifiedType();
     ResultTy.removeLocalOwned();
     ResultTy.removeLocalBorrow();
-    NullabilityKind DstNullability =
-        getBSCEffectiveNullability(ResultTy, Context);
+    NullabilityKind DstNullability = getBSCDefNullability(ResultTy, Context);
     if (SrcNullability != DstNullability)
       ResultTy = applyNullabilityToType(ResultTy, SrcNullability, Context);
     TheCall->setType(ResultTy);
     break;
   }
   case Builtin::BI__take_from_raw: {
+    if (getLangOpts().BSC && IsInSafeZone()) {
+      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
+                       << "__take_from_raw");
+    }
     if (checkArgCount(*this, TheCall, 1))
       return ExprError();
     QualType ArgTy = TheCall->getArg(0)->getType();
@@ -2140,14 +2139,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                             diag::err_bsc_take_from_raw_not_raw)
                        << ArgTy);
     }
-    NullabilityKind SrcNullability =
-        getBSCEffectiveNullability(ArgTy, Context);
+    NullabilityKind SrcNullability = getBSCDefNullability(ArgTy, Context);
     QualType ResultTy = ArgTy.getUnqualifiedType();
     ResultTy.removeLocalOwned();
     ResultTy.removeLocalBorrow();
     ResultTy = ResultTy.withOwned();
-    NullabilityKind DstNullability =
-        getBSCEffectiveNullability(ResultTy, Context);
+    NullabilityKind DstNullability = getBSCDefNullability(ResultTy, Context);
     if (SrcNullability != DstNullability)
       ResultTy = applyNullabilityToType(ResultTy, SrcNullability, Context);
     TheCall->setType(ResultTy);
