@@ -499,13 +499,15 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   //   If there are fewer initializer-clauses in the list than there are
   //   members in the aggregate, then each member not explicitly initialized
   //   ...
-  bool EmptyInitList =
-      (SemaRef.getLangOpts().CPlusPlus11
-      #if ENABLE_BSC
-      || SemaRef.getLangOpts().BSC
-      #endif
-      ) &&
+  bool EmptyInitList = SemaRef.getLangOpts().CPlusPlus11 &&
       Entity.getType()->getBaseElementTypeUnsafe()->isRecordType();
+#if ENABLE_BSC
+  if (SemaRef.getLangOpts().BSC) {
+    auto* BaseTy = Entity.getType()->getBaseElementTypeUnsafe();
+    EmptyInitList =
+        BaseTy->isBSCTemplateRecordType() || BaseTy->isOwnedStructureType();
+  }
+#endif
   if (EmptyInitList) {
     // C++1y / DR1070:
     //   shall be initialized [...] from an empty initializer list.

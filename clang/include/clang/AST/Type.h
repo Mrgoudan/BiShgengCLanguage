@@ -2393,6 +2393,7 @@ public:
   #if ENABLE_BSC
   /// Check if the type is the BSC future type.
   bool isBSCFutureType() const;
+  bool isBSCTemplateRecordType() const;
   #endif
 
   /// Return the implicit lifetime for this type, which must not be dependent.

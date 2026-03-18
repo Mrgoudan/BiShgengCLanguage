@@ -33,6 +33,7 @@ void test1(){
 void test2(){
     B b ={};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
     A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+    A c = {};// expected-error {{`c.p` is a _Nonnull pointer and must be properly initialized.}}  expected-error {{`c.b.p` is a _Nonnull pointer and must be properly initialized.}}
 }
 
 void test3(){

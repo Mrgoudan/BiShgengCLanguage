@@ -129,10 +129,9 @@ public:
   void SetCFGBlocksByExpr(Expr *PtrE, const CFGBlock *NonNullBlock,
                           const CFGBlock *NullableBlock);
   void PassConditionStatusToSuccBlocks(Stmt *Cond);
-  void HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
+  Expr *NormalizeInitExpr(Expr *E);
+  void HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                               InitListExpr *InitList, std::string FieldPrefix);
-  void HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
-                             InitListExpr *InitList, std::string FieldPrefix);
   void HandleArrayInit(DeclStmt *DS, VarDecl *VD, const ArrayType *AT,
                        InitListExpr *ILE);
 };
@@ -392,11 +391,8 @@ void TransferFunctions::HandleRecordInit(DeclStmt *DS, VarDecl *VD,
       }
       break;
     }
-    if (auto InitListE = dyn_cast<InitListExpr>(Init)) {
-      if (RD->isStruct())
-        HandleNestedStructInit(DS, VD, RD, InitListE, "");
-      if (RD->isUnion())
-        HandleNestedUnionInit(DS, VD, RD, InitListE, "");
+    if (auto *InitListE = dyn_cast<InitListExpr>(Init)) {
+      HandleNestedRecordInit(DS, VD, RD, InitListE, "");
     }
   }
 }
@@ -446,10 +442,7 @@ void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
                    dyn_cast<RecordType>(ElemTy.getCanonicalType())) {
       if (RecordDecl *NestedRD = NestedRecTy->getDecl()) {
         if (auto *NestedILE = dyn_cast<InitListExpr>(ElemInit)) {
-          if (NestedRD->isStruct())
-            HandleNestedStructInit(DS, VD, NestedRD, NestedILE, "");
-          if (NestedRD->isUnion())
-            HandleNestedUnionInit(DS, VD, NestedRD, NestedILE, "");
+          HandleNestedRecordInit(DS, VD, NestedRD, NestedILE, "");
         }
       }
     } else if (auto *NestedAT = ElemTy->getAsArrayTypeUnsafe()) {
@@ -471,99 +464,71 @@ void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
   }
 }
 
-void TransferFunctions::HandleNestedStructInit(DeclStmt *DS, VarDecl *TopVD,
-                                               RecordDecl *RD,
-                                               InitListExpr *InitList,
-                                               std::string FieldPrefix) {
-  if (!RD->isStruct())
-    return;
-  Expr **Inits = InitList->getInits();
-  for (FieldDecl *FD : RD->fields()) {
-    unsigned idx = FD->getFieldIndex();
-    std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
-
-    Expr *fieldInit = Inits[idx];
-
-    // Skip all ParenExpr/ImplicitCastExpr
-    while (true) {
-      if (auto *CSE = dyn_cast<CStyleCastExpr>(fieldInit)) {
-        fieldInit = CSE->getSubExpr()->IgnoreParenImpCasts();
-        continue;
-      }
-      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(fieldInit)) {
-        if (Expr *Sub = CLE->getInitializer()) {
-          fieldInit = Sub->IgnoreParenImpCasts();
-          continue;
-        }
-      }
-      break;
-    }
-
-    if (FD->getType()->isPointerType()) {
-      HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
-    } else if (auto nestedRecTy =
-                   dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
-      if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
-        if (auto nestedInitList = dyn_cast<InitListExpr>(fieldInit)) {
-          if (nestedRD->isStruct())
-            HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
-                      fullFieldPath);
-          if (nestedRD->isUnion())
-            HandleNestedUnionInit(DS, TopVD, nestedRD, nestedInitList,
-                                  fullFieldPath);
-        }
-      }
-    }
-  }
-}
-
-void TransferFunctions::HandleNestedUnionInit(DeclStmt *DS, VarDecl *TopVD,
-                                              RecordDecl *RD,
-                                              InitListExpr *InitList,
-                                              std::string FieldPrefix) {
-  if (!RD->isUnion())
-    return;
-  FieldDecl *FD = *RD->field_begin();
-  std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
-  if (InitList->inits().empty()) {
-    if (!FD->getType()->isPointerType())
-      return;
-    if (!ShouldReportNullPtrError(DS))
-      return;
-    if (getDefNullability(FD->getType(), Ctx) != NullabilityKind::NonNull)
-      return;
-    NullabilityCheckDiagInfo DI(TopVD->getLocation(), NonnullInitByDefault,
-                                TopVD->getNameAsString() + fullFieldPath);
-    Reporter.addDiagInfo(DI);
-    return;
-  }
-
-  Expr *fieldInit = InitList->getInit(0);
+Expr *TransferFunctions::NormalizeInitExpr(Expr *E) {
+  if (!E)
+    return nullptr;
   while (true) {
-    if (auto *CSE = dyn_cast<CStyleCastExpr>(fieldInit)) {
-      fieldInit = CSE->getSubExpr()->IgnoreParenImpCasts();
+    if (auto *CSE = dyn_cast<CStyleCastExpr>(E)) {
+      E = CSE->getSubExpr()->IgnoreParenImpCasts();
       continue;
     }
-    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(fieldInit)) {
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(E)) {
       if (Expr *Sub = CLE->getInitializer()) {
-        fieldInit = Sub->IgnoreParenImpCasts();
+        E = Sub->IgnoreParenImpCasts();
         continue;
       }
     }
     break;
   }
-  if (FD->getType()->isPointerType()) {
-    HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
-  } else if (auto nestedRecTy =
-                 dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
-    if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
-      if (auto nestedInitList = dyn_cast<InitListExpr>(fieldInit)) {
-        if (nestedRD->isStruct())
-          HandleNestedStructInit(DS, TopVD, nestedRD, nestedInitList,
+  return E;
+}
+
+void TransferFunctions::HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD,
+                                               RecordDecl *RD,
+                                               InitListExpr *InitList,
+                                               std::string FieldPrefix) {
+  if (!RD || RD->field_empty())
+    return;
+  std::vector<FieldDecl *> FieldsToProcess;
+  if (RD->isUnion()) {
+    if (!RD->field_empty())
+      FieldsToProcess.push_back(*RD->field_begin());
+  } else if (RD->isStruct()) {
+    for (FieldDecl *FD : RD->fields())
+      FieldsToProcess.push_back(FD);
+  }
+  for (FieldDecl *FD : FieldsToProcess) {
+    std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
+
+    Expr *fieldInit = nullptr;
+    if (InitList && !InitList->inits().empty()) {
+      unsigned idx = RD->isStruct() ? FD->getFieldIndex() : 0;
+      fieldInit = InitList->getInit(idx);
+    }
+    // normalize init (ignore casts, compound literal)
+    fieldInit = NormalizeInitExpr(fieldInit);
+    if (FD->getType()->isPointerType()) {
+      if (!fieldInit) {
+        // handle ImplicitValueInitExpr / empty init
+        if (!ShouldReportNullPtrError(DS))
+          continue;
+        if (getDefNullability(FD->getType(), Ctx) != NullabilityKind::NonNull)
+          continue;
+        NullabilityCheckDiagInfo DI(TopVD->getLocation(), NonnullInitByDefault,
+                                    TopVD->getNameAsString() + fullFieldPath);
+        Reporter.addDiagInfo(DI);
+        continue;
+      }
+      HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
+    } else if (auto *nestedRecTy =
+                   dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
+      if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
+        if (!fieldInit || isa<ImplicitValueInitExpr>(fieldInit) ||
+            isa<InitListExpr>(fieldInit)) {
+          HandleNestedRecordInit(DS, TopVD, nestedRD,
+                                 dyn_cast_or_null<InitListExpr>(fieldInit),
                                  fullFieldPath);
-        if (nestedRD->isUnion())
-          HandleNestedUnionInit(DS, TopVD, nestedRD, nestedInitList,
-                                fullFieldPath);
+        }
       }
     }
   }

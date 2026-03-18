@@ -1,0 +1,79 @@
+// RUN: %clang_cc1 -ast-dump %s \
+// RUN: | FileCheck --strict-whitespace %s
+
+void case1() {
+  struct foo {
+    int x;
+    int y;
+  };
+  struct bar {
+    struct foo a;
+    int *p;
+  };
+  struct bar b = { 0};
+}
+
+void case2() {
+  union UIn {
+    int * q;
+    int * p;
+  };
+  union UOut {
+    union UIn u;
+  };
+
+  union UOut u1 = {};
+}
+
+void case3() {
+  struct SIn {
+    int * p;
+  };
+  union UOut {
+    struct SIn s;
+  };
+
+  union UOut u1 = {};
+}
+
+void case4() {
+  union UIn {
+    int * p;
+  };
+  struct SOut {
+    union UIn u;
+  };
+
+  struct SOut s1 = {};
+  struct SOut s2 = {{}};
+}
+
+
+// CHECK: |-FunctionDecl 0x{{.*}} case1 'void (void)'
+// CHECK: |   `-DeclStmt 0x{{.*}}
+// CHECK-NEXT: |     `-VarDecl 0x{{.*}} 'struct bar':'struct bar' cinit
+// CHECK-NEXT: |       `-InitListExpr 0x{{.*}} 'struct bar':'struct bar'
+// CHECK-NEXT: |         |-InitListExpr 0x{{.*}} 'struct foo':'struct foo'
+// CHECK-NEXT: |         | |-IntegerLiteral 0x{{.*}} 'int' 0
+// CHECK-NEXT: |         | `-ImplicitValueInitExpr 0x{{.*}} 'int'
+// CHECK-NEXT: |         `-ImplicitValueInitExpr 0x{{.*}} 'int *'
+
+// CHECK: |-FunctionDecl 0x{{.*}} case2 'void (void)'
+// CHECK: |   `-DeclStmt 0x{{.*}}
+// CHECK-NEXT: |     `-VarDecl 0x{{.*}} u1 'union UOut':'union UOut' cinit
+// CHECK-NEXT: |       `-InitListExpr 0x{{.*}} 'union UOut':'union UOut' field Field 0x{{.*}} 'u' 'union UIn':'union UIn'
+
+// CHECK: |-FunctionDecl 0x{{.*}} case3 'void (void)'
+// CHECK: |   `-DeclStmt 0x{{.*}}
+// CHECK-NEXT: |     `-VarDecl 0x{{.*}} u1 'union UOut':'union UOut' cinit
+// CHECK-NEXT: |       `-InitListExpr 0x{{.*}} 'union UOut':'union UOut' field Field 0x{{.*}} 's' 'struct SIn':'struct SIn'
+
+// CHECK: `-FunctionDecl 0x{{.*}} case4 'void (void)'
+// CHECK:     |-DeclStmt 0x{{.*}}
+// CHECK:     | `-VarDecl 0x{{.*}} s1 'struct SOut':'struct SOut' cinit
+// CHECK-NEXT:     |   `-InitListExpr 0x{{.*}} 'struct SOut':'struct SOut'
+// CHECK-NEXT:     |     `-ImplicitValueInitExpr 0x{{.*}} 'union UIn':'union UIn'
+// CHECK:     `-DeclStmt 0x{{.*}}
+// CHECK:       `-VarDecl 0x{{.*}} s2 'struct SOut':'struct SOut' cinit
+// CHECK-NEXT:         `-InitListExpr 0x{{.*}} 'struct SOut':'struct SOut'
+// CHECK-NEXT:           `-InitListExpr 0x{{.*}} 'union UIn':'union UIn' field Field 0x{{.*}} 'p' 'int *'

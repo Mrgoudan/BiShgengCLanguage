@@ -487,6 +487,14 @@ bool Type::isBSCFutureType() const {
   return false;
 }
 
+bool Type::isBSCTemplateRecordType() const {
+  if (const auto *RT = getAs<RecordType>()) {
+    RecordDecl *RD = RT->getAsRecordDecl();
+    return isa<ClassTemplateSpecializationDecl>(RD);
+  }
+  return false;
+}
+
 ConditionalType::ConditionalType(llvm::Optional<bool> CondRes, Expr *CondE,
                                  QualType T1, QualType T2, QualType can)
     : Type(Conditional, can,
