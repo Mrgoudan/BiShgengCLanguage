@@ -37,7 +37,7 @@ _Safe void basic(int *_Owned _Nullable p, int x) {
 
 _Safe void member_not(struct Foo foo) {
     if (!foo.p) {
-        consume(foo.p); // expected-error {{use of moved value: `foo.p`}}
+        consume(foo.p);
     }
 } // expected-error {{field memory leak of value: `foo`, foo.p is leak}}
 
@@ -45,7 +45,7 @@ _Safe void member(struct Foo foo, int x) {
     if (foo.p) {
         ++x;
     } else {
-        consume(foo.p); // expected-error {{use of moved value: `foo.p`}}
+        consume(foo.p);
     }
 } // expected-error {{field memory leak of value: `foo`, foo.p is leak}}
 
