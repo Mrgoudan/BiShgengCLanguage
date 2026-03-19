@@ -2904,12 +2904,26 @@ void CastOperation::CheckCStyleCast() {
         }
       }
     }
-    if (const auto *LHSPtrType = DestType->getAs<PointerType>()) {
-      if (const auto *RHSPtrType = SrcExpr.get()->getType()->getAs<PointerType>()) {
-        if (LHSPtrType->hasOwnedFields() || RHSPtrType->hasOwnedFields()) {
-          if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {
-            SrcExpr = ExprError();
-            return;
+    {
+      auto hasOwnedInPtrChain = [](const PointerType *PT) -> bool {
+        QualType Pointee = PT->getPointeeType();
+        while (true) {
+          if (Pointee.isOwnedQualified())
+            return true;
+          if (const auto *InnerPT = Pointee->getAs<PointerType>()) {
+            Pointee = InnerPT->getPointeeType();
+          } else {
+            return false;
+          }
+        }
+      };
+      if (const auto *LHSPtrType = DestType->getAs<PointerType>()) {
+        if (const auto *RHSPtrType = SrcExpr.get()->getType()->getAs<PointerType>()) {
+          if (hasOwnedInPtrChain(LHSPtrType) || hasOwnedInPtrChain(RHSPtrType)) {
+            if (!Self.CheckOwnedQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {
+              SrcExpr = ExprError();
+              return;
+            }
           }
         }
       }

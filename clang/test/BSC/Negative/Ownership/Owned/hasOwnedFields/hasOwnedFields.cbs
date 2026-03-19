@@ -20,3 +20,22 @@ struct B {
 
 struct A a;
 
+// 3. C-style cast between raw pointers to different struct types
+//    where one struct has _Owned member fields should be allowed.
+struct S1 {
+  int v;
+};
+
+struct S2 {
+  int v;
+  void * _Owned _Nullable p;
+};
+
+_Safe struct S2* _Owned foo(struct S1* _Owned ptr) {
+  _Unsafe {
+    struct S1 * p1 = (struct S1*)ptr;
+    struct S2 * p2 = (struct S2*)p1;
+    return (struct S2 * _Owned)p2;
+  }
+}
+
