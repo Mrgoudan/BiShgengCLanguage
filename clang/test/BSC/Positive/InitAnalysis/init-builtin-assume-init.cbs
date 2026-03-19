@@ -1,0 +1,78 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+// expected-no-diagnostics
+
+// Test __builtin_assume_initialized: marks a variable as initialized at
+// this program point (path-sensitive). Uses &_Mut in _Safe zones.
+
+_Safe void use_int(int x);
+
+struct Pair { int a; int b; };
+_Safe void use_pair(struct Pair p);
+
+// Basic: scalar.
+_Safe void test_basic(void) {
+    int x;
+    __builtin_assume_initialized(&_Mut x);
+    use_int(x); // ok
+}
+
+// Struct: all fields treated as initialized.
+_Safe void test_struct(void) {
+    struct Pair s;
+    __builtin_assume_initialized(&_Mut s);
+    use_pair(s); // ok
+    use_int(s.a); // ok
+    use_int(s.b); // ok
+}
+
+// In branch: both paths call builtin → OK at merge.
+_Safe void test_branch_both(int cond) {
+    int x;
+    if (cond) {
+        __builtin_assume_initialized(&_Mut x);
+    } else {
+        __builtin_assume_initialized(&_Mut x);
+    }
+    use_int(x); // ok — initialized on both paths
+}
+
+// After assignment + builtin: still OK.
+_Safe void test_after_assign(void) {
+    int x;
+    x = 10;
+    __builtin_assume_initialized(&_Mut x);
+    use_int(x); // ok
+}
+
+// Multiple variables: each independently.
+_Safe void test_multiple(void) {
+    int a, b;
+    __builtin_assume_initialized(&_Mut a);
+    b = 2;
+    use_int(a); // ok
+    use_int(b); // ok
+}
+
+// Pointer variable: builtin marks the pointer itself as initialized.
+// Uses -uninit-check=all style (raw pointer) since _Borrow requires init at decl.
+void use_raw_ptr(int *p);
+
+void test_pointer(void) {
+    int *p;
+    __builtin_assume_initialized(&p);
+    use_raw_ptr(p); // ok
+}
+
+// Pointer to initialized value, deref ok.
+_Safe void test_ptr_deref(void) {
+    int x = 42;
+    int *_Borrow p = &_Mut x;
+    use_int(*p); // ok
+}
+
+// Array: &arr marks array as initialized.
+void test_array(void) {
+    int arr[3];
+    __builtin_assume_initialized(&arr);
+    use_int(arr[0]); // ok
+}

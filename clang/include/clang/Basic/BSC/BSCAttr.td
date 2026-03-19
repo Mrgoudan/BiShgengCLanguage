@@ -90,3 +90,10 @@ def Operator : InheritableAttr {
   let Args = [IntArgument<"OperatorKind">];
   let Documentation = [Undocumented];
 }
+
+def EnsureInit : InheritableParamAttr {
+  let Spellings = [GNU<"ensure_init">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [Undocumented];
+}
+

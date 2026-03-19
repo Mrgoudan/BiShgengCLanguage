@@ -1,0 +1,61 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: borrow pointer initialization with &_Mut and &_Const.
+
+// Borrow from initialized local is ok
+_Safe void test_mut_borrow(void) {
+    int x = 42;
+    int *_Borrow p = &_Mut x;
+    int y = *p;
+}
+
+_Safe void test_const_borrow(void) {
+    int x = 42;
+    const int *_Borrow p = &_Const x;
+    int y = *p;
+}
+
+// Struct borrow
+struct Point { int x; int y; };
+
+_Safe void test_struct_borrow(void) {
+    struct Point p = {1, 2};
+    struct Point *_Borrow bp = &_Mut p;
+    int sum = bp->x + bp->y;
+}
+
+// Declared uninit, then assigned via &_Mut before use.
+_Safe void use_borrow(int *_Borrow p);
+
+_Safe void test_borrow_assign_then_use(void) {
+    int x = 1;
+    int *_Borrow p;
+    p = &_Mut x;
+    use_borrow(p);
+}
+
+// Both branches assign _Borrow.
+_Safe void test_borrow_branch_both(int cond) {
+    int x = 1;
+    int y = 2;
+    int *_Borrow p;
+    if (cond) {
+        p = &_Mut x;
+    } else {
+        p = &_Mut y;
+    }
+    use_borrow(p);
+}
+
+// Struct with _Borrow field, all fields assigned.
+struct SB { int *_Borrow p; int v; };
+_Safe void use_sb(struct SB s);
+
+_Safe void test_borrow_struct_full(void) {
+    int x = 1;
+    struct SB s;
+    s.p = &_Mut x;
+    s.v = 2;
+    use_sb(s);
+}

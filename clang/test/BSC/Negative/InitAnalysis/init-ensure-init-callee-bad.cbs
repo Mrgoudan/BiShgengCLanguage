@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init callee side: function never initializes *out.
+
+void bad_init(int *__attribute__((ensure_init)) out) {
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}

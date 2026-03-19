@@ -1,0 +1,60 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+// expected-no-diagnostics
+
+void use_ptr(int *p);
+
+// & on initialized variable: OK.
+void test_addr_init(void) {
+    int x = 1;
+    int *p = &x;
+    use_ptr(p);
+}
+
+// & on initialized struct field: OK.
+struct S { int a; int b; };
+
+void test_addr_field_init(void) {
+    struct S s;
+    s.a = 1;
+    s.b = 2;
+    int *p = &s.a;
+    use_ptr(p);
+}
+
+// & passed to ensure_init function: OK (exemption).
+void init_int(int *__attribute__((ensure_init)) out);
+void init_pair(struct S *__attribute__((ensure_init)) out);
+
+void test_ensure_init_addr(void) {
+    int x;
+    init_int(&x);
+    int y = x;
+}
+
+void test_ensure_init_struct(void) {
+    struct S s;
+    init_pair(&s);
+    int a = s.a;
+}
+
+// &_Mut passed to ensure_init: OK.
+void init_borrow(int *_Borrow __attribute__((ensure_init)) out);
+
+void test_ensure_init_borrow(void) {
+    int x;
+    _Unsafe { init_borrow(&_Mut x); }
+    int y = x;
+}
+
+// __builtin_assume_initialized: & on uninit is OK (exemption).
+void test_builtin_ensure_init(void) {
+    int x;
+    __builtin_assume_initialized(&x);
+    int y = x;
+}
+
+void test_builtin_ensure_init_struct(void) {
+    struct S s;
+    __builtin_assume_initialized(&s);
+    int a = s.a;
+}

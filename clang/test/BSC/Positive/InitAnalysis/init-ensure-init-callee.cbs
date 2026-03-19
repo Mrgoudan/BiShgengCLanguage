@@ -1,0 +1,38 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test ensure_init callee side: valid cases where *param is initialized.
+
+void init_int(int *__attribute__((ensure_init)) out);
+
+// Valid: direct assignment initializes *out
+void good_init(int *__attribute__((ensure_init)) out) {
+    *out = 42;
+}
+
+// Valid: delegation to another ensure_init function
+void delegating_init(int *__attribute__((ensure_init)) out) {
+    init_int(out);
+}
+
+// Valid: init via assignment through different paths
+void branch_init(int *__attribute__((ensure_init)) out, int cond) {
+    if (cond)
+        *out = 1;
+    else
+        *out = 2;
+}
+
+// Valid: all params initialized
+void all_params(int *__attribute__((ensure_init)) a,
+                int *__attribute__((ensure_init)) b) {
+    *a = 1;
+    *b = 2;
+}
+
+// Valid: reassignment after *out is initialized — contract fulfilled.
+void reassign_after_init(int *__attribute__((ensure_init)) out) {
+    *out = 42;
+    int local = 10;
+    out = &local;  // ok — *out already initialized
+}

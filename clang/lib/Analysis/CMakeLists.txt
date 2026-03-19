@@ -9,8 +9,8 @@ add_clang_library(clangAnalysis
   BSC/BSCBorrowChecker.cpp
   BSC/BSCIR.cpp
   BSC/BSCIRBuilder.cpp
-  BSC/BSCIRDataflow.cpp
   BSC/BSCIRDump.cpp
+  BSC/BSCIRInitAnalysis.cpp
   BSC/BSCNullabilityCheck.cpp
   BSC/BSCOwnership.cpp
   CalledOnceCheck.cpp

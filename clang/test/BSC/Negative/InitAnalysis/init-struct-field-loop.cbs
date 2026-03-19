@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: struct fields and loop interactions.
+
+struct Pair { int a; int b; };
+
+// One field initialized before loop, other inside loop
+_Safe void test_field_loop_partial(int n) {
+    struct Pair p;
+    p.a = 0;
+    while (n > 0) {
+        p.b = n;
+        n = n - 1;
+    }
+    int a = p.a;  // ok: p.a initialized before loop
+    int b = p.b;  // expected-error {{use of possibly uninitialized value: `p.b`}}
+}
+
+// Both fields initialized before loop
+_Safe void test_field_loop_ok(int n) {
+    struct Pair p;
+    p.a = 0;
+    p.b = 0;
+    while (n > 0) {
+        p.a = p.a + n;
+        n = n - 1;
+    }
+    int sum = p.a + p.b; // ok: both initialized before loop
+}

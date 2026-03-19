@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// _Nonnull pointer struct fields must be properly initialized.
+
+struct SP { int *_Nonnull p; int v; };
+struct OuterP { struct SP inner; int x; };
+
+_Safe void use_sp(struct SP s);
+_Safe void use_op(struct OuterP s);
+
+// _Nonnull struct with empty init: pointer field is null-initialized.
+_Safe void test_nonnull_empty(void) {
+    struct SP s = {}; // expected-error {{`s.p` is a _Nonnull pointer and must be properly initialized}}
+    use_sp(s);
+}
+
+// Nested _Nonnull struct with empty init.
+_Safe void test_nested_nonnull_empty(void) {
+    struct OuterP o = {}; // expected-error {{`o.inner.p` is a _Nonnull pointer and must be properly initialized}}
+    use_op(o);
+}

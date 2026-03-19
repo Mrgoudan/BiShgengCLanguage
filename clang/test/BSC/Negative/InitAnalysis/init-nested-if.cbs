@@ -1,0 +1,24 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: nested if-else where only some paths initialize.
+
+_Safe void test_nested_if_partial(int a, int b) {
+    int x;
+    if (a) {
+        if (b)
+            x = 1;
+        // else: x not initialized
+    } else {
+        x = 3;
+    }
+    int y = x + 1; // expected-error {{use of possibly uninitialized value: `x`}}
+}
+
+_Safe void test_inner_branch_only(int a, int b) {
+    int x;
+    if (a) {
+        x = 1;
+    }
+    // outer else: x not initialized
+    int y = x + 1; // expected-error {{use of possibly uninitialized value: `x`}}
+}

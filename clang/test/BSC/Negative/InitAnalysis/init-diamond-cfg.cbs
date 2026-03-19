@@ -1,0 +1,34 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: diamond-shaped CFG patterns (if-else reconverging).
+
+// Both branches init different variables
+_Safe void test_diamond_different_vars(int cond) {
+    int x;
+    int y;
+    if (cond) {
+        x = 1;
+        y = 2;
+    } else {
+        x = 3;
+        // y not initialized
+    }
+    int a = x;  // ok: initialized on both paths
+    int b = y;  // expected-error {{use of possibly uninitialized value: `y`}}
+}
+
+// Struct field diamond: one field on both, another on one
+struct Pair { int a; int b; };
+
+_Safe void test_diamond_struct(int cond) {
+    struct Pair p;
+    if (cond) {
+        p.a = 1;
+        p.b = 2;
+    } else {
+        p.a = 3;
+        // p.b not initialized on this path
+    }
+    int a = p.a;  // ok: both paths
+    int b = p.b;  // expected-error {{use of possibly uninitialized value: `p.b`}}
+}

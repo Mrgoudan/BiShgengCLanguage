@@ -1,0 +1,51 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+// expected-no-diagnostics
+
+enum Color { RED, GREEN, BLUE };
+
+void use_color(enum Color c);
+void use_int(int a);
+
+// Basic enum init.
+void test_enum_init(void) {
+    enum Color c = RED;
+    use_color(c);
+}
+
+// Enum assigned later.
+void test_enum_assign(void) {
+    enum Color c;
+    c = GREEN;
+    use_color(c);
+}
+
+// Enum in struct.
+struct WithEnum { enum Color c; int x; };
+
+void test_struct_enum_full(void) {
+    struct WithEnum w;
+    w.c = RED;
+    w.x = 42;
+    use_color(w.c);
+}
+
+// Enum in union.
+union UEnum { enum Color c; int i; };
+
+void test_union_enum(void) {
+    union UEnum u;
+    u.c = BLUE;
+    use_color(u.c);
+}
+
+// Known limitation: writing one variant marks the whole union as initialized,
+// so reading another variant's struct field passes even though the bytes
+// backing u.s.c may not have been written.
+struct S { int b; int c; };
+union U { int a; struct S s; };
+
+void test_union_cross_variant_limitation(void) {
+    union U u;
+    u.a = 1;
+    use_int(u.s.c);  // cross-variant: passes (limitation)
+}

@@ -1,0 +1,5 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test sema validation: ensure_init on non-pointer param produces warning.
+
+void bad_attr(int __attribute__((ensure_init)) x); // expected-warning {{attribute only applies to pointer parameters}}

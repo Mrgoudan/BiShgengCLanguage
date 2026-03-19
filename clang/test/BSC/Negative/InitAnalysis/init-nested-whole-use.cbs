@@ -1,0 +1,14 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: using the whole struct when nested fields are only partially init.
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_whole_use_partial_nested(void) {
+    struct Outer o;
+    o.inner.a = 1;
+    o.inner.b = 2;
+    // o.c is NOT initialized
+    struct Outer copy = o; // expected-error {{use of uninitialized value: `o`}}
+}

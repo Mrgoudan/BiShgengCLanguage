@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test BSCIR init analysis: properly initialized variables produce no errors.
+
+_Safe void test_init_ok(void) {
+    int x = 42;
+    int y = x + 1;
+}

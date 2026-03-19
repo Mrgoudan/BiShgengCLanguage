@@ -64,7 +64,7 @@ _Safe int test_va_arg_multi(const char *_Borrow fmt, ...) {
 // CHECK-NEXT:   StorageLive(_2) [safe]
 // CHECK-NEXT:   _3 = Cast(const 0 as unsigned int) [safe]
 // CHECK-NEXT:   _4 = Aggregate(__va_list_tag, {copy(_3), const(unsigned int), const(void *), const(void *)}) [safe]
-// CHECK-NEXT:   _5 = Aggregate(?, {copy(_4)}) [safe]
+// CHECK-NEXT:   _5 = Array(struct __va_list_tag, {copy(_4)}) [safe]
 // CHECK-NEXT:   _2 = copy(_5) [safe]
 // CHECK-NEXT:   StorageLive(_6) [safe]
 // CHECK-NEXT:   _6 = const 0 [safe]

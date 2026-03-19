@@ -5629,6 +5629,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             HasAnyInterestingExtParameterInfos = true;
           }
 
+#if ENABLE_BSC
+          if (Param->hasAttr<EnsureInitAttr>()) {
+            ExtParameterInfos[i] = ExtParameterInfos[i].withIsEnsureInit(true);
+            HasAnyInterestingExtParameterInfos = true;
+          }
+#endif
+
           ParamTys.push_back(ParamTy);
         }
 

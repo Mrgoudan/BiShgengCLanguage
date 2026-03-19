@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: two nested struct fields — one fully init, one not.
+// Reading the uninit sibling's sub-field should error.
+
+struct Pair { int x; int y; };
+struct TwoPairs { struct Pair first; struct Pair second; };
+
+_Safe void test_sibling_uninit(void) {
+    struct TwoPairs t;
+    t.first.x = 1;
+    t.first.y = 2;
+    // t.second not initialized at all
+    int val = t.second.x; // expected-error {{use of uninitialized value: `t.second.x`}}
+}

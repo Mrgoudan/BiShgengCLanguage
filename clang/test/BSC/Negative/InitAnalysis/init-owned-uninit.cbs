@@ -1,0 +1,42 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: _Owned pointer use-before-init caught by init analysis.
+
+_Safe void consume(int *_Owned p);
+
+// _Owned pointer used without init → error (emitted twice: call + arg).
+_Safe void test_owned_ptr_uninit(void) {
+    int *_Owned p;
+    consume(p); // expected-error 2 {{use of uninitialized value: `p`}}
+}
+
+// _Owned pointer init on one branch → maybe-uninit.
+_Safe void test_owned_branch(int cond) {
+    int *_Owned p;
+    if (cond) {
+        p = (int *_Owned)nullptr;
+    }
+    consume(p); // expected-error 2 {{use of possibly uninitialized value: `p`}}
+}
+
+// Struct with _Owned field, field not written → error.
+struct SO { int *_Owned p; int v; };
+_Safe void use_so(struct SO s);
+
+_Safe void test_owned_struct_partial(void) {
+    struct SO s;
+    s.v = 1;
+    use_so(s); // expected-error {{use of uninitialized value: `s`}} expected-error {{use of partially moved value: `s`, s.p is moved}}
+}
+
+// _Owned pointer passed to consume without init → error.
+_Safe void test_owned_consume_uninit(void) {
+    int *_Owned q;
+    consume(q); // expected-error 2 {{use of uninitialized value: `q`}}
+}
+
+// Whole struct uninit.
+_Safe void test_owned_struct_whole_uninit(void) {
+    struct SO s;
+    use_so(s); // expected-error {{use of uninitialized value: `s`}} expected-error {{use of partially moved value: `s`, s.p is moved}}
+}

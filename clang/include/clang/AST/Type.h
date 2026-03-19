@@ -3837,6 +3837,9 @@ public:
       IsConsumed = 0x10,
       HasPassObjSize = 0x20,
       IsNoEscape = 0x40,
+#if ENABLE_BSC
+      IsEnsureInit = 0x80,
+#endif
     };
     unsigned char Data = 0;
 
@@ -3879,6 +3882,18 @@ public:
         Copy.Data &= ~IsNoEscape;
       return Copy;
     }
+
+#if ENABLE_BSC
+    bool isEnsureInit() const { return Data & IsEnsureInit; }
+    ExtParameterInfo withIsEnsureInit(bool AI) const {
+      ExtParameterInfo Copy = *this;
+      if (AI)
+        Copy.Data |= IsEnsureInit;
+      else
+        Copy.Data &= ~IsEnsureInit;
+      return Copy;
+    }
+#endif
 
     unsigned char getOpaqueValue() const { return Data; }
     static ExtParameterInfo getFromOpaqueValue(unsigned char data) {

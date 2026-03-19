@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test BSCIR init analysis: field-by-field struct init eliminates false positives.
+
+struct Point { int x; int y; };
+
+// Field-by-field init: no false positive
+_Safe void test_field_init_ok(void) {
+    struct Point p;
+    p.x = 1;
+    p.y = 2;
+    int sum = p.x + p.y; // no error
+}
+
+// Both branches init all fields
+_Safe void test_branch_all_init(int cond) {
+    struct Point p;
+    if (cond) { p.x = 1; p.y = 2; }
+    else      { p.x = 3; p.y = 4; }
+    int sum = p.x + p.y; // no error
+}
+
+// Aggregate init still works
+_Safe void test_aggregate_init(void) {
+    struct Point p = {1, 2};
+    int sum = p.x + p.y; // no error
+}
+
+// Nested struct: all nested fields initialized
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_nested_all_init(void) {
+    struct Outer o;
+    o.inner.a = 1;
+    o.inner.b = 2;
+    o.c = 3;
+    int val = o.inner.a + o.inner.b + o.c; // no error
+}

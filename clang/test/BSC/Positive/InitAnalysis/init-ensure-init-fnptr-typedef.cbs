@@ -1,0 +1,60 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test ensure_init through function pointer typedefs.
+// The ensure_init attribute is encoded in ExtParameterInfo so it
+// survives through typedefs and indirect calls.
+
+// A function type whose first parameter has ensure_init.
+typedef _Safe void (*InitFn)(int *__attribute__((ensure_init)) _Borrow out);
+
+// Direct function matching the typedef signature.
+_Safe void concrete_init(int *__attribute__((ensure_init)) _Borrow out);
+
+// Basic: call through function pointer typedef initializes the local.
+_Safe void test_fnptr_basic(InitFn fn) {
+    int x;
+    concrete_init(&_Mut x);
+    fn(&_Mut x);
+    int y = x;
+}
+
+// Call through a local function pointer variable.
+_Safe void test_fnptr_local(void) {
+    InitFn fn = concrete_init;
+    int x;
+    fn(&_Mut x);
+    int y = x;
+}
+
+// Multiple params: only some are ensure_init.
+typedef _Safe void (*InitFirstFn)(int *__attribute__((ensure_init)) _Borrow out, int val);
+_Safe void concrete_init_first(int *__attribute__((ensure_init)) _Borrow out, int val);
+
+_Safe void test_fnptr_partial(InitFirstFn fn) {
+    int x;
+    fn(&_Mut x, 42);
+    int y = x;
+}
+
+// Struct init through function pointer.
+struct Pair { int a; int b; };
+typedef _Safe void (*InitPairFn)(struct Pair *__attribute__((ensure_init)) _Borrow out);
+
+_Safe void test_fnptr_struct(InitPairFn fn) {
+    struct Pair p;
+    fn(&_Mut p);
+    int a = p.a;
+    int b = p.b;
+}
+
+// Two ensure_init params through function pointer.
+typedef _Safe void (*InitTwoFn)(int *__attribute__((ensure_init)) _Borrow a,
+                                 int *__attribute__((ensure_init)) _Borrow b);
+
+_Safe void test_fnptr_two(InitTwoFn fn) {
+    int x;
+    int y;
+    fn(&_Mut x, &_Mut y);
+    int sum = x + y;
+}

@@ -1,0 +1,11 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test BSCIR init analysis: variable initialized on only one branch is
+// possibly uninitialized at use.
+
+_Safe void test_uninit_one_branch(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    int y = x + 1; // expected-error {{use of possibly uninitialized value: `x`}}
+}

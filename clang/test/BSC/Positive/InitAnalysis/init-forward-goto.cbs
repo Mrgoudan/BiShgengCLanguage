@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that forward goto does not cause spurious "uninitialized" errors.
+// The goto target label is in the same scope — variables initialized before
+// the goto should remain initialized at the label.
+
+// No diagnostic expected: x is initialized before goto and used after label.
+_Safe int test_forward_goto_no_false_positive(void) { // expected-no-diagnostics
+    int x = 1;
+    goto done;
+done:
+    return x;
+}

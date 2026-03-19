@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init callee side: only some params initialized.
+
+void partial_params(int *__attribute__((ensure_init)) a,
+                    int *__attribute__((ensure_init)) b) {
+    *a = 1;
+} // expected-error {{'*b' not initialized at return in __attribute__((ensure_init)) function}}

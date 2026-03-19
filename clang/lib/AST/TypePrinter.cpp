@@ -990,6 +990,10 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
       if (EPI.isConsumed()) OS << "__attribute__((ns_consumed)) ";
       if (EPI.isNoEscape())
         OS << "__attribute__((noescape)) ";
+#if ENABLE_BSC
+      if (EPI.isEnsureInit() && !Policy.RewriteBSC)
+        OS << "__attribute__((ensure_init)) ";
+#endif
       auto ABI = EPI.getABI();
       if (ABI != ParameterABI::Ordinary)
         OS << "__attribute__((" << getParameterABISpelling(ABI) << ")) ";

@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: _Safe/_Unsafe boundary interactions.
+
+// Unsafe use of uninitialized value is allowed; subsequent safe use is ok
+// because the unsafe block "consumed" the value without error, and later
+// code re-initializes it.
+_Safe void test_unsafe_then_safe(void) {
+    int x;
+    _Unsafe {
+        int y = x;   // no error: _Unsafe
+        x = y + 1;   // x becomes initialized
+    }
+    int z = x;       // ok: x was initialized inside _Unsafe
+}
+
+// Multiple _Unsafe blocks in a _Safe function
+_Safe void test_multiple_unsafe_blocks(void) {
+    int a;
+    int b;
+    _Unsafe {
+        a = 10;      // init a
+    }
+    int c = a;       // ok: a initialized in first _Unsafe
+    _Unsafe {
+        b = a + 1;   // init b using a
+    }
+    int d = b;       // ok: b initialized in second _Unsafe
+}
+
+// _Unsafe function body has no init checking at all
+_Unsafe void test_fully_unsafe(void) {
+    int x;
+    int y = x;       // no error: entire function is _Unsafe
+}

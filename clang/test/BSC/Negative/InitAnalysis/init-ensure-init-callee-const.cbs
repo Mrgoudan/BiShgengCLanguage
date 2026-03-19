@@ -1,0 +1,48 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init callee side: pointer reassignment and deref-read-before-write
+// checks replace the old implicit-const approach.
+
+// Reassignment before init: error (contract not yet fulfilled).
+void callee_reassign(int *__attribute__((ensure_init)) out) {
+    int local;
+    out = &local; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// Dereferencing to write through the pointer is allowed.
+void callee_deref_ok(int *__attribute__((ensure_init)) out) {
+    *out = 42;
+} // no error: contract fulfilled
+
+// Compound assignment to the pointer itself is reassignment.
+void callee_compound(int *__attribute__((ensure_init)) out) {
+    out += 1; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// Increment/decrement on the pointer is reassignment.
+void callee_increment(int *__attribute__((ensure_init)) out) {
+    out++; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// Reading *out before writing is an error.
+void callee_read_before_write(int *__attribute__((ensure_init)) out) {
+    int x = *out; // expected-error {{use of uninitialized '*out' in __attribute__((ensure_init)) function}}
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// Reading *out after writing is fine.
+void callee_read_after_write(int *__attribute__((ensure_init)) out) {
+    *out = 42;
+    int x = *out;
+} // no error
+
+// Aliasing the pointer before *out is initialized is an error.
+void callee_alias_before_init(int *__attribute__((ensure_init)) out, int *other) {
+    int *p = out; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
+    *out = 42;
+} // no error
+
+// Aliasing the pointer after *out is initialized is fine.
+void callee_alias_after_init(int *__attribute__((ensure_init)) out) {
+    *out = 42;
+    int *p = out; // ok: *out already initialized
+} // no error

@@ -1,0 +1,107 @@
+// RUN: %clang_cc1 -fsyntax-only %s
+
+// All struct initialization forms are considered initialized.
+
+struct S { int a; int b; };
+struct SP { int *_Nonnull p; int v; };
+struct SB { int *_Borrow p; int v; };
+struct SN { int *_Nullable p; int v; };
+
+struct OuterS { struct S inner; int x; };
+struct OuterP { struct SP inner; int x; };
+struct OuterB { struct SB inner; int x; };
+struct OuterN { struct SN inner; int x; };
+
+_Safe void use_s(struct S s);
+_Safe void use_sp(struct SP s);
+_Safe void use_sb(struct SB s);
+_Safe void use_sn(struct SN s);
+_Safe void use_os(struct OuterS s);
+_Safe void use_op(struct OuterP s);
+_Safe void use_ob(struct OuterB s);
+_Safe void use_on(struct OuterN s);
+
+// Plain int struct: full, zero, empty, partial.
+_Safe void test_int_full(void) {
+    struct S s = {1, 2};
+    use_s(s);
+}
+
+_Safe void test_int_zero(void) {
+    struct S s = {0};
+    use_s(s);
+}
+
+_Safe void test_int_empty(void) {
+    struct S s = {};
+    use_s(s);
+}
+
+_Safe void test_int_partial(void) {
+    struct S s = {1};
+    use_s(s);
+}
+
+// _Nonnull pointer struct with full init.
+_Safe void test_nonnull_full(int *_Nonnull a) {
+    struct SP s = {a, 1};
+    use_sp(s);
+}
+
+// _Borrow pointer struct with full init.
+_Safe void test_borrow_full(int *_Borrow a) {
+    struct SB s = {a, 1};
+    use_sb(s);
+}
+
+// _Nullable pointer struct: full, empty, nullptr.
+_Safe void test_nullable_full(int *_Nullable a) {
+    struct SN s = {a, 1};
+    use_sn(s);
+}
+
+_Safe void test_nullable_empty(void) {
+    struct SN s = {};
+    use_sn(s);
+}
+
+_Safe void test_nullable_null(void) {
+    struct SN s = {nullptr, 1};
+    use_sn(s);
+}
+
+// --- Nested structs ---
+
+// Nested plain int struct.
+_Safe void test_nested_int_full(void) {
+    struct OuterS o = {{1, 2}, 3};
+    use_os(o);
+}
+
+_Safe void test_nested_int_empty(void) {
+    struct OuterS o = {};
+    use_os(o);
+}
+
+// Nested _Nonnull struct with full init.
+_Safe void test_nested_nonnull_full(int *_Nonnull a) {
+    struct OuterP o = {{a, 1}, 2};
+    use_op(o);
+}
+
+// Nested _Borrow struct with full init.
+_Safe void test_nested_borrow_full(int *_Borrow a) {
+    struct OuterB o = {{a, 1}, 2};
+    use_ob(o);
+}
+
+// Nested _Nullable struct: full and empty.
+_Safe void test_nested_nullable_full(int *_Nullable a) {
+    struct OuterN o = {{a, 1}, 2};
+    use_on(o);
+}
+
+_Safe void test_nested_nullable_empty(void) {
+    struct OuterN o = {};
+    use_on(o);
+}

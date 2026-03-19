@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: ensure_init with struct field-level initialization patterns.
+
+struct Triple { int a; int b; int c; };
+
+void init_int(int *__attribute__((ensure_init)) out);
+void init_triple(struct Triple *__attribute__((ensure_init)) out);
+
+// Whole struct via ensure_init, then access fields
+_Safe void test_whole_struct_assume(void) {
+    struct Triple t;
+    _Unsafe { init_triple(&t); }
+    int sum = t.a + t.b + t.c; // ok: whole struct initialized
+}
+
+// Only some fields initialized via ensure_init, others not
+_Safe void test_partial_field_assume(void) {
+    struct Triple t;
+    _Unsafe {
+        init_int(&t.a);
+        init_int(&t.b);
+    }
+    int a = t.a;  // ok
+    int b = t.b;  // ok
+    int c = t.c;  // expected-error {{use of uninitialized value: `t.c`}}
+}
+
+// Mix of direct init and ensure_init
+_Safe void test_mixed_init_assume(void) {
+    struct Triple t;
+    t.a = 1;
+    _Unsafe { init_int(&t.b); }
+    t.c = 3;
+    int sum = t.a + t.b + t.c; // ok: all initialized
+}

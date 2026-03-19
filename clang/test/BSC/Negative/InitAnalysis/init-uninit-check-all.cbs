@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+
+// Test: -uninit-check=all runs init analysis on all functions,
+// including code outside _Safe zones.
+
+void test_uninit_no_safe(void) {
+    int x;
+    int y = x + 1; // expected-error {{use of uninitialized value: `x`}}
+}
+
+void test_branch_no_safe(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    int y = x; // expected-error {{use of possibly uninitialized value: `x`}}
+}
+
+int test_return_uninit_no_safe(void) {
+    int x;
+    return x; // expected-error {{use of uninitialized value: `x`}}
+}

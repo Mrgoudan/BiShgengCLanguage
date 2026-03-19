@@ -1,0 +1,81 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Array element writes do NOT initialize the array.
+// Arrays must be initialized via initializer list or __builtin_assume_initialized.
+
+// All elements written — still not considered initialized.
+_Safe double full_write(void) {
+    double parr[3];
+    parr[0] = 0;
+    parr[1] = 1;
+    parr[2] = 2;
+    return parr[1]; // expected-error {{use of uninitialized value: `parr`}}
+}
+
+// Partial write — not initialized.
+_Safe double partial_write(void) {
+    double parr[3];
+    parr[0] = 0;
+    parr[2] = 2;
+    return parr[1]; // expected-error {{use of uninitialized value: `parr`}}
+}
+
+// No elements written — not initialized.
+_Safe int no_init(void) {
+    int arr[2];
+    return arr[0]; // expected-error {{use of uninitialized value: `arr`}}
+}
+
+// Single element write — still not initialized.
+_Safe int single_elem(void) {
+    int arr[1];
+    arr[0] = 42;
+    return arr[0]; // expected-error {{use of uninitialized value: `arr`}}
+}
+
+// VLA element write — not initialized.
+_Safe void vla_write(int n) {
+    int arr[n];
+    arr[0] = 1;
+    int x = arr[0]; // expected-error {{use of uninitialized value: `arr`}}
+}
+
+// VLA no write — not initialized.
+_Safe int vla_no_init(int n) {
+    int arr[n];
+    return arr[0]; // expected-error {{use of uninitialized value: `arr`}}
+}
+
+// Struct array element write — not initialized.
+typedef struct {
+    int val;
+    int len;
+} Entry;
+
+_Safe void use_len(int n);
+
+_Safe void array_struct_write(void) {
+    int x = 42;
+    Entry entries[2];
+    entries[0].val = x;
+    entries[0].len = 1;
+    entries[1].val = x;
+    entries[1].len = 2;
+    use_len(entries[0].len); // expected-error {{use of uninitialized value: `entries`}}
+}
+
+// Workaround 1: initializer list
+_Safe double workaround_init_list(void) {
+    double parr[3] = {0, 1, 2};
+    return parr[1]; // ok
+}
+
+// Workaround 2: __builtin_assume_initialized
+_Safe double workaround_assume(void) {
+    double parr[3];
+    parr[0] = 0;
+    parr[1] = 1;
+    parr[2] = 2;
+    __builtin_assume_initialized(&_Mut parr);
+    return parr[1]; // ok
+}

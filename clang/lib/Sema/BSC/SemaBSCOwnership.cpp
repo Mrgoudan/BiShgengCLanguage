@@ -704,6 +704,47 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
   return true;
 }
 
+bool Sema::CheckEnsureInitFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
+  const FunctionProtoType *LHSFuncType = LHSType->getAs<PointerType>()
+                                             ->getPointeeType()
+                                             ->getAs<FunctionProtoType>();
+  const FunctionProtoType *RHSFuncType =
+      RHSExpr->getType()->isFunctionPointerType()
+          ? RHSExpr->getType()
+                ->getAs<PointerType>()
+                ->getPointeeType()
+                ->getAs<FunctionProtoType>()
+          : RHSExpr->getType()->getAs<FunctionProtoType>();
+
+  if (!LHSFuncType || !RHSFuncType)
+    return true;
+
+  // For heterogeneous redeclarations, select the best matching declaration.
+  if (FunctionDecl *SelectedFD =
+          SelectFunctionDeclForPointerAssignment(RHSExpr, LHSFuncType))
+    RHSFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+
+  if (LHSFuncType->getNumParams() != RHSFuncType->getNumParams())
+    return true; // Param count mismatch handled elsewhere
+
+  // Check: if target has ensure_init but source doesn't → error.
+  // Source having ensure_init but target not → ok (stronger to weaker).
+  for (unsigned I = 0; I < LHSFuncType->getNumParams(); ++I) {
+    bool LHSHasEnsureInit = LHSFuncType->hasExtParameterInfos() &&
+                            LHSFuncType->getExtParameterInfo(I).isEnsureInit();
+    bool RHSHasEnsureInit = RHSFuncType->hasExtParameterInfos() &&
+                            RHSFuncType->getExtParameterInfo(I).isEnsureInit();
+
+    if (LHSHasEnsureInit && !RHSHasEnsureInit) {
+      Diag(RHSExpr->getBeginLoc(),
+           diag::err_ensure_init_funcptr_incompatible)
+          << I;
+      return false;
+    }
+  }
+  return true;
+}
+
 // Check that borrow qualifiers on an instantiated type are valid.
 // This is called after template instantiation to validate that template
 // parameters which were qualified with 'borrow' instantiate to pointer types

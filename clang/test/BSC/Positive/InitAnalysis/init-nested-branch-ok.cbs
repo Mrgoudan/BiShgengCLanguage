@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: nested field initialized on both branches is fine.
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_nested_both_branches(int cond) {
+    struct Outer o;
+    o.inner.a = 1;
+    o.c = 3;
+    if (cond)
+        o.inner.b = 2;
+    else
+        o.inner.b = 4;
+    int val = o.inner.b; // no error: initialized on both branches
+}

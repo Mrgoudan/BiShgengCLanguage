@@ -7686,7 +7686,9 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
     if (getLangOpts().BSC) {
       // _Unsafe function call is forbidden in the safe zone
+      // (exempt __builtin_assume_initialized — it is safe by design)
       if (IsInSafeZone() &&
+          BuiltinID != Builtin::BI__builtin_assume_initialized &&
           (Fn->getType()->checkFunctionProtoType(SZ_None) ||
            Fn->getType()->checkFunctionProtoType(SZ_Unsafe))) {
         Diag(Fn->getBeginLoc(), diag::err_unsafe_action)
@@ -10701,6 +10703,10 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
         return IncompatibleOwnedPointer;
       if (!CheckBorrowFunctionPointerType(LHSType, RHS.get()))
         return IncompatibleBorrowPointer;
+      // Check ensure_init compatibility. Diagnostic is emitted inside but we
+      // don't block the conversion — the types are structurally compatible and
+      // blocking would cause cascading errors (e.g. "not a compile-time constant").
+      CheckEnsureInitFunctionPointerType(LHSType, RHS.get());
     }
   }
 #endif

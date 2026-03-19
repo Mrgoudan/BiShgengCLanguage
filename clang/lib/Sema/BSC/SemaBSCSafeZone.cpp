@@ -994,69 +994,44 @@ bool Sema::CanBeUninitializedInSafeZone(QualType Type) {
 
   QualType CanonType = Type.getCanonicalType();
 
-  // Bool type can be uninitialized
-  if (CanonType->isBooleanType())
-    return true;
+  if (CanonType->isOwnedStructureType())
+    return false;
 
-  // All pointer types (including function pointers) can be uninitialized
-  if (CanonType->isPointerType()) {
-    return true;
-  }
-
-  // forbid owned struct
-  if (CanonType->isOwnedStructureType()) {
-      return false;
-  }
-  // For struct/union types, recursively check if they contain pointer fields
+  // Recursively check struct/union fields for owned structs.
   if (CanonType->isStructureType() || CanonType->isUnionType()) {
-    // Check if the struct/union contains any pointer fields
     llvm::SmallPtrSet<const clang::Type *, 16> Visited;
     llvm::SmallVector<QualType, 16> Stack;
     Stack.push_back(CanonType);
 
     while (!Stack.empty()) {
-      QualType CurType = Stack.pop_back_val();
-
+      QualType CurType = Stack.pop_back_val().getCanonicalType();
       if (CurType.isNull())
         continue;
-      const clang::Type *TyPtr = CurType.getTypePtr();
-      if (!Visited.insert(TyPtr).second)
+      if (!Visited.insert(CurType.getTypePtr()).second)
         continue;
 
-      // Recursively check struct members
+      if (CurType->isOwnedStructureType())
+        return false;
+
       if (CurType->isStructureType() || CurType->isUnionType()) {
         if (const auto *RT = CurType->getAs<RecordType>()) {
-          RecordDecl *RD = RT->getDecl();
-          for (RecordDecl::field_iterator i = RD->field_begin(),
-                                          e = RD->field_end();
-               i != e; ++i) {
-            Stack.push_back(i->getType());
-          }
+          for (const auto *FD : RT->getDecl()->fields())
+            Stack.push_back(FD->getType());
         }
       }
 
-      // Check array element types
-      if (CurType->isArrayType()) {
+      if (CurType->isArrayType())
         Stack.push_back(cast<ArrayType>(CurType)->getElementType());
-      }
     }
-
-    // If we didn't find any pointer fields, the struct/union can be uninitialized
     return true;
   }
 
-  // For array types, check the element type
-  if (CanonType->isArrayType()) {
-    QualType ElementType = Context.getBaseElementType(CanonType);
-    return CanBeUninitializedInSafeZone(ElementType);
-  }
+  // Array: check element type.
+  if (CanonType->isArrayType())
+    return CanBeUninitializedInSafeZone(
+        Context.getBaseElementType(CanonType));
 
-  // All other scalar types (int, float, char, enum, etc.) can be uninitialized
-  if (CanonType->isScalarType())
-    return true;
-
-  // For any other types, default to not allowing uninitialized
-  return false;
+  return true;
 }
 
 void Sema::DiagnoseInvalidMemberAccessExprInSafeZone(SourceLocation OpLoc,

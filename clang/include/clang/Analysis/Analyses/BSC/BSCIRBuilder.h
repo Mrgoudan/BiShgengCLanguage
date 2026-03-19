@@ -97,6 +97,10 @@ private:
   llvm::DenseMap<LabelDecl *, BasicBlockId> LabelMap;
   llvm::DenseMap<LabelDecl *, unsigned> LabelScopeDepth;
 
+  // --- Address-of origin tracking (for ensure_init) ---
+  // Maps temp LocalId → the Place whose address was taken to produce that temp.
+  llvm::DenseMap<LocalId, Place> AddrOfOrigins;
+
   // --- Single return block (created in build()) ---
   BasicBlockId ReturnBlock = {0};
 

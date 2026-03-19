@@ -1,0 +1,38 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: edge cases for initialization analysis.
+
+// Self-assignment with initialized value
+_Safe void test_self_assign(void) {
+    int x = 1;
+    x = x;
+    int y = x;
+}
+
+// Variable initialized in all paths of a complex if-else-if chain
+_Safe void test_if_else_if(int a, int b) {
+    int x;
+    if (a)
+        x = 1;
+    else if (b)
+        x = 2;
+    else
+        x = 3;
+    int y = x;
+}
+
+// Single-field struct
+struct Single { int val; };
+
+_Safe void test_single_field(void) {
+    struct Single s;
+    s.val = 42;
+    int x = s.val;
+}
+
+// Initialization with 0
+_Safe void test_zero_init(void) {
+    int x = 0;
+    int y = x;
+}

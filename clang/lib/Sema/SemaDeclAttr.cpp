@@ -8688,6 +8688,16 @@ static void handleOperatorAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
   D->addAttr(::new (S.Context) OperatorAttr(
       S.Context, Attrs, Attrs.getOperatorTypeBuffer().Kind));
 }
+
+static void handleEnsureInitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *PVD = dyn_cast<ParmVarDecl>(D);
+  if (!PVD || !PVD->getType()->isPointerType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << AL << "pointer parameters";
+    return;
+  }
+  D->addAttr(::new (S.Context) EnsureInitAttr(S.Context, AL));
+}
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -9562,6 +9572,11 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_Operator:
     handleOperatorAttr(S, D, AL);
     break;
+
+  case ParsedAttr::AT_EnsureInit:
+    handleEnsureInitAttr(S, D, AL);
+    break;
+
 #endif
   }
 }

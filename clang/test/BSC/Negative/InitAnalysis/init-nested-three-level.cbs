@@ -1,0 +1,48 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: three levels of nesting with various initialization patterns.
+
+struct Level3 { int x; int y; };
+struct Level2 { struct Level3 inner; int z; };
+struct Level1 { struct Level2 mid; int w; };
+
+// All leaf fields initialized: full promotion
+_Safe void test_three_level_full(void) {
+    struct Level1 s;
+    s.mid.inner.x = 1;
+    s.mid.inner.y = 2;
+    s.mid.z = 3;
+    s.w = 4;
+    struct Level1 copy = s; // ok: all fields init
+}
+
+// Missing one deeply nested field
+_Safe void test_three_level_missing_deep(void) {
+    struct Level1 s;
+    s.mid.inner.x = 1;
+    // s.mid.inner.y missing
+    s.mid.z = 3;
+    s.w = 4;
+    int val = s.mid.inner.y; // expected-error {{use of uninitialized value: `s.mid.inner.y`}}
+}
+
+// Missing an intermediate field
+_Safe void test_three_level_missing_mid(void) {
+    struct Level1 s;
+    s.mid.inner.x = 1;
+    s.mid.inner.y = 2;
+    // s.mid.z missing
+    s.w = 4;
+    int val = s.mid.z; // expected-error {{use of uninitialized value: `s.mid.z`}}
+}
+
+// Branch: deep field initialized on one path only
+_Safe void test_three_level_branch(int cond) {
+    struct Level1 s;
+    s.mid.inner.x = 1;
+    s.mid.z = 3;
+    s.w = 4;
+    if (cond)
+        s.mid.inner.y = 2;
+    int val = s.mid.inner.y; // expected-error {{use of possibly uninitialized value: `s.mid.inner.y`}}
+}

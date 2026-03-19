@@ -1,0 +1,49 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init function pointer compatibility:
+// - Target has ensure_init but source doesn't → error
+// - Source has ensure_init but target doesn't → ok (stronger to weaker)
+// - Both have it → ok
+// - Neither has it → ok
+
+typedef _Safe void (*FP1)(int *_Borrow __attribute__((ensure_init)));
+typedef _Safe void (*FP2)(int *_Borrow);
+
+_Safe void foo(int *_Borrow);
+_Safe void bar(int *_Borrow __attribute__((ensure_init)));
+
+// Variable initialization
+_Safe void test_init(void) {
+    FP1 p1 = foo; // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter 0 but source does not have it}}
+    FP1 p2 = bar; // ok
+    FP2 p3 = foo; // ok
+    FP2 p4 = bar; // ok
+}
+
+// Variable assignment
+_Safe void test_assign(void) {
+    FP1 fp1;
+    fp1 = foo; // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter 0 but source does not have it}}
+    fp1 = bar; // ok
+
+    FP2 fp2;
+    fp2 = foo; // ok
+    fp2 = bar; // ok
+}
+
+// Function call argument passing
+_Safe void take_fp1(FP1 fn);
+_Safe void test_arg_passing(void) {
+    take_fp1(foo); // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter 0 but source does not have it}}
+    take_fp1(bar); // ok
+}
+
+// Multiple parameters: only some have ensure_init
+typedef _Safe void (*FP3)(int *_Borrow __attribute__((ensure_init)), int *_Borrow);
+_Safe void baz(int *_Borrow, int *_Borrow);
+_Safe void qux(int *_Borrow __attribute__((ensure_init)), int *_Borrow);
+
+_Safe void test_multi_param(void) {
+    FP3 p1 = baz; // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter 0 but source does not have it}}
+    FP3 p2 = qux; // ok
+}

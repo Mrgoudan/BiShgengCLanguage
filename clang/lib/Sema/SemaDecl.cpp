@@ -3965,6 +3965,48 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
+#if ENABLE_BSC
+  // BSC: Propagate ensure_init attribute from previous declaration to the
+  // new one. This ensures a definition without the attribute is compatible
+  // with a forward declaration that has it. We rebuild the FunctionProtoType
+  // with the matching ExtParameterInfos so the types are compatible.
+  if (getLangOpts().BSC && Old->hasPrototype() && New->hasPrototype() &&
+      Old->getNumParams() == New->getNumParams()) {
+    const FunctionProtoType *OldFPT =
+        Old->getType()->getAs<FunctionProtoType>();
+    if (OldFPT && OldFPT->hasExtParameterInfos()) {
+      bool HasEnsureInitDiff = false;
+      for (unsigned I = 0; I < Old->getNumParams(); ++I) {
+        if (Old->getParamDecl(I)->hasAttr<EnsureInitAttr>() &&
+            !New->getParamDecl(I)->hasAttr<EnsureInitAttr>()) {
+          HasEnsureInitDiff = true;
+          New->getParamDecl(I)->addAttr(
+              EnsureInitAttr::CreateImplicit(Context));
+        }
+      }
+      if (HasEnsureInitDiff) {
+        const FunctionProtoType *NewFPT =
+            New->getType()->getAs<FunctionProtoType>();
+        if (NewFPT) {
+          FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
+          SmallVector<FunctionProtoType::ExtParameterInfo, 4> EPIs;
+          for (unsigned I = 0; I < OldFPT->getNumParams(); ++I)
+            EPIs.push_back(OldFPT->getExtParameterInfo(I));
+          EPI.ExtParameterInfos = EPIs.data();
+          // Use current param types.
+          SmallVector<QualType, 4> ParamTypes;
+          for (unsigned I = 0; I < New->getNumParams(); ++I)
+            ParamTypes.push_back(New->getParamDecl(I)->getType());
+          QualType NewFnType = Context.getFunctionType(
+              NewFPT->getReturnType(), ParamTypes, EPI);
+          New->setType(NewFnType);
+          NewQType = Context.getCanonicalType(New->getType());
+        }
+      }
+    }
+  }
+#endif
+
   if (getLangOpts().CPlusPlus) {
     // C++1z [over.load]p2
     //   Certain function declarations cannot be overloaded:
@@ -16374,7 +16416,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       if (getDiagnostics().getNumErrors() ==
               getDiagnostics().getNumOwnershipErrors() +
               getDiagnostics().getNumBorrowCheckErrors() +
-              getDiagnostics().getNumNullabilityCheckErrors()) {
+              getDiagnostics().getNumNullabilityCheckErrors() +
+              getDiagnostics().getNumInitCheckErrors()) {
         bool DoAnalysis = true;
         // Skip function template and class template
         if (const auto *RD = dyn_cast<RecordDecl>(FD->getParent())) {

@@ -1,0 +1,11 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that calling a function WITHOUT ensure_init does NOT mark locals initialized.
+
+void no_init(int *out);
+
+_Safe void test_no_ensure_init(void) {
+    int x;
+    _Unsafe { no_init(&x); }
+    int y = x; // expected-error {{use of uninitialized value: `x`}}
+}

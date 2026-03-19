@@ -1,0 +1,114 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test ensure_init caller side: calling a function with __attribute__((ensure_init))
+// marks the pointed-to place as initialized.
+
+struct Pair { int a; int b; };
+
+void init_int(int *__attribute__((ensure_init)) out);
+void init_pair(struct Pair *__attribute__((ensure_init)) out);
+
+// Basic: ensure_init marks whole local as initialized
+_Safe void test_basic(void) {
+    int x;
+    _Unsafe { init_int(&x); }
+    int y = x;
+}
+
+// Whole struct init via ensure_init
+_Safe void test_whole_struct(void) {
+    struct Pair p;
+    _Unsafe { init_pair(&p); }
+    int a = p.a;
+    int b = p.b;
+}
+
+// Field-level: full init through two ensure_init calls (promotion)
+_Safe void test_field_full(void) {
+    struct Pair p;
+    _Unsafe {
+        init_int(&p.a);
+        init_int(&p.b);
+    }
+    struct Pair q = p;
+}
+
+// Multiple ensure_init params
+void init_two(int *__attribute__((ensure_init)) a,
+              int *__attribute__((ensure_init)) b);
+
+_Safe void test_multi_param(void) {
+    int x;
+    int y;
+    _Unsafe { init_two(&x, &y); }
+    int sum = x + y;
+}
+
+// Only some params are ensure_init
+void init_first(int *__attribute__((ensure_init)) out, int val);
+
+_Safe void test_partial_param(void) {
+    int x;
+    _Unsafe { init_first(&x, 42); }
+    int y = x;
+}
+
+// Nested struct: whole struct init
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+void init_outer(struct Outer *__attribute__((ensure_init)) out);
+
+_Safe void test_nested_whole(void) {
+    struct Outer o;
+    _Unsafe { init_outer(&o); }
+    int val = o.inner.a + o.inner.b + o.c;
+}
+
+// Unsafe calling unsafe ensure_init (no zone wrapper needed)
+void test_unsafe_call_unsafe(void) {
+    int x;
+    init_int(&x);
+    int y = x;
+}
+
+// Safe calling safe ensure_init (no _Unsafe needed)
+_Safe void safe_init_int(int *_Borrow __attribute__((ensure_init)) out);
+
+_Safe void test_safe_call_safe(void) {
+    int x;
+    safe_init_int(&_Mut x);
+    int y = x;
+}
+
+// Safe calling safe ensure_init with struct
+_Safe void safe_init_pair(struct Pair *_Borrow __attribute__((ensure_init)) out);
+
+_Safe void test_safe_call_safe_struct(void) {
+    struct Pair p;
+    safe_init_pair(&_Mut p);
+    int a = p.a;
+    int b = p.b;
+}
+
+// Struct with pointer field: ensure_init marks all fields including pointer
+struct WithPtr { int *_Nullable p; int x; };
+void init_wp(struct WithPtr *__attribute__((ensure_init)) out);
+_Safe void use_nullable_ptr(int *_Nullable p);
+
+_Safe void test_struct_with_ptr(void) {
+    struct WithPtr w;
+    _Unsafe { init_wp(&w); }
+    use_nullable_ptr(w.p);
+    int y = w.x;
+}
+
+// Pointer-to-pointer: ensure_init marks the pointer variable itself
+void init_pp(int *_Nullable *__attribute__((ensure_init)) out);
+
+_Safe void test_ptr_to_ptr(void) {
+    int *_Nullable q;
+    _Unsafe { init_pp(&q); }
+    use_nullable_ptr(q);
+}

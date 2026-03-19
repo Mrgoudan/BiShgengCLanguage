@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test BSCIR init analysis: noreturn on the else-branch means x is always
+// initialized when control reaches the use. No false positive.
+
+__attribute__((noreturn)) void my_abort(void);
+
+_Safe void test_noreturn_branch(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    else
+        _Unsafe { my_abort(); }
+    int y = x + 1;
+}

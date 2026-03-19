@@ -1,0 +1,42 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+
+void use_ptr(int *p);
+void use_cptr(const int *p);
+
+// & on uninit variable.
+void test_addr_uninit(void) {
+    int x;
+    int *p = &x; // expected-error {{use of uninitialized value: `x`}}
+    use_ptr(p);
+}
+
+// &_Mut on uninit variable.
+void test_ampmut_uninit(void) {
+    int x;
+    int *_Borrow p = &_Mut x; // expected-error {{use of uninitialized value: `x`}}
+    (void)p;
+}
+
+// &_Const on uninit variable.
+void test_ampconst_uninit(void) {
+    int x;
+    const int *_Borrow p = &_Const x; // expected-error {{use of uninitialized value: `x`}}
+    (void)p;
+}
+
+// & on uninit struct field.
+struct S { int a; int b; };
+
+void test_addr_field_uninit(void) {
+    struct S s;
+    s.a = 1;
+    int *p = &s.b; // expected-error {{use of uninitialized value: `s.b`}}
+    use_ptr(p);
+}
+
+// & on whole uninit struct.
+void test_addr_whole_uninit(void) {
+    struct S s;
+    int *p = &s.a; // expected-error {{use of uninitialized value: `s.a`}}
+    use_ptr(p);
+}

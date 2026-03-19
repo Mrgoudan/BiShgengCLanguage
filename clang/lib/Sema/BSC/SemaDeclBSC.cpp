@@ -14,11 +14,13 @@
 #if ENABLE_BSC
 
 #include "TreeTransform.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/BSC/WalkerBSC.h"
 #include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
 #include "clang/Analysis/Analyses/BSC/BSCIR.h"
 #include "clang/Analysis/Analyses/BSC/BSCIRBuilder.h"
 #include "clang/Analysis/Analyses/BSC/BSCIRDump.h"
+#include "clang/Analysis/Analyses/BSC/BSCIRInitAnalysis.h"
 #include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
 #include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
@@ -294,7 +296,77 @@ void Sema::BSCDataflowAnalysis(const Decl *D) {
     return;
   }
 
+  // Init analysis (BSCIR-based, independent of CFG)
+  bool RequireInitCheck = false;
+  switch (getLangOpts().getUninitCheck()) {
+  case LangOptions::UC_NONE:
+    break;
+  case LangOptions::UC_SAFE:
+    if (FD) {
+      bool HasEnsureInitParams = false;
+      for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+        if (FD->getParamDecl(I)->hasAttr<EnsureInitAttr>()) {
+          HasEnsureInitParams = true;
+          break;
+        }
+      }
+      RequireInitCheck = HasSafeZoneInFunction(FD) ||
+                         FD->getSafeZoneSpecifier() == SZ_Safe ||
+                         HasEnsureInitParams;
+    }
+    break;
+  case LangOptions::UC_ALL:
+    RequireInitCheck = true;
+    break;
+  }
+  if (RequireInitCheck && FD && FD->getBody()) {
+    bscir::BSCIRBuilder Builder(Context, *FD);
+    auto Body = Builder.build();
+    if (Body) {
+      SmallVector<bscir::InitDiagInfo, 8> InitDiags;
+      bool CheckAllZones =
+          getLangOpts().getUninitCheck() == LangOptions::UC_ALL;
+      bscir::runInitAnalysis(*Body, InitDiags, CheckAllZones);
+      llvm::DenseSet<std::pair<unsigned, unsigned>> Seen;
+      for (const auto &D : InitDiags) {
+        unsigned RawLoc = D.Loc.getRawEncoding();
+        unsigned KindVal = static_cast<unsigned>(D.Kind);
+        if (!Seen.insert({RawLoc, KindVal}).second)
+          continue;
+        unsigned DiagId;
+        switch (D.Kind) {
+        case bscir::InitDiagKind::UseOfUninit:
+          DiagId = diag::err_ownership_use_uninit;
+          break;
+        case bscir::InitDiagKind::UseOfMaybeUninit:
+          DiagId = diag::err_ownership_use_possibly_uninit;
+          break;
+        case bscir::InitDiagKind::ReturnUninit:
+          DiagId = diag::err_return_uninit;
+          break;
+        case bscir::InitDiagKind::ReturnMaybeUninit:
+          DiagId = diag::err_return_possibly_uninit;
+          break;
+        case bscir::InitDiagKind::EnsureInitNotInit:
+          DiagId = diag::err_ensure_init_not_init;
+          break;
+        case bscir::InitDiagKind::EnsureInitMaybeNotInit:
+          DiagId = diag::err_ensure_init_maybe_not_init;
+          break;
+        case bscir::InitDiagKind::EnsureInitPtrAliased:
+          DiagId = diag::err_ensure_init_ptr_aliased;
+          break;
+        case bscir::InitDiagKind::EnsureInitDerefReadUninit:
+          DiagId = diag::err_ensure_init_deref_read_uninit;
+          break;
+        }
+        Diag(D.Loc, DiagId) << D.VarName;
+        getDiagnostics().increaseInitCheckErrors();
+      }
+    }
+  }
 
+  // CFG-based analyses (nullability, borrow check)
   if (RequireCFGAnalysis && FD && AC.getCFG()) {
     // Step one: Run NullabilityCheck
     unsigned NumNullabilityCheckErrorsInCurrFD = 0;

@@ -1568,6 +1568,11 @@ BUILTIN(__builtin_annotation, "v.", "tn")
 // Invariants
 BUILTIN(__builtin_assume, "vb", "n")
 
+#if ENABLE_BSC
+// BSC: mark a variable as initialized at this program point
+BUILTIN(__builtin_assume_initialized, "v.", "nt")
+#endif
+
 // Multiprecision Arithmetic Builtins.
 BUILTIN(__builtin_addcb, "UcUcCUcCUcCUc*", "n")
 BUILTIN(__builtin_addcs, "UsUsCUsCUsCUs*", "n")

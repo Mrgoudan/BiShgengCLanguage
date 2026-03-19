@@ -1,0 +1,50 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Globals and file-scope statics are assumed initialized (zero-initialized by C).
+
+_Safe void use(int a);
+_Safe void use_ptr(int *_Nullable p);
+
+int g_val;
+int g_arr[3];
+int *_Nullable g_ptr;
+static int s_val;
+static int s_arr[3];
+static int *_Nullable s_ptr;
+
+struct S { int a; int b; };
+static struct S s_struct;
+
+_Safe void test_global_val(void) {
+    use(g_val);
+}
+
+_Safe void test_global_arr(void) {
+    use(g_arr[0]);
+    use(g_arr[1]);
+    use(g_arr[2]);
+}
+
+_Safe void test_global_ptr(void) {
+    use_ptr(g_ptr);
+}
+
+_Safe void test_static_val(void) {
+    use(s_val);
+}
+
+_Safe void test_static_arr(void) {
+    use(s_arr[0]);
+    use(s_arr[1]);
+    use(s_arr[2]);
+}
+
+_Safe void test_static_ptr(void) {
+    use_ptr(s_ptr);
+}
+
+_Safe void test_static_struct(void) {
+    use(s_struct.a);
+    use(s_struct.b);
+}

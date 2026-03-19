@@ -25,10 +25,10 @@ _Safe int main(void) {
   _Bool b;  // ok: bool type can be uninitialized
   struct StructWithoutPointer s;  // ok: struct without pointer fields can be uninitialized
   union UnionWithoutPointer u;  // ok: union without pointer fields can be uninitialized
-  int *p;
-  int (*fp)(int);
-  struct StructWithPointer sp;
-  union UnionWithPointer up;
+  int *p;  // ok: pointers can be left uninitialized, BSCIR init analysis handles use-before-init
+  int (*fp)(int);  // ok: function pointers can be left uninitialized
+  struct StructWithPointer sp;  // ok: structs with pointers can be left uninitialized
+  union UnionWithPointer up;  // ok: unions with pointers can be left uninitialized
   a = 0;
   lab:
   if (a < 10) {

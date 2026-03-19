@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: _Owned pointer initialization in _Safe zones.
+
+_Safe void consume(int *_Owned p);
+
+// Init at declaration.
+_Safe void test_owned_init_at_decl(void) {
+    int *_Owned p = (int *_Owned)nullptr;
+    consume(p);
+}
+
+// Declared uninit, then assigned before use.
+_Safe void test_owned_assign_then_use(void) {
+    int *_Owned p;
+    p = (int *_Owned)nullptr;
+    consume(p);
+}
+
+// Both branches assign.
+_Safe void test_owned_branch_both(int cond) {
+    int *_Owned p;
+    if (cond) {
+        p = (int *_Owned)nullptr;
+    } else {
+        p = (int *_Owned)nullptr;
+    }
+    consume(p);
+}
+
+// Struct with _Owned field, all fields assigned.
+struct SO { int *_Owned p; int v; };
+_Safe void use_so(struct SO s);
+
+_Safe void test_owned_struct_full(void) {
+    struct SO s;
+    s.p = (int *_Owned)nullptr;
+    s.v = 1;
+    use_so(s);
+}

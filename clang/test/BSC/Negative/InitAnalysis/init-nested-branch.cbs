@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: nested field initialized on only one branch is possibly uninitialized.
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_nested_branch_partial(int cond) {
+    struct Outer o;
+    o.inner.a = 1;
+    o.c = 3;
+    if (cond)
+        o.inner.b = 2;
+    int val = o.inner.b; // expected-error {{use of possibly uninitialized value: `o.inner.b`}}
+}

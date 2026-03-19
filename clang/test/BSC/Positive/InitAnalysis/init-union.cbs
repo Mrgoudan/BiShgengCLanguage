@@ -1,0 +1,229 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all %s
+
+// Union: initializing any member initializes the whole union.
+// Union read/write is not allowed in safe zone, so use -uninit-check=all.
+
+union U { int a; float b; };
+union UP { int *_Nullable p; int v; };
+
+void use_int(int a);
+void use_float(float f);
+void use_ptr(int *_Nullable p);
+
+// Initializing one member makes the whole union initialized.
+void test_union_init_a(void) {
+    union U u;
+    u.a = 42;
+    use_int(u.a);
+    use_float(u.b);
+}
+
+void test_union_init_b(void) {
+    union U u;
+    u.b = 3.14f;
+    use_int(u.a);
+    use_float(u.b);
+}
+
+// Designated init.
+void test_union_designated(void) {
+    union U u = {.a = 1};
+    use_int(u.a);
+    use_float(u.b);
+}
+
+// Zero init: {0}.
+void test_union_zero(void) {
+    union U u = {0};
+    use_int(u.a);
+    use_float(u.b);
+}
+
+// Empty init: {}.
+void test_union_empty(void) {
+    union U u = {};
+    use_int(u.a);
+}
+
+// Union with _Nullable pointer.
+void test_union_ptr_init(int *_Nullable p) {
+    union UP u = {.p = p};
+    use_ptr(u.p);
+    use_int(u.v);
+}
+
+void test_union_ptr_zero(void) {
+    union UP u = {0};
+    use_ptr(u.p);
+}
+
+// --- Union with struct inside ---
+
+struct Inner { int x; int y; };
+union UWithStruct { struct Inner s; float f; };
+
+// Partial struct init within union: only x written.
+// Cross-variant read (u.f) is OK, same-variant initialized field (u.s.x) is OK.
+void test_union_struct_member(void) {
+    union UWithStruct u;
+    u.s.x = 1;
+    use_int(u.s.x);
+    use_float(u.f);  // cross-variant: OK
+}
+
+// All struct fields within union written: promotes whole union.
+void test_union_struct_all_fields(void) {
+    union UWithStruct u;
+    u.s.x = 1;
+    u.s.y = 2;
+    use_int(u.s.x);
+    use_int(u.s.y);
+    use_float(u.f);
+}
+
+// Scalar write after partial struct write clears field tracking.
+void test_union_scalar_clears_tracking(void) {
+    union UWithStruct u;
+    u.s.x = 1;
+    u.f = 3.14f;
+    use_int(u.s.y);  // OK: scalar write cleared field tracking
+}
+
+// Init float member of union containing struct.
+void test_union_struct_float(void) {
+    union UWithStruct u;
+    u.f = 3.14f;
+    use_float(u.f);
+    use_int(u.s.x);
+}
+
+// Designated init of union containing struct.
+void test_union_struct_designated(void) {
+    union UWithStruct u = {.s = {1, 2}};
+    use_int(u.s.x);
+    use_float(u.f);
+}
+
+// Empty init of union containing struct.
+void test_union_struct_empty(void) {
+    union UWithStruct u = {};
+    use_int(u.s.x);
+}
+
+// --- Struct with union inside ---
+
+union InnerU { int a; float b; };
+struct SWithUnion { union InnerU u; int v; };
+
+// Init both fields of struct containing union.
+void test_struct_union_init(void) {
+    struct SWithUnion s;
+    s.u.a = 42;
+    s.v = 1;
+    use_int(s.u.a);
+    use_int(s.v);
+}
+
+// Designated init of struct containing union.
+void test_struct_union_designated(void) {
+    struct SWithUnion s = {.u = {.a = 1}, .v = 2};
+    use_int(s.u.a);
+    use_int(s.v);
+}
+
+// Empty init of struct containing union.
+void test_struct_union_empty(void) {
+    struct SWithUnion s = {};
+    use_int(s.u.a);
+    use_int(s.v);
+}
+
+// --- Union with union with struct inside ---
+
+union Mid { struct Inner ms; int mv; };
+union Outer { union Mid m; float of; };
+
+// Partial struct init in nested union: cross-variant reads OK.
+void test_deep_cross_variant(void) {
+    union Outer u;
+    u.m.ms.x = 1;
+    use_float(u.of);  // outer cross-variant: OK
+}
+
+// Scalar variant write in inner union clears struct tracking.
+void test_deep_inner_scalar(void) {
+    union Outer u;
+    u.m.mv = 42;
+    use_int(u.m.ms.x);  // inner scalar covers all: OK
+}
+
+// Outer scalar write clears all tracking.
+void test_deep_outer_scalar(void) {
+    union Outer u;
+    u.of = 3.14f;
+    use_int(u.m.ms.x);  // outer scalar covers all: OK
+}
+
+// All struct fields written in nested union.
+void test_deep_all_fields(void) {
+    union Outer u;
+    u.m.ms.x = 1;
+    u.m.ms.y = 2;
+    use_int(u.m.ms.x);
+    use_int(u.m.ms.y);
+    use_float(u.of);
+}
+
+// Scalar write after partial struct clears tracking.
+void test_deep_scalar_clears(void) {
+    union Outer u;
+    u.m.ms.x = 1;
+    u.of = 3.14f;
+    use_int(u.m.ms.y);  // OK: scalar write cleared field tracking
+}
+
+// --- Struct with union inside (nested) ---
+
+struct Wrap { union UWithStruct uw; int v; };
+
+// Cross-variant read in nested union.
+void test_wrap_cross_variant(void) {
+    struct Wrap w;
+    w.uw.s.x = 1;
+    use_float(w.uw.f);  // cross-variant: OK
+}
+
+// Scalar variant write in nested union clears tracking.
+void test_wrap_scalar_variant(void) {
+    struct Wrap w;
+    w.uw.f = 3.14f;
+    use_int(w.uw.s.x);  // scalar covers all: OK
+}
+
+// Scalar write after partial struct clears tracking in nested.
+void test_wrap_scalar_clears(void) {
+    struct Wrap w;
+    w.uw.s.x = 1;
+    w.uw.f = 3.14f;
+    use_int(w.uw.s.y);  // OK: scalar write cleared field tracking
+}
+
+// All struct fields + v written in nested.
+void test_wrap_all_fields(void) {
+    struct Wrap w;
+    w.uw.s.x = 1;
+    w.uw.s.y = 2;
+    w.v = 3;
+    use_int(w.uw.s.x);
+    use_int(w.uw.s.y);
+    use_float(w.uw.f);
+    use_int(w.v);
+}
+
+// Whole union assign in nested.
+void test_wrap_whole_assign(struct Wrap w2) {
+    struct Wrap w;
+    w.uw = w2.uw;
+    use_int(w.uw.s.x);  // OK: whole union assigned
+    use_float(w.uw.f);  // OK
+}

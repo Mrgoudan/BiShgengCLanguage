@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test BSCIR init analysis: a function call return value is always initialized.
+// No false positive for variables initialized by call results.
+
+_Safe int get_value(void);
+
+_Safe void test_call_return(void) {
+    int x = get_value();
+    int y = x + 1;
+}

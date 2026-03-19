@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=none -verify %s
+// expected-no-diagnostics
+
+// Test: -uninit-check=none disables all init analysis, including ensure_init.
+
+_Safe void test_uninit_in_safe(void) {
+    int x;
+    int y = x + 1; // no error with -uninit-check=none
+}
+
+void test_uninit_outside_safe(void) {
+    int x;
+    _Safe {
+        int y = x + 1; // no error with -uninit-check=none
+    }
+}
+
+void bad_init(int *__attribute__((ensure_init)) out) {
+    // no error even though *out is never initialized
+}

@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -uninit-check=all %s
+
+// Test that the ensure_init address-of exemption is scoped to the specific
+// temp feeding the call arg, not the entire block.
+
+void init_int(int *__attribute__((ensure_init)) out);
+
+// &x for ensure_init arg is exempt, but earlier &x in same block is not.
+void addr_of_before_ensure_init(void) {
+    int x;
+    int *p = &x;    // expected-error {{use of uninitialized value: `x`}}
+    init_int(&x);   // ok: &x feeds ensure_init arg
+    int y = x;      // ok: x initialized by ensure_init
+}
+
+// Multiple ensure_init calls: each only exempts its own arg prep.
+void init_pair(int *__attribute__((ensure_init)) a, int *__attribute__((ensure_init)) b);
+
+void two_uninit_addr_of(void) {
+    int x, y;
+    int *px = &x;   // expected-error {{use of uninitialized value: `x`}}
+    int *py = &y;   // expected-error {{use of uninitialized value: `y`}}
+    init_pair(&x, &y); // ok: both feed ensure_init args
+    int sum = x + y;   // ok
+}
+
+// __builtin_assume_initialized: same scoping rule.
+void assume_init_scoped(void) {
+    int x;
+    int *p = &x;    // expected-error {{use of uninitialized value: `x`}}
+    __builtin_assume_initialized(&_Mut x); // ok: &x feeds builtin arg
+    int y = x;      // ok
+}

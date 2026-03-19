@@ -73,7 +73,7 @@ public:
 namespace detail {
 
 /// Compute postorder numbering for BSCIR blocks via iterative DFS.
-inline SmallVector<BasicBlockId, 32> computePostOrder(const Body &B) {
+inline SmallVector<BasicBlockId, 32> computePO(const Body &B) {
   SmallVector<BasicBlockId, 32> PO;
   if (B.Blocks.empty())
     return PO;
@@ -116,15 +116,11 @@ inline SmallVector<BasicBlockId, 32> computePostOrder(const Body &B) {
 
 /// Compute reverse-postorder numbering for BSCIR blocks.
 inline SmallVector<BasicBlockId, 32> computeRPO(const Body &B) {
-  auto PO = computePostOrder(B);
+  auto PO = computePO(B);
   SmallVector<BasicBlockId, 32> RPO(PO.rbegin(), PO.rend());
   return RPO;
 }
 
-/// Compute postorder numbering for BSCIR blocks.
-inline SmallVector<BasicBlockId, 32> computePO(const Body &B) {
-  return computePostOrder(B);
-}
 
 } // namespace detail
 

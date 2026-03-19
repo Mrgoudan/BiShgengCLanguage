@@ -10,6 +10,11 @@ def nullability_check : Joined<["-"], "nullability-check=">, Flags<[CC1Option]>,
   Values<"safeonly,all">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["NC_SAFE", "NC_ALL"]>,
   MarshallingInfoEnum<LangOpts<"NullabilityCheck">, "NC_SAFE">;
+def uninit_check : Joined<["-"], "uninit-check=">, Flags<[CC1Option]>,
+  HelpText<"Select uninitialized variable check mode">,
+  Values<"safeonly,none,all">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["UC_SAFE", "UC_NONE", "UC_ALL"]>,
+  MarshallingInfoEnum<LangOpts<"UninitCheck">, "UC_SAFE">;
 def E_Group : OptionGroup<"<E group>">, Group<Diag_Group>, DocFlatten;
 def E_value_Group : OptionGroup<"<E (with value) group>">, Group<E_Group>,
                     DocFlatten;

@@ -1,0 +1,30 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: function parameters are always initialized.
+
+_Safe void test_scalar_param(int x) {
+    int y = x + 1;
+}
+
+struct Point { int x; int y; };
+
+_Safe void test_struct_param(struct Point p) {
+    int a = p.x;
+    int b = p.y;
+    int sum = a + b;
+}
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_nested_struct_param(struct Outer o) {
+    int a = o.inner.a;
+    int b = o.inner.b;
+    int c = o.c;
+}
+
+// Multiple parameters
+_Safe void test_multi_params(int a, int b, struct Point p) {
+    int sum = a + b + p.x + p.y;
+}

@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init caller side: nested struct field-level init.
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+void init_int(int *__attribute__((ensure_init)) out);
+
+_Safe void test_nested_field(void) {
+    struct Outer o;
+    _Unsafe {
+        init_int(&o.c);
+        init_int(&o.inner.a);
+    }
+    int a = o.inner.a;
+    int c = o.c;
+    int b = o.inner.b; // expected-error {{use of uninitialized value: `o.inner.b`}}
+}

@@ -1,0 +1,38 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: various noreturn patterns with initialization.
+
+__attribute__((noreturn)) void abort_now(void);
+__attribute__((noreturn)) void panic(const char *msg);
+
+// noreturn on the if-branch: else path always executes
+_Safe void test_noreturn_if(int cond) {
+    int x;
+    if (cond)
+        _Unsafe { abort_now(); }
+    else
+        x = 1;
+    int y = x;
+}
+
+// noreturn on the else-branch: if path always executes
+_Safe void test_noreturn_else(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    else
+        _Unsafe { abort_now(); }
+    int y = x;
+}
+
+// Both branches have noreturn: code after is unreachable, no error
+_Safe void test_both_noreturn(int cond) {
+    int x;
+    if (cond)
+        _Unsafe { abort_now(); }
+    else
+        _Unsafe { panic("error"); }
+    // unreachable: no diagnostics
+    int y = x;
+}

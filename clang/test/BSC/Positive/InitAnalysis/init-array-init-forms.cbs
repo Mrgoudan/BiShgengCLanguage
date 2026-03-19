@@ -1,0 +1,98 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// All array initialization forms are considered initialized.
+
+_Safe void use(int a);
+_Safe void use_ptr(int *_Nonnull p);
+_Safe void use_nullable(int *_Nullable p);
+_Safe void use_borrow(int *_Borrow p);
+
+// Full init: {1, 2, 3}
+_Safe void test_full_init(void) {
+    int arr[3] = {1, 2, 3};
+    use(arr[0]);
+    use(arr[1]);
+    use(arr[2]);
+}
+
+// Zero init: {0}
+_Safe void test_zero_init(void) {
+    int arr[3] = {0};
+    use(arr[0]);
+    use(arr[1]);
+    use(arr[2]);
+}
+
+// Empty init: {}
+_Safe void test_empty_init(void) {
+    int arr[3] = {};
+    use(arr[0]);
+    use(arr[1]);
+    use(arr[2]);
+}
+
+// Partial init: {1} — remaining elements zero-initialized by C semantics.
+_Safe void test_partial_init(void) {
+    int arr[3] = {1};
+    use(arr[0]);
+    use(arr[1]);
+    use(arr[2]);
+}
+
+// Pointer array with full init.
+_Safe void test_ptr_array(int *_Nonnull a, int *_Nonnull b) {
+    int *_Nonnull arr[2] = {a, b};
+    use_ptr(arr[0]);
+    use_ptr(arr[1]);
+}
+
+// _Nonnull pointer array with full init.
+_Safe void test_nonnull_ptr_full(int *_Nonnull a, int *_Nonnull b, int *_Nonnull c) {
+    int *_Nonnull arr[3] = {a, b, c};
+    use_ptr(arr[0]);
+    use_ptr(arr[1]);
+    use_ptr(arr[2]);
+}
+
+// _Nullable pointer array with full init.
+_Safe void test_nullable_ptr_full(int *_Nullable a, int *_Nullable b) {
+    int *_Nullable arr[2] = {a, b};
+    use_nullable(arr[0]);
+    use_nullable(arr[1]);
+}
+
+// _Nullable pointer array with nullptr init.
+_Safe void test_nullable_ptr_null(void) {
+    int *_Nullable arr[2] = {nullptr, nullptr};
+    use_nullable(arr[0]);
+    use_nullable(arr[1]);
+}
+
+// _Nullable pointer array with empty init.
+_Safe void test_nullable_ptr_empty(void) {
+    int *_Nullable arr[2] = {};
+    use_nullable(arr[0]);
+    use_nullable(arr[1]);
+}
+
+// _Nullable pointer array with mixed init: {a, nullptr}.
+_Safe void test_nullable_ptr_mixed(int *_Nullable a) {
+    int *_Nullable arr[2] = {a, nullptr};
+    use_nullable(arr[0]);
+    use_nullable(arr[1]);
+}
+
+// _Nullable pointer array with partial init: {a}.
+_Safe void test_nullable_ptr_partial(int *_Nullable a) {
+    int *_Nullable arr[2] = {a};
+    use_nullable(arr[0]);
+    use_nullable(arr[1]);
+}
+
+// _Borrow pointer array with full init.
+_Safe void test_borrow_full(int *_Borrow a, int *_Borrow b) {
+    int *_Borrow arr[2] = {a, b};
+    use_borrow(arr[0]);
+    use_borrow(arr[1]);
+}

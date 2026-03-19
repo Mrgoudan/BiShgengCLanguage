@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: ensure_init callee with various branch patterns.
+
+// Only one branch initializes: maybe not init
+void partial_init(int cond, int *__attribute__((ensure_init)) out) {
+    if (cond)
+        *out = 42;
+    // else: not initialized
+} // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init)) function}}
+
+// Both branches initialize: ok
+void full_init(int cond, int *__attribute__((ensure_init)) out) {
+    if (cond)
+        *out = 1;
+    else
+        *out = 2;
+}
+
+// Loop initialization: may not execute
+void loop_init(int n, int *__attribute__((ensure_init)) out) {
+    while (n > 0) {
+        *out = n;
+        n = n - 1;
+    }
+} // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init)) function}}

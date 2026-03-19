@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Negative: function pointer typedef WITHOUT ensure_init does NOT mark locals initialized.
+typedef _Safe void (*NoInitFn)(int * _Borrow out);
+
+_Safe void test_fnptr_no_attr(NoInitFn fn) {
+    int x;
+    fn(&_Mut x); // expected-error {{use of uninitialized value: `x`}}
+    int y = x; // expected-error {{use of uninitialized value: `x`}}
+}
+
+// Negative: direct function decl WITHOUT ensure_init does NOT mark locals initialized.
+_Safe void no_init_decl(int * _Borrow out);
+
+_Safe void test_decl_no_attr(void) {
+    int x;
+    no_init_decl(&_Mut x); // expected-error {{use of uninitialized value: `x`}}
+    int y = x; // expected-error {{use of uninitialized value: `x`}}
+}

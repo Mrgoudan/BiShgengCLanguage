@@ -1,0 +1,14 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test BSCIR init analysis: field initialized on only one branch is
+// possibly uninitialized at use.
+
+struct Point { int x; int y; };
+
+_Safe void test_branch_field(int cond) {
+    struct Point p;
+    p.x = 1;
+    if (cond)
+        p.y = 2;
+    int val = p.y; // expected-error {{use of possibly uninitialized value: `p.y`}}
+}

@@ -13,6 +13,7 @@
 #if ENABLE_BSC
 
 #include "clang/Analysis/Analyses/BSC/BSCIRDump.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "llvm/Support/raw_ostream.h"
@@ -176,6 +177,17 @@ void clang::bscir::dumpRvalue(const Rvalue &R, const Body &B,
     OS << "})";
     break;
   }
+  case Rvalue::Array: {
+    const auto &Arr = R.getArray();
+    OS << "Array(" << typeStr(Arr.ElementTy) << ", {";
+    for (unsigned I = 0; I < Arr.Elements.size(); ++I) {
+      if (I > 0)
+        OS << ", ";
+      dumpOperand(Arr.Elements[I], OS);
+    }
+    OS << "})";
+    break;
+  }
   case Rvalue::Cast: {
     const auto &C = R.getCast();
     OS << "Cast(";
@@ -262,6 +274,17 @@ void clang::bscir::dumpTerminator(const Terminator &T, const Body &B,
       if (I > 0)
         OS << ", ";
       dumpOperand(C.Args[I], OS);
+      // Check if this argument has ensure_init.
+      bool IsEnsureInit = false;
+      if (C.Decl && I < C.Decl->getNumParams() &&
+          C.Decl->getParamDecl(I)->hasAttr<EnsureInitAttr>())
+        IsEnsureInit = true;
+      if (!IsEnsureInit && C.CalleeProtoType &&
+          I < C.CalleeProtoType->getNumParams() &&
+          C.CalleeProtoType->getExtParameterInfo(I).isEnsureInit())
+        IsEnsureInit = true;
+      if (IsEnsureInit)
+        OS << " [ensure_init]";
     }
     OS << ")";
     if (C.Diverges)
@@ -323,6 +346,10 @@ void clang::bscir::dumpBody(const Body &B, llvm::raw_ostream &OS) {
     OS << "_" << L.Id.Index << ": " << typeStr(L.Ty);
     if (!L.Name.empty())
       OS << " /* " << L.Name << " */";
+    // Check if this param has ensure_init.
+    if (B.SourceFD && (I - 1) < B.SourceFD->getNumParams() &&
+        B.SourceFD->getParamDecl(I - 1)->hasAttr<EnsureInitAttr>())
+      OS << " [ensure_init]";
   }
   OS << ") -> " << typeStr(B.Locals[0].Ty);
 
@@ -337,6 +364,11 @@ void clang::bscir::dumpBody(const Body &B, llvm::raw_ostream &OS) {
       OS << " (" << L.Name << ")";
     if (L.IsTemp)
       OS << " [temp]";
+    // Check if this local is a param with ensure_init.
+    if (B.SourceFD && L.Id.Index >= 1 && L.Id.Index <= B.NumParams &&
+        (L.Id.Index - 1) < B.SourceFD->getNumParams() &&
+        B.SourceFD->getParamDecl(L.Id.Index - 1)->hasAttr<EnsureInitAttr>())
+      OS << " [ensure_init]";
     OS << "\n";
   }
   OS << "\n";

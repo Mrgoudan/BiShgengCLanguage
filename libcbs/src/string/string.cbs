@@ -3,26 +3,23 @@
 
 const size_t bsc_string_no_pos = SIZE_MAX;
 
-_Safe char* _Borrow String::as_mut_str(String* _Borrow this) {
+_Safe char* _Nullable _Borrow String::as_mut_str(String* _Nullable _Borrow this) {
     _Unsafe {
-        if (this->vec.buf.ptr != nullptr)
             return &_Mut *this->vec.buf.ptr;
     }
 }
 
-_Safe const char* _Borrow String::as_str(const String* _Borrow this) {
+_Safe const char* _Nullable _Borrow String::as_str(const String* _Nullable _Borrow this) {
     _Unsafe {
-        if (this->vec.buf.ptr != nullptr)
             return &_Const *this->vec.buf.ptr;
     }
 }
 
-_Safe char String::at(const String* _Borrow this, size_t index) {
+_Safe char  String::at(const String* _Nullable _Borrow this, size_t index) {
     _Unsafe {
         if (this->length() <= index) {
             bsc_out_of_bound_handler(this->length(), index);
         }
-        if (this->vec.buf.ptr != nullptr)
             return this->vec.buf.ptr[index];
     }
 }

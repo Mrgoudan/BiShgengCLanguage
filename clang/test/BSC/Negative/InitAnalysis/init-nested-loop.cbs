@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: nested field written inside a loop body is only possibly initialized
+// (the loop may not execute).
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_nested_in_loop(int n) {
+    struct Outer o;
+    o.inner.a = 0;
+    o.c = 0;
+    while (n > 0) {
+        o.inner.b = n;
+        n = n - 1;
+    }
+    int val = o.inner.b; // expected-error {{use of possibly uninitialized value: `o.inner.b`}}
+}

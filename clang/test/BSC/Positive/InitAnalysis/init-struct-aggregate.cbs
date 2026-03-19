@@ -1,0 +1,27 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: aggregate initialization of structs.
+
+struct Point { int x; int y; };
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+// Aggregate initialization: all fields initialized
+_Safe void test_aggregate(void) {
+    struct Point p = {1, 2};
+    int sum = p.x + p.y;
+}
+
+// Nested aggregate initialization
+_Safe void test_nested_aggregate(void) {
+    struct Outer o = {{10, 20}, 30};
+    int val = o.inner.a + o.inner.b + o.c;
+}
+
+// Assign from initialized struct
+_Safe void test_struct_copy(void) {
+    struct Point p = {1, 2};
+    struct Point q = p;
+    int sum = q.x + q.y;
+}

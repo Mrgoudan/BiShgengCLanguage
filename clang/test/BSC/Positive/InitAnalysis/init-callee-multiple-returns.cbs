@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: ensure_init callee with multiple return paths all initializing.
+
+void multi_return(int cond, int *__attribute__((ensure_init)) out) {
+    if (cond) {
+        *out = 1;
+        return;
+    }
+    *out = 2;
+    return;
+}
+
+// Early return after initialization
+void early_return(int *__attribute__((ensure_init)) out) {
+    *out = 42;
+    return;
+}

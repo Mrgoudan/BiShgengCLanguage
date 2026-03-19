@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: three-level nesting. Partial init at the deepest level should error.
+
+struct Level2 { int x; int y; };
+struct Level1 { struct Level2 sub; int z; };
+struct Level0 { struct Level1 top; int w; };
+
+_Safe void test_deep_partial(void) {
+    struct Level0 v;
+    v.top.sub.x = 1;
+    v.top.z = 2;
+    v.w = 3;
+    int val = v.top.sub.y; // expected-error {{use of uninitialized value: `v.top.sub.y`}}
+}

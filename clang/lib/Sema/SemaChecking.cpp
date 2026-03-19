@@ -2225,6 +2225,26 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinArithmeticFence(TheCall))
       return ExprError();
     break;
+#if ENABLE_BSC
+  case Builtin::BI__builtin_assume_initialized: {
+    if (TheCall->getNumArgs() != 1) {
+      Diag(TheCall->getBeginLoc(), diag::err_assume_init_bad_arg);
+      return ExprError();
+    }
+    Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
+    bool Valid = false;
+    if (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
+      auto Op = UO->getOpcode();
+      if (Op == UO_AddrOf || Op == UO_AddrMut)
+        Valid = true;
+    }
+    if (!Valid) {
+      Diag(Arg->getBeginLoc(), diag::err_assume_init_bad_arg);
+      return ExprError();
+    }
+    break;
+  }
+#endif
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume:
     if (SemaBuiltinAssume(TheCall))

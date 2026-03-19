@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that a TRY/CATCH macro pattern using forward goto does not produce
+// false positive "uninitialized" diagnostics.
+//
+// CATCH is an empty macro; the catch block uses DUMMY_CALL() as a CFG barrier
+// and __taberr: as a goto label.  The (void) casts force init analysis checks.
+// All variables are initialized by TRY, so no diagnostic should fire.
+
+#define DUMMY_CALL() __rosa_dummyfunc()
+extern _Safe void __rosa_dummyfunc(void);
+
+#define TRY \
+    unsigned int __errorcode = 0; \
+    unsigned int __status = 0;
+
+#define CATCH
+
+_Safe unsigned int do_work(void);
+
+_Safe unsigned int test_try_catch_macro(void) { // expected-no-diagnostics
+    TRY {
+        __status = do_work();
+        if (__status != 0) { __errorcode = __status; goto __taberr; }
+    } CATCH {
+        DUMMY_CALL();
+      __taberr:
+        (void)__errorcode;
+        (void)__status;
+        return __errorcode;
+    }
+    return __status;
+}

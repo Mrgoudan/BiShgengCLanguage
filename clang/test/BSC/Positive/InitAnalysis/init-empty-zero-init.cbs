@@ -1,0 +1,64 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test that empty initializer lists ({}) and zero initializer lists ({0})
+// are treated as fully initialized by the init analysis.
+
+typedef struct Pair { int a; int b; } Pair;
+
+typedef struct Nested {
+    Pair p;
+    int c;
+} Nested;
+
+_Safe void use_int(int x);
+_Safe void use_pair(Pair p);
+_Safe void use_nested(Nested n);
+
+// Empty init list: all fields implicitly zero-initialized.
+_Safe void test_empty_init(void) {
+    Pair p = {};
+    use_pair(p); // ok
+}
+
+// Zero init list: first field explicit, rest implicit.
+_Safe void test_zero_init(void) {
+    Pair p = {0};
+    use_pair(p); // ok
+}
+
+// Partial designated init: unmentioned fields implicitly zero-initialized.
+_Safe void test_partial_designated(void) {
+    Pair p = {.b = 42};
+    use_pair(p); // ok
+}
+
+// Full designated init.
+_Safe void test_full_designated(void) {
+    Pair p = {.a = 1, .b = 2};
+    use_pair(p); // ok
+}
+
+// Nested struct with empty init.
+_Safe void test_nested_empty(void) {
+    Nested n = {};
+    use_nested(n); // ok
+}
+
+// Nested struct with partial init.
+_Safe void test_nested_partial(void) {
+    Nested n = {.c = 10};
+    use_nested(n); // ok
+}
+
+// Array with empty init.
+_Safe void test_array_empty(void) {
+    int arr[3] = {};
+    use_int(arr[0]); // ok
+}
+
+// Array with partial init.
+_Safe void test_array_partial(void) {
+    int arr[3] = {1};
+    use_int(arr[1]); // ok
+}

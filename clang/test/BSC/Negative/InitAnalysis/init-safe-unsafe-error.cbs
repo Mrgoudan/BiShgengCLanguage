@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: _Safe zone sees errors even after _Unsafe blocks.
+
+// Variable declared in _Safe, uninitialized use in _Safe after _Unsafe block
+// that doesn't initialize it.
+_Safe void test_unsafe_no_init(void) {
+    int x;
+    _Unsafe {
+        int y = 42;  // _Unsafe block doesn't touch x
+    }
+    int z = x; // expected-error {{use of uninitialized value: `x`}}
+}
+
+// Variable conditionally initialized in _Unsafe block
+_Safe void test_unsafe_conditional(int cond) {
+    int x;
+    _Unsafe {
+        if (cond)
+            x = 1;
+    }
+    int y = x; // expected-error {{use of possibly uninitialized value: `x`}}
+}

@@ -1,0 +1,98 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test that va_list usage in _Unsafe blocks inside _Safe functions does not
+// produce false "uninitialized" errors from the init analysis.
+
+typedef __builtin_va_list va_list;
+#define va_start(ap, param) __builtin_va_start(ap, param)
+#define va_arg(ap, type) __builtin_va_arg(ap, type)
+#define va_end(ap) __builtin_va_end(ap)
+
+// Basic va_list usage: va_start initializes args, va_arg reads, va_end cleans up.
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_basic(const char *_Borrow fmt, ...) {
+    int result = 0;
+    _Unsafe {
+        va_list args;
+        va_start(args, fmt);
+        result = va_arg(args, int);
+        va_end(args);
+    }
+    return result;
+}
+
+// Multiple va_arg calls.
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_multi(const char *_Borrow fmt, ...) {
+    int a = 0;
+    int b = 0;
+    _Unsafe {
+        va_list args;
+        va_start(args, fmt);
+        a = va_arg(args, int);
+        b = va_arg(args, int);
+        va_end(args);
+    }
+    return a + b;
+}
+
+// va_list with loop.
+__attribute__((format(printf, 2, 3)))
+_Safe int test_va_loop(int count, const char *_Borrow fmt, ...) {
+    int total = 0;
+    _Unsafe {
+        va_list args;
+        va_start(args, fmt);
+        for (int i = 0; i < count; i++) {
+            total += va_arg(args, int);
+        }
+        va_end(args);
+    }
+    return total;
+}
+
+// va_list declared in _Safe zone, used in _Unsafe block.
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_safe_zone_decl(const char *_Borrow fmt, ...) {
+    va_list args;
+    int result = 0;
+    _Unsafe {
+        va_start(args, fmt);
+        result = va_arg(args, int);
+        va_end(args);
+    }
+    return result;
+}
+
+// va_list declared in _Safe zone, multiple _Unsafe blocks.
+__attribute__((format(printf, 1, 2)))
+_Safe int test_va_safe_zone_multi_unsafe(const char *_Borrow fmt, ...) {
+    va_list args;
+    int a = 0;
+    int b = 0;
+    _Unsafe {
+        va_start(args, fmt);
+        a = va_arg(args, int);
+    }
+    _Unsafe {
+        b = va_arg(args, int);
+        va_end(args);
+    }
+    return a + b;
+}
+
+// va_list declared in _Safe zone with branching.
+__attribute__((format(printf, 2, 3)))
+_Safe int test_va_safe_zone_branch(int flag, const char *_Borrow fmt, ...) {
+    va_list args;
+    int result = 0;
+    _Unsafe {
+        va_start(args, fmt);
+        if (flag) {
+            result = va_arg(args, int);
+        }
+        va_end(args);
+    }
+    return result;
+}

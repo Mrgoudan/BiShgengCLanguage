@@ -1,0 +1,25 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: ensure_init caller side with branch patterns.
+
+void init_int(int *__attribute__((ensure_init)) out);
+
+// ensure_init on one branch only
+_Safe void test_branch_one_side(int cond) {
+    int x;
+    if (cond) {
+        _Unsafe { init_int(&x); }
+    }
+    int y = x; // expected-error {{use of possibly uninitialized value: `x`}}
+}
+
+// ensure_init on both branches: ok
+_Safe void test_branch_both(int cond) {
+    int x;
+    if (cond) {
+        _Unsafe { init_int(&x); }
+    } else {
+        _Unsafe { init_int(&x); }
+    }
+    int y = x; // ok: initialized on all paths
+}

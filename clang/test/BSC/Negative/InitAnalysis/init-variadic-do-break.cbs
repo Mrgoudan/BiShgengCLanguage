@@ -1,0 +1,35 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Safe void bar(const char * _Borrow fmt, ...) __attribute__((format(printf, 1, 2)));
+
+// break path skips ret init — bar(ret) and return ret after loop are MaybeUninit.
+_Safe unsigned int do_break_uninit(int n) {
+    unsigned int ret;
+    do {
+        if (n < 1) {
+            ret = 0;
+        } else if (n > 1) {
+            ret = 1;
+        } else {
+            break;
+        }
+        bar("%u", ret);
+    } while (ret != 1);
+    bar("%u", ret); // expected-error {{use of possibly uninitialized value: `ret`}}
+    return ret; // expected-error {{use of possibly uninitialized value: `ret`}}
+}
+
+// All paths init ret — no error.
+_Safe unsigned int do_all_init(int n) {
+    unsigned int ret;
+    do {
+        if (n < 1) {
+            ret = 0;
+        } else {
+            ret = 1;
+        }
+        bar("%u", ret);
+    } while (ret != 1);
+    bar("%u", ret);
+    return ret;
+}

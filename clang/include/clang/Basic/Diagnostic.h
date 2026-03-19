@@ -499,6 +499,7 @@ private:
   unsigned NumOwnershipErrors;
   unsigned NumBorrowCheckErrors;
   unsigned NumNullabilityCheckErrors;
+  unsigned NumInitCheckErrors;
   #endif
 
   /// A function pointer that converts an opaque diagnostic
@@ -876,6 +877,8 @@ public:
     return NumNullabilityCheckErrors;
   }
   void increaseNullabilityCheckErrors() { NumNullabilityCheckErrors++; }
+  unsigned getNumInitCheckErrors() const { return NumInitCheckErrors; }
+  void increaseInitCheckErrors() { NumInitCheckErrors++; }
   #endif
 
   /// Return an ID for a diagnostic with the specified format string and

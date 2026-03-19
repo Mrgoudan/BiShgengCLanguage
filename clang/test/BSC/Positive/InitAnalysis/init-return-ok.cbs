@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: properly initialized return values produce no errors.
+
+_Safe int test_return_init(void) {
+    int x = 42;
+    return x;
+}
+
+_Safe int test_return_all_branches(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    else
+        x = 2;
+    return x;
+}
+
+_Safe void test_void_return(void) {
+    // void function: no return value to check
+    int x = 1;
+}

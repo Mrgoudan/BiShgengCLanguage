@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test BSCIR init analysis: use of uninitialized variable in _Safe zone.
+
+_Safe void test_uninit(void) {
+    int x;
+    int y = x + 1; // expected-error {{use of uninitialized value: `x`}}
+}

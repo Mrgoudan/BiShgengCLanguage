@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test BSCIR init analysis: _Unsafe blocks inside a _Safe function skip
+// initialization checking, so no error is emitted for uninit use within
+// the _Unsafe block.
+
+_Safe void test_uninit_in_unsafe(void) {
+    int x;
+    _Unsafe {
+        int y = x + 1;
+    }
+}

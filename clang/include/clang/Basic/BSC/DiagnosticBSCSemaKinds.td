@@ -175,6 +175,39 @@ def err_ownership_use_possibly_uninit : Error<
   "use of possibly uninitialized value: `%0`">,
   InGroup<UseUninitOwned>;
 
+// return value initialization
+def err_return_uninit : Error<
+  "return value of `%0` is not initialized on all paths">,
+  InGroup<UseUninitOwned>;
+def err_return_possibly_uninit : Error<
+  "return value of `%0` may not be initialized on all paths">,
+  InGroup<UseUninitOwned>;
+
+// ensure_init contract verification
+def err_ensure_init_not_init : Error<
+  "'*%0' not initialized at return in __attribute__((ensure_init)) function">,
+  InGroup<UseUninitOwned>;
+def err_ensure_init_maybe_not_init : Error<
+  "'*%0' may not be initialized on all paths at return in __attribute__((ensure_init)) function">,
+  InGroup<UseUninitOwned>;
+def warn_ensure_init_not_addressof : Warning<
+  "ensure_init effect cannot be verified when argument is not an address-of expression">,
+  InGroup<UseUninitOwned>;
+def err_ensure_init_ptr_aliased : Error<
+  "__attribute__((ensure_init)) parameter '%0' cannot be reassigned or aliased before '*%0' is initialized">,
+  InGroup<UseUninitOwned>;
+def err_ensure_init_deref_read_uninit : Error<
+  "use of uninitialized '*%0' in __attribute__((ensure_init)) function">,
+  InGroup<UseUninitOwned>;
+def err_ensure_init_funcptr_incompatible : Error<
+  "incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter %0 but source does not have it">,
+  InGroup<UseUninitOwned>;
+
+// __builtin_assume_initialized
+def err_assume_init_bad_arg : Error<
+  "__builtin_assume_initialized requires '&' or '&_Mut' expression as argument">,
+  InGroup<UseUninitOwned>;
+
 // assign
 def err_ownership_assign_owned : Error<
   "assign to _Owned value: `%0`">,

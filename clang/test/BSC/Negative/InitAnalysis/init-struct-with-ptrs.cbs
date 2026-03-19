@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: struct fields init tracking with various types.
+// Pointer-containing structs cannot be left uninitialized in _Safe zones
+// (sema rule), so we test field-level tracking with int fields.
+
+struct Triple { int a; int b; int c; };
+
+// Partial field init
+_Safe void test_field_partial(void) {
+    struct Triple t;
+    t.a = 1;
+    t.b = 2;
+    // t.c not initialized
+    int val = t.c; // expected-error {{use of uninitialized value: `t.c`}}
+}
+
+// Full field init
+_Safe void test_field_full(void) {
+    struct Triple t;
+    t.a = 1;
+    t.b = 2;
+    t.c = 3;
+    int sum = t.a + t.b + t.c; // ok: all initialized
+}
+
+// Partial init with use of initialized field
+_Safe void test_use_init_field(void) {
+    struct Triple t;
+    t.a = 1;
+    int val = t.a; // ok: t.a is initialized
+    int bad = t.b; // expected-error {{use of uninitialized value: `t.b`}}
+}

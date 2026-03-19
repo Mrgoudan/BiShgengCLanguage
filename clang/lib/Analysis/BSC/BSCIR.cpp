@@ -377,10 +377,10 @@ void Body::simplify() {
   while (Changed) {
     Changed = false;
     Changed |= collapseGotoChains(*this);
-    Changed |= ::mergeBlocks(*this);
+    Changed |= mergeBlocks(*this);
     Changed |= simplifyBranches(*this);
   }
-  ::removeDeadBlocks(*this);
+  removeDeadBlocks(*this);
 }
 
 #endif // ENABLE_BSC

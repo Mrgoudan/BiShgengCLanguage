@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: three-level nesting — all leaf fields written promotes everything.
+
+struct Level2 { int x; int y; };
+struct Level1 { struct Level2 sub; int z; };
+struct Level0 { struct Level1 top; int w; };
+
+_Safe void test_deep_all_init(void) {
+    struct Level0 v;
+    v.top.sub.x = 1;
+    v.top.sub.y = 2;
+    v.top.z = 3;
+    v.w = 4;
+    struct Level0 copy = v; // no error: all leaf fields → promoted
+}

@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: recursive promotion — all nested fields init promotes parent, then
+// whole local.
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+// All leaf fields written → inner promoted → outer promoted → whole-struct use OK
+_Safe void test_promote_to_whole(void) {
+    struct Outer o;
+    o.inner.a = 1;
+    o.inner.b = 2;
+    o.c = 3;
+    struct Outer copy = o; // no error: whole local promoted
+}
+
+// Writing inner as a whole (aggregate) then writing c → whole local promoted
+_Safe void test_inner_aggregate(void) {
+    struct Inner i = {10, 20};
+    struct Outer o;
+    o.inner = i;
+    o.c = 3;
+    struct Outer copy = o; // no error
+}

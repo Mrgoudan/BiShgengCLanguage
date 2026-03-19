@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: default behavior (no -uninit-check= flag) is equivalent to safeonly.
+
+_Safe void test_safe_error(void) {
+    int x;
+    int y = x + 1; // expected-error {{use of uninitialized value: `x`}}
+}
+
+void test_no_safe_no_error(void) {
+    int x;
+    int y = x + 1; // no error — default is safeonly
+}

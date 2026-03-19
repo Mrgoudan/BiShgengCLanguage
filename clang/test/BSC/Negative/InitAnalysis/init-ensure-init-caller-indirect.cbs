@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init caller side: passing a variable (not &expr) to an
+// ensure_init parameter emits a warning because the init effect
+// cannot be verified.
+
+void init_int(int *__attribute__((ensure_init)) out);
+
+// Indirect: store address in a variable first, then pass the variable.
+_Safe void test_indirect(void) {
+    int x;
+    _Unsafe {
+        int *p = &x;
+        init_int(p); // expected-warning {{ensure_init effect cannot be verified when argument is not an address-of expression}}
+    }
+}
+
+// Direct &expr should produce no warning.
+_Safe void test_direct(void) {
+    int x;
+    _Unsafe { init_int(&x); }
+    int y = x; // OK - x is initialized
+}
+
+// Passing a parameter pointer (not &expr) should warn.
+_Safe void test_param_pass(int *q) {
+    _Unsafe { init_int(q); } // expected-warning {{ensure_init effect cannot be verified when argument is not an address-of expression}}
+}
+
+// Delegation: passing an ensure_init param to another ensure_init function is OK.
+void delegating(int *__attribute__((ensure_init)) out) {
+    init_int(out); // no warning: delegation is allowed
+}

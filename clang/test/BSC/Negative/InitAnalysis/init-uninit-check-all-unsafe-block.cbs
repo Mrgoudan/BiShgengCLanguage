@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+
+// Test: -uninit-check=all checks outside _Safe zones 
+
+void test_all_catches_outside_safe(void) {
+    int x;
+    int y = x + 1; // expected-error {{use of uninitialized value: `x`}}
+}
+
+_Safe void test_unsafe_block_also_checked(void) {
+    int x;
+    _Unsafe {
+        int y = x + 1; // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+_Safe void test_safe_still_catches(void) {
+    int x;
+    int y = x + 1; // expected-error {{use of uninitialized value: `x`}}
+}

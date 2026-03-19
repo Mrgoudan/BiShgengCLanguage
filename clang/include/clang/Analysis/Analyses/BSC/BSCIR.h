@@ -18,6 +18,7 @@
 #if ENABLE_BSC
 
 #include "clang/AST/ASTContext.h"
+#include <cassert>
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
@@ -239,12 +240,12 @@ struct Operand {
   Kind K;
 
   // --- Accessors ---
-  Place &getPlace() { return Data.PlaceVal; }
-  const Place &getPlace() const { return Data.PlaceVal; }
-  APValue &getConstVal() { return Data.ConstData.Val; }
-  const APValue &getConstVal() const { return Data.ConstData.Val; }
-  QualType getConstTy() const { return Data.ConstData.Ty; }
-  StringRef getStringVal() const { return Data.ConstData.Str; }
+  Place &getPlace() { assert(K == Copy || K == Move); return Data.PlaceVal; }
+  const Place &getPlace() const { assert(K == Copy || K == Move); return Data.PlaceVal; }
+  APValue &getConstVal() { assert(K == Constant); return Data.ConstData.Val; }
+  const APValue &getConstVal() const { assert(K == Constant); return Data.ConstData.Val; }
+  QualType getConstTy() const { assert(K == Constant); return Data.ConstData.Ty; }
+  StringRef getStringVal() const { assert(K == Constant); return Data.ConstData.Str; }
   bool hasString() const { return K == Constant && Data.ConstData.HasStr; }
 
   // --- Factories ---
@@ -378,6 +379,7 @@ struct Rvalue {
     BinaryOp,
     UnaryOp,
     Aggregate,
+    Array,
     Cast,
     NullPtr,
     SizeOf
@@ -392,20 +394,23 @@ struct Rvalue {
   struct BinaryOpData { BinaryOperatorKind Op; Operand LHS, RHS; };
   struct UnaryOpData { UnaryOperatorKind Op; Operand Sub; };
   struct AggregateData { const RecordDecl *Decl; SmallVector<Operand, 4> Fields; };
+  struct ArrayData { QualType ElementTy; SmallVector<Operand, 4> Elements; };
   struct CastData { CastKind CK; Operand Op; QualType Ty; };
   struct TypeData { QualType Ty; }; // shared by NullPtr and SizeOf
 
   // --- Accessors ---
-  const UseData &getUse() const { return Data.use; }
-  UseData &getUse() { return Data.use; }
-  const RefData &getRef() const { return Data.ref; }
-  RefData &getRef() { return Data.ref; }
-  const AddressOfData &getAddrOf() const { return Data.addrOf; }
-  const BinaryOpData &getBinOp() const { return Data.binOp; }
-  const UnaryOpData &getUnOp() const { return Data.unOp; }
-  const AggregateData &getAgg() const { return Data.agg; }
-  const CastData &getCast() const { return Data.cast; }
-  const TypeData &getTypeData() const { return Data.typeData; }
+  const UseData &getUse() const { assert(K == Use); return Data.use; }
+  UseData &getUse() { assert(K == Use); return Data.use; }
+  const RefData &getRef() const { assert(K == Ref); return Data.ref; }
+  RefData &getRef() { assert(K == Ref); return Data.ref; }
+  const AddressOfData &getAddrOf() const { assert(K == AddressOf); return Data.addrOf; }
+  const BinaryOpData &getBinOp() const { assert(K == BinaryOp); return Data.binOp; }
+  const UnaryOpData &getUnOp() const { assert(K == UnaryOp); return Data.unOp; }
+  const AggregateData &getAgg() const { assert(K == Aggregate); return Data.agg; }
+  const ArrayData &getArray() const { assert(K == Array); return Data.arr; }
+  ArrayData &getArray() { assert(K == Array); return Data.arr; }
+  const CastData &getCast() const { assert(K == Cast); return Data.cast; }
+  const TypeData &getTypeData() const { assert(K == NullPtr || K == SizeOf); return Data.typeData; }
 
   // --- Factories ---
   static Rvalue createUse(Operand Op) {
@@ -444,6 +449,13 @@ struct Rvalue {
     Rvalue R(Aggregate);
     R.Data.agg.Decl = Decl;
     R.Data.agg.Fields = std::move(Fields);
+    return R;
+  }
+  static Rvalue createArray(QualType ElementTy,
+                             SmallVector<Operand, 4> Elements) {
+    Rvalue R(Array);
+    R.Data.arr.ElementTy = ElementTy;
+    R.Data.arr.Elements = std::move(Elements);
     return R;
   }
   static Rvalue createCast(CastKind CK, Operand Op, QualType Ty) {
@@ -486,6 +498,7 @@ private:
     BinaryOpData binOp;
     UnaryOpData unOp;
     AggregateData agg;
+    ArrayData arr;
     CastData cast;
     TypeData typeData;
     PayloadUnion() {}
@@ -502,6 +515,7 @@ private:
     case BinaryOp:  new (&Data.binOp) BinaryOpData(); break;
     case UnaryOp:   new (&Data.unOp) UnaryOpData(); break;
     case Aggregate: new (&Data.agg) AggregateData(); break;
+    case Array:     new (&Data.arr) ArrayData(); break;
     case Cast:      new (&Data.cast) CastData(); break;
     case NullPtr:
     case SizeOf:    new (&Data.typeData) TypeData(); break;
@@ -516,6 +530,7 @@ private:
     case BinaryOp:  Data.binOp.~BinaryOpData(); break;
     case UnaryOp:   Data.unOp.~UnaryOpData(); break;
     case Aggregate: Data.agg.~AggregateData(); break;
+    case Array:     Data.arr.~ArrayData(); break;
     case Cast:      Data.cast.~CastData(); break;
     case NullPtr:
     case SizeOf:    Data.typeData.~TypeData(); break;
@@ -530,6 +545,7 @@ private:
     case BinaryOp:  new (&Data.binOp) BinaryOpData(O.Data.binOp); break;
     case UnaryOp:   new (&Data.unOp) UnaryOpData(O.Data.unOp); break;
     case Aggregate: new (&Data.agg) AggregateData(O.Data.agg); break;
+    case Array:     new (&Data.arr) ArrayData(O.Data.arr); break;
     case Cast:      new (&Data.cast) CastData(O.Data.cast); break;
     case NullPtr:
     case SizeOf:    new (&Data.typeData) TypeData(O.Data.typeData); break;
@@ -544,6 +560,7 @@ private:
     case BinaryOp:  new (&Data.binOp) BinaryOpData(std::move(O.Data.binOp)); break;
     case UnaryOp:   new (&Data.unOp) UnaryOpData(std::move(O.Data.unOp)); break;
     case Aggregate: new (&Data.agg) AggregateData(std::move(O.Data.agg)); break;
+    case Array:     new (&Data.arr) ArrayData(std::move(O.Data.arr)); break;
     case Cast:      new (&Data.cast) CastData(std::move(O.Data.cast)); break;
     case NullPtr:
     case SizeOf:    new (&Data.typeData) TypeData(std::move(O.Data.typeData)); break;
@@ -565,9 +582,9 @@ struct Statement {
   struct StorageData { LocalId Local; };
 
   // --- Accessors ---
-  const AssignData &getAssign() const { return Data.assign; }
-  AssignData &getAssign() { return Data.assign; }
-  LocalId getStorageLocal() const { return Data.storage.Local; }
+  const AssignData &getAssign() const { assert(K == Assign); return Data.assign; }
+  AssignData &getAssign() { assert(K == Assign); return Data.assign; }
+  LocalId getStorageLocal() const { assert(K == StorageLive || K == StorageDead); return Data.storage.Local; }
 
   // --- Common fields ---
   SafeZoneSpecifier SafeZone = SZ_None;
@@ -713,19 +730,21 @@ struct Terminator {
     BasicBlockId Successor;
     bool Diverges;
     const FunctionDecl *Decl;
+    SmallVector<llvm::Optional<Place>, 4> ArgPlaces;
+    const FunctionProtoType *CalleeProtoType = nullptr;
     std::string CalleeName; // For builtins without a FunctionDecl (e.g. AtomicExpr)
   };
   struct DropData { Place Dropped; BasicBlockId Successor; };
 
   // --- Accessors ---
-  const GotoData &getGoto() const { return Data.go; }
-  GotoData &getGoto() { return Data.go; }
-  const SwitchIntData &getSwitchInt() const { return Data.sw; }
-  SwitchIntData &getSwitchInt() { return Data.sw; }
-  const CallData &getCall() const { return Data.call; }
-  CallData &getCall() { return Data.call; }
-  const DropData &getDrop() const { return Data.drop; }
-  DropData &getDrop() { return Data.drop; }
+  const GotoData &getGoto() const { assert(K == Goto); return Data.go; }
+  GotoData &getGoto() { assert(K == Goto); return Data.go; }
+  const SwitchIntData &getSwitchInt() const { assert(K == SwitchInt); return Data.sw; }
+  SwitchIntData &getSwitchInt() { assert(K == SwitchInt); return Data.sw; }
+  const CallData &getCall() const { assert(K == Call); return Data.call; }
+  CallData &getCall() { assert(K == Call); return Data.call; }
+  const DropData &getDrop() const { assert(K == Drop); return Data.drop; }
+  DropData &getDrop() { assert(K == Drop); return Data.drop; }
 
   // --- Common fields ---
   SafeZoneSpecifier SafeZone = SZ_None;
@@ -759,7 +778,9 @@ struct Terminator {
                                 SafeZoneSpecifier SZ = SZ_None,
                                 const Stmt *Orig = nullptr,
                                 SourceLocation Loc = SourceLocation(),
-                                bool Diverges = false) {
+                                bool Diverges = false,
+                                SmallVector<llvm::Optional<Place>, 4> ArgPlaces = {},
+                                const FunctionProtoType *ProtoType = nullptr) {
     Terminator T(Call);
     T.Data.call.Callee = std::move(Callee);
     T.Data.call.Args = std::move(Args);
@@ -767,6 +788,8 @@ struct Terminator {
     T.Data.call.Successor = Successor;
     T.Data.call.Diverges = Diverges;
     T.Data.call.Decl = FD;
+    T.Data.call.ArgPlaces = std::move(ArgPlaces);
+    T.Data.call.CalleeProtoType = ProtoType;
     T.SafeZone = SZ;
     T.OriginalStmt = Orig;
     T.Loc = Loc;

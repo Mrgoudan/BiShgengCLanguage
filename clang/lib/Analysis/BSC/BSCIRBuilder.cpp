@@ -325,6 +325,19 @@ void BSCIRBuilder::lowerCompoundStmt(const CompoundStmt *CS) {
 }
 
 void BSCIRBuilder::lowerIfStmt(const IfStmt *IS) {
+  // For constexpr if (or any if with a compile-time constant condition),
+  // only emit the taken branch to avoid false positives in init analysis.
+  Expr::EvalResult ConstResult;
+  if (IS->getCond()->EvaluateAsInt(ConstResult, Ctx)) {
+    bool CondIsTrue = ConstResult.Val.getInt().getBoolValue();
+    if (CondIsTrue) {
+      lowerStmt(IS->getThen());
+    } else if (IS->getElse()) {
+      lowerStmt(IS->getElse());
+    }
+    return;
+  }
+
   // Lower condition
   Operand Cond = lowerToOperand(IS->getCond());
 
@@ -388,6 +401,8 @@ void BSCIRBuilder::lowerWhileStmt(const WhileStmt *WS) {
   emitCondBranch(WS->getCond(), BodyBB, ExitBB);
 
   // Body block
+  // FIXME if cond always false no need to build body part. 
+  // currently handled by simplify dead block removal. 
   switchToBlock(BodyBB);
   BreakableScopes.push_back(
       {ExitBB, CondBB, /*HasContinue=*/true,
@@ -402,9 +417,6 @@ void BSCIRBuilder::lowerWhileStmt(const WhileStmt *WS) {
 }
 
 void BSCIRBuilder::lowerForStmt(const ForStmt *FS) {
-  // C99 §6.8.5: if the init clause is a declaration, its scope extends
-  // through the entire for statement and no further. Push a dedicated
-  // scope so StorageDead is emitted at loop exit, not at enclosing scope exit.
   bool PushedInitScope = false;
   if (isa_and_nonnull<DeclStmt>(FS->getInit())) {
     ScopeStack.push_back({});
@@ -520,6 +532,7 @@ void BSCIRBuilder::lowerSwitchStmt(const SwitchStmt *SS) {
 
   // Walk the CompoundStmt body linearly to build case regions.
   const Stmt *Body = SS->getBody();
+  // FIXME: handle brace-less switch body (e.g., "switch (x) case 1: foo();")
   if (auto *CS = dyn_cast<CompoundStmt>(Body)) {
     for (const Stmt *S : CS->body()) {
       if (isa<CaseStmt>(S) || isa<DefaultStmt>(S)) {
@@ -791,7 +804,7 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
     }
     LocalId Tmp = TheBody->addTemp(UO->getType(), UO->getExprLoc());
     Place TmpPlace(Tmp, UO->getType(), UO->getExprLoc());
-
+    AddrOfOrigins[Tmp] = P;
     emit(Statement::createAssign(
         TmpPlace, Rvalue::createRef(BorrowKind::Mut, P),
         currentSafeZone(), UO, UO->getExprLoc()));
@@ -803,6 +816,8 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
     bool IsReborrow = (Op == UO_AddrConstDeref);
     LocalId Tmp = TheBody->addTemp(UO->getType(), UO->getExprLoc());
     Place TmpPlace(Tmp, UO->getType(), UO->getExprLoc());
+    if (!IsReborrow)
+      AddrOfOrigins[Tmp] = P;
     emit(Statement::createAssign(
         TmpPlace, Rvalue::createRef(BorrowKind::Shared, P, IsReborrow),
         currentSafeZone(), UO, UO->getExprLoc()));
@@ -814,7 +829,7 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
     Place P = lowerToPlace(UO->getSubExpr());
     LocalId Tmp = TheBody->addTemp(UO->getType(), UO->getExprLoc());
     Place TmpPlace(Tmp, UO->getType(), UO->getExprLoc());
-
+    AddrOfOrigins[Tmp] = P;
     emit(Statement::createAssign(
         TmpPlace, Rvalue::createAddressOf(P),
         currentSafeZone(), UO, UO->getExprLoc()));
@@ -918,11 +933,55 @@ Operand BSCIRBuilder::VisitCallExpr(CallExpr *CE) {
       ? Operand::createConstant(APValue(), CE->getCallee()->getType())
       : lowerToOperand(CE->getCallee());
 
+  // Extract FunctionProtoType from callee for indirect call ensure_init support.
+  const FunctionProtoType *CalleeProtoType = nullptr;
+  {
+    QualType CalleeType = CE->getCallee()->getType();
+    if (const auto *FnPtr = CalleeType->getAs<PointerType>())
+      CalleeProtoType = FnPtr->getPointeeType()->getAs<FunctionProtoType>();
+    else
+      CalleeProtoType = CalleeType->getAs<FunctionProtoType>();
+  }
+
   SmallVector<Operand, 4> Args;
+  SmallVector<llvm::Optional<Place>, 4> ArgPlaces;
   for (unsigned I = 0; I < CE->getNumArgs(); ++I) {
     Operand Arg = lowerToOperand(CE->getArg(I));
     if (shouldMove(CE->getArg(I)) && Arg.K == Operand::Copy) {
       Arg.K = Operand::Move;
+    }
+    // Capture address-of origin for ensure_init support
+    if (Arg.K == Operand::Copy || Arg.K == Operand::Move) {
+      auto It = AddrOfOrigins.find(Arg.getPlace().Base);
+      if (It != AddrOfOrigins.end()) {
+        ArgPlaces.push_back(It->second);
+        Args.push_back(std::move(Arg));
+        continue;
+      }
+    }
+    ArgPlaces.push_back(llvm::None);
+    // Warn if this param has ensure_init but we can't track the origin.
+    // Suppress if the argument is itself an ensure_init parameter (delegation).
+    // Check both direct decl attrs and ExtParameterInfo (for indirect calls).
+    bool ParamIsEnsureInit = false;
+    if (CalleeDecl && I < CalleeDecl->getNumParams() &&
+        CalleeDecl->getParamDecl(I)->hasAttr<EnsureInitAttr>())
+      ParamIsEnsureInit = true;
+    if (!ParamIsEnsureInit && CalleeProtoType &&
+        CalleeProtoType->hasExtParameterInfos() &&
+        I < CalleeProtoType->getNumParams() &&
+        CalleeProtoType->getExtParameterInfo(I).isEnsureInit())
+      ParamIsEnsureInit = true;
+    if (ParamIsEnsureInit) {
+      bool IsDelegation = false;
+      if (auto *DRE = dyn_cast<DeclRefExpr>(CE->getArg(I)->IgnoreParenCasts()))
+        if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+          if (PVD->hasAttr<EnsureInitAttr>())
+            IsDelegation = true;
+      if (!IsDelegation)
+        Ctx.getDiagnostics().Report(
+            CE->getArg(I)->getExprLoc(),
+            diag::warn_ensure_init_not_addressof);
     }
     Args.push_back(std::move(Arg));
   }
@@ -942,7 +1001,8 @@ Operand BSCIRBuilder::VisitCallExpr(CallExpr *CE) {
 
   setTerminator(Terminator::createCall(
       std::move(Callee), std::move(Args), DestPlace, Successor,
-      CalleeDecl, currentSafeZone(), CE, CE->getExprLoc(), Diverges));
+      CalleeDecl, currentSafeZone(), CE, CE->getExprLoc(), Diverges,
+      std::move(ArgPlaces), CalleeProtoType));
 
   switchToBlock(Successor);
 
@@ -958,6 +1018,13 @@ Operand BSCIRBuilder::VisitCastExpr(CastExpr *CE) {
   Operand Sub = lowerToOperand(CE->getSubExpr());
   LocalId Tmp = TheBody->addTemp(CE->getType(), CE->getExprLoc());
   Place TmpPlace(Tmp, CE->getType(), CE->getExprLoc());
+  // Propagate AddrOfOrigins through pointer casts (e.g., int* -> void*)
+  // so that ensure_init tracking can see through implicit casts.
+  if (Sub.K == Operand::Copy || Sub.K == Operand::Move) {
+    auto It = AddrOfOrigins.find(Sub.getPlace().Base);
+    if (It != AddrOfOrigins.end())
+      AddrOfOrigins[Tmp] = It->second;
+  }
   emit(Statement::createAssign(
       TmpPlace, Rvalue::createCast(CE->getCastKind(), Sub, CE->getType()),
       currentSafeZone(), CE, CE->getExprLoc()));
@@ -1078,7 +1145,6 @@ Operand BSCIRBuilder::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
 }
 
 Operand BSCIRBuilder::VisitInitListExpr(InitListExpr *ILE) {
-  auto *RD = ILE->getType()->getAsRecordDecl();
   SmallVector<Operand, 4> Fields;
   for (unsigned I = 0; I < ILE->getNumInits(); ++I) {
     Operand FieldOp = lowerToOperand(ILE->getInit(I));
@@ -1088,9 +1154,19 @@ Operand BSCIRBuilder::VisitInitListExpr(InitListExpr *ILE) {
   }
   LocalId Tmp = TheBody->addTemp(ILE->getType(), ILE->getExprLoc());
   Place TmpPlace(Tmp, ILE->getType(), ILE->getExprLoc());
-  emit(Statement::createAssign(
-      TmpPlace, Rvalue::createAggregate(RD, std::move(Fields)),
-      currentSafeZone(), ILE, ILE->getExprLoc()));
+  Rvalue RV;
+  if (auto *RD = ILE->getType()->getAsRecordDecl()) {
+    RV = Rvalue::createAggregate(RD, std::move(Fields));
+  } else {
+    QualType ElemTy;
+    if (const auto *AT = ILE->getType()->getAsArrayTypeUnsafe())
+      ElemTy = AT->getElementType();
+    else
+      ElemTy = ILE->getType();
+    RV = Rvalue::createArray(ElemTy, std::move(Fields));
+  }
+  emit(Statement::createAssign(TmpPlace, std::move(RV), currentSafeZone(), ILE,
+                               ILE->getExprLoc()));
   return Operand::createCopy(TmpPlace);
 }
 

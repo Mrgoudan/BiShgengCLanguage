@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: variable initialized on ALL branches is definitely initialized.
+
+_Safe void test_if_else(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    else
+        x = 2;
+    int y = x + 1;
+}
+
+_Safe void test_nested_if_else(int a, int b) {
+    int x;
+    if (a) {
+        if (b)
+            x = 1;
+        else
+            x = 2;
+    } else {
+        x = 3;
+    }
+    int y = x + 1;
+}

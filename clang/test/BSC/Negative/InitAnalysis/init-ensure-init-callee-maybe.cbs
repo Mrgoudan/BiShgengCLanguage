@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test ensure_init callee side: conditional init produces maybe-not-init error.
+
+void maybe_init(int *__attribute__((ensure_init)) out, int cond) {
+    if (cond)
+        *out = 42;
+} // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init)) function}}

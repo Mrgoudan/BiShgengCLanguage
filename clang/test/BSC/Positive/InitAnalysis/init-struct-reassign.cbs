@@ -1,0 +1,35 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: reassignment to struct fields and variables.
+
+struct Pair { int a; int b; };
+
+// Field overwrite
+_Safe void test_field_overwrite(void) {
+    struct Pair p;
+    p.a = 1;
+    p.b = 2;
+    p.a = 10;       // re-assign
+    int sum = p.a + p.b;
+}
+
+// Variable reassignment after conditional init
+_Safe void test_reassign_after_branch(int cond) {
+    int x;
+    if (cond)
+        x = 1;
+    else
+        x = 2;
+    x = x + 10;     // x already init on all paths
+    int y = x;
+}
+
+// Struct fully re-initialized after use
+_Safe void test_struct_reinit(void) {
+    struct Pair p = {1, 2};
+    int sum1 = p.a + p.b;
+    p.a = 100;
+    p.b = 200;
+    int sum2 = p.a + p.b;
+}

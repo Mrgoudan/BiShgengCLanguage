@@ -1,0 +1,28 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test: struct fields initialized on all branches.
+
+struct Pair { int a; int b; };
+
+_Safe void test_field_all_branches(int cond) {
+    struct Pair p;
+    if (cond) {
+        p.a = 1;
+        p.b = 2;
+    } else {
+        p.a = 3;
+        p.b = 4;
+    }
+    int sum = p.a + p.b;
+}
+
+_Safe void test_field_one_common(int cond) {
+    struct Pair p;
+    p.a = 0;             // common: always initialized
+    if (cond)
+        p.b = 1;
+    else
+        p.b = 2;
+    int sum = p.a + p.b;
+}
