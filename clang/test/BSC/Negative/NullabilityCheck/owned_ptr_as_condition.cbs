@@ -2,52 +2,60 @@
 
 _Safe void consume(int *_Owned _Nullable);
 
+_Safe void strict_consume(int *_Owned _Nonnull);
+
 struct Foo {
     int *_Owned _Nullable p;
 };
 
 _Safe void reference(int *_Owned _Nullable p) {
     if (p == nullptr) {
-        consume(p);
+        int x = *p; // expected-error {{nullable pointer cannot be dereferenced}}
+        strict_consume(p); // expected-error {{cannot pass nullable pointer argument}}
     }
-} // expected-error {{memory leak of value: `p`}}
+} // no memory leak error expected, because nullability goes before ownership
 
 _Safe void reference_not(int *_Owned _Nullable p, int x) {
     if (p != nullptr) {
         ++x;
     } else {
-        consume(p);
+        x = *p; // expected-error {{nullable pointer cannot be dereferenced}}
+        strict_consume(p); // expected-error {{cannot pass nullable pointer argument}}
     }
-} // expected-error {{memory leak of value: `p`}}
+}
 
 
 _Safe void logical_not(int *_Owned _Nullable p) {
     if (!p) {
-        consume(p);
+        int x = *p; // expected-error {{nullable pointer cannot be dereferenced}}
+        strict_consume(p); // expected-error {{cannot pass nullable pointer argument}}
     }
-} // expected-error {{memory leak of value: `p`}}
+}
 
 _Safe void basic(int *_Owned _Nullable p, int x) {
     if (p) {
         ++x;
     } else {
-        consume(p);
+        x = *p; // expected-error {{nullable pointer cannot be dereferenced}}
+        strict_consume(p); // expected-error {{cannot pass nullable pointer argument}}
     }
-} // expected-error {{memory leak of value: `p`}}
+}
 
 _Safe void member_not(struct Foo foo) {
     if (!foo.p) {
-        consume(foo.p);
+        int x = *(foo.p); // expected-error {{nullable pointer cannot be dereferenced}}
+        strict_consume(foo.p); // expected-error {{cannot pass nullable pointer argument}}
     }
-} // expected-error {{field memory leak of value: `foo`, foo.p is leak}}
+}
 
 _Safe void member(struct Foo foo, int x) {
     if (foo.p) {
         ++x;
     } else {
-        consume(foo.p);
+        x = *(foo.p);  // expected-error {{nullable pointer cannot be dereferenced}}
+        strict_consume(foo.p); // expected-error {{cannot pass nullable pointer argument}}
     }
-} // expected-error {{field memory leak of value: `foo`, foo.p is leak}}
+}
 
 _Safe void ternary(int *_Owned _Nullable p, int x) {
     x = (nullptr == p) ? (*p = 1) : 0; // expected-error {{nullable pointer cannot be dereferenced}}

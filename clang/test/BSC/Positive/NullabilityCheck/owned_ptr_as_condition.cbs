@@ -3,13 +3,16 @@
 
 _Safe void consume(int *_Owned _Nullable);
 
+_Safe void strict_consume(int *_Owned _Nonnull);
+
 struct Foo {
     int *_Owned _Nullable p;
 };
 
 _Safe void reference(int *_Owned _Nullable p) {
     if (p != nullptr) {
-        consume(p);
+        int x = *p;
+        strict_consume(p);
     }
 }
 
@@ -17,13 +20,15 @@ _Safe void reference_not(int *_Owned _Nullable p, int x) {
     if (p == nullptr) {
         ++x;
     } else {
-        consume(p);
+        x = *p;
+        strict_consume(p);
     }
 }
 
 _Safe void basic(int *_Owned _Nullable p) {
     if (p) {
-        consume(p);
+        int x = *p;
+        strict_consume(p);
     }
 }
 
@@ -31,13 +36,15 @@ _Safe void logical_not(int *_Owned _Nullable p, int x) {
     if (!p) {
         ++x;
     } else {
-        consume(p);
+        x = *p;
+        strict_consume(p);
     }
 }
 
 _Safe void member(struct Foo foo) {
     if (foo.p) {
-        consume(foo.p);
+        int x = *(foo.p);
+        strict_consume(foo.p);
     }
 } 
 
@@ -45,7 +52,8 @@ _Safe void member_not(struct Foo foo, int x) {
     if (!foo.p) {
         ++x;
     } else {
-        consume(foo.p);
+        x = *(foo.p);
+        strict_consume(foo.p);
     }
 }
 
