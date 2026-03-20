@@ -1998,15 +1998,20 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     Qs.removeConst();
     Qs.removeVolatile();
   }
+
 #if ENABLE_BSC
   if (getLangOpts().BSC) {
-    if (Qs.hasBorrow() && Qs.hasOwned()) {
+    Qualifiers TQs = T.getQualifiers();
+    TQs.addQualifiers(Qs);
+    if (TQs.hasOwned() && TQs.hasBorrow()) {
       Diag(Loc, diag::err_owned_and_borrow_conflict);
     }
+    // Check _Borrow qualifier should only be applied to pointer types.
     if (Qs.hasBorrow() && !T->isPointerType() && !T->isDependentType()) {
       Diag(DS ? DS->getBorrowSpecLoc() : Loc,
            diag::err_typecheck_invalid_borrow_not_pointer)
           << T;
+      Qs.removeBorrow();
     }
   }
 #endif
@@ -2046,13 +2051,6 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
       Qs.removeRestrict();
     }
   }
-
-#if ENABLE_BSC
-  if (getLangOpts().BSC && Qs.hasOwned() &&
-      !CheckOwnedDecl(DS ? DS->getOwnedSpecLoc() : Loc, T)) {
-    return QualType();
-  }
-#endif
 
   return Context.getQualifiedType(T, Qs);
 }

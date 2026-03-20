@@ -6,3 +6,46 @@ void test(int *_Owned _Borrow p) { // expected-error {{cannot combine '_Owned' a
 }
 // expected-error@#1 {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
 // expected-error@#1 {{incompatible _Owned types, cannot cast 'int *_Owned _Borrow' to 'int *_Owned _Borrow *'}}
+
+struct S1<T> {
+  T _Borrow p; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+};
+
+struct S2<T> {
+  T _Owned p; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+};
+
+struct S3<T> {
+  T p;
+};
+
+typedef int *_Owned int_owned_t;
+typedef int *_Borrow int_borrow_t;
+
+void f1() {
+  S1<int *_Owned> s1; // expected-note {{in instantiation of template class 'S1<int *_Owned>' requested here}}
+  S2<int *_Borrow> s2; // expected-note {{in instantiation of template class 'S2<int *_Borrow>' requested here}}
+  S3<int *_Owned _Borrow> s3; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+  S1<int_owned_t> s4;
+  S2<int_borrow_t> s5;
+}
+
+void f2<T>(void) {
+  T _Owned a; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+  return;
+}
+
+int f3() {
+  f2<int *_Borrow>(); // expected-note {{in instantiation of function template specialization 'f2<int *_Borrow>' requested here}}
+  return 0;
+}
+
+void f4<T>(void) {
+  T _Borrow a; // expected-error {{cannot combine '_Owned' and '_Borrow' qualifiers on the same type}}
+  return;
+}
+
+int f5() {
+  f4<int *_Owned>(); // expected-note {{in instantiation of function template specialization 'f4<int *_Owned>' requested here}}
+  return 0;
+}

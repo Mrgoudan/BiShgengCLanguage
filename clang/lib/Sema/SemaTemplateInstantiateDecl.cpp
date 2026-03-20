@@ -1121,9 +1121,6 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
     // Check owned qualifiers
     if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(VarType, D->getLocation()))
       return nullptr;
-    // Check borrow qualifiers
-    if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(VarType, D->getLocation()))
-      return nullptr;
   }
 #endif
 
@@ -1246,10 +1243,6 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
     QualType FieldType = DI->getType();
     // Check owned qualifiers
     if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FieldType, D->getLocation())) {
-      Invalid = true;
-    }
-    // Check borrow qualifiers
-    if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(FieldType, D->getLocation())) {
       Invalid = true;
     }
   }
@@ -2096,12 +2089,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     if (FPT) {
       // Check return type
       SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(), D->getLocation());
-      SemaRef.CheckInstantiatedTypeBorrowQualifiers(FPT->getReturnType(), D->getLocation());
 
       // Check parameter types
       for (QualType ParamType : FPT->param_types()) {
         SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType, D->getLocation());
-        SemaRef.CheckInstantiatedTypeBorrowQualifiers(ParamType, D->getLocation());
       }
     }
   }
@@ -2483,22 +2474,10 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
                                                          D->getLocation()))
         return nullptr;
 
-      // Check return type for borrow qualifiers
-      if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(FPT->getReturnType(),
-                                                          D->getLocation()))
-        return nullptr;
-
       // Check parameter types for owned qualifiers
       for (QualType ParamType : FPT->getParamTypes()) {
         if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType,
                                                            D->getLocation()))
-          return nullptr;
-      }
-
-      // Check parameter types for borrow qualifiers
-      for (QualType ParamType : FPT->getParamTypes()) {
-        if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(ParamType,
-                                                            D->getLocation()))
           return nullptr;
       }
     }

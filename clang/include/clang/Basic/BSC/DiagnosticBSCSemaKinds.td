@@ -49,7 +49,6 @@ def err_owned_inderictOwned_type_check : Error<
   "type of %2 cannot qualified by '%1' |"
   "type of %2 cannot qualified by '%1', %3 contains '%1' type |"
   "type of %2 cannot qualified by '%1'(even indirectly), %3 contains '%1' type}0">;
-def err_owned_decl: Error<"%0 cannot be qualified by '_Owned'">;
 def err_owned_funcPtr_incompatible : Error<"cannot cast %0 to %1">;
 def err_owned_qualcheck_incompatible : Error<
   "incompatible _Owned types, cannot cast %0 to %1">;
