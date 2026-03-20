@@ -388,6 +388,18 @@ public:
   void VisitUnaryPreDec(UnaryOperator *UO);
   void VisitUnaryPreInc(UnaryOperator *UO);
 };
+
+QualType getPointeeOrElementType(QualType T) {
+  auto CT = T.getCanonicalType();
+  if (CT->isPointerType()) {
+    return CT->getPointeeType();
+  }
+  if (CT->isArrayType()) {
+    QualType ElemTy = CT->getAsArrayTypeUnsafe()->getElementType();
+    return ElemTy;
+  }
+  return T;
+}
 } // namespace
 
 void ActionExtract::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
@@ -497,12 +509,7 @@ void ActionExtract::VisitDeclRefExpr(DeclRefExpr *DRE) {
     Dest = std::make_unique<Path>(DRE->getDecl()->getName().str(),
                                   DREType, DRE->getLocation());
     if (isArrow) {
-      QualType PT;
-      if (DREType->isArrayType()) {
-        PT = DREType;
-      } else {
-        PT = DREType->getPointeeType();
-      }
+      QualType PT = getPointeeOrElementType(DREType);
       Dest = std::make_unique<Path>(std::move(Dest), "*",
                                     PT,
                                     DRE->getLocation());
@@ -524,12 +531,7 @@ void ActionExtract::VisitDeclRefExpr(DeclRefExpr *DRE) {
       RNR = rc.getRegionName(DRE->getDecl());
     }
     if (isArrow) {
-      QualType PT;
-      if (DREType->isArrayType()) {
-        PT = DREType;
-      } else {
-        PT = DREType->getPointeeType();
-      }
+      QualType PT = getPointeeOrElementType(DREType);
       Src = std::make_unique<Path>(std::move(Src), "*",
                                    PT,
                                    DRE->getLocation());
@@ -638,16 +640,18 @@ void ActionExtract::VisitInitListExpr(InitListExpr *ILE) {
 }
 
 void ActionExtract::VisitMemberExpr(MemberExpr *ME) {
+  auto METype = ME->getType();
   if (op == LHS) {
     llvm::SaveAndRestore<bool> save_is_arrow(isArrow);
     isArrow = ME->isArrow();
     Visit(ME->getBase());
     std::unique_ptr<Path> Member = std::make_unique<Path>(
-        std::move(Dest), ME->getMemberNameInfo().getAsString(), ME->getType(),
+        std::move(Dest), ME->getMemberNameInfo().getAsString(), METype,
         ME->getMemberLoc());
     if (save_is_arrow.get()) {
+      QualType PT = getPointeeOrElementType(METype);
       Member = std::make_unique<Path>(std::move(Member), "*",
-                                      ME->getType()->getPointeeType(),
+                                      PT,
                                       ME->getMemberLoc());
     }
     Dest = std::move(Member);
@@ -667,14 +671,15 @@ void ActionExtract::VisitMemberExpr(MemberExpr *ME) {
       return;
     }
     std::unique_ptr<Path> Member = std::make_unique<Path>(
-        std::move(Src), ME->getMemberNameInfo().getAsString(), ME->getType(),
+        std::move(Src), ME->getMemberNameInfo().getAsString(), METype,
         ME->getMemberLoc());
-    if (ME->getType().isBorrowQualified()) {
+    if (METype.isBorrowQualified()) {
       Member->setDecl(D);
     }
     if (save_is_arrow.get()) {
+      QualType PT = getPointeeOrElementType(METype);
       Member = std::make_unique<Path>(std::move(Member), "*",
-                                      ME->getType()->getPointeeType(),
+                                      PT,
                                       ME->getMemberLoc());
     }
     Src = std::move(Member);

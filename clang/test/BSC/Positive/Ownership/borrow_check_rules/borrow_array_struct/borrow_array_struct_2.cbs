@@ -2,13 +2,28 @@
 // expected-no-diagnostics
 
 struct SI { int a; int b; };
+struct SJ { struct SI *arr[1]; };
+struct SK { struct SJ *arr[1][1][1]; };
+
 void foo1() {
   struct SI *arr[2] = {0};
   (void)&_Mut arr[0]->a;
   (void)&_Mut arr[1]->b;
 }
 
+void foo2() {
+  struct SJ *a = nullptr;
+  (void)&_Mut a->arr[0]->a;
+  (void)&_Mut a->arr[0]->b;
+}
+
+void foo3() {
+  struct SK *a = nullptr;
+  (void)&_Mut a->arr[0][0][0]->arr[0]->a;
+}
+
 int main() {
   foo1();
+  foo2();
   return 0;
 }
