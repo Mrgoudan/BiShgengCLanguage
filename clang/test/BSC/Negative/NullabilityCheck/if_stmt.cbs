@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -verify %s
 
-_Safe void test1(void) {
-    int *_Borrow _Nullable p = nullptr;
+// dummy function to "manufacture" a pointer for assignment scenario
+// simply pass a nullptr to it to confuse the compiler about
+// its return value's nullability
+_Safe int *_Borrow _Nullable ptr_factory(int *_Borrow _Nullable);
+
+_Safe void test1(int *_Borrow _Nullable p) {
     if (p != nullptr) {
         *p = 10;
     } else {
@@ -10,9 +14,117 @@ _Safe void test1(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test2(void) {
+_Safe void test1_direct(int *_Borrow _Nullable p) {
+    if (p) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_paren(int *_Borrow _Nullable p) {
+    if ((p)) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_assignment(int *_Borrow _Nullable p) {
+    if ((p = ptr_factory(nullptr))) {
+        *p = 10; 
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_assignment_cmp(int *_Borrow _Nullable p) {
+    if ((p = ptr_factory(nullptr)) != nullptr) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_null_assignment(int *_Borrow _Nullable p) {
+    if ((p = nullptr)) {
+        *p = 10; 
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}} 
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_null_assignment_cmp(int *_Borrow _Nullable p) {
+    if ((p = nullptr) != nullptr) {
+        *p = 10;  
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_null_assignment_cmp_inv(int *_Borrow _Nullable p) {
+    if ((p = nullptr) == nullptr) {
+        *p = 10; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *p = 20; 
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_comma(int *_Borrow _Nullable p, int x) {
+    if (++x, p) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_comma_cmp(int *_Borrow _Nullable p, int x) {
+    if (++x, p != nullptr) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_transitive_assign(int *_Borrow _Nullable p, int *_Borrow _Nullable q, int x) {
+    if ((p = q = nullptr)) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_multi_comma(int *_Borrow _Nullable p, int x) {
+    if (++x, ++x, p) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test1_multi_comma_cmp(int *_Borrow _Nullable p, int x) {
+    if (++x, ++x, p != nullptr) {
+        *p = 10;
+    } else {
+        *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+
+_Safe void test2(int *_Borrow _Nullable p) {
     int a = 10;
-    int *_Borrow _Nullable p = nullptr;
     if (p != nullptr) {
         *p = 10;
     } else {
@@ -21,9 +133,7 @@ _Safe void test2(void) {
     *p = 30;
 }
 
-_Safe void test3(void) {
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
+_Safe void test3(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     if (p != nullptr && q != nullptr) {
         *p = 10;
         *q = 10;
@@ -35,11 +145,9 @@ _Safe void test3(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test4(void) {
+_Safe void test4(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     int a = 10;
     int b = 10;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
     if (p != nullptr && q != nullptr) {
         *p = 10;
         *q = 10;
@@ -51,9 +159,7 @@ _Safe void test4(void) {
     *q = 30;
 }
 
-_Safe void test5(void) {
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
+_Safe void test5(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     if (p != nullptr || q != nullptr) {
         *p = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
         *q = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
@@ -65,11 +171,9 @@ _Safe void test5(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test6(void) {
+_Safe void test6(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     int a = 10;
     int b = 10;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
     if (p != nullptr) {
         *p = 10;
         if (q != nullptr)
@@ -87,13 +191,10 @@ _Safe void test6(void) {
     *q = 30;
 }
 
-_Safe void test7(void) {
+_Safe void test7(int *_Borrow _Nullable p, int *_Borrow _Nullable q, int *_Borrow _Nullable m) {
     int a = 10;
     int b = 10;
     int c = 10;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
-    int *_Borrow _Nullable m = nullptr;
     if (p != nullptr && q != nullptr && m != nullptr) {
         *p = 10;
         *q = 10;
@@ -108,11 +209,8 @@ _Safe void test7(void) {
     *m = 30;
 }
 
-_Safe void test8(void) {
+_Safe void test8(int *_Borrow _Nullable p, int *_Borrow _Nullable q, int *_Borrow _Nullable m) {
     int a = 10;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
-    int *_Borrow _Nullable m = nullptr;
     if (p != nullptr && q != nullptr && m != nullptr) {
         *p = 10;
         *q = 10;
@@ -127,11 +225,8 @@ _Safe void test8(void) {
     *m = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test9(void) {
+_Safe void test9(int *_Borrow _Nullable p, int *_Borrow _Nullable q, int *_Borrow _Nullable m) {
     int a = 10;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
-    int *_Borrow _Nullable m = nullptr;
     if (p != nullptr || q != nullptr || m != nullptr) {
         *p = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
         *q = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
@@ -146,9 +241,8 @@ _Safe void test9(void) {
     *m = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test10(void) {
+_Safe void test10(int *_Borrow _Nullable p) {
     int a = 0;
-    int *_Borrow _Nullable p = nullptr;
     if (p != nullptr) {
         *p = 10;
         p = nullptr;
@@ -158,10 +252,8 @@ _Safe void test10(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test11(void) {
+_Safe void test11(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     int a = 0;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
     if (p != nullptr && q != nullptr || a > 0) {
         *p = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
         *q = 10;  // expected-error {{nullable pointer cannot be dereferenced}}
@@ -173,10 +265,8 @@ _Safe void test11(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test12(void) {
+_Safe void test12(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     int a = 0;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
     if (p != nullptr && q != nullptr && a > 0) {
         *p = 10;
         *q = 10;
@@ -188,11 +278,9 @@ _Safe void test12(void) {
     *q = 30; // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test13(void) {
+_Safe void test13(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     int a = 0;
     int b = 0;
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
     if (p != nullptr && q != nullptr && a > 0) {
         *p = 10;
         *q = 10;
@@ -204,8 +292,7 @@ _Safe void test13(void) {
     *q = 30;
 }
 
-_Safe void test14(void) {
-    int *_Borrow _Nullable p = nullptr;
+_Safe void test14(int *_Borrow _Nullable p) {
     if (p) {
         *p = 10;
     } else {
@@ -214,8 +301,7 @@ _Safe void test14(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test15(void) {
-    int *_Borrow _Nullable p = nullptr;
+_Safe void test15(int *_Borrow _Nullable p) {
     if (!p) {
         *p = 10; // expected-error {{nullable pointer cannot be dereferenced}}
     } else {
@@ -224,9 +310,7 @@ _Safe void test15(void) {
     *p = 30;  // expected-error {{nullable pointer cannot be dereferenced}}
 }
 
-_Safe void test16(void) {
-    int *_Borrow _Nullable p = nullptr;
-    int *_Borrow _Nullable q = nullptr;
+_Safe void test16(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
     if (p && q) {
         *p = 10;
         *q = 10;
@@ -241,12 +325,18 @@ _Safe void test16(void) {
 struct S {
     int a;
 };
-_Safe void test17(void) {
-    struct S *_Borrow _Nullable p = nullptr;
+_Safe void test17(struct S *_Borrow _Nullable p) {
     if (p != nullptr) {
         p->a = 10;
     } else {
         p->a = 20; // expected-error {{cannot access member through nullable pointer}}
     }
     p->a = 30;  // expected-error {{cannot access member through nullable pointer}}
+}
+
+_Safe void test18(void) {
+    int *_Borrow _Nullable arr[3] = {nullptr, nullptr, nullptr};
+	if (arr[0]) {
+		*(arr[0]) = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+	}
 }

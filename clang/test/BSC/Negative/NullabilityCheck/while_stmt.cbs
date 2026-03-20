@@ -81,3 +81,74 @@ _Safe void test7(void) {
     }
     p->a = 20;  // expected-error {{cannot access member through nullable pointer}}
 }
+
+_Safe void test8(void) {
+    int a = 10;
+    int *_Borrow _Nullable p = get_random_ptr(&_Mut a);
+    while (p) {
+        *p = 10;
+        p = get_random_ptr(&_Mut a);
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test9(void) {
+    int a = 10;
+    int *_Borrow _Nullable p = nullptr;
+    while ((p = get_random_ptr(&_Mut a)) != nullptr) {
+        *p = 10;
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test10(void) {
+    int a = 10;
+    int *_Borrow _Nullable p = nullptr;
+    while ((p = get_random_ptr(&_Mut a)) == nullptr) {
+    }
+    *p = 20;
+}
+
+_Safe void test11(void) {
+    int a = 10;
+    int x = 0;
+    int *_Borrow _Nullable p = get_random_ptr(&_Mut a);
+    while (++x, p) {
+        *p = 10;
+        p = get_random_ptr(&_Mut a);
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test12(void) {
+    int a = 10;
+    int x = 0;
+    int *_Borrow _Nullable p = get_random_ptr(&_Mut a);
+    while (++x, p != nullptr) {
+        *p = 10;
+        p = get_random_ptr(&_Mut a);
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test13(void) {
+    int a = 10;
+    int x = 0;
+    int *_Borrow _Nullable p = get_random_ptr(&_Mut a);
+    while (++x, ++x, p) {
+        *p = 10;
+        p = get_random_ptr(&_Mut a);
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test14(void) {
+    int a = 10;
+    int x = 0;
+    int *_Borrow _Nullable p = get_random_ptr(&_Mut a);
+    while (++x, ++x, p != nullptr) {
+        *p = 10;
+        p = get_random_ptr(&_Mut a);
+    }
+    *p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}

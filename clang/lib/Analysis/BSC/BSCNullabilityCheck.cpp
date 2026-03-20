@@ -128,13 +128,112 @@ public:
   NullabilityKind getExprPathNullability(Expr *E, bool Point = false);
   void SetCFGBlocksByExpr(Expr *PtrE, const CFGBlock *NonNullBlock,
                           const CFGBlock *NullableBlock);
-  void PassConditionStatusToSuccBlocks(Stmt *Cond);
+  void PassConditionStatusToSuccBlocks(Expr *CondExpr);
   Expr *NormalizeInitExpr(Expr *E);
   void HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                               InitListExpr *InitList, std::string FieldPrefix);
   void HandleArrayInit(DeclStmt *DS, VarDecl *VD, const ArrayType *AT,
                        InitListExpr *ILE);
 };
+
+/// Return whether E or its sub-expressions contains built-in []
+bool containsBuiltinArraySubscript(Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  return isa<ArraySubscriptExpr>(E);
+}
+
+/// Return whether E contains dereference of pointer arithmetic, e.g. *(a + 1).
+bool containsPointerArithmeticDeref(Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_Deref) {
+      Expr *SubE = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (auto *BO = dyn_cast<BinaryOperator>(SubE)) {
+        if (BO->isAdditiveOp())
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// Extract the pointer expression that satisfies nullability state transfer
+/// requirements:
+///
+/// pointer type, lvalue, not volatile and doesn't contain built-in
+/// array subscription [i] or pointer-arithmetic-dereference *(p + 1).
+///
+/// Return nullptr if no such expression exists.
+Expr *GetPointerExpr(Expr *E) {
+  if (!E)
+    return nullptr;
+  E = E->IgnoreParenImpCasts();
+
+  // recursively process (m, n, o, p) and (p = q = r) to get p
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->isAssignmentOp())
+      return GetPointerExpr(BO->getLHS());
+    if (BO->getOpcode() == BO_Comma)
+      return GetPointerExpr(BO->getRHS());
+  }
+
+  if (!E->isLValue())
+    return nullptr;
+
+  QualType QT = E->getType();
+  if (!QT.getCanonicalType()->isPointerType())
+    return nullptr;
+
+  if (QT.isVolatileQualified())
+    return nullptr;
+
+  if (containsBuiltinArraySubscript(E) || containsPointerArithmeticDeref(E))
+    return nullptr;
+
+  return E;
+}
+
+/// Helper of PassConditionStatusToSuccBlocks, under Ctx, extract a binary
+/// operator condition expression CondExpr into underlying core pointer
+/// expression and returns it.
+/// Inverse: output paremeter indicates whether the condition is checking for
+/// null-ness or non-null-ness
+Expr *GetPointerExprFromBinaryCondition(BinaryOperator *BO, ASTContext &Ctx,
+                                        bool &Inverse) {
+  if (!BO)
+    return nullptr;
+
+  // Unwrap expression whose value is determined by RHS, such as
+  // (x, p != nullptr) or (x = (p == nullptr))
+  if (BO->getOpcode() == BO_Comma || BO->isAssignmentOp()) {
+    Expr *RHS = BO->getRHS()->IgnoreParenImpCasts();
+    if (auto *RHSBO = dyn_cast<BinaryOperator>(RHS))
+      return GetPointerExprFromBinaryCondition(RHSBO, Ctx, Inverse);
+    return nullptr;
+  }
+
+  // Check Equality operator, such as p == nullptr, p != nullptr
+  // and s.p == nullptr, s.p != nullptr
+  if (!BO->isEqualityOp())
+    return nullptr;
+
+  Expr *LHS = BO->getLHS()->IgnoreParenImpCasts();
+  Expr *RHS = BO->getRHS()->IgnoreParenImpCasts();
+  bool NullLHS = LHS->isNullExpr(Ctx);
+  bool NullRHS = RHS->isNullExpr(Ctx);
+  if (NullLHS == NullRHS)
+    // not a nullability check, or both sides are trivially semantic null
+    return nullptr;
+
+  Expr *Candidate = NullLHS ? RHS : LHS;
+  Expr *PtrE = GetPointerExpr(Candidate);
+  if (!PtrE)
+    return nullptr;
+
+  Inverse = BO->getOpcode() == BO_EQ;
+  return PtrE;
+}
+
 } // namespace
 
 namespace clang{
@@ -257,6 +356,14 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
         else if (NK == NullabilityKind::Nullable && CurrStatusVD.count(VD))
           return CurrStatusVD[VD];
       }
+      break;
+    }
+    case Expr::ArraySubscriptExprClass: {
+      // Builtin array elements cannot have independent path-sensitive state.
+      NullabilityKind NK =
+          getDefNullability(cast<ArraySubscriptExpr>(E)->getType(), Ctx);
+      if (NK == NullabilityKind::NonNull || NK == NullabilityKind::Nullable)
+        return NK;
       break;
     }
     case Expr::MemberExprClass: {
@@ -709,48 +816,54 @@ void TransferFunctions::SetCFGBlocksByExpr(Expr *PtrE,
 
 // This function handles condition expression and
 // pass the conditions to successor block.
-void TransferFunctions::PassConditionStatusToSuccBlocks(Stmt *Cond) {
+void TransferFunctions::PassConditionStatusToSuccBlocks(Expr *CondExpr) {
+  if (!CondExpr)
+    return;
+  CondExpr = CondExpr->IgnoreParenImpCasts();
+
+  // When building CFG, if a block has a condition as terminitor,
+  // the successors has certain order, for example:
+  //    B4(has condition as terminitor)
+  //   /  \
+  //  B3  B2
+  // The first successor of B4 must be true branch,
+  // and the second successor of B4 must be false branch.
+  // Here we only handle terminators with two successors.
+
+  // Because the caller has guaranteed that the block has two successors,
+  // we can directly get these two successor blocks without
+  // checking results of the iterator step by step
   CFGBlock::const_succ_iterator it = Block->succ_begin();
-  if (const CFGBlock *TrueBlock = *it) {
-    it++;
-    if (const CFGBlock *FalseBlock = *it) {
-      // When building CFG, if a block has a condition as terminitor,
-      // the successors has certain order, for example:
-      //    B4(has condition as terminitor)
-      //   /  \
-      //  B3  B2
-      // The first successor of B4 must be true branch,
-      // and the second successor of B4 must be false branch.
-      // Here we only handle terminators with two successors.
-      if (auto BO = dyn_cast<BinaryOperator>(Cond)) {
-        // Condition expr is BinaryOperator, such as:
-        // if (p != nullptr), if (s.p != nullptr), if (p == nullptr), if (s.p !=
-        // nullptr), ...
-        bool isNullPtrEqual =
-            BO->getRHS()->isNullExpr(Ctx) || BO->getLHS()->isNullExpr(Ctx);
-        if (BO->isEqualityOp() && isNullPtrEqual) {
-          Expr *PointerE =
-              BO->getRHS()->isNullExpr(Ctx) ? BO->getLHS() : BO->getRHS();
-          if (BO->getOpcode() == BO_EQ) {
-            // set FalseBlock NoNull
-            SetCFGBlocksByExpr(PointerE, FalseBlock, TrueBlock);
-          } else {
-            // set TrueBlock NoNull
-            SetCFGBlocksByExpr(PointerE, TrueBlock, FalseBlock);
-          }
-        }
-      } else if (auto ICE = dyn_cast<ImplicitCastExpr>(Cond)) {
-        // Condition expr is ImplicitCastExpr, such as: if (p), if (s.p), ...
-        // set TrueBlock NoNull
-        SetCFGBlocksByExpr(ICE, TrueBlock, FalseBlock);
-      } else if (auto UO = dyn_cast<UnaryOperator>(Cond)) {
-        // Condition expr is UnaryOperator, such as:
-        // if (!p), if (!s.p), ...
-        if (UO->getOpcode() == UO_LNot) {
-          // set FalseBlock NoNull
-          SetCFGBlocksByExpr(UO->getSubExpr(), FalseBlock, TrueBlock);
-        }
+  const CFGBlock *TrueBlock = *it++;
+  const CFGBlock *FalseBlock = *it;
+  if (!TrueBlock || !FalseBlock)
+    return;
+
+  if (Expr *PtrE = GetPointerExpr(CondExpr)) {
+    // Condition expr directly references a pointer
+    // such as: if (p), if (s.p), ...
+    SetCFGBlocksByExpr(PtrE, TrueBlock, FalseBlock);
+    return;
+  }
+  if (auto UO = dyn_cast<UnaryOperator>(CondExpr)) {
+    // Condition expr is UnaryOperator (logical not), such as:
+    // if (!p), if (!s.p), ...
+    if (UO->getOpcode() == UO_LNot) {
+      if (Expr *PtrE = GetPointerExpr(UO->getSubExpr())) {
+        // set FalseBlock NoNull
+        SetCFGBlocksByExpr(PtrE, FalseBlock, TrueBlock);
       }
+    }
+  }
+  // General binary operator cases including comparison and assignment,
+  // binary logical operator is already split when building CFG
+  if (auto BO = dyn_cast<BinaryOperator>(CondExpr)) {
+    bool Inverse = false;
+    if (Expr *PtrE = GetPointerExprFromBinaryCondition(BO, Ctx, Inverse)) {
+      if (Inverse)
+        SetCFGBlocksByExpr(PtrE, FalseBlock, TrueBlock);
+      else
+        SetCFGBlocksByExpr(PtrE, TrueBlock, FalseBlock);
     }
   }
 }
@@ -839,15 +952,14 @@ NullabilityCheckImpl::runOnBlock(const CFGBlock *block, StatusVD statusVD,
 
   // Here we will handle the condition in IfStmt, or other branch stmts
   // which will change the nullability of VarDecl or FiledPath.
-  // Limit block's successor to 2 to ensure compatibility of existing 
+  // Limit block's successor to 2 to ensure compatibility of existing
   // implementation of PassConditionStatusToSuccBlocks, which assumes the first
   // successor is true branch and the second successor is false branch.
-  if (block->getTerminatorCondition() && block->succ_size() == 2) {
-    const CFGElement &elem = *(block->rbegin());
-    if (elem.getAs<CFGStmt>()) {
-      const Stmt *S = elem.castAs<CFGStmt>().getStmt();
-      TF.PassConditionStatusToSuccBlocks(const_cast<Stmt *>(S));
-    }
+  if (block->succ_size() == 2) {
+    // Use block-local last condition instead of terminator condition to be
+    // consistent for conditions already split in CFG (&& ||).
+    Expr *CondExpr = const_cast<Expr *>(block->getLastCondition());
+    TF.PassConditionStatusToSuccBlocks(CondExpr);
   }
   return std::make_pair(statusVD, statusFP);
 }

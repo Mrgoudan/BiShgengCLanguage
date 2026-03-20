@@ -64,3 +64,76 @@ _Safe void test5(void) {
     *s1.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
     *s2.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
 }
+
+_Safe void test6(void) {
+    int a = 10;
+    struct S s = { .p = get_random_ptr(&_Mut a) };
+    while (s.p) {
+        *s.p = 10;
+        s.p = get_random_ptr(&_Mut a);
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test7(void) {
+    int a = 10;
+    struct S s = { .p = get_random_ptr(&_Mut a) };
+    while ((s.p)) {
+        *s.p = 10;
+        s.p = get_random_ptr(&_Mut a);
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test8(void) {
+    int a = 10;
+    struct S s = { .p = nullptr };
+    while ((s.p = get_random_ptr(&_Mut a)) != nullptr) {
+        *s.p = 10;
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test9(void) {
+    int a = 10;
+    int x = 0;
+    struct S s = { .p = get_random_ptr(&_Mut a) };
+    while (++x, s.p) {
+        *s.p = 10;
+        s.p = get_random_ptr(&_Mut a);
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test10(void) {
+    int a = 10;
+    int x = 0;
+    struct S s = { .p = get_random_ptr(&_Mut a) };
+    while (++x, s.p != nullptr) {
+        *s.p = 10;
+        s.p = get_random_ptr(&_Mut a);
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test11(void) {
+    int a = 10;
+    int x = 0;
+    struct S s = { .p = get_random_ptr(&_Mut a) };
+    while (++x, ++x, s.p) {
+        *s.p = 10;
+        s.p = get_random_ptr(&_Mut a);
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void test12(void) {
+    int a = 10;
+    int x = 0;
+    struct S s = { .p = get_random_ptr(&_Mut a) };
+    while (++x, ++x, s.p != nullptr) {
+        *s.p = 10;
+        s.p = get_random_ptr(&_Mut a);
+    }
+    *s.p = 20; // expected-error {{nullable pointer cannot be dereferenced}}
+}

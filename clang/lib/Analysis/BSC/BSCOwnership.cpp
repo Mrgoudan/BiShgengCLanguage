@@ -2445,7 +2445,7 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block, const CFGBlock *cur,
   if (!block || !cur)
     return;
   const Expr *Cond =
-      dyn_cast_or_null<Expr>(cur->getTerminatorCondition(false));
+      dyn_cast_or_null<Expr>(cur->getLastCondition());
   if (!Cond) {
     return;
   }
