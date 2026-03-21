@@ -21,6 +21,41 @@
 
 ### 1.1. 构建与安装
 
+在使用毕昇C语言开发程序之前，需要先构建并安装毕昇C语言的编译器。毕昇C语言的编译器基于LLVM项目，因此其构建与安装过程与LLVM相同。
+
+首先，克隆毕昇C编译器项目仓库：
+
+```shell
+$ git clone https://gitee.com/bisheng_c_language_dep/llvm-project.git
+$ cd llvm-project
+```
+
+然后，使用`cmake`和`ninja`构建毕昇C编译器：
+
+```shell
+$ mkdir build && cd build
+$ cmake -G "Ninja" -DLLVM_ENABLE_PROJECTS="clang" -DCMAKE_BUILD_TYPE=Release -DLLVM_USE_LINKER=lld -DBUILD_SHARED_LIBS=OFF -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX=<install_dir> ../llvm
+$ ninja
+```
+
+最后，使用`ninja install`安装上一步构建的毕昇C编译器，安装目录为 `<install_dir>`：
+
+```shell
+$ ninja install
+```
+
+可选构建: 毕昇C编译器项目中还提供了毕昇C标准库`libcbs`，用于支持毕昇C语言的开发。
+
+```shell
+$ cd llvm-project
+$ mkdir build_libcbs && cd build_libcbs
+$ cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=<install_dir>/bin/clang -DCMAKE_INSTALL_PREFIX=<install_dir> ../libcbs
+$ ninja stdcbs
+$ ninja install
+```
+
+至此，毕昇C编译器的构建与安装就完成了。可以将 `<install_dir>/bin` 添加到环境变量 `PATH` 中，方便后续使用。
+
 ### 1.2. 第一个毕昇C程序
 
 如下示例中，我们创建一个名为 bsc_project 的目录，创建 demo.cbs 源程序文件，并键入以下内容。
@@ -7209,6 +7244,27 @@ void test() {
 
 ### 附录A. 关键字
 
+下面的列表包含了毕昇C语言新增的关键字及其功能描述。
+
+- `_Trait`: 用于定义一个`_Trait`
+- `_Impl`: 用于为一个类型实现一个或多个`_Trait`
+- `This`: 用于在成员函数中表示当前类型
+- `this`: 用于在实例成员函数中表示当前实例或指向当前实例的指针
+- `constexpr`: 用于定义编译时常量表达式或在编译时求值的函数
+- `_Safe`: 用于声明安全区
+- `_Unsafe`: 用于声明非安全区
+- `_Owned`: 用于修饰拥有所有权的指针类型或`_Owned struct`
+- `_Borrow`: 用于修饰借用指针类型
+- `_Const`: 用于获取不可变借用
+- `_Mut`: 用于获取可变借用
+- `_Private`: 用于修饰`_Owned struct`的私有成员
+- `_Public`: 用于修饰`_Owned struct`的公共成员
+- `_Nonnull`: 用于修饰非空指针类型
+- `_Nullable`: 用于修饰可空指针类型
+- `nullptr`: 用于表示空指针的字面量
+- `_Async`: 用于修饰异步函数
+- `_Await`: 用于异步函数调用
+
 ### 附录B. 语法
 
 本章对毕昇 C 语言的语法使用 EBNF（Extended Backus-Naur Form，扩展巴科斯范式）进行规范化描述。由于毕昇 C 语言扩展自 C 语言，本节不再列出 C 语言已有的语法的 EBNF 表示，**仅给出毕昇 C 语言扩展的语法的 EBNF 表示**，关于 C 语言已有语法的 EBNF 表示可查阅[ C11 标准规范](https://www.iso-9899.info/n1570.html#A.)。本章的组织结构与 C11 标准规范的附录 A 保持一致，用户可将两者对比阅读，能够清晰直观地了解到毕昇 C 扩展的 EBNF 表示的内容。
@@ -7231,7 +7287,7 @@ void test() {
 
 `_keyword`的产生式规则有如下变化：
 
-1. 新增 17 个关键字，为`_keyword`新增 17 条产生式：
+1. 新增 18 个关键字，为`_keyword`新增 18 条产生式：
 
 ```text
 _keyword : one of
@@ -7240,7 +7296,8 @@ _keyword : one of
     _Await       _Owned        _Trait
     _Borrow      _Private      _Unsafe
     constexpr    _Public       _Nonnull
-    fat          _Safe         _Nullable
+    _Safe        _Nullable     _Const
+    _Mut
 ```
 
 ##### B.1.3. Identifiers
@@ -7263,11 +7320,11 @@ _keyword : one of
 
 `_punctuator`的产生式规则有如下变化：
 
-1. 新增 6 个运算符和分隔符，为`_punctuator`新增 6 条产生式。
+1. 新增 5 个运算符和分隔符，为`_punctuator`新增 5 条产生式。
 
 ```text
 _punctuator : one of
-    ....          &fat         ::
+    ....          ::
     &_Const       &_Mut
     &_Const *     &_Mut *
 ```
@@ -7332,12 +7389,12 @@ _unary-expression :
 
 `_unary-operator`的产生式规则有如下变化：
 
-1. 新增 5 种一元运算符，为`_unary-operator`新增 5 条产生式。
+1. 新增 4 种一元运算符，为`_unary-operator`新增 4 条产生式。
 
 ```text
 _unary-operator : one of
     ....         &_Const *     &_Mut
-    &_Const       &fat         &_Mut *
+    &_Const       &_Mut *
 ```
 
 ##### B.2.2. Declarations
@@ -7432,13 +7489,12 @@ _struct-or-union-specifier :
 
 `_type-qualifier`的产生式规则有如下变化：
 
-1. 新增 5 种类型说明符，为`_type-qualifier`新增 5 条产生式。
+1. 新增 4 种类型说明符，为`_type-qualifier`新增 4 条产生式。
 
 ```text
 _type-qualifier :
     ....
     _Borrow
-    fat
     _Owned
     _Nonnull
     _Nullable
