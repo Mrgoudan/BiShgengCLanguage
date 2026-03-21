@@ -81,7 +81,7 @@ void test7(int *_Borrow p) {
 void test8() {
   int arr[5];
   int *_Borrow p = &_Mut arr[0]; // expected-note {{first mut borrow occurs here}}
-  int *_Borrow q = &_Mut arr[1]; // expected-error {{cannot borrow `arr` as mutable more than once at a time}}
+  int *_Borrow q = &_Mut arr[1]; // expected-error {{cannot borrow `arr[]` as mutable more than once at a time}}
   use_mut(p);
   use_mut(q);
 }

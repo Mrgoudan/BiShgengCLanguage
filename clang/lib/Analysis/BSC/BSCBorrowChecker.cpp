@@ -365,6 +365,7 @@ public:
     return std::move(actions);
   }
 
+  void VisitArraySubscriptExprOrUnaryDeref(Expr *E, Expr *SubExpr);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitBinAssign(BinaryOperator *BO);
@@ -390,7 +391,7 @@ public:
 } // namespace
 
 void ActionExtract::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
-  Visit(ASE->getLHS());
+  VisitArraySubscriptExprOrUnaryDeref(ASE, ASE->getBase());
 }
 
 void ActionExtract::VisitBinaryOperator(BinaryOperator *BO) {
@@ -757,35 +758,40 @@ void ActionExtract::VisitUnaryAddrMutDeref(UnaryOperator *UO) {
   }
 }
 
-void ActionExtract::VisitUnaryDeref(UnaryOperator *UO) {
+void ActionExtract::VisitArraySubscriptExprOrUnaryDeref(Expr *E, Expr *SubExpr) {
   if (Kind == Action::Noop) {
     Kind = Action::Use;
     op = RHS;
   }
+  QualType Type = E->getType();
   if (op == LHS) {
-    Visit(UO->getSubExpr());
+    Visit(SubExpr);
     std::unique_ptr<Path> Deref = std::make_unique<Path>(
-        std::move(Dest), "*", UO->getType(), UO->getBeginLoc());
+        std::move(Dest), "*", Type, E->getBeginLoc());
     Dest = std::move(Deref);
   } else if (op == RHS) {
     ++pathDepth;
-    Visit(UO->getSubExpr());
+    Visit(SubExpr);
     bool DontAddDeref = false;
     if (UnaryOperator *Sub =
-            dyn_cast<UnaryOperator>(UO->getSubExpr()->IgnoreParenImpCasts())) {
+            dyn_cast<UnaryOperator>(SubExpr->IgnoreParenImpCasts())) {
       if (Sub->getOpcode() == UO_AddrOf) {
         DontAddDeref = true;
       }
     }
     if (!DontAddDeref) {
       std::unique_ptr<Path> Deref = std::make_unique<Path>(
-          std::move(Src), "*", UO->getType(), UO->getBeginLoc());
+          std::move(Src), "*", Type, E->getBeginLoc());
       Src = std::move(Deref);
     }
     --pathDepth;
     if (pathDepth == 0)
       Sources.emplace_back(std::move(Src));
   }
+}
+
+void ActionExtract::VisitUnaryDeref(UnaryOperator *UO) {
+  VisitArraySubscriptExprOrUnaryDeref(UO, UO->getSubExpr());
 }
 
 // Skip visiting UE's children to avoid treating them as accesses.

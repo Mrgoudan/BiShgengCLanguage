@@ -155,10 +155,20 @@ struct Path {
 
   void setDecl(Decl *D) { this->D = D; }
 
-  bool isDeref() const {
+  bool isDerefLike() const {
     if (type == PathType::Var)
       return false;
     return fieldName == "*";
+  }
+
+  bool isBaseArrayType() const {
+    if (type == PathType::Var)
+      return false;
+    return base->ty.getCanonicalType()->isArrayType();
+  }
+
+  bool isDeref() const {
+    return isDerefLike() && !isBaseArrayType();
   }
 
   /// The prefixes of a path are all the lvalues you get by stripping away
@@ -213,10 +223,14 @@ struct Path {
   std::string to_string() const {
     if (type == PathType::Var)
       return fieldName;
-    if (fieldName == "*")
+    if (isDeref()) {
       return "*" + base->to_string();
+    }
     if (base->isDeref())
       return '(' + base->to_string() + ")." + fieldName;
+    bool baseIsArray = isBaseArrayType();
+    if (baseIsArray)
+      return base->to_string() + "[]";
     return base->to_string() + '.' + fieldName;
   }
 
