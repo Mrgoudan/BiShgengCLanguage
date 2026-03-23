@@ -17,7 +17,8 @@ _Safe void foo1(int p) {
   &_Mut num1; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
              // expected-warning@-1{{expression result unused}}
   &_Mut c1; // expected-error {{the expression after '&_Mut' must be modifiable}}
-          // expected-warning@-1{{expression result unused}}
+            // expected-error@-1 {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+            // expected-warning@-2{{expression result unused}}
   &_Const a; // legal
             // expected-warning@-1{{expression result unused}}
   &_Const num1; // legal

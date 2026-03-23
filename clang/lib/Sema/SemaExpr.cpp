@@ -15216,14 +15216,10 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
       if (InputExpr->getType()->isFunctionProtoType())
         Diag(OpLoc, diag::err_mut_expr_func) << InputExpr->getSourceRange();
       if (IsInSafeZone()) {
-        if (auto DRE =
-                dyn_cast_or_null<DeclRefExpr>(InputExpr->IgnoreParenCasts())) {
-          if (auto VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
-            if ((VD->isExternallyVisible() || VD->isStaticLocal() ||
-                 VD->getDeclContext()->isTranslationUnit()) &&
-                !VD->getType().isConstQualified())
-              Diag(OpLoc, diag::err_safe_mut) << InputExpr->getSourceRange();
-          }
+        if (VarDecl *VD = dyn_cast_or_null<VarDecl>(getPrimaryDecl(
+                const_cast<Expr *>(InputExpr->IgnoreParenCasts())))) {
+          if (VD->hasGlobalStorage())
+            Diag(OpLoc, diag::err_safe_mut) << InputExpr->getSourceRange();
         }
       }
     }

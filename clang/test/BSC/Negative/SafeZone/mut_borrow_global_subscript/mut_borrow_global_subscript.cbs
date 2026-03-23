@@ -1,0 +1,39 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+typedef struct {
+  int a;
+  int arr[3];
+  int *_Nonnull p;
+} S;
+
+int gv[10];
+S gs1;
+S gs2[5];
+
+_Safe void test_global_subscript_mut_borrow(void) {
+  (void)&_Mut gv[0]; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+}
+
+_Safe void test_local_subscript_mut_borrow(void) {
+  int lv[10];
+  (void)&_Mut lv[0]; // legal
+}
+
+_Safe void test_mut_borrow_binary_expr(void) {
+  (void)&_Mut (gv[2] + 2); // expected-error {{cannot take the address of an rvalue of type 'int'}}
+}
+
+_Safe void test_mut_borrow_struct(void) {
+  (void) &_Mut gs1; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs1.a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs1.arr; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs1.arr[2]; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs1.p; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+
+  (void) &_Mut gs2; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs2[0]; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs2[1].a; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs2[2].arr; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs2[2].arr[2]; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+  (void) &_Mut gs2[2].p; // expected-error {{global or static variables are not allowed to be mutably borrowed within the safe zone}}
+}
