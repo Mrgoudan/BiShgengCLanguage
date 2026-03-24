@@ -1,0 +1,54 @@
+#ifndef COMPLEX_STRUCTS_HBS
+#define COMPLEX_STRUCTS_HBS 1
+
+typedef int MyInt;
+typedef int Arr1[];
+typedef int Arr2[3];
+typedef struct SEmpty {} SEmpty;
+typedef struct SInt { int a; } SInt;
+_Owned struct OSInt {_Public: int a; };
+typedef struct SOInt { int *_Owned a; } SOInt;
+typedef struct SOSInt { OSInt a; } SOSInt;
+typedef struct SSOInt { SOInt a; } SSOInt;
+typedef struct SOSOInt { SOInt *_Owned a; } SOSOInt;
+typedef struct SDupSInt { SInt g1; SInt g2; } SDupSInt;
+typedef struct SSInt { SInt g; } SSInt;
+typedef int *_Owned OwnedInt;
+typedef int *_Borrow MutBorrowInt;
+typedef const int *_Borrow ImmutBorrowInt;
+typedef SInt *_Borrow ArrB1[];
+typedef SInt *_Borrow ArrB2[3];
+typedef struct Ano { struct { SInt g; } a1, a2; } Ano;
+typedef enum Enum { Mon=1, Tue, Wed } Enum;
+typedef union Union { int a; } Union;
+
+typedef struct XS { SSInt h; SInt g1; SInt g2; SInt g3; } XS;
+typedef struct XS0 { SInt g1; SInt g2; SInt g3; SSInt h; } XS0;
+typedef struct XO0 { SOInt g1; SOInt g2; SOInt g3; SOInt h; } XO0;
+typedef struct XSP0 { SInt g1; SInt g2; SInt g3; SSInt h; int *p; } XSP0;
+typedef struct XSO0 { SInt g1; SInt g2; SInt g3; SSInt h; SOInt p; } XSO0;
+
+struct TS<T> { T a; };
+
+#define DECL_STRUCT_X(layer, base) \
+typedef struct XS##layer { XS##base x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12; } XS##layer; \
+typedef struct XO##layer { XO##base x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12; } XO##layer; \
+typedef struct XSP##layer { XSP##base x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12; } XSP##layer; \
+typedef struct XSO##layer { XSO##base x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12; } XSO##layer;
+DECL_STRUCT_X(1, 0);
+DECL_STRUCT_X(2, 1);
+DECL_STRUCT_X(3, 2);
+DECL_STRUCT_X(4, 3);
+DECL_STRUCT_X(5, 4);
+DECL_STRUCT_X(6, 5);
+DECL_STRUCT_X(7, 6);
+DECL_STRUCT_X(8, 7);
+DECL_STRUCT_X(9, 8);
+DECL_STRUCT_X(10, 9);
+DECL_STRUCT_X(11, 10);
+DECL_STRUCT_X(12, 11);
+#undef DECL_STRUCT_X
+
+typedef struct SMix { SEmpty b; SOInt c; } SMix;
+
+#endif // COMPLEX_STRUCTS_HBS

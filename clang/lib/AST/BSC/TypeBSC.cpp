@@ -291,11 +291,17 @@ bool isMoveSemanticTypeImpl(QualType QT, llvm::SmallPtrSetImpl<const RecordType 
   if (QT.isOwnedQualified())
     return true;
   if (const auto *RecTy = dyn_cast<RecordType>(QT)) {
-    if (!RecTy->getDecl())
-      return false;
+    // Every element in Visited is either:
+    // 1. `T t2`   in `struct S { T t1; T t2; };`
+    //    In this case, T t1 is visited means T is not move semantic. It is safe to return false for `T t2`.
+    // 2. `S s`    in `struct S { S s; };`
+    //    In this case, it is a faulty C program. Return something to prevent infinite loop.
     if (!Visited.insert(RecTy).second)
-      return false; // Cycle detected.
-    for (FieldDecl *FD : RecTy->getDecl()->fields()) {
+      return false;
+    RecordDecl *RD = RecTy->getDecl();
+    if (!RD)
+      return false;
+    for (FieldDecl *FD : RD->fields()) {
       QualType FQT = FD->getType().getCanonicalType();
       if (FQT.isOwnedQualified())
         return true;
@@ -327,8 +333,13 @@ bool isTrivialDataTypeImpl(QualType QT, llvm::SmallPtrSetImpl<const RecordType *
     return false;
 
   if (const auto *RecTy = dyn_cast<RecordType>(QT)) {
+    // Every element in Visited is either:
+    // 1. `T t2`   in `struct S { T t1; T t2; };`
+    //    In this case, T t1 is visited means T is trivial data. It is safe to return true for `T t2`.
+    // 2. `S s`    in `struct S { struct S s; };`
+    //    In this case, it is a faulty C program. Return something to prevent infinite loop.
     if (!Visited.insert(RecTy).second)
-      return false; // Cycle detected.
+      return true;
     if (RecordDecl *RD = RecTy->getDecl()) {
       for (FieldDecl *FD : RD->fields()) {
         QualType FQT = FD->getType().getCanonicalType();

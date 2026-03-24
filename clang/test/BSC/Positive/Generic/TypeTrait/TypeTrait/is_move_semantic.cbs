@@ -6,28 +6,59 @@
 // expected-no-diagnostics
 
 #include "bsc_type_traits.hbs"
-struct S<T> { T a; };
-_Owned struct A { _Public: int a; };
-typedef struct B { int *_Owned a; } B;
-typedef struct C { A a; } C;
-typedef struct D { B b; } D;
-// Struct with non-move-semantic field first, then move-semantic field.
-// is_move_semantic must check all fields, not return on first RecordType.
-struct B_empty {};
-struct C_owned { int *_Owned a; };
-typedef struct A_mixed { struct B_empty b; struct C_owned c; } A_mixed;
-typedef int *_Owned OwnedInt;
+#include "complex_structs.hbs"
+
+int test_is_move_semantic() {
+    _Static_assert(is_move_semantic<void>() == false, "fail");
+    _Static_assert(is_move_semantic<void *>() == false, "fail");
+    _Static_assert(is_move_semantic<int>() == false, "fail");
+    _Static_assert(is_move_semantic<int *>() == false, "fail");
+    _Static_assert(is_move_semantic<int *_Owned>() == true, "fail");
+    _Static_assert(is_move_semantic<const void *_Borrow>() == false, "fail");
+    _Static_assert(is_move_semantic<void *_Borrow>() == false, "fail");
+    _Static_assert(is_move_semantic<int *_Borrow>() == false, "fail");
+
+    _Static_assert(is_move_semantic<MyInt>() == false, "fail");
+    _Static_assert(is_move_semantic<Arr1>() == false, "fail");
+    _Static_assert(is_move_semantic<Arr2>() == false, "fail");
+    _Static_assert(is_move_semantic<SEmpty>() == false, "fail");
+    _Static_assert(is_move_semantic<SInt>() == false, "fail");
+    _Static_assert(is_move_semantic<OSInt>() == true, "fail");
+    _Static_assert(is_move_semantic<SOInt>() == true, "fail");
+    _Static_assert(is_move_semantic<SOSInt>() == true, "fail");
+    _Static_assert(is_move_semantic<SSOInt>() == true, "fail");
+    _Static_assert(is_move_semantic<SOSOInt>() == true, "fail");
+    _Static_assert(is_move_semantic<SDupSInt>() == false, "fail");
+    _Static_assert(is_move_semantic<SSInt>() == false, "fail");
+    _Static_assert(is_move_semantic<SInt[]>() == false, "fail");
+    _Static_assert(is_move_semantic<SInt[3]>() == false, "fail");
+    _Static_assert(is_move_semantic<OwnedInt>() == true, "fail");
+    _Static_assert(is_move_semantic<MutBorrowInt>() == false, "fail");
+    _Static_assert(is_move_semantic<ImmutBorrowInt>() == false, "fail");
+    _Static_assert(is_move_semantic<ArrB1>() == false, "fail");
+    _Static_assert(is_move_semantic<ArrB2>() == false, "fail");
+    _Static_assert(is_move_semantic<Ano>() == false, "fail");
+    _Static_assert(is_move_semantic<Enum>() == false, "fail");
+    _Static_assert(is_move_semantic<Union>() == false, "fail");
+
+    _Static_assert(is_move_semantic<struct TS<int>>() == false, "fail");
+    _Static_assert(is_move_semantic<struct TS<int*>>() == false, "fail");
+
+    _Static_assert(is_move_semantic<XS>() == false, "fail");
+    _Static_assert(is_move_semantic<XS0>() == false, "fail");
+    _Static_assert(is_move_semantic<XS12>() == false, "fail");
+    _Static_assert(is_move_semantic<XO0>() == true, "fail");
+    _Static_assert(is_move_semantic<XO12>() == true, "fail");
+    _Static_assert(is_move_semantic<XSP0>() == false, "fail");
+    _Static_assert(is_move_semantic<XSP12>() == false, "fail");
+    _Static_assert(is_move_semantic<XSO0>() == true, "fail");
+    _Static_assert(is_move_semantic<XSO12>() == true, "fail");
+    _Static_assert(is_move_semantic<SMix>() == true, "fail");
+
+    return 0;
+}
 
 int main() {
-    _Static_assert(is_move_semantic<int *_Owned>() == true, "fail");
-    _Static_assert(is_move_semantic<A>() == true, "fail");
-    _Static_assert(is_move_semantic<struct B>() == true, "fail");
-    _Static_assert(is_move_semantic<B>() == true, "fail");
-    _Static_assert(is_move_semantic<D>() == true, "fail");
-    _Static_assert(is_move_semantic<A *>() == false, "fail");
-    _Static_assert(is_move_semantic<struct S<A>>() == true, "fail");
-    _Static_assert(is_move_semantic<struct S<int>>() == false, "fail");
-    _Static_assert(is_move_semantic<C>() == true, "fail");
-    _Static_assert(is_move_semantic<A_mixed>() == true, "fail");
+    test_is_move_semantic();
     return 0;
 }
