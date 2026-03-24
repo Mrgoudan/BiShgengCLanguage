@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -x bsc -fsyntax-only -verify %s
+
+// Standalone union definition/declaration: _Owned is ignored with a warning.
+_Owned union U1 { // expected-warning {{'_Owned' ignored on this declaration}}
+  int a;
+  int b;
+};
+
+_Owned union U2; // expected-warning {{'_Owned' ignored on this declaration}}
+
+union U3 _Owned; // expected-warning {{'_Owned' ignored on this declaration}}
+
+// typedef creates an actual type alias, so _Owned union remains rejected.
+typedef _Owned union T1 T1Alias; // expected-error {{'union T1' cannot be qualified by '_Owned'}}
+typedef union T2 _Owned T2Alias; // expected-error {{'union T2' cannot be qualified by '_Owned'}}
+
+union G { int a; };
+typedef _Owned union G GAlias1; // expected-error {{'union G' cannot be qualified by '_Owned'}}
+typedef union G _Owned GAlias2; // expected-error {{'union G' cannot be qualified by '_Owned'}}
+
+union H;
+typedef _Owned union H HAlias1; // expected-error {{'union H' cannot be qualified by '_Owned'}}
+typedef union H _Owned HAlias2; // expected-error {{'union H' cannot be qualified by '_Owned'}}
+
+// Standalone typedef-without-name still follows the ignored-on-declaration path.
+typedef _Owned union T5; // expected-warning {{typedef requires a name}} expected-warning {{'_Owned' ignored on this declaration}}

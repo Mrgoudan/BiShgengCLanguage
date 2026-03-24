@@ -5505,10 +5505,14 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (DS.getTypeQualifiers()) {
     if (DS.getTypeQualifiers() & DeclSpec::TQ_const)
       Diag(DS.getConstSpecLoc(), DiagID) << "const";
-    #if ENABLE_BSC
+#if ENABLE_BSC
+    if ((DS.getTypeQualifiers() & DeclSpec::TQ_owned) &&
+        !(isa_and_nonnull<RecordDecl>(Tag) &&
+          cast<RecordDecl>(Tag)->isOwnedDecl()))
+      Diag(DS.getOwnedSpecLoc(), DiagID) << "_Owned";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_borrow)
       Diag(DS.getBorrowSpecLoc(), DiagID) << "_Borrow";
-    #endif
+#endif
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
     // Restrict is covered above.

@@ -2108,7 +2108,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       } else {
         D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagOrTempResult.get();
       }
-      if (DS.getTypeQualifiers() & DeclSpec::TQ_owned) {
+      if ((DS.getTypeQualifiers() & DeclSpec::TQ_owned) &&
+          (TagType == DeclSpec::TST_struct || TagType == DeclSpec::TST_class)) {
         if (RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
           RD->setOwnedDecl(true);
         }
