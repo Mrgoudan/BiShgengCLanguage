@@ -3969,17 +3969,26 @@ void foo(int *_Borrow _Nullable p) {
 
 ### 3.3. 非空指针
 
-为了提高指针使用的安全性，BSC 为指针引入了可空（Nullable）和非空（Nonnull）属性：
-1. 使用`_Nullable`关键字修饰任意指针类型（包括裸指针、owned和borrow指针），表明该指针是可空指针。
-2. 使用`_Nonnull`关键字修饰任意指针类型，表明该指针是非空指针。
-在使用指针时，BSC 编译器会（在编译期）对指针的 nullability 进行检查，避免出现解引用空指针、通过空指针访问成员等不安全行为。
+为了提高指针使用的安全性，BSC 引入了指针的可空性（Nullability）概念。
 
-BSC 不允许在安全区内使用`NULL`，但是在日常开发中，空指针的使用是不可避免的，例如：
+根据是否可以直接解引用使用，可以使用两种属性修饰任意指针类型（裸指针、_Owned 和 _Borrow 指针）。
+
+1. 被关键字 `_Nullable` 修饰的是可空指针。
+2. 被关键字 `_Nonnull` 修饰的是非空指针。
+
+BSC 编译器会在编译时检查指针的可空性，避免出现解引用空指针、通过空指针访问成员等不安全行为。
+
+BSC 不允许在安全区内使用宏 `NULL`，但是 C 风格编程不可避免地使用空指针来描述逻辑：
+
 1. 一个指针的指向需要在运行时才能确定，那么我们可以将指针初始化为空指针，在后续再根据运行状态来修改指向
 2. 对于可空指针，在使用前需要判断该指针是否为空指针
-为此 BSC 引入了`nullptr`关键字来替代`NULL`，用户可以定义 Nullable 指针，并将其初始化为`nullptr`，在解引用 Nullable 指针前，也可以使用`nullptr`对指针判空。
+
+BSC 引入了 `nullptr` 关键字来替代 `NULL`。
+用户可以定义 Nullable 指针，并将其初始化为 `nullptr`。
+需要对 Nullable 指针判空才能解引用。
 
 我们用一个简单的例子来学习如何定义指针的 nullabiliy 并使用它：
+
 ```C
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
 
@@ -4017,11 +4026,55 @@ _Safe int main(void) {
 }
 ```
 
-#### 3.3.1. 指针变量的 Nullability
+#### 3.3.1. 编译器可以检查哪些指针的可空性
 
-指针变量的默认 Nullability 跟 qualifier 和指针类型有关：
-1. 如果有 qualifier(`_Nonnull`或`_Nullable`)修饰，以这个为准
-2. 如果没有 qualifier 修饰，裸指针（包括函数指针）默认是 Nullable 的，`_Owned` 和 `_Borrow` 指针默认是 Nonnull 的
+可以用 `_Nullable` 和 `_Nonnull` 修饰任意指针类型（裸指针、_Owned 和 _Borrow 指针），
+但只有指针满足以下条件时，编译器可以对它的可空性进行跟踪，从而保护空指针解引用。
+
+1. 是左值（存在一个内存地址）
+2. 不被 `volatile` 修饰（指针自己不是 volatile）
+3. 不是通过访问数组得到的指针
+
+例子：
+
+```c
+// 函数的返回值不是左值
+_Safe int *_Borrow _Nullable identity(int *_Borrow _Nullable p) { return p; }
+
+_Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable volatile vp) {
+  int local = 0;
+  int *_Borrow _Nullable q = nullptr;
+  int *_Borrow _Nullable arr[2] = {nullptr, &_Mut local};
+
+  if ((q = p) != nullptr) {
+    *q = 1; // ok：q 是左值指针，编译器可跟踪其可空性
+  }
+
+  if ((0, q) != nullptr) {
+    *q = 2; // ok：逗号表达式最终提取到 q，仍可跟踪
+  }
+
+  if (identity(p) != nullptr) {
+    *identity(p) = 3; // error：不是左值，不做可空性状态转移
+  }
+
+  if (vp != nullptr) {
+    *vp = 4; // error：volatile 指针不做可空性状态转移
+  }
+
+  if (arr[1] != nullptr) {
+    *arr[1] = 5; // error：通过 [] 得到的指针不做可空性状态转移
+  }
+}
+```
+
+#### 3.3.2. 指针类型的 Nullability
+
+指针类型的可空性标记和指针的类型以及指针的修饰符有关：
+
+1. 裸指针是 Nullable 的， `_Owned` 和 `_Borrow` 是 Nonnull 的
+2. 可以显式地使用 `_Nonnull` 和 `_Nullable` 修饰符覆盖上述规则
+
 ```C
 // Nullable 指针：
 int *_Nullable p1 = nullptr;
@@ -4037,7 +4090,8 @@ int *_Borrow p8 = &_Mut a;
 int *_Owned p9 = safe_malloc<int>(5);
 ```
 
-对于 Nonnull 指针，它的 Nullability 一定是 Nonnull 的。如果在控制流语句中对其做了判空，那么在空的分支中，其被认为是空指针。
+对于可空性标记为 Nonnull 的指针，它的可空性状态（Nullability）一定是 Nonnull 的。
+如果在控制流语句中对其做了判空，那么在空的分支中，其被认为是空指针。
 
 ```C
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -4057,9 +4111,10 @@ int main() {
 }
 ```
 
-对于 Nullable 指针，它的 Nullability 可能会发生变化：
-1. 如果用非空表达式对其进行了赋值，那么在这条赋值语句后面可以把它当做 Nonnull 指针使用
-2. 如果在控制流语句中对其做了判空，那么在非空的分支中，可以把它当做 Nonnull 指针使用
+对于可空性标记为 Nullable 的指针，它的可空性状态（Nullability）可能会发生变化：
+
+1. 如果用非空表达式对其进行了赋值，那么在这条赋值语句之后可空性状态变为 Nonnull
+2. 如果在控制流语句中对其做了判空，那么在非空的分支中可空性状态变为 Nonnull
 
 ```C
 // 返回值类型为 Nullable
@@ -4094,9 +4149,90 @@ int main() {
 }
 ```
 
-#### 3.3.2. 指针的赋值、传参和返回
+#### 3.3.3. 什么是判空语句
 
-1. 不允许用可空表达式给 Nonnull 指针赋值：
+在条件语句、循环语句的条件和三元表达式的条件表达式中，只有部分行为可以被视作“判断指针是否为空指针”：
+
+1. 直接使用指针 `e`
+
+- `if (p)`
+- `while (s.p)`
+- `p ? do_with(p) : do_without()`
+
+2. 逻辑运算符 `!e` `e && f` `e || f`
+
+- `if (!p)` `if (p && q)` `if (p || q)`
+- `while (!s.p)`  `while (s.p && s.q)` `while (s.p || s.q)`
+
+3. 显式和空指针做比较 `e == nullptr` `e != nullptr` 
+
+- 比较运算符具有对称性，因此 `nullptr == e` 和 `nullptr != e` 也支持
+
+4. 可以出现赋值运算符 `e = ...`
+
+- `if (p = q)` 只能判断 `p` 的可空性
+- 赋值运算符可结合，但 `if (p = q = r)` 只能判断 `p` 的可空性
+
+5. 可以作为逗号表达式的一部分，即 `(..., e)`
+
+- `if (x, p != nullptr)` 可以判断 `p` 的可空性
+- `if (p != nullptr, q != nullptr)` 只能判断  `q` 的可空性
+
+6. 上述模式可以嵌套括号
+
+其中 `e` 需要满足 3.3.1 中“可被跟踪”的要求。
+
+对这些“判空语句”，编译器会在在后续控制流中更新 `e` 的可空性状态：
+
+- 在 `if (e)` / `while (e)` 的真分支（或循环体）里，`e` 视作 Nonnull
+- 在 `if (!e)` 的假分支里，`e` 视作 Nonnull
+- 在 `if (e != nullptr)` 的真分支里，`e` 视作 Nonnull
+- 在 `if (e == nullptr)` 的假分支里，`e` 视作 Nonnull
+
+```c
+
+_Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
+  // 1) 直接指针条件
+  if (p) {
+    *p = 1; // ok: 真分支里 p 视作 nonnull
+  }
+
+  // 2) 逻辑运算符
+  if (!p) {
+    *p = 1; // error: 真分支里 p 视作 nullable
+  }
+  if (p && q) {
+    *p = 1; // ok
+    *q = 1; // ok
+  }
+  if (!p || !q) {
+    // snip
+  } else {
+    *p = 1; // ok
+    *q = 1; // ok
+  }
+
+  // 3) 与 nullptr 比较
+  if (p != nullptr) {
+    *p = 1; // ok
+  }
+  if (nullptr == p) {
+    *p = 1; // error
+  }
+
+  // 4) 赋值/逗号包裹
+  if ((q = p) != nullptr) {
+    *q = 1; // ok
+  }
+  if ((0, q) != nullptr) {
+    *q = 1; // ok
+  }
+}
+```
+
+#### 3.3.4. 指针的赋值、传参和返回
+
+1. 不允许用可空表达式给可空性标记为 Nonnull 的指针赋值：
 ```C
 // 返回值类型为 Nullable
 _Safe T *_Borrow _Nullable foo<T>(T *_Borrow p) { return p; }
@@ -4120,7 +4256,7 @@ int main() {
 }
 ```
 
-2. 函数调用时，如果形参为 Nonnull 类型，那么不能使用用可空表达式作为实参：
+2. 函数调用时，如果形参类型具有 Nonnull 可空性标记，那么不能传递可空表达式作为实参：
 ```C
 // 返回值类型为 Nullable
 _Safe T *_Borrow _Nullable foo<T>(T *_Borrow p) { return p; }
@@ -4140,7 +4276,7 @@ int main() {
 }
 ```
 
-3. 函数返回值类型如果是 Nonnull 类型，也不能使用可空表达式作为返回值：
+3. 函数返回值类型如果具有 Nonnull 可空性标记，不能返回可空表达式的结果：
 ```C
 _Safe int *_Borrow return_nonnull(int *_Borrow p) {
   int *_Borrow _Nullable q = nullptr;
@@ -4153,7 +4289,7 @@ int main() {
 }
 ```
 
-#### 3.3.3. 指针的强制类型转换
+#### 3.3.5. 指针的强制类型转换
 
 在开启编译选项`-nullability-check=all`后，在非安全区中不允许将 Nullable 指针强制类型转换为 Nonnull 类型：
 ```C
@@ -4186,9 +4322,10 @@ int main() {
 }
 ```
 
-#### 3.3.4. 指针的解引用、成员访问
+#### 3.3.6. 指针的解引用、成员访问
 
-被定义为 Nullable 的指针的 Nullability 会随赋值和控制流发生变化，BSC 编译器会跟踪这些变换，保证指针解引用、成员访问等操作的安全性。
+可空性标记为 Nullable 的指针的可空性状态（Nullability）会随赋值和控制流发生变化，
+BSC 编译器会跟踪这些变换，保证指针解引用、成员访问等操作的安全性。
 ```C
 // 返回值类型为 Nullable
 _Safe T *_Borrow _Nullable foo<T>(T *_Borrow p) { return p; }
@@ -4212,7 +4349,7 @@ int main() {
 }
 ```
 
-#### 3.3.5. 结构体成员是 Nullable 指针
+#### 3.3.7. 结构体成员是 Nullable 指针
 
 初始化有 Nullable 指针成员的结构体变量时：
 1. 如果是通过初始化列表进行初始化，BSC 编译器会根据初始化表达式来初始化 Nullable 指针成员的 Nullability
@@ -4258,7 +4395,7 @@ int main() {
   return 0;
 }
 ```
-#### 3.3.6. 非空指针检查的范围和控制选项
+#### 3.3.8. 非空指针检查的范围和控制选项
 
 非空指针检查是一项强大的功能，能帮助开发者在编译期识别出潜在的危险行为。同时，这会带来一定的编译性能开销和编码行为限制。**默认情况下，对非空指针的检查仅在安全区生效**，安全区的定义详见[内存安全-安全区](#安全区)章节。
 
