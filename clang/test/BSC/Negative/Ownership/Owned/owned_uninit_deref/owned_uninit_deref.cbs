@@ -1,0 +1,24 @@
+// RUN: %clang_cc1 -verify %s
+
+int rand(void);
+int *_Owned safe_malloc_int(void);
+
+void basic() {
+    int *_Owned uninit;
+    int val1 = *uninit; // expected-error {{use of uninitialized value: `uninit`}}
+    int val2 = *uninit; // expected-error {{use of uninitialized value: `uninit`}}
+}
+
+void basic_partial() {
+    int *_Owned uninit;
+    if (rand()) {
+        uninit = safe_malloc_int();
+    }
+    int val1 = *uninit; // expected-error {{use of possibly uninitialized value: `uninit`}}
+    int val2 = *uninit; // expected-error {{use of possibly uninitialized value: `uninit`}}
+} // expected-error {{memory leak of value: `uninit`}}
+
+int main() {
+    basic();
+    return 0;
+}

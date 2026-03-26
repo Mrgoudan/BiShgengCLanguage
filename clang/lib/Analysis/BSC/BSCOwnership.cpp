@@ -1507,6 +1507,19 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkBOPFieldUse(
       break;
     }
   }
+
+  // check VD has value
+  bool isUninit = is(VD, Ownership::Status::Uninitialized);
+  bool mayUninit = has(VD, Ownership::Status::Uninitialized);
+  if ((isUninit || mayUninit) && diags.empty()) {
+    if (isUninit) {
+      diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfUninit,
+                                        VD->getNameAsString()));
+    } else {
+      diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfPossiblyUninit,
+                                        VD->getNameAsString()));
+    }
+  }
   if ((is(VD, Ownership::Status::Moved) || has(VD, Ownership::Status::Moved)) &&
       diags.empty()) {
     diags.push_back(OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfMoved,
