@@ -233,4 +233,80 @@ ExprResult Parser::ParseSafeExpression() {
   return Expr;
 }
 
+/// BSC lowering for trait values built from a unary address-of on a
+/// trait-related operand. When the expression type desugars to a \c TraitDecl
+/// and the form matches (unary op, pointer type, mapped vtable \c VarDecl),
+/// replace \p Res with a compound literal of the trait record type, initialized
+/// with \code { (void*)trait_data, &vtable } \endcode so subsequent parsing can
+/// treat it like an ordinary value.
+///
+/// Preconditions: the caller has already gated on BSC and non-null \p Res.
+///
+/// \returns \p Res unchanged if no rewrite applies or record completion fails;
+///          \c ExprError() when the expression tree already contains errors;
+///          the new compound-literal expression otherwise.
+ExprResult Parser::TryDesugarBSCTraitAddressExpr(ExprResult Res) {
+  QualType ResType = Res.get()->getType();
+  TraitDecl *TD = Actions.TryDesugarTrait(ResType);
+  if (!TD) return Res;
+
+  // TODO: if containsErrors(), we should return earlier, fix it when refact trait.
+  if (Res.get()->containsErrors()) return ExprError();
+
+  UnaryOperator *UO = dyn_cast<UnaryOperator>(Res.get()->IgnoreParenCasts());
+  if (!UO) return Res;
+
+  const Type *UOT = UO->getType().getTypePtr();
+  if (!UOT || !UOT->isPointerType()) return Res;
+
+  QualType QT = UOT->getPointeeType().getCanonicalType();
+  VarDecl *LookupVar = TD->getTypeImpledVarDecl(QT);
+  if (!LookupVar) return Res;
+
+  QualType VoidPT = Actions.Context.getPointerType(Actions.Context.VoidTy);
+  ImplicitCastExpr *TraitData = ImplicitCastExpr::Create(
+      Actions.Context, VoidPT,
+      /* CastKind=*/CK_BitCast,
+      /* Expr=*/UO,
+      /* CXXCastPath=*/nullptr,
+      /* ExprValueKind=*/VK_PRValue,
+      /* FPFeatures */ FPOptionsOverride());
+
+  RecordDecl *LookupTrait = TD->getTrait();
+  QualType VtableTy = LookupVar->getType();
+  QualType RecordTy = Actions.Context.getRecordType(LookupTrait);
+  if (LookupTrait->getDescribedClassTemplate()) {
+    TypeSourceInfo *TInfo = Actions.Context.getTrivialTypeSourceInfo(ResType, Res.get()->getBeginLoc());
+    RecordTy = Actions.CompleteRecordType(LookupTrait, TInfo);
+  }
+  if (RecordTy.isNull()) return Res;
+
+  RecordTy = Actions.Context.getElaboratedType(ETK_Struct, nullptr,
+                                               RecordTy);
+  QualType VtablePT = Actions.Context.getPointerType(VtableTy);
+  DeclRefExpr *VtableRef = Actions.BuildDeclRefExpr(
+      LookupVar, VtableTy, VK_LValue, LookupVar->getLocation());
+  UnaryOperator *UOVtable = UnaryOperator::Create(
+      Actions.Context, VtableRef, UO_AddrOf, VtablePT, VK_PRValue,
+      OK_Ordinary, SourceLocation(), false, FPOptionsOverride());
+
+  std::vector<Expr *> Exprs = {TraitData, UOVtable};
+  MutableArrayRef<Expr *> initExprs = MutableArrayRef<Expr *>(Exprs);
+  ExprResult TraitInit = Actions.ActOnInitList(
+      SourceLocation(), initExprs, SourceLocation());
+  // The following line always succeeds
+  InitListExpr *ILE = dyn_cast<InitListExpr>(TraitInit.get());
+
+  ValueDecl *VD = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenCasts())->getDecl();
+  VarDecl *NewVD = VarDecl::Create(
+      Actions.Context, Actions.CurContext, VD->getBeginLoc(),
+      VD->getLocation(), VD->getIdentifier(), RecordTy,
+      Actions.Context.getTrivialTypeSourceInfo(RecordTy), SC_None);
+  Actions.AddInitializerToDecl(NewVD, ILE, false);
+  TypeSourceInfo *TInfo = Actions.Context.getTrivialTypeSourceInfo(ILE->getType());
+  Res = Actions.BuildCompoundLiteralExpr(SourceLocation(), TInfo,
+                                         SourceLocation(), ILE);
+  return Res;
+}
+
 #endif // ENABLE_BSC

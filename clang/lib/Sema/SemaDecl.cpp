@@ -15393,13 +15393,18 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     if (TraitDecl *TD = TryDesugarTrait(QT)) {
       RecordDecl *LookupTrait = TD->getTrait();
       if (LookupTrait && LookupTrait->getDescribedClassTemplate()) {
+        QualType OrigT = T;
         T = CompleteRecordType(LookupTrait, TSInfo);
-        T = Context.getElaboratedType(ETK_Struct, nullptr, T);
-        if (QT->isPointerType())
-          QT = QT->getPointeeType();
-        while (QT->isPointerType()) {
-          T = Context.getPointerType(T);
-          QT = QT->getPointeeType();
+        if (T.isNull()) {
+          T = OrigT;
+        } else {
+          T = Context.getElaboratedType(ETK_Struct, nullptr, T);
+          if (QT->isPointerType())
+            QT = QT->getPointeeType();
+          while (QT->isPointerType()) {
+            T = Context.getPointerType(T);
+            QT = QT->getPointeeType();
+          }
         }
       }
       TSInfo = Context.getTrivialTypeSourceInfo(

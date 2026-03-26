@@ -667,6 +667,9 @@ QualType Sema::DesugarTraitToStructTrait(TraitDecl *TD, QualType T,
   } else {
     RT = RD->getTypeForDecl()->getCanonicalTypeInternal();
   }
+  if (RT.isNull()) {
+    return T;
+  }
   RT = Context.getElaboratedType(ETK_Struct, nullptr, RT);
   assert(T->isPointerType() && "Trait must be of pointer type");
   T = T->getPointeeType();
@@ -721,6 +724,10 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
         return nullptr;
       if (LookupTrait->getDescribedClassTemplate()) {
         QT = CompleteRecordType(LookupTrait, VD->getTypeSourceInfo());
+        // Error recovery: e.g. TU already has errors; need a non-null base type
+        // before wrapping pointer levels (_Trait F<float>** ...).
+        if (QT.isNull())
+          QT = Context.getRecordType(LookupTrait);
       } else {
         QT = Context.getRecordType(LookupTrait);
       }
@@ -731,6 +738,8 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
     QT = Context.getElaboratedType(ETK_Struct, nullptr, QT);
   QualType TmpT = OriginQT.getCanonicalType();
   while (TmpT->isPointerType()) {
+    if (QT.isNull())
+      return nullptr;
     QT = Context.getPointerType(QT);
     TmpT = TmpT->getPointeeType();
   }
@@ -774,7 +783,10 @@ VarDecl *Sema::ActOnDesugarTraitInstance(Decl *D) {
   else
     TraitTy = QualType(TD->getTrait()->getTypeForDecl(), 0);
   if (dyn_cast<InjectedClassNameType>(TraitTy)) {
-    TraitTy = CompleteRecordType(TD->getTrait(), NewVD->getTypeSourceInfo());
+    QualType CompletedTrait =
+        CompleteRecordType(TD->getTrait(), NewVD->getTypeSourceInfo());
+    if (!CompletedTrait.isNull())
+      TraitTy = CompletedTrait;
   }
   // @code
   // trait I **a;

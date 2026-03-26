@@ -1818,6 +1818,7 @@ private:
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr,
                                  QualType T = QualType());
+  ExprResult TryDesugarBSCTraitAddressExpr(ExprResult Res);
 #else
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand, bool &NotCastExpr,

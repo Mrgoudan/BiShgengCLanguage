@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+#include <filenotfound.h> // expected-error {{'filenotfound.h' file not found}}
+
+_Trait F<T> {};
+
+void f0(_Trait F<int>* a);
+void f1(_Trait F<int>* a) {}
+
+_Trait F<float>* f2() {
+    return nullptr;
+}
+
+_Trait F<float>* f3() {
+    _Trait F<float>* a = nullptr;
+    return a;
+}
+
+_Trait F<float>** f4() {
+    _Trait F<float>** a = nullptr;
+    return a;
+}
+
+struct S {};
+
+_Impl _Trait F<float> for struct S;
+
+_Trait F<float>* f5() {
+    struct S s;
+    return &s;
+}

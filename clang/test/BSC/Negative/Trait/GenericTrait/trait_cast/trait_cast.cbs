@@ -1,0 +1,49 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Trait F<T> {
+  T foo(This *this);
+};
+
+struct S {};
+
+int struct S::foo(This *this) {
+  return 42;
+}
+
+_Impl _Trait F<int> for struct S;
+
+struct T { struct S s; };
+
+int main() {
+  struct S s;
+  struct T t = {s};
+  struct S ss[1] = {s};
+  (void)(_Trait F<int>*)&t.s;
+  (void)(_Trait F<int>*)&ss[0];
+  return 0;
+}
+
+#include <filenotfound.h> // expected-error {{'filenotfound.h' file not found}}
+
+_Trait F1<T> {
+  T foo(This *this);
+};
+
+struct S1 {};
+
+int struct S1::foo(This *this) {
+  return 42;
+}
+
+_Impl _Trait F1<int> for struct S1;
+
+struct T1 { struct S1 s; };
+
+int main1() {
+  struct S1 s;
+  struct T1 t = {s};
+  struct S1 ss[1] = {s};
+  (void)(_Trait F1<int>*)&t.s;
+  (void)(_Trait F1<int>*)&ss[0];
+  return 0;
+}
