@@ -13,6 +13,7 @@
 #if ENABLE_BSC
 
 #include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
+#include "clang/Analysis/Analyses/BSC/BSCNullCheckInfo.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
@@ -41,63 +42,6 @@ public:
 
   OwnershipImpl(AnalysisDeclContext &ac, ASTContext &context)
       : analysisContext(ac), ctx(context), blocksBeginStatus(0), blocksEndStatus(0) {}
-};
-
-/// Helper struct to represent whether an Expr is checking null-ness
-/// or non-null-ness, and stores the pointer expressions being checked.
-struct NullCheckInfo {
-  llvm::SmallSet<const Expr *, 2> nullCheckedExprs;
-  // Only stores expressions checked by syntactic patterns that are
-  // determined to be non-null, not the complement set of nullCheckedExprs.
-  llvm::SmallSet<const Expr *, 2> presentCheckedExprs;
-
-  /// Analyze the condition expression of an if/while statement, and extract the
-  /// pointer expressions being checked for null-ness or non-null-ness.
-  /// Callers must ensure TrimCond are called IgnoreParenImpCasts() before.
-  NullCheckInfo(const Expr *TrimCond, ASTContext &ctx) {
-    // if (p) { /* p is null */ }
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(TrimCond)) {
-      const Expr *PtrExpr = DRE->IgnoreParenImpCasts();
-      presentCheckedExprs.insert(PtrExpr);
-      return;
-    }
-    if (const auto *ME = dyn_cast<MemberExpr>(TrimCond)) {
-      const Expr *PtrExpr = ME->IgnoreParenImpCasts();
-      presentCheckedExprs.insert(PtrExpr);
-      return;
-    }
-
-    // if (!p) { ... } else { /* p is null */ }
-    if (const auto *UO = dyn_cast<UnaryOperator>(TrimCond)) {
-      if (UO->getOpcode() == UO_LNot) {
-        const Expr *PtrExpr = UO->getSubExpr()->IgnoreParenImpCasts();
-        nullCheckedExprs.insert(PtrExpr);
-      }
-      return;
-    }
-
-    if (const auto *BO = dyn_cast<BinaryOperator>(TrimCond)) {
-      auto Opc = BO->getOpcode();
-      // if (p == nullptr) { /* p is null */ }
-      // if (p != nullptr) { ... } else {  /* p is null */ }
-      if (Opc == BO_EQ || Opc == BO_NE) {
-        bool NullLHS = BO->getLHS()->isNullExpr(ctx);
-        bool NullRHS = BO->getRHS()->isNullExpr(ctx);
-        if (NullLHS == NullRHS) {
-          // XNOR: not a null check, or both sides are trivially semantic null
-          return;
-        }
-        const Expr *PtrExpr = NullLHS ? BO->getRHS() : BO->getLHS();
-        PtrExpr = PtrExpr->IgnoreParenImpCasts();
-        if (Opc == BO_EQ) {
-          nullCheckedExprs.insert(PtrExpr);
-        } else {
-          presentCheckedExprs.insert(PtrExpr);
-        }
-        return;
-      }
-    }
-  }
 };
 } // namespace
 
@@ -2490,7 +2434,7 @@ void OwnershipImpl::MaybeSetNull(const CFGBlock *block, const CFGBlock *cur,
   if (!Cond) {
     return;
   }
-  NullCheckInfo Info = NullCheckInfo(Cond->IgnoreParenImpCasts(), ctx);
+  NullCheckInfo Info(Cond->IgnoreParenImpCasts(), ctx);
   if (cur->succ_begin()[0] == block) {
     // block is True branch
     for (const Expr *E : Info.nullCheckedExprs) {

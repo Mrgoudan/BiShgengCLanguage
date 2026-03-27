@@ -1,0 +1,192 @@
+// RUN: %clang_cc1 -verify %s
+
+// Section I: Utilities
+
+// clang will split top-level && || operators, wrap all condition with
+// double ! to bypass the split.
+#define ID(c) !(!(c))
+
+// dummy function to "manufacture" a pointer for assignment scenario
+// simply pass a nullptr to it to confuse the compiler about
+// its return value's nullability
+_Safe int *_Borrow _Nullable ptr_factory(int *_Borrow _Nullable);
+
+// sinks of ownership
+_Safe void hard_exhaust(int *_Owned);
+_Safe void soft_exhaust(int *_Owned _Nullable);
+
+struct ArrayWrapper {
+    int *_Borrow _Nullable arr[2];
+};
+
+struct NestedArrayWrapper {
+    struct ArrayWrapper aw;
+};
+
+struct PointerWrapper {
+    int *_Borrow _Nullable ptr;
+};
+
+struct PWArray {
+    struct PointerWrapper arr[2];
+};
+
+struct PWArrayWrapper {
+    struct PWArray pwa;
+};
+
+// Section II: What can be tracked
+
+_Safe void basic(int *_Borrow _Nullable p) {
+    if (ID(p != nullptr)) {
+        *p = 1;
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 3;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void basic_o(int *_Owned _Nullable p) {
+    if (ID(p == nullptr)) {
+        hard_exhaust(p); // expected-error {{cannot pass nullable pointer argument}}
+    }
+}
+
+_Safe void pointer_volatile(int *_Borrow _Nullable volatile p) {
+    if (ID(p != nullptr)) {
+        *p = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 3;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void pointee_volatile(volatile int *_Borrow _Nullable p) {
+    if (ID(p != nullptr)) {
+        *p = 1;
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 3;  // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+// Section III: GetTrackablePtr exclusions
+
+_Safe void array_direct(struct ArrayWrapper aw) {
+    if (ID(aw.arr[0] != nullptr)) {
+        *(aw.arr[0]) = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *(aw.arr[0]) = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+_Safe void array_nested(struct NestedArrayWrapper naw) {
+    if (ID(naw.aw.arr[1])) {
+        *(naw.aw.arr[1]) = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *(naw.aw.arr[1]) = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+_Safe void array_indirect(struct PWArrayWrapper paw) {
+    if (ID(paw.pwa.arr[0].ptr != nullptr)) {
+        *(paw.pwa.arr[0].ptr) = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *(paw.pwa.arr[0].ptr) = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+// Section IV: Triviality with constant sub-conditions
+
+_Safe void triviality_and_true(int *_Borrow _Nullable p) {
+    if (ID(p != nullptr && 1)) {
+        *p = 1;
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    *p = 3; // expected-error {{nullable pointer cannot be dereferenced}}
+}
+
+_Safe void triviality_or_true(int *_Borrow _Nullable p) {
+    if (ID(p != nullptr || 1)) {
+        *p = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *p = 2;
+    }
+}
+
+_Safe void triviality_or_false(int *_Borrow _Nullable p) {
+    if (ID(p != nullptr || 0)) {
+        *p = 1;
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+// Section V: logical operators
+
+_Safe void logical_not_basic(int *_Borrow _Nullable p) {
+    p = nullptr;
+    if (!(p != nullptr)) {
+        // snip
+    } else {
+        *p = 2;
+    }
+}
+
+_Safe void logical_and_two_ptrs(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
+    if (ID(p != nullptr && q != nullptr)) {
+        *p = 1;
+        *q = 1;
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+        *q = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+_Safe void logical_or_intersection(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
+    if (ID((p != nullptr && q != nullptr) || p != nullptr)) {
+        *p = 1;
+        *q = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    } else {
+        *p = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+        *q = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+// Section VI: Ownership sink behavior under distinguish results
+
+_Safe void ownership_and_true(int *_Owned _Nullable p) {
+    if (ID(p != nullptr && 1)) {
+        hard_exhaust(p);
+    } else {
+        soft_exhaust(p);
+    }
+}
+
+_Safe void ownership_or_true(int *_Owned _Nullable p) {
+    if (ID(p != nullptr || 1)) {
+        hard_exhaust(p); // expected-error {{cannot pass nullable pointer argument}}
+    } else {
+        soft_exhaust(p);
+    }
+}
+
+_Safe void ownership_or_false(int *_Owned _Nullable p) {
+    if (ID(p != nullptr || 0)) {
+        hard_exhaust(p);
+    } else {
+        soft_exhaust(p);
+    }
+}
+
+_Safe void ownership_logical_or_intersection(int *_Owned _Nullable p,
+                                             int *_Owned _Nullable q) {
+    if (ID((p != nullptr && q != nullptr) || p != nullptr)) {
+        hard_exhaust(p);
+        hard_exhaust(q); // expected-error {{cannot pass nullable pointer argument}}
+    } else {
+        soft_exhaust(p);
+        soft_exhaust(q);
+    }
+}

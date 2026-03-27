@@ -16,6 +16,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/BSC/BSCNullabilityCheck.h"
+#include "clang/Analysis/Analyses/BSC/BSCNullCheckInfo.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
@@ -64,14 +65,10 @@ public:
   // BlocksConditionStatus records condition status:
   // Key is current BB, value is condition status passed from pred BB to current
   // BB, for this example, BlocksConditionStatusVD will be:
-  // B3 : { B4 : p NonNull }  B2 : { B4 : p Nullable }
-  llvm::DenseMap<
-      const CFGBlock *,
-      llvm::DenseMap<const CFGBlock *, std::pair<VarDecl *, NullabilityKind>>>
+  // B3 : { B4 : { p NonNull } }  B2 : { B4 : { p Nullable } }
+  llvm::DenseMap<const CFGBlock *, llvm::DenseMap<const CFGBlock *, StatusVD>>
       BlocksConditionStatusVD;
-  llvm::DenseMap<
-      const CFGBlock *,
-      llvm::DenseMap<const CFGBlock *, std::pair<FieldPath, NullabilityKind>>>
+  llvm::DenseMap<const CFGBlock *, llvm::DenseMap<const CFGBlock *, StatusFP>>
       BlocksConditionStatusFP;
 
   StatusVD mergeVD(StatusVD statusA, StatusVD statusB);
@@ -136,104 +133,6 @@ public:
   void HandleArrayInit(DeclStmt *DS, VarDecl *VD, const ArrayType *AT,
                        InitListExpr *ILE, std::string FieldPath);
 };
-
-/// Return whether E or its sub-expressions contains built-in []
-bool containsBuiltinArraySubscript(Expr *E) {
-  E = E->IgnoreParenImpCasts();
-  return isa<ArraySubscriptExpr>(E);
-}
-
-/// Return whether E contains dereference of pointer arithmetic, e.g. *(a + 1).
-bool containsPointerArithmeticDeref(Expr *E) {
-  E = E->IgnoreParenImpCasts();
-  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_Deref) {
-      Expr *SubE = UO->getSubExpr()->IgnoreParenImpCasts();
-      if (auto *BO = dyn_cast<BinaryOperator>(SubE)) {
-        if (BO->isAdditiveOp())
-          return true;
-      }
-    }
-  }
-  return false;
-}
-
-/// Extract the pointer expression that satisfies nullability state transfer
-/// requirements:
-///
-/// pointer type, lvalue, not volatile and doesn't contain built-in
-/// array subscription [i] or pointer-arithmetic-dereference *(p + 1).
-///
-/// Return nullptr if no such expression exists.
-Expr *GetPointerExpr(Expr *E) {
-  if (!E)
-    return nullptr;
-  E = E->IgnoreParenImpCasts();
-
-  // recursively process (m, n, o, p) and (p = q = r) to get p
-  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
-    if (BO->isAssignmentOp())
-      return GetPointerExpr(BO->getLHS());
-    if (BO->getOpcode() == BO_Comma)
-      return GetPointerExpr(BO->getRHS());
-  }
-
-  if (!E->isLValue())
-    return nullptr;
-
-  QualType QT = E->getType();
-  if (!QT.getCanonicalType()->isPointerType())
-    return nullptr;
-
-  if (QT.isVolatileQualified())
-    return nullptr;
-
-  if (containsBuiltinArraySubscript(E) || containsPointerArithmeticDeref(E))
-    return nullptr;
-
-  return E;
-}
-
-/// Helper of PassConditionStatusToSuccBlocks, under Ctx, extract a binary
-/// operator condition expression CondExpr into underlying core pointer
-/// expression and returns it.
-/// Inverse: output paremeter indicates whether the condition is checking for
-/// null-ness or non-null-ness
-Expr *GetPointerExprFromBinaryCondition(BinaryOperator *BO, ASTContext &Ctx,
-                                        bool &Inverse) {
-  if (!BO)
-    return nullptr;
-
-  // Unwrap expression whose value is determined by RHS, such as
-  // (x, p != nullptr) or (x = (p == nullptr))
-  if (BO->getOpcode() == BO_Comma || BO->isAssignmentOp()) {
-    Expr *RHS = BO->getRHS()->IgnoreParenImpCasts();
-    if (auto *RHSBO = dyn_cast<BinaryOperator>(RHS))
-      return GetPointerExprFromBinaryCondition(RHSBO, Ctx, Inverse);
-    return nullptr;
-  }
-
-  // Check Equality operator, such as p == nullptr, p != nullptr
-  // and s.p == nullptr, s.p != nullptr
-  if (!BO->isEqualityOp())
-    return nullptr;
-
-  Expr *LHS = BO->getLHS()->IgnoreParenImpCasts();
-  Expr *RHS = BO->getRHS()->IgnoreParenImpCasts();
-  bool NullLHS = LHS->isNullExpr(Ctx);
-  bool NullRHS = RHS->isNullExpr(Ctx);
-  if (NullLHS == NullRHS)
-    // not a nullability check, or both sides are trivially semantic null
-    return nullptr;
-
-  Expr *Candidate = NullLHS ? RHS : LHS;
-  Expr *PtrE = GetPointerExpr(Candidate);
-  if (!PtrE)
-    return nullptr;
-
-  Inverse = BO->getOpcode() == BO_EQ;
-  return PtrE;
-}
 
 } // namespace
 
@@ -807,10 +706,10 @@ void TransferFunctions::SetCFGBlocksByExpr(Expr *PtrE,
     if (getDefNullability(VD->getType(), Ctx) == NullabilityKind::Nullable &&
         CurrStatusVD.count(VD) &&
         CurrStatusVD[VD] != NullabilityKind::NonNull) {
-      NCI.BlocksConditionStatusVD[NonNullBlock][Block] =
-          std::pair<VarDecl *, NullabilityKind>(VD, NullabilityKind::NonNull);
-      NCI.BlocksConditionStatusVD[NullableBlock][Block] =
-          std::pair<VarDecl *, NullabilityKind>(VD, NullabilityKind::Nullable);
+      NCI.BlocksConditionStatusVD[NonNullBlock][Block][VD] =
+          NullabilityKind::NonNull;
+      NCI.BlocksConditionStatusVD[NullableBlock][Block][VD] =
+          NullabilityKind::Nullable;
     }
   } else if (MemberExpr *ME = getMemberExprFromExpr(PtrE)) {
     if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
@@ -821,11 +720,10 @@ void TransferFunctions::SetCFGBlocksByExpr(Expr *PtrE,
           CurrStatusFP[FP] != NullabilityKind::NonNull) {
         FieldPath FP;
         VisitMEForFieldPath(ME, FP);
-        NCI.BlocksConditionStatusFP[NonNullBlock][Block] =
-            std::pair<FieldPath, NullabilityKind>(FP, NullabilityKind::NonNull);
-        NCI.BlocksConditionStatusFP[NullableBlock][Block] =
-            std::pair<FieldPath, NullabilityKind>(FP,
-                                                  NullabilityKind::Nullable);
+        NCI.BlocksConditionStatusFP[NonNullBlock][Block][FP] =
+            NullabilityKind::NonNull;
+        NCI.BlocksConditionStatusFP[NullableBlock][Block][FP] =
+            NullabilityKind::Nullable;
       }
     }
   }
@@ -856,32 +754,12 @@ void TransferFunctions::PassConditionStatusToSuccBlocks(Expr *CondExpr) {
   if (!TrueBlock || !FalseBlock)
     return;
 
-  if (Expr *PtrE = GetPointerExpr(CondExpr)) {
-    // Condition expr directly references a pointer
-    // such as: if (p), if (s.p), ...
-    SetCFGBlocksByExpr(PtrE, TrueBlock, FalseBlock);
-    return;
+  NullCheckInfo Info (CondExpr, Ctx);
+  for(const auto* E: Info.presentCheckedExprs){
+    SetCFGBlocksByExpr(const_cast<Expr*>(E), TrueBlock, FalseBlock);
   }
-  if (auto UO = dyn_cast<UnaryOperator>(CondExpr)) {
-    // Condition expr is UnaryOperator (logical not), such as:
-    // if (!p), if (!s.p), ...
-    if (UO->getOpcode() == UO_LNot) {
-      if (Expr *PtrE = GetPointerExpr(UO->getSubExpr())) {
-        // set FalseBlock NoNull
-        SetCFGBlocksByExpr(PtrE, FalseBlock, TrueBlock);
-      }
-    }
-  }
-  // General binary operator cases including comparison and assignment,
-  // binary logical operator is already split when building CFG
-  if (auto BO = dyn_cast<BinaryOperator>(CondExpr)) {
-    bool Inverse = false;
-    if (Expr *PtrE = GetPointerExprFromBinaryCondition(BO, Ctx, Inverse)) {
-      if (Inverse)
-        SetCFGBlocksByExpr(PtrE, FalseBlock, TrueBlock);
-      else
-        SetCFGBlocksByExpr(PtrE, TrueBlock, FalseBlock);
-    }
+  for (const auto* E: Info.nullCheckedExprs){
+    SetCFGBlocksByExpr(const_cast<Expr*>(E), FalseBlock, TrueBlock);
   }
 }
 
@@ -1012,9 +890,9 @@ void clang::runNullabilityCheck(const FunctionDecl &fd, const CFG &cfg,
         StatusVD predValVD = NCI.BlocksEndStatusVD[pred];
         if (NCI.BlocksConditionStatusVD.count(block)) {
           if (NCI.BlocksConditionStatusVD[block].count(pred)) {
-            std::pair<VarDecl *, NullabilityKind> condition =
-                NCI.BlocksConditionStatusVD[block][pred];
-            predValVD[condition.first] = condition.second;
+            for (auto &CondState : NCI.BlocksConditionStatusVD[block][pred]) {
+              predValVD[CondState.first] = CondState.second;
+            }
           }
         }
         valVD = NCI.mergeVD(valVD, predValVD);
@@ -1022,9 +900,9 @@ void clang::runNullabilityCheck(const FunctionDecl &fd, const CFG &cfg,
         StatusFP predValFP = NCI.BlocksEndStatusFP[pred];
         if (NCI.BlocksConditionStatusFP.count(block)) {
           if (NCI.BlocksConditionStatusFP[block].count(pred)) {
-            std::pair<FieldPath, NullabilityKind> condition =
-                NCI.BlocksConditionStatusFP[block][pred];
-            predValFP[condition.first] = condition.second;
+            for (auto &CondState : NCI.BlocksConditionStatusFP[block][pred]) {
+              predValFP[CondState.first] = CondState.second;
+            }
           }
         }
         valFP = NCI.mergeFP(valFP, predValFP);
