@@ -76,12 +76,15 @@ SmallVector<Place, 4> Place::supportingPrefixes() const {
   return Result;
 }
 
-Place Place::project(ProjectionElem Elem, llvm::BumpPtrAllocator &Alloc) const {
+Place Place::project(ProjectionElem Elem, llvm::BumpPtrAllocator &Alloc,
+                     SourceLocation OverrideLoc) const {
   size_t N = Projections.size();
   auto *New = Alloc.Allocate<ProjectionElem>(N + 1);
   std::copy(Projections.begin(), Projections.end(), New);
   New[N] = Elem;
-  return Place(Base, ArrayRef<ProjectionElem>(New, N + 1), Elem.ResultTy, Loc);
+  SourceLocation NewLoc = OverrideLoc.isValid() ? OverrideLoc : Loc;
+  return Place(Base, ArrayRef<ProjectionElem>(New, N + 1), Elem.ResultTy,
+               NewLoc);
 }
 
 std::string Place::toString() const {
@@ -92,10 +95,15 @@ std::string Place::toString() const {
       Result = "(*" + Result + ")";
       break;
     case ProjectionElem::Field:
-      if (Proj.FD)
-        Result += "." + Proj.FD->getNameAsString();
-      else
+      if (Proj.FD) {
+        if (Proj.FD->isAnonymousStructOrUnion())
+          Result += "." + formatAnonymousFieldName(Proj.FieldIndex,
+                                                   Proj.FD->getParent());
+        else
+          Result += "." + Proj.FD->getNameAsString();
+      } else {
         Result += "." + std::to_string(Proj.FieldIndex);
+      }
       break;
     case ProjectionElem::Index:
       Result += "[_" + std::to_string(Proj.IndexLocal.Index) + "]";

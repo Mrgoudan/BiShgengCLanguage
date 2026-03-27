@@ -1,0 +1,125 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test BSCIR init analysis with anonymous structs/unions.
+// Anonymous wrappers are elided in diagnostics so paths match source syntax.
+
+// --- Anonymous struct inside a struct ---
+
+struct AnonInner {
+    int before;
+    struct {
+        int x;
+        int y;
+    };
+    int after;
+};
+
+_Safe void test_anon_struct_partial(void) {
+    struct AnonInner a;
+    a.before = 1;
+    a.x = 2;
+    a.after = 4;
+    int val = a.y; // expected-error {{use of uninitialized value: `a.y`}}
+}
+
+// --- Anonymous union inside a struct ---
+
+struct AnonUnion {
+    int tag;
+    union {
+        int i;
+        float f;
+    };
+    int extra;
+};
+
+_Safe void test_anon_union_field(void) {
+    struct AnonUnion u;
+    u.tag = 1;
+    u.i = 42;
+    u.extra = 3;
+    int val = u.tag;  // OK, should not error
+}
+
+_Safe void test_anon_union_partial(void) {
+    struct AnonUnion u;
+    u.tag = 1;
+    u.i = 42;
+    int val = u.extra; // expected-error {{use of uninitialized value: `u.extra`}}
+}
+
+// --- Nested anonymous struct (two levels) ---
+
+struct DeepAnon {
+    int a;
+    struct {
+        int b;
+        struct {
+            int c;
+            int d;
+        };
+    };
+    int e;
+};
+
+_Safe void test_deep_anon_partial(void) {
+    struct DeepAnon v;
+    v.a = 1;
+    v.b = 2;
+    v.c = 3;
+    v.e = 5;
+    int val = v.d; // expected-error {{use of uninitialized value: `v.d`}}
+}
+
+// --- Anonymous struct with pointer fields ---
+
+struct AnonWithPtr {
+    int x;
+    struct {
+        int *_Owned p;
+        int y;
+    };
+};
+
+
+// --- Union containing anonymous struct ---
+
+union UnionAnonStruct {
+    struct {
+        int x;
+        int y;
+    };
+    float f;
+};
+
+// Union read/write is not allowed in safe zone.
+// Just test that the compiler doesn't crash on this pattern.
+void test_union_anon_struct(void) {
+    union UnionAnonStruct u;
+    u.x = 1;
+    u.y = 2;
+    float val = u.f;
+}
+
+// --- Struct with multiple anonymous members at same level ---
+
+struct MultiAnon {
+    struct {
+        int a;
+        int b;
+    };
+    struct {
+        int c;
+        int d;
+    };
+    int e;
+};
+
+_Safe void test_multi_anon_partial(void) {
+    struct MultiAnon m;
+    m.a = 1;
+    m.b = 2;
+    m.c = 3;
+    m.e = 5;
+    int val = m.d; // expected-error {{use of uninitialized value: `m.d`}}
+}

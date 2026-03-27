@@ -193,6 +193,16 @@ struct ProjectionElem {
   bool operator==(const ProjectionElem &Other) const;
 };
 
+/// Format a synthetic name for an anonymous struct/union field (for IR dumps).
+/// E.g., "anonymous_1_in_AnonInner".
+inline std::string formatAnonymousFieldName(unsigned FieldIndex,
+                                            const RecordDecl *Parent) {
+  std::string ParentName = Parent ? Parent->getNameAsString() : "unknown";
+  if (ParentName.empty())
+    ParentName = "anonymous";
+  return "anonymous_" + std::to_string(FieldIndex) + "_in_" + ParentName;
+}
+
 //===----------------------------------------------------------------------===//
 // Place - A memory location: base local + projections
 //===----------------------------------------------------------------------===//
@@ -219,7 +229,10 @@ struct Place {
   SmallVector<Place, 4> supportingPrefixes() const;
 
   /// Create a new place by appending a projection (arena-allocated).
-  Place project(ProjectionElem Elem, llvm::BumpPtrAllocator &Alloc) const;
+  /// If OverrideLoc is valid, the projected Place uses it instead of
+  /// inheriting the base location.
+  Place project(ProjectionElem Elem, llvm::BumpPtrAllocator &Alloc,
+                SourceLocation OverrideLoc = SourceLocation()) const;
 
   /// Pretty-print: "x.f1.f2" or "*p"
   std::string toString() const;

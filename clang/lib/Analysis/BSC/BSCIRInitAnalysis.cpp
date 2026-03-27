@@ -600,7 +600,9 @@ std::string InitAnalysis::buildFieldName(const FieldPath &FP) const {
     unsigned I = 0;
     for (auto It = RD->field_begin(); It != RD->field_end(); ++It, ++I) {
       if (I == Idx) {
-        Name += "." + It->getNameAsString();
+        if (!It->isAnonymousStructOrUnion()) {
+          Name += "." + It->getNameAsString();
+        }
         CurTy = It->getType();
         break;
       }
@@ -753,6 +755,9 @@ void InitAnalysis::checkOperand(const Operand &Op, const InitLattice &State,
                                 SmallVectorImpl<InitDiagInfo> &Diags) const {
   if (Op.K == Operand::Constant)
     return;
+
+  if (Op.getPlace().Loc.isValid())
+    Loc = Op.getPlace().Loc;
 
   LocalId Id = Op.getPlace().Base;
   InitState IS = getInitState(State, Id);

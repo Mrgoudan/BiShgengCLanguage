@@ -116,9 +116,11 @@ Place BSCIRBuilder::lowerToPlace(const Expr *E) {
             ME->getBase()->getType()->getPointeeType()),
             TheBody->getAllocator());
       }
+      // Pass the member-access location so diagnostics point to the
+      // leaf field (e.g. `y` in `a.y`), not the base (`a`).
       return Base.project(
           ProjectionElem::createField(FD->getFieldIndex(), FD, FD->getType()),
-          TheBody->getAllocator());
+          TheBody->getAllocator(), ME->getMemberLoc());
     }
   }
 
@@ -127,7 +129,7 @@ Place BSCIRBuilder::lowerToPlace(const Expr *E) {
       Place Base = lowerToPlace(UO->getSubExpr());
       return Base.project(
           ProjectionElem::createDeref(UO->getType()),
-          TheBody->getAllocator());
+          TheBody->getAllocator(), UO->getOperatorLoc());
     }
   }
 
@@ -139,7 +141,7 @@ Place BSCIRBuilder::lowerToPlace(const Expr *E) {
         uint64_t CI = Idx.getConstVal().getInt().getZExtValue();
         return Base.project(
             ProjectionElem::createConstantIndex(CI, ASE->getType()),
-            TheBody->getAllocator());
+            TheBody->getAllocator(), ASE->getExprLoc());
       }
     }
     LocalId IdxLocal = TheBody->addTemp(ASE->getIdx()->getType(),
@@ -150,7 +152,7 @@ Place BSCIRBuilder::lowerToPlace(const Expr *E) {
                                  currentSafeZone()));
     return Base.project(
         ProjectionElem::createIndex(IdxLocal, ASE->getType()),
-        TheBody->getAllocator());
+        TheBody->getAllocator(), ASE->getExprLoc());
   }
 
   // Fallback: create a temporary for complex lvalue expressions

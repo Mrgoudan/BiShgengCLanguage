@@ -1,0 +1,121 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR lowering of anonymous struct/union fields.
+// Anonymous fields are named "anonymous_<FieldIndex>_in_<OuterDecl>".
+
+// --- Anonymous struct inside a named struct ---
+
+struct S1 {
+    int before;
+    struct {
+        int x;
+        int y;
+    };
+    int after;
+};
+
+// CHECK-LABEL: fn test_anon_struct
+// CHECK:      _1.before = const 1
+// CHECK-NEXT: _1.anonymous_1_in_S1.x = const 2
+// CHECK-NEXT: _1.anonymous_1_in_S1.y = const 3
+// CHECK-NEXT: _1.after = const 4
+void test_anon_struct(void) {
+    struct S1 s;
+    s.before = 1;
+    s.x = 2;
+    s.y = 3;
+    s.after = 4;
+}
+
+// --- Anonymous union inside a named struct ---
+
+struct S2 {
+    int tag;
+    union {
+        int i;
+        float f;
+    };
+    int extra;
+};
+
+// CHECK-LABEL: fn test_anon_union
+// CHECK:      _1.tag = const 1
+// CHECK-NEXT: _1.anonymous_1_in_S2.i = const 42
+// CHECK-NEXT: _1.extra = const 3
+void test_anon_union(void) {
+    struct S2 s;
+    s.tag = 1;
+    s.i = 42;
+    s.extra = 3;
+}
+
+// --- Two-level nested anonymous structs ---
+
+struct S3 {
+    int a;
+    struct {
+        int b;
+        struct {
+            int c;
+            int d;
+        };
+    };
+    int e;
+};
+
+// CHECK-LABEL: fn test_deep_anon
+// CHECK:      _1.a = const 1
+// CHECK-NEXT: _1.anonymous_1_in_S3.b = const 2
+// CHECK-NEXT: _1.anonymous_1_in_S3.anonymous_1_in_anonymous.c = const 3
+// CHECK-NEXT: _1.anonymous_1_in_S3.anonymous_1_in_anonymous.d = const 4
+// CHECK-NEXT: _1.e = const 5
+void test_deep_anon(void) {
+    struct S3 s;
+    s.a = 1;
+    s.b = 2;
+    s.c = 3;
+    s.d = 4;
+    s.e = 5;
+}
+
+// --- Multiple anonymous structs at the same level ---
+
+struct S4 {
+    struct {
+        int a;
+        int b;
+    };
+    struct {
+        int c;
+        int d;
+    };
+    int e;
+};
+
+// CHECK-LABEL: fn test_multi_anon
+// CHECK:      _1.anonymous_0_in_S4.a = const 1
+// CHECK-NEXT: _1.anonymous_0_in_S4.b = const 2
+// CHECK-NEXT: _1.anonymous_1_in_S4.c = const 3
+// CHECK-NEXT: _1.anonymous_1_in_S4.d = const 4
+// CHECK-NEXT: _1.e = const 5
+void test_multi_anon(void) {
+    struct S4 s;
+    s.a = 1;
+    s.b = 2;
+    s.c = 3;
+    s.d = 4;
+    s.e = 5;
+}
+
+// --- Read from anonymous struct field ---
+
+// CHECK-LABEL: fn test_anon_read
+// CHECK:      _2 = copy(_1.anonymous_1_in_S1.x)
+void test_anon_read(void) {
+    struct S1 s;
+    s.before = 0;
+    s.x = 0;
+    s.y = 0;
+    s.after = 0;
+    int v = s.x;
+}
