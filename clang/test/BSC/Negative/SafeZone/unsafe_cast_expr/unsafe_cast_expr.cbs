@@ -152,8 +152,8 @@ void baseTypeCastConver() {
   };
   _Safe {
     int a = 0;
-    enum E num = (enum E)a;     // ok: explicit cast allowed
-    num = (enum E)0;            // ok: explicit cast allowed
+    enum E num = (enum E)a;     // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
+    num = (enum E)0;            // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
     num = (enum E)ZERO;         // ok
     num = _Safe((enum E)ZERO);
     num = _Unsafe((enum E)ZERO);

@@ -26,12 +26,23 @@ _Safe void test_int_to_enum_forbidden(void) {
   num = 0;             // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
 }
 
+_Safe void test_explicit_non_enum_to_enum_forbidden(void) {
+  enum E { ZERO, ONE, TWO };
+  int a = 1;
+  float f = 1.0f;
+
+  enum E from_var = (enum E)a;         // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
+  enum E from_expr = (enum E)(a + 1);  // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
+  enum E from_const = (enum E)0;       // expected-error {{conversion from type 'int' to 'enum E' is forbidden in the safe zone}}
+  enum E from_float = (enum E)f;       // expected-error {{conversion from type 'float' to 'enum E' is forbidden in the safe zone}}
+}
+
 _Safe void test_enum_to_enum_when_dest_does_not_contain_source(void) {
   enum E { ZERO, ONE, TWO };
   enum G { G1, G2 };
   enum E num = ZERO;
   enum G g1 = (enum G)num;   // expected-error {{conversion from type 'enum E' to 'enum G' is forbidden in the safe zone}}
-  g1 = (enum G)ZERO;         // same conversion; one diagnostic emitted for the first cast
+  g1 = (enum G)ZERO;         // expected-error {{conversion from type 'int' to 'enum G' is forbidden in the safe zone}} expected-note {{source type 'int' is implicit converted from type 'enum E'}}
 }
 
 _Safe void test_constant_out_of_range_implicit(void) {
@@ -59,6 +70,7 @@ int main(void) {
   test_implicit_int_to_double_forbidden();
   test_implicit_double_to_float_forbidden();
   test_int_to_enum_forbidden();
+  test_explicit_non_enum_to_enum_forbidden();
   test_enum_to_enum_when_dest_does_not_contain_source();
   test_constant_out_of_range_implicit();
   test_literal_conversions_forbidden();

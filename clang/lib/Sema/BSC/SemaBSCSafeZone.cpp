@@ -826,6 +826,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
           // In C, enum constants and sometimes enum variables have type int.
           // Allow (enum E)x when x is an enum constant or variable and dest
           // enum contains all values of the source enum.
+          IsSafeBehavior = false;
           const EnumType *DestET = DestType->getAs<EnumType>();
           if (DestET && SrcType->isIntegerType()) {
             EnumDecl *SrcED = nullptr;
@@ -844,10 +845,6 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
                                                   Context)) {
               IsSafeBehavior = true;
             }
-          }
-          if (!IsSafeBehavior) {
-            // Arithmetic to enum (e.g. literal int to enum) is forbidden.
-            IsSafeBehavior = false;
           }
         }
       } else {

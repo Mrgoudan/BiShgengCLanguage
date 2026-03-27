@@ -67,8 +67,7 @@ void test_enum_casts(void) {
 
   _Safe {
     int a = 0;
-    enum E num = (enum E)a;     // ok: explicit cast allowed
-    num = (enum E)0;            // ok: explicit cast allowed
+    enum E num = ZERO;
     num = (enum E)ZERO;         // ok
     num = _Safe((enum E)ZERO);   // ok
     num = _Unsafe((enum E)ZERO); // ok
