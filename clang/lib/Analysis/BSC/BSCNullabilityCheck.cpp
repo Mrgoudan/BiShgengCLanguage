@@ -134,7 +134,7 @@ public:
   void HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                               InitListExpr *InitList, std::string FieldPrefix);
   void HandleArrayInit(DeclStmt *DS, VarDecl *VD, const ArrayType *AT,
-                       InitListExpr *ILE);
+                       InitListExpr *ILE, std::string FieldPath);
 };
 
 /// Return whether E or its sub-expressions contains built-in []
@@ -468,7 +468,7 @@ void TransferFunctions::HandleVarDeclInit(DeclStmt *DS, VarDecl *VD) {
       HandleRecordInit(DS, VD, RD);
   } else if (auto *AT = VD->getType()->getAsArrayTypeUnsafe()) {
     if (auto *ILE = dyn_cast<InitListExpr>(VD->getInit()))
-      HandleArrayInit(DS, VD, AT, ILE);
+      HandleArrayInit(DS, VD, AT, ILE, "");
   }
 }
 
@@ -516,7 +516,8 @@ void TransferFunctions::HandleRecordInit(DeclStmt *DS, VarDecl *VD,
 
 void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
                                         const ArrayType *AT,
-                                        InitListExpr *ILE) {
+                                        InitListExpr *ILE,
+                                        std::string FieldPath) {
   QualType ElemTy = AT->getElementType();
   unsigned NumInits = ILE->getNumInits();
 
@@ -550,8 +551,8 @@ void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
       NullabilityKind RHSKind = getExprPathNullability(ElemInit);
       if (LHSKind == NullabilityKind::NonNull &&
           RHSKind != NullabilityKind::NonNull && ShouldReportNullPtrError(DS)) {
-        NullabilityCheckDiagInfo DI(VD->getBeginLoc(), NonnullInitByDefault,
-                                    VD->getNameAsString());
+        NullabilityCheckDiagInfo DI(ILE->getBeginLoc(), NonnullInitByDefault,
+                                    VD->getNameAsString() + FieldPath);
         Reporter.addDiagInfo(DI);
         return;
       }
@@ -564,7 +565,7 @@ void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
       }
     } else if (auto *NestedAT = ElemTy->getAsArrayTypeUnsafe()) {
       if (auto *NestedILE = dyn_cast<InitListExpr>(ElemInit))
-        HandleArrayInit(DS, VD, NestedAT, NestedILE);
+        HandleArrayInit(DS, VD, NestedAT, NestedILE, "");
     }
   }
 
@@ -637,6 +638,12 @@ void TransferFunctions::HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD,
         continue;
       }
       HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
+    } else if (auto *AT = FD->getType()->getAsArrayTypeUnsafe()) {
+      if (fieldInit) {
+        if (auto *ILE = dyn_cast<InitListExpr>(fieldInit)) {
+          HandleArrayInit(DS, TopVD, AT, ILE, fullFieldPath);
+        }
+      }
     } else if (auto *nestedRecTy =
                    dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
       if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
