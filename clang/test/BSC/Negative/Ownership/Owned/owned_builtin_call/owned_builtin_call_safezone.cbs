@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -verify %s
+// Test that BSC errors in CheckSingleAssignmentConstraints do not skip
+// implicit conversions (no crash from deferred error handling).
+
+int __builtin_strcmp(const char *, const char *); // expected-note {{passing argument to parameter here}}
+
+// Test 1: Owned pointer passed to builtin inside safe zone.
+// Both safe zone error and owned error are relevant; the key is no crash.
+_Safe void test_owned_safezone_builtin(char *_Owned out) {
+    if (__builtin_strcmp(out, "hello") != 0) { // expected-error {{conversion from type 'char *_Owned' to 'const char *' is forbidden in the safe zone}} \
+                                               // expected-error {{_Unsafe function call is forbidden in the safe zone}}
+    }
+}
+
+// Test 2: Raw pointer in safe zone with safe builtin usage.
+_Safe void test_raw_safezone_const(const char *a) {
+    const char *b = a; // no error
+}

@@ -6,7 +6,7 @@ _Owned struct Rc<T> {
 _Owned struct Weak<T> {
 };
 
-Weak<T> Weak<T>::new(const Rc<T> *_Borrow rc);
+Weak<T> Weak<T>::new(const Rc<T> *_Borrow rc); // expected-note {{passing argument to parameter 'rc' here}}
 
 _Owned struct S { 
 };

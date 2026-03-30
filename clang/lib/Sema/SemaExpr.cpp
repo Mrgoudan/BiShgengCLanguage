@@ -10210,6 +10210,37 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
   LHSType = Context.getCanonicalType(LHSType).getUnqualifiedType();
   RHSType = Context.getCanonicalType(RHSType).getUnqualifiedType();
 
+#if ENABLE_BSC
+  // BSC qualifier checks run before C standard checks using original types.
+  if (getLangOpts().BSC) {
+    QualType OrigRHSType = RHS.get()->getType();
+
+    AssignConvertType Result = CheckBSCQualTypeAssignment(OrigLHSType, RHS);
+    if (Result != Compatible) {
+      Kind = CK_NoOp;
+      return Result;
+    }
+
+    if (OrigLHSType->getAs<PointerType>() &&
+        OrigRHSType->getAs<PointerType>()) {
+      if (!CheckNullabilityQualTypeAssignment(OrigLHSType, RHS.get())) {
+        Kind = CK_NoOp;
+        return IncompatiblePointer;
+      }
+    }
+
+    if (OrigLHSType->isFunctionPointerType() &&
+        (OrigRHSType->isFunctionPointerType() ||
+         OrigRHSType->isFunctionType())) {
+      AssignConvertType Result = CheckBSCFunctionPointerType(OrigLHSType, RHS.get());
+      if (Result != Compatible) {
+        Kind = CK_NoOp;
+        return Result;
+      }
+    }
+  }
+#endif
+
   // Common case: no conversion required.
   if (LHSType == RHSType) {
     Kind = CK_NoOp;
@@ -10664,61 +10695,15 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
   }
 
   #if ENABLE_BSC
+  // BSC checks that emit diagnostics directly require the Diagnose guard.
   if (getLangOpts().BSC && Diagnose) {
     if (!IsSafeConversion(LHSType, RHS.get())) {
       return IncompatibleBSCSafeZone;
     }
 
-    // BSC: Auto-convert string literals to const char * borrow
-    if (IsStringLiteralExpr(RHS.get())) {
-      if (IsConstCharPtrBorrow(LHSType)) {
-        RHS = InsertConstBorrowForStringLiteral(RHS.get(), RHS.get()->getBeginLoc());
-      } else if (Diagnose && LHSType.isBorrowQualified() && LHSType->isPointerType() &&
-                 LHSType->getPointeeType()->isCharType()) {
-        // Error: trying to mutably borrow string literal
-        Diag(RHS.get()->getBeginLoc(), diag::err_pass_string_literal_to_mut_borrow) << LHSType;
-        return IncompatibleBorrowPointer;
-      }
-    }
-
-    QualType LHSCanType = LHSType.getCanonicalType();
-    QualType RHSCanType = RHS.get()->getType().getCanonicalType();
-    if (RHSCanType.isOwnedQualified() || LHSCanType.isOwnedQualified()) {
-      if (!CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
-        return IncompatibleOwnedPointer;
-    }
-    if (RHSCanType.isBorrowQualified() || LHSCanType.isBorrowQualified()) {
-      if (!CheckBorrowQualTypeAssignment(LHSType, RHS))
-        return IncompatibleBorrowPointer;
-    }
-    if (const auto *LHSPtrType = LHSType->getAs<PointerType>()) {
-      if (const auto *RHSPtrType = RHS.get()->getType()->getAs<PointerType>()) {
-        if (LHSPtrType->hasOwnedFields() || RHSPtrType->hasOwnedFields()) {
-          if (!CheckOwnedQualTypeAssignment(LHSType, RHS.get())) {
-            return IncompatibleOwnedPointer;
-          }
-        }
-        if (LHSPtrType->hasBorrowFields() || RHSPtrType->hasBorrowFields()) {
-          if (!CheckBorrowQualTypeAssignment(LHSType, RHS)) {
-            return IncompatibleBorrowPointer;
-          }
-        }
-        // Check nullability qualifiers for nested pointers
-        if (!CheckNullabilityQualTypeAssignment(LHSType, RHS.get())) {
-          return IncompatiblePointer;
-        }
-      }
-    }
-
-    if (LHSType->isFunctionPointerType()
-        && (RHS.get()->getType()->isFunctionPointerType() || RHS.get()->getType()->isFunctionType())) {
-      if (!CheckOwnedFunctionPointerType(LHSType, RHS.get()))
-        return IncompatibleOwnedPointer;
-      if (!CheckBorrowFunctionPointerType(LHSType, RHS.get()))
-        return IncompatibleBorrowPointer;
-      // Check ensure_init compatibility. Diagnostic is emitted inside but we
-      // don't block the conversion — the types are structurally compatible and
-      // blocking would cause cascading errors (e.g. "not a compile-time constant").
+    if (LHSType->isFunctionPointerType() &&
+        (RHS.get()->getType()->isFunctionPointerType() ||
+         RHS.get()->getType()->isFunctionType())) {
       CheckEnsureInitFunctionPointerType(LHSType, RHS.get());
     }
   }
@@ -10776,6 +10761,14 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
        LHSType->isBlockPointerType()) &&
       RHS.get()->isNullPointerConstant(Context,
                                        Expr::NPC_ValueDependentIsNull)) {
+#if ENABLE_BSC
+    // BSC: owned pointers only accept nullptr, not integer 0.
+    // This early return bypasses CheckAssignmentConstraints where BSC checks
+    // live, so we must reject non-nullptr here.
+    if (getLangOpts().BSC && LHSType.isOwnedQualified() &&
+        !isa<CXXNullPtrLiteralExpr>(RHS.get()->IgnoreParens()))
+      return IncompatibleOwnedPointer;
+#endif
     if (Diagnose || ConvertRHS) {
       CastKind Kind;
       CXXCastPath Path;
@@ -10806,6 +10799,15 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     if (RHS.isInvalid())
       return Incompatible;
   }
+
+#if ENABLE_BSC
+  // BSC: Convert string literals to const char *_Borrow before type checking.
+  if (getLangOpts().BSC && IsStringLiteralExpr(RHS.get()) &&
+      IsConstCharPtrBorrow(LHSType)) {
+    RHS = InsertConstBorrowForStringLiteral(RHS.get(), RHS.get()->getBeginLoc());
+  }
+#endif
+
   CastKind Kind;
   Sema::AssignConvertType result =
     CheckAssignmentConstraints(LHSType, RHS, Kind, ConvertRHS);
@@ -18086,6 +18088,10 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   const ObjCInterfaceDecl *IFace = nullptr;
   const ObjCProtocolDecl *PDecl = nullptr;
 
+#if ENABLE_BSC
+  QualType BSCFirstType, BSCSecondType;
+#endif
+
   switch (ConvTy) {
   case Compatible:
       DiagnoseAssignmentEnum(DstType, SrcType, SrcExpr);
@@ -18297,9 +18303,38 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveFunctionDiff = true;
     break;
   #if ENABLE_BSC
-  case IncompatibleOwnedPointer:
-  case IncompatibleBorrowPointer:
-    return false;
+  case IncompatibleOwnedPointer: {
+    bool outerOwnedDiffers =
+        DstType.getCanonicalType().isOwnedQualified() !=
+        SrcType.getCanonicalType().isOwnedQualified();
+    if (!outerOwnedDiffers &&
+        (DstType->isFunctionPointerType() || SrcType->isFunctionPointerType())) {
+      DiagKind = diag::err_owned_funcPtr_incompatible;
+      BSCFirstType = DstType;
+      BSCSecondType = SrcType;
+    } else {
+      DiagKind = diag::err_owned_qualcheck_incompatible;
+      BSCFirstType = SrcType;
+      BSCSecondType = DstType;
+    }
+    break;
+  }
+  case IncompatibleBorrowPointer: {
+    if (DstType->isFunctionPointerType() || SrcType->isFunctionPointerType()) {
+      DiagKind = diag::err_funcPtr_incompatible;
+      BSCFirstType = DstType;
+      BSCSecondType = SrcType;
+    } else if (SrcExpr && isa<StringLiteral>(SrcExpr->IgnoreParenImpCasts())) {
+      DiagKind = diag::err_pass_string_literal_to_mut_borrow;
+      BSCFirstType = DstType;
+      BSCSecondType = QualType();
+    } else {
+      DiagKind = diag::err_borrow_qualcheck_incompatible;
+      BSCFirstType = CompleteTraitType(SrcType);
+      BSCSecondType = CompleteTraitType(DstType);
+    }
+    break;
+  }
   case IncompatibleBSCSafeZone:
     return true;
 #endif
@@ -18325,12 +18360,19 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     SecondType = DstType;
     break;
   }
+#if ENABLE_BSC
+  if (ConvTy == IncompatibleOwnedPointer ||
+      ConvTy == IncompatibleBorrowPointer) {
+    FirstType = BSCFirstType;
+    SecondType = BSCSecondType;
+  }
+#endif
 
   PartialDiagnostic FDiag = PDiag(DiagKind);
   AssignmentAction ActionForDiag = Action;
   if (Action == AA_Passing_CFAudited)
     ActionForDiag = AA_Passing;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   SecondType = CompleteTraitType(SecondType);
 #endif
 

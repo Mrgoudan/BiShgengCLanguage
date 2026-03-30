@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -verify %s
+
+int __builtin_strcmp(const char *, const char *); // expected-note 3 {{passing argument to parameter here}}
+
+void test_owned_ptr_to_builtin(char *_Owned out) {
+    char *buf = (char *)(void *)0;
+    if (__builtin_strcmp(out, buf) != 0) { // expected-error {{incompatible _Owned types, cannot cast 'char *_Owned' to 'const char *'}}
+    }
+}
+
+void test_owned_ptr_to_builtin_both(char *_Owned a, char *_Owned b) {
+    if (__builtin_strcmp(a, b) != 0) { // expected-error 2 {{incompatible _Owned types, cannot cast 'char *_Owned' to 'const char *'}}
+    }
+}
+
+void test_raw_ptr_to_builtin(char *a, char *b) {
+    if (__builtin_strcmp(a, b) != 0) {
+    }
+}

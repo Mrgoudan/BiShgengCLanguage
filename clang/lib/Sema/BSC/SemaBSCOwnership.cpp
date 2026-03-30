@@ -311,9 +311,6 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
   } else {
     Res = CheckOwnedQualTypeAssignment(LHSType, RHSCanType, ExprLoc);
   }
-  if (!Res) {
-    Diag(ExprLoc, diag::err_owned_qualcheck_incompatible) << RHSExpr->getType() << LHSType;
-  }
   return Res;
 }
 
@@ -322,7 +319,6 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
   const FunctionProtoType* RSHFuncType = RHSExpr->getType()->isFunctionPointerType()?
     RHSExpr->getType()->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>():
     RHSExpr->getType()->getAs<FunctionProtoType>();
-  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
 
   // For heterogeneous redeclarations, select the best matching declaration.
   if (FunctionDecl *SelectedFD =
@@ -335,21 +331,56 @@ bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
   }
   if ((LSHFuncType->getReturnType().isOwnedQualified() && !RSHFuncType->getReturnType().isOwnedQualified())
        || (!LSHFuncType->getReturnType().isOwnedQualified() && RSHFuncType->getReturnType().isOwnedQualified())) {
-    Diag(ExprLoc, diag::err_owned_funcPtr_incompatible) << LHSType << RHSExpr->getType();
     return false;
   }
   if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
-    Diag(ExprLoc, diag::err_owned_funcPtr_incompatible) << LHSType << RHSExpr->getType();
     return false;
   }
   for (unsigned i = 0; i < LSHFuncType->getNumParams(); i++) {
     if ((LSHFuncType->getParamType(i).isOwnedQualified() && !RSHFuncType->getParamType(i).isOwnedQualified())
          || (!LSHFuncType->getParamType(i).isOwnedQualified() && RSHFuncType->getParamType(i).isOwnedQualified())) {
-      Diag(ExprLoc, diag::err_owned_funcPtr_incompatible) << LHSType << RHSExpr->getType();
       return false;
     }
   }
   return true;
+}
+
+Sema::AssignConvertType
+Sema::CheckBSCQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
+  QualType LHSCan = LHSType.getCanonicalType();
+  QualType RHSCan = RHS.get()->getType().getCanonicalType();
+
+  bool MayHaveOwned = LHSCan.isOwnedQualified() || RHSCan.isOwnedQualified();
+  bool MayHaveBorrow = LHSCan.isBorrowQualified() || RHSCan.isBorrowQualified();
+  if (const auto *LHSPtr = LHSType->getAs<PointerType>()) {
+    if (const auto *RHSPtr = RHS.get()->getType()->getAs<PointerType>()) {
+      MayHaveOwned |= LHSPtr->hasOwnedFields() || RHSPtr->hasOwnedFields();
+      MayHaveBorrow |= LHSPtr->hasBorrowFields() || RHSPtr->hasBorrowFields();
+    }
+  }
+
+  // Check the destination's qualifier first for accurate diagnostics.
+  if (LHSCan.isBorrowQualified()) {
+    if (MayHaveBorrow && !CheckBorrowQualTypeAssignment(LHSType, RHS))
+      return IncompatibleBorrowPointer;
+    if (MayHaveOwned && !CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
+      return IncompatibleOwnedPointer;
+  } else {
+    if (MayHaveOwned && !CheckOwnedQualTypeAssignment(LHSType, RHS.get()))
+      return IncompatibleOwnedPointer;
+    if (MayHaveBorrow && !CheckBorrowQualTypeAssignment(LHSType, RHS))
+      return IncompatibleBorrowPointer;
+  }
+  return Compatible;
+}
+
+Sema::AssignConvertType
+Sema::CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
+  if (!CheckOwnedFunctionPointerType(LHSType, RHSExpr))
+    return IncompatibleOwnedPointer;
+  if (!CheckBorrowFunctionPointerType(LHSType, RHSExpr))
+    return IncompatibleBorrowPointer;
+  return Compatible;
 }
 
 bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
@@ -576,10 +607,6 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
   } else {
     Res = CheckBorrowQualTypeAssignment(LHSType, RHSCanType, ExprLoc);
   }
-  if (!Res) {
-    Diag(ExprLoc, diag::err_borrow_qualcheck_incompatible)
-        << CompleteTraitType(RHSExpr->getType()) << CompleteTraitType(LHSType);
-  }
   return Res;
 }
 
@@ -625,7 +652,6 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
                 ->getPointeeType()
                 ->getAs<FunctionProtoType>()
           : RHSExpr->getType()->getAs<FunctionProtoType>();
-  SourceLocation ExprLoc = RHSExpr->getBeginLoc();
 
   // For heterogeneous redeclarations, select the best matching declaration.
   if (FunctionDecl *SelectedFD =
@@ -674,8 +700,6 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
     }
   }
   if (!Compatible) {
-    Diag(ExprLoc, diag::err_funcPtr_incompatible)
-        << LHSType << RHSExpr->getType();
     return false;
   }
   return true;

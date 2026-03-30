@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 
-_Safe void safe_free(void *_Owned p);
+_Safe void safe_free(void *_Owned p); // expected-note 2 {{passing argument to parameter 'p' here}}
 
 void test1() {
     int *p1, *p2;

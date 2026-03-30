@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify %s
 
-int bar(void* _Borrow ptr);
+int bar(void* _Borrow ptr); // expected-note {{passing argument to parameter 'ptr' here}}
 
 void foo(void) {
   int array[10];

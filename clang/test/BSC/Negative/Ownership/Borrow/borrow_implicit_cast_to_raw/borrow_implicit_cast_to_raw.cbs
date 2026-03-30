@@ -2,7 +2,7 @@
 
 void *malloc(unsigned long);
 
-void log_print(void *msg, const char *pcFormat, ...){}
+void log_print(void *msg, const char *pcFormat, ...){} // expected-note {{passing argument to parameter 'msg' here}}
 
 #define bsc_log_print(msg, pcFormat, ...) \
   _Unsafe {log_print(msg, pcFormat, ##__VA_ARGS__);}

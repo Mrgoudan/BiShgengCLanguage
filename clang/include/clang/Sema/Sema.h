@@ -12391,6 +12391,8 @@ public:
   bool CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
   bool CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
+  AssignConvertType CheckBSCQualTypeAssignment(QualType LHSType, ExprResult &RHS);
+  AssignConvertType CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   void CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T);
   /// Check that owned qualifiers on an instantiated type are valid.

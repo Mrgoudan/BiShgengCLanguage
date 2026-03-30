@@ -12,7 +12,7 @@ void test1(void) {
 
 // Test 2: Const to mut _Borrow is not allowed
 _Unsafe void modify_data(int* p);
-_Safe void modify_data(int* _Borrow p);
+_Safe void modify_data(int* _Borrow p); // expected-note {{passing argument to parameter 'p' here}}
 
 void test2(const int* _Borrow const_borrow) {
     modify_data(const_borrow);  // expected-error {{incompatible _Borrow types, cannot cast 'const int *_Borrow' to 'int *_Borrow'}}

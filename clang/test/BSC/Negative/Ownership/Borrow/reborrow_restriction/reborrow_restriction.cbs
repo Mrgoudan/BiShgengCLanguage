@@ -20,8 +20,8 @@ void non_lexical_lifetime_limitation(int x) {
 }
 
 // re-_Borrow in function arguments
-void accept_immutable(const int *_Borrow);
-void accept_mutable(int *_Borrow);
+void accept_immutable(const int *_Borrow); // expected-note 2 {{passing argument to parameter here}}
+void accept_mutable(int *_Borrow); // expected-note 3 {{passing argument to parameter here}}
 
 // re-_Borrow when return value
 int *ret_raw();
@@ -37,9 +37,9 @@ void raw2immutable(int *ptr) {
 }
 
 int *_Owned own2immutable(int *_Owned ptr) {
-    const int *_Borrow cref = ptr; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'const int *_Borrow'}}
-    accept_immutable(ptr); // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'const int *_Borrow'}}
-    const int *_Borrow cref2 = ret_own(); // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'const int *_Borrow'}}
+    const int *_Borrow cref = ptr; // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned' to 'const int *_Borrow'}}
+    accept_immutable(ptr); // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned' to 'const int *_Borrow'}}
+    const int *_Borrow cref2 = ret_own(); // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned' to 'const int *_Borrow'}}
     return ptr;
 }
 
@@ -57,9 +57,9 @@ void raw2mutable(int *ptr) {
 }
 
 int *_Owned own2mutable(int *_Owned ptr) {
-    int *_Borrow ref = ptr; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
-    accept_mutable(ptr); // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
-    int *_Borrow ref2 = ret_own(); // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
+    int *_Borrow ref = ptr; // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
+    accept_mutable(ptr); // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
+    int *_Borrow ref2 = ret_own(); // expected-error {{incompatible _Borrow types, cannot cast 'int *_Owned' to 'int *_Borrow'}}
     return ptr;
 }
 
