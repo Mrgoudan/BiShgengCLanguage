@@ -5147,13 +5147,7 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
     return CreateOverloadedArraySubscriptExpr(lbLoc, rbLoc, base, ArgExprs);
   }
 
-  #if ENABLE_BSC
-  // BSC owned pointer index check
-  if (getLangOpts().BSC && base->getType()->isPointerType() && base->getType().isOwnedQualified()) {
-     Diag(lbLoc, diag::err_typecheck_invalid_owned_arrsub)
-    << base->getType() << base->getSourceRange();
-    return ExprError();
-  }
+#if ENABLE_BSC
   if (getLangOpts().BSC && base->getType()->isRecordType()) {
     return CreateOverloadedArraySubscriptExpr(lbLoc, rbLoc, base, ArgExprs);
   }
@@ -5840,14 +5834,33 @@ ExprResult Sema::ActOnOMPIteratorExpr(Scope *S, SourceLocation IteratorKwLoc,
 ExprResult
 Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
                                       Expr *Idx, SourceLocation RLoc) {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (getLangOpts().BSC) {
-    QualType canonical = Base->getType().getCanonicalType();
-    if (canonical->isPointerType() && canonical.isBorrowQualified()) {
-      return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
+    QualType BaseType = Base->getType();
+    // Check if owned/borrow pointer is allowed to arrscript.
+    // When -spatial-check=user, it's allowed. Otherwise, it's forbidden.
+    if (getLangOpts().getSpatialCheck() != LangOptions::SC_USER) {
+      if (BaseType->isPointerType()) {
+        if (BaseType.isOwnedQualified()) {
+          return ExprError(Diag(LLoc, diag::err_typecheck_invalid_owned_arrsub)
+                           << BaseType << Base->getSourceRange());
+        }
+        if (BaseType.isBorrowQualified()) {
+          return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
+        }
+      }
+    }
+    // Array subscripting on owned/borrowed pointers to types with owned fields
+    // is disallowed in all modes, including -spatial-check=user and
+    // -spatial-check=static.
+    if (BaseType->isPointerType() &&
+        (BaseType.isOwnedQualified() || BaseType.isBorrowQualified()) &&
+        BaseType->hasOwnedFields()) {
+      return ExprError(Diag(LLoc, diag::err_typecheck_invalid_owned_arrsub)
+                       << BaseType << Base->getSourceRange());
     }
   }
-  #endif
+#endif
   Expr *LHSExp = Base;
   Expr *RHSExp = Idx;
 

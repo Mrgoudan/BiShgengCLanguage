@@ -1948,6 +1948,7 @@ public:
                     OwnershipDiagReporter &reporter)
       : OS(os), stat(Stat), reporter(reporter) {}
 
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *UE);
   void VisitCallExpr(CallExpr *CE);
@@ -1979,6 +1980,30 @@ void TransferFunctions::VisitStmt(Stmt *S) {
       Visit(C);
     }
   }
+}
+
+void TransferFunctions::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
+  string suffix;
+  Expr *E = ASE;
+  while (ArraySubscriptExpr *ase = dyn_cast<ArraySubscriptExpr>(E)) {
+    suffix += "*";
+    E = ase->getBase()->IgnoreParenImpCasts();
+    ASE = ase;
+  }
+
+  if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+    auto memberField = getMemberFullField(ME);
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
+      VisitDeclRefExpr(DRE, memberField.second + suffix);
+      return;
+    }
+  }
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+    VisitDeclRefExpr(DRE, suffix);
+    return;
+  }
+
+  Visit(ASE->getBase());
 }
 
 void TransferFunctions::VisitMemberExpr(MemberExpr *ME) {

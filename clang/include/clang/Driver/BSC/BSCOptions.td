@@ -15,6 +15,11 @@ def uninit_check : Joined<["-"], "uninit-check=">, Flags<[CC1Option]>,
   Values<"safeonly,none,all">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["UC_SAFE", "UC_NONE", "UC_ALL"]>,
   MarshallingInfoEnum<LangOpts<"UninitCheck">, "UC_SAFE">;
+def spatial_check: Joined<["-"], "spatial-check=">, Flags<[CC1Option]>,
+  HelpText<"Select spatial check mode">,
+  Values<"static,user">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["SC_STATIC", "SC_USER"]>,
+  MarshallingInfoEnum<LangOpts<"SpatialCheck">, "SC_STATIC">;
 def E_Group : OptionGroup<"<E group>">, Group<Diag_Group>, DocFlatten;
 def E_value_Group : OptionGroup<"<E (with value) group>">, Group<E_Group>,
                     DocFlatten;
