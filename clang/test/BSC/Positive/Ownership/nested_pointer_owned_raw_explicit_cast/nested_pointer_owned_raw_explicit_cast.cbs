@@ -1,0 +1,45 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+typedef struct {int * _Owned ptr;} S;
+
+// T* _Owned * 与 T** 互转
+void test1_i(int* _Owned * p1) {
+  int** p2 = (int**)p1;
+  int* _Owned * p3 = (int* _Owned *)p2;
+  (void) p3;
+}
+void test1_cross(int* _Owned * p1) {
+  float* _Owned * p2 = (float* _Owned *)p1;
+  int* _Owned * p3 = (int* _Owned *)p2;
+  (void) p3;
+}
+void test1_s(S* _Owned * p1) {
+  S** p2 = (S**)p1;
+  S* _Owned * p3 = (S* _Owned *)p2;
+  (void) p3;
+}
+
+// T* _Owned * _Owned 与 T** 互转
+void test2_i(int* _Owned * _Owned p1) {
+  int** p2 = (int**)__move_to_raw(p1);
+  int* _Owned * _Owned p3 = __take_from_raw((int* _Owned *)p2);
+  (void) __move_to_raw(p3);
+}
+void test2_s(S* _Owned * _Owned p1) {
+  S** p2 = (S**)__move_to_raw(p1);
+  S* _Owned * _Owned p3 = __take_from_raw((S* _Owned *)p2);
+  (void) __move_to_raw(p3);
+}
+
+// T** _Owned 与 T** 互转
+void test3_i(int** _Owned p1) {
+  int** p2 = __move_to_raw(p1);
+  int** _Owned p3 = __take_from_raw(p2);
+  (void) __move_to_raw(p3);
+}
+void test3_s(S** _Owned p1) {
+  S** p2 = __move_to_raw(p1);
+  S** _Owned p3 = __take_from_raw(p2);
+  (void) __move_to_raw(p3);
+}

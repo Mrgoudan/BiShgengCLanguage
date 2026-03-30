@@ -151,29 +151,19 @@ bool IsOwnedRawPointerCastDisallowed(QualType LHSCanType, QualType RHSCanType) {
   if ((LHSOwned && RHSRaw) || (RHSOwned && LHSRaw))
     return true;
 
-  return IsOwnedRawPointerCastDisallowed(LHSPtrType->getPointeeType(),
-                                         RHSPtrType->getPointeeType());
+  return false;
 }
 } // end anonymous namespace
 
 bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
-  if ((LHSCanType.isBorrowQualified() && LHSCanType->isPointerType() &&
-       RHSCanType.isOwnedQualified() && RHSCanType->isPointerType()) ||
-      (RHSCanType.isBorrowQualified() && RHSCanType->isPointerType() &&
-       LHSCanType.isOwnedQualified() && LHSCanType->isPointerType())) {
-    return false;
-  }
 
   // Allow owned pointer to be cast from nullptr_t
   if (LHSCanType.isOwnedQualified() && LHSCanType->isPointerType() &&
       RHSCanType->isNullPtrType()) {
     return true;
   }
-
-  if (IsOwnedRawPointerCastDisallowed(LHSCanType, RHSCanType))
-    return false;
 
   bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
@@ -184,38 +174,34 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
     return true;
   }
 
-  // legal cases:
-  // 'int owned'    <->  'int owned'                      // same type same owned
-  // 'int'          <->  'owned int'                      // same type diff owned
-  // 'owned int*'   <->  'int*'                           // pointer to 'same type diff owned'
-  // 'int**'        <->  'owned int* const owned * owned' // multi-layer pointer same type diff owned or const
-  // 'int**'        <->  'int* const * owned'             // multi-layer pointer same type diff owned or const
-  // 'float* owned' <->  'void* owned'                    // pointer to diff type but voidpointer same owned
-  // 'float* owned' <->  'void*'                          // diff type but voidpointer diff owned
-  // 'int** owned'' <->  const int** owned'
-  // <integral type><--  'T* owned' // owned pointer can be cast to integral type, but not the opposite
-
-  // illegal cases:
-  // 'float owned'  <->  'int owned'    // diff type
-  // 'float* owned' <->  'int* owned'   // diff type same owned
-  // 'owned float*' <->  'owned int*'   // pointer to diff type same owned
-  // 'int *owned'   <->  'int *borrow'  // should use borrow operators instead
-
   if (IsPointer) {
+    bool LHSOwned = LHSCanType.isOwnedQualified();
+    bool RHSOwned = RHSCanType.isOwnedQualified();
+    bool LHSBorrow = LHSCanType.isBorrowQualified();
+    bool RHSBorrow = RHSCanType.isBorrowQualified();
+    bool LHSRaw = !LHSOwned && !LHSBorrow;
+    bool RHSRaw = !RHSOwned && !RHSBorrow;
     // Disallow conversion between owned and borrow pointers
-    if ((LHSCanType.isBorrowQualified() && RHSCanType.isOwnedQualified()) ||
-        (LHSCanType.isOwnedQualified() && RHSCanType.isBorrowQualified())) {
+    if ((LHSBorrow && RHSOwned) || (LHSOwned && RHSBorrow)) {
       return false;
     }
-    // Allow owned pointer to be cast from nullptr_t
-    if (LHSCanType.isOwnedQualified() && RHSCanType->isNullPtrType()) {
+    // Disallow conversion between owned and raw pointers
+    if ((LHSRaw && RHSOwned) || (LHSOwned && RHSRaw)) {
+      return false;
+    }
+    // Conversion between different raw pointers is allowed
+    if (LHSRaw && RHSRaw) {
       return true;
     }
+    // Allow conversion from/to void pointers
+    // for conversion of owned->owned, we need to check
+    // the inner pointer type recursively
     return LHSCanType.getTypePtr()->isVoidPointerType() ||
            RHSCanType.getTypePtr()->isVoidPointerType() ||
            CheckOwnedQualTypeCStyleCast(LHSPtrType->getPointeeType(),
                                         RHSPtrType->getPointeeType());
   }
+  // owned pointer can be cast to integral type, but not the opposite
   if (LHSCanType->isIntegerType() && RHSCanType.isOwnedQualified() &&
       RHSCanType->isPointerType()) {
     return true;

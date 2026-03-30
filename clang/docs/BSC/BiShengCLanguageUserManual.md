@@ -2414,7 +2414,7 @@ _Safe int main(void) {
 }
 ```
 
-8. 禁止 `_Owned` 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 `_Owned` 指针时，必须使用内置函数 `__take_from_raw` 显式表达所有权转移；当用户需要将 `_Owned` 指针转换为裸指针时：若需转移所有权，必须使用 `__move_to_raw` 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 `(T *)&_Mut *p`。以上转换均需在非安全区进行。
+8. 禁止 `_Owned` 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 `_Owned` 指针时，必须使用内置函数 `__take_from_raw` 显式表达所有权转移；当用户需要将 `_Owned` 指针转换为裸指针时：若需转移所有权，必须使用 `__move_to_raw` 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 `(T *)&_Mut *p`。以上转换均需在非安全区进行。对 `_Owned` 指针与裸指针之间转换的限制只对最外层指针类型生效；形如 `T*_Owned*` 与 `T**` 之间的转换视为裸指针之间的转换，在安全区不允许、非安全区允许显式执行。
 基本类型不一致时，只允许`void * _Owned`类型与`T * _Owned`类型之间的相互强制转换；
 
     **显式所有权转移接口**（内置函数）：
@@ -2434,6 +2434,10 @@ int main() {
 
   double *_Owned pd3 = safe_malloc(1.5);
   void *_Owned pv1 = (void *_Owned)pd3; // ok: 允许显式转换为 void *_Owned
+
+  void *_Owned * ppv1 = &pv1;
+  void ** ppv2 = (void **) ppv1; // ok: 允许显式从 T *_Owned * 转为 T **
+  ppv1 = (void *_Owned *) ppv2; // ok: 允许显式从 T ** 转为 T *_Owned *
   safe_free((void *_Owned)pi3);
   safe_free(pv1);
   free((void*)pd2);

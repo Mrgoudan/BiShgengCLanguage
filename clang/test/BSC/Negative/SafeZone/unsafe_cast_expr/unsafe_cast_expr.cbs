@@ -58,6 +58,13 @@ void diffPointCastConver(void) {
       pa = (int *)p1;                    // expected-error{{conversion from type 'int *_Owned' to 'int *' is forbidden in the safe zone}}
     }
   }
+  _Unsafe {
+    // top-level raw pointer casts involving nested _Owned pointers are still forbidden in safe zone
+    int* _Owned *pa = NULL;
+    _Safe {
+      float* _Owned *pb = (float* _Owned *)pa; // expected-error{{conversion from type 'int *_Owned *' to 'float *_Owned *' is forbidden in the safe zone}}
+    }
+  }
   // _Borrow -> raw  (waiting complement...)
 }
 
