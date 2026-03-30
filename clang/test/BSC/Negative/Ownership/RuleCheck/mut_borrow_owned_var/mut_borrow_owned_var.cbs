@@ -18,6 +18,8 @@ void foo5(U *_Borrow p);
 
 void consume(int *_Owned p);
 
+_Safe void safe_generic_consume<T>(T *_Owned _Nullable);
+
 void test1() {
   int *_Owned p = nullptr;
   foo1(&_Mut p);
@@ -31,7 +33,7 @@ void test2() {
 
 void test3() {
   S *_Owned p = nullptr;
-  foo2(&_Mut p); // expected-error {{use of moved value: `p`}}
+  foo2(&_Mut p);
 } // expected-error {{memory leak of value: `p`}}
 
 void test4() {
@@ -111,4 +113,26 @@ void test15(int *_Owned q) {
   while (p != nullptr) {
     foo1(&_Mut p);
   }
+}
+
+_Safe void test16(void) {
+    S *_Owned _Nullable p = nullptr;
+    S *_Owned _Nullable *_Borrow q = &_Mut p;
+    safe_generic_consume(p);
+}
+
+struct S2 {
+  int *_Owned _Nullable a;
+  int *_Owned _Nullable b;
+};
+
+_Safe T *_Owned _Nullable make_owned<T>(T);
+
+_Safe void test17(int *_Owned val) {
+  struct S2 s;
+  s.a = val;
+  s.b = nullptr;
+  struct S2 *_Owned _Nullable sp = make_owned(s);
+  struct S2 *_Owned _Nullable *_Borrow spb = &_Mut sp;
+  safe_generic_consume(sp);
 }

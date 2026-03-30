@@ -876,7 +876,8 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSUse(
   // check the status of the variable
   if (!is(VD, Ownership::Status::Owned)) {
     if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved) ||
-        (is(VD, Ownership::Status::Null) && !OPSAllOwnedFields[VD].empty())) {
+        (is(VD, Ownership::Status::Null) && !OPSAllOwnedFields[VD].empty() &&
+         !isGetAddr)) {
       diags.push_back(OwnershipDiagInfo(
           Loc, OwnershipDiagKind::InvalidUseOfMoved, VD->getNameAsString()));
     } else if (is(VD, Ownership::Status::Uninitialized)) {
