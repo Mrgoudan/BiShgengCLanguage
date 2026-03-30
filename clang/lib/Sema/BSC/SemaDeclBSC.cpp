@@ -453,11 +453,14 @@ class BorrowCheckerPrologue : public TreeTransform<BorrowCheckerPrologue> {
 
   // Replace the given expression with a new temporary variable, and return the
   // corresponding DeclRefExpr.
-  DeclRefExpr *ReplaceWithRefToNewTempVar(Expr *E) {
-    VarDecl *VD = NewTempVar(E->getType(), E);
+  DeclRefExpr *ReplaceWithRefToNewTempVar(Expr *E, QualType T = QualType{}) {
+    if (T.isNull()) {
+      T = E->getType();
+    }
+    VarDecl *VD = NewTempVar(T, E);
     return DeclRefExpr::Create(getSema().Context, NestedNameSpecifierLoc(),
                                SourceLocation(), VD, false, E->getBeginLoc(),
-                               E->getType(), VK_LValue);
+                               T, VK_LValue);
   }
 
   // Ensure the given statement is wrapped with a CompoundStmt. If not, create
@@ -922,6 +925,13 @@ public:
       return DRE;
     }
     return UO;
+  }
+
+  ExprResult TransformStringLiteral(StringLiteral *SL) {
+    QualType PtrTy = getSema().Context.getArrayDecayedType(SL->getType());
+    DeclRefExpr *DRE = ReplaceWithRefToNewTempVar(SL, PtrTy);
+    replacedNodesMap.Insert(DRE, SL);
+    return DRE;
   }
 };
 
