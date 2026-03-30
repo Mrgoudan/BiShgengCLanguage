@@ -225,10 +225,8 @@ void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
 namespace {
 
 class DeclRefFinder : public RecursiveASTVisitor<DeclRefFinder> {
-  Sema &SemaRef;
-
 public:
-  DeclRefFinder(Sema &SemaRef) : SemaRef(SemaRef) {}
+  DeclRefFinder() {}
 
   bool VisitCallExpr(CallExpr *CE) {
     for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
@@ -411,7 +409,7 @@ public:
       } else {
         // add destructor call if-stmt for reassigned decl in BinaryOperator
         if (isa<BinaryOperator>(S)) {
-          DeclRefFinder Finder = DeclRefFinder(SemaRef);
+          DeclRefFinder Finder = DeclRefFinder();
           Finder.TraverseStmt(S);
           for (auto *D : Finder.ReAssignedDecls) {
             Stmt *IfStmt = AddIfStmt(D);
@@ -434,7 +432,7 @@ public:
 
       if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
         // change reassigned_decl_is_moved = 0, and moved_decl_is_moved = 1
-        DeclRefFinder Finder = DeclRefFinder(SemaRef);
+        DeclRefFinder Finder = DeclRefFinder();
         Finder.TraverseStmt(S);
         for (auto *D : Finder.ReAssignedDecls) {
           Statements.push_back(MoveFlagStatusUpdate(D, 0));
@@ -478,7 +476,7 @@ public:
       }
     }
     if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
-      DeclRefFinder Finder = DeclRefFinder(SemaRef);
+      DeclRefFinder Finder = DeclRefFinder();
       Finder.TraverseStmt(S);
       for (auto *D : Finder.ReAssignedDecls) {
         Statements.push_back(MoveFlagStatusUpdate(D, 0));
@@ -620,7 +618,7 @@ public:
 
   bool VisitReturnStmt(ReturnStmt *RS) {
     if (!VisitCompoundStmtStack.empty()) {
-      DeclRefFinder Finder = DeclRefFinder(SemaRef);
+      DeclRefFinder Finder = DeclRefFinder();
       Finder.TraverseStmt(RS);
       SmallVector<VarDecl *> MovedDecls = Finder.MovedDecls;
       std::stack<CompoundStmt *> tempStack = VisitCompoundStmtStack;
@@ -865,7 +863,7 @@ void Sema::CollectDestructMap(StmtResult Res, Scope *BeginScope,
   if (isa<ReturnStmt>(Res.get())) {
     ReturnStmt *Value = cast<ReturnStmt>(Res.get());
     // should find var
-    DeclRefFinder Finder = DeclRefFinder(*this);
+    DeclRefFinder Finder = DeclRefFinder();
     Finder.TraverseStmt(Value);
     MovedDecls = Finder.MovedDecls;
   }

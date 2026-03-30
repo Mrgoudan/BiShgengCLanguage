@@ -914,7 +914,6 @@ public:
 class BorrowCheck {
 private:
   BorrowDiagReporter &reporter;
-  const Environment &env;
   Point point;
   const llvm::SmallVector<Loan> &loans;
   bool IsBorrow = false;
@@ -935,9 +934,9 @@ private:
   FrozenByBorrowOf(const std::unique_ptr<Path> &path);
 
 public:
-  BorrowCheck(BorrowDiagReporter &reporter, const Environment &env, Point point,
+  BorrowCheck(BorrowDiagReporter &reporter, Point point,
               const llvm::SmallVector<Loan> &loans)
-      : reporter(reporter), env(env), point(point), loans(loans) {}
+      : reporter(reporter), point(point), loans(loans) {}
 
   void CheckAction(const std::unique_ptr<Action> &action);
 };
@@ -986,7 +985,7 @@ public:
   }
 };
 
-void BorrowCk(const Environment &env, RegionCheck &rc, LoansInScope &LIS);
+void BorrowCk(RegionCheck &rc, LoansInScope &LIS);
 void runBorrowChecker(const FunctionDecl &fd, const CFG &cfg, ASTContext &Ctx,
                       BorrowDiagReporter &Reporter);
 

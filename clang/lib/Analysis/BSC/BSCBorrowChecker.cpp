@@ -1351,8 +1351,6 @@ void BorrowCheck::CheckBorrows(Depth depth, Mode accessMode,
   case Depth::Deep:
     loans = FindLoansThatIntersect(path);
     break;
-  default:
-    break;
   }
 
   for (const Loan *loan : loans) {
@@ -1372,8 +1370,6 @@ void BorrowCheck::CheckBorrows(Depth depth, Mode accessMode,
         }
         return;
       }
-      default:
-        break;
       }
       break;
     }
@@ -1392,8 +1388,6 @@ void BorrowCheck::CheckBorrows(Depth depth, Mode accessMode,
       }
       return;
     }
-    default:
-      break;
     }
   }
 }
@@ -1546,8 +1540,6 @@ BorrowCheck::FrozenByBorrowOf(const std::unique_ptr<Path> &path) {
       curPath = basePath;
       break;
     }
-    default:
-      break;
     }
   }
   return paths;
@@ -1638,7 +1630,7 @@ void RegionCheck::Check() {
   llvm::outs() << "========== BorrowCk ==========\n";
 #endif
   // Run the borrow check, reporting any errors.
-  BorrowCk(env, *this, LIS);
+  BorrowCk(*this, LIS);
 }
 
 RegionName RegionCheck::getRegionName(Decl *D) {
@@ -1713,8 +1705,6 @@ void RegionCheck::EnsureBorrowSource(Point SuccPoint,
       }
       break;
     }
-    default:
-      break;
     }
   }
 }
@@ -1769,11 +1759,11 @@ void RegionCheck::PreprocessForParamAndReturn() {
 
 /// Traverse each statement in the CFG, check the corresponding actions and
 /// report erros according to the loans in scope information.
-void clang::borrow::BorrowCk(const Environment &env, RegionCheck &rc,
+void clang::borrow::BorrowCk(RegionCheck &rc,
                              LoansInScope &LIS) {
   LIS.Walk([&](Point point, const Stmt *S,
                const llvm::SmallVector<Loan> &loans) -> void {
-    BorrowCheck borrowck(rc.getReporter(), env, point, loans);
+    BorrowCheck borrowck(rc.getReporter(), point, loans);
 #if DEBUG_PRINT
     llvm::outs() << "Point: " << point.print() << '\n';
     llvm::outs() << "Loans: [\n";

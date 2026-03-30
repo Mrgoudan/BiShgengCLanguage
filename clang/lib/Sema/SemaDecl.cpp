@@ -14659,7 +14659,7 @@ void Sema::CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init,
           CheckInit(ChildLoc, FD->getType(), ChildInit, FieldPath, true);
           Idx++;
         } else {
-          if (const NamedDecl *Bad = FindNonnull(FD->getType(), FD))
+          if (FindNonnull(FD->getType(), FD))
             Diag(Loc, diag::err_nonnull_init_by_default) << FieldPath;
         }
       }
