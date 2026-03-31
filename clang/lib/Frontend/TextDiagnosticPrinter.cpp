@@ -78,18 +78,12 @@ static void printDiagnosticOptions(raw_ostream &OS,
 
     StringRef Opt = DiagnosticIDs::getWarningOptionForDiag(Info.getID());
     if (!Opt.empty()) {
-#if ENABLE_BSC
-      if (!DiagnosticIDs::isDefaultMappingAsError(Info.getID())) {
-#endif
         OS << (Started ? "," : " [")
            << (Level == DiagnosticsEngine::Remark ? "-R" : "-W") << Opt;
         StringRef OptValue = Info.getDiags()->getFlagValue();
         if (!OptValue.empty())
           OS << "=" << OptValue;
         Started = true;
-#if ENABLE_BSC
-      }
-#endif
     }
   }
 
