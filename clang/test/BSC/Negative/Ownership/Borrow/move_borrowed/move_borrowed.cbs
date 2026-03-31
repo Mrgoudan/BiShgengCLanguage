@@ -1,0 +1,21 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// expected-no-diagnostics
+
+void use_mut(int *_Borrow p);
+void free_owned<T>(T* _Owned p);
+void test1(int* _Owned oriPtr) {
+  int *_Borrow p = &_Mut *oriPtr;
+  use_mut(p);
+  free_owned<int>(oriPtr);
+}
+
+// CHECK:      static void free_owned_int(int * p);
+// CHECK-EMPTY: 
+// CHECK:      void use_mut(int * p);
+// CHECK-EMPTY: 
+// CHECK:      void test1(int * oriPtr) {
+// CHECK-NEXT:     int * p = &*oriPtr;
+// CHECK-NEXT:     use_mut(p);
+// CHECK-NEXT:     free_owned_int(oriPtr);
+// CHECK-NEXT: }

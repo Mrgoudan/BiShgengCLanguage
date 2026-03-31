@@ -1,0 +1,11 @@
+// RUN: %clang_cc1 -verify %s
+
+void free_owned_new(void * _Owned p);
+
+typedef struct A {
+	int * _Owned a;
+} A;
+
+void test1(A * _Owned p) {
+	free_owned_new((void * _Owned)p); // expected-error{{invalid cast to `void * _Owned` of not all moved value: `p`, p.a is _Owned}}
+}

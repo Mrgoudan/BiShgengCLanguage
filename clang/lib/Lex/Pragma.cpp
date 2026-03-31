@@ -1285,21 +1285,13 @@ public:
     }
 
     if (WarningName.size() < 3 || WarningName[0] != '-' ||
-        (WarningName[1] != 'W' && WarningName[1] != 'R'
-#if ENABLE_BSC
-         && WarningName[1] != 'E'
-#endif
-         )) {
+        (WarningName[1] != 'W' && WarningName[1] != 'R')) {
       PP.Diag(StringLoc, diag::warn_pragma_diagnostic_invalid_option);
       return;
     }
 
-    diag::Flavor Flavor = WarningName[1] == 'W'
-                              ? diag::Flavor::WarningOrError
-#if ENABLE_BSC
-                              : WarningName[1] == 'E' ? diag::Flavor::Error
-#endif
-                                                      : diag::Flavor::Remark;
+    diag::Flavor Flavor = WarningName[1] == 'W' ? diag::Flavor::WarningOrError
+                                                : diag::Flavor::Remark;
     StringRef Group = StringRef(WarningName).substr(2);
     bool unknownDiag = false;
     if (Group == "everything") {

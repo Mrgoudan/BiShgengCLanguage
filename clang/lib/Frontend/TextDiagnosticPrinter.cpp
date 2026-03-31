@@ -78,12 +78,12 @@ static void printDiagnosticOptions(raw_ostream &OS,
 
     StringRef Opt = DiagnosticIDs::getWarningOptionForDiag(Info.getID());
     if (!Opt.empty()) {
-        OS << (Started ? "," : " [")
-           << (Level == DiagnosticsEngine::Remark ? "-R" : "-W") << Opt;
-        StringRef OptValue = Info.getDiags()->getFlagValue();
-        if (!OptValue.empty())
-          OS << "=" << OptValue;
-        Started = true;
+      OS << (Started ? "," : " [")
+         << (Level == DiagnosticsEngine::Remark ? "-R" : "-W") << Opt;
+      StringRef OptValue = Info.getDiags()->getFlagValue();
+      if (!OptValue.empty())
+        OS << "=" << OptValue;
+      Started = true;
     }
   }
 

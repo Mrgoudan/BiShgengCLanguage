@@ -82,8 +82,7 @@ def err_typecheck_borrow_func : Error<"no _Borrow qualified type found in the fu
 def err_typecheck_borrow_subscript : Error<"subscript of _Borrow pointer is not allowed">;
 def err_owned_and_borrow_conflict : Error<"cannot combine '_Owned' and '_Borrow' qualifiers on the same type">;
 def err_owned_qualifier_non_pointer : Error<
-  "type of %1 cannot be qualified by '%0'">,
-  InGroup<OwnedQualifierType>;
+  "type of %1 cannot be qualified by '%0'">;
 
 
 // BSC trait warnings and errors.
@@ -159,137 +158,99 @@ def err_owned_struct_destructor_body : Error<"destructor must have a function bo
 // BSC Ownership Analysis errors.
 // use
 def err_ownership_use_moved : Error<
-  "use of moved value: `%0`">,
-  InGroup<UseMovedOwned>;
+  "use of moved value: `%0`">;
 def err_ownership_use_partially_moved : Error<
-  "use of partially moved value: `%0`, %1 moved">,
-  InGroup<UseMovedOwned>;
+  "use of partially moved value: `%0`, %1 moved">;
 def err_ownership_use_all_moved: Error<
-  "use of all moved value: `%0`">,
-  InGroup<UseMovedOwned>;
+  "use of all moved value: `%0`">;
 def err_ownership_use_uninit : Error<
-  "use of uninitialized value: `%0`">,
-  InGroup<UseUninitOwned>;
+  "use of uninitialized value: `%0`">;
 def err_ownership_use_possibly_uninit : Error<
-  "use of possibly uninitialized value: `%0`">,
-  InGroup<UseUninitOwned>;
+  "use of possibly uninitialized value: `%0`">;
 
 // return value initialization
 def err_return_uninit : Error<
-  "return value of `%0` is not initialized on all paths">,
-  InGroup<UseUninitOwned>;
+  "return value of `%0` is not initialized on all paths">;
 def err_return_possibly_uninit : Error<
-  "return value of `%0` may not be initialized on all paths">,
-  InGroup<UseUninitOwned>;
+  "return value of `%0` may not be initialized on all paths">;
 
 // ensure_init contract verification
 def err_ensure_init_not_init : Error<
-  "'*%0' not initialized at return in __attribute__((ensure_init)) function">,
-  InGroup<UseUninitOwned>;
+  "'*%0' not initialized at return in __attribute__((ensure_init)) function">;
 def err_ensure_init_maybe_not_init : Error<
-  "'*%0' may not be initialized on all paths at return in __attribute__((ensure_init)) function">,
-  InGroup<UseUninitOwned>;
+  "'*%0' may not be initialized on all paths at return in __attribute__((ensure_init)) function">;
 def warn_ensure_init_not_addressof : Warning<
-  "ensure_init effect cannot be verified when argument is not an address-of expression">,
-  InGroup<UseUninitOwned>;
+  "ensure_init effect cannot be verified when argument is not an address-of expression">;
 def err_ensure_init_ptr_aliased : Error<
-  "__attribute__((ensure_init)) parameter '%0' cannot be reassigned or aliased before '*%0' is initialized">,
-  InGroup<UseUninitOwned>;
+  "__attribute__((ensure_init)) parameter '%0' cannot be reassigned or aliased before '*%0' is initialized">;
 def err_ensure_init_deref_read_uninit : Error<
-  "use of uninitialized '*%0' in __attribute__((ensure_init)) function">,
-  InGroup<UseUninitOwned>;
+  "use of uninitialized '*%0' in __attribute__((ensure_init)) function">;
 def err_ensure_init_funcptr_incompatible : Error<
-  "incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter %0 but source does not have it">,
-  InGroup<UseUninitOwned>;
+  "incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter %0 but source does not have it">;
 
 // __builtin_assume_initialized
 def err_assume_init_bad_arg : Error<
-  "__builtin_assume_initialized requires '&' or '&_Mut' expression as argument">,
-  InGroup<UseUninitOwned>;
+  "__builtin_assume_initialized requires '&' or '&_Mut' expression as argument">;
 
 // assign
 def err_ownership_assign_owned : Error<
-  "assign to _Owned value: `%0`">,
-  InGroup<AssignOwned>;
+  "assign to _Owned value: `%0`">;
 def err_ownership_assign_partially_moved : Error<
-  "assign to partially moved value: `%0`, %1 moved">,
-  InGroup<AssignMovedOwned>;
+  "assign to partially moved value: `%0`, %1 moved">;
 def err_ownership_assign_possibly_partially_moved : Error<
-  "assign to possibly partially moved value: `%0`, %1 possibly moved">,
-  InGroup<AssignMovedOwned>;
+  "assign to possibly partially moved value: `%0`, %1 possibly moved">;
 def err_ownership_assign_all_moved : Error<
-  "assign to all moved value: `%0`">,
-  InGroup<AssignMovedOwned>;
+  "assign to all moved value: `%0`">;
 // field assign
 def err_ownership_assign_field_uninit : Error<
-  "assign to part of uninitialized value: `%0`">,
-  InGroup<AssignUninitOwned>;
+  "assign to part of uninitialized value: `%0`">;
 def err_ownership_assign_field_owned : Error<
-  "assign to part of _Owned value: `%0`">,
-  InGroup<AssignOwned>;
+  "assign to part of _Owned value: `%0`">;
 def err_ownership_assign_field_moved : Error<
-  "assign to part of moved value: `%0`">,
-  InGroup<AssignMovedOwned>;
+  "assign to part of moved value: `%0`">;
 def err_ownership_assign_field_subfield_owned : Error<
-  "assign to subfield _Owned value: `%0`, %1 _Owned">,
-  InGroup<AssignOwned>;
+  "assign to subfield _Owned value: `%0`, %1 _Owned">;
 
 // cast to `void * _Owned`
 def err_ownership_cast_moved : Error<
-  "invalid cast to `void * _Owned` of moved or uninitialized value: `%0`">,
-  InGroup<CastMovedOwned>;
+  "invalid cast to `void * _Owned` of moved or uninitialized value: `%0`">;
 def err_ownership_cast_owned : Error<
-  "invalid cast to `void * _Owned` of _Owned value: `%0`">,
-  InGroup<CastOwned>;
+  "invalid cast to `void * _Owned` of _Owned value: `%0`">;
 def err_ownership_cast_uninit: Error<
-  "invalid cast to `void * _Owned` of uninit value: `%0`">,
-  InGroup<CastOwned>;
+  "invalid cast to `void * _Owned` of uninit value: `%0`">;
 def err_ownership_cast_subfield_owned : Error<
-  "invalid cast to `void * _Owned` of not all moved value: `%0`, %1 _Owned">,
-  InGroup<CastOwned>;
+  "invalid cast to `void * _Owned` of not all moved value: `%0`, %1 _Owned">;
 // memory leak
 def err_ownership_memory_leak_field : Error<
-  "field memory leak of value: `%0`, %1 leak">,
-  InGroup<CheckMemoryLeak>;
+  "field memory leak of value: `%0`, %1 leak">;
 def err_ownership_memory_leak : Error<
-  "memory leak of value: `%0`">,
-  InGroup<CheckMemoryLeak>;
+  "memory leak of value: `%0`">;
 def err_ownership_owned_struct_patially_moved : Error<
-  "partially moved _Owned struct:`%0` at scope end, %1 moved">,
-  InGroup<PartiallyMovedStruct>;
+  "partially moved _Owned struct:`%0` at scope end, %1 moved">;
 def err_ownership_owned_struct_not_properly_freed : Error<
-  "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually">,
-  InGroup<DestructOwnedStruct>;
+  "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually">;
 
 // New BSC Borrow Checker errors.
 def err_borrow_assign_when_borrowed : Error<
-  "cannot assign to `%0` because it is borrowed">,
-  InGroup<AssignBorrowed>;
+  "cannot assign to `%0` because it is borrowed">;
 def err_borrow_move_when_borrowed : Error<
-  "cannot move out of `%0` because it is borrowed">,
-  InGroup<MoveBorrowed>;
+  "cannot move out of `%0` because it is borrowed">;
 def err_borrow_use_when_mut_borrowed : Error<
-  "cannot use `%0` because it was mutably borrowed">,
-  InGroup<UseMutablyBorrowed>;
+  "cannot use `%0` because it was mutably borrowed">;
 def note_borrowed_here : Note<"`%0` is borrowed here">;
 def err_borrow_mut_borrow_more_than_once : Error<
-  "cannot borrow `%0` as mutable more than once at a time">,
-  InGroup<RepeatedBorrow>;
+  "cannot borrow `%0` as mutable more than once at a time">;
 def note_first_mut_borrow_occurs_here : Note<"first mut borrow occurs here">;
 def err_borrow_return_local_borrow : Error<
-  "cannot return reference to local variable `%0`">,
-  InGroup<ReturnLocalBorrow>;
+  "cannot return reference to local variable `%0`">;
 def err_borrow_not_live_long : Error<
-  "`%0` does not live long enough">,
-  InGroup<ShortLifeBorrow>;
+  "`%0` does not live long enough">;
 def note_dropped_while_borrowed: Note<"`%0` dropped here while still borrowed">;
 def err_borrow_immut_borrow_when_mut_borrowed : Error<
-  "cannot borrow `%0` as immutable because it is also borrowed as mutable">,
-  InGroup<RepeatedBorrow>;
+  "cannot borrow `%0` as immutable because it is also borrowed as mutable">;
 def note_mutable_borrow_occurs_here : Note<"mutable borrow occurs here">;
 def err_borrow_mut_borrow_when_immut_borrowed : Error<
-  "cannot borrow `%0` as mutable because it is also borrowed as immutable">,
-  InGroup<RepeatedBorrow>;
+  "cannot borrow `%0` as mutable because it is also borrowed as immutable">;
 def note_immutable_borrow_occurs_here : Note<"immutable borrow occurs here">;
 
 // BSC operator overload errors.
@@ -299,26 +260,19 @@ def err_operator_overload_needs_point : Error<
 
 // BSC Pointer Nullability Check errors.
 def err_nullable_pointer_dereference : Error<
-  "nullable pointer cannot be dereferenced">,
-  InGroup<DerefNullable>;
+  "nullable pointer cannot be dereferenced">;
 def err_pass_nullable_argument : Error<
-  "cannot pass nullable pointer argument">,
-  InGroup<PassNullable>;
+  "cannot pass nullable pointer argument">;
 def err_return_nullable : Error<
-  "cannot return nullable pointer type">,
-  InGroup<ReturnNullable>;
+  "cannot return nullable pointer type">;
 def err_nullable_cast_nonnull : Error<
-  "cannot cast nullable pointer to nonnull type">,
-  InGroup<CastNullable>;
+  "cannot cast nullable pointer to nonnull type">;
 def err_nullable_pointer_access_member : Error<
-  "cannot access member through nullable pointer">,
-  InGroup<AssignNullable>;
+  "cannot access member through nullable pointer">;
 def err_nonnull_assigned_by_nullable : Error<
-  "nonnull pointer cannot be assigned by nullable pointer">,
-  InGroup<AssignNonnull>;
+  "nonnull pointer cannot be assigned by nullable pointer">;
 def err_nonnull_init_by_default : Error<
-  "`%0` is a _Nonnull pointer and must be properly initialized.">,
-  InGroup<InitNonnull>;
+  "`%0` is a _Nonnull pointer and must be properly initialized.">;
 
 // BSC string literal borrow errors.
 def err_mut_borrow_string_literal : Error<

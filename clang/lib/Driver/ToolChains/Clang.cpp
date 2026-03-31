@@ -5758,9 +5758,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   claimNoWarnArgs(Args);
 
   Args.AddAllArgs(CmdArgs, options::OPT_R_Group);
-#if ENABLE_BSC
-  Args.AddAllArgs(CmdArgs, options::OPT_E_Group);
-#endif
 
   for (const Arg *A :
        Args.filtered(options::OPT_W_Group, options::OPT__SLASH_wd)) {

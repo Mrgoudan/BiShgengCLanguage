@@ -121,11 +121,6 @@ public:
   /// The prefixes for comment directives sought by -verify ("expected" by
   /// default).
   std::vector<std::string> VerifyPrefixes;
-#if ENABLE_BSC
-  /// The list of -E... options used to alter the diagnostic mappings, with the
-  /// prefixes removed.
-  std::vector<std::string> Errors;
-#endif
 
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.

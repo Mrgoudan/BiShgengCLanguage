@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -verify %s
+
+_Safe T *_Owned safe_malloc<T>(T t);
+_Safe void test1(void) {
+    int *_Owned _Nullable p = nullptr;
+    int cond = 1;
+    if (cond) {
+        p = safe_malloc<int>(10);
+        *p = 10;
+    }
+    p = nullptr; // expected-error{{assign to _Owned value: `p`}}
+}

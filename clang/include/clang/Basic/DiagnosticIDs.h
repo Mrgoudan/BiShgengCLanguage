@@ -95,10 +95,6 @@ namespace clang {
                       ///< problem. Can be made fatal by -Werror.
       Remark          ///< A diagnostic that indicates normal progress through
                       ///< compilation.
-#if ENABLE_BSC
-      ,
-      Error
-#endif
     };
   }
 

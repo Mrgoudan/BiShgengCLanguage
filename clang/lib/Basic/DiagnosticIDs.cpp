@@ -134,16 +134,6 @@ struct StaticDiagInfoRec {
   }
 
   diag::Flavor getFlavor() const {
-#if ENABLE_BSC
-    switch (Class) {
-    case CLASS_ERROR:
-      return diag::Flavor::Error;
-    case CLASS_REMARK:
-      return diag::Flavor::Remark;
-    default:
-      return diag::Flavor::WarningOrError;
-    }
-#endif
     return Class == CLASS_REMARK ? diag::Flavor::Remark
                                  : diag::Flavor::WarningOrError;
   }

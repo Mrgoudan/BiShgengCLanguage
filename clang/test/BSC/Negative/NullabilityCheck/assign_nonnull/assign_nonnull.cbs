@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+_Safe int *_Borrow _Nullable foo1(int* _Borrow a);  
+_Safe void test1(void) {
+    int a = 10;
+    int *_Borrow p1 = foo1(&_Mut a);             // expected-error{{nonnull pointer cannot be assigned by nullable pointer}}
+    int *_Borrow _Nullable p2 = foo1(&_Mut a);
+}
+
+void test2(void) {
+  int *_Borrow p = nullptr;                     // expected-error{{nonnull pointer cannot be assigned by nullable pointer}}
+  _Unsafe {
+    int *_Borrow p2 = nullptr;                  // expected-error{{nonnull pointer cannot be assigned by nullable pointer}}
+  }
+}

@@ -20,8 +20,3 @@ def spatial_check: Joined<["-"], "spatial-check=">, Flags<[CC1Option]>,
   Values<"static,user">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["SC_STATIC", "SC_USER"]>,
   MarshallingInfoEnum<LangOpts<"SpatialCheck">, "SC_STATIC">;
-def E_Group : OptionGroup<"<E group>">, Group<Diag_Group>, DocFlatten;
-def E_value_Group : OptionGroup<"<E (with value) group>">, Group<E_Group>,
-                    DocFlatten;
-def E_Joined : Joined<["-"], "E">, Group<E_Group>, Flags<[CC1Option, CoreOption]>,
-  MetaVarName<"<error>">, HelpText<"Enable the specified error">;

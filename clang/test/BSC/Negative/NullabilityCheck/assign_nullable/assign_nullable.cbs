@@ -1,0 +1,14 @@
+// RUN: %clang_cc1 -verify %s
+
+struct S {
+    int a;
+};
+_Safe void test1(void) {
+    struct S *_Borrow _Nullable p = nullptr;
+    if (p != nullptr) {
+        p->a = 10;
+    } else {
+        p->a = 20;          // expected-error{{cannot access member through nullable pointer}}
+    }
+    p->a = 30;              // expected-error{{cannot access member through nullable pointer}}
+}

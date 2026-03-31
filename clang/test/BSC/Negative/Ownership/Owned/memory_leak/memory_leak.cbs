@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -verify %s
+
+typedef int* _Owned myInt;
+
+void test1() {
+    int x = 10;
+    int* p = &x;
+    myInt p1 = __take_from_raw(p);
+} // expected-error {{memory leak of value: `p1`}}
+
+_Owned struct S { 
+_Public:
+  int a;
+};
+
+_Trait T { 
+};
+
+_Impl _Trait T for S;
+void test2(S* _Owned sp) {
+  _Trait T* _Owned t = sp;
+} // expected-error{{field memory leak of value: `t`, t.data is leak}}

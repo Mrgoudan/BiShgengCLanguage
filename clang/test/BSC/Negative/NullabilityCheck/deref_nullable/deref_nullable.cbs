@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -verify %s
+
+struct S {
+    int *_Borrow _Nullable p;
+};
+
+_Safe void test1(void) {
+    struct S s = { .p = nullptr };
+    if (s.p != nullptr) {
+        *s.p = 10;
+    } else {
+        *s.p = 20;              // expected-error{{nullable pointer cannot be dereferenced}}
+    }
+    *s.p = 30;                  // expected-error{{nullable pointer cannot be dereferenced}}
+}
