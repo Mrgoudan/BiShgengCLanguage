@@ -7764,6 +7764,7 @@ void Parser::ParseParameterDeclarationClause(
 #if ENABLE_BSC
       if (ParamInfo.empty() && isTraitMem) {
         if (DS.getTypeSpecType() != TST_This ||
+            !ParmDeclarator.getIdentifier() ||
             ParmDeclarator.getIdentifier()->getName() != "this") {
           Diag(ParmDeclarator.getIdentifierLoc(),
                diag::invalid_param_for_trait_member);

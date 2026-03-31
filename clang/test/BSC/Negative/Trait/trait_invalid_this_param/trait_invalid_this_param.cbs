@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -verify %s
+
+_Trait F {
+  void foo(This; this); // expected-error {{expected ')'}}
+  // expected-error@-1 {{only function declarations can be _Trait member}}
+  // expected-error@-2 {{expected member name or ';' after declaration specifiers}}
+  // expected-error@-3 {{the first parameter of _Trait member function must be 'This* this'}}
+  // expected-warning@-4 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+  // expected-note@-5 {{to match this '('}}
+};
+
+_Trait F1 { void foo(This*); }; // expected-error {{the first parameter of _Trait member function must be 'This* this'}}
+_Trait F2 { void foo(This* this,, int x); }; // expected-error {{expected parameter declarator}}
+_Trait F3 { void foo(This* a); }; // expected-error {{the first parameter of _Trait member function must be 'This* this'}}
+_Trait F4 { void foo(const This*); }; // expected-error {{the first parameter of _Trait member function must be 'This* this'}}
+_Trait F5<T> { void foo(This*); }; // expected-error {{the first parameter of _Trait member function must be 'This* this'}}
+_Trait F6 { void foo(This, int x); }; // expected-error {{expected identifier}}
