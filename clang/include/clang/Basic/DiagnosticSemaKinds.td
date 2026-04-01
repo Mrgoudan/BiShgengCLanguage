@@ -1330,11 +1330,11 @@ def err_atomic_property_nontrivial_assign_op : Error<
   " operator">;
 def warn_cocoa_naming_owned_rule : Warning<
   "property follows Cocoa naming"
-  " convention for returning '_Owned' objects">,
+  " convention for returning 'owned' objects">,
   InGroup<DiagGroup<"objc-property-matches-cocoa-ownership-rule">>;
 def err_cocoa_naming_owned_rule : Error<
   "property follows Cocoa naming"
-  " convention for returning '_Owned' objects">;
+  " convention for returning 'owned' objects">;
 def note_cocoa_naming_declare_family : Note<
   "explicitly declare getter %objcinstance0 with '%1' to return an 'unowned' "
   "object">;
@@ -3087,17 +3087,9 @@ def err_attribute_only_once_per_parameter : Error<
   "%0 attribute can only be applied once per parameter">;
 def err_mismatched_uuid : Error<"uuid does not match previous declaration">;
 def note_previous_uuid : Note<"previous uuid specified here">;
-// EnhanceC
-#ifdef BSC
-def warn_attribute_pointers_only : Warning<
-  "(EnhanceC) %0 attribute only applies to%select{| constant}1 pointer arguments, vars or fields)">,
-  InGroup<IgnoredAttributes>;
-#else
 def warn_attribute_pointers_only : Warning<
   "%0 attribute only applies to%select{| constant}1 pointer arguments">,
   InGroup<IgnoredAttributes>;
-#endif
-
 def err_attribute_pointers_only : Error<warn_attribute_pointers_only.Text>;
 def err_attribute_integers_only : Error<
   "%0 attribute argument may only refer to a function parameter of integer "

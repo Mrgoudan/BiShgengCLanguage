@@ -1942,13 +1942,8 @@ def NoSplitStack : InheritableAttr {
 
 def NonNull : InheritableParamAttr {
   let Spellings = [GCC<"nonnull">];
-  #ifdef BSC
-  let Subjects = SubjectList<[ObjCMethod, HasFunctionProto, ParmVar, Var, Field], WarnDiag,
-                             "functions, methods, and parameters (EnhanceC: additional applies to vars and fields)">;
-  #else
   let Subjects = SubjectList<[ObjCMethod, HasFunctionProto, ParmVar], WarnDiag,
                              "functions, methods, and parameters">;
-  #endif
   let Args = [VariadicParamIdxArgument<"Args">];
   let AdditionalMembers = [{
     bool isNonNull(unsigned IdxAST) const {
@@ -1966,11 +1961,7 @@ def NonNull : InheritableParamAttr {
 
 def ReturnsNonNull : InheritableAttr {
   let Spellings = [GCC<"returns_nonnull">];
-  #ifdef BSC
-  let Subjects = SubjectList<[ObjCMethod, Function, Var, Field]>;
-  #else
   let Subjects = SubjectList<[ObjCMethod, Function]>;
-  #endif
   let Documentation = [ReturnsNonNullDocs];
 }
 

@@ -13,19 +13,6 @@ def err_incompatible_const_cast : Error<
 def err_incompatible_owned_cast : Error<
   "incompatible conversion from non _Owned type '%0' to _Owned type '%1' in member function call">;
 
-// BSC attributes warnings and errors.
-def warn_attribute_no_pointers : Warning<
-  "(EnhanceC) %0 attribute applied to function with no pointer arguments">,
-  InGroup<IgnoredAttributes>;
-def err_attribute_redundant_pointers : Error<
-  "(EnhanceC) %0 attribute applied to function with more than one pointer arguments, "
-  "please specify the index argument in the %0 attribute">;
-def warn_attribute_function_pointer : Warning<
-  "(EnhanceC) %0 attribute applied to function and function type pointer">,
-  InGroup<IgnoredAttributes>;
-def err_attribute_zero_pointer : Error<
-  "(EnhanceC) %0 attribute: The number of pointer arguments index cannot be zero">;
-
 // BSC _Async/_Await warnings and errors.
 def err_async_non_function : Error<
   "'_Async' can only appear on functions">;

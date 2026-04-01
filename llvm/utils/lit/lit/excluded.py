@@ -5,7 +5,6 @@ excluded testlist
 """ failed tests """
 clang_excluded_list = [
     "Clang :: Preprocessor/init-aarch64.c", # to be fixed by weixin
-    "Clang :: Sema/nonnull.c", # impossible to fix, because we changed the rules for nonnull attribute
     "Clang :: SemaTemplate/address_space-dependent.cpp", # impossible to fix, because we change the value of MaxAddressSpace in `Type.h`
 ]
 
