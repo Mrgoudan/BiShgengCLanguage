@@ -180,7 +180,8 @@ def err_ensure_init_not_init : Error<
 def err_ensure_init_maybe_not_init : Error<
   "'*%0' may not be initialized on all paths at return in __attribute__((ensure_init)) function">;
 def warn_ensure_init_not_addressof : Warning<
-  "ensure_init effect cannot be verified when argument is not an address-of expression">;
+  "ensure_init effect cannot be verified when argument is not an address-of expression">,
+  InGroup<BSCEnsureInitAttr>;
 def err_ensure_init_ptr_aliased : Error<
   "__attribute__((ensure_init)) parameter '%0' cannot be reassigned or aliased before '*%0' is initialized">;
 def err_ensure_init_deref_read_uninit : Error<
