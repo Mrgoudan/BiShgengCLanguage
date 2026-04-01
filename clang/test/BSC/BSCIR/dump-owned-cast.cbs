@@ -1,0 +1,21 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that casting an _Owned pointer to a non-pointer type uses copy().
+// The cast reads the pointer value without transferring ownership.
+
+// CHECK-LABEL: fn test_owned_to_bool
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK:        Cast(copy(_1) as
+// CHECK:        _0 = move(_1)
+int *_Owned test_owned_to_bool(int *_Owned p) {
+    int b = (_Bool)p;
+    return p;
+}
+
+// Pointer-to-pointer cast of _Owned should still use move (ownership transfer).
+// CHECK-LABEL: fn test_owned_ptr_cast
+// CHECK:        Cast(move(_1) as
+void *_Owned test_owned_ptr_cast(int *_Owned p) {
+    return (void *_Owned)p;
+}

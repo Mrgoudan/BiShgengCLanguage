@@ -8,7 +8,7 @@ _Safe void use_str(const char *_Borrow s);
 // CHECK:      bb0: {
 // CHECK-NEXT:   StorageLive(_1) [safe]
 // CHECK-NEXT:   _2 = const "test_predefined" [safe]
-// CHECK-NEXT:   _3 = &_Const _2 (reborrow) [safe]
+// CHECK-NEXT:   _3 = &_Const _2 (reborrow) <'r{{[0-9]+}}> [safe]
 // CHECK-NEXT:   _1 = copy(_3) [safe]
 // CHECK-NOT:    nop
 _Safe void test_predefined(void) {

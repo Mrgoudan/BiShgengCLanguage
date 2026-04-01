@@ -1,0 +1,25 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that each borrow expression gets a unique RegionId.
+// Region IDs live on the Ref rvalue, not on the local declaration.
+
+// CHECK-LABEL: fn test_unique_regions
+// Ref rvalues get unique regions:
+// CHECK:        _4 = &_Mut _1 <'r{{[0-9]+}}> [safe]
+// CHECK:        _6 = &_Const _2 <'r{{[0-9]+}}> [safe]
+_Safe void test_unique_regions(void) {
+    int x = 1;
+    int y = 2;
+    int *_Borrow p = &_Mut x;
+    const int *_Borrow q = &_Const y;
+}
+
+// Reborrow: each borrow expression gets a unique region.
+// CHECK-LABEL: fn test_reborrow_region
+// CHECK:        &_Mut _1 <'r{{[0-9]+}}>
+// CHECK:        &_Mut _2 (reborrow) <'r{{[0-9]+}}>
+_Safe void test_reborrow_region(void) {
+    int x = 1;
+    int *_Borrow p = &_Mut x;
+    int *_Borrow q = &_Mut *p;
+}

@@ -204,12 +204,50 @@ BasicBlockId BSCIRBuilder::getOrCreateLabelBlock(LabelDecl *LD) {
 // Scope Cleanup
 //===----------------------------------------------------------------------===//
 
-void BSCIRBuilder::emitScopeCleanup(unsigned TargetDepth) {
-  // Emit StorageDead for all locals in scopes above TargetDepth, top-down
-  for (unsigned I = ScopeStack.size(); I > TargetDepth; --I) {
-    for (LocalId L : llvm::reverse(ScopeStack[I - 1].Locals))
+/// Check whether a type needs an explicit Drop terminator (owned pointer or
+/// struct with owned fields / move semantics).
+/// NOTE: file-local for now. Promote to a header if other passes need it.
+static bool needsDrop(QualType Ty) {
+  if (Ty->isPointerType() && Ty.isOwnedQualified())
+    return true;
+  if (Ty->isRecordType() &&
+      (Ty.getTypePtr()->isOwnedStructureType() || Ty->isMoveSemanticType()))
+    return true;
+  return false;
+}
+
+void BSCIRBuilder::emitLocalsCleanup(ArrayRef<LocalId> Locals,
+                                      SourceLocation Loc, CleanupKind CK) {
+  for (LocalId L : llvm::reverse(Locals)) {
+    const LocalDecl &LD = TheBody->getLocal(L);
+    if (needsDrop(LD.Ty)) {
+      SourceLocation DropLoc = Loc.isValid() ? Loc : LD.DeclLoc;
+      Place P(L, LD.Ty, DropLoc);
+      BasicBlockId SuccBB = createBlock();
+      setTerminator(Terminator::createDrop(P, SuccBB, currentSafeZone()));
+      TheBody->getBlock(CurrentBlock).Term.Loc = DropLoc;
+      switchToBlock(SuccBB);
+    }
+    if (CK == CleanupKind::DropAndStorageDead)
       emit(Statement::createStorageDead(L, currentSafeZone()));
   }
+}
+
+void BSCIRBuilder::emitScopeCleanup(unsigned TargetDepth,
+                                     SourceLocation ScopeEndLoc) {
+  // Emit Drop + StorageDead for all locals in scopes above TargetDepth,
+  // top-down (reverse declaration order).
+  // Does NOT pop scopes — used by break/continue/goto/return where other
+  // code paths still need the scope stack intact.
+  for (unsigned I = ScopeStack.size(); I > TargetDepth; --I)
+    emitLocalsCleanup(ScopeStack[I - 1].Locals, ScopeEndLoc);
+}
+
+void BSCIRBuilder::emitScopeExit(SourceLocation ScopeEndLoc) {
+  // Emit Drop + StorageDead for the topmost scope, then pop it.
+  // Used at normal scope end (compound '}', for-loop exit, switch exit).
+  emitLocalsCleanup(ScopeStack.back().Locals, ScopeEndLoc);
+  ScopeStack.pop_back();
 }
 
 //===----------------------------------------------------------------------===//
@@ -317,10 +355,7 @@ void BSCIRBuilder::lowerCompoundStmt(const CompoundStmt *CS) {
   for (const Stmt *S : CS->body())
     lowerStmt(S);
 
-  // Emit StorageDead for all locals declared in this scope
-  for (LocalId L : llvm::reverse(ScopeStack.back().Locals))
-    emit(Statement::createStorageDead(L, currentSafeZone()));
-  ScopeStack.pop_back();
+  emitScopeExit(CS->getRBracLoc());
 
   if (PushedSafeZone)
     SafeZoneStack.pop_back();
@@ -465,12 +500,9 @@ void BSCIRBuilder::lowerForStmt(const ForStmt *FS) {
   // Exit
   switchToBlock(ExitBB);
 
-  // Emit StorageDead for init-declaration variables at loop exit
-  if (PushedInitScope) {
-    for (LocalId L : llvm::reverse(ScopeStack.back().Locals))
-      emit(Statement::createStorageDead(L, currentSafeZone()));
-    ScopeStack.pop_back();
-  }
+  // Emit Drop + StorageDead for init-declaration variables at loop exit
+  if (PushedInitScope)
+    emitScopeExit(FS->getRParenLoc());
 }
 
 void BSCIRBuilder::lowerDoWhileStmt(const DoStmt *DS) {
@@ -600,17 +632,15 @@ void BSCIRBuilder::lowerSwitchStmt(const SwitchStmt *SS) {
     }
   }
 
-  // Exit: emit StorageDead for switch-body locals, then pop the scope.
+  // Exit: emit Drop + StorageDead for switch-body locals, then pop the scope.
   switchToBlock(ExitBB);
-  for (LocalId L : llvm::reverse(ScopeStack.back().Locals))
-    emit(Statement::createStorageDead(L, currentSafeZone()));
-  ScopeStack.pop_back();
+  emitScopeExit(SS->getEndLoc());
 }
 
 void BSCIRBuilder::lowerBreakStmt(const BreakStmt *BS) {
   if (BreakableScopes.empty())
     return;
-  emitScopeCleanup(BreakableScopes.back().ScopeDepth);
+  emitScopeCleanup(BreakableScopes.back().ScopeDepth, BS->getBreakLoc());
   setTerminator(Terminator::createGoto(BreakableScopes.back().BreakTarget,
                                        currentSafeZone()));
   // Create fresh unreachable block for dead code after break
@@ -624,7 +654,7 @@ void BSCIRBuilder::lowerContinueStmt(const ContinueStmt *CS) {
   for (int I = BreakableScopes.size() - 1; I >= 0; --I) {
     const auto &Scope = BreakableScopes[I];
     if (Scope.HasContinue) {
-      emitScopeCleanup(Scope.ScopeDepth);
+      emitScopeCleanup(Scope.ScopeDepth, CS->getContinueLoc());
       setTerminator(Terminator::createGoto(Scope.ContinueTarget,
                                            currentSafeZone()));
       break;
@@ -644,7 +674,7 @@ void BSCIRBuilder::lowerGotoStmt(const GotoStmt *GS) {
   unsigned TargetDepth = (It != LabelScopeDepth.end())
                              ? It->second
                              : ScopeStack.size(); // no cleanup if unknown
-  emitScopeCleanup(TargetDepth);
+  emitScopeCleanup(TargetDepth, GS->getGotoLoc());
   setTerminator(Terminator::createGoto(TargetBB, currentSafeZone()));
   // Create fresh block for dead code after goto
   BasicBlockId DeadBB = createBlock();
@@ -666,8 +696,17 @@ void BSCIRBuilder::lowerLabelStmt(const LabelStmt *LS) {
 void BSCIRBuilder::lowerReturnStmt(const ReturnStmt *RS) {
   // Lower return value and assign to _0
   VisitReturnStmt(const_cast<ReturnStmt *>(RS));
-  // Emit StorageDead for all locals in all scopes
-  emitScopeCleanup(0);
+  // Emit Drop + StorageDead for all locals in all scopes.
+  // Use the return statement's location for drop diagnostics.
+  emitScopeCleanup(0, RS->getReturnLoc());
+  // Emit Drop for owned parameters (not tracked in ScopeStack).
+  // Drops are emitted unconditionally; if the parameter was already moved
+  // (e.g., returned via `_0 = move(_1)`), the ownership analysis sees the
+  // Moved state at the drop point and treats it as a no-op.
+  SmallVector<LocalId, 4> ParamLocals;
+  for (unsigned I = TheBody->NumParams; I >= 1; --I)
+    ParamLocals.push_back(LocalId{I});
+  emitLocalsCleanup(ParamLocals, RS->getReturnLoc(), CleanupKind::DropOnly);
   // Goto return block
   setTerminator(Terminator::createGoto(ReturnBlock, currentSafeZone()));
   // Create fresh block for dead code after return
@@ -706,7 +745,11 @@ Operand BSCIRBuilder::VisitCharacterLiteral(CharacterLiteral *E) {
 }
 
 Operand BSCIRBuilder::VisitStringLiteral(StringLiteral *E) {
-  return Operand::createStringConstant(E->getString(), E->getType());
+  // getString() asserts on wide strings (L"...", u"...", U"...").
+  if (E->getCharByteWidth() == 1)
+    return Operand::createStringConstant(E->getString(), E->getType());
+  // Wide string: treat as opaque constant.
+  return Operand::createConstant(APValue(), E->getType());
 }
 
 Operand BSCIRBuilder::VisitBinaryOperator(BinaryOperator *BO) {
@@ -782,6 +825,15 @@ Operand BSCIRBuilder::VisitBinaryOperator(BinaryOperator *BO) {
   Operand LHS = lowerToOperand(BO->getLHS());
   Operand RHS = lowerToOperand(BO->getRHS());
 
+  // For comparison operators, force copy — comparing reads values without
+  // consuming ownership. Convert any Move to Copy.
+  if (BO->isComparisonOp() || BO->isEqualityOp()) {
+    if (LHS.K == Operand::Move)
+      LHS = Operand::createCopy(LHS.getPlace());
+    if (RHS.K == Operand::Move)
+      RHS = Operand::createCopy(RHS.getPlace());
+  }
+
   LocalId Tmp = TheBody->addTemp(BO->getType(), BO->getExprLoc());
   Place TmpPlace(Tmp, BO->getType(), BO->getExprLoc());
   emit(Statement::createAssign(
@@ -796,11 +848,13 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
   // BSC borrow operators
   if (Op == UO_AddrMut || Op == UO_AddrMutDeref) {
     Place P = lowerToPlace(UO->getSubExpr());
+    unsigned RId = NextRegionId++;
     if (Op == UO_AddrMutDeref) {
       LocalId Tmp = TheBody->addTemp(UO->getType(), UO->getExprLoc());
       Place TmpPlace(Tmp, UO->getType(), UO->getExprLoc());
       emit(Statement::createAssign(
-          TmpPlace, Rvalue::createRef(BorrowKind::Mut, P, /*IsReborrow=*/true),
+          TmpPlace,
+          Rvalue::createRef(BorrowKind::Mut, P, /*IsReborrow=*/true, RId),
           currentSafeZone(), UO, UO->getExprLoc()));
       return Operand::createCopy(TmpPlace);
     }
@@ -808,7 +862,7 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
     Place TmpPlace(Tmp, UO->getType(), UO->getExprLoc());
     AddrOfOrigins[Tmp] = P;
     emit(Statement::createAssign(
-        TmpPlace, Rvalue::createRef(BorrowKind::Mut, P),
+        TmpPlace, Rvalue::createRef(BorrowKind::Mut, P, /*IsReborrow=*/false, RId),
         currentSafeZone(), UO, UO->getExprLoc()));
     return Operand::createCopy(TmpPlace);
   }
@@ -816,17 +870,19 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
   if (Op == UO_AddrConst || Op == UO_AddrConstDeref) {
     Place P = lowerToPlace(UO->getSubExpr());
     bool IsReborrow = (Op == UO_AddrConstDeref);
+    unsigned RId = NextRegionId++;
     LocalId Tmp = TheBody->addTemp(UO->getType(), UO->getExprLoc());
     Place TmpPlace(Tmp, UO->getType(), UO->getExprLoc());
     if (!IsReborrow)
       AddrOfOrigins[Tmp] = P;
     emit(Statement::createAssign(
-        TmpPlace, Rvalue::createRef(BorrowKind::Shared, P, IsReborrow),
+        TmpPlace, Rvalue::createRef(BorrowKind::Shared, P, IsReborrow, RId),
         currentSafeZone(), UO, UO->getExprLoc()));
     return Operand::createCopy(TmpPlace);
   }
 
   // C-style address-of
+  // C-style &: no RegionId — raw pointers don't participate in borrow checking.
   if (Op == UO_AddrOf) {
     Place P = lowerToPlace(UO->getSubExpr());
     LocalId Tmp = TheBody->addTemp(UO->getType(), UO->getExprLoc());
@@ -838,9 +894,11 @@ Operand BSCIRBuilder::VisitUnaryOperator(UnaryOperator *UO) {
     return Operand::createCopy(TmpPlace);
   }
 
-  // Dereference
+  // Dereference: reads through the pointer but does NOT consume it.
+  // Force a copy even if the pointer is _Owned.
   if (Op == UO_Deref) {
-    Operand Sub = lowerToOperand(UO->getSubExpr());
+    Place SubPlace = lowerToPlace(UO->getSubExpr());
+    Operand Sub = Operand::createCopy(SubPlace);
     LocalId Tmp = TheBody->addTemp(UO->getSubExpr()->getType(),
                                    UO->getExprLoc());
     Place TmpPlace(Tmp, UO->getSubExpr()->getType(), UO->getExprLoc());
@@ -994,7 +1052,18 @@ Operand BSCIRBuilder::VisitCastExpr(CastExpr *CE) {
     return lowerToOperand(CE->getSubExpr());
   }
 
-  Operand Sub = lowerToOperand(CE->getSubExpr());
+  // If casting to a non-pointer type (e.g., _Owned ptr to _Bool), force copy.
+  // The cast doesn't transfer ownership — it just reads the pointer value.
+  Operand Sub = [&]() -> Operand {
+    QualType DestTy = CE->getType();
+    QualType SrcTy = CE->getSubExpr()->getType();
+    if (SrcTy->isPointerType() && SrcTy.isOwnedQualified() &&
+        !DestTy->isPointerType()) {
+      Place P = lowerToPlace(CE->getSubExpr());
+      return Operand::createCopy(P);
+    }
+    return lowerToOperand(CE->getSubExpr());
+  }();
   LocalId Tmp = TheBody->addTemp(CE->getType(), CE->getExprLoc());
   Place TmpPlace(Tmp, CE->getType(), CE->getExprLoc());
   // Propagate AddrOfOrigins through pointer casts (e.g., int* -> void*)
@@ -1309,9 +1378,16 @@ std::unique_ptr<Body> BSCIRBuilder::build() {
   if (FnBody)
     lowerStmt(FnBody);
 
-  // If current block hasn't been terminated, goto return block
-  if (TheBody->getBlock(CurrentBlock).Term.K == Terminator::Unreachable)
+  // If current block hasn't been terminated (implicit return for void
+  // functions), emit owned parameter drops and goto return block.
+  if (TheBody->getBlock(CurrentBlock).Term.K == Terminator::Unreachable) {
+    SourceLocation EndLoc = FnBody ? FnBody->getEndLoc() : FD.getEndLoc();
+    SmallVector<LocalId, 4> ParamLocals;
+    for (unsigned I = TheBody->NumParams; I >= 1; --I)
+      ParamLocals.push_back(LocalId{I});
+    emitLocalsCleanup(ParamLocals, EndLoc, CleanupKind::DropOnly);
     setTerminator(Terminator::createGoto(ReturnBlock, currentSafeZone()));
+  }
 
   // Set return block terminator
   switchToBlock(ReturnBlock);
@@ -1322,6 +1398,9 @@ std::unique_ptr<Body> BSCIRBuilder::build() {
 
   // Compute predecessor map
   TheBody->computePredecessors();
+
+  // Record total number of region variables for borrow checker.
+  TheBody->NumRegions = NextRegionId - 1;
 
   return std::move(TheBody);
 }

@@ -1,0 +1,33 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that comparison operators on _Owned pointers use copy(), not move().
+// Comparing reads the pointer value without consuming ownership.
+
+// CHECK-LABEL: fn test_owned_eq
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_3)
+// CHECK-NEXT:   _4 = BinOp(==, copy(_1), copy(_2))
+// CHECK-NEXT:   _3 = copy(_4)
+int test_owned_eq(int *_Owned p, int *_Owned q) {
+    int r = (p == q);
+    return r;
+}
+
+// CHECK-LABEL: fn test_owned_ne
+// CHECK:        BinOp(!=, copy(_1), copy(_2))
+int test_owned_ne(int *_Owned p, int *_Owned q) {
+    return p != q;
+}
+
+// CHECK-LABEL: fn test_owned_lt
+// CHECK:        BinOp(<, copy(_1), copy(_2))
+int test_owned_lt(int *_Owned p, int *_Owned q) {
+    return p < q;
+}
+
+// Mixed: one _Owned, one raw — _Owned side uses copy, raw already copy.
+// CHECK-LABEL: fn test_mixed_comparison
+// CHECK:        BinOp(==, copy(_1), copy(_2))
+int test_mixed_comparison(int *_Owned p, int *q) {
+    return p == q;
+}

@@ -40,22 +40,6 @@ enum class InitState : uint8_t {
   Initialized    // Definitely initialized on all paths
 };
 
-/// Identifies a specific field path from a local base.
-/// E.g., FieldPath{_1, {0, 1}} = _1.field0.field1
-struct FieldPath {
-  LocalId Base;
-  llvm::SmallVector<unsigned, 4> Indices;
-
-  bool operator<(const FieldPath &O) const {
-    if (Base.Index != O.Base.Index)
-      return Base.Index < O.Base.Index;
-    return Indices < O.Indices;
-  }
-  bool operator==(const FieldPath &O) const {
-    return Base == O.Base && Indices == O.Indices;
-  }
-};
-
 /// Lattice for initialization analysis.
 /// Tracks which locals/places are definitely initialized.
 struct InitLattice {

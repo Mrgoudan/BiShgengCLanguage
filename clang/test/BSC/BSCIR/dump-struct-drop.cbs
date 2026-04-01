@@ -1,0 +1,65 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test Drop emission for structs containing owned pointers,
+// including nested structs and mixed types.
+
+struct OwnedFields { int *_Owned a; int *_Owned b; };
+struct NestedOwned { struct OwnedFields inner; int *_Owned c; };
+struct Mixed { int x; int *_Owned p; int y; };
+
+void sink(int *_Owned p);
+void sink_struct(struct OwnedFields s);
+
+// Partial move of struct field: struct gets drop at implicit return.
+// CHECK-LABEL: fn test_struct_scope_drop
+// CHECK:        _2 = call sink(move(_1.a)) -> bb2
+// CHECK:        drop(_1) -> bb1
+void test_struct_scope_drop(struct OwnedFields s) {
+    sink(s.a);
+}
+
+// Nested struct: deep field move + top-level drop.
+// CHECK-LABEL: fn test_nested_struct_drop
+// CHECK:        _2 = call sink(move(_1.inner.a)) -> bb2
+// CHECK:        _3 = call sink(move(_1.c)) -> bb3
+// CHECK:        drop(_1) -> bb1
+void test_nested_struct_drop(struct NestedOwned n) {
+    sink(n.inner.a);
+    sink(n.c);
+}
+
+// Mixed struct (owned + non-owned fields): still gets drop.
+// CHECK-LABEL: fn test_mixed_struct_drop
+// CHECK:        call sink(move(_1.p))
+// CHECK:        drop(_1)
+void test_mixed_struct_drop(struct Mixed m) {
+    sink(m.p);
+}
+
+// Struct local: drop for local at scope exit + drop for param at return.
+// CHECK-LABEL: fn test_struct_local_drop
+// CHECK:        StorageLive(_2)
+// CHECK-NEXT:   _2 = move(_1)
+// CHECK-NEXT:   drop(_2) -> bb2
+// CHECK:        StorageDead(_2)
+// CHECK-NEXT:   drop(_1)
+void test_struct_local_drop(struct OwnedFields s) {
+    struct OwnedFields local = s;
+}
+
+// Whole struct moved into call: drop for param at return.
+// CHECK-LABEL: fn test_struct_call_move
+// CHECK:        _2 = call sink_struct(move(_1))
+// CHECK:        drop(_1)
+void test_struct_call_move(struct OwnedFields s) {
+    sink_struct(s);
+}
+
+// Return struct: move to _0, then unconditional drop (ownership analysis
+// sees Moved state and treats it as no-op).
+// CHECK-LABEL: fn test_struct_return
+// CHECK:        _0 = move(_1)
+// CHECK-NEXT:   drop(_1) -> bb1
+struct OwnedFields test_struct_return(struct OwnedFields s) {
+    return s;
+}

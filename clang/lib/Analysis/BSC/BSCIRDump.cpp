@@ -135,6 +135,8 @@ void clang::bscir::dumpRvalue(const Rvalue &R, const Body &B,
     dumpPlace(Ref.P, OS);
     if (Ref.IsReborrow)
       OS << " (reborrow)";
+    if (Ref.RegionId != 0)
+      OS << " <'r" << Ref.RegionId << ">";
     break;
   }
   case Rvalue::AddressOf:

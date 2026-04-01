@@ -1,0 +1,68 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test BSCIR Drop terminator emission for owned types.
+// Drop is emitted before StorageDead for _Owned pointers and owned structs,
+// analogous to Rust MIR's Drop terminator for types implementing Drop.
+
+void sink(int *_Owned p);
+
+// Basic: _Owned local gets a drop before StorageDead at scope exit.
+// CHECK-LABEL: fn test_owned_drop
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = move(_1)
+// CHECK-NEXT:   _3 = call sink(move(_2)) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   drop(_2) -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   drop(_1) -> bb1
+// CHECK-NEXT: }
+void test_owned_drop(int *_Owned p) {
+    int *_Owned q = p;
+    sink(q);
+}
+
+// Non-owned local: no Drop, just StorageDead.
+// CHECK-LABEL: fn test_no_drop
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_1)
+// CHECK-NEXT:   _1 = const 42
+// CHECK-NEXT:   StorageDead(_1)
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+void test_no_drop(void) {
+    int x = 42;
+}
+
+// Drop in nested scope: inner owned gets dropped at inner scope exit.
+// CHECK-LABEL: fn test_nested_scope_drop
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _2 = move(_1)
+// CHECK-NEXT:   drop(_2) -> bb2
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   StorageDead(_2)
+// CHECK-NEXT:   drop(_1) -> bb1
+// CHECK-NEXT: }
+void test_nested_scope_drop(int *_Owned p) {
+    {
+        int *_Owned q = p;
+    }
+}
+
+// Drop on return: owned parameter is dropped before return.
+// CHECK-LABEL: fn test_return_drop
+// CHECK:      bb0: {{[{]}}
+// CHECK:        _0 = copy(_2)
+// CHECK-NEXT:   drop(_1) -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int *_Owned test_return_drop(int *_Owned p) {
+    return nullptr;
+}

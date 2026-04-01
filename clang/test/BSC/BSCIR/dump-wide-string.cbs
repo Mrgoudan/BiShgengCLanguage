@@ -1,0 +1,11 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that wide string literals don't crash the BSCIR builder.
+// Wide strings (L"...", u"...", U"...") are lowered as opaque constants.
+
+// CHECK-LABEL: fn test_wide_string
+// CHECK:        _1 = const(int[5])
+// CHECK:        _2 = &_Const _1[0]
+void test_wide_string(void) {
+    (void)&_Const L"wide"[0];
+}

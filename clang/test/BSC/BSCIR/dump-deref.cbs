@@ -18,9 +18,8 @@ int test_deref(int *p) {
 
 // CHECK-LABEL: fn test_double_deref
 // CHECK:      bb0: {{[{]}}
-// CHECK-NEXT:   _2 = copy(_1)
-// CHECK-NEXT:   _3 = copy((*_2))
-// CHECK-NEXT:   _0 = copy((*_3))
+// CHECK-NEXT:   _2 = copy((*_1))
+// CHECK-NEXT:   _0 = copy((*_2))
 // CHECK-NEXT:   goto -> bb1
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}

@@ -381,6 +381,53 @@ private:
 enum class BorrowKind : uint8_t { Mut, Shared };
 
 //===----------------------------------------------------------------------===//
+// FieldPath - Identifies a nested field within a local
+//===----------------------------------------------------------------------===//
+
+/// A path from a local to a nested struct field, e.g., _1.inner.x = {_1, [0, 0]}.
+/// Used by init analysis and ownership analysis for field-level tracking.
+struct FieldPath {
+  LocalId Base;
+  llvm::SmallVector<unsigned, 4> Indices;
+
+  bool operator<(const FieldPath &O) const {
+    if (Base.Index != O.Base.Index)
+      return Base.Index < O.Base.Index;
+    return Indices < O.Indices;
+  }
+  bool operator==(const FieldPath &O) const {
+    return Base == O.Base && Indices == O.Indices;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Point - Identifies a specific program point (block + statement index)
+//===----------------------------------------------------------------------===//
+
+/// Identifies a precise BSCIR program point as { block, statement_index }.
+/// Note: BSCBorrowChecker.h has a separate Point for CFG-based analysis.
+struct Point {
+  BasicBlockId Block;
+  unsigned StmtIndex;
+
+  static Point endPoint() {
+    return {BasicBlockId{UINT_MAX}, UINT_MAX};
+  }
+  bool isEnd() const {
+    return Block.Index == UINT_MAX && StmtIndex == UINT_MAX;
+  }
+  bool operator==(const Point &O) const {
+    return Block == O.Block && StmtIndex == O.StmtIndex;
+  }
+  bool operator!=(const Point &O) const { return !(*this == O); }
+  bool operator<(const Point &O) const {
+    if (Block < O.Block) return true;
+    if (O.Block < Block) return false;
+    return StmtIndex < O.StmtIndex;
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Rvalue - The right-hand side of an assignment
 //===----------------------------------------------------------------------===//
 
@@ -402,7 +449,12 @@ struct Rvalue {
 
   // --- Payload types ---
   struct UseData { Operand Op; };
-  struct RefData { BorrowKind BK; Place P; bool IsReborrow; };
+  struct RefData {
+    BorrowKind BK;
+    Place P;
+    bool IsReborrow;
+    unsigned RegionId = 0; // Unique region variable for future borrow checking
+  };
   struct AddressOfData { Place P; };
   struct BinaryOpData { BinaryOperatorKind Op; Operand LHS, RHS; };
   struct UnaryOpData { UnaryOperatorKind Op; Operand Sub; };
@@ -431,11 +483,13 @@ struct Rvalue {
     R.Data.use.Op = std::move(Op);
     return R;
   }
-  static Rvalue createRef(BorrowKind BK, Place P, bool IsReborrow = false) {
+  static Rvalue createRef(BorrowKind BK, Place P, bool IsReborrow = false,
+                           unsigned RegionId = 0) {
     Rvalue R(Ref);
     R.Data.ref.BK = BK;
     R.Data.ref.P = std::move(P);
     R.Data.ref.IsReborrow = IsReborrow;
+    R.Data.ref.RegionId = RegionId;
     return R;
   }
   static Rvalue createAddressOf(Place P) {
@@ -970,6 +1024,10 @@ struct Body {
   llvm::DenseMap<BasicBlockId, SmallVector<BasicBlockId, 4>> Predecessors;
 
   SafeZoneSpecifier FuncSafeZone = SZ_None;
+
+  /// Total number of region variables allocated by the builder.
+  /// Prepared for future borrow checker integration (not consumed yet).
+  unsigned NumRegions = 0;
 
   /// Add a new local and return its ID. Index 0 = return slot.
   LocalId addLocal(QualType Ty, const VarDecl *VD, StringRef Name,

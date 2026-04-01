@@ -101,6 +101,11 @@ private:
   // Maps temp LocalId → the Place whose address was taken to produce that temp.
   llvm::DenseMap<LocalId, Place> AddrOfOrigins;
 
+  // --- Region ID counter for borrow checking ---
+  // Each Rvalue::Ref gets a unique RegionId at build time.
+  // Prepared for future borrow checker integration.
+  unsigned NextRegionId = 1;
+
   // --- Single return block (created in build()) ---
   BasicBlockId ReturnBlock = {0};
 
@@ -138,9 +143,19 @@ private:
   // Get or create a label block for a LabelDecl
   BasicBlockId getOrCreateLabelBlock(LabelDecl *LD);
 
-  // Emit StorageDead for all locals in scopes up to (but not including)
-  // the target scope depth (for break/continue/goto)
-  void emitScopeCleanup(unsigned TargetDepth);
+  enum class CleanupKind { DropAndStorageDead, DropOnly };
+
+  // Emit Drop (for owned types) + StorageDead for a list of locals.
+  // DropOnly skips StorageDead (used for parameters).
+  void emitLocalsCleanup(ArrayRef<LocalId> Locals, SourceLocation Loc,
+                          CleanupKind CK = CleanupKind::DropAndStorageDead);
+
+  // Emit cleanup for all scopes above TargetDepth (without popping).
+  void emitScopeCleanup(unsigned TargetDepth,
+                         SourceLocation ScopeEndLoc = SourceLocation());
+
+  // Emit cleanup for the topmost scope, then pop it.
+  void emitScopeExit(SourceLocation ScopeEndLoc);
 
   // Emit a statement into the current block
   void emit(Statement S);

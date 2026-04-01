@@ -8,11 +8,14 @@ void sink(int *_Owned p);
 // CHECK:      bb0: {{[{]}}
 // CHECK-NEXT:   StorageLive(_2)
 // CHECK-NEXT:   _2 = move(_1)
-// CHECK-NEXT:   _3 = call sink(move(_2)) -> bb1
+// CHECK-NEXT:   _3 = call sink(move(_2)) -> bb2
 // CHECK-NEXT: }
-// CHECK:      bb1: {{[{]}}
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   drop(_2) -> bb3
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
 // CHECK-NEXT:   StorageDead(_2)
-// CHECK-NEXT:   return
+// CHECK-NEXT:   drop(_1) -> bb1
 // CHECK-NEXT: }
 void test_owned_move(int *_Owned p) {
     int *_Owned q = p;

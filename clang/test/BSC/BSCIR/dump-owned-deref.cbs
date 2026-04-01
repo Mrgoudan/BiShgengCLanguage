@@ -1,0 +1,38 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Test that dereferencing an _Owned pointer uses copy(), not move().
+// Dereference reads through the pointer — it does NOT consume ownership.
+
+// CHECK-LABEL: fn test_owned_deref
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _3 = copy(_1)
+// CHECK-NEXT:   _2 = copy((*_3))
+// CHECK-NEXT:   _0 = move(_1)
+int *_Owned test_owned_deref(int *_Owned p) {
+    int val = *p;
+    return p;
+}
+
+// Double deref of owned pointer: both levels use copy().
+// CHECK-LABEL: fn test_owned_double_deref
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _3 = copy((*_1))
+// CHECK-NEXT:   _2 = copy((*_3))
+// CHECK-NEXT:   _0 = move(_1)
+int *_Owned *_Owned test_owned_double_deref(int *_Owned *_Owned p) {
+    int val = **p;
+    return p;
+}
+
+// Deref of non-owned pointer remains copy (unchanged behavior).
+// CHECK-LABEL: fn test_nonowned_deref
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK-NEXT:   _3 = copy(_1)
+// CHECK-NEXT:   _2 = copy((*_3))
+int test_nonowned_deref(int *p) {
+    int val = *p;
+    return val;
+}
