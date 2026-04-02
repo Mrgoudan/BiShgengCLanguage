@@ -760,9 +760,11 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
     QualType DestCanType = DestType.getCanonicalType();
     IsSafeBehavior = IsSafePointerConversion(SrcCanType, DestCanType);
   } else if (SrcType->isArrayType() && DestType->isPointerType()) {
-    // Array-to-pointer decay: Allow for string literals, __FUNCTION__, and
-    // ternary expressions containing only string literals.
-    IsSafeBehavior = IsStringLiteralExpr(E);
+    // Array-to-pointer decay: check compatibility after canonical decay.
+    QualType SrcDecayedCanType =
+        Context.getArrayDecayedType(SrcType).getCanonicalType();
+    QualType DestCanType = DestType.getCanonicalType();
+    IsSafeBehavior = IsSafePointerConversion(SrcDecayedCanType, DestCanType);
   } else if (SrcType->isPointerType() || DestType->isPointerType()) {
     // conversion from pointer to non-pointer or non-pointer to pointer is not
     // allowed

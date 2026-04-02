@@ -46,6 +46,6 @@ void test_va_end_in_safe_expr(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     _Safe {
-        va_end(args);  // expected-error {{_Unsafe function call is forbidden in the safe zone}} expected-error {{conversion from type 'va_list' (aka '__builtin_va_list') to 'struct __va_list_tag *' is forbidden in the safe zone}}
+        va_end(args);  // expected-error {{_Unsafe function call is forbidden in the safe zone}} expected-error {{va_end is forbidden in the safe zone}}
     }
 }

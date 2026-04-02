@@ -1,0 +1,46 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+extern int ext_unknown_bound_arr[];
+
+struct FlexArray {
+  int len;
+  int data[];
+};
+
+_Safe void test_array_decay_incompatible_types(void) {
+  int arr[4] = {0};
+
+  float *fp = arr; // expected-error{{conversion from type 'int[4]' to 'float *' is forbidden in the safe zone}}
+
+  int *ip = arr;
+  double *dp = arr; // expected-error{{conversion from type 'int[4]' to 'double *' is forbidden in the safe zone}}
+}
+
+_Safe void test_array_decay_to_owned_forbidden(void) {
+  int arr[2] = {1, 2};
+  int *ip = arr;
+
+  int *_Owned op = arr; // expected-error{{conversion from type 'int[2]' to 'int *_Owned' is forbidden in the safe zone}}
+}
+
+_Safe void test_compound_literal_decay_incompatible_types(void) {
+  float *fp = (int[2]){1, 2}; // expected-error{{conversion from type 'int[2]' to 'float *' is forbidden in the safe zone}}
+}
+
+_Safe void test_vla_decay_incompatible_types(int n) {
+  int vla[n];
+  __builtin_assume_initialized(&_Mut vla);
+  int *ip = vla;
+  float *fp = vla; // expected-error{{conversion from type 'int[n]' to 'float *' is forbidden in the safe zone}}
+}
+
+_Safe void test_unknown_bound_decay_incompatible_types(void) {
+  int *ip = ext_unknown_bound_arr;
+  float *fp = ext_unknown_bound_arr; // expected-error{{conversion from type 'int[]' to 'float *' is forbidden in the safe zone}}
+}
+
+_Safe void test_flexible_array_member_decay_incompatible_types(void) {
+  struct FlexArray s = {0};
+  int *ip = s.data;
+  float *fp = s.data; // expected-error{{conversion from type 'int[]' to 'float *' is forbidden in the safe zone}}
+}

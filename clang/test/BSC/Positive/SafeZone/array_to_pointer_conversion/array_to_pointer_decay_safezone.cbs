@@ -1,0 +1,67 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+_Safe void use_int_ptr(int *p);
+_Safe void use_const_int_ptr(const int *p);
+_Safe void use_const_char_ptr(const char *p);
+extern int ext_unknown_bound_arr[];
+
+struct FlexArray {
+  int len;
+  int data[];
+};
+
+_Safe void test_general_array_decay(void) {
+  int arr[4] = {1, 2, 3, 4};
+  const int carr[2] = {10, 20};
+
+  int *p = arr;
+  const int *cp2 = carr;
+
+  use_int_ptr(arr);
+  use_const_int_ptr(carr);
+
+  p = arr;
+  cp2 = carr;
+
+  const char *msg = "safe zone literal";
+  use_const_char_ptr("array-to-pointer literal");
+  use_const_char_ptr(msg);
+  const char *func = __FUNCTION__;
+  use_const_char_ptr(__FILE__);
+}
+
+_Safe void test_compound_literal_array_decay(void) {
+  int *p = (int[2]){1, 2};
+  const int *cp = (const int[2]){3, 4};
+
+  use_int_ptr((int[2]){5, 6});
+  use_const_int_ptr((const int[2]){7, 8});
+
+  p = (int[2]){9, 10};
+  cp = (const int[2]){11, 12};
+}
+
+_Safe void test_vla_array_decay(int n) {
+  int vla[n];
+  __builtin_assume_initialized(&_Mut vla);
+  int *p = vla;
+
+  use_int_ptr(vla);
+  p = vla;
+}
+
+_Safe void test_unknown_bound_array_decay(void) {
+  int *p = ext_unknown_bound_arr;
+
+  use_int_ptr(ext_unknown_bound_arr);
+  p = ext_unknown_bound_arr;
+}
+
+_Safe void test_flexible_array_member_decay(void) {
+  struct FlexArray s = {0};
+  int *p = s.data;
+
+  use_int_ptr(s.data);
+  p = s.data;
+}
