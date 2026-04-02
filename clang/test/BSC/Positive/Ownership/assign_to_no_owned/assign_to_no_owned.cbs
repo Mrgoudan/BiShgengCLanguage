@@ -1,0 +1,45 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+typedef struct S1 { int a; } S1;
+S1 *_Owned malloc_s(void);
+void free_s(S1 *_Owned);
+
+int test1() {
+  S1 *_Owned s = malloc_s();
+  S1 s1 = *s;
+  S1 s2 = *s;
+  free_s(s);
+  return 0;
+}
+
+typedef struct {
+  int a;
+  int *_Owned _Nullable b;
+} S;
+
+_Safe void bar(S *_Owned _Nullable *_Borrow);
+_Safe void baz(S *_Borrow _Nullable);
+
+_Safe S *_Owned _Nullable foo(int a) {
+  S *_Owned _Nullable p = nullptr;
+  bar(&_Mut p);
+  if (p == nullptr) {
+    return nullptr;
+  }
+  int tmp = p->a;
+  baz(&_Mut *p);
+  return p;
+}
+
+_Safe int call1(int);
+_Safe int call2(S *_Owned);
+
+_Safe S *_Owned test3(S *_Owned p) {
+  int tmp = call1(p->a);
+  return p;
+}
+
+_Safe void test4(S *_Owned p) {
+  int tmp = call2(p);
+}
