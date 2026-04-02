@@ -738,14 +738,17 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
     // Late template parsing can begin.
     Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
-    if (!PP.isIncrementalProcessingEnabled())
-     { Actions.ActOnEndOfTranslationUnit();
 #if ENABLE_BSC
-      for (auto ins : Actions.Context.InstantiationVec) {
+    if (!PP.isIncrementalProcessingEnabled()) {
+      Actions.ActOnEndOfTranslationUnit();
+      for (RecordDecl *ins : Actions.Context.InstantiationVec) {
         Actions.DesugarDestructor(ins);
       }
-#endif
     }
+#else
+    if (!PP.isIncrementalProcessingEnabled())
+      Actions.ActOnEndOfTranslationUnit();
+#endif
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
 

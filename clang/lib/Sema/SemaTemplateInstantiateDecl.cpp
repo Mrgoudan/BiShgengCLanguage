@@ -1116,10 +1116,10 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   }
 
 #if ENABLE_BSC
-  if (SemaRef.getLangOpts().BSC && DI) {
-    QualType VarType = DI->getType();
+  if (SemaRef.getLangOpts().BSC) {
     // Check owned qualifiers
-    if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(VarType, D->getLocation()))
+    if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(DI->getType(),
+                                                      D->getLocation()))
       return nullptr;
   }
 #endif
@@ -1239,10 +1239,10 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   }
 
 #if ENABLE_BSC
-  if (SemaRef.getLangOpts().BSC && !Invalid && DI) {
-    QualType FieldType = DI->getType();
+  if (SemaRef.getLangOpts().BSC && !Invalid) {
     // Check owned qualifiers
-    if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FieldType, D->getLocation())) {
+    if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(DI->getType(),
+                                                      D->getLocation())) {
       Invalid = true;
     }
   }
@@ -2084,15 +2084,26 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
 #if ENABLE_BSC
-  if (SemaRef.getLangOpts().BSC && TInfo) {
-    const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
-    if (FPT) {
+  // FIXME: It's more proper to move those type checking to BuildFunctionType.
+  if (SemaRef.getLangOpts().BSC) {
+    if (const FunctionProtoType *FPT = T->getAs<FunctionProtoType>()) {
+      if (!SemaRef.CheckBorrowFunctionType(
+              FPT->getReturnType(), FPT->getParamTypes(), D->getLocation())) {
+        return nullptr;
+      }
+
       // Check return type
-      SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(), D->getLocation());
+      if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(),
+                                                        D->getLocation())) {
+        return nullptr;
+      }
 
       // Check parameter types
       for (QualType ParamType : FPT->param_types()) {
-        SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType, D->getLocation());
+        if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType,
+                                                          D->getLocation())) {
+          return nullptr;
+        }
       }
     }
   }
@@ -2466,19 +2477,21 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
 #if ENABLE_BSC
-  if (SemaRef.getLangOpts().BSC && TInfo) {
-    const FunctionProtoType *FPT = T->getAs<FunctionProtoType>();
-    if (FPT) {
+  // FIXME: It's more proper to move those type checking to BuildFunctionType.
+  if (SemaRef.getLangOpts().BSC) {
+    if (const FunctionProtoType *FPT = T->getAs<FunctionProtoType>()) {
       // Check return type for owned qualifiers
       if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(),
-                                                         D->getLocation()))
+                                                        D->getLocation())) {
         return nullptr;
+      }
 
       // Check parameter types for owned qualifiers
       for (QualType ParamType : FPT->getParamTypes()) {
         if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType,
-                                                           D->getLocation()))
+                                                          D->getLocation())) {
           return nullptr;
+        }
       }
     }
   }

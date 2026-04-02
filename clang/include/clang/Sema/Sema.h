@@ -12454,7 +12454,8 @@ public:
   bool CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS);
   bool CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
-  void CheckBorrowFunctionType(QualType ReturnTy, SmallVector<QualType, 16> ParamTys, SourceLocation SL);
+  bool CheckBorrowFunctionType(QualType ReturnTy, ArrayRef<QualType> ParamTys,
+                               SourceLocation SL);
   bool CheckBorrowFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   bool CheckEnsureInitFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL);

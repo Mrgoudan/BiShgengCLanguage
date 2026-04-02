@@ -621,24 +621,29 @@ bool Sema::CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType) {
   return true;
 }
 
-void Sema::CheckBorrowFunctionType(QualType ReturnTy, SmallVector<QualType, 16> ParamTys, SourceLocation SL) {
+bool Sema::CheckBorrowFunctionType(QualType ReturnTy,
+                                   ArrayRef<QualType> ParamTys,
+                                   SourceLocation SL) {
   if (ReturnTy->isDependentType()) {
-    return;
+    return true;
   }
   if (ReturnTy.hasBorrow()) {
     bool HasBorrowParam = false;
     for (QualType PT : ParamTys) {
       if (PT->isDependentType()) {
-        return;
+        return true;
       }
       if (PT.hasBorrow()) {
         HasBorrowParam = true;
         break;
       }
     }
-    if (!HasBorrowParam)
+    if (!HasBorrowParam) {
       Diag(SL, diag::err_typecheck_borrow_func);
+      return false;
+    }
   }
+  return true;
 }
 
 bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
