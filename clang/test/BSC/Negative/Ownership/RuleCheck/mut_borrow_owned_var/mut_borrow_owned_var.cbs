@@ -35,6 +35,7 @@ void test3() {
   S *_Owned p = nullptr;
   foo2(&_Mut p);
 } // expected-error {{memory leak of value: `p`}}
+// expected-error@-1 {{field memory leak of value: `p`, p.a, p.b are leak}}
 
 void test4() {
   S s;

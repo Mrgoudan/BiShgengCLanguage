@@ -899,7 +899,7 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSUse(
   }
   if (isAddrMut) {
     if (is(VD, Ownership::Status::Null)) {
-      set(VD, Ownership::Status::Owned);
+      setToOwned(VD);
     }
   }
   if (!isGetAddr) {
@@ -1001,7 +1001,10 @@ SmallVector<OwnershipDiagInfo> Ownership::OwnershipStatus::checkOPSFieldUse(
         OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidUseOfPartiallyMoved,
                           VD->getNameAsString(), collectMovedFields(VD)));
   }
-  if (!isGetAddr) {
+  // Reading non-owned fields will not update ownership state.
+  bool TouchesOwnedSubtree =
+      OPSAllOwnedFields[VD].count(fullFieldName) != 0 || !allPrefixStrs.empty();
+  if (!isGetAddr && TouchesOwnedSubtree) {
     // change the status of the fields
     OPSOwnedOwnedFields[VD].erase(fullFieldName);
     // remove ownedPrefixStrs from OPSOwnedOwnedFields
@@ -2092,9 +2095,9 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     Expr *LHS = BO->getLHS();
     Expr *RHS = BO->getRHS();
 
-    // _Bool assignment observes null-ness without ownership exhaustion
-    op =
-        LHS->IgnoreParenImpCasts()->getType()->isBooleanType() ? GetAddr : Move;
+    // Assignment consumes RHS only when destination is move semantic.
+    QualType LHSType = LHS->getType().getCanonicalType();
+    op = IsTrackedType(LHSType) ? Move : GetAddr;
     Visit(RHS);
     op = None;
 
@@ -2261,9 +2264,8 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
         } else {
           stat.setToOwned(VD);
         }
-        // handle the init expr if it is not CallExpr
-        // _Bool initialization observes null-ness without ownership exhaustion
-        op = VQT->isBooleanType() ? GetAddr : Move;
+        // Initialization consumes RHS only for move-semantic destination types.
+        op = IsTrackedType(VQT) ? Move : GetAddr;
         Visit(Init);
         op = None;
       }
