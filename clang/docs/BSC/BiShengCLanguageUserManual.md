@@ -2415,7 +2415,7 @@ _Safe int main(void) {
 ```
 
 8. 禁止 `_Owned` 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 `_Owned` 指针时，必须使用内置函数 `__take_from_raw` 显式表达所有权转移；当用户需要将 `_Owned` 指针转换为裸指针时：若需转移所有权，必须使用 `__move_to_raw` 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 `(T *)&_Mut *p`。以上转换均需在非安全区进行。对 `_Owned` 指针与裸指针之间转换的限制只对最外层指针类型生效；形如 `T*_Owned*` 与 `T**` 之间的转换视为裸指针之间的转换，在安全区不允许、非安全区允许显式执行。
-基本类型不一致时，只允许`void * _Owned`类型与`T * _Owned`类型之间的相互强制转换；
+基本类型不一致时，只允许`void * _Owned`类型与`T * _Owned`类型之间的显式强制转换。此类转换在[下文](#3143-强制类型转换) 有额外说明。
 
     **显式所有权转移接口**（内置函数）：
     - `__move_to_raw(p)`：将 `_Owned` 指针 `p` 转为裸指针并转移所有权，返回的裸指针与入参具有相同的 Nullability。
@@ -2881,6 +2881,37 @@ int main() {
 ```
 
 在这个例子中，试图将`s1`强制类型转换为`void * _Owned`类型，但`s1->q`依然拥有所有权，因此转换失败。
+
+注意，在涉及 `T * _Owned` 到 `void *` 的转换时，转换的顺序不同会导致语义不同:
+1. 先将 `_Owned` 指针的指向类型转为 `void`，再使用 `__move_to_raw` 将 `_Owned` 指针转换为裸指针 (即`T * _Owned` 转 `void * _Owned` 转 `void *`): `T * _Owned` 指针必须具有所有权，但其指向的 `T` 内部所有 `_Owned` 指针变量必须**均不拥有所有权**才能进行转换。
+2. 先使用 `__move_to_raw` 将 `_Owned` 指针转换为裸指针，再改变指向类型 (即`T * _Owned` 转 `T *` 转 `void *`): `T * _Owned` 指针必须具有所有权、其指向的 `T` 内部所有 `_Owned` 指针变量仍**拥有所有权**才能进行转换。
+
+用户在需要将 `T * _Owned` 转成裸指针进行释放时，应先将其成员释放，再采用第一种转换顺序，将 `T * _Owned` 转为 `void * _Owned` 再转为裸指针进行释放。编译器会在 `T * _Owned` 转为 `void * _Owned` 时检查 `T` 内的 `_Owned` 指针均已转移所有权，避免内存泄露。除了需要释放对象的情况，其余场景均应采用第二种转换顺序，将 `T * _Owned` 内 `_Owned` 指针的所有权保留下来，以免后续使用已释放的指针。
+
+以下是示例代码：
+
+```c
+#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+void myfree(struct S *_Owned ptr) {
+  // 释放场景：采用第一种顺序 (T * _Owned 转 void * _Owned 转 void *)
+  safe_free((void *_Owned) ptr->p);
+  safe_free((void *_Owned) ptr->q);
+
+  // free((void *)__move_to_raw(ptr)); // error: ptr内部已经没有所有权， 不能使用 __move_to_raw
+  free(__move_to_raw((void *_Owned)ptr)); // ok
+}
+void *mymove(struct S *_Owned ptr) {
+  // 其余场景：采用第二种顺序 (T * _Owned 转 T * 转 void *)
+  // return __move_to_raw((void *_Owned)ptr); // error: ptr内部仍有所有权，不能转为 void *_Owned
+  return (void *)__move_to_raw(ptr); // ok
+}
+```
 
 ##### 3.1.4.4. 函数调用与返回
 
