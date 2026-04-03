@@ -1132,6 +1132,24 @@ bool Parser::isBSCTemplateDecl(Token tok) {
   if (!getLangOpts().BSC)
     return false;
 
+  // Quick check: BSC template declarations start with type keywords,
+  // identifiers, or declaration specifiers. Skip lookahead for tokens that
+  // cannot start a declaration to avoid triggering early preprocessor
+  // diagnostic emissions during PP.LookAhead().
+  if (Tok.isLiteral() || IsBSCTemplateBlackList(Tok.getKind()))
+    return false;
+  if (!Tok.is(tok::identifier) && !Tok.isOneOf(
+          tok::kw_void, tok::kw_char, tok::kw_int, tok::kw_float,
+          tok::kw_double, tok::kw_long, tok::kw_short,
+          tok::kw_unsigned, tok::kw_signed, tok::kw_bool, tok::kw__Bool,
+          tok::kw_struct, tok::kw_union, tok::kw_enum,
+          tok::kw_const, tok::kw_volatile, tok::kw_restrict,
+          tok::kw_static, tok::kw_extern, tok::kw_inline, tok::kw_typedef,
+          tok::kw_constexpr, tok::star, tok::kw___attribute, tok::kw___declspec,
+          tok::kw__Owned, tok::kw__Borrow, tok::kw__Safe, tok::kw__Unsafe,
+          tok::kw__Async, tok::kw__Trait))
+    return false;
+
   int LookAheadOffset = 0;
   bool FoundLess = false;
   bool FoundGreater = false;

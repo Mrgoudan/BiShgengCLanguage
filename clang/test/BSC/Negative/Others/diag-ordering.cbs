@@ -1,0 +1,26 @@
+// RUN: not %clang_cc1 -fsyntax-only -xc %s 2>&1 | grep -E "error:|warning:" > %t.c.txt
+// RUN: not %clang_cc1 -fsyntax-only -xbsc %s 2>&1 | grep -E "error:|warning:" > %t.bsc.txt
+// RUN: diff %t.c.txt %t.bsc.txt
+//
+// Test that BSC mode emits diagnostics in the same order as C mode.
+// Previously, BSC-specific lookahead (isBSCTemplateDecl, FindUntil) called
+// PP.LookAhead() which triggered preprocessor diagnostics out of source order.
+//
+// Pattern 1: colon stop token - parser error before PP error
+// Pattern 2: literal early-exit - macro redefinition stays in order
+// Pattern 3: operator stop token - paste-formed operator doesn't scan past
+// Pattern 4: r_brace stop token
+
+// --- Pattern 1: colon typo before #endif ---
+int bar:
+#endif
+
+// --- Pattern 2: literal from macro + later PP warning ---
+#define __FILE__ "test"
+
+// --- Pattern 3: operator token from paste ---
+#define PASTE x ## +
+PASTE
+
+// --- Pattern 4: #warning after earlier errors ---
+#warning end_of_file

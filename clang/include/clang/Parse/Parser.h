@@ -1934,7 +1934,18 @@ private:
     case tok::eof:
     case tok::equal:
     case tok::l_brace:
+    case tok::r_brace:
     case tok::semi:
+    case tok::colon:
+    case tok::plus:
+    case tok::minus:
+    case tok::slash:
+    case tok::percent:
+    case tok::exclaim:
+    case tok::tilde:
+    case tok::question:
+    case tok::pipe:
+    case tok::caret:
       return true;
 
     default:

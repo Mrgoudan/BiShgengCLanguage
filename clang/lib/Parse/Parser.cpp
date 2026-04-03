@@ -109,12 +109,20 @@ static bool IsCommonTypo(tok::TokenKind ExpectedTok, const Token &Tok) {
 
 #if ENABLE_BSC
 bool Parser::FindUntil(tok::TokenKind FindToken) {
-  if (Tok.isOneOf(tok::star, tok::greater, tok::r_paren, tok::comma,
+  if (Tok.isLiteral() ||
+      Tok.isOneOf(tok::star, tok::greater, tok::r_paren, tok::comma,
                   tok::l_brace, tok::semi, tok::eof, tok::greatergreater,
-                  tok::equal, tok::l_paren, tok::l_square))
+                  tok::equal, tok::l_paren, tok::l_square, tok::colon,
+                  tok::plus, tok::minus, tok::slash, tok::percent,
+                  tok::exclaim, tok::tilde, tok::question,
+                  tok::pipe, tok::caret, tok::r_brace))
     return false;
   std::vector<tok::TokenKind> StopTokens {tok::l_brace, tok::semi, tok::eof,
-                                          tok::equal, tok::l_paren, tok::l_square};
+                                          tok::equal, tok::l_paren, tok::l_square,
+                                          tok::colon, tok::plus, tok::minus,
+                                          tok::slash, tok::percent, tok::exclaim,
+                                          tok::tilde, tok::question, tok::pipe,
+                                          tok::caret, tok::r_brace};
   int LookStep = 0;
   tok::TokenKind KindToMatch;
 
