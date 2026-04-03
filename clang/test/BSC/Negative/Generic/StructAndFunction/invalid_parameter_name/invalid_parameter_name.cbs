@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -verify %s
+
+// Fix crashes first, then optimize error messages.
+// TODO: missing "extraneous ')' before ';'".
+// TODO: wrong error message "expected identifier or '('".
+
+test<enum E>());
+// expected-error@-1 {{a non-type template parameter cannot have type enum}}
+// expected-error@-2 {{no template named 'test'}}
+// expected-error@-3 {{expected identifier or '('}}
+test<_Trait T>();
+// expected-error@-1 {{a non-type template parameter cannot have type _Trait}}
+// expected-error@-2 {{use of undeclared identifier 'T'}}
+// expected-error@-3 {{expected identifier or '('}}
+_Impl _Trait F for int;
+// expected-error@-1 {{unexpected token for ImplTraitDecl}}
+test<union U>());
+// expected-error@-1 {{a non-type template parameter cannot have type union}}
+// expected-error@-2 {{no template named 'test'}}
+// expected-error@-3 {{expected identifier or '('}}
+test<_Trait T, int N>());
+// expected-error@-1 {{a non-type template parameter cannot have type _Trait}}
+// expected-error@-2 {{use of undeclared identifier 'T'}}
+// expected-error@-3 {{expected identifier or '('}}
+struct S<enum E> {};
+// expected-error@-1 {{explicit specialization of undeclared template struct 'S'}}
+T fn<union U, T>(T x));
+// expected-error@-1 {{a non-type template parameter cannot have type union}}
+// expected-error@-2 {{extraneous ')' before ';'}}
