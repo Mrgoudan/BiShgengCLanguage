@@ -24,10 +24,10 @@ void two_uninit_addr_of(void) {
     int sum = x + y;   // ok
 }
 
-// __builtin_assume_initialized: same scoping rule.
+// __assume_initialized: same scoping rule.
 void assume_init_scoped(void) {
     int x;
     int *p = &x;    // expected-error {{use of uninitialized value: `x`}}
-    __builtin_assume_initialized(&_Mut x); // ok: &x feeds builtin arg
+    __assume_initialized(&x); // ok: &x feeds builtin arg
     int y = x;      // ok
 }

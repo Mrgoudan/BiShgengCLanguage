@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
 // expected-no-diagnostics
 
-// Test __builtin_assume_initialized: marks a variable as initialized at
-// this program point (path-sensitive). Uses &_Mut in _Safe zones.
+// Test __assume_initialized: marks a variable as initialized at
+// this program point (path-sensitive). Only allowed in _Unsafe zones.
 
 _Safe void use_int(int x);
 
@@ -12,14 +12,14 @@ _Safe void use_pair(struct Pair p);
 // Basic: scalar.
 _Safe void test_basic(void) {
     int x;
-    __builtin_assume_initialized(&_Mut x);
+    _Unsafe { __assume_initialized(&x); }
     use_int(x); // ok
 }
 
 // Struct: all fields treated as initialized.
 _Safe void test_struct(void) {
     struct Pair s;
-    __builtin_assume_initialized(&_Mut s);
+    _Unsafe { __assume_initialized(&s); }
     use_pair(s); // ok
     use_int(s.a); // ok
     use_int(s.b); // ok
@@ -29,9 +29,9 @@ _Safe void test_struct(void) {
 _Safe void test_branch_both(int cond) {
     int x;
     if (cond) {
-        __builtin_assume_initialized(&_Mut x);
+        _Unsafe { __assume_initialized(&x); }
     } else {
-        __builtin_assume_initialized(&_Mut x);
+        _Unsafe { __assume_initialized(&x); }
     }
     use_int(x); // ok — initialized on both paths
 }
@@ -40,14 +40,14 @@ _Safe void test_branch_both(int cond) {
 _Safe void test_after_assign(void) {
     int x;
     x = 10;
-    __builtin_assume_initialized(&_Mut x);
+    _Unsafe { __assume_initialized(&x); }
     use_int(x); // ok
 }
 
 // Multiple variables: each independently.
 _Safe void test_multiple(void) {
     int a, b;
-    __builtin_assume_initialized(&_Mut a);
+    _Unsafe { __assume_initialized(&a); }
     b = 2;
     use_int(a); // ok
     use_int(b); // ok
@@ -59,7 +59,7 @@ void use_raw_ptr(int *p);
 
 void test_pointer(void) {
     int *p;
-    __builtin_assume_initialized(&p);
+    _Unsafe { __assume_initialized(&p); }
     use_raw_ptr(p); // ok
 }
 
@@ -73,6 +73,6 @@ _Safe void test_ptr_deref(void) {
 // Array: &arr marks array as initialized.
 void test_array(void) {
     int arr[3];
-    __builtin_assume_initialized(&arr);
+    _Unsafe { __assume_initialized(&arr); }
     use_int(arr[0]); // ok
 }

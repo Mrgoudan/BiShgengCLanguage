@@ -962,29 +962,6 @@ Operand BSCIRBuilder::VisitCallExpr(CallExpr *CE) {
       }
     }
     ArgPlaces.push_back(llvm::None);
-    // Warn if this param has ensure_init but we can't track the origin.
-    // Suppress if the argument is itself an ensure_init parameter (delegation).
-    // Check both direct decl attrs and ExtParameterInfo (for indirect calls).
-    bool ParamIsEnsureInit = false;
-    if (CalleeDecl && I < CalleeDecl->getNumParams() &&
-        CalleeDecl->getParamDecl(I)->hasAttr<EnsureInitAttr>())
-      ParamIsEnsureInit = true;
-    if (!ParamIsEnsureInit && CalleeProtoType &&
-        CalleeProtoType->hasExtParameterInfos() &&
-        I < CalleeProtoType->getNumParams() &&
-        CalleeProtoType->getExtParameterInfo(I).isEnsureInit())
-      ParamIsEnsureInit = true;
-    if (ParamIsEnsureInit) {
-      bool IsDelegation = false;
-      if (auto *DRE = dyn_cast<DeclRefExpr>(CE->getArg(I)->IgnoreParenCasts()))
-        if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-          if (PVD->hasAttr<EnsureInitAttr>())
-            IsDelegation = true;
-      if (!IsDelegation)
-        Ctx.getDiagnostics().Report(
-            CE->getArg(I)->getExprLoc(),
-            diag::warn_ensure_init_not_addressof);
-    }
     Args.push_back(std::move(Arg));
   }
 

@@ -29,7 +29,7 @@ _Safe void test_compound_literal_decay_incompatible_types(void) {
 
 _Safe void test_vla_decay_incompatible_types(int n) {
   int vla[n];
-  __builtin_assume_initialized(&_Mut vla);
+  _Unsafe { __assume_initialized(&vla); }
   int *ip = vla;
   float *fp = vla; // expected-error{{conversion from type 'int[n]' to 'float *' is forbidden in the safe zone}}
 }

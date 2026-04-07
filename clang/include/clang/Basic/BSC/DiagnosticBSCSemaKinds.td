@@ -176,9 +176,9 @@ def err_ensure_init_deref_read_uninit : Error<
 def err_ensure_init_funcptr_incompatible : Error<
   "incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter %0 but source does not have it">;
 
-// __builtin_assume_initialized
+// __assume_initialized
 def err_assume_init_bad_arg : Error<
-  "__builtin_assume_initialized requires '&' or '&_Mut' expression as argument">;
+  "__assume_initialized requires '&' expression as argument">;
 
 // assign
 def err_ownership_assign_owned : Error<

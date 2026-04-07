@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test __builtin_assume_initialized: negative cases — use before call,
-// use on wrong path. Uses &_Mut in _Safe zones.
+// Test __assume_initialized: negative cases — use before call,
+// use on wrong path. Only allowed in _Unsafe zones.
 
 _Safe void use_int(int x);
 
@@ -12,14 +12,14 @@ _Safe void use_pair(struct Pair p);
 _Safe void test_use_before(void) {
     int x;
     use_int(x); // expected-error {{use of uninitialized value: `x`}}
-    __builtin_assume_initialized(&_Mut x);
+    _Unsafe { __assume_initialized(&x); }
 }
 
 // Use on wrong path: builtin only on one branch → error at merge.
 _Safe void test_branch_one(int cond) {
     int x;
     if (cond) {
-        __builtin_assume_initialized(&_Mut x);
+        _Unsafe { __assume_initialized(&x); }
     }
     use_int(x); // expected-error {{use of possibly uninitialized value: `x`}}
 }
@@ -39,6 +39,6 @@ _Safe void test_struct_no_builtin(void) {
 // Array: decay (no &) doesn't mark as initialized.
 _Safe void test_array_decay(void) {
     int arr[3];
-    __builtin_assume_initialized(arr); // expected-error {{__builtin_assume_initialized requires '&' or '&_Mut' expression as argument}}
+    _Unsafe { __assume_initialized(arr); } // expected-error {{__assume_initialized requires '&' expression as argument}}
     use_int(arr[0]);
 }

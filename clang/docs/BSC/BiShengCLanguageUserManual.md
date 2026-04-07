@@ -5507,7 +5507,7 @@ _Safe void rule3_ok(int cond) {
 }
 ```
 
-4. 取地址操作（`&_Mut`、`&_Const`、`&`）被视为对变量的使用。对未初始化的变量取地址会报错。
+4. 取地址操作（`&_Mut`、`&_Const`、`&`）被视为对变量的使用。对未初始化的变量取地址会报错。例外：作为 `ensure_init` 参数或 `__assume_initialized` 参数的取地址表达式不受此限制（详见 3.6.4 和 3.6.5）。
 
 ```c
 _Safe void rule4(void) {
@@ -5532,7 +5532,7 @@ _Safe int rule5(int cond) {
 } // error: return value of `rule5` may not be initialized on all paths
 ```
 
-6. 数组元素的逐个赋值**不会**将数组标记为已初始化。数组必须通过初始化列表或 `__builtin_assume_initialized` 来初始化。
+6. 数组元素的逐个赋值**不会**将数组标记为已初始化。数组必须通过初始化列表或在 `_Unsafe` 区域中使用 `__assume_initialized` 来初始化（详见 3.6.5）。此规则同样适用于结构体中的数组字段——对数组元素的逐个写入不会将该字段标记为已初始化。
 
 ```c
 _Safe void rule6_error(void) {
@@ -5553,8 +5553,24 @@ _Safe void rule6_ok_assume(void) {
     arr[0] = 1;
     arr[1] = 2;
     arr[2] = 3;
-    __builtin_assume_initialized(&_Mut arr);
-    int x = arr[0]; // ok: 通过 __builtin_assume_initialized 标记
+    _Unsafe { __assume_initialized(&arr); }
+    int x = arr[0]; // ok: 通过 __assume_initialized 标记
+}
+
+// 结构体中的数组字段同理
+typedef struct { int a[2]; int b; } ArrStruct;
+
+_Safe void rule6_struct_error(void) {
+    ArrStruct s;
+    s.a[0] = 1;
+    s.a[1] = 2;
+    s.b = 3;
+    ArrStruct t = s; // error: use of uninitialized value: `s.a`
+}
+
+_Safe void rule6_struct_ok(void) {
+    ArrStruct s = {{1, 2}, 3};
+    ArrStruct t = s; // ok: 通过初始化列表初始化
 }
 ```
 
@@ -5586,15 +5602,40 @@ void rule7_struct(void) {
 > **已知限制**：写入一个变体会将整个联合体标记为已初始化，因此跨变体读取结构体字段时，即使对应的字节实际上未被写入，编译器也不会报错。例如：
 >
 > ```c
-> struct S { int b; int c; };
-> union U { int a; struct S s; };
+> struct S2 { int b; int c; };
+> union U2 { int a; struct S2 s; };
 >
 > void example(void) {
->     union U u;
+>     union U2 u;
 >     u.a = 1;
 >     int v = u.s.c; // 编译通过，但 u.s.c 的字节实际上可能未被有意义地写入
 > }
 > ```
+
+8. 嵌套结构体支持任意深度的字段级追踪。当所有叶子字段都被初始化后，父字段和整个结构体会自动提升为已初始化状态。
+
+```c
+struct Inner { int x; int y; };
+struct Outer { struct Inner inner; int z; };
+
+_Safe void rule8(void) {
+    struct Outer o;
+    o.inner.x = 1;
+    o.inner.y = 2;  // inner 的所有字段已初始化 → inner 自动提升
+    o.z = 3;        // 所有字段已初始化 → o 自动提升
+    struct Outer p = o; // ok
+}
+```
+
+9. 全局变量和静态变量被视为隐式已初始化（由 C 语言规范保证零初始化），不需要显式初始化。
+
+```c
+static int global_count;
+
+_Safe void rule9(void) {
+    int x = global_count; // ok: 全局/静态变量隐式已初始化
+}
+```
 
 #### 3.6.4. `__attribute__((ensure_init))`
 
@@ -5676,20 +5717,76 @@ void ok_alias(int *__attribute__((ensure_init)) out) {
 }
 ```
 
-#### 3.6.5. `__builtin_assume_initialized`
+`ensure_init` 参数可以委托给另一个 `ensure_init` 函数，编译器会追踪委托链：
 
-`__builtin_assume_initialized(&x)` 是一个内建函数，用于在某个程序点将变量标记为已初始化。与 `ensure_init` 不同，它**不做契约验证**——由用户保证变量确实已初始化。
+```c
+void init_val(int *__attribute__((ensure_init)) out);
+
+void init_delegated(int *__attribute__((ensure_init)) out) {
+    init_val(out); // ok: 委托给另一个 ensure_init 函数
+}
+```
+
+**重声明规则**：同安全级别的重声明（`_Safe`/`_Safe`、`_Unsafe`/`_Unsafe` 或 default/`_Unsafe`）必须保持 `ensure_init` 一致——要么都有，要么都没有。不同安全级别的重声明（`_Safe` 与非安全）是独立的重载，`ensure_init` 差异是允许的。
+
+```c
+// 同安全级别：必须一致
+_Safe void foo(int *__attribute__((ensure_init)) _Borrow out);
+_Safe void foo(int *__attribute__((ensure_init)) _Borrow out) { // ok: 一致
+    *out = 1;
+}
+
+// 同安全级别：不一致 → 错误
+// _Safe void bar(int *__attribute__((ensure_init)) _Borrow out);
+// _Safe void bar(int *_Borrow out) { ... } // error: incompatible declarations
+
+// 不同安全级别：allow differences
+void init_value(int *__attribute__((ensure_init)) out);
+_Safe void init_value(int *_Borrow out) { // ok: 不同安全级别
+    // ...
+}
+```
+
+**函数指针兼容性**：`ensure_init` 是函数类型的一部分。将不具有 `ensure_init` 的函数赋值给需要 `ensure_init` 的函数指针是不允许的：
+
+```c
+typedef _Safe void (*InitFn)(int *__attribute__((ensure_init)) _Borrow out);
+
+_Safe void has_attr(int *__attribute__((ensure_init)) _Borrow out) { *out = 1; }
+_Safe void no_attr(int *_Borrow out) { *out = 1; }
+
+_Safe void test(void) {
+    InitFn fn = has_attr; // ok: 签名匹配
+    // InitFn fn2 = no_attr; // error: 目标需要 ensure_init 但源没有
+}
+```
+
+通过函数指针的间接调用同样支持 `ensure_init` 效果验证：
+
+```c
+_Safe void indirect_call(InitFn fn) {
+    int x;
+    fn(&_Mut x); // ok: ensure_init 通过函数指针类型识别
+    int y = x;   // ok: x 已通过 ensure_init 标记为已初始化
+}
+```
+
+#### 3.6.5. `__assume_initialized`
+
+`__assume_initialized(&x)` 是一个内建函数，用于在某个程序点将变量标记为已初始化。与 `ensure_init` 不同，它**不做契约验证**——由用户保证变量确实已初始化。
 
 每次调用只能标记**一个**变量。如需标记多个变量，须分别调用。
 
-使用 `__builtin_assume_initialized` 函数时，参数应使用 `&_Mut` 或者 `&`.
+使用 `__assume_initialized` 函数时，参数应使用 `&`。
+
+`__assume_initialized` 只能在 `_Unsafe` 区域中使用，因为它绕过了编译器的初始化验证。
 
 该内建函数是路径敏感的：仅在执行到该调用的 CFG 路径上生效。
 
 ```c
 _Safe void example_builtin(void) {
     int x;
-    __builtin_assume_initialized(&_Mut x); // 从此处起 x 被视为已初始化
+    _Unsafe { __assume_initialized(&x); } // 从此处起 x 被视为已初始化
     int y = x; // ok
 }
 
@@ -5697,7 +5794,7 @@ _Safe void example_builtin(void) {
 _Safe void path_sensitive(int cond) {
     int x;
     if (cond) {
-        __builtin_assume_initialized(&_Mut x);
+        _Unsafe { __assume_initialized(&x); }
     }
     int y = x; // error: use of possibly uninitialized value: `x`
 }
@@ -5705,7 +5802,7 @@ _Safe void path_sensitive(int cond) {
 // 对结构体使用：所有字段都被标记为已初始化
 _Safe void struct_example(void) {
     struct Pair s;
-    __builtin_assume_initialized(&_Mut s);
+    _Unsafe { __assume_initialized(&s); }
     int a = s.a; // ok
     int b = s.b; // ok
 }
@@ -5716,8 +5813,8 @@ _Safe void struct_example(void) {
 ```c
 _Safe void array_example(void) {
     int arr[3];
-    __builtin_assume_initialized(&_Mut arr); // ok: 使用 &_Mut
-    // __builtin_assume_initialized(arr);    // 不生效: 数组退化为指针
+    _Unsafe { __assume_initialized(&arr); } // ok: 使用 &
+    // __assume_initialized(arr);           // error: 需要 & 表达式
 }
 ```
 

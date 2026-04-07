@@ -44,7 +44,7 @@ _Safe void test_compound_literal_array_decay(void) {
 
 _Safe void test_vla_array_decay(int n) {
   int vla[n];
-  __builtin_assume_initialized(&_Mut vla);
+  _Unsafe { __assume_initialized(&vla); }
   int *p = vla;
 
   use_int_ptr(vla);

@@ -1570,7 +1570,7 @@ BUILTIN(__builtin_assume, "vb", "n")
 
 #if ENABLE_BSC
 // BSC: mark a variable as initialized at this program point
-BUILTIN(__builtin_assume_initialized, "v.", "nt")
+BUILTIN(__assume_initialized, "v.", "nt")
 #endif
 
 // Multiprecision Arithmetic Builtins.

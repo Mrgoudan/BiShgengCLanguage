@@ -7699,13 +7699,48 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     TheCall->getCallee()->HasBSCScopeSpec = Fn->HasBSCScopeSpec;
     if (getLangOpts().BSC) {
       // _Unsafe function call is forbidden in the safe zone
-      // (exempt __builtin_assume_initialized — it is safe by design)
       if (IsInSafeZone() &&
-          BuiltinID != Builtin::BI__builtin_assume_initialized &&
           (Fn->getType()->checkFunctionProtoType(SZ_None) ||
            Fn->getType()->checkFunctionProtoType(SZ_Unsafe))) {
         Diag(Fn->getBeginLoc(), diag::err_unsafe_action)
             << "_Unsafe function call";
+      }
+
+      // Check ensure_init arguments: warn if not an address-of expression
+      // and not a delegation to another ensure_init parameter.
+      // Works for both direct calls (FDecl) and indirect calls (fn pointers).
+      unsigned NumCallArgs = TheCall->getNumArgs();
+      unsigned NumParams = FDecl ? FDecl->getNumParams() : 0;
+      const FunctionProtoType *CalleeFPT =
+          Fn->getType()->getAs<FunctionProtoType>();
+      if (!CalleeFPT) {
+        QualType PointeeTy = Fn->getType()->getPointeeType();
+        if (!PointeeTy.isNull())
+          CalleeFPT = PointeeTy->getAs<FunctionProtoType>();
+      }
+
+      for (unsigned I = 0; I < NumCallArgs; ++I) {
+        bool IsEI = false;
+        if (FDecl && I < NumParams &&
+            FDecl->getParamDecl(I)->hasAttr<EnsureInitAttr>())
+          IsEI = true;
+        if (!IsEI && CalleeFPT && CalleeFPT->hasExtParameterInfos() &&
+            I < CalleeFPT->getNumParams() &&
+            CalleeFPT->getExtParameterInfo(I).isEnsureInit())
+          IsEI = true;
+        if (!IsEI)
+          continue;
+
+        Expr *Arg = TheCall->getArg(I)->IgnoreParenImpCasts();
+        if (auto *UO = dyn_cast<UnaryOperator>(Arg))
+          if (UO->getOpcode() == UO_AddrOf || UO->getOpcode() == UO_AddrMut)
+            continue;
+        if (auto *DRE = dyn_cast<DeclRefExpr>(Arg))
+          if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+            if (PVD->hasAttr<EnsureInitAttr>())
+              continue;
+        Diag(TheCall->getArg(I)->getExprLoc(),
+             diag::warn_ensure_init_not_addressof);
       }
     }
 #endif

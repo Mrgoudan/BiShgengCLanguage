@@ -101,6 +101,10 @@ bool InitAnalysis::transferStatement(const Statement &S,
         Changed = true;
       }
     } else if (auto FP = getFieldPath(S.getAssign().Dest)) {
+      // Array-typed fields cannot be initialized element-by-element.
+      // They must be initialized via {} or __assume_initialized.
+      if (getFieldType(FP->Base, FP->Indices)->isArrayType())
+        break;
       unsigned UnionDepth = 0;
       if (isUnionStructFieldPath(*FP, UnionDepth)) {
         // Writing a struct field within a union variant (e.g., u.s.x).
@@ -147,7 +151,7 @@ bool InitAnalysis::transferStatement(const Statement &S,
     }
     // Note: array element writes (arr[i] = ...) do NOT mark the array as
     // initialized. Arrays must be initialized via initializer list or
-    // __builtin_assume_initialized.
+    // __assume_initialized.
 
     // Callee-side ensure_init: detect assignments through *param
     // Pattern: Assign dest is Place{paramId, [Deref, ...]}
@@ -222,9 +226,9 @@ InitLattice InitAnalysis::transferTerminator(const Terminator &T,
       Result.LocalStates[CD.Dest.Base] = InitState::Initialized;
     }
 
-    // __builtin_assume_initialized(&x): mark x as initialized at this point.
+    // __assume_initialized(&x): mark x as initialized at this point.
     if (CD.Decl &&
-        CD.Decl->getBuiltinID() == Builtin::BI__builtin_assume_initialized) {
+        CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
       if (!CD.ArgPlaces.empty() && CD.ArgPlaces[0]) {
         const Place &ArgPlace = *CD.ArgPlaces[0];
         if (ArgPlace.Projections.empty()) {
@@ -878,7 +882,7 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
     InitLattice State = EntryIt->second;
 
     // Exempt address-of statements that produce temps feeding ensure_init or
-    // __builtin_assume_initialized call args. We identify by dest temp, not
+    // __assume_initialized call args. We identify by dest temp, not
     // source local, so only the specific "_tmp = &x" preparing the call arg
     // is exempted — other uses of &x in the same block are still checked.
     //
@@ -891,7 +895,7 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
       const auto &CD = BB.Term.getCall();
       llvm::DenseSet<LocalId> ExemptArgBases;
       if (CD.Decl &&
-          CD.Decl->getBuiltinID() == Builtin::BI__builtin_assume_initialized) {
+          CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
         for (const Operand &Arg : CD.Args)
           if (Arg.K == Operand::Copy || Arg.K == Operand::Move)
             ExemptArgBases.insert(Arg.getPlace().Base);
@@ -961,7 +965,7 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
             break;
           case Rvalue::Ref: {
             const Place &P = Src.getRef().P;
-            // Exempt if dest temp feeds an ensure_init/assume_initialized arg.
+            // Exempt if dest temp feeds an ensure_init/__assume_initialized arg.
             if (!S.getAssign().Dest.isLocal() ||
                 !EnsureInitArgTemps.count(S.getAssign().Dest.Base))
               checkOperand(Operand::createCopy(P), State, S.Loc, Diags);
@@ -1103,11 +1107,11 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
     if (T.K == Terminator::Call && (CheckAllZones || T.SafeZone == SZ_Safe)) {
       const auto &CD = T.getCall();
 
-      // Exempt ensure_init and __builtin_assume_initialized args from
+      // Exempt ensure_init and __assume_initialized args from
       // the uninit check — these accept uninitialized addresses by design.
       llvm::DenseSet<unsigned> ExemptArgIndices;
       if (CD.Decl &&
-          CD.Decl->getBuiltinID() == Builtin::BI__builtin_assume_initialized) {
+          CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
         ExemptArgIndices.insert(0);
       }
       unsigned NumParams = CD.Decl

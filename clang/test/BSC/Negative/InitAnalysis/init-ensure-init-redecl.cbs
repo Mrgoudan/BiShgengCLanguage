@@ -1,66 +1,37 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// Test that a forward declaration with ensure_init is compatible with
-// a definition that omits the attribute. The attribute is propagated
-// from the declaration to the definition during merging.
+// Test ensure_init on redeclarations.
+// Rule: same-safety redeclarations must match ensure_init exactly.
+// Heterogeneous (_Safe vs non-safe) redeclarations are separate overloads.
 
-// No conflict: definition without attribute matches declaration with it.
+// --- Same-safety: both have ensure_init — OK ---
+
 _Safe void foo(int *__attribute__((ensure_init)) _Borrow out);
-_Safe void foo(int *_Borrow out) {
+_Safe void foo(int *__attribute__((ensure_init)) _Borrow out) {
     *out = 1;
 }
 
-// Multiple params: only some have ensure_init.
-_Safe void bar(int *__attribute__((ensure_init)) _Borrow a, int *_Borrow b);
-_Safe void bar(int *_Borrow a, int *_Borrow b) {
-    *a = 42;
-}
+// Callee contract enforced: empty body → error.
+_Safe void bar(int *__attribute__((ensure_init)) _Borrow out);
+_Safe void bar(int *__attribute__((ensure_init)) _Borrow out) {
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
 
-// Caller side: calling through the declared signature still initializes.
+// Caller side works.
 _Safe void test_caller(void) {
     int x;
     foo(&_Mut x);
     int y = x;
 }
 
-// Callee side: ensure_init contract is enforced on the definition even
-// though the attribute was only on the forward declaration.
-_Safe void baz(int *__attribute__((ensure_init)) _Borrow out);
-_Safe void baz(int *_Borrow out) {
-} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
-
-// Callee side: only writing through one of two ensure_init params.
-_Safe void two_params(int *__attribute__((ensure_init)) _Borrow a,
-                      int *__attribute__((ensure_init)) _Borrow b);
-_Safe void two_params(int *_Borrow a, int *_Borrow b) {
-    *a = 1;
-} // expected-error {{'*b' not initialized at return in __attribute__((ensure_init)) function}}
-
-// Callee side: conditional init is maybe-uninit.
-_Safe void cond_init(int *__attribute__((ensure_init)) _Borrow out, int flag);
-_Safe void cond_init(int *_Borrow out, int flag) {
-    if (flag)
-        *out = 1;
-} // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init)) function}}
-
-// Callee side: writing through *out in all paths fulfills the contract.
-_Safe void branch_ok(int *__attribute__((ensure_init)) _Borrow out, int flag);
-_Safe void branch_ok(int *_Borrow out, int flag) {
-    if (flag)
-        *out = 1;
-    else
-        *out = 2;
-}
-
-// Chain call: test_chain calls init_x, init_x calls init_int to init.
+// Chain call with consistent ensure_init.
 _Safe void init_int(int *__attribute__((ensure_init)) _Borrow out);
-_Safe void init_int(int *_Borrow out) {
+_Safe void init_int(int *__attribute__((ensure_init)) _Borrow out) {
     *out = 99;
 }
 
 _Safe void init_x(int *__attribute__((ensure_init)) _Borrow out);
-_Safe void init_x(int *_Borrow out) {
-    init_int(out); // delegation: pass ensure_init param to another ensure_init
+_Safe void init_x(int *__attribute__((ensure_init)) _Borrow out) {
+    init_int(out);
 }
 
 _Safe int use_val(int v);
@@ -72,7 +43,8 @@ _Safe int test_chain(void) {
     return y;
 }
 
-// Real-world pattern: struct initialized by syscall via _Unsafe escape.
+// --- Heterogeneous: ensure_init differences allowed ---
+
 struct stat {
     unsigned int st_dev;
     unsigned int st_ino;
@@ -93,22 +65,40 @@ _Safe int is_directory(const char *_Borrow path) {
     return 1;
 }
 
-// memset / memcpy with ensure_init.
-// Redeclaring builtins with ensure_init is now compatible (ensure_init is
-// stripped during type merging), so no warning is expected.
-typedef unsigned long size_t;
-void *memset(void *__attribute__((ensure_init)) s, int c, size_t n);
-void *memcpy(void *__attribute__((ensure_init)) dest, const void *src, size_t n);
-
-_Safe void test_memset(void) {
-    int val;
-    _Unsafe(memset(&val, 0, sizeof(val))); // expected-warning {{expression result unused}}
-    int x = val; // no error: ensure_init sees through the implicit cast
+// Unsafe with ensure_init, _Safe without — allowed (different safety).
+void hetero_ei(int *__attribute__((ensure_init)) out);
+_Safe void hetero_ei(int *_Borrow out) {
+    *out = 1;
 }
 
-_Safe void test_memcpy(void) {
-    int src = 42;
-    int dst;
-    _Unsafe(memcpy(&dst, &src, sizeof(dst))); // expected-warning {{expression result unused}}
-    int x = dst; // no error: ensure_init sees through the implicit cast
+// _Safe with ensure_init, unsafe without — allowed (different safety).
+_Safe void hetero_ei2(int *__attribute__((ensure_init)) _Borrow out);
+void hetero_ei2(int *out) {
+    *out = 1;
+}
+
+// --- Same-safety mismatch: ERROR ---
+
+// _Safe/_Safe: first has, second doesn't.
+_Safe void mismatch_safe(int *__attribute__((ensure_init)) _Borrow out);
+_Safe void mismatch_safe(int *_Borrow out) { // expected-error {{function 'mismatch_safe' has incompatible _Safe and _Unsafe declarations}}
+    *out = 1;
+}
+
+// _Safe/_Safe: first doesn't, second adds.
+_Safe void mismatch_safe_add(int *_Borrow out);
+_Safe void mismatch_safe_add(int *__attribute__((ensure_init)) _Borrow out) { // expected-error {{function 'mismatch_safe_add' has incompatible _Safe and _Unsafe declarations}}
+    *out = 1;
+}
+
+// default/default: first has, second doesn't.
+void mismatch_unsafe(int *__attribute__((ensure_init)) out);
+void mismatch_unsafe(int *out) { // expected-error {{function 'mismatch_unsafe' has incompatible _Safe and _Unsafe declarations}}
+    *out = 1;
+}
+
+// default/default: first doesn't, second adds.
+void mismatch_add(int *out);
+void mismatch_add(int *__attribute__((ensure_init)) out) { // expected-error {{function 'mismatch_add' has incompatible _Safe and _Unsafe declarations}}
+    *out = 1;
 }
