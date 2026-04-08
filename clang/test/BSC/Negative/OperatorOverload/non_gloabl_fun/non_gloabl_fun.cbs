@@ -7,12 +7,13 @@ struct F
 
 __attribute__((operator +))
 int int::intMember(int *this, struct F f2){      // expected-error {{cannot combine with previous 'int' declaration specifier}}
-    return *this + f2.a;                         // expected-error@-1 {{expected identifier or '('}}
+    return *this + f2.a;                         // expected-error@-1 {{unsupported global scope specifier '::'}}
+    // expected-note@-2 {{candidate function not viable: no known conversion from '_Owned struct S' to 'int *' for 1st argument}}
 }
 
 __attribute__((operator -))
 int struct F::structMember(struct F *this, struct F f2){    // expected-error {{cannot combine with previous 'int' declaration specifier}}
-    return this->a - f2.a;                                   // expected-error@-1 {{expected identifier or '('}}
+    return this->a - f2.a;                                   // expected-error@-1 {{unsupported global scope specifier '::'}}
 }
 
 _Owned struct G {

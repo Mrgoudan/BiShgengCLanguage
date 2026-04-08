@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+::a // expected-error {{unsupported global scope specifier '::'}}
+// expected-error@-1 {{unknown type name 'a'}}
+
+::b; // expected-warning {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+// expected-error@-1 {{no member named 'b' in 'struct __int'}}
+
+::c(); // expected-warning {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+// expected-error@-1 {{unsupported global scope specifier '::'}}
+
+// TODO fix the following diagnostics
+
+static ::d(); // expected-warning 2 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+
+const ::e(); // expected-warning 2 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+
+::::f; // expected-warning {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+// expected-error@-1 {{expected identifier or '('}}
+
+_Trait T {};
+void _Trait T::f1(_Trait T* this) {} // expected-error {{unsupported global scope specifier '::'}}
+// expected-error@-1 {{cannot combine with previous 'void' declaration specifier}}
+
+_Trait F<T2> {};
+void _Trait F<T2>::f2(_Trait F<T2>* this) {} // expected-error {{unsupported global scope specifier '::'}}
+// expected-error@-1 {{cannot combine with previous 'void' declaration specifier}}
+void _Trait F<int>::f3(_Trait F<int>* this) {} // expected-error {{unsupported global scope specifier '::'}}
+// expected-error@-1 {{cannot combine with previous 'void' declaration specifier}}

@@ -3488,6 +3488,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 #if ENABLE_BSC
       if (BSCScopeSpecFlag)
         goto DoneWithDeclSpec;
+      if (getLangOpts().BSC) {
+        Diag(Tok, diag::err_unsupport_global_scope);
+        ConsumeToken();
+        continue;
+      }
 #endif
       if (TryAnnotateCXXScopeToken(EnteringContext)) {
         if (!DS.hasTypeSpecifier())

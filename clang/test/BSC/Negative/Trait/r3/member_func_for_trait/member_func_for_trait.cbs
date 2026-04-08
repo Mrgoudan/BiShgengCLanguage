@@ -4,4 +4,5 @@ _Trait F {
   int foo(This* this, int a);
 };
 
-_Trait F::getA(); // expected-error {{expected identifier or '('}}
+_Trait F::getA(); // expected-error {{unsupported global scope specifier '::'}}
+// expected-error@-1 {{only _Trait pointer type is allowed to be declared}}

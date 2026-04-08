@@ -1238,7 +1238,7 @@ _Trait T {}; // ok
 5. 不允许给 _Trait 类型扩展成员函数
 
 ```c
-void _Trait T::getArea(_Trait T* this) { // error: expected identifier or '('
+void _Trait T::getArea(_Trait T* this) { // error: cannot combine with previous 'void' declaration specifier
 	...
 }
 ```

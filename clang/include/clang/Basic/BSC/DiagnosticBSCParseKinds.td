@@ -16,3 +16,6 @@ def err_generic_typealias_not_within_function : Error<"BSC generic typealias can
 
 // BSC operator overload errors.
 def err_unsupport_overload_type : Error<"unsupported operator type">;
+
+// BSC scope errors.
+def err_unsupport_global_scope : Error<"unsupported global scope specifier '::'">;
