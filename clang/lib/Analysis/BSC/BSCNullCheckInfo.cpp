@@ -137,6 +137,12 @@ const Expr *getTrackablePtr(const Expr *Cond) {
 const Expr *extractDistinguishedTrackablePtr(const Expr *Cond, ASTContext &Ctx,
                                              bool &NullNess) {
   Cond = Cond->IgnoreParenImpCasts();
+  // Generic pointer-valued condition, e.g. `if (*p)` / `if (**p)`.
+  if (const Expr *PtrExpr = getTrackablePtr(Cond)) {
+    NullNess = false;
+    return PtrExpr;
+  }
+
   // if (p) { p is present }
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     if (const Expr *PtrExpr = getTrackablePtr(DRE)) {

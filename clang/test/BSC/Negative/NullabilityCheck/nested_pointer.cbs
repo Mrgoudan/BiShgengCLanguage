@@ -1,0 +1,163 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+_Safe void exhaust<T>(T *_Owned _Nullable);
+
+struct Inner {
+    int * _Nullable p;
+};
+
+struct Outer {
+    struct Inner * _Nullable in;
+};
+
+void test_raw_double_ptr(int **p) {
+    if (p) {
+        **p = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+void test_raw_double_ptr_ref(int **p) {
+    if (p) {
+        if (*p) {
+            **p = 1;
+        }
+    }
+}
+
+void test_raw_triple_ptr(int ***p) {
+    if (p) {
+        ***p = 1; // expected-error {{nullable pointer cannot be dereferenced}} expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+void test_raw_triple_ptr_ref(int ***p) {
+    if (p) {
+        if (*p) {
+            if (**p) {
+                ***p = 1;
+            }
+        }
+    }
+}
+
+void test_raw_ptr_to_struct_ptr(struct Inner **pp) {
+    if (pp) {
+        (*pp)->p = nullptr; // expected-error {{cannot access member through nullable pointer}}
+    }
+}
+
+void test_raw_ptr_to_struct_ptr_ref(struct Inner **pp) {
+    if (pp) {
+        if (*pp) {
+            (*pp)->p = nullptr;
+        }
+    }
+}
+
+void test_raw_ptr_to_nested_struct_ptr(struct Outer **pp) {
+    if (pp) {
+        (*pp)->in->p = nullptr; // expected-error {{cannot access member through nullable pointer}}
+    }
+}
+
+void test_raw_ptr_to_nested_struct_ptr_ref(struct Outer **pp) {
+    if (pp) {
+        if (*pp) {
+            if ((*pp)->in) {
+                (*pp)->in->p = nullptr;
+            }
+        }
+    }
+}
+
+void test_owned_inner(struct Inner *_Owned _Nullable oi) {
+    if (oi) {
+        *(oi->p) = 2; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+    exhaust(oi);
+}
+
+void test_owned_inner_ref(struct Inner *_Owned _Nullable oi) {
+    if (oi) {
+        if (oi->p) {
+            *(oi->p) = 2;
+        }
+    }
+    exhaust(oi);
+}
+
+void test_owned_outer(struct Outer *_Owned _Nullable oo) {
+    if (oo) {
+        *(oo->in->p) = 2; // expected-error {{nullable pointer cannot be dereferenced}} expected-error {{cannot access member through nullable pointer}}
+    }
+    exhaust(oo);
+}
+
+void test_owned_outer_ref(struct Outer *_Owned _Nullable oo) {
+    if (oo) {
+        if (oo->in) {
+            if (oo->in->p) {
+                *(oo->in->p) = 2;
+            }
+        }
+    }
+    exhaust(oo);
+}
+
+void test_borrow_inner(struct Inner *_Borrow _Nullable b) {
+    if (b) {
+        *b->p = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+    }
+}
+
+void test_borrow_inner_ref(struct Inner *_Borrow _Nullable b) {
+    if (b) {
+        if (b->p) {
+            *b->p = 1;
+        }
+    }
+}
+
+void test_borrow_outer(struct Outer *_Borrow _Nullable m) {
+    if (m) {
+        m->in->p = nullptr; // expected-error {{cannot access member through nullable pointer}}
+    }
+}
+
+void test_borrow_outer_ref(struct Outer *_Borrow _Nullable m) {
+    if (m) {
+        if (m->in) {
+            m->in->p = nullptr;
+        }
+    }
+}
+
+void test_deref_fact_invalidate_after_null_assign(int **p) {
+    if (p) {
+        if (*p) {
+            *p = nullptr;
+            **p = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+        }
+    }
+}
+
+void test_deref_fact_invalidate_after_ptr_assign(int **p, int *_Nullable q) {
+    if (p) {
+        if (*p) {
+            *p = q;
+            **p = 1; // expected-error {{nullable pointer cannot be dereferenced}}
+        }
+    }
+}
+
+void test_recheck_deref_without_false_positive(int **p) {
+    if (p) {
+        if (*p) {
+            if (*p) {
+                **p = 1;
+            } else {
+                **p = 2;
+            }
+        }
+    }
+}

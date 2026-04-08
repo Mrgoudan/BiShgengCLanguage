@@ -37,6 +37,10 @@ using namespace std;
 using StatusVD = llvm::DenseMap<VarDecl *, NullabilityKind>;
 using FieldPath = std::pair<VarDecl *, std::string>;
 using StatusFP = std::map<FieldPath, NullabilityKind>;
+// DerefPathVD models chained dereference rooted at one local variable:
+// (p, 1) => *p, (p, 2) => **p.
+using DerefPathVD = std::pair<VarDecl *, unsigned>;
+using StatusDPVD = std::map<DerefPathVD, NullabilityKind>;
 
 class NullabilityCheckImpl {
 public:
@@ -45,6 +49,10 @@ public:
 
   llvm::DenseMap<const CFGBlock *, StatusFP> BlocksBeginStatusFP;
   llvm::DenseMap<const CFGBlock *, StatusFP> BlocksEndStatusFP;
+
+  // Block in/out state for dereference-chain path nullability.
+  llvm::DenseMap<const CFGBlock *, StatusDPVD> BlocksBeginStatusDPVD;
+  llvm::DenseMap<const CFGBlock *, StatusDPVD> BlocksEndStatusDPVD;
   // For branch statement with condition, such as IfStmt, WhileStmt,
   // true branch and else branch may have different status.
   // For example:
@@ -70,20 +78,27 @@ public:
       BlocksConditionStatusVD;
   llvm::DenseMap<const CFGBlock *, llvm::DenseMap<const CFGBlock *, StatusFP>>
       BlocksConditionStatusFP;
+  // Condition-derived state for dereference chains, e.g. if (*p) / if (**p).
+  llvm::DenseMap<
+      const CFGBlock *,
+      llvm::DenseMap<const CFGBlock *, std::pair<DerefPathVD, NullabilityKind>>>
+      BlocksConditionStatusDPVD;
 
   StatusVD mergeVD(StatusVD statusA, StatusVD statusB);
   StatusFP mergeFP(StatusFP statusA, StatusFP statusB);
+  StatusDPVD mergeDPVD(StatusDPVD statusA, StatusDPVD statusB);
 
-  std::pair<StatusVD, StatusFP>
+  std::tuple<StatusVD, StatusFP, StatusDPVD>
   runOnBlock(const CFGBlock *block, StatusVD statusVD, StatusFP statusFP,
-             NullabilityCheckDiagReporter &reporter, ASTContext &ctx,
-             const FunctionDecl &fd, ParentMap &PM);
+             StatusDPVD statusDPVD, NullabilityCheckDiagReporter &reporter,
+             ASTContext &ctx, const FunctionDecl &fd, ParentMap &PM);
   void initStatus(const CFG &cfg, ASTContext &ctx);
 
   NullabilityCheckImpl()
       : BlocksBeginStatusVD(0), BlocksEndStatusVD(0), BlocksBeginStatusFP(0),
-        BlocksEndStatusFP(0), BlocksConditionStatusVD(0),
-        BlocksConditionStatusFP(0) {}
+        BlocksEndStatusFP(0), BlocksBeginStatusDPVD(0), BlocksEndStatusDPVD(0),
+        BlocksConditionStatusVD(0), BlocksConditionStatusFP(0),
+        BlocksConditionStatusDPVD(0) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -95,6 +110,7 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
   const CFGBlock *Block;
   StatusVD &CurrStatusVD;
   StatusFP &CurrStatusFP;
+  StatusDPVD &CurrStatusDPVD;
   NullabilityCheckDiagReporter &Reporter;
   ASTContext &Ctx;
   const FunctionDecl &Fd;
@@ -103,10 +119,12 @@ class TransferFunctions : public StmtVisitor<TransferFunctions> {
 public:
   TransferFunctions(NullabilityCheckImpl &nci, const CFGBlock *block,
                     StatusVD &statusVD, StatusFP &statusFP,
+                    StatusDPVD &statusDPVD,
                     NullabilityCheckDiagReporter &reporter, ASTContext &ctx,
                     const FunctionDecl &fd, ParentMap &pm)
       : NCI(nci), Block(block), CurrStatusVD(statusVD), CurrStatusFP(statusFP),
-        Reporter(reporter), Ctx(ctx), Fd(fd), PM(pm) {}
+        CurrStatusDPVD(statusDPVD), Reporter(reporter), Ctx(ctx), Fd(fd),
+        PM(pm) {}
 
   bool IsStmtInSafeZone(Stmt *S);
   bool ShouldReportNullPtrError(Stmt *S);
@@ -127,6 +145,7 @@ public:
   void SetCFGBlocksByExpr(Expr *PtrE, const CFGBlock *NonNullBlock,
                           const CFGBlock *NullableBlock);
   void PassConditionStatusToSuccBlocks(Expr *CondExpr);
+  void InvalidateDerefStatusForVar(VarDecl *VD);
   Expr *NormalizeInitExpr(Expr *E);
   void HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
                               InitListExpr *InitList, std::string FieldPrefix);
@@ -134,9 +153,91 @@ public:
                        InitListExpr *ILE, std::string FieldPath);
 };
 
+void VisitMEForFieldPath(Expr *E, FieldPath &FP) {
+  if (auto ME = dyn_cast<MemberExpr>(E)) {
+    if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
+      FP.second = "." + FD->getNameAsString() + FP.second;
+      VisitMEForFieldPath(ME->getBase(), FP);
+    }
+  } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      FP.first = VD;
+  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    VisitMEForFieldPath(ICE->getSubExpr(), FP);
+  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
+    VisitMEForFieldPath(PE->getSubExpr(), FP);
+  }
+}
+
+VarDecl *getVarDeclFromExpr(Expr *E) {
+  if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      return VD;
+  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    return getVarDeclFromExpr(ICE->getSubExpr());
+  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
+    return getVarDeclFromExpr(PE->getSubExpr());
+  } else if (auto BO = dyn_cast<BinaryOperator>(E)) {
+    return getVarDeclFromExpr(BO->getLHS());
+  }
+  return nullptr;
+}
+
+MemberExpr *getMemberExprFromExpr(Expr *E) {
+  if (auto ME = dyn_cast<MemberExpr>(E)) {
+    return ME;
+  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
+    return getMemberExprFromExpr(ICE->getSubExpr());
+  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
+    return getMemberExprFromExpr(PE->getSubExpr());
+  }
+  return nullptr;
+}
+
+// Extract a dereference-chain key from expression E if E is rooted at one
+// variable and composed by unary dereference operations.
+bool getDerefPathVDFromExpr(Expr *E, DerefPathVD &DP) {
+  if (!E)
+    return false;
+  E = E->IgnoreParenImpCasts();
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      DP = std::make_pair(VD, 0);
+      return true;
+    }
+    return false;
+  }
+
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() != UO_Deref)
+      return false;
+    DerefPathVD SubDP;
+    if (!getDerefPathVDFromExpr(UO->getSubExpr(), SubDP))
+      return false;
+    DP = std::make_pair(SubDP.first, SubDP.second + 1);
+    return true;
+  }
+
+  return false;
+}
+
+// Invalidate dereference-chain facts rooted at DP.first with depth greater than
+// DP.second. For example:
+//   DP = (p, 0): clear *p, **p, ...
+//   DP = (p, 1): clear **p, ***, ... while preserving *p.
+void InvalidateDeeperDerefStatusForPath(StatusDPVD &Status, DerefPathVD DP) {
+  auto It = Status.begin();
+  while (It != Status.end()) {
+    if (It ->first.first == DP.first && It->first.second > DP.second) 
+      It = Status.erase(It);
+     else 
+      ++It;    
+  }
+}
 } // namespace
 
-namespace clang{
+namespace clang {
 // basic tool for CFG check and global Nullability check
 NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
   QualType CanQT = QT.getCanonicalType();
@@ -154,46 +255,6 @@ NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
 }
 } // namespace clang
 
-static void VisitMEForFieldPath(Expr *E, FieldPath &FP) {
-  if (auto ME = dyn_cast<MemberExpr>(E)) {
-    if (auto FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      FP.second = "." + FD->getNameAsString() + FP.second;
-      VisitMEForFieldPath(ME->getBase(), FP);
-    }
-  } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
-    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      FP.first = VD;
-  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    VisitMEForFieldPath(ICE->getSubExpr(), FP);
-  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
-    VisitMEForFieldPath(PE->getSubExpr(), FP);
-  }
-}
-
-static VarDecl *getVarDeclFromExpr(Expr *E) {
-  if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
-    if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      return VD;
-  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    return getVarDeclFromExpr(ICE->getSubExpr());
-  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
-    return getVarDeclFromExpr(PE->getSubExpr());
-  } else if (auto BO = dyn_cast<BinaryOperator>(E)) {
-    return getVarDeclFromExpr(BO->getLHS());
-  }
-  return nullptr;
-}
-
-static MemberExpr *getMemberExprFromExpr(Expr *E) {
-  if (auto ME = dyn_cast<MemberExpr>(E)) {
-    return ME;
-  } else if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
-    return getMemberExprFromExpr(ICE->getSubExpr());
-  } else if (auto PE = dyn_cast<ParenExpr>(E)) {
-    return getMemberExprFromExpr(PE->getSubExpr());
-  }
-  return nullptr;
-}
 
 // We can get PathNullability for these exprs:
 //   1. int *p = nullptr;   // nullptr is NullExpr
@@ -245,6 +306,17 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
       UnaryOperator::Opcode Op = cast<UnaryOperator>(E)->getOpcode();
       if (Op == UO_AddrOf || Op == UO_AddrMut || Op == UO_AddrConst)
         return NullabilityKind::NonNull;
+      if (Op == UO_Deref) {
+        // Prefer path-sensitive state produced by condition propagation (if
+        // (*p), if (**p), ...). Fall back to declaration/default semantics.
+        DerefPathVD DP;
+        if (getDerefPathVDFromExpr(E, DP)) {
+          auto It = CurrStatusDPVD.find(DP);
+          if (It != CurrStatusDPVD.end())
+            return It->second;
+        }
+        return getDefNullability(cast<UnaryOperator>(E)->getType(), Ctx);
+      }
       if (Op == UO_AddrMutDeref || Op == UO_AddrConstDeref) {
         return getExprPathNullability(cast<UnaryOperator>(E)->getSubExpr(), true);
       }
@@ -385,6 +457,17 @@ void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
   } else if (CurrStatusVD.count(VD))
     // Here we update PathNullability of nullable pointer.
     CurrStatusVD[VD] = RHSKind;
+
+  // Declaration-time rebinding can stale existing dereference-chain facts.
+  // Example:
+  //   if (*p) { /* (*p) is NonNull on this path */ }
+  //   int **p = q; // root pointer changes, old (*p) fact must be dropped.
+  InvalidateDerefStatusForVar(VD);
+}
+
+void TransferFunctions::InvalidateDerefStatusForVar(VarDecl *VD) {
+  // Use (VD, 0) as a dummy deref-path to invalidate all facts rooted at VD.
+  InvalidateDeeperDerefStatusForPath(CurrStatusDPVD, std::make_pair(VD, 0));
 }
 
 // Init a record type variable.
@@ -584,8 +667,26 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
     QualType LHSQT = LHS->getType();
     if (LHSQT.getCanonicalType()->isPointerType()) {
       NullabilityKind RHSKind = getExprPathNullability(BO->getRHS());
+      NullabilityKind LHSKind = getDefNullability(LHSQT, Ctx);
+
+      DerefPathVD LHSDP;
+      bool HasLHSDP = getDerefPathVDFromExpr(LHS, LHSDP) && LHSDP.second > 0;
+      if (HasLHSDP) {
+        // Rewriting *p / **p invalidates deeper facts; update current depth.
+        if (LHSKind == NullabilityKind::NonNull) {
+          if (RHSKind == NullabilityKind::Nullable &&
+              ShouldReportNullPtrError(BO)) {
+            NullabilityCheckDiagInfo DI(BO->getBeginLoc(),
+                                        NonnullAssignedByNullable);
+            Reporter.addDiagInfo(DI);
+          }
+        } else {
+          CurrStatusDPVD[LHSDP] = RHSKind;
+        }
+        InvalidateDeeperDerefStatusForPath(CurrStatusDPVD, LHSDP);
+      }
+
       if (VarDecl *VD = getVarDeclFromExpr(LHS)) {
-        NullabilityKind LHSKind = getDefNullability(VD->getType(), Ctx);
         if (LHSKind == NullabilityKind::NonNull) {
           // NonNull pointer cannot be assigned by expr
           // whose PathNullability is nullable.
@@ -598,10 +699,16 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
           // Here we update PathNullability of nullable pointer.
           CurrStatusVD[VD] = RHSKind;
         }
+        // Assignment-time rebinding can stale existing dereference-chain facts.
+        // Example:
+        //   if (*p) { /* (*p) is NonNull on true branch */ }
+        //   p = r;
+        //   // The old (*p) refinement no longer applies after p is reassigned.
+        InvalidateDerefStatusForVar(VD);
       } else if (MemberExpr *ME = getMemberExprFromExpr(LHS)) {
         if (FieldDecl *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-          NullabilityKind LHSKind = getDefNullability(FD->getType(), Ctx);
-          if (LHSKind == NullabilityKind::NonNull) {
+          NullabilityKind MemberLHSKind = getDefNullability(FD->getType(), Ctx);
+          if (MemberLHSKind == NullabilityKind::NonNull) {
             if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(BO)) {
               NullabilityCheckDiagInfo DI(ME->getBeginLoc(),
                                           NonnullAssignedByNullable);
@@ -702,6 +809,18 @@ void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
 void TransferFunctions::SetCFGBlocksByExpr(Expr *PtrE,
                                            const CFGBlock *NonNullBlock,
                                            const CFGBlock *NullableBlock) {
+  DerefPathVD DP;
+  if (getDerefPathVDFromExpr(PtrE, DP) && DP.second > 0 &&
+      getDefNullability(PtrE->getType(), Ctx) == NullabilityKind::Nullable &&
+      (!CurrStatusDPVD.count(DP) ||
+       CurrStatusDPVD[DP] != NullabilityKind::NonNull)) {
+    // Condition directly refines dereference-chain state for successors.
+    NCI.BlocksConditionStatusDPVD[NonNullBlock][Block] =
+        std::pair<DerefPathVD, NullabilityKind>(DP, NullabilityKind::NonNull);
+    NCI.BlocksConditionStatusDPVD[NullableBlock][Block] =
+        std::pair<DerefPathVD, NullabilityKind>(DP, NullabilityKind::Nullable);
+  }
+
   if (VarDecl *VD = getVarDeclFromExpr(PtrE)) {
     if (getDefNullability(VD->getType(), Ctx) == NullabilityKind::Nullable &&
         CurrStatusVD.count(VD) &&
@@ -829,12 +948,30 @@ StatusFP NullabilityCheckImpl::mergeFP(StatusFP statusA, StatusFP statusB) {
   return statusA;
 }
 
-std::pair<StatusVD, StatusFP>
-NullabilityCheckImpl::runOnBlock(const CFGBlock *block, StatusVD statusVD,
-                                 StatusFP statusFP,
-                                 NullabilityCheckDiagReporter &reporter,
-                                 ASTContext &ctx, const FunctionDecl &fd, ParentMap &PM) {
-  TransferFunctions TF(*this, block, statusVD, statusFP, reporter, ctx, fd, PM);
+StatusDPVD NullabilityCheckImpl::mergeDPVD(StatusDPVD statusA,
+                                           StatusDPVD statusB) {
+  // Nullable over NonNull
+  if (statusA.empty())
+    return statusB;
+  for (auto NullabilityOfDP : statusB) {
+    DerefPathVD DP = NullabilityOfDP.first;
+    NullabilityKind NK = NullabilityOfDP.second;
+    if (statusA.count(DP)) {
+      statusA[DP] = NK == NullabilityKind::Nullable ? NullabilityKind::Nullable
+                                                    : statusA[DP];
+    } else {
+      statusA[DP] = NK;
+    }
+  }
+  return statusA;
+}
+
+std::tuple<StatusVD, StatusFP, StatusDPVD> NullabilityCheckImpl::runOnBlock(
+    const CFGBlock *block, StatusVD statusVD, StatusFP statusFP,
+    StatusDPVD statusDPVD, NullabilityCheckDiagReporter &reporter,
+    ASTContext &ctx, const FunctionDecl &fd, ParentMap &PM) {
+  TransferFunctions TF(*this, block, statusVD, statusFP, statusDPVD, reporter,
+                       ctx, fd, PM);
 
   for (CFGBlock::const_iterator it = block->begin(), ei = block->end();
        it != ei; ++it) {
@@ -856,7 +993,7 @@ NullabilityCheckImpl::runOnBlock(const CFGBlock *block, StatusVD statusVD,
     Expr *CondExpr = const_cast<Expr *>(block->getLastCondition());
     TF.PassConditionStatusToSuccBlocks(CondExpr);
   }
-  return std::make_pair(statusVD, statusFP);
+  return std::make_tuple(statusVD, statusFP, statusDPVD);
 }
 
 void clang::runNullabilityCheck(const FunctionDecl &fd, const CFG &cfg,
@@ -881,8 +1018,10 @@ void clang::runNullabilityCheck(const FunctionDecl &fd, const CFG &cfg,
   while (const CFGBlock *block = worklist.dequeue()) {
     StatusVD &preValVD = NCI.BlocksBeginStatusVD[block];
     StatusFP &preValFP = NCI.BlocksBeginStatusFP[block];
+    StatusDPVD &preValDPVD = NCI.BlocksBeginStatusDPVD[block];
     StatusVD valVD;
     StatusFP valFP;
+    StatusDPVD valDPVD;
     for (CFGBlock::const_pred_iterator it = block->pred_begin(),
                                        ei = block->pred_end();
          it != ei; ++it) {
@@ -906,18 +1045,31 @@ void clang::runNullabilityCheck(const FunctionDecl &fd, const CFG &cfg,
           }
         }
         valFP = NCI.mergeFP(valFP, predValFP);
+
+        StatusDPVD predValDPVD = NCI.BlocksEndStatusDPVD[pred];
+        if (NCI.BlocksConditionStatusDPVD.count(block)) {
+          if (NCI.BlocksConditionStatusDPVD[block].count(pred)) {
+            std::pair<DerefPathVD, NullabilityKind> condition =
+                NCI.BlocksConditionStatusDPVD[block][pred];
+            predValDPVD[condition.first] = condition.second;
+          }
+        }
+        valDPVD = NCI.mergeDPVD(valDPVD, predValDPVD);
       }
     }
 
-    std::pair<StatusVD, StatusFP> val =
-        NCI.runOnBlock(block, valVD, valFP, reporter, ctx, fd, ac.getParentMap());
-    NCI.BlocksEndStatusVD[block] = val.first;
-    NCI.BlocksEndStatusFP[block] = val.second;
-    if (preValVD == val.first && preValFP == val.second)
+    std::tuple<StatusVD, StatusFP, StatusDPVD> val = NCI.runOnBlock(
+        block, valVD, valFP, valDPVD, reporter, ctx, fd, ac.getParentMap());
+    NCI.BlocksEndStatusVD[block] = std::get<0>(val);
+    NCI.BlocksEndStatusFP[block] = std::get<1>(val);
+    NCI.BlocksEndStatusDPVD[block] = std::get<2>(val);
+    if (preValVD == std::get<0>(val) && preValFP == std::get<1>(val) &&
+        preValDPVD == std::get<2>(val))
       continue;
 
-    preValVD = val.first;
-    preValFP = val.second;
+    preValVD = std::get<0>(val);
+    preValFP = std::get<1>(val);
+    preValDPVD = std::get<2>(val);
 
     // Enqueue the value to the successors.
     worklist.enqueueSuccessors(block);
