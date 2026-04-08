@@ -2962,10 +2962,9 @@ ExprResult Sema::BuildAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
 }
 
 ExprResult Sema::ActOnAwaitExpr(SourceLocation AwaitLoc, Expr *E) {
-  assert(FunctionScopes.size() > 0 && "FunctionScopes missing");
   if (FunctionScopes.size() < 1 ||
       getCurFunction()->CompoundScopes.size() < 1) {
-    Diag(AwaitLoc, diag::err_await_invalid_scope) << "this scope.";
+    Diag(AwaitLoc, diag::err_await_invalid_scope) << "this scope";
     return ExprError();
   }
 
@@ -3055,7 +3054,7 @@ SmallVector<Decl *, 8> Sema::ActOnAsyncFunctionDefinition(FunctionDecl *FD) {
   if (!FD->isAsyncSpecified()) {
     if (AwaitFinder.GetAwaitExprNum() != 0) {
       Diag(FD->getBeginLoc(), diag::err_await_invalid_scope)
-          << "non-_Async function.";
+          << "non-_Async function";
     }
     return Decls;
   }

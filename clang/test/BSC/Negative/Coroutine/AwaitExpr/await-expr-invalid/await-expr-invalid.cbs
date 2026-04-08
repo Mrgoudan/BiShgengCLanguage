@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -internal-isystem %S/../../../../../../lib/Headers/bsc_include -verify %s
+
+#include "../../async-func-read-opposite.hbs"
+
+int a = _Await read; // expected-error {{_Await expression is not allowed to appear in this scope}}
+
+int a = _Await read(1); // expected-error {{_Await expression is not allowed to appear in this scope}}
+
+int test1() {
+    int a = _Await read; // expected-error {{the _Await expression's external function declaration must be modified by _Async or return 'Future' type}}
+    return 0;
+}
+
+_Async int test2() {
+    int a = _Await read; // expected-error {{the _Await expression's external function declaration must be modified by _Async or return 'Future' type}}
+    return 0;
+}
