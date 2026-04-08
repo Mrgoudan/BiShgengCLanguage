@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Trait F { void foo(This); }; // expected-error {{a parameter list without types is only allowed in a function definition}}
+
+_Trait F1<T> { void foo(This); }; // expected-error {{a parameter list without types is only allowed in a function definition}}
+
+_Owned struct S { void a(b); }; // expected-error {{a parameter list without types is only allowed in a function definition}}
+
+struct S1 { void a(b); }; // expected-error {{a parameter list without types is only allowed in a function definition}}

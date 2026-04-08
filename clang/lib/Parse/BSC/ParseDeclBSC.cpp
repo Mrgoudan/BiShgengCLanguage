@@ -107,10 +107,6 @@ Parser::ParseTraitMemberDeclaration(ParsedAttributes &AccessAttrs) {
       }
       Actions.FinalizeDeclaration(ThisDecl);
       DeclsInGroup.push_back(ThisDecl); // Put each Decl inside struct Foo
-      if (DeclaratorInfo.isFunctionDeclarator() &&
-          DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
-              DeclSpec::SCS_typedef)
-        HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
     }
     LateParsedAttrs.clear();
     DeclaratorInfo.complete(ThisDecl);
@@ -195,33 +191,11 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
          "Error enter bsc trait specifier parsing function.");
   DeclSpec::TST TagType = DeclSpec::TST_trait;
   tok::TokenKind TagTokKind = tok::kw__Trait;
-  if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteTag(getCurScope(), TagType);
-    return cutOffParsing();
-  }
   ParsedAttributes attrs(AttrFactory);
   SourceLocation AttrFixitLoc = Tok.getLocation();
   IdentifierInfo *Name = nullptr;
   if (Tok.is(tok::identifier))
     Name = Tok.getIdentifierInfo();
-
-  struct PreserveAtomicIdentifierInfoRAII {
-    PreserveAtomicIdentifierInfoRAII(Token &Tok, bool Enabled)
-        : AtomicII(nullptr) {
-      if (!Enabled)
-        return;
-      assert(Tok.is(tok::kw__Atomic));
-      AtomicII = Tok.getIdentifierInfo();
-      AtomicII->revertTokenIDToIdentifier();
-      Tok.setKind(tok::identifier);
-    }
-    ~PreserveAtomicIdentifierInfoRAII() {
-      if (!AtomicII)
-        return;
-      AtomicII->revertIdentifierToTokenID(tok::kw__Atomic);
-    }
-    IdentifierInfo *AtomicII;
-  };
 
   CXXScopeSpec &SS = DS.getTypeSpecScope();
   ColonProtectionRAIIObject X(*this);
@@ -632,24 +606,6 @@ void Parser::TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs) {
   MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
   SourceLocation AttrFixitLoc = Tok.getLocation();
 
-  struct PreserveAtomicIdentifierInfoRAII {
-    PreserveAtomicIdentifierInfoRAII(Token &Tok, bool Enabled)
-        : AtomicII(nullptr) {
-      if (!Enabled)
-        return;
-      assert(Tok.is(tok::kw__Atomic));
-      AtomicII = Tok.getIdentifierInfo();
-      AtomicII->revertTokenIDToIdentifier();
-      Tok.setKind(tok::identifier);
-    }
-    ~PreserveAtomicIdentifierInfoRAII() {
-      if (!AtomicII)
-        return;
-      AtomicII->revertIdentifierToTokenID(tok::kw__Atomic);
-    }
-    IdentifierInfo *AtomicII;
-  };
-
   CXXScopeSpec &SS = DS.getTypeSpecScope();
   ColonProtectionRAIIObject X(*this);
   CXXScopeSpec Spec;
@@ -870,8 +826,7 @@ NamedDecl *Parser::ParseBSCInlineMethodDef(
     AccessSpecifier AS, const ParsedAttributesView &AccessAttrs,
     ParsingDeclarator &D, const ParsedTemplateInfo &TemplateInfo) {
   assert(D.isFunctionDeclarator() && "This isn't a function declarator!");
-  assert(Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try, tok::equal) &&
-         "Current token not a '{', ':', '=', or 'try'!");
+  assert(Tok.is(tok::l_brace) && "Current token not a '{'!");
 
   MultiTemplateParamsArg TemplateParams(
       TemplateInfo.TemplateParams ? TemplateInfo.TemplateParams->data()
@@ -884,38 +839,11 @@ NamedDecl *Parser::ParseBSCInlineMethodDef(
     Actions.ProcessDeclAttributeList(getCurScope(), FnD, AccessAttrs);
   }
 
-  if (FnD)
-    HandleMemberFunctionDeclDelays(D, FnD);
-
   D.complete(FnD);
 
   if (SkipFunctionBodies && (!FnD || Actions.canSkipFunctionBody(FnD)) &&
       trySkippingFunctionBody()) {
     Actions.ActOnSkippedFunctionBody(FnD);
-    return FnD;
-  }
-
-  // In delayed template parsing mode, if we are within a class template
-  // or if we are about to parse function member template then consume
-  // the tokens and store them for parsing at the end of the translation unit.
-  if (getLangOpts().DelayedTemplateParsing &&
-      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Definition &&
-      !D.getDeclSpec().hasConstexprSpecifier() &&
-      !(FnD && FnD->getAsFunction() &&
-        FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
-      ((Actions.CurContext->isDependentContext() ||
-        (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
-         TemplateInfo.Kind != ParsedTemplateInfo::ExplicitSpecialization)) &&
-       !Actions.IsInsideALocalClassWithinATemplateFunction())) {
-    CachedTokens Toks;
-    LexTemplateFunctionForLateParsing(Toks);
-
-    if (FnD) {
-      FunctionDecl *FD = FnD->getAsFunction();
-      Actions.CheckForFunctionRedefinition(FD);
-      Actions.MarkAsLateParsedTemplate(FD, FnD, Toks);
-    }
-
     return FnD;
   }
 
@@ -930,18 +858,6 @@ NamedDecl *Parser::ParseBSCInlineMethodDef(
   if (ConsumeAndStoreFunctionPrologue(Toks)) {
     // We didn't find the left-brace we expected after the
     // constructor initializer.
-
-    // If we're code-completing and the completion point was in the broken
-    // initializer, we want to parse it even though that will fail.
-    if (PP.isCodeCompletionEnabled() &&
-        llvm::any_of(Toks, [](const Token &Tok) {
-          return Tok.is(tok::code_completion);
-        })) {
-      // If we gave up at the completion point, the initializer list was
-      // likely truncated, so don't eat more tokens. We'll hit some extra
-      // errors, but they should be ignored in code completion.
-      return FnD;
-    }
 
     // We already printed an error, and it's likely impossible to recover,
     // so don't try to parse this method later.
@@ -1012,11 +928,6 @@ Parser::DeclGroupPtrTy Parser::ParseBSCClassMemberDeclarationWithPragmas(
     return nullptr;
 
   case tok::kw__Private:
-    // FIXME: We don't accept GNU attributes on access specifiers in OpenCL mode
-    // yet.
-    if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
-      return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
-    LLVM_FALLTHROUGH;
   case tok::kw__Public: {
     AccessSpecifier NewAS = getAccessSpecifierIfPresent();
     assert(NewAS != AS_none);
@@ -1181,58 +1092,6 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
   //   struct D { A::B : C; };
   ColonProtectionRAIIObject X(*this);
 
-  // Access declarations.
-  bool MalformedTypeSpec = false;
-  if (!TemplateInfo.Kind && Tok.isOneOf(tok::identifier, tok::coloncolon)) {
-    if (TryAnnotateCXXScopeToken())
-      MalformedTypeSpec = true;
-
-    bool isAccessDecl;
-    if (Tok.isNot(tok::annot_cxxscope))
-      isAccessDecl = false;
-    else if (NextToken().is(tok::identifier))
-      isAccessDecl = GetLookAheadToken(2).is(tok::semi);
-    else
-      isAccessDecl = NextToken().is(tok::kw_operator);
-
-    if (isAccessDecl) {
-      // Collect the scope specifier token we annotated earlier.
-      CXXScopeSpec SS;
-      ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHasErrors=*/false,
-                                     /*EnteringContext=*/false);
-
-      if (SS.isInvalid()) {
-        SkipUntil(tok::semi);
-        return nullptr;
-      }
-
-      // Try to parse an unqualified-id.
-      SourceLocation TemplateKWLoc;
-      UnqualifiedId Name;
-      if (ParseUnqualifiedId(SS, /*ObjectType=*/nullptr,
-                             /*ObjectHadErrors=*/false, false, true, true,
-                             false, &TemplateKWLoc, Name)) {
-        SkipUntil(tok::semi);
-        return nullptr;
-      }
-
-      // TODO: recover from mistakenly-qualified operator declarations.
-      if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                           "access declaration")) {
-        SkipUntil(tok::semi);
-        return nullptr;
-      }
-
-      // FIXME: We should do something with the 'template' keyword here.
-      return DeclGroupPtrTy::make(DeclGroupRef(Actions.ActOnUsingDeclaration(
-          getCurScope(), AS, /*UsingLoc*/ SourceLocation(),
-          /*TypenameLoc*/ SourceLocation(), SS, Name,
-          /*EllipsisLoc*/ SourceLocation(),
-          /*AttrList*/ ParsedAttributesView())));
-    }
-  }
-
   // static_assert-declaration. A templated static_assert declaration is
   // diagnosed in Parser::ParseSingleDeclarationAfterTemplate.
   if (!TemplateInfo.Kind &&
@@ -1242,24 +1101,9 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
         DeclGroupRef(ParseStaticAssertDeclaration(DeclEnd)));
   }
 
-  // Handle:  member-declaration ::= '__extension__' member-declaration
-  if (Tok.is(tok::kw___extension__)) {
-    // __extension__ silences extension warnings in the subexpression.
-    ExtensionRAIIObject O(Diags); // Use RAII to do this.
-    ConsumeToken();
-    return ParseCXXClassMemberDeclaration(AS, AccessAttrs, TemplateInfo,
-                                          TemplateDiags);
-  }
-
   ParsedAttributes DeclAttrs(AttrFactory);
   // Optional C++11 attribute-specifier
   MaybeParseCXX11Attributes(DeclAttrs);
-
-  // The next token may be an OpenMP pragma annotation token. That would
-  // normally be handled from ParseCXXClassMemberDeclarationWithPragmas, but in
-  // this case, it came from an *attribute* rather than a pragma. Handle it now.
-  if (Tok.is(tok::annot_attr_openmp))
-    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, DeclAttrs);
 
   ParsedAttributes DeclSpecAttrs(AttrFactory);
   MaybeParseMicrosoftAttributes(DeclSpecAttrs);
@@ -1271,9 +1115,6 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this, TemplateDiags);
   DS.takeAttributesFrom(DeclSpecAttrs);
-
-  if (MalformedTypeSpec)
-    DS.SetTypeSpecError();
 
   // Turn off usual access checking for templates explicit specialization
   // and instantiation.
@@ -1351,15 +1192,11 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
   // Check for a member function definition.
   if (BitfieldSize.isUnset()) {
     FunctionDefinitionKind DefinitionKind = FunctionDefinitionKind::Declaration;
-    // function-definition:
-    //
-    // In C++11, a non-function declarator followed by an open brace is a
-    // braced-init-list for an in-class member initialization, not an
-    // erroneous function definition.
-    if (Tok.is(tok::l_brace) && !getLangOpts().CPlusPlus11) {
+
+    if (Tok.is(tok::l_brace)) {
       DefinitionKind = FunctionDefinitionKind::Definition;
     } else if (DeclaratorInfo.isFunctionDeclarator()) {
-      if (Tok.isOneOf(tok::l_brace, tok::colon, tok::kw_try)) {
+      if (Tok.isOneOf(tok::l_brace, tok::colon)) {
         DefinitionKind = FunctionDefinitionKind::Definition;
       }
     }
@@ -1439,11 +1276,6 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
       }
       Actions.FinalizeDeclaration(ThisDecl);
       DeclsInGroup.push_back(ThisDecl);
-
-      if (DeclaratorInfo.isFunctionDeclarator() &&
-          DeclaratorInfo.getDeclSpec().getStorageClassSpec() !=
-              DeclSpec::SCS_typedef)
-        HandleMemberFunctionDeclDelays(DeclaratorInfo, ThisDecl);
     }
     LateParsedAttrs.clear();
 
