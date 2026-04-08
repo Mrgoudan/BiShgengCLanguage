@@ -1,0 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+[union // expected-error {{expected expression}}
+// expected-error {{expected identifier or '('}}
