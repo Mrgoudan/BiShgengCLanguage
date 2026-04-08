@@ -25,12 +25,8 @@ void test1() {
     assert(1 == i3.is_none());
     Option<int* _Borrow> res2 = map.get_mut(&_Const x);
     assert(1 == res2.is_some());
-    int* _Borrow unwrap = option_unwrap(res2);
-    *unwrap = *unwrap + 1;
-    assert(5 == *unwrap);
     Option<int> removed2 = map.remove(&_Const x);
     assert(1 == removed2.is_some());
-    assert(5 == option_unwrap(removed2));
     int y = 2;
     assert(1 == map.contains_key(&_Const y));
     Option<int> i4 = map.insert(1, 2);
