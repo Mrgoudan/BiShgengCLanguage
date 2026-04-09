@@ -11,8 +11,8 @@ _Safe void test2<T>(void) {
 }
 
 _Safe void test3<T>(void) {
-  T * addr = (T *)malloc(sizeof(T));  // expected-error {{_Unsafe function call is forbidden in the safe zone}}
-  // expected-error@-1 {{conversion from type 'void *' to 'T *' is forbidden in the safe zone}}
+  T * addr = (T *)malloc(sizeof(T));  // expected-error 2 {{_Unsafe function call is forbidden in the safe zone}}
+  // expected-error@-1 {{conversion from type 'void *' to 'int *' is forbidden in the safe zone}}
 }
 
 
@@ -24,7 +24,7 @@ _Safe void test4<T>(void) {
 int main(){
   test1<int>();
   test2<int>();  // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}
-  test3<int>();
+  test3<int>(); // expected-note {{in instantiation of function template specialization 'test3<int>' requested here}}
   test4<int>();
 }
 

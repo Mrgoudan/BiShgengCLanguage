@@ -2869,8 +2869,14 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   if (Self.getLangOpts().BSC) {
+    // If the type is dependent, we won't do any other semantic analysis now.
+    if (DestType->isDependentType() || SrcExpr.get()->isTypeDependent() ||
+        SrcExpr.get()->isValueDependent()) {
+      assert(Kind == CK_Dependent);
+      return;
+    }
     // Handle nullptr cast to pointer - skip BSC checks that may not handle it
     if (isa<CXXNullPtrLiteralExpr>(SrcExpr.get()) && DestType->isPointerType()) {
       Kind = CK_NullToPointer;
@@ -2946,16 +2952,9 @@ void CastOperation::CheckCStyleCast() {
   if (Self.getASTContext().isDependenceAllowed() &&
       (DestType->isDependentType() || SrcExpr.get()->isTypeDependent() ||
        SrcExpr.get()->isValueDependent())) {
-    #if ENABLE_BSC
-    assert((Self.getLangOpts().BSC ||
-            (DestType->containsErrors() || SrcExpr.get()->containsErrors() ||
-             SrcExpr.get()->containsErrors())) &&
-           "should only occur in error-recovery path for non BSC.");
-    #else
     assert((DestType->containsErrors() || SrcExpr.get()->containsErrors() ||
             SrcExpr.get()->containsErrors()) &&
            "should only occur in error-recovery path.");
-    #endif
     assert(Kind == CK_Dependent);
     return;
   }
@@ -3363,16 +3362,7 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange = SourceRange(Op.DestRange.getBegin(), CastExpr->getEndLoc());
 
-  #if ENABLE_BSC
-  // Try to use C-Style cast check for BSC generic.
-  if (getLangOpts().BSC) {
-    Op.CheckCStyleCast();
-  } else {
-  #endif
-    Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
-  #if ENABLE_BSC
-  }
-  #endif
+  Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
   if (Op.SrcExpr.isInvalid())
     return ExprError();
 

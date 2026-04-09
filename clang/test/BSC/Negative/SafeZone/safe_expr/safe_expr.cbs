@@ -25,15 +25,15 @@ void test_safe_expr2() {
 }
 
 _Safe void foo<T>(T* _Owned p) {
-    T * a = (T*)p                       // expected-error {{conversion from type 'T *_Owned' to 'T *' is forbidden in the safe zone}}
-    T * b = _Unsafe((T*)p);              // ok
-    T * c = (T*)p;                      // expected-error {{conversion from type 'T *_Owned' to 'T *' is forbidden in the safe zone}}
+    T * a = (T*)p;                       // expected-error {{conversion from type 'int *_Owned' to 'int *' is forbidden in the safe zone}}
+    T * b = _Unsafe((T*)p);              // expected-error {{cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer}}
+    T * c = (T*)p;                      // expected-error {{conversion from type 'int *_Owned' to 'int *' is forbidden in the safe zone}}
 }
 
 _Safe void test_safe_expr3(void) {
     int a = 0;
     int *_Owned p = _Unsafe(__take_from_raw(&a));
-    foo<int>(p);
+    foo<int>(p); // expected-note {{in instantiation of function template specialization 'foo<int>' requested here}}
 }
 
 int getNum() {
