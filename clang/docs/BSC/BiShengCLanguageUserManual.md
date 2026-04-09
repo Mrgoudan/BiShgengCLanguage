@@ -2913,6 +2913,37 @@ void *mymove(struct S *_Owned ptr) {
 }
 ```
 
+**2. 允许将`void * _Owned`类型的变量通过强制类型转换转为`T * _Owned`类型，转换成功的条件为变量依然拥有所有权，转换成功后，得到的`T *_Owned`类型内部的`_Owned`指针变量均不拥有所有权。**
+以下是一段代码示例及说明：
+
+```c
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void *_Owned memAlloc(unsigned long);
+_Safe void memFree(void *_Owned);
+
+_Safe void foo(void) {
+  struct S *_Owned sp = _Unsafe((struct S *_Owned)memAlloc(sizeof(struct S)));
+  int *_Owned p = sp->p; // error: sp->p 此时未拥有所有权
+  sp->q = _Unsafe((int *_Owned)memAlloc(sizeof(int)));
+  *(sp->q) = 2;
+  _Unsafe {
+    memFree((void *_Owned)sp->q);
+    memFree((void *_Owned)sp);
+  }
+}
+
+int main() {
+  foo();
+  return 0;
+}
+```
+
+在这个例子中，试图直接转移`sp->p`的所有权给`p`，但此时`sp->p`还未拥有所有权，因此编译报错。
+
 ##### 3.1.4.4. 函数调用与返回
 
 **1. 函数调用和返回时，如果函数的形参或函数的返回值为`_Owned`指针类型，则要求传入的实参以及返回值必须拥有堆内存的所有权。**

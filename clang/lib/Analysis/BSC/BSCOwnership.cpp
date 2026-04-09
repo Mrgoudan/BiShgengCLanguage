@@ -13,8 +13,8 @@
 #if ENABLE_BSC
 
 #include "clang/Analysis/Analyses/BSC/BSCOwnership.h"
-#include "clang/Analysis/Analyses/BSC/BSCNullCheckInfo.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Analysis/Analyses/BSC/BSCNullCheckInfo.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 
@@ -162,6 +162,30 @@ static string concatUnmovedFields(const VarDecl *VD,
     }
   }
   return concatFields(VD, unmovedFields);
+}
+
+static bool IsCastFromVoidPointer(Expr *E) {
+  while (true) {
+    E = E->IgnoreParenImpCasts();
+    if (SafeExpr *SE = dyn_cast<SafeExpr>(E)) {
+      E = SE->getSubExpr();
+    } else {
+      break;
+    }
+  }
+
+  if (CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
+    QualType QT = CSCE->getType();
+    if (QT->isPointerType() && QT.isOwnedQualified() &&
+        !QT->getPointeeType()->isVoidType()) {
+      Expr *Sub = CSCE->getSubExpr();
+      if (Sub->getType()->isVoidPointerType() &&
+          Sub->getType().isOwnedQualified()) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -682,6 +706,63 @@ void Ownership::OwnershipStatus::setToOwned(const VarDecl *VD) {
     resetAll(VD);
     set(VD, Ownership::Status::Owned);
     BOPOwnedOwnedFields[VD] = BOPAllOwnedFields[VD];
+  }
+}
+
+void Ownership::OwnershipStatus::setToAllMoved(const VarDecl *VD) {
+  if (OPSStatus.count(VD)) {
+    resetAll(VD);
+    if (!OPSAllOwnedFields[VD].empty()) {
+      set(VD, Ownership::Status::AllMoved);
+      OPSOwnedOwnedFields[VD].clear();
+    } else {
+      set(VD, Ownership::Status::Owned);
+    }
+  }
+
+  if (BOPStatus.count(VD)) {
+    resetAll(VD);
+    if (!BOPAllOwnedFields[VD].empty()) {
+      set(VD, Ownership::Status::AllMoved);
+      BOPOwnedOwnedFields[VD].clear();
+    } else {
+      set(VD, Ownership::Status::Owned);
+    }
+  }
+}
+
+void Ownership::OwnershipStatus::setToAllMoved(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    setToAllMoved(VD);
+    return;
+  }
+  if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+    pair<const Expr *, string> memberField = getMemberFullField(ME);
+    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(memberField.first)) {
+      const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      if (OPSStatus.count(VD)) {
+        if (OPSAllOwnedFields[VD].count(memberField.second)) {
+          OPSOwnedOwnedFields[VD].insert(memberField.second);
+          auto allPrefixStrs = findPrefixStrings(OPSAllOwnedFields[VD],
+                                                 memberField.second + ".");
+          for (const string &str : allPrefixStrs) {
+            OPSOwnedOwnedFields[VD].erase(str);
+          }
+        }
+      }
+      if (SStatus.count(VD)) {
+        if (SAllOwnedFields[VD].count(memberField.second)) {
+          SOwnedOwnedFields[VD].insert(memberField.second);
+          auto allPrefixStrs =
+              findPrefixStrings(SAllOwnedFields[VD], memberField.second + ".");
+          for (const string &str : allPrefixStrs) {
+            SOwnedOwnedFields[VD].erase(str);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -1911,7 +1992,7 @@ public:
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitAbstractConditionalOperator(AbstractConditionalOperator *ACO);
 
-  void HandleNullInitListExpr(VarDecl *VD, RecordDecl *RD, InitListExpr *ILE, std::string fullFieldName = "");
+  void HandleInitListExpr(VarDecl *VD, RecordDecl *RD, InitListExpr *ILE, std::string fullFieldName = "");
   void HandleDREAssign(const DeclRefExpr *DRE, std::string fullFieldName = "");
   void HandleDREUse(const DeclRefExpr *DRE, std::string fullFieldName = "");
 
@@ -2051,6 +2132,8 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
 
     if (RHS->isNullExpr(OS.ctx)) {
       stat.setToNull(LHS);
+    } else if (IsCastFromVoidPointer(RHS)) {
+      stat.setToAllMoved(LHS);
     }
   } else {
     Visit(BO->getLHS());
@@ -2186,6 +2269,8 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
         if (VQT->isPointerType() && VQT.isOwnedQualified()) {
           if (Init->isNullExpr(OS.ctx)) {
             stat.setToNull(VD);
+          } else if (IsCastFromVoidPointer(Init)) {
+            stat.setToAllMoved(VD);
           } else {
             stat.setToOwned(VD);
           }
@@ -2198,7 +2283,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
             // we reset the status of s.p.
             RecordDecl *RD = dyn_cast<RecordType>(VQT)->getDecl();
             InitListExpr *ILE = dyn_cast<InitListExpr>(Init);
-            HandleNullInitListExpr(VD, RD, ILE);
+            HandleInitListExpr(VD, RD, ILE);
             if (stat.SOwnedOwnedFields[VD].size() == 0) {
               stat.set(VD, Ownership::Status::AllMoved);
             } else if (stat.SAllOwnedFields[VD].size() != stat.SOwnedOwnedFields[VD].size()) {
@@ -2217,7 +2302,7 @@ void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   }
 }
 
-void TransferFunctions::HandleNullInitListExpr(VarDecl *VD, RecordDecl *RD, InitListExpr *ILE, std::string fullFieldName) {
+void TransferFunctions::HandleInitListExpr(VarDecl *VD, RecordDecl *RD, InitListExpr *ILE, std::string fullFieldName) {
   // unexplicitly initialized fields are implicitly initialized automatically
   Expr **Inits = ILE->getInits();
   for (const auto &FD : RD->fields()) {
@@ -2240,7 +2325,18 @@ void TransferFunctions::HandleNullInitListExpr(VarDecl *VD, RecordDecl *RD, Init
       QualType QT = FieldInit->getType().getCanonicalType();
       if (QT->isRecordType() && QT->hasOwnedFields()) {
         RecordDecl *FieldRD = dyn_cast<RecordType>(QT)->getDecl();
-        HandleNullInitListExpr(VD, FieldRD, FieldILE, newFullFieldName);
+        HandleInitListExpr(VD, FieldRD, FieldILE, newFullFieldName);
+      }
+    } else if (IsCastFromVoidPointer(FieldInit)) {
+      if (stat.SAllOwnedFields[VD].count(newFullFieldName)) {
+        stat.SOwnedOwnedFields[VD].insert(newFullFieldName);
+        stat.SNullOwnedFields[VD].erase(newFullFieldName);
+        auto allPrefixStrs =
+            findPrefixStrings(stat.SAllOwnedFields[VD], newFullFieldName + ".");
+        for (const string &str : allPrefixStrs) {
+          stat.SOwnedOwnedFields[VD].erase(str);
+          stat.SNullOwnedFields[VD].erase(str);
+        }
       }
     }
   }

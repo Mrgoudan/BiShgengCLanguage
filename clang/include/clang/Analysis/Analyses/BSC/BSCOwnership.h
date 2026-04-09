@@ -130,6 +130,8 @@ public:
     void resetAll(const VarDecl *VD);
     void init(const VarDecl *VD);
     void setToOwned(const VarDecl *VD);
+    void setToAllMoved(const VarDecl *VD);
+    void setToAllMoved(const Expr *E);
     void setToNull(const VarDecl *VD);
     void setToNull(const Expr *E);
 

@@ -1,0 +1,106 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+void *_Owned safe_malloc(unsigned int);
+void safe_free(void *_Owned p);
+
+struct Node {
+  int value;
+};
+
+struct Inner {
+  int *_Owned data;
+};
+
+struct Holder {
+  int *_Owned leaf;
+  struct Inner *_Owned inner;
+};
+
+void test1(int *_Owned p) {
+  void *_Owned erased = (void *_Owned)p;
+  int *_Owned typed = (int *_Owned)erased;
+  safe_free((void *_Owned)typed);
+}
+
+void test2(int *_Owned p) {
+  void *_Owned erased = (void *_Owned)p;
+  int *_Owned typed;
+  typed = (int *_Owned)erased;
+  safe_free((void *_Owned)typed);
+}
+
+void test3(struct Node *_Owned p) {
+  void *_Owned erased = (void *_Owned)p;
+  struct Node *_Owned typed = (struct Node *_Owned)erased;
+  safe_free((void *_Owned)typed);
+}
+
+void test4(struct Node *_Owned p) {
+  void *_Owned erased = (void *_Owned)p;
+  struct Node *_Owned typed;
+  typed = (struct Node *_Owned)erased;
+  safe_free((void *_Owned)typed);
+}
+
+void test5(struct Inner *_Owned p) {
+  safe_free((void *_Owned)p->data);
+  void *_Owned erased = (void *_Owned)p;
+  struct Inner *_Owned typed = (struct Inner *_Owned)erased;
+  safe_free((void *_Owned)typed);
+}
+
+void test6(int *_Owned leafSrc, struct Inner *_Owned innerSrc, int *_Owned p, void *_Owned holder) {
+  struct Holder *_Owned h = (struct Holder *_Owned)holder;
+  safe_free((void *_Owned)innerSrc->data);
+  void *_Owned leafErased = (void *_Owned)leafSrc;
+  void *_Owned innerErased = (void *_Owned)innerSrc;
+  h->leaf = (int *_Owned)leafErased;
+  h->inner = (struct Inner *_Owned)innerErased;
+  h->inner->data = p;
+  safe_free((void *_Owned)h->leaf);
+  safe_free((void *_Owned)h->inner->data);
+  safe_free((void *_Owned)h->inner);
+  safe_free((void *_Owned)h);
+}
+
+void test7(int *_Owned leafSrc, struct Inner *_Owned innerSrc) {
+  safe_free((void *_Owned)innerSrc->data);
+  void *_Owned leafErased = (void *_Owned)leafSrc;
+  void *_Owned innerErased = (void *_Owned)innerSrc;
+  struct Holder h = {
+      .leaf = (int *_Owned)leafErased,
+      .inner = (struct Inner *_Owned)innerErased,
+  };
+  safe_free((void *_Owned)h.leaf);
+  safe_free((void *_Owned)h.inner);
+}
+
+void test8(int *_Owned leafSrc, struct Inner *_Owned innerSrc, int *_Owned p) {
+  struct Holder h = {.leaf = nullptr, .inner = nullptr};
+  safe_free((void *_Owned)innerSrc->data);
+  void *_Owned leafErased = (void *_Owned)leafSrc;
+  void *_Owned innerErased = (void *_Owned)innerSrc;
+  h.leaf = (int *_Owned)leafErased;
+  h.inner = (struct Inner *_Owned)innerErased;
+  h.inner->data = p;
+  safe_free((void *_Owned)h.leaf);
+  safe_free((void *_Owned)h.inner->data);
+  safe_free((void *_Owned)h.inner);
+}
+
+void test9() {
+  struct Holder *_Owned hp = (struct Holder *_Owned)safe_malloc(sizeof(struct Holder));
+  safe_free((void *_Owned)hp);
+}
+
+void test10() {
+  struct Holder *_Owned hp = (struct Holder *_Owned)safe_malloc(sizeof(struct Holder));
+  hp->leaf = (int *_Owned)safe_malloc(sizeof(int));
+  hp->inner = (struct Inner *_Owned)safe_malloc(sizeof(struct Inner));
+  hp->inner->data = (int *_Owned)safe_malloc(sizeof(int));
+  safe_free((void *_Owned)hp->inner->data);
+  safe_free((void *_Owned)hp->inner);
+  safe_free((void *_Owned)hp->leaf);
+  safe_free((void *_Owned)hp);
+}

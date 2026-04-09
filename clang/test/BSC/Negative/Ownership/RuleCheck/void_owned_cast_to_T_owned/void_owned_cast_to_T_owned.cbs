@@ -1,0 +1,57 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+struct Node {
+  int value;
+};
+
+struct Inner {
+  int *_Owned data;
+};
+
+struct Holder {
+  int *_Owned leaf;
+  struct Inner *_Owned inner;
+};
+
+void consume_int(int *_Owned p);
+void consume_node(struct Node *_Owned p);
+void consume_inner(struct Inner *_Owned p);
+void safe_free(void *_Owned p);
+
+void test1(struct Inner *_Owned p) {
+  safe_free((void *_Owned)p->data);
+  void *_Owned erased = (void *_Owned)p;
+  struct Inner *_Owned typed = (struct Inner *_Owned)erased;
+  consume_inner(typed); // expected-error {{use of all moved value: `typed`}}
+}
+
+void test2(struct Inner *_Owned p) {
+  safe_free((void *_Owned)p->data);
+  void *_Owned erased = (void *_Owned)p;
+  struct Inner *_Owned typed;
+  typed = (struct Inner *_Owned)erased;
+  consume_inner(typed); // expected-error {{use of all moved value: `typed`}}
+}
+
+void test3(int *_Owned leafSrc, struct Inner *_Owned innerSrc) {
+  safe_free((void *_Owned)innerSrc->data);
+  void *_Owned leafErased = (void *_Owned)leafSrc;
+  void *_Owned innerErased = (void *_Owned)innerSrc;
+  struct Holder h = {
+      .leaf = (int *_Owned)leafErased,
+      .inner = (struct Inner *_Owned)innerErased,
+  };
+  consume_int(h.leaf);
+  consume_inner(h.inner); // expected-error {{use of partially moved value: `h.inner`, h.leaf, h.inner.data are moved}}
+}
+
+void test4(int *_Owned leafSrc, struct Inner *_Owned innerSrc) {
+  struct Holder h = {.leaf = nullptr, .inner = nullptr};
+  safe_free((void *_Owned)innerSrc->data);
+  void *_Owned leafErased = (void *_Owned)leafSrc;
+  void *_Owned innerErased = (void *_Owned)innerSrc;
+  h.leaf = (int *_Owned)leafErased;
+  h.inner = (struct Inner *_Owned)innerErased;
+  consume_int(h.leaf);
+  consume_inner(h.inner); // expected-error {{use of partially moved value: `h.inner`, h.leaf, h.inner.data are moved}}
+}
