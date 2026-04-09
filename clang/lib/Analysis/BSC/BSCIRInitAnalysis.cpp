@@ -866,6 +866,222 @@ void InitAnalysis::checkOperand(const Operand &Op, const InitLattice &State,
 }
 
 //===----------------------------------------------------------------------===//
+// Ensure-Init Helpers
+//===----------------------------------------------------------------------===//
+
+/// Visit all operands in an Rvalue, calling F on each.
+template <typename Fn>
+static void forEachRvalueOperand(const Rvalue &Src, Fn &&F) {
+  switch (Src.K) {
+  case Rvalue::Use:
+    F(Src.getUse().Op);
+    break;
+  case Rvalue::BinaryOp:
+    F(Src.getBinOp().LHS);
+    F(Src.getBinOp().RHS);
+    break;
+  case Rvalue::UnaryOp:
+    F(Src.getUnOp().Sub);
+    break;
+  case Rvalue::Cast:
+    F(Src.getCast().Op);
+    break;
+  case Rvalue::Aggregate:
+    for (const Operand &Field : Src.getAgg().Fields)
+      F(Field);
+    break;
+  case Rvalue::Array:
+    for (const Operand &El : Src.getArray().Elements)
+      F(El);
+    break;
+  default:
+    break;
+  }
+}
+
+llvm::DenseSet<LocalId>
+InitAnalysis::collectEnsureInitArgTemps(const BasicBlock &BB) const {
+  llvm::DenseSet<LocalId> Result;
+  if (BB.Term.K != Terminator::Call)
+    return Result;
+
+  const auto &CD = BB.Term.getCall();
+  llvm::DenseSet<LocalId> ExemptArgBases;
+  if (CD.Decl &&
+      CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
+    for (const Operand &Arg : CD.Args)
+      if (Arg.K == Operand::Copy || Arg.K == Operand::Move)
+        ExemptArgBases.insert(Arg.getPlace().Base);
+  }
+  unsigned NumParams = CD.Decl
+                           ? CD.Decl->getNumParams()
+                           : (CD.CalleeProtoType
+                                  ? CD.CalleeProtoType->getNumParams()
+                                  : 0);
+  for (unsigned I = 0; I < NumParams && I < CD.Args.size(); ++I) {
+    bool IsAI = false;
+    if (CD.Decl && I < CD.Decl->getNumParams())
+      IsAI = CD.Decl->getParamDecl(I)->hasAttr<EnsureInitAttr>();
+    if (!IsAI && CD.CalleeProtoType &&
+        CD.CalleeProtoType->hasExtParameterInfos() &&
+        I < CD.CalleeProtoType->getNumParams())
+      IsAI = CD.CalleeProtoType->getExtParameterInfo(I).isEnsureInit();
+    if (IsAI && (CD.Args[I].K == Operand::Copy ||
+                 CD.Args[I].K == Operand::Move))
+      ExemptArgBases.insert(CD.Args[I].getPlace().Base);
+  }
+  // Find statements that are AddressOf/Ref producing these temps.
+  for (const Statement &S : BB.Statements) {
+    if (S.K != Statement::Assign || !S.getAssign().Dest.isLocal())
+      continue;
+    LocalId DestId = S.getAssign().Dest.Base;
+    if (!ExemptArgBases.count(DestId))
+      continue;
+    const Rvalue &Src = S.getAssign().Src;
+    if (Src.K == Rvalue::AddressOf || Src.K == Rvalue::Ref)
+      Result.insert(DestId);
+  }
+  return Result;
+}
+
+void InitAnalysis::checkEnsureInitAssign(
+    const Statement &S, const InitLattice &State,
+    llvm::DenseMap<LocalId, LocalId> &TempToEnsureInitParam,
+    SmallVectorImpl<InitDiagInfo> &Diags) const {
+  if (!S.getAssign().Dest.isLocal())
+    return;
+
+  LocalId DestId = S.getAssign().Dest.Base;
+
+  // Check pointer reassignment (zone-independent).
+  // If dest is a bare local that is an ensure_init param, it's being
+  // reassigned. Only error if *param has not yet been initialized —
+  // once the contract is fulfilled, the pointer can be freely reused.
+  {
+    auto DerefIt = State.EnsureInitDerefStates.find(DestId);
+    if (DerefIt != State.EnsureInitDerefStates.end() &&
+        DerefIt->second != InitState::Initialized) {
+      const LocalDecl &LD = B.getLocal(DestId);
+      if (!LD.IsTemp && !LD.Name.empty()) {
+        Diags.emplace_back(InitDiagKind::EnsureInitPtrAliased,
+                           S.Loc.isValid() ? S.Loc : LD.DeclLoc, LD.Name);
+      }
+    }
+  }
+
+  // Reject aliasing the pointer before *param is initialized.
+  // Copying an ensure_init param into a named variable creates an alias the
+  // analysis cannot track across blocks. Temp copies (compiler-generated) are
+  // tracked for same-block deref checking but not rejected.
+  const Rvalue &Src = S.getAssign().Src;
+  if (Src.K != Rvalue::Use)
+    return;
+  const Operand &Op = Src.getUse().Op;
+  if (Op.K != Operand::Copy || !Op.getPlace().Projections.empty())
+    return;
+  LocalId SrcId = Op.getPlace().Base;
+  // Check direct ensure_init param or transitive temp alias.
+  LocalId ParamId = SrcId;
+  auto AliasIt = TempToEnsureInitParam.find(SrcId);
+  if (AliasIt != TempToEnsureInitParam.end())
+    ParamId = AliasIt->second;
+  auto DerefIt = State.EnsureInitDerefStates.find(ParamId);
+  if (DerefIt == State.EnsureInitDerefStates.end() ||
+      DerefIt->second == InitState::Initialized)
+    return;
+  const LocalDecl &DestLD = B.getLocal(DestId);
+  if (DestLD.IsTemp) {
+    // Track temp alias for same-block deref checking.
+    TempToEnsureInitParam[DestId] = ParamId;
+  } else if (!DestLD.Name.empty()) {
+    // Named variable: reject aliasing before init.
+    const LocalDecl &ParamLD = B.getLocal(ParamId);
+    if (!ParamLD.Name.empty()) {
+      Diags.emplace_back(InitDiagKind::EnsureInitPtrAliased,
+                         S.Loc.isValid() ? S.Loc : DestLD.DeclLoc,
+                         ParamLD.Name);
+    }
+  }
+}
+
+void InitAnalysis::checkEnsureInitDerefReads(
+    const Statement &S, const InitLattice &State,
+    const llvm::DenseMap<LocalId, LocalId> &TempToEnsureInitParam,
+    SmallVectorImpl<InitDiagInfo> &Diags) const {
+  auto checkDerefRead = [&](const Operand &Op) {
+    if (Op.K == Operand::Constant)
+      return;
+    const Place &P = Op.getPlace();
+    if (P.Projections.empty() ||
+        P.Projections[0].K != ProjectionElem::Deref)
+      return;
+    // Resolve temp alias to the original ensure_init param.
+    LocalId Base = P.Base;
+    auto AliasIt = TempToEnsureInitParam.find(Base);
+    LocalId ParamId = (AliasIt != TempToEnsureInitParam.end())
+                          ? AliasIt->second
+                          : Base;
+    auto DerefIt = State.EnsureInitDerefStates.find(ParamId);
+    if (DerefIt == State.EnsureInitDerefStates.end())
+      return;
+    if (DerefIt->second != InitState::Initialized) {
+      const LocalDecl &ParamLD = B.getLocal(ParamId);
+      if (!ParamLD.Name.empty()) {
+        Diags.emplace_back(InitDiagKind::EnsureInitDerefReadUninit,
+                           S.Loc.isValid() ? S.Loc : ParamLD.DeclLoc,
+                           ParamLD.Name);
+      }
+    }
+  };
+
+  forEachRvalueOperand(S.getAssign().Src, checkDerefRead);
+}
+
+llvm::DenseSet<unsigned>
+InitAnalysis::collectExemptArgIndices(
+    const Terminator::CallData &CD) const {
+  llvm::DenseSet<unsigned> ExemptArgIndices;
+  if (CD.Decl &&
+      CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
+    ExemptArgIndices.insert(0);
+  }
+  unsigned NumParams = CD.Decl
+                           ? CD.Decl->getNumParams()
+                           : (CD.CalleeProtoType
+                                  ? CD.CalleeProtoType->getNumParams()
+                                  : 0);
+  for (unsigned I = 0; I < NumParams; ++I) {
+    bool IsAI = false;
+    if (CD.Decl && I < CD.Decl->getNumParams())
+      IsAI = CD.Decl->getParamDecl(I)->hasAttr<EnsureInitAttr>();
+    if (!IsAI && CD.CalleeProtoType &&
+        CD.CalleeProtoType->hasExtParameterInfos() &&
+        I < CD.CalleeProtoType->getNumParams())
+      IsAI = CD.CalleeProtoType->getExtParameterInfo(I).isEnsureInit();
+    if (IsAI)
+      ExemptArgIndices.insert(I);
+  }
+  return ExemptArgIndices;
+}
+
+void InitAnalysis::checkEnsureInitAtReturn(
+    const Terminator &T, const InitLattice &State,
+    SmallVectorImpl<InitDiagInfo> &Diags) const {
+  for (const auto &Entry : State.EnsureInitDerefStates) {
+    const LocalDecl &LD = B.getLocal(Entry.first);
+    SourceLocation DiagLoc = T.Loc.isValid()
+        ? T.Loc
+        : (B.SourceFD ? B.SourceFD->getBodyRBrace() : SourceLocation());
+    if (Entry.second == InitState::Uninitialized) {
+      Diags.emplace_back(InitDiagKind::EnsureInitNotInit, DiagLoc, LD.Name);
+    } else if (Entry.second == InitState::MaybeInit) {
+      Diags.emplace_back(InitDiagKind::EnsureInitMaybeNotInit, DiagLoc,
+                         LD.Name);
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Run Analysis with Diagnostic Collection
 //===----------------------------------------------------------------------===//
 
@@ -881,57 +1097,11 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
 
     InitLattice State = EntryIt->second;
 
-    // Exempt address-of statements that produce temps feeding ensure_init or
-    // __assume_initialized call args. We identify by dest temp, not
-    // source local, so only the specific "_tmp = &x" preparing the call arg
-    // is exempted — other uses of &x in the same block are still checked.
-    //
-    // Steps:
-    // 1. Collect temp bases from the terminator's exempt arg operands.
-    // 2. Match those temps to AddressOf/Ref statements in the block.
-    // 3. At check time, skip Ref/AddressOf rvalues whose dest is in the set.
-    llvm::DenseSet<LocalId> EnsureInitArgTemps;
-    if (BB.Term.K == Terminator::Call) {
-      const auto &CD = BB.Term.getCall();
-      llvm::DenseSet<LocalId> ExemptArgBases;
-      if (CD.Decl &&
-          CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
-        for (const Operand &Arg : CD.Args)
-          if (Arg.K == Operand::Copy || Arg.K == Operand::Move)
-            ExemptArgBases.insert(Arg.getPlace().Base);
-      }
-      unsigned NumParams = CD.Decl
-                               ? CD.Decl->getNumParams()
-                               : (CD.CalleeProtoType
-                                      ? CD.CalleeProtoType->getNumParams()
-                                      : 0);
-      for (unsigned I = 0; I < NumParams && I < CD.Args.size(); ++I) {
-        bool IsAI = false;
-        if (CD.Decl && I < CD.Decl->getNumParams())
-          IsAI = CD.Decl->getParamDecl(I)->hasAttr<EnsureInitAttr>();
-        if (!IsAI && CD.CalleeProtoType &&
-            CD.CalleeProtoType->hasExtParameterInfos() &&
-            I < CD.CalleeProtoType->getNumParams())
-          IsAI = CD.CalleeProtoType->getExtParameterInfo(I).isEnsureInit();
-        if (IsAI && (CD.Args[I].K == Operand::Copy ||
-                     CD.Args[I].K == Operand::Move))
-          ExemptArgBases.insert(CD.Args[I].getPlace().Base);
-      }
-      // Now find statements that are AddressOf/Ref producing these temps.
-      for (const Statement &S : BB.Statements) {
-        if (S.K != Statement::Assign || !S.getAssign().Dest.isLocal())
-          continue;
-        LocalId DestId = S.getAssign().Dest.Base;
-        if (!ExemptArgBases.count(DestId))
-          continue;
-        const Rvalue &Src = S.getAssign().Src;
-        if (Src.K == Rvalue::AddressOf || Src.K == Rvalue::Ref)
-          EnsureInitArgTemps.insert(DestId);
-      }
-    }
+    // Collect ensure_init/assume_initialized exempt arg temps for this block.
+    llvm::DenseSet<LocalId> EnsureInitArgTemps =
+        collectEnsureInitArgTemps(BB);
 
     // Track block-local temp aliases of ensure_init params for deref checking.
-    // Maps temp local → original ensure_init param.
     llvm::DenseMap<LocalId, LocalId> TempToEnsureInitParam;
 
     for (const Statement &S : BB.Statements) {
@@ -1001,118 +1171,9 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
           }
         }
 
-        // Callee-side ensure_init: check pointer reassignment (zone-independent).
-        // If dest is a bare local that is an ensure_init param, it's being
-        // reassigned. Only error if *param has not yet been initialized —
-        // once the contract is fulfilled, the pointer can be freely reused.
-        if (S.getAssign().Dest.isLocal()) {
-          LocalId DestId = S.getAssign().Dest.Base;
-          auto DerefIt = State.EnsureInitDerefStates.find(DestId);
-          if (DerefIt != State.EnsureInitDerefStates.end() &&
-              DerefIt->second != InitState::Initialized) {
-            const LocalDecl &LD = B.getLocal(DestId);
-            if (!LD.IsTemp && !LD.Name.empty()) {
-              Diags.emplace_back(InitDiagKind::EnsureInitPtrAliased,
-                                 S.Loc.isValid() ? S.Loc : LD.DeclLoc,
-                                 LD.Name);
-            }
-          }
-        }
-
-        // Callee-side ensure_init: reject aliasing the pointer before *param
-        // is initialized. Copying an ensure_init param into a named variable
-        // creates an alias the analysis cannot track across blocks.
-        // Temp copies (compiler-generated) are tracked for same-block deref
-        // checking but not rejected.
-        if (S.getAssign().Dest.isLocal()) {
-          LocalId DestId = S.getAssign().Dest.Base;
-          const Rvalue &Src = S.getAssign().Src;
-          if (Src.K == Rvalue::Use) {
-            const Operand &Op = Src.getUse().Op;
-            if (Op.K == Operand::Copy && Op.getPlace().Projections.empty()) {
-              LocalId SrcId = Op.getPlace().Base;
-              // Check direct ensure_init param or transitive temp alias.
-              LocalId ParamId = SrcId;
-              auto AliasIt = TempToEnsureInitParam.find(SrcId);
-              if (AliasIt != TempToEnsureInitParam.end())
-                ParamId = AliasIt->second;
-              auto DerefIt = State.EnsureInitDerefStates.find(ParamId);
-              if (DerefIt != State.EnsureInitDerefStates.end() &&
-                  DerefIt->second != InitState::Initialized) {
-                const LocalDecl &DestLD = B.getLocal(DestId);
-                if (DestLD.IsTemp) {
-                  // Track temp alias for same-block deref checking.
-                  TempToEnsureInitParam[DestId] = ParamId;
-                } else if (!DestLD.Name.empty()) {
-                  // Named variable: reject aliasing before init.
-                  const LocalDecl &ParamLD = B.getLocal(ParamId);
-                  if (!ParamLD.Name.empty()) {
-                    Diags.emplace_back(InitDiagKind::EnsureInitPtrAliased,
-                                       S.Loc.isValid() ? S.Loc : DestLD.DeclLoc,
-                                       ParamLD.Name);
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Check deref reads of ensure_init params (*out or *_tmp before init).
-        // Handles both direct derefs and same-block temp alias derefs.
-        {
-          auto checkDerefRead = [&](const Operand &Op) {
-            if (Op.K == Operand::Constant)
-              return;
-            const Place &P = Op.getPlace();
-            if (P.Projections.empty() ||
-                P.Projections[0].K != ProjectionElem::Deref)
-              return;
-            // Resolve temp alias to the original ensure_init param.
-            LocalId Base = P.Base;
-            auto AliasIt = TempToEnsureInitParam.find(Base);
-            LocalId ParamId = (AliasIt != TempToEnsureInitParam.end())
-                                  ? AliasIt->second
-                                  : Base;
-            auto DerefIt = State.EnsureInitDerefStates.find(ParamId);
-            if (DerefIt == State.EnsureInitDerefStates.end())
-              return;
-            if (DerefIt->second != InitState::Initialized) {
-              const LocalDecl &ParamLD = B.getLocal(ParamId);
-              if (!ParamLD.Name.empty()) {
-                Diags.emplace_back(InitDiagKind::EnsureInitDerefReadUninit,
-                                   S.Loc.isValid() ? S.Loc : ParamLD.DeclLoc,
-                                   ParamLD.Name);
-              }
-            }
-          };
-
-          const Rvalue &Src = S.getAssign().Src;
-          switch (Src.K) {
-          case Rvalue::Use:
-            checkDerefRead(Src.getUse().Op);
-            break;
-          case Rvalue::BinaryOp:
-            checkDerefRead(Src.getBinOp().LHS);
-            checkDerefRead(Src.getBinOp().RHS);
-            break;
-          case Rvalue::UnaryOp:
-            checkDerefRead(Src.getUnOp().Sub);
-            break;
-          case Rvalue::Cast:
-            checkDerefRead(Src.getCast().Op);
-            break;
-          case Rvalue::Aggregate:
-            for (const Operand &Field : Src.getAgg().Fields)
-              checkDerefRead(Field);
-            break;
-          case Rvalue::Array:
-            for (const Operand &El : Src.getArray().Elements)
-              checkDerefRead(El);
-            break;
-          default:
-            break;
-          }
-        }
+        // Callee-side ensure_init checks (zone-independent).
+        checkEnsureInitAssign(S, State, TempToEnsureInitParam, Diags);
+        checkEnsureInitDerefReads(S, State, TempToEnsureInitParam, Diags);
       }
 
       // Apply transfer function to update state
@@ -1123,38 +1184,14 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
     const Terminator &T = BB.Term;
     if (T.K == Terminator::Call && (CheckAllZones || T.SafeZone == SZ_Safe)) {
       const auto &CD = T.getCall();
-
-      // Exempt ensure_init and __assume_initialized args from
-      // the uninit check — these accept uninitialized addresses by design.
-      llvm::DenseSet<unsigned> ExemptArgIndices;
-      if (CD.Decl &&
-          CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
-        ExemptArgIndices.insert(0);
-      }
-      unsigned NumParams = CD.Decl
-                               ? CD.Decl->getNumParams()
-                               : (CD.CalleeProtoType
-                                      ? CD.CalleeProtoType->getNumParams()
-                                      : 0);
-      for (unsigned I = 0; I < NumParams; ++I) {
-        bool IsAI = false;
-        if (CD.Decl && I < CD.Decl->getNumParams())
-          IsAI = CD.Decl->getParamDecl(I)->hasAttr<EnsureInitAttr>();
-        if (!IsAI && CD.CalleeProtoType &&
-            CD.CalleeProtoType->hasExtParameterInfos() &&
-            I < CD.CalleeProtoType->getNumParams())
-          IsAI = CD.CalleeProtoType->getExtParameterInfo(I).isEnsureInit();
-        if (IsAI)
-          ExemptArgIndices.insert(I);
-      }
-
+      llvm::DenseSet<unsigned> ExemptArgIndices = collectExemptArgIndices(CD);
       for (unsigned I = 0; I < CD.Args.size(); ++I) {
         if (!ExemptArgIndices.count(I))
           checkOperand(CD.Args[I], State, T.Loc, Diags);
       }
     }
 
-    // Check return slot at Return terminator 
+    // Check return slot at Return terminator
     if (T.K == Terminator::Return && (CheckAllZones || T.SafeZone == SZ_Safe)) {
       if (!B.Locals[0].Ty->isVoidType()) {
         InitState RetState = getInitState(State, LocalId{0});
@@ -1168,37 +1205,12 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
                                         : "<return>");
         }
       }
-
-      // Callee-side ensure_init: verify *param is initialized at return
-      for (const auto &Entry : State.EnsureInitDerefStates) {
-        const LocalDecl &LD = B.getLocal(Entry.first);
-        SourceLocation DiagLoc = T.Loc.isValid() ? T.Loc
-            : (B.SourceFD ? B.SourceFD->getBodyRBrace() : SourceLocation());
-        if (Entry.second == InitState::Uninitialized) {
-          Diags.emplace_back(InitDiagKind::EnsureInitNotInit, DiagLoc,
-                             LD.Name);
-        } else if (Entry.second == InitState::MaybeInit) {
-          Diags.emplace_back(InitDiagKind::EnsureInitMaybeNotInit, DiagLoc,
-                             LD.Name);
-        }
-      }
+      checkEnsureInitAtReturn(T, State, Diags);
     }
 
     // Also check ensure_init contract at Return outside _Safe zones
-    if (T.K == Terminator::Return && T.SafeZone != SZ_Safe) {
-      for (const auto &Entry : State.EnsureInitDerefStates) {
-        const LocalDecl &LD = B.getLocal(Entry.first);
-        SourceLocation DiagLoc = T.Loc.isValid() ? T.Loc
-            : (B.SourceFD ? B.SourceFD->getBodyRBrace() : SourceLocation());
-        if (Entry.second == InitState::Uninitialized) {
-          Diags.emplace_back(InitDiagKind::EnsureInitNotInit, DiagLoc,
-                             LD.Name);
-        } else if (Entry.second == InitState::MaybeInit) {
-          Diags.emplace_back(InitDiagKind::EnsureInitMaybeNotInit, DiagLoc,
-                             LD.Name);
-        }
-      }
-    }
+    if (T.K == Terminator::Return && T.SafeZone != SZ_Safe)
+      checkEnsureInitAtReturn(T, State, Diags);
   }
 }
 

@@ -139,6 +139,30 @@ private:
                     SourceLocation Loc,
                     SmallVectorImpl<InitDiagInfo> &Diags) const;
 
+  /// Collect ensure_init/assume_initialized exempt arg temps for a block.
+  llvm::DenseSet<LocalId>
+  collectEnsureInitArgTemps(const BasicBlock &BB) const;
+
+  /// Check ensure_init constraints on an assignment (reassignment + aliasing).
+  void checkEnsureInitAssign(
+      const Statement &S, const InitLattice &State,
+      llvm::DenseMap<LocalId, LocalId> &TempToEnsureInitParam,
+      SmallVectorImpl<InitDiagInfo> &Diags) const;
+
+  /// Check deref reads of ensure_init params (*out before init).
+  void checkEnsureInitDerefReads(
+      const Statement &S, const InitLattice &State,
+      const llvm::DenseMap<LocalId, LocalId> &TempToEnsureInitParam,
+      SmallVectorImpl<InitDiagInfo> &Diags) const;
+
+  /// Collect exempt ensure_init arg indices for a call terminator.
+  llvm::DenseSet<unsigned>
+  collectExemptArgIndices(const Terminator::CallData &CD) const;
+
+  /// Check ensure_init contract at return.
+  void checkEnsureInitAtReturn(const Terminator &T, const InitLattice &State,
+                               SmallVectorImpl<InitDiagInfo> &Diags) const;
+
   /// Get the number of fields for a type (0 for unions and non-record types).
   static unsigned getNumFields(QualType Ty);
 
