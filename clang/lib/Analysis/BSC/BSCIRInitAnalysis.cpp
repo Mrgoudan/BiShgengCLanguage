@@ -982,6 +982,23 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
           case Rvalue::SizeOf:
             break;
           }
+
+          // Check destination for implicit reads through Deref projections.
+          // Writing to (*_1.p) reads _1.p to compute the address.
+          // For each Deref in the projection chain, the prefix before it
+          // must be initialized.
+          const Place &Dest = S.getAssign().Dest;
+          if (!Dest.Projections.empty()) {
+            for (unsigned I = 0; I < Dest.Projections.size(); ++I) {
+              if (Dest.Projections[I].K == ProjectionElem::Deref) {
+                // Build prefix place up to (not including) this Deref.
+                Place Prefix(Dest.Base, Dest.Projections.slice(0, I),
+                             Dest.Projections[I].ResultTy, Dest.Loc);
+                checkOperand(Operand::createCopy(Prefix), State, S.Loc,
+                             Diags);
+              }
+            }
+          }
         }
 
         // Callee-side ensure_init: check pointer reassignment (zone-independent).
