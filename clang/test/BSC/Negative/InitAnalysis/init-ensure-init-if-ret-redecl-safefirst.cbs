@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+//
+// Cross-safety redecl diagnostics follow the standard convention regardless of
+// declaration order — the error is reported on the new declaration and the note
+// on the previous one. init-ensure-init-if-ret-redecl.cbs covers the
+// _Unsafe-first ordering; this covers _Safe-first.
+
+_Safe int f(int *out); // expected-note {{previous declaration is here}}
+_Unsafe int f(int *__attribute__((ensure_init_if_ret(0))) out); // expected-error {{requires the matching _Safe declaration to carry the same attribute with the same argument}}

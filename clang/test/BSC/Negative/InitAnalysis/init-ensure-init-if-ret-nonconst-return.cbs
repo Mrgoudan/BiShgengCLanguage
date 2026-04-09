@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// =============================================================================
+// Non-constant return value: the runtime value may equal the cond value, so
+// the analyzer conservatively requires *p to be initialized on that path. If
+// *p is unconditionally initialized, the contract is over-fulfilled and the
+// function compiles cleanly.
+// =============================================================================
+
+
+// Returning a parameter — non-constant, *out not init.
+int try_pass_through(int code, int *__attribute__((ensure_init_if_ret(0))) out) {
+    return code; // expected-error {{cannot verify __attribute__((ensure_init_if_ret(0))) contract for '*out': return value is not an integer constant, so the runtime value may equal the cond value — '*out' must be initialized on this path}}
+}
+
+// Returning the result of another call — non-constant, *out not init.
+int helper(void);
+int try_call_return(int *__attribute__((ensure_init_if_ret(0))) out) {
+    return helper(); // expected-error {{cannot verify __attribute__((ensure_init_if_ret(0))) contract for '*out': return value is not an integer constant, so the runtime value may equal the cond value — '*out' must be initialized on this path}}
+}
+
+// Over-fulfilling: *out always initialized, so non-constant return is fine.
+int try_over_init(int code, int *__attribute__((ensure_init_if_ret(0))) out) {
+    *out = 42;
+    return code; // OK — *out is init regardless of what `code` resolves to.
+}

@@ -1,0 +1,113 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// ==========================================================================
+// ensure_init_if_ret(VALUE) — caller side, across control-flow forms.
+// After `ret = f(&x)`, `x` is treated as initialized only on the branch that
+// proves `ret == VALUE` (via the recognised `==`/`!=` forms). These tests
+// check how that credit behaves through for / while / do-while / switch /
+// goto in the caller.
+// ==========================================================================
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+// ----- for / while / do-while: check inside the loop body -----------------
+// Each iteration re-calls and re-checks, so the use inside `if (r == 0)` is
+// credited every time.
+
+_Safe void for_use_in_if(int n) {
+    int x;
+    for (int i = 0; i < n; i++) {
+        int r = try_init(&_Mut x);
+        if (r == 0) {
+            int y = x;          // OK: credited on the ret==0 branch
+            (void)y;
+        }
+    }
+}
+
+_Safe void while_use_in_if(int n) {
+    int x;
+    while (n > 0) {
+        n = n - 1;
+        int r = try_init(&_Mut x);
+        if (r == 0) {
+            int y = x;          // OK
+            (void)y;
+        }
+    }
+}
+
+_Safe void dowhile_use_in_if(int n) {
+    int x;
+    int i = 0;
+    do {
+        int r = try_init(&_Mut x);
+        if (r == 0) {
+            int y = x;          // OK
+            (void)y;
+        }
+        i = i + 1;
+    } while (i < n);
+}
+
+// ERROR: the credit does not survive the loop merge — after the loop `x` is
+// not known-initialized (the loop may have run zero times, and the fact
+// tying `r` to the call no longer holds), so the post-loop check can't help.
+_Safe void for_use_after_loop(int n) {
+    int x;
+    int r = 1;
+    for (int i = 0; i < n; i++)
+        r = try_init(&_Mut x);
+    if (r == 0) {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+        (void)y;
+    }
+}
+
+// ----- goto ---------------------------------------------------------------
+
+// OK: only the ret==0 edge jumps to `use`, so `x` is initialized there.
+_Safe void goto_to_use(void) {
+    int x;
+    int r = try_init(&_Mut x);
+    if (r == 0)
+        goto use;
+    return;
+use:
+    {
+        int y = x;              // OK: reached only when ret==0
+        (void)y;
+    }
+}
+
+// OK: jump away on failure; the fall-through is the ret==0 path.
+_Safe void goto_skip_on_fail(void) {
+    int x;
+    int r = try_init(&_Mut x);
+    if (r != 0)
+        goto skip;
+    {
+        int y = x;              // OK: fall-through is ret==0
+        (void)y;
+    }
+skip: ;
+}
+
+// ----- switch -------------------------------------------------------------
+
+// ERROR (documented limitation): switching on the return value directly is
+// NOT one of the recognised forms (only the `==`/`!=` comparisons are), so
+// the `case 0:` arm does not credit `x`.
+_Safe void switch_on_ret(void) {
+    int x;
+    int r = try_init(&_Mut x);
+    switch (r) {
+    case 0: {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+        (void)y;
+        break;
+    }
+    default:
+        break;
+    }
+}

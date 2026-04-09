@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Multi-declaration consistency for ensure_init_if_ret:
+//   - Multiple same-safety declarations: presence + cond value must match
+//   - If an _Unsafe decl carries the attribute, the matching _Safe decl must
+//     too with the same arg
+
+
+// --- Same-safety: missing on second decl ------------------------------------
+
+int unsafe_a(int *__attribute__((ensure_init_if_ret(0))) out);
+int unsafe_a(int *out); // expected-error {{conflicting __attribute__((ensure_init_if_ret)) on parameter 'out' in redeclaration of 'unsafe_a'}}
+                        // expected-note@-2 {{previous declaration is here}}
+
+
+// --- Same-safety: different cond values -------------------------------------
+
+int unsafe_b(int *__attribute__((ensure_init_if_ret(0))) out);
+int unsafe_b(int *__attribute__((ensure_init_if_ret(1))) out); // expected-error {{conflicting __attribute__((ensure_init_if_ret)) on parameter 'out' in redeclaration of 'unsafe_b'}}
+                                                                // expected-note@-2 {{previous declaration is here}}
+
+
+// --- Safe pair: same safety, different attr presence ------------------------
+
+_Safe int safe_a(int *__attribute__((ensure_init_if_ret(0))) out);
+_Safe int safe_a(int *out); // expected-error {{conflicting __attribute__((ensure_init_if_ret)) on parameter 'out' in redeclaration of 'safe_a'}}
+                            // expected-note@-2 {{previous declaration is here}}
+
+
+// --- Cross-safety: _Unsafe has attr, _Safe missing ----------------------------
+
+int cross_a(int *__attribute__((ensure_init_if_ret(0))) out);
+_Safe int cross_a(int *out); // expected-error {{__attribute__((ensure_init_if_ret(0))) on parameter 'out' of _Unsafe declaration requires the matching _Safe declaration to carry the same attribute with the same argument}}
+                              // expected-note@-2 {{previous declaration is here}}
+
+
+// --- Cross-safety: both have attr, different cond ---------------------------
+
+int cross_b(int *__attribute__((ensure_init_if_ret(0))) out);
+_Safe int cross_b(int *__attribute__((ensure_init_if_ret(1))) out); // expected-error {{__attribute__((ensure_init_if_ret(0))) on parameter 'out' of _Unsafe declaration requires the matching _Safe declaration to carry the same attribute with the same argument}}
+                                                                     // expected-note@-2 {{previous declaration is here}}

@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Delegation IS sound when this function returns the inner call's result
+// with a matching cond value: the inner contract then guarantees *out is
+// initialized on exactly this function's matching-return path.
+
+// inner_zero is only declared, not defined: the analysis is modular and
+// trusts its declared contract.
+int inner_zero(int *__attribute__((ensure_init_if_ret(0))) out);
+
+// Return the inner result directly.
+int delegate_return(int *__attribute__((ensure_init_if_ret(0))) out) {
+    return inner_zero(out);
+}
+
+// Store the inner result in a local, then return that local.
+int delegate_store_return(int *__attribute__((ensure_init_if_ret(0))) out) {
+    int r = inner_zero(out);
+    return r;
+}
+
+// Guard the matching-constant return on the inner result: on the r == 0
+// branch the inner call returned its cond value, so *out is initialized;
+// the non-matching branch carries no obligation.
+int delegate_guarded(int *__attribute__((ensure_init_if_ret(0))) out) {
+    int r = inner_zero(out);
+    if (r == 0)
+        return 0;
+    return -1;
+}

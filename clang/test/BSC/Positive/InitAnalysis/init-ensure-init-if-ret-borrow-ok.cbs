@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Mutable borrow (&_Mut T) as the ensure_init_if_ret parameter type.
+// Both callee-side definition and caller-side use should work.
+
+// --- Callee side: mutable borrow parameter, init on matching return ---------
+
+int try_init_borrow(_Bool ok, int *_Borrow __attribute__((ensure_init_if_ret(0))) out) {
+    if (ok) {
+        *out = 42;
+        return 0;
+    }
+    return -1;
+}
+
+
+// --- Caller side: pass &_Mut local to an ensure_init_if_ret borrow param ----
+
+int try_init_borrow_decl(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+_Safe int test_caller_borrow(void) {
+    int x;
+    int ret;
+    _Unsafe { ret = try_init_borrow_decl(&_Mut x); }
+    if (ret == 0)
+        return x;
+    return -1;
+}

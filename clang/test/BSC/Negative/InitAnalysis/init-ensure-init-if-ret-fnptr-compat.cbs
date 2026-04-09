@@ -1,0 +1,80 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Function pointer compatibility for ensure_init_if_ret:
+//   - target annotated + source unannotated  → error
+//   - source annotated + target unannotated  → ok (weakening)
+//   - both annotated, same cond              → ok
+//   - both annotated, different cond         → error
+
+typedef _Safe int (*FP0)(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+typedef _Safe int (*FP1)(int *_Borrow __attribute__((ensure_init_if_ret(1))) out);
+typedef _Safe int (*FP_PLAIN)(int *_Borrow out);
+
+_Safe int plain(int *_Borrow out);
+_Safe int try_zero(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Safe int try_one(int *_Borrow __attribute__((ensure_init_if_ret(1))) out);
+
+
+// --- Init: target annotated, source not ------------------------------------
+
+_Safe void test_init_missing(void) {
+    FP0 a = plain;     // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret)) on parameter 0 but source does not have it}}
+    FP0 b = try_zero;  // ok
+}
+
+
+// --- Init: cond mismatch ---------------------------------------------------
+
+_Safe void test_init_cond_mismatch(void) {
+    FP0 a = try_one;   // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret(0))) on parameter 0 but source has __attribute__((ensure_init_if_ret(1)))}}
+    FP1 b = try_zero;  // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret(1))) on parameter 0 but source has __attribute__((ensure_init_if_ret(0)))}}
+}
+
+
+// --- Init: source has it, target doesn't (weakening — ok) ------------------
+
+_Safe void test_init_weaken(void) {
+    FP_PLAIN p = try_zero; // ok: source's stronger contract decays away
+}
+
+
+// --- Assignment: same rules ------------------------------------------------
+
+_Safe void test_assign_missing(void) {
+    FP0 fp;
+    fp = plain;        // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret)) on parameter 0 but source does not have it}}
+    fp = try_zero;     // ok
+}
+
+
+// --- Function call argument passing ----------------------------------------
+
+_Safe void take_fp0(FP0 fn);
+
+_Safe void test_arg_passing(void) {
+    take_fp0(plain);    // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret)) on parameter 0 but source does not have it}}
+    take_fp0(try_one);  // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret(0))) on parameter 0 but source has __attribute__((ensure_init_if_ret(1)))}}
+    take_fp0(try_zero); // ok
+}
+
+
+// --- Cross-attribute: ensure_init ↔ ensure_init_if_ret ---------------------
+// The two attributes encode semantically different contracts; mixing them
+// across a function-pointer assignment is forbidden in both directions.
+
+typedef _Safe int (*FP_EI)(int *_Borrow __attribute__((ensure_init)) out);
+_Safe int with_ei(int *_Borrow __attribute__((ensure_init)) out);
+
+_Safe void test_cross_attribute(void) {
+    // target ensure_init, source ensure_init_if_ret(0):
+    // source only inits on the matching-arg path, so the target's
+    // unconditional contract isn't fulfilled.
+    FP_EI a = try_zero; // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter 0 but source does not have it}}
+
+    // target ensure_init_if_ret(0), source ensure_init:
+    // source always inits, target's conditional contract is technically
+    // over-fulfilled — but the attribute kinds differ, so the assignment
+    // is still rejected (the call site would mis-shape the caller's
+    // return-value-check semantics).
+    FP0 b = with_ei;     // expected-error {{incompatible function pointer types: target expects __attribute__((ensure_init_if_ret)) on parameter 0 but source does not have it}}
+}

@@ -1,0 +1,83 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// ensure_init_if_ret(VALUE) — caller side negative tests.
+// All functions take mutable borrows so the calls are safe-zone clean.
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Safe _Bool try_read(int *_Borrow __attribute__((ensure_init_if_ret(1))) out);
+
+// No check before use.
+_Safe void test_no_check(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    int y = x; // expected-error {{use of uninitialized value: `x`}}
+}
+
+// Wrong check value.
+_Safe void test_wrong_check(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret == 1) {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+// Else branch: x not initialized.
+_Safe void test_else_branch(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret == 0) {
+        int y = x; // OK
+    } else {
+        int z = x; // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+// After the if: merged paths, x is MaybeInit.
+_Safe void test_after_if(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret == 0) {
+        // x is initialized here
+    }
+    int y = x; // expected-error {{use of uninitialized value: `x`}}
+}
+
+// Bool: no check.
+_Safe void test_bool_no_check(void) {
+    int x;
+    _Bool ok = try_read(&_Mut x);
+    int y = x; // expected-error {{use of uninitialized value: `x`}}
+}
+
+// Bool: `if (!ok)` is NOT a recognised spec form (the four supported
+// forms are e==v, e!=v, v==e, v!=e). The check is ignored, so `x` is
+// uninitialised in the if-body regardless of which branch is taken.
+_Safe void test_bool_negated(void) {
+    int x;
+    _Bool ok = try_read(&_Mut x);
+    if (!ok) {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+// Bool: `if (ok)` (no comparison) is also NOT a recognised form — even
+// the true-branch leaves *out unverified.
+_Safe void test_bool_bare(void) {
+    int x;
+    _Bool ok = try_read(&_Mut x);
+    if (ok) {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+// Chained: only one checked.
+_Safe void test_chained_partial(void) {
+    int a;
+    int b;
+    int r1 = try_init(&_Mut a);
+    int r2 = try_init(&_Mut b);
+    if (r1 == 0) {
+        int sum = a + b; // expected-error {{use of uninitialized value: `b`}}
+    }
+}

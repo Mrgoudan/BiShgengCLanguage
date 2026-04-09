@@ -8309,7 +8309,91 @@ static void handleEnsureInitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         << AL << "pointer parameters";
     return;
   }
+  if (PVD->hasAttr<EnsureInitIfRetAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_ensure_init_if_ret_conflicts_ensure_init);
+    return;
+  }
   D->addAttr(::new (S.Context) EnsureInitAttr(S.Context, AL));
+}
+
+static void handleEnsureInitIfRetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // The contract is about *param, so it requires a (non-array) pointer
+  // parameter — same precondition as __attribute__((ensure_init)).
+  auto *PVD = dyn_cast<ParmVarDecl>(D);
+  if (!PVD || !PVD->getType()->isPointerType() ||
+      PVD->getOriginalType()->isArrayType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
+        << AL << "pointer parameters";
+    return;
+  }
+
+  if (PVD->hasAttr<EnsureInitAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_ensure_init_if_ret_conflicts_ensure_init);
+    return;
+  }
+
+  // Spec requires an integer literal, not just any constant expression.
+  // Accept `-N` / `+N` since the AST wraps a literal in a UnaryOperator.
+  Expr *ArgExpr = AL.getArgAsExpr(0);
+  Expr *Stripped = ArgExpr->IgnoreParenImpCasts();
+  bool IsLiteral = isa<IntegerLiteral>(Stripped) ||
+                   isa<CXXBoolLiteralExpr>(Stripped);
+  if (!IsLiteral) {
+    if (auto *UO = dyn_cast<UnaryOperator>(Stripped)) {
+      if ((UO->getOpcode() == UO_Minus || UO->getOpcode() == UO_Plus) &&
+          isa<IntegerLiteral>(UO->getSubExpr()->IgnoreParenImpCasts()))
+        IsLiteral = true;
+    }
+  }
+  if (!IsLiteral) {
+    S.Diag(ArgExpr->getExprLoc(),
+           diag::err_ensure_init_if_ret_arg_not_integer_literal);
+    return;
+  }
+  Optional<llvm::APSInt> ICE = ArgExpr->getIntegerConstantExpr(S.Context);
+  if (!ICE) {
+    S.Diag(ArgExpr->getExprLoc(),
+           diag::err_ensure_init_if_ret_arg_not_integer_literal);
+    return;
+  }
+  // Range-check by signedness/width before extracting: a bare getSExtValue()
+  // asserts on >64-bit literals and misreads large unsigned ones as negative.
+  constexpr int CondMin = FunctionType::ExtParameterInfo::EnsureInitIfRetCondMin;
+  constexpr int CondMax = FunctionType::ExtParameterInfo::EnsureInitIfRetCondMax;
+  bool InRange = false;
+  int64_t Val = 0;
+  if (ICE->isSigned()) {
+    if (ICE->isSignedIntN(64)) {
+      Val = ICE->getSExtValue();
+      InRange = Val >= CondMin && Val <= CondMax;
+    }
+  } else if (ICE->isIntN(64)) {
+    // Unsigned: value >= 0, so only the upper bound can be exceeded.
+    uint64_t U = ICE->getZExtValue();
+    if (U <= static_cast<uint64_t>(CondMax)) {
+      Val = static_cast<int64_t>(U);
+      InRange = true;
+    }
+  }
+  if (!InRange) {
+    S.Diag(ArgExpr->getExprLoc(),
+           diag::err_ensure_init_if_ret_cond_out_of_range)
+        << toString(*ICE, 10, ICE->isSigned()) << CondMin << CondMax;
+    return;
+  }
+  // Reject a second ensure_init_if_ret on the same parameter: a conflicting
+  // arg is an error (the contract would be ambiguous and the duplicate is
+  // silently dropped), an exact repeat is a redundant-attribute warning.
+  // Either way keep the first and don't add this one.
+  if (auto *Prev = PVD->getAttr<EnsureInitIfRetAttr>()) {
+    if (Prev->getCondValue() != static_cast<int>(Val))
+      S.Diag(AL.getLoc(), diag::err_ensure_init_if_ret_duplicate);
+    else
+      S.Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact) << AL;
+    return;
+  }
+  D->addAttr(::new (S.Context)
+                 EnsureInitIfRetAttr(S.Context, AL, static_cast<int>(Val)));
 }
 #endif
 
@@ -9119,6 +9203,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_EnsureInit:
     handleEnsureInitAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_EnsureInitIfRet:
+    handleEnsureInitIfRetAttr(S, D, AL);
     break;
 #endif
   }

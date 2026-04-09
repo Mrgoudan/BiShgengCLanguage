@@ -14,3 +14,9 @@ def EnsureInit : InheritableParamAttr {
   let Documentation = [Undocumented];
 }
 
+def EnsureInitIfRet : InheritableParamAttr {
+  let Spellings = [GNU<"ensure_init_if_ret">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Args = [IntArgument<"CondValue">];
+  let Documentation = [Undocumented];
+}

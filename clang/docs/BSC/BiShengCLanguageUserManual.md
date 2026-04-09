@@ -5900,8 +5900,8 @@ _Safe void rule9(void) {
 
 `__attribute__((ensure_init))` 是一个参数属性，用于标注指针参数，建立初始化契约：
 
-- **调用端**：调用后，被指向的变量标记为已初始化
-- **被调用端**：编译器验证函数确实在所有返回路径上初始化了 `*param`
+- **调用者**：调用后，被指向的变量标记为已初始化
+- **被调用者**：编译器验证函数确实在所有返回路径上初始化了 `*param`
 
 ```c
 void init_int(int *__attribute__((ensure_init)) out);
@@ -5912,7 +5912,7 @@ _Safe void caller(void) {
     int y = x;                // ok
 }
 
-// 编译器验证被调用端的契约
+// 编译器验证被调用者的契约
 void good_init(int *__attribute__((ensure_init)) out) {
     *out = 42; // ok: 在返回前初始化了 *out
 }
@@ -5986,22 +5986,22 @@ void init_delegated(int *__attribute__((ensure_init)) out) {
 }
 ```
 
-**重声明规则**：同安全级别的重声明（`_Safe`/`_Safe`、`_Unsafe`/`_Unsafe` 或 default/`_Unsafe`）必须保持 `ensure_init` 一致——要么都有，要么都没有。不同安全级别的重声明（`_Safe` 与非安全）是独立的重载，`ensure_init` 差异是允许的。
+**重声明规则**：safe/safe unsafe/unsafe compatible 的重声明（`_Safe`/`_Safe`、`_Unsafe`/`_Unsafe` 或 default/`_Unsafe`）必须保持 `ensure_init` 一致——要么都有，要么都没有。safe unsafe compatible 的重声明（`_Safe` 与非安全）是独立的重载，`ensure_init` 差异是允许的。
 
 ```c
-// 同安全级别：必须一致
+// safe/safe unsafe/unsafe compatible ：必须一致
 _Safe void foo(int *__attribute__((ensure_init)) _Borrow out);
 _Safe void foo(int *__attribute__((ensure_init)) _Borrow out) { // ok: 一致
     *out = 1;
 }
 
-// 同安全级别：不一致 → 错误
+// safe/safe unsafe/unsafe compatible ：不一致 → 错误
 // _Safe void bar(int *__attribute__((ensure_init)) _Borrow out);
 // _Safe void bar(int *_Borrow out) { ... } // error: incompatible declarations
 
-// 不同安全级别：allow differences
+// 不safe/safe unsafe/unsafe compatible ：allow differences
 void init_value(int *__attribute__((ensure_init)) out);
-_Safe void init_value(int *_Borrow out) { // ok: 不同安全级别
+_Safe void init_value(int *_Borrow out) { // ok: 不safe/safe unsafe/unsafe compatible 
     // ...
 }
 ```
@@ -6030,7 +6030,216 @@ _Safe void indirect_call(InitFn fn) {
 }
 ```
 
-#### 3.7.5. `__assume_initialized`
+#### 3.7.5. `__attribute__((ensure_init_if_ret(arg)))`
+
+**概要**：`ensure_init_if_ret` 用于表达「函数内有条件地对入参做初始化」——把「是否初始化」与「函数返回值」绑定，从而减少不必要的声明时初始化。
+
+**动机**：目前毕昇 C 要么在声明变量的函数内初始化，要么把变量传给带 `ensure_init` 的形参由被调用函数初始化（后者要求该形参指向的内存在**所有**返回路径上都被初始化）。但有一类在 C 中广泛存在的接口——返回成功值（如 `0`）时才回填输出参数、返回失败值时不碰它——无法用 `ensure_init` 表达：
+
+```c
+// 返回 0 时才初始化 *info；因失败路径不写，标不了 ensure_init
+_Safe unsigned int Init(Info *_Borrow info);
+```
+
+现状下只能在声明处先用初始化列表做一次冗余初始化，或在调用前用 `__assume_initialized`——后者是不安全调用，会漏掉对 `Init` 内部是否真正初始化 `*info` 的检查，破坏安全性。`ensure_init_if_ret(arg)` 填补这一空缺：返回值等于 `arg` 时才要求被修饰形参指向的内存被初始化，既不破坏安全区安全性，又避免性能敏感场景下的冗余初始化：
+
+```c
+_Safe unsigned int Init(Info *_Borrow __attribute__((ensure_init_if_ret(0))) info);
+_Safe unsigned int GetSize(const Info *_Borrow info);
+
+_Safe unsigned int example(void) {
+    Info info;                                 // 无需声明时初始化
+    unsigned int ret = Init(&_Mut info);
+    if (ret != 0) return ret;
+    unsigned int size = GetSize(&_Const info); // ok：info 已初始化
+    return 0;
+}
+```
+
+##### 语法
+
+`__attribute__((ensure_init_if_ret(arg)))` 接收一个参数 `arg`，表示「函数返回值为 `arg` 时，才要求被修饰的形参指向的内存被初始化」。
+
+```c
+int foo1(int *__attribute__((ensure_init_if_ret(2))));                            // ok
+_Safe int foo2(int *_Borrow __attribute__((ensure_init_if_ret(0))));              // ok
+_Safe int foo3(__attribute__((ensure_init_if_ret(1))) int *_Borrow, int, float);  // ok
+```
+
+##### 语义检查
+
+**1. 只能修饰函数形参。**
+
+```c
+typedef _Safe int (*FP)(int *_Borrow __attribute__((ensure_init_if_ret(0))), int *_Borrow); // ok
+_Safe int foo(int *_Borrow p, __attribute__((ensure_init_if_ret(1))) int *_Borrow q);       // ok
+
+__attribute__((ensure_init_if_ret(1))) int g_a;        // error：不能修饰全局变量
+_Safe void bar(int *_Borrow p, int *_Borrow q) {
+    int *_Borrow __attribute__((ensure_init_if_ret(0))) m; // error：不能修饰局部变量
+}
+```
+
+**2. 被修饰形参的类型必须是「指向 non-const 类型的裸指针或可变借用」。**
+
+```c
+_Safe int foo(int *_Borrow __attribute__((ensure_init_if_ret(1))), int,
+              int *_Borrow __attribute__((ensure_init_if_ret(1))));               // ok
+typedef _Safe int (*FP)(int *_Borrow __attribute__((ensure_init_if_ret(1))),
+                        int __attribute__((ensure_init_if_ret(0))), int);          // error：第二个形参不是指针/借用
+int bar(int *, int, const int *_Borrow __attribute__((ensure_init_if_ret(0))));   // error：第三个形参指向 const
+```
+
+**3. 函数返回类型必须是整数类型或 `_Bool`。**
+
+```c
+_Safe int   test1(int *_Borrow __attribute__((ensure_init_if_ret(1))), int);   // ok
+_Safe _Bool test2(int *_Borrow __attribute__((ensure_init_if_ret(1))), int);   // ok
+_Safe float test3(float *_Borrow __attribute__((ensure_init_if_ret(1))), int); // error：返回类型不符合
+```
+
+**4. `arg` 必须是整数字面量（整数类型，可为负）。**
+
+```c
+_Safe int   test1(int *_Borrow __attribute__((ensure_init_if_ret(1))), int);    // ok
+_Safe _Bool test2(int *_Borrow __attribute__((ensure_init_if_ret(-1))), int);   // ok
+_Safe int   test4(int *_Borrow __attribute__((ensure_init_if_ret(-1.0f))), int);// error：arg 不是整数字面量
+_Safe int   test5(int *_Borrow __attribute__((ensure_init_if_ret('s'))), int);  // error：arg 不是整数字面量
+```
+
+**5. 函数指针赋值兼容。** 不允许把「无 `ensure_init_if_ret`」的函数指针类型赋给「有」的；反向（强契约赋给弱契约）允许。两端都有时，对应形参的 `arg` 必须相同。
+
+```c
+typedef _Safe int (*FP1)(int *_Borrow __attribute__((ensure_init_if_ret(0))));
+typedef _Safe int (*FP2)(int *_Borrow);
+_Safe int foo(int *_Borrow);
+_Safe int bar(int *_Borrow __attribute__((ensure_init_if_ret(0))));
+
+FP1 g1 = foo; // error
+FP1 g2 = bar; // ok
+FP2 g3 = foo; // ok
+FP2 g4 = bar; // ok
+```
+
+**6. 重声明一致性。** 同安全级别（`_Safe`/`_Safe`、`_Unsafe`/`_Unsafe`）的多份声明之间，`ensure_init_if_ret` 的有无及 `arg` 必须一致；若 `_Unsafe` 声明带它，则配对的 `_Safe` 声明对应形参也必须带且 `arg` 相同。
+
+```c
+int baz(void *, int, int);
+_Safe int baz(void *_Borrow __attribute__((ensure_init_if_ret(0))), int, int);  // ok
+
+_Safe int goo(int *_Borrow __attribute__((ensure_init_if_ret(0))), int);
+_Safe int goo(int *_Borrow __attribute__((ensure_init_if_ret(2))), int);        // error：两份 _Safe 声明 arg 不同
+```
+
+**7. 与 `ensure_init` 互斥。**
+
+```c
+_Safe int t(int *_Borrow __attribute__((ensure_init_if_ret(1))) __attribute__((ensure_init)), int); // error
+```
+
+##### 调用端
+
+允许对未初始化变量取地址 / 可变借用，**前提是所得表达式直接作为带 `ensure_init_if_ret` 的实参传入**。调用返回后，只有在「返回值 == `arg`」的分支上才认为该变量已初始化，其他分支仍视为未初始化。
+
+```c
+_Safe int bar(int *_Borrow __attribute__((ensure_init_if_ret(0))));
+
+_Safe void foo(void) {
+    int a;
+    (void)bar(&_Mut a); // ok
+    int b = a;          // error：没有对返回值做判断，a 可能未初始化
+}
+_Safe void baz(void) {
+    int a;
+    int *_Borrow p = &_Mut a; // error：借用未直接传给 bar，且 a 未初始化
+    (void)bar(p);
+    int b = a;                // error：a 未初始化
+}
+_Safe void goo(void) {
+    int a;
+    int res = bar(&_Mut a);
+    if (res != 0) return;
+    int b = a;                // ok：a 已初始化
+}
+```
+
+返回值判断支持四种形式：`e == value`、`e != value`、`value == e`、`value != e`（`value` 为整数 / `_Bool` 字面量）。其中 `e` 可以是：
+
+- 带 `ensure_init_if_ret` 入参的函数调用 `foo(...)`；
+- 与该调用关联的变量 `a`——「关联」指 `a` 在判断时的值是由「直接把 `foo(...)` 的返回值赋给 `a`」得到，且从赋值到判断之间 `a` 未被取地址、取可变借用或重新赋值。
+
+```c
+_Safe int bar(int *_Borrow __attribute__((ensure_init_if_ret(0))));
+_Safe void goo(void) {
+    int a;
+    int res = bar(&_Mut a);
+    if (res != 0) ;           // ok
+    if (0 != res) ;           // ok
+    if (res == 0) ;           // ok
+    if (0 == res) ;           // ok
+    if (bar(&_Mut a) != 0) ;  // ok（直接用调用）
+    if (0 == bar(&_Mut a)) ;  // ok
+}
+```
+
+##### 被调用端
+
+对带 `ensure_init_if_ret(arg)` 的形参 `p` 做初始化检查：初始认为 `*p` 未初始化；若在「返回值为 `arg`」的分支上 `*p` 未完成初始化则报错（结构体要求所有字段都被初始化）。
+
+```c
+typedef struct { int a; int b; } S;
+
+_Safe unsigned int ok(int a, S *_Borrow __attribute__((ensure_init_if_ret(0))) p) {
+    if (a == 2) return 1;       // ok：返回 1 的路径不要求初始化
+    p->a = 1; p->b = 2;
+    return 0;                   // ok：返回 0 的路径已初始化
+}
+_Safe unsigned int bad(int a, S *_Borrow __attribute__((ensure_init_if_ret(0))) p) {
+    if (a == 2) { p->a = 0; p->b = 0; return 1; } // ok
+    p->a = 1;
+    return 0;                   // error：(*p).b 未初始化
+}
+```
+
+**改变 `p` 的指向**是允许的，但在「返回 `arg`」的分支上，改指之前必须先初始化 `*p`。
+
+```c
+_Safe int foo(int a, int *_Borrow __attribute__((ensure_init_if_ret(0))) p) {
+    if (a == 1) return 1;
+    *p = 2;
+    int b = 3;
+    p = &_Mut b;                // ok：*p 已初始化，可改变 p 的指向
+    return 0;
+}
+```
+
+**把 `p` 赋给其他变量**也允许，但赋值前必须先初始化 `*p`。
+
+```c
+_Safe int foo(int *_Borrow __attribute__((ensure_init_if_ret(0))) p) {
+    int *_Borrow q = p;         // error：*p 未初始化
+    *p = 2;
+    return 0;
+}
+_Safe int bar(int a, int *_Borrow __attribute__((ensure_init_if_ret(0))) p) {
+    *p = 2;
+    int *_Borrow q = p;         // ok：*p 已初始化
+    if (a == 1) return 1;
+    return 0;
+}
+```
+
+##### 已知限制
+
+初始化检查是流敏感的定值分析，不做循环 trip-count 推理，也不追踪路径相关性，因此对某些写法会保守报错：
+
+- 即便循环上界是常量（`for (i = 0; i < 10; i++)`），循环体仍被视作可能执行 0 次，循环内的初始化不算数；用初始化前置或 `do-while` 规避。
+- 两个由同一变量控制的 `if` 被视为相互独立，可能误报；把相关检查并入同一 `if` 规避。
+- 用 `&&`、`||` 组合多个条件时，组合条件中的子比较暂不被识别为对返回值的判断。
+- 把返回值复制到的局部变量若被重新赋值、取地址或取可变借用，原先的关联会被丢弃。
+
+
+#### 3.7.6. `__assume_initialized`
 
 `__assume_initialized(&x)` 是一个内建函数，用于在某个程序点将变量标记为已初始化。与 `ensure_init` 不同，它**不做契约验证**——由用户保证变量确实已初始化。
 
@@ -6115,7 +6324,7 @@ _Safe void array_subscript_example(void) {
 }
 ```
 
-#### 3.7.6. 检查模式
+#### 3.7.7. 检查模式
 
 通过编译选项 `-uninit-check=<mode>` 控制初始化分析的范围：
 

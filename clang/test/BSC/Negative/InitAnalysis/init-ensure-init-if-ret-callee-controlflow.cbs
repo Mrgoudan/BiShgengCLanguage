@@ -1,0 +1,162 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// ==========================================================================
+// ensure_init_if_ret(VALUE) — callee side, across every control-flow form
+// (for / while / do-while / switch / goto). Contract: on a return path whose
+// value == VALUE, *param must be initialized; the dataflow fixpoint must
+// reach that conclusion through loops, switch edges and goto edges.
+// ==========================================================================
+
+// ----- for ----------------------------------------------------------------
+
+// OK: *out initialized before the loop.
+int for_init_before(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    *out = 0;
+    for (int i = 0; i < n; i++) {}
+    return 0;
+}
+
+// OK: the body runs unconditionally before break.
+int for_forever_break(int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (;;) { *out = 1; break; }
+    return 0;
+}
+
+// ERROR: return 0 inside the loop before any init.
+int for_return_in_body(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (int i = 0; i < n; i++) {
+        if (i == 5)
+            return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    }
+    return 1;
+}
+
+// MAYBE: the loop may run zero times, so the init may not happen.
+int for_init_in_body(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (int i = 0; i < n; i++)
+        *out = i;
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// ERROR: inner-loop return 0 with no init on that path.
+int for_nested(int m, int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            if (i == j)
+                return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    return 1;
+}
+
+// MAYBE: init only on the break path; the loop may never reach it.
+int for_break_init(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (int i = 0; i < n; i++)
+        if (i == 2) { *out = 1; break; }
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// MAYBE: continue skips the init on odd iterations.
+int for_continue(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (int i = 0; i < n; i++) {
+        if (i % 2) continue;
+        *out = i;
+    }
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// MAYBE: a constant loop bound does not change the result — the analysis
+// does not reason about trip counts, so the body is still treated as
+// possibly running zero times. (Init before the loop, or use do-while.)
+int for_const_bound(int *__attribute__((ensure_init_if_ret(0))) out) {
+    for (int i = 0; i < 10; i++)
+        *out = i;
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// ----- while --------------------------------------------------------------
+
+// ERROR: *out never initialized.
+int while_never(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    while (n > 0) n--;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// MAYBE: the body may run zero times.
+int while_init_in_body(int c, int *__attribute__((ensure_init_if_ret(0))) out) {
+    while (c) { *out = 1; c = 0; }
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// OK: initialized before the loop.
+int while_init_before(int c, int *__attribute__((ensure_init_if_ret(0))) out) {
+    *out = 0;
+    while (c) c--;
+    return 0;
+}
+
+// ----- do-while (body runs at least once) ---------------------------------
+
+// OK: unconditional init in the body, which always executes.
+int dowhile_uncond(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    do { *out = 1; } while (n-- > 0);
+    return 0;
+}
+
+// MAYBE: init is conditional inside the body.
+int dowhile_cond(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    do { if (n) *out = 1; } while (n-- > 0);
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// ----- switch -------------------------------------------------------------
+
+// Per-case: only the case that returns 0 without init is flagged.
+int switch_cases(int k, int *__attribute__((ensure_init_if_ret(0))) out) {
+    switch (k) {
+    case 1:
+        *out = 1;
+        return 0;            // OK: initialized on this case
+    case 2:
+        return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    default:
+        return 1;            // non-0: no obligation
+    }
+}
+
+// OK: fallthrough reaches the init before the shared return 0.
+int switch_fallthrough(int k, int *__attribute__((ensure_init_if_ret(0))) out) {
+    switch (k) {
+    case 1:
+    case 0:
+        *out = 1;
+        return 0;
+    default:
+        return 2;
+    }
+}
+
+// ----- goto ---------------------------------------------------------------
+
+// MAYBE: the goto path skips the init; the fall-through path takes it.
+int goto_skip(int c, int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (c) goto done;
+    *out = 1;
+done:
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// OK: the only path goes through the init.
+int goto_through_init(int *__attribute__((ensure_init_if_ret(0))) out) {
+    goto skip;
+skip:
+    *out = 1;
+    return 0;
+}
+
+// OK: backward goto forms a loop; init happens after it, before return 0.
+int goto_backward(int n, int *__attribute__((ensure_init_if_ret(0))) out) {
+    int i = 0;
+again:
+    if (i < n) { i++; goto again; }
+    *out = 1;
+    return 0;
+}

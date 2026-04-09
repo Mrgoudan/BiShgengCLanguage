@@ -1,0 +1,17 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+//
+// CheckBSCEnsureInitIfRetOnFunctionDecl guards the return-type check with
+// !isDependentType() && !isBSCCalculatedTypeInCompileTime() (like the sibling
+// check), so a generic whose return type is the (dependent) type parameter is
+// not rejected at template-definition time.
+
+T identity<T>(int *__attribute__((ensure_init_if_ret(0))) out, T v) {
+    *out = 1;
+    return v;
+}
+
+int use(void) {
+    int x;
+    return identity<int>(&x, 7);
+}

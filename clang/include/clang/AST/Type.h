@@ -3907,16 +3907,35 @@ public:
   /// because the substitution of T=void, U=id into the former will
   /// not produce the latter.
   class ExtParameterInfo {
+#if ENABLE_BSC
+    enum : uint32_t {
+#else
     enum {
+#endif
       ABIMask = 0x0F,
       IsConsumed = 0x10,
       HasPassObjSize = 0x20,
       IsNoEscape = 0x40,
 #if ENABLE_BSC
       IsEnsureInit = 0x80,
+      IsEnsureInitIfRet = 0x100,
+      // Bits 16-31: signed ensure_init_if_ret cond value (range
+      // -32768..32767), valid only when IsEnsureInitIfRet is set. The value
+      // occupies the top 16 bits so its sign bit lands on bit 31, letting
+      // getEnsureInitIfRetCondValue() sign-extend with a plain arithmetic
+      // shift.
+      EnsureInitIfRetValueShift = 16,
+      EnsureInitIfRetValueBits = 16,
+      EnsureInitIfRetValueMask = 0xFFFF0000u,
 #endif
     };
+#if ENABLE_BSC
+    // Widened from a byte so the flag + packed cond value survive through
+    // function pointer types (the fnptr-compat rule compares them).
+    uint32_t Data = 0;
+#else
     unsigned char Data = 0;
+#endif
 
   public:
     ExtParameterInfo() = default;
@@ -3968,14 +3987,46 @@ public:
         Copy.Data &= ~IsEnsureInit;
       return Copy;
     }
-#endif
 
+    bool isEnsureInitIfRet() const { return Data & IsEnsureInitIfRet; }
+    /// Cond value for ensure_init_if_ret, only meaningful when
+    /// isEnsureInitIfRet() is true. Sign-extended from the packed bits.
+    int getEnsureInitIfRetCondValue() const {
+      int32_t Raw = static_cast<int32_t>(Data & EnsureInitIfRetValueMask);
+      return Raw >> EnsureInitIfRetValueShift;
+    }
+    /// Encodable cond range; values outside it are rejected at
+    /// attribute-attach time. Enumerators avoid C++14 odr-use.
+    enum : int {
+      EnsureInitIfRetCondMin = -(1 << (EnsureInitIfRetValueBits - 1)),
+      EnsureInitIfRetCondMax = (1 << (EnsureInitIfRetValueBits - 1)) - 1,
+    };
+    ExtParameterInfo withIsEnsureInitIfRet(bool On, int CondValue = 0) const {
+      ExtParameterInfo Copy = *this;
+      Copy.Data &= ~(IsEnsureInitIfRet | EnsureInitIfRetValueMask);
+      if (On) {
+        Copy.Data |= IsEnsureInitIfRet;
+        uint32_t Packed =
+            static_cast<uint32_t>(CondValue) << EnsureInitIfRetValueShift;
+        Copy.Data |= (Packed & EnsureInitIfRetValueMask);
+      }
+      return Copy;
+    }
+
+    uint32_t getOpaqueValue() const { return Data; }
+    static ExtParameterInfo getFromOpaqueValue(uint32_t data) {
+      ExtParameterInfo result;
+      result.Data = data;
+      return result;
+    }
+#else
     unsigned char getOpaqueValue() const { return Data; }
     static ExtParameterInfo getFromOpaqueValue(unsigned char data) {
       ExtParameterInfo result;
       result.Data = data;
       return result;
     }
+#endif
 
     friend bool operator==(ExtParameterInfo lhs, ExtParameterInfo rhs) {
       return lhs.Data == rhs.Data;

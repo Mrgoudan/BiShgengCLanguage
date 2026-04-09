@@ -1,0 +1,89 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Sema-level rules for __attribute__((ensure_init_if_ret(arg))):
+//   - attribute may only appear on a function formal parameter
+//   - function return type must be integer or _Bool
+//   - arg must be an integer literal
+//   - mutually exclusive with __attribute__((ensure_init))
+
+
+// --- Subject must be a parameter --------------------------------------------
+
+// On a variable
+int __attribute__((ensure_init_if_ret(0))) g; // expected-warning {{'ensure_init_if_ret' attribute only applies to parameters}}
+
+// On a function (return type slot)
+__attribute__((ensure_init_if_ret(0))) int return_attr(int *out); // expected-warning {{'ensure_init_if_ret' attribute only applies to parameters}}
+
+
+// --- Subject must be a (non-array) pointer parameter ------------------------
+// The contract is about *param, so a non-pointer or array parameter is
+// rejected (same rule as __attribute__((ensure_init))).
+
+int int_param(int __attribute__((ensure_init_if_ret(0))) p); // expected-warning {{attribute only applies to pointer parameters}}
+
+int arr_param(int __attribute__((ensure_init_if_ret(0))) p[2]); // expected-warning {{attribute only applies to pointer parameters}}
+
+int arr_param_unsized(int __attribute__((ensure_init_if_ret(0))) p[]); // expected-warning {{attribute only applies to pointer parameters}}
+
+
+// --- Function return type ---------------------------------------------------
+
+void void_ret(int *__attribute__((ensure_init_if_ret(0))) out); // expected-error {{__attribute__((ensure_init_if_ret)) requires an integer or '_Bool' return type, but function returns 'void'}}
+
+float float_ret(int *__attribute__((ensure_init_if_ret(0))) out); // expected-error {{__attribute__((ensure_init_if_ret)) requires an integer or '_Bool' return type, but function returns 'float'}}
+
+int *ptr_ret(int *__attribute__((ensure_init_if_ret(0))) out); // expected-error {{__attribute__((ensure_init_if_ret)) requires an integer or '_Bool' return type, but function returns 'int *'}}
+
+int int_ret(int *__attribute__((ensure_init_if_ret(0))) out);
+
+_Bool bool_ret(int *__attribute__((ensure_init_if_ret(1))) out);
+
+
+// --- arg must be an integer literal -----------------------------------------
+
+#define MAGIC 0
+// Macro that expands to a literal is acceptable.
+int macro_ok(int *__attribute__((ensure_init_if_ret(MAGIC))) out);
+
+// const variable is not a literal.
+const int kZero = 0;
+int const_var(int *__attribute__((ensure_init_if_ret(kZero))) out); // expected-error {{__attribute__((ensure_init_if_ret)) argument must be an integer literal}}
+
+// Compound expression is not a single literal.
+int expr_arg(int *__attribute__((ensure_init_if_ret(1 + 1))) out); // expected-error {{__attribute__((ensure_init_if_ret)) argument must be an integer literal}}
+
+// Negative integer literal is accepted (wrapped UnaryOperator over IntegerLiteral).
+int neg_arg(int *__attribute__((ensure_init_if_ret(-1))) out);
+
+// Boundary values inside the packed cond-value range (signed 16-bit) are
+// accepted; the diagnostic only fires when a literal overflows the bits
+// reserved for the value in ExtParameterInfo (so it can survive through
+// function-pointer types without silent truncation).
+int max_in_range(int *__attribute__((ensure_init_if_ret(32767))) out);
+int min_in_range(int *__attribute__((ensure_init_if_ret(-32768))) out);
+
+int over_max(int *__attribute__((ensure_init_if_ret(32768))) out); // expected-error {{__attribute__((ensure_init_if_ret)) argument 32768 is outside the range [-32768, 32767] supported in function pointer types}}
+int under_min(int *__attribute__((ensure_init_if_ret(-32769))) out); // expected-error {{__attribute__((ensure_init_if_ret)) argument -32769 is outside the range [-32768, 32767] supported in function pointer types}}
+
+// A large unsigned literal must be range-checked by its true (unsigned)
+// value, not silently reinterpreted by getSExtValue() as a small negative
+// (and must not trip the >64-bit width assertion). 0xFFFFFFFFFFFFFFFF is
+// 2^64-1, well outside the range.
+int u64_max(int *__attribute__((ensure_init_if_ret(0xFFFFFFFFFFFFFFFF))) out); // expected-error {{__attribute__((ensure_init_if_ret)) argument 18446744073709551615 is outside the range [-32768, 32767] supported in function pointer types}}
+int u32_max(int *__attribute__((ensure_init_if_ret(0xFFFFFFFF))) out); // expected-error {{__attribute__((ensure_init_if_ret)) argument 4294967295 is outside the range [-32768, 32767] supported in function pointer types}}
+
+
+// --- Mutually exclusive with ensure_init ------------------------------------
+
+int mutex_a(int *__attribute__((ensure_init)) __attribute__((ensure_init_if_ret(0))) out); // expected-error {{__attribute__((ensure_init_if_ret)) cannot be combined with __attribute__((ensure_init)) on the same parameter}}
+
+int mutex_b(int *__attribute__((ensure_init_if_ret(0))) __attribute__((ensure_init)) out); // expected-error {{__attribute__((ensure_init_if_ret)) cannot be combined with __attribute__((ensure_init)) on the same parameter}}
+
+
+// --- Specified more than once on the same parameter -------------------------
+// Conflicting args → error (the contract would be ambiguous); the first wins.
+int dup_conflict(int *__attribute__((ensure_init_if_ret(0))) __attribute__((ensure_init_if_ret(1))) out); // expected-error {{__attribute__((ensure_init_if_ret)) specified more than once with conflicting arguments on the same parameter}}
+
+// Exact repeat → redundant-attribute warning.
+int dup_same(int *__attribute__((ensure_init_if_ret(0))) __attribute__((ensure_init_if_ret(0))) out); // expected-warning {{attribute 'ensure_init_if_ret' is already applied}}

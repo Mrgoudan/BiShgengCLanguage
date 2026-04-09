@@ -947,19 +947,41 @@ bool Sema::CheckEnsureInitFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
   if (LHSFuncType->getNumParams() != RHSFuncType->getNumParams())
     return true; // Param count mismatch handled elsewhere
 
-  // Check: if target has ensure_init but source doesn't → error.
-  // Source having ensure_init but target not → ok (stronger to weaker).
+  // Asymmetric compat: target having the attribute is a contract callers
+  // rely on, so source must carry it too. Reverse direction (source has
+  // more, target has less) silently weakens and is allowed.
   for (unsigned I = 0; I < LHSFuncType->getNumParams(); ++I) {
-    bool LHSHasEnsureInit = LHSFuncType->hasExtParameterInfos() &&
-                            LHSFuncType->getExtParameterInfo(I).isEnsureInit();
-    bool RHSHasEnsureInit = RHSFuncType->hasExtParameterInfos() &&
-                            RHSFuncType->getExtParameterInfo(I).isEnsureInit();
+    FunctionProtoType::ExtParameterInfo LHSExt =
+        LHSFuncType->hasExtParameterInfos()
+            ? LHSFuncType->getExtParameterInfo(I)
+            : FunctionProtoType::ExtParameterInfo();
+    FunctionProtoType::ExtParameterInfo RHSExt =
+        RHSFuncType->hasExtParameterInfos()
+            ? RHSFuncType->getExtParameterInfo(I)
+            : FunctionProtoType::ExtParameterInfo();
 
-    if (LHSHasEnsureInit && !RHSHasEnsureInit) {
+    if (LHSExt.isEnsureInit() && !RHSExt.isEnsureInit()) {
       Diag(RHSExpr->getBeginLoc(),
            diag::err_ensure_init_funcptr_incompatible)
           << I;
       return false;
+    }
+
+    if (LHSExt.isEnsureInitIfRet()) {
+      if (!RHSExt.isEnsureInitIfRet()) {
+        Diag(RHSExpr->getBeginLoc(),
+             diag::err_ensure_init_if_ret_funcptr_missing)
+            << I;
+        return false;
+      }
+      if (LHSExt.getEnsureInitIfRetCondValue() !=
+          RHSExt.getEnsureInitIfRetCondValue()) {
+        Diag(RHSExpr->getBeginLoc(),
+             diag::err_ensure_init_if_ret_funcptr_cond_mismatch)
+            << LHSExt.getEnsureInitIfRetCondValue() << I
+            << RHSExt.getEnsureInitIfRetCondValue();
+        return false;
+      }
     }
   }
   return true;

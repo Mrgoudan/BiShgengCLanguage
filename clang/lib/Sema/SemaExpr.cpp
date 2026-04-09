@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -7772,7 +7773,6 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       // and not a delegation to another ensure_init parameter.
       // Works for both direct calls (FDecl) and indirect calls (fn pointers).
       unsigned NumCallArgs = TheCall->getNumArgs();
-      unsigned NumParams = FDecl ? FDecl->getNumParams() : 0;
       const FunctionProtoType *CalleeFPT =
           Fn->getType()->getAs<FunctionProtoType>();
       if (!CalleeFPT) {
@@ -7782,16 +7782,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
       }
 
       for (unsigned I = 0; I < NumCallArgs; ++I) {
-        bool IsEI = false;
-        if (FDecl && I < NumParams &&
-            FDecl->getParamDecl(I)->hasAttr<EnsureInitAttr>())
-          IsEI = true;
-        if (!IsEI && CalleeFPT && CalleeFPT->hasExtParameterInfos() &&
-            I < CalleeFPT->getNumParams() &&
-            CalleeFPT->getExtParameterInfo(I).isEnsureInit())
-          IsEI = true;
-        if (!IsEI)
+        // 0 = ensure_init, 1 = ensure_init_if_ret; -1 = no contract.
+        int Cond = 0;
+        EnsureInitKind Kind = classifyEnsureInit(FDecl, CalleeFPT, I, Cond);
+        if (Kind == EnsureInitKind::None)
           continue;
+        int AttrSelect = (Kind == EnsureInitKind::EnsureInitIfRet) ? 1 : 0;
 
         Expr *Arg = TheCall->getArg(I)->IgnoreParenImpCasts();
         if (auto *UO = dyn_cast<UnaryOperator>(Arg))
@@ -7799,10 +7795,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
             continue;
         if (auto *DRE = dyn_cast<DeclRefExpr>(Arg))
           if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-            if (PVD->hasAttr<EnsureInitAttr>())
+            if (PVD->hasAttr<EnsureInitAttr>() ||
+                PVD->hasAttr<EnsureInitIfRetAttr>())
               continue;
         Diag(TheCall->getArg(I)->getExprLoc(),
-             diag::warn_ensure_init_not_addressof);
+             diag::warn_ensure_init_not_addressof)
+            << AttrSelect;
       }
     }
 #endif

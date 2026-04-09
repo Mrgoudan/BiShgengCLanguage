@@ -91,7 +91,7 @@ Every borrow-check error is emitted with one note from `BSCBorrowChecker.h::flus
 
 ---
 
-## INIT — initialization (15 errors, 1 warning)
+## INIT — initialization (29 errors, 1 warning)
 
 | Code | Diagnostic | Message | Notes |
 |------|------------|---------|-------|
@@ -101,16 +101,30 @@ Every borrow-check error is emitted with one note from `BSCBorrowChecker.h::flus
 | INIT-004 | err_ownership_cast_uninit | invalid cast to `void * _Owned` of uninit value: `%0` | — |
 | INIT-005 | err_return_uninit | return value of `%0` is not initialized on all paths | — |
 | INIT-006 | err_return_possibly_uninit | return value of `%0` may not be initialized on all paths | — |
-| INIT-007 | err_ensure_init_not_init | `*%0` not initialized at return in `__attribute__((ensure_init))` function | — |
-| INIT-008 | err_ensure_init_maybe_not_init | `*%0` may not be initialized on all paths at return in `__attribute__((ensure_init))` function | — |
-| INIT-009 | err_ensure_init_ptr_aliased | `__attribute__((ensure_init))` parameter `%0` cannot be reassigned or aliased before `*%0` is initialized | — |
+| INIT-007 | err_ensure_init_not_init | `*%0` not initialized at return in `__attribute__((ensure_init))` function | `note_ensure_init_ptr_reassigned_here` — `'%0'` was re-pointed here without initializing `'*%0'` first (fires when the failing path included a re-point) |
+| INIT-008 | err_ensure_init_maybe_not_init | `*%0` may not be initialized on all paths at return in `__attribute__((ensure_init))` function | `note_ensure_init_ptr_reassigned_here` — same trigger as INIT-007 |
+| INIT-009 | err_ensure_init_ptr_aliased | `__attribute__((ensure_init))` parameter `%0` cannot be reassigned or aliased before `*%0` is initialized | Fires for aliasing the param into a named local; re-pointing is deferred to INIT-007/008 with a note instead |
 | INIT-010 | err_ensure_init_deref_read_uninit | use of uninitialized `*%0` in `__attribute__((ensure_init))` function | — |
 | INIT-011 | err_ensure_init_funcptr_incompatible | incompatible function pointer types: target expects `__attribute__((ensure_init))` on parameter %0 but source does not have it | — |
 | INIT-012 | err_assume_init_bad_arg | `__assume_initialized` requires `&` expression as argument | — |
 | INIT-013 | err_assume_init_array_subscript | `__assume_initialized` argument cannot contain an array subscript | `note_assume_init_array_subscript_hint` — the init analysis tracks arrays as whole units; address the enclosing array instead |
 | INIT-014 | err_assume_init_complex_arg | unsupported `__assume_initialized` argument | `note_assume_init_complex_arg_hint` — the argument must be `&` applied to a variable, struct field access, or pointer dereference |
 | INIT-015 | err_nonnull_init_by_default | type contains nonnull pointer must be properly initialized | — |
-| **INIT-W001** | warn_ensure_init_not_addressof | ensure_init effect cannot be verified when argument is not an address-of expression | — |
+| INIT-016 | err_ensure_init_if_ret_not_init | `'*%0'` not initialized at return in `__attribute__((ensure_init_if_ret(%1)))` function | `note_ensure_init_ptr_reassigned_here` — fires when the failing matching-return path included a re-point |
+| INIT-017 | err_ensure_init_if_ret_maybe_not_init | `'*%0'` may not be initialized on all paths at return in `__attribute__((ensure_init_if_ret(%1)))` function | `note_ensure_init_ptr_reassigned_here` — same trigger as INIT-016 |
+| INIT-018 | err_ensure_init_if_ret_non_const_return | cannot verify `__attribute__((ensure_init_if_ret(%1)))` contract for `'*%0'`: return value is not an integer constant, so the runtime value may equal the cond value — `'*%0'` must be initialized on this path | `note_ensure_init_ptr_reassigned_here` — same trigger as INIT-016 |
+| INIT-019 | err_ensure_init_if_ret_conflicts_ensure_init | `__attribute__((ensure_init_if_ret))` cannot be combined with `__attribute__((ensure_init))` on the same parameter | — |
+| INIT-020 | err_ensure_init_if_ret_arg_not_integer_literal | `__attribute__((ensure_init_if_ret))` argument must be an integer literal | — |
+| INIT-021 | err_ensure_init_if_ret_bad_return_type | `__attribute__((ensure_init_if_ret))` requires an integer or `'_Bool'` return type, but function returns %0 | — |
+| INIT-022 | err_ensure_init_if_ret_redecl_mismatch | conflicting `__attribute__((ensure_init_if_ret))` on parameter %0 in redeclaration of %1 | `note_previous_declaration` — previous declaration is here |
+| INIT-023 | err_ensure_init_if_ret_unsafe_without_safe | `__attribute__((ensure_init_if_ret(%0)))` on parameter %1 of `_Unsafe` declaration requires the matching `_Safe` declaration to carry the same attribute with the same argument | `note_previous_declaration` — previous declaration is here |
+| INIT-024 | err_ensure_init_if_ret_cond_out_of_range | `__attribute__((ensure_init_if_ret))` argument %0 is outside the range [%1, %2] supported in function pointer types | The bound is set by the cond-value bits packed into `ExtParameterInfo` (signed 16-bit field) |
+| INIT-025 | err_ensure_init_if_ret_funcptr_missing | incompatible function pointer types: target expects `__attribute__((ensure_init_if_ret))` on parameter %0 but source does not have it | — |
+| INIT-026 | err_ensure_init_if_ret_funcptr_cond_mismatch | incompatible function pointer types: target expects `__attribute__((ensure_init_if_ret(%0)))` on parameter %1 but source has `__attribute__((ensure_init_if_ret(%2)))` | — |
+| INIT-027 | err_ensure_init_reassigned | `__attribute__((ensure_init))` not satisfied: `%0` is reassigned before `*%0` is initialized, so `*%0` is not initialized at return | `note_ensure_init_ptr_reassigned_here`; used in place of INIT-007/008 when the failing path's cause is a re-point |
+| INIT-028 | err_ensure_init_if_ret_reassigned | `__attribute__((ensure_init_if_ret(%1)))` not satisfied: `%0` is reassigned before `*%0` is initialized, so `*%0` is not guaranteed initialized when returning %1 | `note_ensure_init_ptr_reassigned_here`; used in place of INIT-016/017 when the cause is a re-point |
+| INIT-029 | err_ensure_init_if_ret_duplicate | `__attribute__((ensure_init_if_ret))` specified more than once with conflicting arguments on the same parameter | An exact repeat instead warns via the generic `attribute … is already applied` |
+| **INIT-W001** | warn_ensure_init_not_addressof | `%select{ensure_init\|ensure_init_if_ret}0` effect cannot be verified when argument is not an address-of expression | Message names the attribute the parameter actually carries; also fires for `ensure_init_if_ret` parameters, including indirect calls through a function-pointer typedef |
 
 ---
 
@@ -180,13 +194,13 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 |------------|-------------------------------|-------:|---------:|
 | OWN-       | owned                         | 46     | 1        |
 | BOR-       | borrow                        | 20     | 0        |
-| INIT-      | initialization                | 14     | 1        |
+| INIT-      | initialization                | 29     | 1        |
 | MISC-      | declaration / dispatch        | 7      | 0        |
 | SZONE-     | safe zone                     | 12     | 0        |
 | NONNULL-   | nonnull pointer               | 2      | 0        |
 | NULLABLE-  | nullable pointer              | 5      | 0        |
-| **Total**  |                               | **106** | **2**   |
+| **Total**  |                               | **121** | **2**   |
 
-Plus **21 BSC-specific notes**, each tied to one or more of the errors above (see the Notes column per row).
+Plus **22 BSC-specific notes**, each tied to one or more of the errors above (see the Notes column per row).
 
 Out-of-scope BSC features (not coded here): traits, async/await, generic, constexpr, operator overload, instance member functions. These contribute several more errors, one warning (`warn_type_has_not_impl_trait`), and one note (`note_no_this_parameter`).

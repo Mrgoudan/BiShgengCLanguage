@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Counterpart to init-ensure-init-if-ret-owned-cleanup.cbs: an
+// owned-resource function that DOES initialize *out on the matching
+// return path passes, even though cleanup lowers the return through a
+// Drop terminator.
+
+struct OwnedFields { int *_Owned a; };
+void sink(int *_Owned p);
+
+// *out initialized before the matching (==0) return.
+int ok_owned_param(struct OwnedFields s,
+                   int *__attribute__((ensure_init_if_ret(0))) out) {
+    sink(s.a);
+    *out = 1;
+    return 0;
+}
+
+// Non-matching return on the owned path: no obligation to initialize.
+int ok_owned_nonmatch(struct OwnedFields s,
+                      int *__attribute__((ensure_init_if_ret(0))) out) {
+    sink(s.a);
+    return -1;
+}
+
+// Init on the matching branch, non-matching return on the other branch.
+int ok_owned_branch(int cond, struct OwnedFields s,
+                    int *__attribute__((ensure_init_if_ret(0))) out) {
+    sink(s.a);
+    if (cond) {
+        *out = 1;
+        return 0;
+    }
+    return -1;
+}

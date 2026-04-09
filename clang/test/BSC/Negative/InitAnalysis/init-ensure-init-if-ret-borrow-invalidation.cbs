@@ -1,0 +1,35 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Regression: the call<->compare association breaks on address-of or a
+// MUTABLE borrow of the tracked return-value local, but NOT on an
+// immutable (&_Const) borrow, which cannot change the value. Previously
+// any borrow invalidated the association, spuriously rejecting valid code
+// that takes an immutable borrow of the return value (a false positive).
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Safe void observe(const int *_Borrow r);
+_Safe void mutate(int *_Borrow r);
+
+// Immutable borrow of the return value: association preserved, so *x is
+// initialized on the ret==0 branch. No diagnostic expected here.
+_Safe void const_borrow_ok(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    observe(&_Const ret);
+    if (ret == 0) {
+        int y = x; // OK: x initialized on the matching branch
+        (void)y;
+    }
+}
+
+// Mutable borrow: ret may be changed through the alias, so the association
+// is broken and x must be treated as uninitialized inside the branch.
+_Safe void mut_borrow_breaks(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    mutate(&_Mut ret);
+    if (ret == 0) {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+        (void)y;
+    }
+}

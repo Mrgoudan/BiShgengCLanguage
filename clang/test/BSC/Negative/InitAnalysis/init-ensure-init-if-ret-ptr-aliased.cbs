@@ -1,0 +1,79 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Re-pointing vs aliasing for ensure_init_if_ret:
+//   - Re-pointing the param (`p = other`) is path-sensitive: allowed on
+//     paths that don't return the matching arg; the contract failure is
+//     reported at a matching-arg return where *p was not initialised,
+//     with a note pointing back at the re-point site.
+//   - Aliasing the param into a named local (`int *q = p`) is
+//     unconditional — errors immediately.
+
+
+// Aliasing param to a local variable before *p is init.
+// Return -1 so the matching-arg return check is silent.
+int alias_before_init(int *__attribute__((ensure_init_if_ret(0))) out, int **escape) {
+    int *alias = out; // expected-error {{__attribute__((ensure_init_if_ret)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
+    *alias = 1;
+    return -1;
+}
+
+
+// Re-point then return arg → at-return error with note at re-point.
+int repoint_then_match(int *__attribute__((ensure_init_if_ret(0))) out, int *other) {
+    out = other; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+    return 0; // expected-error {{__attribute__((ensure_init_if_ret(0))) not satisfied: 'out' is reassigned before '*out' is initialized}}
+}
+
+
+// Re-point then return non-arg → compiles cleanly.
+int repoint_then_nonmatch(int *__attribute__((ensure_init_if_ret(0))) out, int *other) {
+    out = other;
+    return -1;
+}
+
+
+// Re-point on a path that returns non-arg, init on the path that returns
+// arg → compiles cleanly. This is the canonical motivating case.
+int repoint_one_branch(int cond,
+                       int *__attribute__((ensure_init_if_ret(0))) out,
+                       int *other) {
+    if (cond) {
+        out = other;
+        return -1;
+    }
+    *out = 42;
+    return 0;
+}
+
+
+// Re-point on one branch, init on the other, BUT both return arg
+// → at-return error on the re-point branch only.
+int repoint_one_branch_both_match(int cond,
+                                  int *__attribute__((ensure_init_if_ret(0))) out,
+                                  int *other) {
+    if (cond) {
+        out = other; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+        return 0; // expected-error {{__attribute__((ensure_init_if_ret(0))) not satisfied: 'out' is reassigned before '*out' is initialized}}
+    }
+    *out = 42;
+    return 0;
+}
+
+
+// Writes through the re-pointed param do NOT count as initialising the
+// original pointee. Without the ReassignedParams gating, `*out = 99`
+// would falsely promote out's deref state.
+int write_after_repoint_does_not_help(int *__attribute__((ensure_init_if_ret(0))) out,
+                                      int *other) {
+    out = other; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+    *out = 99;    // writes to *other, not *original_out
+    return 0; // expected-error {{__attribute__((ensure_init_if_ret(0))) not satisfied: 'out' is reassigned before '*out' is initialized}}
+}
+
+
+// OK: after init, the pointer can be reused freely.
+int reuse_after_init(int *__attribute__((ensure_init_if_ret(0))) out, int *other) {
+    *out = 1;       // init first
+    out = other;    // now allowed (contract already fulfilled)
+    return 0;
+}

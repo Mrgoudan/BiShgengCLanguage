@@ -30,6 +30,15 @@ class ASTContext;
 class IdentifierInfo;
 class UsingDecl;
 
+/// The ensure_init contract carried by a function parameter.
+enum class EnsureInitKind { None, EnsureInit, EnsureInitIfRet };
+
+/// The ensure_init contract on call parameter \p I, from the callee decl \p Decl
+/// or (for indirect calls) its prototype \p FPT; sets \p CondOut for if_ret.
+EnsureInitKind classifyEnsureInit(const FunctionDecl *Decl,
+                                  const FunctionProtoType *FPT, unsigned I,
+                                  int &CondOut);
+
 class BSCMethodDecl : public FunctionDecl {
 public:
   static BSCMethodDecl *

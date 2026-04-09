@@ -1,0 +1,146 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// ==========================================================================
+// ensure_init_if_ret with struct / union pointee.
+//   - struct: each field tracked independently; deref state promotes to
+//     Initialized once every field is written on the path.
+//   - union: per existing init-analysis rules, variant writes don't
+//     promote the deref state (the union has no "all fields written"
+//     meaning). Whole-union assignment is the supported pattern.
+// ==========================================================================
+
+struct Pair { int a; int b; };
+struct Triple { int a; int b; int c; };
+struct Nested { struct Pair p; int x; };
+union U { int i; float f; };
+struct WithUnion { union U u; int tag; };
+
+
+// --- struct: matching return with one field missing ------------------------
+
+int pair_one(struct Pair *__attribute__((ensure_init_if_ret(0))) out) {
+    out->a = 1;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// Single early-return path: definitely uninit on this path.
+int pair_one_skip(int cond, struct Pair *__attribute__((ensure_init_if_ret(0))) out) {
+    out->a = 1;
+    if (cond)
+        return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    return -1;
+}
+
+
+// --- struct: full init on the matching path --------------------------------
+
+int pair_full_match(int cond, struct Pair *__attribute__((ensure_init_if_ret(0))) out) {
+    if (cond) {
+        out->a = 1;
+        out->b = 2;
+        return 0;        // OK: both fields written
+    }
+    return -1;
+}
+
+
+// --- struct: two return-0 paths, only one fully inits ----------------------
+
+int pair_branch_partial(int a, int b,
+                        struct Pair *__attribute__((ensure_init_if_ret(0))) out) {
+    if (a) {
+        out->a = 1;
+        out->b = 2;
+        return 0;        // OK
+    }
+    if (b) {
+        out->a = 1;
+        return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    }
+    return -1;
+}
+
+
+// --- struct: merged-paths MaybeInit at return-0 ----------------------------
+
+int pair_maybe(int a,
+               struct Pair *__attribute__((ensure_init_if_ret(0))) out) {
+    out->a = 1;
+    if (a)
+        out->b = 2;
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+
+// --- whole-struct write satisfies the contract -----------------------------
+
+int pair_whole_write(struct Pair *__attribute__((ensure_init_if_ret(0))) out) {
+    struct Pair tmp;
+    tmp.a = 1;
+    tmp.b = 2;
+    *out = tmp;
+    return 0;            // OK: whole-struct assignment
+}
+
+
+// --- triple: two of three fields ------------------------------------------
+
+int triple_two_of_three(struct Triple *__attribute__((ensure_init_if_ret(0))) out) {
+    out->a = 1;
+    out->b = 2;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+
+// --- nested struct: inner pair init but outer scalar missing ---------------
+
+int nested_inner_only(struct Nested *__attribute__((ensure_init_if_ret(0))) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+int nested_full(struct Nested *__attribute__((ensure_init_if_ret(0))) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+    out->x = 3;
+    return 0;            // OK
+}
+
+
+// --- union pointee --------------------------------------------------------
+// Per existing init-analysis behavior, writing a single union variant does
+// NOT mark the union as fully initialized. Use whole-union assignment.
+
+int union_no_variant(union U *__attribute__((ensure_init_if_ret(0))) out) {
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+int union_variant_write(union U *__attribute__((ensure_init_if_ret(0))) out) {
+    out->i = 5;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+int union_whole_write(union U *__attribute__((ensure_init_if_ret(0))) out) {
+    union U tmp;
+    tmp.i = 5;
+    *out = tmp;
+    return 0;            // OK: whole-union write
+}
+
+
+// --- struct containing a union --------------------------------------------
+// Same rule as plain union for the embedded union field.
+
+int with_union_whole(struct WithUnion *__attribute__((ensure_init_if_ret(0))) out) {
+    struct WithUnion tmp;
+    tmp.u.i = 1;
+    tmp.tag = 7;
+    *out = tmp;
+    return 0;            // OK: whole-struct assignment covers the union
+}
+
+int with_union_only_tag(struct WithUnion *__attribute__((ensure_init_if_ret(0))) out) {
+    out->tag = 7;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}

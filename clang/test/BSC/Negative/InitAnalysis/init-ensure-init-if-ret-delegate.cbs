@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Regression: passing this function's own ensure_init_if_ret param to an
+// inner ensure_init_if_ret call only establishes *out when this function
+// actually RETURNS the inner call's result. The inner contract guarantees
+// *out only on the inner's matching-return path; if this function returns
+// a constant (or any value not derived from the inner call), the inner may
+// have returned a non-matching value and left *out uninitialized.
+// Previously the deref state was marked Initialized unconditionally at the
+// call site (a soundness hole / missed diagnostic).
+
+// inner_zero is only declared, not defined: the analysis is modular and
+// trusts its declared contract.
+int inner_zero(int *__attribute__((ensure_init_if_ret(0))) out);
+
+// Delegate, discard the result, return a matching constant.
+int delegate_then_const(int *__attribute__((ensure_init_if_ret(0))) out) {
+    int r = inner_zero(out);
+    (void)r;
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// Gating the matching-constant return on the inner result is sound on the
+// guarded branch (r == 0 => inner initialized *out), but the unguarded
+// fall-through return (reached only when r != 0) is not.
+int delegate_guarded_fallthrough(int *__attribute__((ensure_init_if_ret(0))) out) {
+    int r = inner_zero(out);
+    if (r == 0) {
+        return 0;   // OK: r == 0 => inner initialized *out
+    }
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}

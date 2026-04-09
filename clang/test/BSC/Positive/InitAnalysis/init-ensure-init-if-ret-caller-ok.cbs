@@ -1,0 +1,75 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// ensure_init_if_ret(VALUE) — caller side, positive tests (no errors).
+// Mutable borrows so the calls are safe-zone clean (no _Unsafe wrapping).
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Safe _Bool try_read(int *_Borrow __attribute__((ensure_init_if_ret(1))) out);
+
+// Use inside correct if-check.
+_Safe void test_int_check(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret == 0) {
+        int y = x;
+    }
+}
+
+// Early-return pattern: check failure, then use.
+_Safe int test_early_return(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret != 0)
+        return -1;
+    return x;
+}
+
+// Bool check — must use one of the four explicit comparison forms;
+// `if (ok)` by itself is NOT a recognised form per spec.
+_Safe void test_bool_check(void) {
+    int x;
+    _Bool ok = try_read(&_Mut x);
+    if (ok == 1) {
+        int y = x;
+    }
+}
+
+// Both paths covered: check + manual fallback.
+_Safe int test_fallback(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret != 0) {
+        x = -1;
+    }
+    return x;
+}
+
+
+// Raw-pointer style: function takes `int *`, called from a safe zone
+// inside an _Unsafe { } block with `&x` on an uninitialised local. The
+// return-value check still resolves the matching-arg branch, marking
+// `x` initialised in the safe-zone use that follows.
+int try_init_raw(int *__attribute__((ensure_init_if_ret(0))) out);
+
+_Safe void test_unsafe_block_raw(void) {
+    int x;
+    int ret;
+    _Unsafe { ret = try_init_raw(&x); }
+    if (ret == 0) {
+        int y = x;
+    }
+}
+
+
+// Int return with cond value 1 (non-zero, non-bool): matching-arg
+// branch is `ret == 1` rather than `ret == 0`.
+_Safe int try_init_one(int *_Borrow __attribute__((ensure_init_if_ret(1))) out);
+
+_Safe void test_int_ret_one(void) {
+    int x;
+    int ret = try_init_one(&_Mut x);
+    if (ret == 1) {
+        int y = x;
+    }
+}

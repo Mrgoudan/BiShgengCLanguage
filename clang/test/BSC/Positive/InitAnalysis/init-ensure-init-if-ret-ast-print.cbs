@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -ast-print %s | FileCheck %s
+//
+// The ensure_init_if_ret contract must survive -ast-print on a function-pointer
+// type (TypePrinter prints it next to ensure_init). The attribute is printed
+// before the parameter type, matching the ensure_init / noescape spelling.
+typedef int (*fp_t)(int *__attribute__((ensure_init_if_ret(0))) out);
+// CHECK: typedef int (*fp_t)(__attribute__((ensure_init_if_ret(0))) int *);
+fp_t g;

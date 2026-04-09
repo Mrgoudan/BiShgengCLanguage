@@ -4108,6 +4108,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         }
       }
     }
+    if (CheckBSCEnsureInitIfRetRedecl(Old, New))
+      return true;
   }
 #endif
 
@@ -10753,6 +10755,13 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       checkNonTrivialCUnion(NewFD->getReturnType(),
                             NewFD->getReturnTypeSourceRange().getBegin(),
                             NTCUC_FunctionReturn, NTCUK_Destruct | NTCUK_Copy);
+
+    #if ENABLE_BSC
+    // After CheckFunctionDeclaration above, the redeclaration chain is linked,
+    // so this can dedup the bad-return-type diagnostic across redeclarations.
+    if (getLangOpts().BSC && !NewFD->isInvalidDecl())
+      CheckBSCEnsureInitIfRetOnFunctionDecl(NewFD);
+    #endif
 
     #if ENABLE_BSC
     // We need this API for BSC template situation.

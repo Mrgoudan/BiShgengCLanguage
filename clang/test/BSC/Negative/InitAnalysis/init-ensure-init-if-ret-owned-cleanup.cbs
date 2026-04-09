@@ -1,0 +1,37 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Regression: a function that owns a resource lowers its return path
+// through a Drop terminator (destructor / StorageDead cleanup) *before*
+// the return block. The ensure_init_if_ret contract must still be checked
+// on that path. Previously the at-return check only inspected Goto
+// predecessors of the return block and silently skipped every
+// owned-resource function (a soundness hole / missed diagnostic).
+
+struct OwnedFields { int *_Owned a; };
+void sink(int *_Owned p);
+
+// Single owned param -> one Drop block sits between `_0 = 0` and `return`.
+int bad_owned_param(struct OwnedFields s,
+                    int *__attribute__((ensure_init_if_ret(0))) out) {
+    sink(s.a);
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// Two owned params -> the `_0 = 0` assignment is several Drop blocks back
+// in the cleanup chain; the walk-back must still locate the return value.
+int bad_two_owned(struct OwnedFields s1, struct OwnedFields s2,
+                  int *__attribute__((ensure_init_if_ret(0))) out) {
+    sink(s1.a);
+    sink(s2.a);
+    return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// Owned + partial init -> the "may not be initialized on all paths"
+// variant on the matching return path.
+int maybe_owned(int cond, struct OwnedFields s,
+                int *__attribute__((ensure_init_if_ret(0))) out) {
+    sink(s.a);
+    if (cond)
+        *out = 1;
+    return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+}

@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Documented analyzer limitations for ensure_init_if_ret. Each function
+// here is a false-positive case that the implementation is currently
+// known to flag conservatively. When the underlying analysis is
+// improved, the corresponding `expected-error` becomes a tripwire — its
+// removal is the signal to update the user-manual limitations section.
+
+
+// --- Path correlation across sibling `if`s --------------------------------
+//
+// `*out = 10` and `return 0` are both guarded by `a`, so at runtime they
+// always happen together — there is no path that returns 0 without
+// initialising *out. The analyzer treats the two ifs independently,
+// merges the states, and conservatively reports a maybe-uninit at the
+// `return 0`. Workaround: combine the two checks into a single `if`.
+
+int two_ifs_same_var(int a,
+                     int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (a) *out = 10;
+    if (a) return 0; // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+    return 1;
+}
+
+
+// --- Short-circuit `&&` / `||` in the caller-side check -------------------
+//
+// `if (r1 == 0 && r2 == 0)` lowers to a short-circuit chain whose branch
+// structure the comparison-form recogniser does not stitch back
+// together. After the merge, x ends up MaybeInit inside the if-body.
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+_Safe void short_circuit_check(void) {
+    int x, y;
+    int r1 = try_init(&_Mut x);
+    int r2 = try_init(&_Mut y);
+    if (r1 == 0 && r2 == 0) {
+        int sx = x; // expected-error {{use of possibly uninitialized value: `x`}}
+    }
+}

@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Consistent ensure_init_if_ret across redeclarations (positive cases).
+
+
+// Same-safety + matching attr + matching cond value: OK.
+int both_attr(int *__attribute__((ensure_init_if_ret(0))) out);
+int both_attr(int *__attribute__((ensure_init_if_ret(0))) out);
+
+// Same-safety + neither has attr: OK.
+int neither_attr(int *out);
+int neither_attr(int *out);
+
+// Heterogeneous _Safe/_Unsafe — both carry matching attr.
+int hetero_a(int *__attribute__((ensure_init_if_ret(0))) out);
+_Safe int hetero_a(int *__attribute__((ensure_init_if_ret(0))) out);
+
+// Heterogeneous: _Safe has attr, _Unsafe doesn't — allowed (only the
+// reverse direction is restricted: _Unsafe-has implies _Safe-has).
+_Safe int hetero_b(int *__attribute__((ensure_init_if_ret(0))) out);
+int hetero_b(int *out);

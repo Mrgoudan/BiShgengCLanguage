@@ -3,11 +3,10 @@
 // Test ensure_init callee side: pointer reassignment and deref-read-before-write
 // checks replace the old implicit-const approach.
 
-// Reassignment before init: error (contract not yet fulfilled).
 void callee_reassign(int *__attribute__((ensure_init)) out) {
     int local;
-    out = &local; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
-} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+    out = &local; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+} // expected-error {{__attribute__((ensure_init)) not satisfied: 'out' is reassigned before '*out' is initialized}}
 
 // Dereferencing to write through the pointer is allowed.
 void callee_deref_ok(int *__attribute__((ensure_init)) out) {
@@ -16,13 +15,13 @@ void callee_deref_ok(int *__attribute__((ensure_init)) out) {
 
 // Compound assignment to the pointer itself is reassignment.
 void callee_compound(int *__attribute__((ensure_init)) out) {
-    out += 1; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
-} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+    out += 1; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+} // expected-error {{__attribute__((ensure_init)) not satisfied: 'out' is reassigned before '*out' is initialized}}
 
 // Increment/decrement on the pointer is reassignment.
 void callee_increment(int *__attribute__((ensure_init)) out) {
-    out++; // expected-error {{__attribute__((ensure_init)) parameter 'out' cannot be reassigned or aliased before '*out' is initialized}}
-} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+    out++; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+} // expected-error {{__attribute__((ensure_init)) not satisfied: 'out' is reassigned before '*out' is initialized}}
 
 // Reading *out before writing is an error.
 void callee_read_before_write(int *__attribute__((ensure_init)) out) {

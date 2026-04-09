@@ -1,0 +1,84 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// =============================================================================
+// Caller-side: passing &x.field to an ensure_init_if_ret function only
+// initializes that specific field. Other fields of the enclosing struct
+// remain in their prior state and yield use-of-uninit on read.
+// =============================================================================
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+
+// --- Single struct: only one field passed ----------------------------------
+
+struct Pair { int a; int b; };
+
+_Safe void test_field_partial(void) {
+    struct Pair p;
+    int r = try_init(&_Mut p.a);
+    if (r == 0) {
+        int y = p.a;             // OK
+        int z = p.b;             // expected-error {{use of uninitialized value: `p.b`}}
+    }
+}
+
+
+// --- Nested struct: pass inner field + scalar, leave one sibling untouched -
+// Checks are nested (one if per call) since short-circuit `&&` is not one
+// of the four spec-supported comparison forms.
+
+struct Inner { int a; int b; };
+struct Outer { struct Inner inner; int c; };
+
+_Safe void test_nested_field(void) {
+    struct Outer o;
+    int r1 = try_init(&_Mut o.c);
+    int r2 = try_init(&_Mut o.inner.a);
+    if (r1 == 0) {
+        if (r2 == 0) {
+            int a = o.inner.a;   // OK
+            int c = o.c;         // OK
+            int b = o.inner.b;   // expected-error {{use of uninitialized value: `o.inner.b`}}
+        }
+    }
+}
+
+
+// --- Mix of direct field assignment and ensure_init_if_ret calls ----------
+
+struct Triple { int a; int b; int c; };
+
+_Safe void test_mixed_direct_and_call(void) {
+    struct Triple t;
+    t.a = 1;                         // direct
+    int r = try_init(&_Mut t.b);     // contract on .b
+    t.c = 3;                         // direct
+    if (r == 0) {
+        int sum = t.a + t.b + t.c;   // OK: all three initialized
+    }
+}
+
+// Same mix but in the wrong branch — t.b stays MaybeInit since the
+// matching-return path didn't fire on this branch.
+_Safe void test_mixed_wrong_branch(void) {
+    struct Triple t;
+    t.a = 1;
+    int r = try_init(&_Mut t.b);
+    t.c = 3;
+    if (r != 0) {
+        int sum = t.a + t.b + t.c;   // expected-error {{use of uninitialized value: `t.b`}}
+    }
+}
+
+
+// --- Control: a function without ensure_init_if_ret does NOT init *out ----
+
+_Safe int plain_call(int *_Borrow out);
+
+_Safe void test_no_attr_no_init(void) {
+    int x;
+    int r = plain_call(&_Mut x);     // expected-error {{use of uninitialized value: `x`}}
+    if (r == 0) {
+        int y = x;                   // expected-error {{use of uninitialized value: `x`}}
+    }
+}

@@ -1,0 +1,20 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Regression: the compared/returned value is arbitrary-width, unlike the
+// range-limited cond value. A 64-bit comparison constant whose low 32 bits
+// equal the cond value must NOT be conflated with it. Previously the
+// compared constant was truncated to `int`, so this branch was wrongly
+// treated as the matching (ret==0) branch and *x was marked initialized
+// (a soundness hole / missed diagnostic).
+
+_Safe long try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+_Safe void test_wide_const(void) {
+    int x;
+    long ret = try_init(&_Mut x);
+    // 0x100000000 has low-32-bits == 0 (the cond) but ret != 0 on this edge.
+    if (ret == 0x100000000L) {
+        int y = x; // expected-error {{use of uninitialized value: `x`}}
+        (void)y;
+    }
+}

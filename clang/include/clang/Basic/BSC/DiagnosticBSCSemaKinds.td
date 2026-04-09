@@ -217,15 +217,65 @@ def err_ensure_init_not_init : Error<
   "'*%0' not initialized at return in __attribute__((ensure_init)) function">;
 def err_ensure_init_maybe_not_init : Error<
   "'*%0' may not be initialized on all paths at return in __attribute__((ensure_init)) function">;
+def err_ensure_init_reassigned : Error<
+  "__attribute__((ensure_init)) not satisfied: '%0' is reassigned before '*%0' "
+  "is initialized, so '*%0' is not initialized at return">;
 def warn_ensure_init_not_addressof : Warning<
-  "ensure_init effect cannot be verified when argument is not an address-of expression">,
+  "%select{ensure_init|ensure_init_if_ret}0 effect cannot be verified when argument is not an address-of expression">,
   InGroup<BSCEnsureInitAttr>;
 def err_ensure_init_ptr_aliased : Error<
-  "__attribute__((ensure_init)) parameter '%0' cannot be reassigned or aliased before '*%0' is initialized">;
+  "__attribute__((%select{ensure_init|ensure_init_if_ret}1)) parameter '%0' "
+  "cannot be reassigned or aliased before '*%0' is initialized">;
+def note_ensure_init_ptr_reassigned_here : Note<
+  "'%0' was re-pointed here without initializing '*%0' first">;
 def err_ensure_init_deref_read_uninit : Error<
-  "use of uninitialized '*%0' in __attribute__((ensure_init)) function">;
+  "use of uninitialized '*%0' in "
+  "__attribute__((%select{ensure_init|ensure_init_if_ret}1)) function">;
 def err_ensure_init_funcptr_incompatible : Error<
   "incompatible function pointer types: target expects __attribute__((ensure_init)) on parameter %0 but source does not have it">;
+
+// ensure_init_if_ret contract verification
+def err_ensure_init_if_ret_not_init : Error<
+  "'*%0' not initialized at return in __attribute__((ensure_init_if_ret(%1))) function">;
+def err_ensure_init_if_ret_maybe_not_init : Error<
+  "'*%0' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(%1))) function">;
+def err_ensure_init_if_ret_reassigned : Error<
+  "__attribute__((ensure_init_if_ret(%1))) not satisfied: '%0' is reassigned "
+  "before '*%0' is initialized, so '*%0' is not guaranteed initialized when "
+  "returning %1">;
+def err_ensure_init_if_ret_non_const_return : Error<
+  "cannot verify __attribute__((ensure_init_if_ret(%1))) contract for '*%0': "
+  "return value is not an integer constant, so the runtime value may equal "
+  "the cond value — '*%0' must be initialized on this path">;
+def err_ensure_init_if_ret_conflicts_ensure_init : Error<
+  "__attribute__((ensure_init_if_ret)) cannot be combined with "
+  "__attribute__((ensure_init)) on the same parameter">;
+def err_ensure_init_if_ret_duplicate : Error<
+  "__attribute__((ensure_init_if_ret)) specified more than once with "
+  "conflicting arguments on the same parameter">;
+def err_ensure_init_if_ret_arg_not_integer_literal : Error<
+  "__attribute__((ensure_init_if_ret)) argument must be an integer literal">;
+def err_ensure_init_if_ret_bad_return_type : Error<
+  "__attribute__((ensure_init_if_ret)) requires an integer or '_Bool' "
+  "return type, but function returns %0">;
+def err_ensure_init_if_ret_redecl_mismatch : Error<
+  "conflicting __attribute__((ensure_init_if_ret)) on parameter %0 "
+  "in redeclaration of %1">;
+def err_ensure_init_if_ret_unsafe_without_safe : Error<
+  "__attribute__((ensure_init_if_ret(%0))) on parameter %1 of _Unsafe "
+  "declaration requires the matching _Safe declaration to carry the same "
+  "attribute with the same argument">;
+def err_ensure_init_if_ret_cond_out_of_range : Error<
+  "__attribute__((ensure_init_if_ret)) argument %0 is outside the range "
+  "[%1, %2] supported in function pointer types">;
+def err_ensure_init_if_ret_funcptr_missing : Error<
+  "incompatible function pointer types: target expects "
+  "__attribute__((ensure_init_if_ret)) on parameter %0 but source does "
+  "not have it">;
+def err_ensure_init_if_ret_funcptr_cond_mismatch : Error<
+  "incompatible function pointer types: target expects "
+  "__attribute__((ensure_init_if_ret(%0))) on parameter %1 but source has "
+  "__attribute__((ensure_init_if_ret(%2)))">;
 
 // __assume_initialized
 def err_assume_init_bad_arg : Error<

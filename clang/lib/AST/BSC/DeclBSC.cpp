@@ -13,11 +13,36 @@
 #if ENABLE_BSC
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/BSC/DeclBSC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/Linkage.h"
 
 using namespace clang;
+
+EnsureInitKind clang::classifyEnsureInit(const FunctionDecl *Decl,
+                                         const FunctionProtoType *FPT,
+                                         unsigned I, int &CondOut) {
+  if (Decl && I < Decl->getNumParams())
+    if (auto *A = Decl->getParamDecl(I)->getAttr<EnsureInitIfRetAttr>()) {
+      CondOut = A->getCondValue();
+      return EnsureInitKind::EnsureInitIfRet;
+    }
+  if (FPT && FPT->hasExtParameterInfos() && I < FPT->getNumParams()) {
+    auto Ext = FPT->getExtParameterInfo(I);
+    if (Ext.isEnsureInitIfRet()) {
+      CondOut = Ext.getEnsureInitIfRetCondValue();
+      return EnsureInitKind::EnsureInitIfRet;
+    }
+  }
+  if (Decl && I < Decl->getNumParams() &&
+      Decl->getParamDecl(I)->hasAttr<EnsureInitAttr>())
+    return EnsureInitKind::EnsureInit;
+  if (FPT && FPT->hasExtParameterInfos() && I < FPT->getNumParams() &&
+      FPT->getExtParameterInfo(I).isEnsureInit())
+    return EnsureInitKind::EnsureInit;
+  return EnsureInitKind::None;
+}
 
 //===----------------------------------------------------------------------===//
 // BSCMethod Implementation

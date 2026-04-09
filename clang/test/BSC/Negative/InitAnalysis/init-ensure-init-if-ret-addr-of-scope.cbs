@@ -1,0 +1,34 @@
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+
+// =============================================================================
+// The "address-of uninit var feeding ensure_init_if_ret arg" exemption is
+// scoped to the call's own argument-prep temp. An earlier &x in the same
+// block, or a stand-alone &x, is still a use-of-uninit.
+// =============================================================================
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+
+// Earlier &_Mut x must still report use-of-uninit.
+_Safe void test_addr_before_call(void) {
+    int x;
+    int *_Borrow p = &_Mut x;   // expected-error {{use of uninitialized value: `x`}}
+    int r = try_init(&_Mut x);  // ok: &_Mut x here feeds the call arg
+    if (r == 0) {
+        int y = x;              // OK
+    }
+}
+
+// Two ensure_init_if_ret args in one call: each exempts only its own prep.
+_Safe int try_init_pair(int *_Borrow __attribute__((ensure_init_if_ret(0))) a,
+                        int *_Borrow __attribute__((ensure_init_if_ret(0))) b);
+
+_Safe void test_two_args(void) {
+    int x, y;
+    int *_Borrow px = &_Mut x; // expected-error {{use of uninitialized value: `x`}}
+    int *_Borrow py = &_Mut y; // expected-error {{use of uninitialized value: `y`}}
+    int r = try_init_pair(&_Mut x, &_Mut y); // ok: both feed call args
+    if (r == 0) {
+        int sum = x + y;       // OK
+    }
+}

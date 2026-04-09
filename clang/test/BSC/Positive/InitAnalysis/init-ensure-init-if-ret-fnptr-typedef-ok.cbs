@@ -1,0 +1,48 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// ensure_init_if_ret survives through function-pointer typedefs.
+// Indirect calls through a matching typedef recognise the contract and the
+// matching-return branch initializes *out as if the call were direct.
+
+typedef _Safe int (*TryInit)(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+_Safe int concrete(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+
+// Indirect call through the typedef parameter.
+_Safe void test_fnptr_param(TryInit fn) {
+    int x;
+    int r = fn(&_Mut x);
+    if (r == 0) {
+        int y = x;
+    }
+}
+
+
+// Local typedef variable initialised from the matching concrete function.
+_Safe void test_fnptr_local(void) {
+    TryInit fn = concrete;
+    int x;
+    int r = fn(&_Mut x);
+    if (r == 0) {
+        int y = x;
+    }
+}
+
+
+// Multiple params with mixed cond values, all carried through the typedef.
+typedef _Safe int (*TryPair)(int *_Borrow __attribute__((ensure_init_if_ret(1))) a,
+                              int *_Borrow __attribute__((ensure_init_if_ret(0))) b);
+
+_Safe void test_fnptr_two(TryPair fn) {
+    int x, y;
+    int r1 = fn(&_Mut x, &_Mut y);
+    if (r1 == 1) {
+        int rx = x;
+    }
+    int r2 = fn(&_Mut x, &_Mut y);
+    if (r2 == 0) {
+        int ry = y;
+    }
+}

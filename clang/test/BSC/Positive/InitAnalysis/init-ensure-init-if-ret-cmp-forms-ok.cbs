@@ -1,0 +1,58 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// The four comparison forms recognised by the caller-side check:
+//   e == value,  e != value,  value == e,  value != e
+// where e is the return-value expression or a copy-propagated variable.
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Safe int try_init_neg(int *_Borrow __attribute__((ensure_init_if_ret(-1))) out);
+
+
+// ret == 0
+_Safe int form_eq_rl(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret == 0) return x;
+    return 0;
+}
+
+// 0 == ret  (constant on the left)
+_Safe int form_eq_lr(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (0 == ret) return x;
+    return 0;
+}
+
+// ret != 0  (early return)
+_Safe int form_ne_rl(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (ret != 0) return -1;
+    return x;
+}
+
+// 0 != ret  (early return)
+_Safe int form_ne_lr(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    if (0 != ret) return -1;
+    return x;
+}
+
+// Negative cond value (-1) via copy-propagated variable.
+_Safe int neg_cond(void) {
+    int x;
+    int ret = try_init_neg(&_Mut x);
+    int status = ret;
+    if (status == -1) return x;
+    return 0;
+}
+
+// e is the call expression itself (no intermediate variable).
+_Safe int direct_call_in_check(void) {
+    int x;
+    if (try_init(&_Mut x) == 0) return x;
+    return 0;
+}

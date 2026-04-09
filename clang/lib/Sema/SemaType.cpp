@@ -5722,6 +5722,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             ExtParameterInfos[i] = ExtParameterInfos[i].withIsEnsureInit(true);
             HasAnyInterestingExtParameterInfos = true;
           }
+          if (auto *EIIRA = Param->getAttr<EnsureInitIfRetAttr>()) {
+            ExtParameterInfos[i] =
+                ExtParameterInfos[i].withIsEnsureInitIfRet(
+                    true, EIIRA->getCondValue());
+            HasAnyInterestingExtParameterInfos = true;
+          }
 #endif
 
           ParamTys.push_back(ParamTy);

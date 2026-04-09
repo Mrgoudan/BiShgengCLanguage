@@ -1000,6 +1000,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 #if ENABLE_BSC
       if (EPI.isEnsureInit() && !Policy.RewriteBSC)
         OS << "__attribute__((ensure_init)) ";
+      if (EPI.isEnsureInitIfRet() && !Policy.RewriteBSC)
+        OS << "__attribute__((ensure_init_if_ret("
+           << EPI.getEnsureInitIfRetCondValue() << "))) ";
 #endif
       auto ABI = EPI.getABI();
       if (ABI != ParameterABI::Ordinary)

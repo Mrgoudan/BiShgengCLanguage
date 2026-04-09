@@ -26,6 +26,8 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <set>
+#include <tuple>
 
 using namespace clang;
 using namespace sema;
@@ -239,6 +241,81 @@ bool Sema::HasSafeZoneInStmt(const Stmt *CompStmt) {
   return false;
 }
 
+void Sema::CheckBSCEnsureInitIfRetOnFunctionDecl(FunctionDecl *FD) {
+  if (!FD)
+    return;
+  bool HasAttr = false;
+  for (ParmVarDecl *PVD : FD->parameters()) {
+    if (PVD->hasAttr<EnsureInitIfRetAttr>()) {
+      HasAttr = true;
+      break;
+    }
+  }
+  if (!HasAttr)
+    return;
+  QualType RT = FD->getReturnType();
+  // Dependent / compile-time return types are checked at instantiation, not on
+  // the template pattern (like the other BSC return-type checks).
+  if (RT->isDependentType() || RT->isBSCCalculatedTypeInCompileTime() ||
+      RT->isIntegerType())
+    return;
+  // Emit once across redeclarations: skip if an earlier decl already carried
+  // the attribute (and was thus already diagnosed).
+  for (FunctionDecl *Prev = FD->getPreviousDecl(); Prev;
+       Prev = Prev->getPreviousDecl())
+    for (ParmVarDecl *PVD : Prev->parameters())
+      if (PVD->hasAttr<EnsureInitIfRetAttr>())
+        return;
+  SourceLocation Loc = FD->getReturnTypeSourceRange().getBegin();
+  if (!Loc.isValid())
+    Loc = FD->getLocation();
+  Diag(Loc, diag::err_ensure_init_if_ret_bad_return_type) << RT;
+}
+
+bool Sema::CheckBSCEnsureInitIfRetRedecl(FunctionDecl *Old, FunctionDecl *New) {
+  if (!Old->hasPrototype() || !New->hasPrototype() ||
+      Old->getNumParams() != New->getNumParams())
+    return false;
+  bool OldSafe = Old->getSafeZoneSpecifier() == SZ_Safe;
+  bool NewSafe = New->getSafeZoneSpecifier() == SZ_Safe;
+  bool SameSafety = (OldSafe == NewSafe);
+  bool Failed = false;
+  for (unsigned I = 0; I < Old->getNumParams(); ++I) {
+    auto *OldA = Old->getParamDecl(I)->getAttr<EnsureInitIfRetAttr>();
+    auto *NewA = New->getParamDecl(I)->getAttr<EnsureInitIfRetAttr>();
+    if (SameSafety) {
+      if (static_cast<bool>(OldA) != static_cast<bool>(NewA) ||
+          (OldA && NewA && OldA->getCondValue() != NewA->getCondValue())) {
+        Diag(New->getParamDecl(I)->getLocation(),
+             diag::err_ensure_init_if_ret_redecl_mismatch)
+            << New->getParamDecl(I) << New;
+        Diag(Old->getParamDecl(I)->getLocation(),
+             diag::note_previous_declaration);
+        Failed = true;
+      }
+    } else {
+      // Cross-safety: if the _Unsafe decl carries the attribute the _Safe one
+      // must too with the same arg. Report on the new declaration with a note
+      // at the previous one (standard redecl convention); %1 is the parameter
+      // that actually carries the attribute (the _Unsafe one).
+      auto *SafeA = OldSafe ? OldA : NewA;
+      auto *UnsafeA = OldSafe ? NewA : OldA;
+      ParmVarDecl *UnsafePVD = OldSafe ? New->getParamDecl(I)
+                                       : Old->getParamDecl(I);
+      if (UnsafeA &&
+          (!SafeA || SafeA->getCondValue() != UnsafeA->getCondValue())) {
+        Diag(New->getParamDecl(I)->getLocation(),
+             diag::err_ensure_init_if_ret_unsafe_without_safe)
+            << UnsafeA->getCondValue() << UnsafePVD;
+        Diag(Old->getParamDecl(I)->getLocation(),
+             diag::note_previous_declaration);
+        Failed = true;
+      }
+    }
+  }
+  return Failed;
+}
+
 bool Sema::HasSafeZoneInFunction(const FunctionDecl* FnDecl) {
   if (!FnDecl || !FnDecl->getBody()) {
     return false;
@@ -308,7 +385,8 @@ void Sema::BSCDataflowAnalysis(const Decl *D) {
     if (FD) {
       bool HasEnsureInitParams = false;
       for (unsigned I = 0; I < FD->getNumParams(); ++I) {
-        if (FD->getParamDecl(I)->hasAttr<EnsureInitAttr>()) {
+        if (FD->getParamDecl(I)->hasAttr<EnsureInitAttr>() ||
+            FD->getParamDecl(I)->hasAttr<EnsureInitIfRetAttr>()) {
           HasEnsureInitParams = true;
           break;
         }
@@ -330,11 +408,14 @@ void Sema::BSCDataflowAnalysis(const Decl *D) {
       bool CheckAllZones =
           getLangOpts().getUninitCheck() == LangOptions::UC_ALL;
       bscir::runInitAnalysis(*Body, InitDiags, CheckAllZones);
-      llvm::DenseSet<std::pair<unsigned, unsigned>> Seen;
+      // Key on the variable name too: distinct parameters can fail the same
+      // way at the same return site (multi-parameter contracts), and each
+      // must be reported.
+      std::set<std::tuple<unsigned, unsigned, std::string>> Seen;
       for (const auto &D : InitDiags) {
         unsigned RawLoc = D.Loc.getRawEncoding();
         unsigned KindVal = static_cast<unsigned>(D.Kind);
-        if (!Seen.insert({RawLoc, KindVal}).second)
+        if (!Seen.insert({RawLoc, KindVal, D.VarName}).second)
           continue;
         unsigned DiagId;
         switch (D.Kind) {
@@ -356,14 +437,44 @@ void Sema::BSCDataflowAnalysis(const Decl *D) {
         case bscir::InitDiagKind::EnsureInitMaybeNotInit:
           DiagId = diag::err_ensure_init_maybe_not_init;
           break;
+        case bscir::InitDiagKind::EnsureInitReassigned:
+          DiagId = diag::err_ensure_init_reassigned;
+          break;
         case bscir::InitDiagKind::EnsureInitPtrAliased:
           DiagId = diag::err_ensure_init_ptr_aliased;
           break;
         case bscir::InitDiagKind::EnsureInitDerefReadUninit:
           DiagId = diag::err_ensure_init_deref_read_uninit;
           break;
+        case bscir::InitDiagKind::EnsureInitIfRetNotInit:
+          DiagId = diag::err_ensure_init_if_ret_not_init;
+          break;
+        case bscir::InitDiagKind::EnsureInitIfRetMaybeNotInit:
+          DiagId = diag::err_ensure_init_if_ret_maybe_not_init;
+          break;
+        case bscir::InitDiagKind::EnsureInitIfRetReassigned:
+          DiagId = diag::err_ensure_init_if_ret_reassigned;
+          break;
+        case bscir::InitDiagKind::EnsureInitIfRetNonConstReturn:
+          DiagId = diag::err_ensure_init_if_ret_non_const_return;
+          break;
         }
-        Diag(D.Loc, DiagId) << D.VarName;
+        if (D.Kind == bscir::InitDiagKind::EnsureInitIfRetNotInit ||
+            D.Kind == bscir::InitDiagKind::EnsureInitIfRetMaybeNotInit ||
+            D.Kind == bscir::InitDiagKind::EnsureInitIfRetReassigned ||
+            D.Kind == bscir::InitDiagKind::EnsureInitIfRetNonConstReturn)
+          Diag(D.Loc, DiagId) << D.VarName << D.CondValue;
+        else if (D.Kind == bscir::InitDiagKind::EnsureInitPtrAliased ||
+                 D.Kind == bscir::InitDiagKind::EnsureInitDerefReadUninit)
+          // %0 = param name, %1 = which attribute the param carries.
+          Diag(D.Loc, DiagId) << D.VarName << D.AttrSelect;
+        else
+          Diag(D.Loc, DiagId) << D.VarName;
+        for (SourceLocation NoteLoc : D.NoteLocs) {
+          if (NoteLoc.isValid())
+            Diag(NoteLoc, diag::note_ensure_init_ptr_reassigned_here)
+                << D.VarName;
+        }
         getDiagnostics().increaseInitCheckErrors();
       }
     }

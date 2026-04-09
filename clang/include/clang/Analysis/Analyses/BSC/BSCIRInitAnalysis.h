@@ -54,10 +54,56 @@ struct InitLattice {
   /// initialized, keyed by the parameter's LocalId.
   llvm::DenseMap<LocalId, InitState> EnsureInitDerefStates;
 
+  /// Re-pointed ensure_init[_if_ret] params and the re-point site(s). Gates
+  /// deref-write promotion (the write hits the new pointee) and feeds the
+  /// at-return note.
+  llvm::DenseMap<LocalId, SmallVector<SourceLocation, 2>> ReassignedParams;
+
+  /// Caller-side pending init: `ret = f(&x[.field])` with ensure_init_if_ret(V)
+  /// records {x[.field], ret, V} until a SwitchInt edge resolves it.
+  /// OutFieldIndices is empty when the whole local was addressed.
+  struct PendingCondInit {
+    LocalId OutParamLocal;
+    SmallVector<unsigned, 2> OutFieldIndices;
+    LocalId RetLocal;
+    int CondValue;
+    bool operator==(const PendingCondInit &O) const {
+      return OutParamLocal == O.OutParamLocal &&
+             OutFieldIndices == O.OutFieldIndices &&
+             RetLocal == O.RetLocal && CondValue == O.CondValue;
+    }
+  };
+  SmallVector<PendingCondInit, 2> PendingCondInits;
+
+  /// Locals holding a known integer constant (the builder lowers `-1` to a
+  /// temp before the comparison sees it). int64_t: the compared/returned
+  /// value is arbitrary-width, unlike the range-limited cond.
+  llvm::DenseMap<LocalId, int64_t> KnownConstants;
+
+  /// Tracks that a local is the boolean result of a comparison.
+  /// E.g., _tmp = (ret == 0) records {_tmp → {ret, 0, true}}.
+  struct ComparisonFact {
+    LocalId ComparedLocal;
+    int64_t ComparedValue; // arbitrary-width; see KnownConstants
+    bool IsEq; // true for ==, false for !=
+    bool operator==(const ComparisonFact &O) const {
+      return ComparedLocal == O.ComparedLocal &&
+             ComparedValue == O.ComparedValue && IsEq == O.IsEq;
+    }
+    // Used by DenseMap<LocalId, ComparisonFact>::operator== in
+    // InitLattice::operator== (its value comparison calls operator!=).
+    bool operator!=(const ComparisonFact &O) const { return !(*this == O); }
+  };
+  llvm::DenseMap<LocalId, ComparisonFact> ComparisonFacts;
+
   bool operator==(const InitLattice &Other) const {
     return LocalStates == Other.LocalStates &&
            FieldStates == Other.FieldStates &&
-           EnsureInitDerefStates == Other.EnsureInitDerefStates;
+           EnsureInitDerefStates == Other.EnsureInitDerefStates &&
+           ReassignedParams == Other.ReassignedParams &&
+           PendingCondInits == Other.PendingCondInits &&
+           ComparisonFacts == Other.ComparisonFacts &&
+           KnownConstants == Other.KnownConstants;
   }
 };
 
@@ -72,17 +118,31 @@ enum class InitDiagKind {
   ReturnMaybeUninit,      // return value possibly not initialized on all paths
   EnsureInitNotInit,        // ensure_init param not initialized at return
   EnsureInitMaybeNotInit,   // ensure_init param possibly not initialized at return
+  EnsureInitReassigned,     // ensure_init failure whose cause on this path is a re-point
   EnsureInitPtrAliased,     // ensure_init pointer reassigned or copied before *param initialized
   EnsureInitDerefReadUninit,// *param read before initialization
+  EnsureInitIfRetNotInit,        // ensure_init_if_ret param uninit at constant ret==arg
+  EnsureInitIfRetMaybeNotInit,   // ensure_init_if_ret param maybe-uninit at constant ret==arg
+  EnsureInitIfRetReassigned,     // ensure_init_if_ret failure whose cause is a re-point
+  EnsureInitIfRetNonConstReturn, // ensure_init_if_ret return value is not a constant
 };
 
 struct InitDiagInfo {
   InitDiagKind Kind;
   SourceLocation Loc;
   std::string VarName;
+  int CondValue = 0; // Only for EnsureInitIfRet* kinds
+  /// Attribute name for the shared diagnostics: 0 = ensure_init,
+  /// 1 = ensure_init_if_ret.
+  int AttrSelect = 0;
+  /// Additional note locations attached to the primary diagnostic
+  /// (e.g. re-point sites on the failing path).
+  SmallVector<SourceLocation, 2> NoteLocs;
 
   InitDiagInfo(InitDiagKind K, SourceLocation L, StringRef Name)
       : Kind(K), Loc(L), VarName(Name.str()) {}
+  InitDiagInfo(InitDiagKind K, SourceLocation L, StringRef Name, int CV)
+      : Kind(K), Loc(L), VarName(Name.str()), CondValue(CV) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -111,6 +171,10 @@ private:
 
   /// Get the struct pointee type for an ensure_init param, or null QualType.
   QualType getEnsureInitPointeeType(LocalId Id) const;
+
+  /// Cond value of an ensure_init_if_ret param at \p Id, or None. Derived
+  /// from the parameter's attribute (a per-decl constant, not lattice state).
+  llvm::Optional<int> getIfRetCondValue(LocalId Id) const;
 
   /// Check if a local/place is initialized in the given state.
   InitState getInitState(const InitLattice &State, LocalId Id) const;
@@ -149,6 +213,24 @@ private:
   /// Check ensure_init contract at return.
   void checkEnsureInitAtReturn(const Terminator &T, const InitLattice &State,
                                SmallVectorImpl<InitDiagInfo> &Diags) const;
+
+  /// Check ensure_init_if_ret contract at return (per-predecessor of return block).
+  void checkEnsureInitIfRetAtReturn(
+      const DataflowResult<InitLattice> &Result,
+      SmallVectorImpl<InitDiagInfo> &Diags) const;
+
+  /// The value the return slot (_0) holds on a path into the return block.
+  struct ReturnValueInfo {
+    SourceLocation Loc;        // the `_0 = ...` assignment
+    bool IsConstant = false;   // _0 folds to an integer constant
+    int64_t ConstVal = 0;      // the folded value when IsConstant
+    LocalId SourceLocal{0};    // local _0 is a copy/cast of, if any
+    bool HasSourceLocal = false;
+  };
+
+  /// Find _0's value on the path into the return block via \p PredId,
+  /// walking back through the cleanup-block chain (Drop/Goto) before it.
+  ReturnValueInfo analyzeReturnValue(BasicBlockId PredId) const;
 
   /// Get the number of fields for a type (0 for unions and non-record types).
   static unsigned getNumFields(QualType Ty);

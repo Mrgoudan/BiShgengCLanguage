@@ -1,0 +1,75 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Soundness of the comparison-form recognition: when the variable
+// holding the return value is reassigned, address-taken, or mutably
+// borrowed before the comparison, the propagated fact must be
+// invalidated — otherwise a stale check could claim *out is init.
+
+_Safe int try_init(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+
+// Reassignment of the propagated copy invalidates tracking.
+_Safe void test_reassigned(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    int status = ret;
+    status = 0;            // overwrites the propagated value; status no
+                           // longer represents try_init's return.
+    if (status == 0) {
+        int y = x;         // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+
+// Reassignment of the original return slot invalidates tracking.
+_Safe void test_ret_reassigned(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    ret = 0;               // overwrites — no longer the call result.
+    if (ret == 0) {
+        int y = x;         // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+
+// Taking a mutable borrow of the propagated copy invalidates tracking.
+_Safe int sink(int *_Borrow p);
+_Safe void test_borrow_of_ret(void) {
+    int x;
+    int ret = try_init(&_Mut x);
+    sink(&_Mut ret);       // ret could be mutated through the borrow.
+    if (ret == 0) {
+        int y = x;         // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+
+// Raw address-of (not borrow) of the propagated copy also invalidates.
+// Uses a raw-pointer variant of try_init so the _Unsafe escape path is valid.
+int try_init_raw(int *__attribute__((ensure_init_if_ret(0))) out);
+void unsafe_sink(int *p);
+_Safe void test_addr_of_ret(void) {
+    int x;
+    int ret;
+    _Unsafe {
+        ret = try_init_raw(&x);
+        unsafe_sink(&ret); // raw & escape — ret could be mutated.
+    }
+    if (ret == 0) {
+        int y = x;         // expected-error {{use of uninitialized value: `x`}}
+    }
+}
+
+
+// Non-zero cond value: reassignment of the return slot must still
+// invalidate the propagated PCI. The `if (ret == 1)` check below would
+// otherwise falsely promote `x` to initialised.
+_Safe int try_init_one(int *_Borrow __attribute__((ensure_init_if_ret(1))) out);
+_Safe void test_ret_reassigned_cond_one(void) {
+    int x;
+    int ret = try_init_one(&_Mut x);
+    ret = 0;                // PCI{x, ret, 1} dropped here.
+    if (ret == 1) {
+        int y = x;         // expected-error {{use of uninitialized value: `x`}}
+    }
+}

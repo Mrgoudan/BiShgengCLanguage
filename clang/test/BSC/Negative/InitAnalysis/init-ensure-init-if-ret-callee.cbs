@@ -1,0 +1,188 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// ==========================================================================
+// Design: ensure_init_if_ret(VALUE) — callee side
+//
+// Semantics: *param MUST be initialized on return paths where the return
+// value == VALUE.  Other return paths are not checked.
+// VALUE must be a constant integer or bool literal.
+// ==========================================================================
+
+// --- int return, ensure_init_if_ret(0) -----------------------------------------
+
+// OK: *out initialized on the return-0 path, not on return-1 (fine).
+int try_init_ok(int cond, int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (cond) {
+        *out = 42;
+        return 0;   // return 0 path: *out initialized ✓
+    }
+    return 1;       // return non-0 path: *out not required
+}
+
+// ERROR: returning 0 without initializing *out.
+int try_init_bad(int cond, int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (cond) {
+        return 0;   // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    }
+    return 1;
+}
+
+// ERROR: one branch returns 0 with init, another returns 0 without.
+int try_init_partial(int a, int b, int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (a) {
+        *out = 1;
+        return 0;   // OK: *out initialized on this return-0 path
+    }
+    if (b) {
+        return 0;   // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+    }
+    return -1;      // non-0: *out not required
+}
+
+// OK: *out initialized on ALL return-0 paths.
+int try_init_all_zero_paths(int a, int b, int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (a) {
+        *out = 1;
+        return 0;
+    }
+    if (b) {
+        *out = 2;
+        return 0;
+    }
+    return -1;
+}
+
+// MAYBE: branch may or may not init before return 0.
+int try_init_maybe(int a, int b, int *__attribute__((ensure_init_if_ret(0))) out) {
+    if (a)
+        *out = 10;
+    // *out may or may not be initialized here
+    if (b)
+        return 0;   // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init_if_ret(0))) function}}
+    return 1;
+}
+
+// Reading *out before initialization is an error, independent of the
+// return-path obligation.
+int try_init_read_before(int *__attribute__((ensure_init_if_ret(0))) out) {
+    int tmp = *out; // expected-error {{use of uninitialized '*out' in __attribute__((ensure_init_if_ret)) function}}
+    *out = tmp;
+    return 0;
+}
+
+
+// Delegation must match the inner cond value to the outer cond value;
+// otherwise the inner's matching-return path doesn't satisfy the outer's
+// contract.
+int inner_zero(int *__attribute__((ensure_init_if_ret(0))) out);
+int inner_one(int *__attribute__((ensure_init_if_ret(1))) out);
+
+int outer_zero_delegates_zero(int *__attribute__((ensure_init_if_ret(0))) out) {
+    return inner_zero(out);   // OK: cond values match
+}
+
+int outer_zero_delegates_one(int *__attribute__((ensure_init_if_ret(0))) out) {
+    // Inner has cond 1, outer has cond 0 — delegation does NOT credit
+    // *out as init. The return is non-constant, so the non-const-return
+    // diagnostic fires (rather than the constant matching-return NotInit).
+    return inner_one(out); // expected-error {{cannot verify __attribute__((ensure_init_if_ret(0))) contract for '*out': return value is not an integer constant, so the runtime value may equal the cond value — '*out' must be initialized on this path}}
+}
+
+
+// `return !0` is folded by the analyser via UnaryOp dispatch; the
+// return value is 1, not the matching cond 0, so no obligation fires.
+int try_init_not_zero(int *__attribute__((ensure_init_if_ret(0))) out) {
+    return !0;            // value 1, doesn't match cond 0 — OK
+}
+
+// `return +0` returns 0 (matching cond), so *out must be init.
+int try_init_plus_zero(int *__attribute__((ensure_init_if_ret(0))) out) {
+    return +0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// --- bool return, ensure_init_if_ret(1) ----------------------------------------
+
+// OK: *out initialized when returning 1 (true).
+_Bool try_read_ok(int src, int *__attribute__((ensure_init_if_ret(1))) out) {
+    if (src) {
+        *out = src;
+        return 1;       // *out initialized
+    }
+    return 0;           // *out not required
+}
+
+// ERROR: returning 1 without init.
+_Bool try_read_bad(int *__attribute__((ensure_init_if_ret(1))) out) {
+    return 1; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(1))) function}}
+}
+
+// --- ensure_init_if_ret(0) with bool: init on failure --------------------------
+
+// Sometimes we want to provide a default on failure.
+_Bool lookup_with_default(int found,
+                          int *__attribute__((ensure_init_if_ret(0))) out_default) {
+    if (found) {
+        return 1;       // found: *out_default not required
+    }
+    *out_default = -1;
+    return 0;           // not found: *out_default initialized
+}
+
+// --- Non-0 integer value ---------------------------------------------------
+
+int try_init_val42(int *__attribute__((ensure_init_if_ret(42))) out) {
+    *out = 99;
+    return 42;          // *out initialized
+}
+
+// --- Multiple ensure_init_if_ret params with same condition --------------------
+
+int init_pair(int *__attribute__((ensure_init_if_ret(0))) a,
+              int *__attribute__((ensure_init_if_ret(0))) b) {
+    *a = 1;
+    *b = 2;
+    return 0;
+}
+
+// ERROR: only *a initialized on return-0 path.
+int init_pair_partial(int cond,
+                      int *__attribute__((ensure_init_if_ret(0))) a,
+                      int *__attribute__((ensure_init_if_ret(0))) b) {
+    *a = 1;
+    if (cond) {
+        *b = 2;
+        return 0;
+    }
+    return 0; // expected-error {{'*b' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+
+// --- Two params with different cond values ---------------------------------
+// *a must be init when ret==1; *b must be init when ret==0. Each return
+// branch carries its own obligation.
+
+// ERROR: returns 1 but only *b is initialized — *a is the one required.
+int mixed_cond_a_bad(int *__attribute__((ensure_init_if_ret(1))) a,
+                     int *__attribute__((ensure_init_if_ret(0))) b) {
+    *b = 2;
+    return 1; // expected-error {{'*a' not initialized at return in __attribute__((ensure_init_if_ret(1))) function}}
+}
+
+// ERROR: returns 0 but only *a is initialized — *b is the one required.
+int mixed_cond_b_bad(int *__attribute__((ensure_init_if_ret(1))) a,
+                     int *__attribute__((ensure_init_if_ret(0))) b) {
+    *a = 1;
+    return 0; // expected-error {{'*b' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// ERROR: both branches fail their own obligation (swap init/return pairing).
+int mixed_cond_both_bad(int branch,
+                        int *__attribute__((ensure_init_if_ret(1))) a,
+                        int *__attribute__((ensure_init_if_ret(0))) b) {
+    if (branch) {
+        *b = 2;          // wrong: this is the ret==1 path, *a needed
+        return 1; // expected-error {{'*a' not initialized at return in __attribute__((ensure_init_if_ret(1))) function}}
+    }
+    *a = 1;              // wrong: this is the ret==0 path, *b needed
+    return 0; // expected-error {{'*b' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}

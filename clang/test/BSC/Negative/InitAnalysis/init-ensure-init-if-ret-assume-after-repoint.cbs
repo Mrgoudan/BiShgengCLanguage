@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+//
+// The __assume_initialized promotion is gated by ReassignedParams. After
+// `out = &other`, `&*out` denotes *other, not the caller's pointee, so
+// __assume_initialized does not credit the contract-tracked pointee; the unmet
+// contract is reported at return.
+
+int try_init(int *__attribute__((ensure_init_if_ret(0))) out) {
+    int other = 99;
+    out = &other; // expected-note {{'out' was re-pointed here without initializing '*out' first}}
+    __assume_initialized(&*out);
+    return 0; // expected-error {{__attribute__((ensure_init_if_ret(0))) not satisfied: 'out' is reassigned before '*out' is initialized}}
+}

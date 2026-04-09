@@ -7656,6 +7656,11 @@ public:
   void checkBSCFunctionContainsTrait(Decl* D);
   void CheckBSCConstexprFunction(FunctionDecl* FD);
   void CheckBSCConstexprVarType(VarDecl* VD);
+  /// Check ensure_init_if_ret rules that need the whole FunctionDecl
+  /// (e.g. return type must be integer or _Bool).
+  void CheckBSCEnsureInitIfRetOnFunctionDecl(FunctionDecl *FD);
+  /// Verify ensure_init_if_ret consistency across redeclarations.
+  bool CheckBSCEnsureInitIfRetRedecl(FunctionDecl *Old, FunctionDecl *New);
 #endif
   void ActOnReenterCXXMethodParameter(Scope *S, ParmVarDecl *Param);
   unsigned ActOnReenterTemplateScope(Decl *Template,

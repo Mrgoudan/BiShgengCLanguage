@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// =============================================================================
+// Even on indirect calls through a function-pointer type, passing a
+// non-addressof expression to an ensure_init_if_ret param warns.
+// =============================================================================
+
+typedef _Safe int (*TryInit)(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+_Safe void test_fnptr_indirect_arg(TryInit fn, int *_Borrow q) {
+    int r = fn(q); // expected-warning {{ensure_init_if_ret effect cannot be verified when argument is not an address-of expression}}
+}
