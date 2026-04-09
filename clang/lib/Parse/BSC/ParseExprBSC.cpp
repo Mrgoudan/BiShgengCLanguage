@@ -97,6 +97,8 @@ bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
 
 bool Parser::IsBSCStaticMemberFunctionCall() {
   assert(Tok.isOneOf(tok::identifier, tok::kw_union, tok::kw_enum, tok::kw_struct));
+  if (NextToken().is(tok::eof))
+    return false;
   Token NextTok = Tok.is(tok::identifier) ? PP.LookAhead(0) : PP.LookAhead(1);
   if (NextTok.is(tok::coloncolon))
     return true;

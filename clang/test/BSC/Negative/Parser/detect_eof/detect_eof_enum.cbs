@@ -1,0 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+[enum // expected-error {{expected expression}}
+// expected-error {{expected identifier or '('}}
