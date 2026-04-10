@@ -160,10 +160,29 @@ bool InitAnalysis::transferStatement(const Statement &S,
       LocalId Base = S.getAssign().Dest.Base;
       auto It = State.EnsureInitDerefStates.find(Base);
       if (It != State.EnsureInitDerefStates.end()) {
-        if (It->second != InitState::Initialized) {
-          It->second = InitState::Initialized;
-          Changed = true;
+        const auto &Projs = S.getAssign().Dest.Projections;
+        if (Projs.size() == 1) {
+          // Whole deref write: *p = val
+          if (It->second != InitState::Initialized) {
+            It->second = InitState::Initialized;
+            Changed = true;
+          }
+          QualType PointeeTy = getEnsureInitPointeeType(Base);
+          if (!PointeeTy.isNull()) {
+            SmallVector<unsigned, 4> Prefix;
+            markAllFieldsInit(State, Base, PointeeTy, Prefix);
+          }
+        } else if (!getEnsureInitPointeeType(Base).isNull()) {
+          // Struct pointee field write: reuse getFieldPath on the
+          // post-Deref sub-place (same as local struct tracking).
+          Place SubPlace(Base, Projs.slice(1),
+                         S.getAssign().Dest.Ty, S.getAssign().Dest.Loc);
+          if (auto FP = getFieldPath(SubPlace)) {
+            if (!getFieldType(FP->Base, FP->Indices)->isArrayType())
+              markFieldInit(State, *FP, Changed);
+          }
         }
+        // else: non-struct element write (e.g. array index) — skip.
       }
     }
     break;
@@ -236,6 +255,17 @@ InitLattice InitAnalysis::transferTerminator(const Terminator &T,
           SmallVector<unsigned, 4> Prefix;
           markAllFieldsInit(Result, ArgPlace.Base,
                             B.getLocal(ArgPlace.Base).Ty, Prefix);
+          // __assume_initialized(&out) where out is ensure_init param:
+          // also mark *out as initialized in EnsureInitDerefStates.
+          auto DerefIt = Result.EnsureInitDerefStates.find(ArgPlace.Base);
+          if (DerefIt != Result.EnsureInitDerefStates.end()) {
+            DerefIt->second = InitState::Initialized;
+            QualType PointeeTy = getEnsureInitPointeeType(ArgPlace.Base);
+            if (!PointeeTy.isNull()) {
+              SmallVector<unsigned, 4> Prefix2;
+              markAllFieldsInit(Result, ArgPlace.Base, PointeeTy, Prefix2);
+            }
+          }
         } else if (auto FP = getFieldPath(ArgPlace)) {
           bool Changed = false;
           markFieldInit(Result, *FP, Changed);
@@ -382,6 +412,22 @@ bool InitAnalysis::merge(const InitLattice &Src, InitLattice &Dst) const {
 // Diagnostic Helpers
 //===----------------------------------------------------------------------===//
 
+QualType InitAnalysis::getEnsureInitPointeeType(LocalId Id) const {
+  // Only applies to ensure_init params (Id 1..NumParams with the attribute).
+  if (Id.Index < 1 || Id.Index > B.NumParams)
+    return QualType();
+  if (!B.SourceFD)
+    return QualType();
+  const ParmVarDecl *PVD = B.SourceFD->getParamDecl(Id.Index - 1);
+  if (!PVD->hasAttr<EnsureInitAttr>())
+    return QualType();
+  QualType PointeeTy = PVD->getType()->getPointeeType();
+  if (PointeeTy.isNull() || !PointeeTy->isRecordType() ||
+      getNumFields(PointeeTy) == 0)
+    return QualType();
+  return PointeeTy;
+}
+
 InitState InitAnalysis::getInitState(const InitLattice &State,
                                      LocalId Id) const {
   auto It = State.LocalStates.find(Id);
@@ -414,7 +460,9 @@ unsigned InitAnalysis::getNumFields(QualType Ty) {
 
 QualType InitAnalysis::getFieldType(LocalId Id,
                                     ArrayRef<unsigned> Path) const {
-  QualType Ty = B.getLocal(Id).Ty;
+  // For ensure_init struct pointees, use the pointee type.
+  QualType PointeeTy = getEnsureInitPointeeType(Id);
+  QualType Ty = PointeeTy.isNull() ? B.getLocal(Id).Ty : PointeeTy;
   for (unsigned Idx : Path) {
     const RecordDecl *RD = Ty->getAsRecordDecl();
     assert(RD && "getFieldType: expected record type along path");
@@ -439,7 +487,9 @@ llvm::Optional<FieldPath> InitAnalysis::getFieldPath(const Place &P) const {
   FP.Base = P.Base;
 
   // Walk the local's type through the field/index chain.
-  QualType CurTy = B.getLocal(P.Base).Ty;
+  // For ensure_init struct pointees, use the pointee type.
+  QualType PointeeTy = getEnsureInitPointeeType(P.Base);
+  QualType CurTy = PointeeTy.isNull() ? B.getLocal(P.Base).Ty : PointeeTy;
 
   for (const auto &Proj : P.Projections) {
     if (Proj.K == ProjectionElem::Field) {
@@ -489,9 +539,8 @@ void InitAnalysis::tryPromoteParent(InitLattice &State, const FieldPath &FP,
   Parent.Indices.assign(FP.Indices.begin(), FP.Indices.end() - 1);
 
   // Get the parent type to count siblings.
-  QualType ParentTy = Parent.Indices.empty()
-                          ? B.getLocal(FP.Base).Ty
-                          : getFieldType(FP.Base, Parent.Indices);
+  // getFieldType handles ensure_init pointee types for empty paths.
+  QualType ParentTy = getFieldType(FP.Base, Parent.Indices);
 
   unsigned NumSiblings = getNumFields(ParentTy);
   if (NumSiblings == 0) {
@@ -531,10 +580,13 @@ void InitAnalysis::tryPromoteParent(InitLattice &State, const FieldPath &FP,
 
   // All siblings initialized. Promote parent.
   if (Parent.Indices.empty()) {
-    // Promote the whole local.
-    auto &LS = State.LocalStates[FP.Base];
-    if (LS != InitState::Initialized) {
-      LS = InitState::Initialized;
+    // Promote the whole local, or EnsureInitDerefStates for pointee tracking.
+    auto DerefIt = State.EnsureInitDerefStates.find(FP.Base);
+    InitState &Target = (DerefIt != State.EnsureInitDerefStates.end())
+                            ? DerefIt->second
+                            : State.LocalStates[FP.Base];
+    if (Target != InitState::Initialized) {
+      Target = InitState::Initialized;
       Changed = true;
     }
   } else {

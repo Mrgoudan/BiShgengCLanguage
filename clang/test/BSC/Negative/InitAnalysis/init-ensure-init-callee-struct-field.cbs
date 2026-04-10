@@ -1,0 +1,147 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test: ensure_init callee side with struct field-level initialization.
+// The callee must initialize ALL fields of *param before returning.
+
+struct Pair { int a; int b; };
+struct Triple { int a; int b; int c; };
+struct Nested { struct Pair p; int x; };
+
+// --- Partial init: only one field written -----------------------------------
+
+void partial_one(struct Pair *__attribute__((ensure_init)) out) {
+    out->a = 1;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+void partial_other(struct Pair *__attribute__((ensure_init)) out) {
+    out->b = 2;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// --- Partial init: two of three fields --------------------------------------
+
+void partial_two_of_three(struct Triple *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    out->b = 2;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// --- Full init: all fields written ------------------------------------------
+
+void full_pair(struct Pair *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    out->b = 2;
+} // no error: all fields initialized
+
+void full_triple(struct Triple *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    out->b = 2;
+    out->c = 3;
+} // no error
+
+// --- Whole struct assignment ------------------------------------------------
+
+void whole_assign(struct Pair *__attribute__((ensure_init)) out) {
+    struct Pair tmp;
+    tmp.a = 1;
+    tmp.b = 2;
+    *out = tmp;
+} // no error: whole struct written
+
+// --- Branch: one path inits all, other inits partial ------------------------
+
+void branch_partial(int cond, struct Pair *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    if (cond) {
+        out->b = 2;
+    }
+} // expected-error {{'*out' may not be initialized on all paths at return in __attribute__((ensure_init)) function}}
+
+void branch_full(int cond, struct Pair *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    if (cond) {
+        out->b = 2;
+    } else {
+        out->b = 3;
+    }
+} // no error: all fields on all paths
+
+// --- Nested struct ----------------------------------------------------------
+
+void nested_partial(struct Nested *__attribute__((ensure_init)) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+void nested_full(struct Nested *__attribute__((ensure_init)) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+    out->x = 3;
+} // no error
+
+// --- Struct with array field ------------------------------------------------
+// Array fields cannot be initialized element-by-element in the analysis.
+// They require whole-struct write or __assume_initialized.
+
+struct WithArr { int x; int arr[3]; };
+
+// Writing x + element writes: arr field not tracked as initialized.
+void struct_arr_partial(struct WithArr *__attribute__((ensure_init)) out) {
+    out->x = 1;
+    out->arr[0] = 0;
+    out->arr[1] = 1;
+    out->arr[2] = 2;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// Whole struct write covers everything including the array.
+void struct_arr_whole(struct WithArr *__attribute__((ensure_init)) out) {
+    struct WithArr tmp = {1, {0, 1, 2}};
+    *out = tmp;
+} // no error: whole struct written
+
+// Only scalar field, array untouched.
+void struct_arr_only_scalar(struct WithArr *__attribute__((ensure_init)) out) {
+    out->x = 1;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// --- Array pointer (non-struct pointee) ------------------------------------
+// Array pointees follow the same rule as local arrays: element writes do
+// NOT mark the array as initialized.  Must use whole write or __assume_initialized.
+
+void arr_ptr_elements(int (*__attribute__((ensure_init)) out)[3]) {
+    (*out)[0] = 0;
+    (*out)[1] = 1;
+    (*out)[2] = 2;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// --- Nested struct with array field ----------------------------------------
+
+struct NestedArr { struct Pair p; int arr[2]; };
+
+void nested_arr_partial(struct NestedArr *__attribute__((ensure_init)) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+void nested_arr_full(struct NestedArr *__attribute__((ensure_init)) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+    out->arr[0] = 0;
+    out->arr[1] = 1;
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// --- __assume_initialized(&out) covers all fields --------------------------
+// __assume_initialized(&out) on an ensure_init pointer param marks *out as
+// fully initialized, including all fields and array members.
+
+void partial_with_assume(struct Pair *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    _Unsafe { __assume_initialized(&out); }
+} // no error: __assume_initialized marks *out as fully initialized
+
+void arr_field_with_assume(struct WithArr *__attribute__((ensure_init)) out) {
+    out->x = 1;
+    _Unsafe { __assume_initialized(&out); }
+} // no error: covers the array field too
+
+void arr_ptr_with_assume(int (*__attribute__((ensure_init)) out)[3]) {
+    _Unsafe { __assume_initialized(&out); }
+} // no error: whole array marked initialized

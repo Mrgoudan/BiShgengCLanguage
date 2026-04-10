@@ -125,6 +125,9 @@ private:
   const Body &B;
   bool CheckAllZones;
 
+  /// Get the struct pointee type for an ensure_init param, or null QualType.
+  QualType getEnsureInitPointeeType(LocalId Id) const;
+
   /// Check if a local/place is initialized in the given state.
   InitState getInitState(const InitLattice &State, LocalId Id) const;
 

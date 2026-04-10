@@ -3,3 +3,12 @@
 // Test sema validation: ensure_init on non-pointer param produces warning.
 
 void bad_attr(int __attribute__((ensure_init)) x); // expected-warning {{attribute only applies to pointer parameters}}
+
+// ensure_init on array parameter (decays to pointer, but should be rejected).
+void bad_array(int __attribute__((ensure_init)) arr[2]); // expected-warning {{attribute only applies to pointer parameters}}
+void bad_array2(int __attribute__((ensure_init)) arr[]); // expected-warning {{attribute only applies to pointer parameters}}
+
+// Definition: ensure_init rejected on array, so no init-analysis tracking.
+void bad_array_def(int __attribute__((ensure_init)) arr[2]) { // expected-warning {{attribute only applies to pointer parameters}}
+    arr[0] = 1;
+} // no ensure_init error: attribute was rejected

@@ -8307,7 +8307,8 @@ static void handleOperatorAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
 
 static void handleEnsureInitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto *PVD = dyn_cast<ParmVarDecl>(D);
-  if (!PVD || !PVD->getType()->isPointerType()) {
+  if (!PVD || !PVD->getType()->isPointerType() ||
+      PVD->getOriginalType()->isArrayType()) {
     S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
         << AL << "pointer parameters";
     return;
