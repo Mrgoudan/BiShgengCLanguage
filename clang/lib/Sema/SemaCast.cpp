@@ -2877,8 +2877,11 @@ void CastOperation::CheckCStyleCast() {
       assert(Kind == CK_Dependent);
       return;
     }
-    // Handle nullptr cast to pointer - skip BSC checks that may not handle it
-    if (isa<CXXNullPtrLiteralExpr>(SrcExpr.get()) && DestType->isPointerType()) {
+    // Intercept explicit casts from nullptr_t to pointer.
+    // Prevents PrepareScalarCast in C mode from crashing, because it will
+    // get the address space of nullptr_t's non-existent pointee type.
+    if (SrcExpr.get()->getType()->isNullPtrType() &&
+        DestType->isPointerType()) {
       Kind = CK_NullToPointer;
       return;
     }
@@ -3228,16 +3231,6 @@ void CastOperation::CheckCStyleCast() {
   DiagnoseCastOfObjCSEL(Self, SrcExpr, DestType);
   DiagnoseCallingConvCast(Self, SrcExpr, DestType, OpRange);
   DiagnoseBadFunctionCast(Self, SrcExpr, DestType);
-  
-#if ENABLE_BSC
-  // Intercept explicit casts from nullptr_t to pointer
-  // Prevents PrepareScalarCast in C mode from crashing, because it will
-  // get the address space of nullptr_t's non-existent pointee type
-  if (SrcType->isNullPtrType() && DestType->isPointerType()) {
-    Kind = CK_NullToPointer;
-    return;
-  }
-#endif
 
   Kind = Self.PrepareScalarCast(SrcExpr, DestType);
   if (SrcExpr.isInvalid())
