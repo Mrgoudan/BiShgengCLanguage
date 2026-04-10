@@ -2476,27 +2476,6 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     return nullptr;
   QualType T = adjustFunctionTypeForInstantiation(SemaRef.Context, D, TInfo);
 
-#if ENABLE_BSC
-  // FIXME: It's more proper to move those type checking to BuildFunctionType.
-  if (SemaRef.getLangOpts().BSC) {
-    if (const FunctionProtoType *FPT = T->getAs<FunctionProtoType>()) {
-      // Check return type for owned qualifiers
-      if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(FPT->getReturnType(),
-                                                        D->getLocation())) {
-        return nullptr;
-      }
-
-      // Check parameter types for owned qualifiers
-      for (QualType ParamType : FPT->getParamTypes()) {
-        if (!SemaRef.CheckInstantiatedTypeOwnedQualifiers(ParamType,
-                                                          D->getLocation())) {
-          return nullptr;
-        }
-      }
-    }
-  }
-#endif
-
   if (TemplateParams && TemplateParams->size()) {
     auto *LastParam =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->asArray().back());
