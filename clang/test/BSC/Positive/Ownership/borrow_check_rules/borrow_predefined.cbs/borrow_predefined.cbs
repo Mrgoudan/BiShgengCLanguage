@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+void func1_0(void) {
+  (void)&_Const __func__[0];
+}
+
+void func1_1(void) {
+  (void)&_Const __FUNCTION__[0];
+}
+
+void func2(void) {
+  (void)&_Const 0[__FILE__];
+}
+
+const char *_Borrow func3(int *_Borrow d) {
+  const char *q = __func__;
+  const char *_Borrow p = &_Const *q;
+  return p;
+}
+
+const char *_Borrow func4(int *_Borrow d) {
+  return &_Const __func__[1];
+}
+
+int get_rand(void);
+
+void func5(void) {
+  int cond = get_rand();
+  const char *_Borrow p = cond ? &_Const __func__[0] : &_Const __FILE__[0];
+  (void)p;
+}
+
+void func6(void) {
+  const char *_Borrow arr[] = { &_Const __func__[0], &_Const __FILE__[0] };
+  (void)arr;
+}
+
+void func7(void) {
+  (void)&_Const __PRETTY_FUNCTION__[0];
+}

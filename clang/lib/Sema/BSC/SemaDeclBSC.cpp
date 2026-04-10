@@ -472,6 +472,13 @@ class BorrowCheckerPrologue : public TreeTransform<BorrowCheckerPrologue> {
                                 S->getBeginLoc(), S->getEndLoc());
   }
 
+  ExprResult TransformStringLiteralLike(Expr *E) {
+    QualType PtrTy = getSema().Context.getArrayDecayedType(E->getType());
+    DeclRefExpr *DRE = ReplaceWithRefToNewTempVar(E, PtrTy);
+    replacedNodesMap.Insert(DRE, E);
+    return DRE;
+  }
+
 public:
   BorrowCheckerPrologue(Sema &SemaRef, FunctionDecl *FD,
                         ReplaceNodesMap &replacedNodesMap)
@@ -897,7 +904,9 @@ public:
     return PE;
   }
 
-  ExprResult TransformPredefinedExpr(PredefinedExpr *PE) { return PE; }
+  ExprResult TransformPredefinedExpr(PredefinedExpr *PE) {
+    return TransformStringLiteralLike(PE);
+  }
 
   ExprResult TransformSafeExpr(SafeExpr *SE) {
     ExprResult Res = getDerived().TransformExpr(SE->getSubExpr());
@@ -928,10 +937,7 @@ public:
   }
 
   ExprResult TransformStringLiteral(StringLiteral *SL) {
-    QualType PtrTy = getSema().Context.getArrayDecayedType(SL->getType());
-    DeclRefExpr *DRE = ReplaceWithRefToNewTempVar(SL, PtrTy);
-    replacedNodesMap.Insert(DRE, SL);
-    return DRE;
+    return TransformStringLiteralLike(SL);
   }
 };
 
