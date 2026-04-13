@@ -5,4 +5,4 @@ void test<const T>() { }
 // expected-error@-1 {{unknown type name 'T'}}
 // expected-error@-2 {{expected identifier}}
 // expected-error@-3 {{expected ',' or '>' in template-parameter-list}}
-// expected-error {{expected identifier}}
+// expected-error {{expected '>'}}

@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+a<struct b>();0
+// expected-error@-1 {{a non-type template parameter cannot have type struct}}
+// expected-error@-2 {{no template named 'a'}}
+// expected-error@-3 {{expected identifier or '('}}
+// expected-error@-4 {{expected identifier or '('}}

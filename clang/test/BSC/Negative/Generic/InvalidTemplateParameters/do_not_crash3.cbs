@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+a b c<0,d a 0,0>{e
+// expected-error@-1 {{expected template parameter}}
+// expected-error@-2 {{unknown type name 'd'}}
+// expected-error@-3 {{expected ',' or '>' in template-parameter-list}}
+// expected-error@-4 {{expected '>'}}

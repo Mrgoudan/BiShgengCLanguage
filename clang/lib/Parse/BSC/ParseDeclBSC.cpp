@@ -1647,8 +1647,7 @@ bool Parser::ParseBSCTemplateParameters(
   bool Failed = false;
   if (!PeekTok.is(tok::greater)) {
     TemplateScopes.Enter(Scope::TemplateParamScope);
-    Failed =
-        ParseBSCTemplateParameterList(Depth, TemplateParams);
+    Failed = !ParseBSCTemplateParameterList(Depth, TemplateParams);
   }
   PeekTok = PP.LookAhead(BSCGenericLookAhead);
   if (PeekTok.getKind() == tok::greater) {
@@ -1658,6 +1657,7 @@ bool Parser::ParseBSCTemplateParameters(
   } else {
     if (Failed) {
       Diag(PeekTok.getLocation(), diag::err_expected) << tok::greater;
+      IsParsingBSCGenericParameters = false;
       return true;
     }
   }
@@ -1696,7 +1696,11 @@ bool Parser::ParseBSCTemplateParameterList(
       // try to get out of the expression. This error is currently
       // subsumed by whatever goes on in ParseTemplateParameter.
       Diag(PeekTok.getLocation(), diag::err_expected_comma_greater);
-      SkipUntil(tok::comma, tok::greater, StopAtSemi | StopBeforeMatch);
+      while (PeekTok.isNot(tok::eof) &&
+             !PeekTok.isOneOf(tok::comma, tok::greater, tok::semi)) {
+        BSCGenericLookAhead++;
+        PeekTok = PP.LookAhead(BSCGenericLookAhead);
+      }
       return false;
     }
   }
