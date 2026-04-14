@@ -20,21 +20,21 @@ using namespace clang;
 using namespace clang::borrow;
 
 namespace {
-bool IsTrackedType(QualType type) {
+bool IsTrackedType(const Environment &env, QualType type) {
   type = type.getCanonicalType();
   if (type->isPointerType() && type.isOwnedQualified()) {
-    return IsTrackedType(type->getPointeeType());
+    return IsTrackedType(env, type->getPointeeType());
   }
   if (type->isArrayType()) {
-    if (const ArrayType *AT = type->getAsArrayTypeUnsafe()) {
-      return IsTrackedType(AT->getElementType());
+    if (const ArrayType *AT = env.Ctx.getAsArrayType(type)) {
+      return IsTrackedType(env, AT->getElementType());
     }
   }
   if (type.isBorrowQualified())
     return true;
   if (const RecordType *RT = type->getAs<RecordType>()) {
     for (const FieldDecl *FD : RT->getDecl()->fields()) {
-      if (IsTrackedType(FD->getType())) {
+      if (IsTrackedType(env, FD->getType())) {
         return true;
       }
     }
@@ -196,6 +196,10 @@ class ActionExtract : public clang::StmtVisitor<ActionExtract> {
   Decl *D = nullptr;
   bool isArrow = false;
   bool BuildOnGet = true;
+
+  bool IsTrackedType(QualType QT) const {
+    return ::IsTrackedType(rc.getEnv(), QT);
+  }
 
   void Reset() {
     Sources.clear();
@@ -1077,7 +1081,7 @@ template <typename CB> void Liveness::Walk(CB callback) {
 std::set<RegionName> Liveness::LiveRegions(const LivenessFact &liveFact) {
   std::set<RegionName> set;
   for (VarDecl *VD : liveFact) {
-    if (IsTrackedType(VD->getType())) {
+    if (IsTrackedType(env, VD->getType())) {
       set.insert(rc.getRegionName(VD));
     }
   }
@@ -1723,12 +1727,12 @@ void RegionCheck::RelateRegions(Point SuccPoint, RegionName Sub,
 /// If the return type of a function is borrow qualifed or has borrow fields,
 /// we relate a free region to function parameters.
 void RegionCheck::PreprocessForParamAndReturn() {
-  if (!IsTrackedType(env.fd.getReturnType()))
+  if (!IsTrackedType(env, env.fd.getReturnType()))
     return;
 
   RegionName ParamRN = RegionName::Create();
   for (ParmVarDecl *PVD : env.fd.parameters()) {
-    if (IsTrackedType(PVD->getType())) {
+    if (IsTrackedType(env, PVD->getType())) {
 #if DEBUG_PRINT
       llvm::outs() << "Decl: { " << cast<VarDecl>(PVD)->getName() << " } => "
                    << ParamRN.print() << '\n';

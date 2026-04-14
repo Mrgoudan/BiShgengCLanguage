@@ -965,6 +965,10 @@ public:
 
   void Check();
 
+  const Environment &getEnv() const {
+    return env;
+  }
+
   /// Get the corresponding RegionName for a Decl in the regionMap.
   /// If not existing, create a RegionName and return it.
   RegionName getRegionName(Decl *D);
