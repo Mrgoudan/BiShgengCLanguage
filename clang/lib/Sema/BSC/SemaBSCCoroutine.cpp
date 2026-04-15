@@ -914,7 +914,7 @@ static FunctionDecl *buildFutureInitFunctionDefinition(Sema &S, RecordDecl *RD,
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType());
   return NewFD;
 }
 
@@ -1091,7 +1091,7 @@ buildFutureStructInitFunctionDefinition(Sema &S, RecordDecl *RD,
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType());
   return NewFD;
 }
 
@@ -2408,7 +2408,7 @@ static BSCMethodDecl *buildFreeFunctionDeclaration(Sema &S, RecordDecl *RD,
   S.PushFunctionScope();
 
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType());
   return NewFD;
 }
 
@@ -2638,7 +2638,7 @@ static BSCMethodDecl *buildFreeFunctionDefinition(Sema &S, RecordDecl *RD,
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType());
 
   return NewFD;
 }
@@ -2699,7 +2699,7 @@ static BSCMethodDecl *buildPollFunctionDeclaration(Sema &S, RecordDecl *RD,
   NewFD->setType(FuncType);
 
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType());
   return NewFD->isInvalidDecl() ? nullptr : NewFD;
 }
 
@@ -2862,7 +2862,7 @@ static BSCMethodDecl *buildPollFunctionDefinition(Sema &S, RecordDecl *RD,
       CompoundStmt::Create(S.Context, Stmts, FPOptionsOverride(), SLoc, ELoc);
   NewFD->setBody(CS);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
-  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType(), true);
+  S.PopFunctionScopeInfo(ActivePolicy, NewFD, QualType());
   return NewFD->isInvalidDecl() ? nullptr : NewFD;
 }
 

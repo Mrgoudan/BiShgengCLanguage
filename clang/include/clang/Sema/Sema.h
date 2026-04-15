@@ -1954,11 +1954,7 @@ public:
   PoppedFunctionScopePtr
   PopFunctionScopeInfo(const sema::AnalysisBasedWarnings::Policy *WP = nullptr,
                        const Decl *D = nullptr,
-                       QualType BlockType = QualType()
-                       #if ENABLE_BSC
-                       , bool isBSCCoroutine = false
-                       #endif
-                       );
+                       QualType BlockType = QualType());
 
   sema::FunctionScopeInfo *getCurFunction() const {
     return FunctionScopes.empty() ? nullptr : FunctionScopes.back();

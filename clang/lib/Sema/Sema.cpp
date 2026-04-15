@@ -2200,11 +2200,7 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
 /// \param BlockType The type of the block expression, if D is a BlockDecl.
 Sema::PoppedFunctionScopePtr
 Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
-                           const Decl *D, QualType BlockType
-                           #if ENABLE_BSC
-                           , bool isBSCCoroutine
-                           #endif
-                           ) {
+                           const Decl *D, QualType BlockType) {
   assert(!FunctionScopes.empty() && "mismatched push/pop!");
 
   markEscapingByrefs(*FunctionScopes.back(), *this);
