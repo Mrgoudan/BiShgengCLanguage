@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Trait T {};
+
+_Trait T *foo() {
+    return; // expected-error {{non-void function 'foo' should return a value}}
+}

@@ -1,0 +1,5 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Trait T *foo() { // expected-error {{'_Trait T' must be defined before it can be used}}
+    return;
+}

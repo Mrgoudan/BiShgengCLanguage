@@ -3992,8 +3992,9 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   if (const FunctionDecl *FD = getCurFunctionDecl()) {
     FnRetType = FD->getReturnType();
-    #if ENABLE_BSC
-    if (getLangOpts().BSC && TryDesugarTrait(FnRetType) && !TryDesugarTrait(RetValExp->getType())) {
+#if ENABLE_BSC
+    if (getLangOpts().BSC && RetValExp && TryDesugarTrait(FnRetType) &&
+        !TryDesugarTrait(RetValExp->getType())) {
       Expr *TraitDesugaredExpr = ConvertParmTraitToStructTrait(
           RetValExp, FnRetType, RetValExp->getBeginLoc());
       if (TraitDesugaredExpr)
@@ -4001,7 +4002,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       else
         return StmtError();
     }
-    #endif
+#endif
     if (FD->hasAttrs())
       Attrs = &FD->getAttrs();
     if (FD->isNoReturn())
