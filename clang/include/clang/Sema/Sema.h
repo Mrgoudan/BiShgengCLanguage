@@ -7630,11 +7630,15 @@ public:
   void ActOnFinishCXXMemberDecls();
   void ActOnFinishCXXNonNestedClass();
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   NamedDecl *ActOnTraitMemberDeclarator(Scope *S, Declarator &D);
   void ActOnFinishTraitMemberSpecification(Decl *TagDecl);
   RecordDecl *ActOnDesugarVtableRecord(TraitDecl *TD);
-  RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD, bool addOwned = false, bool addBorrow = false);
+  RecordDecl *ActOnDesugarTraitRecord(TraitDecl *TD, RecordDecl *TraitVtableRD,
+                                      bool addOwned = false, bool addBorrow = false);
+  /// Return false if any of \c TraitDecl's synthesized desugar record names is
+  /// already taken; emits err_redefinition on the trait.
+  bool CheckTraitDesugarTagNamesAvailable(TraitDecl *TD);
   bool IsTraitExpr(Expr *Expr);
   ExprResult ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
                                     BinaryOperatorKind Opc, Expr *LHSExpr,

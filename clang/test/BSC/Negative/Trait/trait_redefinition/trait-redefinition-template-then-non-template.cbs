@@ -1,0 +1,5 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// Template trait followed by a non-template trait with the same name.
+
+_Trait a<b>{}; // expected-note {{previous definition is here}}
+_Trait a{}; // expected-error {{redefinition of 'a'}}

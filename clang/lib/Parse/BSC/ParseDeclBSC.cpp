@@ -467,12 +467,17 @@ void Parser::ParseTraitSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     }
     assert(TD && "No corresponding trait");
 
+    if (!Actions.CheckTraitDesugarTagNamesAvailable(TD))
+      return;
     RecordDecl *TraitVtableRD = Actions.ActOnDesugarVtableRecord(TD);
     RecordDecl *TraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD);
     TD->setTrait(TraitRD);
-    RecordDecl *OwnedTraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD, true, false);
+    RecordDecl *OwnedTraitRD =
+        Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD, true, false);
     TD->setOwnedTrait(OwnedTraitRD);
-    RecordDecl *BorrowTraitRD = Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD, false, true);
+    RecordDecl *BorrowTraitRD =
+        Actions.ActOnDesugarTraitRecord(TD, TraitVtableRD, false, true);
+
     TD->setBorrowTrait(BorrowTraitRD);
     TD->setVtable(TraitVtableRD);
   }

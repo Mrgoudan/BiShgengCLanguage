@@ -25,6 +25,75 @@
 using namespace clang;
 using namespace sema;
 
+namespace {
+/// If a tag with this name is already in scope, return a declaration suitable
+/// for note_previous_definition; otherwise nullptr.
+NamedDecl *findConflictingTraitDesugarTagDecl(Sema &S,
+                                              const std::string &TraitName) {
+  LookupResult R(S, &S.getASTContext().Idents.get(TraitName), SourceLocation(),
+                 Sema::LookupTagName, Sema::NotForRedeclaration);
+  S.LookupName(R, S.TUScope);
+  if (R.empty())
+    return nullptr;
+  return R.getRepresentativeDecl()->getUnderlyingDecl();
+}
+
+/// Create the desugared struct RecordDecl for \p TD, optionally as a class
+/// template matching the trait's template head, and push it (or the template)
+/// onto the scope chain. Does not start the struct definition.
+static RecordDecl *createTraitDesugarStructAndPush(Sema &S, TraitDecl *TD,
+                                                   const std::string &StructName) {
+  ASTContext &Ctx = S.getASTContext();
+  DeclContext *DC = S.CurContext;
+  SourceLocation NameLoc = TD->getLocation();
+  SourceLocation StartLoc = TD->getBeginLoc();
+  IdentifierInfo &II = Ctx.Idents.get(StructName);
+
+  TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate();
+  TemplateParameterList *TParams = nullptr;
+  const bool DelayTypeCreation = TTD != nullptr;
+  if (TTD)
+    TParams = TTD->getTemplateParameters();
+
+  RecordDecl *RD = RecordDecl::Create(Ctx, TTK_Struct, DC, StartLoc, NameLoc,
+                                      &II, nullptr, DelayTypeCreation);
+  RD->setLexicalDeclContext(DC);
+
+  Scope *Outer = S.getCurScope();
+  while ((Outer->getFlags() & Scope::TemplateParamScope) != 0)
+    Outer = Outer->getParent();
+
+  if (DelayTypeCreation) {
+    ClassTemplateDecl *CTD =
+        ClassTemplateDecl::Create(Ctx, DC, StartLoc, &II, TParams, RD);
+    S.PushOnScopeChains(CTD, Outer);
+    RD->setDescribedClassTemplate(CTD);
+    QualType T = CTD->getInjectedClassNameSpecialization();
+    T = Ctx.getInjectedClassNameType(RD, T);
+    assert(T->isDependentType() && "Class template type is not dependent?");
+    CTD->setLexicalDeclContext(DC);
+  } else {
+    S.PushOnScopeChains(RD, Outer);
+  }
+  return RD;
+}
+} // namespace
+
+bool Sema::CheckTraitDesugarTagNamesAvailable(TraitDecl *TD) {
+  const std::string Names[] = {TD->getDesugarVtableRecordName(),
+                               TD->getDesugarTraitRecordName(),
+                               TD->getDesugarOwnedTraitRecordName(),
+                               TD->getDesugarBorrowTraitRecordName()};
+  for (const std::string &N : Names) {
+    if (NamedDecl *Prev = findConflictingTraitDesugarTagDecl(*this, N)) {
+      Diag(TD->getLocation(), diag::err_redefinition) << TD;
+      Diag(Prev->getLocation(), diag::note_previous_definition);
+      return false;
+    }
+  }
+  return true;
+}
+
 // When we see a trait like:
 // trait I {
 //   int g(This *this);
@@ -36,44 +105,8 @@ using namespace sema;
 //  `---FieldDecl  data (*)(void)
 //  `---FieldDecl  vtable struct (*)Trait_I_Vtable
 RecordDecl *Sema::ActOnDesugarVtableRecord(TraitDecl *TD) {
-  RecordDecl *TraitVtableRD = nullptr;
-  SourceLocation NameLoc = TD->getLocation();
-  SourceLocation StartLoc = TD->getBeginLoc();
-  std::string TraitVTableName = "__Trait_" + TD->getNameAsString() + "_Vtable";
-  LookupResult Previous(*this, &Context.Idents.get(TraitVTableName),
-                        SourceLocation(), LookupTagName, NotForRedeclaration);
-  LookupName(Previous, TUScope);
-  TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate();
-  TemplateParameterList *TParams = nullptr;
-  bool DelayTypeCreation = false;
-  if (TTD) {
-    TParams = TTD->getTemplateParameters();
-    DelayTypeCreation = true;
-  }
-  if (Previous.empty()) {
-    TraitVtableRD = RecordDecl::Create(
-        Context, TTK_Struct, CurContext, StartLoc, NameLoc,
-        &Context.Idents.get(TraitVTableName), nullptr, DelayTypeCreation);
-    TraitVtableRD->setLexicalDeclContext(CurContext);
-    Scope *Outer = getCurScope();
-    while ((Outer->getFlags() & Scope::TemplateParamScope) != 0)
-      Outer = Outer->getParent();
-    if (DelayTypeCreation) {
-      ClassTemplateDecl *CTD = ClassTemplateDecl::Create(
-          Context, CurContext, StartLoc, &Context.Idents.get(TraitVTableName),
-          TParams, TraitVtableRD);
-      PushOnScopeChains(CTD, Outer);
-      TraitVtableRD->setDescribedClassTemplate(CTD);
-      QualType T = CTD->getInjectedClassNameSpecialization();
-      T = Context.getInjectedClassNameType(TraitVtableRD, T);
-      assert(T->isDependentType() && "Class template type is not dependent?");
-      CTD->setLexicalDeclContext(CurContext);
-    } else {
-      PushOnScopeChains(TraitVtableRD, Outer);
-    }
-  } else {
-    // todo: error report?
-  }
+  RecordDecl *TraitVtableRD = createTraitDesugarStructAndPush(
+      *this, TD, TD->getDesugarVtableRecordName());
 
   TraitVtableRD->startDefinition();
   for (TraitDecl::field_iterator FieldIt = TD->field_begin();
@@ -130,49 +163,12 @@ RecordDecl *Sema::ActOnDesugarTraitRecord(TraitDecl *TD,
                                           RecordDecl *TraitVtableRD,
                                           bool addOwned,
                                           bool addBorrow) {
-  RecordDecl *TraitRD = nullptr;
   SourceLocation NameLoc = TD->getLocation();
   SourceLocation StartLoc = TD->getBeginLoc();
-  std::string TraitName = "__Trait_" + TD->getNameAsString();
-  if (addOwned)
-    TraitName += "_Owned";
-  if (addBorrow)
-    TraitName += "_Borrow";
-  TraitTemplateDecl *TTD = TD->getDescribedTraitTemplate();
-  TemplateParameterList *TParams = nullptr;
-  bool DelayTypeCreation = false;
-  if (TTD) {
-    TParams = TTD->getTemplateParameters();
-    DelayTypeCreation = true;
-  }
-  LookupResult Previous(*this, &Context.Idents.get(TraitName), SourceLocation(),
-                        LookupTagName, NotForRedeclaration);
-  LookupName(Previous, TUScope);
-  if (Previous.empty()) {
-    TraitRD = RecordDecl::Create(Context, TTK_Struct, CurContext, StartLoc,
-                                 NameLoc, &Context.Idents.get(TraitName),
-                                 nullptr, DelayTypeCreation);
-    TraitRD->setLexicalDeclContext(CurContext);
-
-    Scope *Outer = getCurScope();
-    while ((Outer->getFlags() & Scope::TemplateParamScope) != 0)
-      Outer = Outer->getParent();
-    if (DelayTypeCreation) {
-      ClassTemplateDecl *CTD = ClassTemplateDecl::Create(
-          Context, CurContext, StartLoc, &Context.Idents.get(TraitName),
-          TParams, TraitRD);
-      PushOnScopeChains(CTD, Outer);
-      TraitRD->setDescribedClassTemplate(CTD);
-      QualType T = CTD->getInjectedClassNameSpecialization();
-      T = Context.getInjectedClassNameType(TraitRD, T);
-      assert(T->isDependentType() && "Class template type is not dependent?");
-      CTD->setLexicalDeclContext(CurContext);
-    } else {
-      PushOnScopeChains(TraitRD, Outer);
-    }
-  } else {
-    // todo: error report?
-  }
+  std::string TraitName = addOwned    ? TD->getDesugarOwnedTraitRecordName()
+                          : addBorrow ? TD->getDesugarBorrowTraitRecordName()
+                                      : TD->getDesugarTraitRecordName();
+  RecordDecl *TraitRD = createTraitDesugarStructAndPush(*this, TD, TraitName);
 
   TraitRD->startDefinition();
   std::string DataName = "data";

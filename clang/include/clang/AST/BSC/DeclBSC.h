@@ -128,6 +128,23 @@ public:
 
   RecordDecl *getVtable() { return Vtable; }
 
+  /// Synthesized C \c struct tag names for lowering this trait (ABI-internal).
+  std::string getDesugarTraitRecordName() const {
+    return "__Trait_" + getNameAsString();
+  }
+
+  std::string getDesugarVtableRecordName() const {
+    return getDesugarTraitRecordName() + "_Vtable";
+  }
+
+  std::string getDesugarOwnedTraitRecordName() const {
+    return getDesugarTraitRecordName() + "_Owned";
+  }
+
+  std::string getDesugarBorrowTraitRecordName() const {
+    return getDesugarTraitRecordName() + "_Borrow";
+  }
+
   field_iterator field_end() const { return field_iterator(decl_iterator()); }
 
   bool field_empty() const { return field_begin() == field_end(); }

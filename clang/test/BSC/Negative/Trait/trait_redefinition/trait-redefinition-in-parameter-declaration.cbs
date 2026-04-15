@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// Defining the same trait again in a parameter declaration (desugar name collision).
+
+_Trait a{}; // expected-note {{previous definition is here}}
+void b(_Trait a{});
+// expected-warning@-1 {{declaration of '_Trait a' will not be visible outside of this function}}
+// expected-error@-2 {{redefinition of 'a'}}
+// expected-error@-3 {{only _Trait pointer type is allowed to be declared}}
