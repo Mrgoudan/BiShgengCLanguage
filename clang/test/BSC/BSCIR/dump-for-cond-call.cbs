@@ -32,7 +32,7 @@ int check_limit(int i);
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
 // CHECK:      bb4: {{[{]}}
-// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_2)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 void test_for_cond_call(void) {
     for (int i = 0; check_limit(i); i++) {

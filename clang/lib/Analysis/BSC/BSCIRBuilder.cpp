@@ -382,12 +382,7 @@ void BSCIRBuilder::lowerIfStmt(const IfStmt *IS) {
   BasicBlockId ElseBB = createBlock();
   BasicBlockId JoinBB = createBlock();
 
-  // SwitchInt: 1 → then, otherwise → else
-  SmallVector<std::pair<llvm::APInt, BasicBlockId>, 4> Targets;
-  Targets.push_back({llvm::APInt(1, 1), ThenBB});
-  setTerminator(Terminator::createSwitchInt(std::move(Cond),
-                                            std::move(Targets), ElseBB,
-                                            currentSafeZone()));
+  emitBoolSwitch(std::move(Cond), ThenBB, ElseBB);
 
   // Then branch
   switchToBlock(ThenBB);
@@ -407,6 +402,15 @@ void BSCIRBuilder::lowerIfStmt(const IfStmt *IS) {
   switchToBlock(JoinBB);
 }
 
+void BSCIRBuilder::emitBoolSwitch(Operand Cond, BasicBlockId TrueBB,
+                                  BasicBlockId FalseBB) {
+  SmallVector<std::pair<llvm::APInt, BasicBlockId>, 4> Targets;
+  Targets.push_back({llvm::APInt(1, 0), FalseBB});
+  setTerminator(Terminator::createSwitchInt(std::move(Cond),
+                                            std::move(Targets), TrueBB,
+                                            currentSafeZone()));
+}
+
 void BSCIRBuilder::emitCondBranch(const Expr *Cond, BasicBlockId BodyBB,
                                       BasicBlockId ExitBB) {
   Expr::EvalResult Result;
@@ -417,11 +421,7 @@ void BSCIRBuilder::emitCondBranch(const Expr *Cond, BasicBlockId BodyBB,
     setTerminator(Terminator::createGoto(Target, currentSafeZone()));
   } else {
     Operand CondOp = lowerToOperand(Cond);
-    SmallVector<std::pair<llvm::APInt, BasicBlockId>, 4> Targets;
-    Targets.push_back({llvm::APInt(1, 1), BodyBB});
-    setTerminator(Terminator::createSwitchInt(std::move(CondOp),
-                                              std::move(Targets), ExitBB,
-                                              currentSafeZone()));
+    emitBoolSwitch(std::move(CondOp), BodyBB, ExitBB);
   }
 }
 
@@ -794,12 +794,9 @@ Operand BSCIRBuilder::VisitBinaryOperator(BinaryOperator *BO) {
 
     // For &&: if LHS truthy → eval RHS, otherwise short-circuit to 0
     // For ||: if LHS truthy → short-circuit to 1, otherwise eval RHS
-    SmallVector<std::pair<llvm::APInt, BasicBlockId>, 4> Targets;
-    Targets.push_back({llvm::APInt(1, 1), IsAnd ? RhsBB : ShortBB});
-    setTerminator(Terminator::createSwitchInt(std::move(LHS),
-                                              std::move(Targets),
-                                              IsAnd ? ShortBB : RhsBB,
-                                              currentSafeZone()));
+    emitBoolSwitch(std::move(LHS),
+                   IsAnd ? RhsBB : ShortBB,
+                   IsAnd ? ShortBB : RhsBB);
 
     // Short-circuit block: result = 0 (&&) or 1 (||)
     switchToBlock(ShortBB);
@@ -820,6 +817,12 @@ Operand BSCIRBuilder::VisitBinaryOperator(BinaryOperator *BO) {
     // Continue in join block
     switchToBlock(JoinBB);
     return Operand::createCopy(ResultPlace);
+  }
+
+  // Comma operator: evaluate LHS for side effects, return RHS.
+  if (BO->getOpcode() == BO_Comma) {
+    lowerToOperand(BO->getLHS());   // side effects only
+    return lowerToOperand(BO->getRHS());
   }
 
   Operand LHS = lowerToOperand(BO->getLHS());
@@ -1257,12 +1260,7 @@ Operand BSCIRBuilder::VisitConditionalOperator(ConditionalOperator *CO) {
   BasicBlockId ElseBB = createBlock();
   BasicBlockId JoinBB = createBlock();
 
-  // SwitchInt: 1 → then, otherwise → else
-  SmallVector<std::pair<llvm::APInt, BasicBlockId>, 4> Targets;
-  Targets.push_back({llvm::APInt(1, 1), ThenBB});
-  setTerminator(Terminator::createSwitchInt(std::move(Cond),
-                                            std::move(Targets), ElseBB,
-                                            currentSafeZone()));
+  emitBoolSwitch(std::move(Cond), ThenBB, ElseBB);
 
   // Then branch: eval true expr, assign to result
   switchToBlock(ThenBB);
@@ -1296,6 +1294,13 @@ Operand BSCIRBuilder::VisitGNUNullExpr(GNUNullExpr *E) {
   emit(Statement::createAssign(TmpPlace, Rvalue::createNullPtr(E->getType()),
                                currentSafeZone(), E, E->getExprLoc()));
   return Operand::createCopy(TmpPlace);
+}
+
+Operand BSCIRBuilder::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E) {
+  // nullptr is a zero constant — no temp needed.
+  return Operand::createConstant(
+      APValue(llvm::APSInt(llvm::APInt(1, 0), /*isUnsigned=*/false)),
+      E->getType());
 }
 
 Operand BSCIRBuilder::VisitStmt(Stmt *S) {

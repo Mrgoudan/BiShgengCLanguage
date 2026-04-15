@@ -8,8 +8,7 @@
 // CHECK-NEXT:   _3 = copy(_1)
 // CHECK-NEXT:   _4 = BinOp(+, copy(_1), const 1)
 // CHECK-NEXT:   _1 = copy(_4)
-// CHECK-NEXT:   _5 = BinOp(,, copy(_3), copy(_2))
-// CHECK-NEXT:   _0 = copy(_5)
+// CHECK-NEXT:   _0 = copy(_2)
 // CHECK-NEXT:   goto -> bb1
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}

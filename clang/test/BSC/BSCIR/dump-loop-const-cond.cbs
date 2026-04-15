@@ -65,8 +65,8 @@ _Safe int test_dowhile_false(void) {
 
 // --- ptr == nullptr: NOT a constant, must produce switchInt ---
 // CHECK-LABEL: fn test_ptr_null_cmp
-// CHECK:      _2 = BinOp(==, copy(_1), const(void))
-// CHECK-NEXT: switchInt(copy(_2)) -> [1: bb3, otherwise: bb4]
+// CHECK:      _2 = BinOp(==, copy(_1), const 0)
+// CHECK-NEXT: switchInt(copy(_2)) -> [0: bb4, otherwise: bb3]
 _Safe int test_ptr_null_cmp(int * _Borrow _Nullable p) {
     while (p == nullptr) {
         return 0;

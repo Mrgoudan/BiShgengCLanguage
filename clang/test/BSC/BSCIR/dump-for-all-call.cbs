@@ -43,7 +43,7 @@ void body(int i);
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
 // CHECK:      bb6: {{[{]}}
-// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb3, otherwise: bb5]
+// CHECK-NEXT:   switchInt(copy(_3)) -> [0: bb5, otherwise: bb3]
 // CHECK-NEXT: }
 // CHECK:      bb7: {{[{]}}
 // CHECK-NEXT:   _1 = copy(_5)

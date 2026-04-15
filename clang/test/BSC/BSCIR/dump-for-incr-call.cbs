@@ -20,7 +20,7 @@ int next_val(int i);
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}
 // CHECK-NEXT:   _3 = BinOp(<, copy(_2), copy(_1))
-// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_3)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 // CHECK:      bb2: {{[{]}}
 // CHECK-NEXT:   _4 = call next_val(copy(_2)) -> bb4

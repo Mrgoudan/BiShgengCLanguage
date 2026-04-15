@@ -6,7 +6,7 @@
 
 // CHECK-LABEL: fn test_land
 // CHECK:      bb0: {{[{]}}
-// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, otherwise: bb2]
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb2, otherwise: bb3]
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}
 // CHECK-NEXT:   return
@@ -27,7 +27,7 @@ int test_land(int a, int b) { return a && b; }
 
 // CHECK-LABEL: fn test_lor
 // CHECK:      bb0: {{[{]}}
-// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}
 // CHECK-NEXT:   return
@@ -45,3 +45,90 @@ int test_land(int a, int b) { return a && b; }
 // CHECK-NEXT:   goto -> bb1
 // CHECK-NEXT: }
 int test_lor(int a, int b) { return a || b; }
+
+// Pointer operands: the discriminant is a raw pointer value, not a bool.
+// With the old [1: true, otherwise: false] pattern, a non-null pointer like
+// 0x1000 would not equal 1, incorrectly taking the false branch.
+// The [0: false, otherwise: true] pattern is correct: any non-zero → true.
+
+// CHECK-LABEL: fn test_land_ptr
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb2, otherwise: bb3]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = const 0
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_2)
+int test_land_ptr(int * _Nullable p, int * _Nullable q) { return p && q; }
+
+// CHECK-LABEL: fn test_lor_ptr
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _3 = const 1
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _3 = copy(_2)
+int test_lor_ptr(int * _Nullable p, int * _Nullable q) { return p || q; }
+
+// if with raw pointer condition: must use [0: false, otherwise: true].
+// A pointer like 0x1000 is truthy — old [1:] would have missed it.
+// CHECK-LABEL: fn test_if_ptr
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = const 0
+int test_if_ptr(int * _Nullable p) {
+    if (p) return 1;
+    return 0;
+}
+
+// do-while with raw pointer condition: loop-back branch must use [0:].
+// CHECK-LABEL: fn test_dowhile_ptr
+// CHECK:      bb2: {{[{]}}
+// CHECK:        switchInt(copy(_1)) -> [0: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+int test_dowhile_ptr(int * _Nullable p) {
+    int i = 0;
+    do { i++; } while (p);
+    return i;
+}
+
+// && in for-condition with pointer operands: both the short-circuit
+// switchInt on p and the loop-continue switchInt on the && result use [0:].
+// CHECK-LABEL: fn test_for_land_ptr
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [0: bb5, otherwise: bb6]
+// CHECK-NEXT: }
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   _4 = const 0
+// CHECK:      bb6: {{[{]}}
+// CHECK-NEXT:   _4 = copy(_2)
+// CHECK:      bb7: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_4)) -> [0: bb4, otherwise: bb3]
+int test_for_land_ptr(int * _Nullable p, int * _Nullable q) {
+    int i = 0;
+    for (; p && q; i++) {}
+    return i;
+}
+
+// || in do-while condition with pointer operands: the short-circuit
+// switchInt on p and the loop-back switchInt on the || result use [0:].
+// CHECK-LABEL: fn test_dowhile_lor_ptr
+// CHECK:      bb2: {{[{]}}
+// CHECK:        switchInt(copy(_1)) -> [0: bb5, otherwise: bb4]
+// CHECK-NEXT: }
+// CHECK:      bb4: {{[{]}}
+// CHECK-NEXT:   _6 = const 1
+// CHECK:      bb5: {{[{]}}
+// CHECK-NEXT:   _6 = copy(_2)
+// CHECK:      bb6: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_6)) -> [0: bb3, otherwise: bb2]
+int test_dowhile_lor_ptr(int * _Nullable p, int * _Nullable q) {
+    int i = 0;
+    do { i++; } while (p || q);
+    return i;
+}

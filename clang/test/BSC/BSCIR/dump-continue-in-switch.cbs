@@ -28,7 +28,7 @@
 // While condition: i < 10 → body or exit.
 // CHECK:      bb[[COND]]: {
 // CHECK-NEXT:   _4 = BinOp(<, copy(_2), const 10)
-// CHECK-NEXT:   switchInt(copy(_4)) -> [1: bb[[BODY:[0-9]+]], otherwise: bb[[EXIT:[0-9]+]]]
+// CHECK-NEXT:   switchInt(copy(_4)) -> [0: bb[[EXIT:[0-9]+]], otherwise: bb[[BODY:[0-9]+]]]
 // CHECK-NEXT: }
 
 // Switch dispatch. case 0 (continue) → bb[[COND]] directly.
@@ -107,7 +107,7 @@ int test_continue_in_switch_while(int x) {
 // For condition: i < 10 → body or exit.
 // CHECK:      bb[[FCOND]]: {
 // CHECK-NEXT:   _{{[0-9]+}} = BinOp(<, copy(_2), const 10)
-// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [1: bb[[FBODY:[0-9]+]], otherwise: bb[[FEXIT:[0-9]+]]]
+// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [0: bb[[FEXIT:[0-9]+]], otherwise: bb[[FBODY:[0-9]+]]]
 // CHECK-NEXT: }
 
 // Switch dispatch. case 0 (continue) → for-increment directly.
@@ -170,7 +170,7 @@ int test_continue_in_switch_for(int x) {
 // Do-while condition: i < 10 → loop back to body or exit.
 // CHECK:      bb[[DCOND]]: {
 // CHECK-NEXT:   _{{[0-9]+}} = BinOp(<, copy(_2), const 10)
-// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [1: bb[[DBODY]], otherwise: bb{{[0-9]+}}]
+// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [0: bb{{[0-9]+}}, otherwise: bb[[DBODY]]]
 // CHECK-NEXT: }
 
 // default: i += 1; falls to condition.
@@ -213,7 +213,7 @@ int test_continue_in_switch_dowhile(int x) {
 // While condition: i < 5 → body or exit.
 // CHECK:      bb[[NCOND]]: {
 // CHECK-NEXT:   _{{[0-9]+}} = BinOp(<, copy(_3), const 5)
-// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [1: bb[[NBODY:[0-9]+]], otherwise: bb[[NEXIT:[0-9]+]]]
+// CHECK-NEXT:   switchInt(copy(_{{[0-9]+}})) -> [0: bb[[NEXIT:[0-9]+]], otherwise: bb[[NBODY:[0-9]+]]]
 // CHECK-NEXT: }
 
 // Outer switch: y==1 → inner switch block, default → i+=1 block.

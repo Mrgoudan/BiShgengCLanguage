@@ -61,6 +61,7 @@ public:
   Operand VisitCompoundAssignOperator(CompoundAssignOperator *CAO);
   Operand VisitConditionalOperator(ConditionalOperator *CO);
   Operand VisitGNUNullExpr(GNUNullExpr *E);
+  Operand VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *E);
   Operand VisitSafeExpr(SafeExpr *SE);
   Operand VisitStmt(Stmt *S); // fallback
 
@@ -123,6 +124,10 @@ private:
   void lowerForStmt(const ForStmt *FS);
   void lowerDoWhileStmt(const DoStmt *DS);
   void lowerSwitchStmt(const SwitchStmt *SS);
+
+  /// Emit a boolean branch: switchInt(Cond) -> [0: FalseBB, otherwise: TrueBB].
+  /// Uses 0-match so that any non-zero value (pointer, int) is truthy.
+  void emitBoolSwitch(Operand Cond, BasicBlockId TrueBB, BasicBlockId FalseBB);
 
   /// Emit a branch for a loop condition. If the condition is a compile-time
   /// constant, emits a direct goto; otherwise emits switchInt.

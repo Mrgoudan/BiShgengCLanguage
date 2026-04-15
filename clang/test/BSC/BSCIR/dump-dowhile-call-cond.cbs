@@ -24,7 +24,7 @@ void process(void);
 // CHECK-NEXT:   _2 = call has_more() -> bb4
 // CHECK-NEXT: }
 // CHECK:      bb4: {{[{]}}
-// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb1]
+// CHECK-NEXT:   switchInt(copy(_2)) -> [0: bb1, otherwise: bb2]
 // CHECK-NEXT: }
 void test_dowhile_call_cond(void) {
     do {

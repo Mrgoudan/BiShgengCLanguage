@@ -19,7 +19,7 @@
 // CHECK-NEXT:   _5 = BinOp(-, copy(_1), const 1)
 // CHECK-NEXT:   _1 = copy(_5)
 // CHECK-NEXT:   _6 = BinOp(>, copy(_1), const 0)
-// CHECK-NEXT:   switchInt(copy(_6)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_6)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 // CHECK:      bb3: {{[{]}}
 // CHECK-NEXT:   _0 = copy(_2)

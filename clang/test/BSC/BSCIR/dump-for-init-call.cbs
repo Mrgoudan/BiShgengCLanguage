@@ -30,7 +30,7 @@ int get_start(void);
 // CHECK-NEXT: }
 // CHECK:      bb3: {{[{]}}
 // CHECK-NEXT:   _5 = BinOp(<, copy(_3), copy(_1))
-// CHECK-NEXT:   switchInt(copy(_5)) -> [1: bb4, otherwise: bb5]
+// CHECK-NEXT:   switchInt(copy(_5)) -> [0: bb5, otherwise: bb4]
 // CHECK-NEXT: }
 // CHECK:      bb4: {{[{]}}
 // CHECK-NEXT:   _6 = BinOp(+, copy(_2), copy(_3))

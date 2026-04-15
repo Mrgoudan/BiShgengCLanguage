@@ -6,7 +6,7 @@
 // CHECK-LABEL: fn test_simple_if
 // CHECK:      bb0: {{[{]}}
 // CHECK-NEXT:   _2 = BinOp(>, copy(_1), const 0)
-// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_2)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}
 // CHECK-NEXT:   return
@@ -28,7 +28,7 @@ int test_simple_if(int x) {
 // CHECK-LABEL: fn test_if_else
 // CHECK:      bb0: {{[{]}}
 // CHECK-NEXT:   _2 = BinOp(>, copy(_1), const 0)
-// CHECK-NEXT:   switchInt(copy(_2)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_2)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}
 // CHECK-NEXT:   return

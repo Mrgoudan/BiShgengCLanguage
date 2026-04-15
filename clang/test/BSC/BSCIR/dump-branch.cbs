@@ -6,7 +6,7 @@
 // CHECK-LABEL: fn max
 // CHECK:      bb0: {{[{]}}
 // CHECK-NEXT:   _3 = BinOp(>, copy(_1), copy(_2))
-// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb2, otherwise: bb3]
+// CHECK-NEXT:   switchInt(copy(_3)) -> [0: bb3, otherwise: bb2]
 // CHECK-NEXT: }
 // CHECK:      bb1: {{[{]}}
 // CHECK-NEXT:   return

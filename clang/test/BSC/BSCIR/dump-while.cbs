@@ -14,7 +14,7 @@
 // CHECK-NEXT: }
 // CHECK:      bb2: {{[{]}}
 // CHECK-NEXT:   _3 = BinOp(>, copy(_1), const 0)
-// CHECK-NEXT:   switchInt(copy(_3)) -> [1: bb3, otherwise: bb4]
+// CHECK-NEXT:   switchInt(copy(_3)) -> [0: bb4, otherwise: bb3]
 // CHECK-NEXT: }
 // CHECK:      bb3: {{[{]}}
 // CHECK-NEXT:   _4 = BinOp(+, copy(_2), copy(_1))
