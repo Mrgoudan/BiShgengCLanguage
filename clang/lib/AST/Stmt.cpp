@@ -371,15 +371,14 @@ int64_t Stmt::getID(const ASTContext &Context) const {
 
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
                            SourceLocation LB, SourceLocation RB
-                           #if ENABLE_BSC
-                           , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc,
-                           SafeZoneSpecifier SafeZoneSpec
-                           #endif
+#if ENABLE_BSC
+                           , SafeZoneSpecifier SafeZoneSpec
+#endif
                            )
     : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB)
-    #if ENABLE_BSC
-    , SafeSpec(SafeSpec), SafeLoc(SafeLoc), SafeZoneSpec(SafeZoneSpec)
-    #endif
+#if ENABLE_BSC
+    ,  SafeZoneSpec(SafeZoneSpec)
+#endif
     {
   CompoundStmtBits.NumStmts = Stmts.size();
   CompoundStmtBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
@@ -398,19 +397,18 @@ void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
 CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
                                    FPOptionsOverride FPFeatures,
                                    SourceLocation LB, SourceLocation RB
-                                   #if ENABLE_BSC
-                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc,
-                                   SafeZoneSpecifier SafeZoneSpec
-                                   #endif
+#if ENABLE_BSC
+                                   , SafeZoneSpecifier SafeZoneSpec
+#endif
                                    ) {
   void *Mem =
       C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(Stmts.size(),  FPFeatures.requiresTrailingStorage()),
       alignof(CompoundStmt));
   return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB
-                                #if ENABLE_BSC
-                                , SafeSpec, SafeLoc, SafeZoneSpec
-                                #endif
-                                );
+#if ENABLE_BSC
+                                , SafeZoneSpec
+#endif
+  );
 }
 
 CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C, unsigned NumStmts,

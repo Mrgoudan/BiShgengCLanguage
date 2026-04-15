@@ -2150,16 +2150,6 @@ public:
     return hasBody(Definition);
   }
 
-#if ENABLE_BSC
-  void setSafeSpecifier(SafeScopeSpecifier SafeSpec) {
-    FunctionDeclBits.SafeSpecifier = SafeSpec;
-  }
-
-  SafeScopeSpecifier getSafeSpecifier() const {
-    return (SafeScopeSpecifier) FunctionDeclBits.SafeSpecifier;
-  }
-#endif
-
   /// Returns whether the function has a trivial body that does not require any
   /// specific codegen.
   bool hasTrivialBody() const;

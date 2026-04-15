@@ -155,13 +155,6 @@ void ASTDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
 #if ENABLE_BSC
 void ASTDumper::VisitCompoundStmt(const CompoundStmt *Node) {
   VisitStmt(Node);
-  SafeScopeSpecifier SafeSpec = Node->getSafeSpecifier();
-  if (SafeSpec == SS_Safe) {
-    OS << " __Safe__";
-  } else if (SafeSpec == SS_Unsafe) {
-    OS << " __Unsafe__";
-  }
-
   SafeZoneSpecifier SafeZoneSpec = Node->getCompSafeZoneSpecifier();
   if (SafeZoneSpec == SZ_Safe) {
     OS << " _Safe";

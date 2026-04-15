@@ -1652,8 +1652,6 @@ class DeclContext {
     uint64_t WillHaveBody : 1;
 
 #if ENABLE_BSC
-    uint64_t SafeSpecifier : 2;
-
     uint64_t SafeZoneSpecifier : 2;
 #endif
 
@@ -1675,7 +1673,7 @@ class DeclContext {
 
   /// Number of non-inherited bits in FunctionDeclBitfields.
 #if ENABLE_BSC
-  enum { NumFunctionDeclBits = 33 };
+  enum { NumFunctionDeclBits = 31 };
 #else
   enum { NumFunctionDeclBits = 28};
 #endif
@@ -1690,13 +1688,13 @@ class DeclContext {
     /// For the bits in FunctionDeclBitfields.
     uint64_t : NumFunctionDeclBits;
 
-    /// 22 bits to fit in the remaining available space.
+    /// 23 bits to fit in the remaining available space.
     /// Note that this makes CXXConstructorDeclBitfields take
     /// exactly 64 bits and thus the width of NumCtorInitializers
     /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
     /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
 #if ENABLE_BSC
-    uint64_t NumCtorInitializers : 15;
+    uint64_t NumCtorInitializers : 17;
 #else
     uint64_t NumCtorInitializers : 20;
 #endif

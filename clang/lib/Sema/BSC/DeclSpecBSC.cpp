@@ -31,23 +31,6 @@ bool DeclSpec::setFunctionSpecAsync(SourceLocation Loc, const char *&PrevSpec,
   return false;
 }
 
-bool DeclSpec::setFunctionSafeSpecifier(SourceLocation Loc,
-                                        const char *&PrevSpec, unsigned &DiagID,
-                                        SafeScopeSpecifier SafeSpec) {
-  if (FS_safe_specified == SS_None) {
-    FS_safe_specified = SafeSpec;
-    FS_safe_loc = Loc;
-    return false;
-  } else if (FS_safe_specified == SS_Safe) {
-    PrevSpec = "__Safe__";
-  } else if (FS_safe_specified == SS_Unsafe) {
-    PrevSpec = "__Unsafe__";
-  } else {
-    PrevSpec = "";
-  }
-  return true;
-}
-
 bool DeclSpec::setFunctionSafeZoneSpecifier(SourceLocation Loc,
                                             const char *&PrevSpec,
                                             unsigned &DiagID,

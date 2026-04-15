@@ -450,8 +450,6 @@ public:
     auto NewCPStmt = CompoundStmt::Create(SemaRef.getASTContext(), Statements,
                                           FPOptionsOverride(),
                                           CS->getLBracLoc(), CS->getRBracLoc(),
-                                          CS->getSafeSpecifier(),
-                                          CS->getSafeSpecifierLoc(),
                                           CS->getCompSafeZoneSpecifier());
     ReplaceCompoundMap[CS] = NewCPStmt;
     return false;

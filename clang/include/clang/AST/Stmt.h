@@ -1416,18 +1416,13 @@ class CompoundStmt final
   SourceLocation RBraceLoc;
 
 #if ENABLE_BSC
-  SafeScopeSpecifier SafeSpec;
-  SourceLocation SafeLoc;
   SafeZoneSpecifier SafeZoneSpec;
 
   CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
                SourceLocation LB, SourceLocation RB,
-               SafeScopeSpecifier SafeSpec = SS_None,
-               SourceLocation SafeLoc = SourceLocation(),
                SafeZoneSpecifier SafeZoneSpec = SZ_None);
   explicit CompoundStmt(EmptyShell Empty)
-      : Stmt(CompoundStmtClass, Empty), SafeSpec(SS_None), SafeLoc(),
-        SafeZoneSpec(SZ_None) {}
+      : Stmt(CompoundStmtClass, Empty), SafeZoneSpec(SZ_None) {}
 #else
   CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
                SourceLocation LB, SourceLocation RB);
@@ -1451,10 +1446,7 @@ public:
                               FPOptionsOverride FPFeatures, SourceLocation LB,
                               SourceLocation RB
 #if ENABLE_BSC
-                              ,
-                              SafeScopeSpecifier SafeSpec = SS_None,
-                              SourceLocation SafeLoc = SourceLocation(),
-                              SafeZoneSpecifier SafeZoneSpec = SZ_None
+                              , SafeZoneSpecifier SafeZoneSpec = SZ_None
 #endif
   );
 
@@ -1462,8 +1454,7 @@ public:
   explicit CompoundStmt(SourceLocation Loc)
       : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc)
 #if ENABLE_BSC
-        ,
-        SafeSpec(SS_None), SafeLoc(), SafeZoneSpec(SZ_None)
+        , SafeZoneSpec(SZ_None)
 #endif
   {
     CompoundStmtBits.NumStmts = 0;
@@ -1560,18 +1551,6 @@ public:
   }
 
 #if ENABLE_BSC
-  SafeScopeSpecifier getSafeSpecifier() const {
-    return SafeSpec;
-  }
-
-  void setSafeSpecifier(SafeScopeSpecifier spec) {
-    SafeSpec = spec;
-  }
-
-  SourceLocation getSafeSpecifierLoc() const {
-    return SafeLoc;
-  }
-
   SafeZoneSpecifier getCompSafeZoneSpecifier() const { return SafeZoneSpec; }
 
   void setCompSafeZoneSpecifier(SafeZoneSpecifier sz) { SafeZoneSpec = sz; }

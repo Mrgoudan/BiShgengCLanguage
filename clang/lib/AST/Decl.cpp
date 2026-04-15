@@ -3014,7 +3014,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
 #if ENABLE_BSC
-  FunctionDeclBits.SafeSpecifier = SS_None;
   FunctionDeclBits.SafeZoneSpecifier = SZ_None;
 #endif
   FunctionDeclBits.IsMultiVersion = false;

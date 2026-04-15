@@ -170,9 +170,6 @@ class Parser : public CodeCompletionHandler {
   // used as type traits.
   llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind> RevertibleTypeTraits;
 
-#if ENABLE_BSC
-  std::unique_ptr<PragmaHandler> SafeHandler;
-#endif
   std::unique_ptr<PragmaHandler> AlignHandler;
   std::unique_ptr<PragmaHandler> GCCVisibilityHandler;
   std::unique_ptr<PragmaHandler> OptionsHandler;
@@ -2185,14 +2182,7 @@ private:
                                     unsigned ScopeFlags);
   void ParseCompoundStatementLeadingPragmas();
   bool ConsumeNullStmt(StmtVector &Stmts);
-  StmtResult
-  ParseCompoundStatementBody(bool isStmtExpr = false
-#if ENABLE_BSC
-                             ,
-                             SafeScopeSpecifier SafeSpec = SS_None,
-                             SourceLocation SafeLoc = SourceLocation()
-#endif
-  );
+  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
   bool ParseParenExprOrCondition(StmtResult *InitStmt,
                                  Sema::ConditionResult &CondResult,
                                  SourceLocation Loc, Sema::ConditionKind CK,

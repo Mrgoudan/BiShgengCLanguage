@@ -5014,33 +5014,10 @@ public:
   void ActOnAfterCompoundStatementLeadingPragmas();
   void ActOnFinishOfCompoundStmt();
   StmtResult ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                               ArrayRef<Stmt *> Elts, bool isStmtExpr
-                               #if ENABLE_BSC
-                               , SafeScopeSpecifier SafeSpec = SS_None,
-                               SourceLocation SafeLoc = SourceLocation()
-                               #endif
-                               );
+                               ArrayRef<Stmt *> Elts, bool isStmtExpr);
 
 #if ENABLE_BSC
-private:
-  SafeScopeSpecifier PragmaSafeInfo = SS_None;
-
 public:
-  enum PragmaSafeStatus {
-    PSS_On,
-    PSS_Off,
-  };
-
-  void ActOnPragmaSafe(PragmaSafeStatus St);
-
-  SafeScopeSpecifier GetPragmaSafeInfo() {
-    return PragmaSafeInfo;
-  }
-
-  void SetPragmaSafeInfo(SafeScopeSpecifier SafeSpec) {
-    PragmaSafeInfo = SafeSpec;
-  }
-
   /// A RAII object to enter safe or unsafe zone of a compound statement.
   class InsSafeZoneRAII {
   public:

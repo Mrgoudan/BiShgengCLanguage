@@ -412,11 +412,7 @@ sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
 }
 
 StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
-                                   ArrayRef<Stmt *> Elts, bool isStmtExpr
-                                   #if ENABLE_BSC
-                                   , SafeScopeSpecifier SafeSpec, SourceLocation SafeLoc
-                                   #endif
-                                   ) {
+                                   ArrayRef<Stmt *> Elts, bool isStmtExpr) {
   const unsigned NumElts = Elts.size();
 
   // If we're in C mode, check that we don't have any decls after stmts.  If
@@ -468,8 +464,7 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
 
   return CompoundStmt::Create(Context, Elts, FPDiff, L, R
 #if ENABLE_BSC
-                              ,
-                              SafeSpec, SafeLoc, SafeZone
+                              , SafeZone
 #endif
   );
 }

@@ -338,14 +338,6 @@ struct PragmaAttributeHandler : public PragmaHandler {
   ParsedAttributes AttributesForPragmaAttribute;
 };
 
-#if ENABLE_BSC
-struct PragmaSafeHandler : public PragmaHandler {
-  PragmaSafeHandler() : PragmaHandler("SAFE") {}
-  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
-                    Token &FirstToken) override;
-};
-#endif
-
 struct PragmaMaxTokensHereHandler : public PragmaHandler {
   PragmaMaxTokensHereHandler() : PragmaHandler("max_tokens_here") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
@@ -516,11 +508,6 @@ void Parser::initializePragmaHandlers() {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
-
-#if ENABLE_BSC
-  SafeHandler.reset(new PragmaSafeHandler());
-  PP.AddPragmaHandler(SafeHandler.get());
-#endif
 }
 
 void Parser::resetPragmaHandlers() {
@@ -650,11 +637,6 @@ void Parser::resetPragmaHandlers() {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
   }
-
-#if ENABLE_BSC
-  PP.RemovePragmaHandler(SafeHandler.get());
-  SafeHandler.reset();
- #endif
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -1913,16 +1895,6 @@ void Parser::HandlePragmaAttribute() {
                                           SubjectMatchRules);
   }
 }
-
-#if ENABLE_BSC
-void Parser::HandlePragmaSafe() {
-  assert(Tok.is(tok::annot_pragma_safe));
-  Sema::PragmaSafeStatus St = static_cast<Sema::PragmaSafeStatus>(
-    reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
-  (void)ConsumeAnnotationToken();
-  Actions.ActOnPragmaSafe(St);
-}
-#endif
 
 // #pragma GCC visibility comes in two variants:
 //   'push' '(' [visibility] ')'
@@ -3916,39 +3888,6 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   PP.EnterTokenStream(std::move(TokenArray), 1,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
-
-#if ENABLE_BSC
-void PragmaSafeHandler::HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
-                                     Token &Tok) {
-  PP.Lex(Tok);
-  Sema::PragmaSafeStatus St = Sema::PSS_On;
-
-  if (!Tok.is(tok::identifier)) {
-    return;
-  }
-
-  IdentifierInfo *II = Tok.getIdentifierInfo();
-  if (II->isStr("ON"))
-    St = Sema::PSS_On;
-  else if (II->isStr("OFF"))
-    St = Sema::PSS_Off;
-  else
-    return;
-
-  PP.Lex(Tok);
-  if (Tok.isNot(tok::eod))
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol) << "SAFE";
-
-  MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
-  Toks[0].startToken();
-  Toks[0].setKind(tok::annot_pragma_safe);
-  Toks[0].setLocation(Tok.getLocation());
-  Toks[0].setAnnotationEndLoc(Tok.getLocation());
-  Toks[0].setAnnotationValue(
-      reinterpret_cast<void *>(static_cast<uintptr_t>(St)));
-  PP.EnterTokenStream(Toks, true, false);
-}
-#endif
 
 // Handle '#pragma clang max_tokens 12345'.
 void PragmaMaxTokensHereHandler::HandlePragma(Preprocessor &PP,

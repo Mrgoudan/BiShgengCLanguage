@@ -2735,12 +2735,8 @@ void Parser::ParseSpecifierQualifierList(DeclSpec &DS, AccessSpecifier AS,
 ///
 static bool isValidAfterIdentifierInDeclarator(const Token &T) {
   return T.isOneOf(tok::l_square, tok::l_paren, tok::r_paren, tok::semi,
-                   tok::comma, tok::equal, tok::kw_asm, tok::l_brace, tok::colon
-#if ENABLE_BSC
-                   ,
-                   tok::kw___Safe__, tok::kw___Unsafe__
-#endif
-  );
+                   tok::comma, tok::equal, tok::kw_asm, tok::l_brace,
+                   tok::colon);
 }
 
 /// ParseImplicitInt - This method is called when we have an non-typename
@@ -4449,21 +4445,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid =
           DS.setFunctionSafeZoneSpecifier(Loc, PrevSpec, DiagID, SafeZoneSpec);
       break;
-    }
-    case tok::kw___Safe__:
-    case tok::kw___Unsafe__: {
-      if (GetLookAheadToken(1).is(tok::l_square)) {
-        goto DoneWithDeclSpec;
-      } else if (GetLookAheadToken(1).is(tok::l_brace)) {
-        break;
-      } else {
-        SafeScopeSpecifier SafeSpec = SS_Unsafe;
-        if (Tok.is(tok::kw___Safe__)) {
-          SafeSpec = SS_Safe;
-        }
-        isInvalid = DS.setFunctionSafeSpecifier(Loc, PrevSpec, DiagID, SafeSpec);
-        break;
-      }
     }
 #endif
     // class-specifier:

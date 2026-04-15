@@ -557,8 +557,7 @@ public:
     }
     CompoundStmt *NewCS = CompoundStmt::Create(
         SemaRef.Context, Stmts, FPOptionsOverride(), CS->getLBracLoc(),
-        CS->getRBracLoc(), CS->getSafeSpecifier(), CS->getSafeSpecifierLoc(),
-        CS->getCompSafeZoneSpecifier());
+        CS->getRBracLoc(), CS->getCompSafeZoneSpecifier());
     replacedNodesMap.Insert(NewCS, CS);
 
     return NewCS;
@@ -604,8 +603,7 @@ public:
     Expr *Cond = DS->getCond();
     CompoundStmt *CS = CompoundStmt::Create(
         SemaRef.Context, Cond, FPOptionsOverride(), Cond->getBeginLoc(),
-        Cond->getEndLoc(), SafeScopeSpecifier::SS_None, SourceLocation(),
-        SafeZoneSpecifier::SZ_None);
+        Cond->getEndLoc(), SafeZoneSpecifier::SZ_None);
     StmtResult ResCS = getDerived().TransformStmt(CS);
     StmtExpr *SE = new (SemaRef.Context)
         StmtExpr(cast<CompoundStmt>(ResCS.get()), Cond->getType(),
@@ -631,8 +629,7 @@ public:
     if (Expr *Cond = FS->getCond()) {
       CompoundStmt *CS = CompoundStmt::Create(
           SemaRef.Context, Cond, FPOptionsOverride(), Cond->getBeginLoc(),
-          Cond->getEndLoc(), SafeScopeSpecifier::SS_None, SourceLocation(),
-          SafeZoneSpecifier::SZ_None);
+          Cond->getEndLoc(), SafeZoneSpecifier::SZ_None);
       StmtResult ResCS = getDerived().TransformStmt(CS);
       StmtExpr *SE = new (SemaRef.Context)
           StmtExpr(cast<CompoundStmt>(ResCS.get()), Cond->getType(),
@@ -644,8 +641,7 @@ public:
     if (Expr *Inc = FS->getInc()) {
       CompoundStmt *CS = CompoundStmt::Create(
           SemaRef.Context, Inc, FPOptionsOverride(), Inc->getBeginLoc(),
-          Inc->getEndLoc(), SafeScopeSpecifier::SS_None, SourceLocation(),
-          SafeZoneSpecifier::SZ_None);
+          Inc->getEndLoc(), SafeZoneSpecifier::SZ_None);
       StmtResult ResCS = getDerived().TransformStmt(CS);
       StmtExpr *SE = new (SemaRef.Context)
           StmtExpr(cast<CompoundStmt>(ResCS.get()), Inc->getType(),
@@ -737,8 +733,7 @@ public:
     Expr *Cond = WS->getCond();
     CompoundStmt *CS = CompoundStmt::Create(
         SemaRef.Context, Cond, FPOptionsOverride(), Cond->getBeginLoc(),
-        Cond->getEndLoc(), SafeScopeSpecifier::SS_None, SourceLocation(),
-        SafeZoneSpecifier::SZ_None);
+        Cond->getEndLoc(), SafeZoneSpecifier::SZ_None);
     StmtResult ResCS = getDerived().TransformStmt(CS);
     StmtExpr *SE = new (SemaRef.Context)
         StmtExpr(cast<CompoundStmt>(ResCS.get()), Cond->getType(),

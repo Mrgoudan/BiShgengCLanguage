@@ -93,7 +93,6 @@ void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
   Record.push_back(S->size());
   Record.push_back(S->hasStoredFPFeatures());
 #if ENABLE_BSC
-  Record.push_back(S->getSafeSpecifier());
   Record.push_back(S->getCompSafeZoneSpecifier());
 #endif
   for (auto *CS : S->body())

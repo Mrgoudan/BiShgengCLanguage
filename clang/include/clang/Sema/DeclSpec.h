@@ -423,12 +423,6 @@ private:
   /// ExplicitSpecifier - Store information about explicit spicifer.
   ExplicitSpecifier FS_explicit_specifier;
 
-#if ENABLE_BSC
-  SafeScopeSpecifier FS_safe_specified;
-
-  SourceLocation FS_safe_loc;
-#endif
-
   // attributes.
   ParsedAttributes Attrs;
 
@@ -507,9 +501,6 @@ public:
 #endif
         Friend_specified(false), ConstexprSpecifier(static_cast<unsigned>(
                                      ConstexprSpecKind::Unspecified)),
-#if ENABLE_BSC
-        FS_explicit_specifier(), FS_safe_specified(SS_None), FS_safe_loc(),
-#endif
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
@@ -693,16 +684,6 @@ public:
                : SourceRange(FS_explicitLoc);
   }
 
-#if ENABLE_BSC
-  SafeScopeSpecifier getSafeSpecifier() const {
-    return FS_safe_specified;
-  }
-
-  SourceLocation getSafeSpecifierLoc() const {
-    return FS_safe_loc;
-  }
-#endif
-
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
 
@@ -714,8 +695,6 @@ public:
 #if ENABLE_BSC
     FS_async_specified = false;
     FS_asyncLoc = SourceLocation();
-    FS_safe_specified = SS_None;
-    FS_safe_loc = SourceLocation();
     FS_safe_zone_specified = SZ_None;
     FS_safe_zone_loc = SourceLocation();
 #endif
@@ -873,10 +852,6 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
-#if ENABLE_BSC
-  bool setFunctionSafeSpecifier(SourceLocation Loc, const char *&PrevSpec,
-                                unsigned &DiagID, SafeScopeSpecifier SafeSpec);
-#endif
 
   bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                      unsigned &DiagID);

@@ -1700,14 +1700,6 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (D->isIneligibleOrNotSelected())
     OS << (isa<CXXDestructorDecl>(D) ? " not_selected" : " ineligible");
 
-  #if ENABLE_BSC
-  if (D->getSafeSpecifier() == SS_Safe) {
-    OS << " __Safe__";
-  } else if (D->getSafeSpecifier() == SS_Unsafe) {
-    OS << " __Unsafe__";
-  }
-#endif
-
   if (const auto *FPT = D->getType()->getAs<FunctionProtoType>()) {
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
     switch (EPI.ExceptionSpec.Type) {

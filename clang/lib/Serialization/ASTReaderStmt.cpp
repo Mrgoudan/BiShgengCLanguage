@@ -155,7 +155,6 @@ void ASTStmtReader::VisitCompoundStmt(CompoundStmt *S) {
   unsigned HasFPFeatures = Record.readInt();
   assert(S->hasStoredFPFeatures() == HasFPFeatures);
 #if ENABLE_BSC
-  S->setSafeSpecifier(static_cast<SafeScopeSpecifier>(Record.readInt()));
   S->setCompSafeZoneSpecifier(static_cast<SafeZoneSpecifier>(Record.readInt()));
 #endif
   while (NumStmts--)

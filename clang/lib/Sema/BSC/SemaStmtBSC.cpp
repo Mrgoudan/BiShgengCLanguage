@@ -19,11 +19,6 @@
 using namespace clang;
 using namespace sema;
 
-void Sema::ActOnPragmaSafe(PragmaSafeStatus St) {
-  SafeScopeSpecifier spec = St == PSS_On ? SS_Safe : SS_Unsafe;
-  SetPragmaSafeInfo(spec);
-}
-
 // Check if BSC constexpr if condition expression satisfy:
 // 1. type is bool, integral or char;
 // 2. constant expression which can be calculated in compile time.

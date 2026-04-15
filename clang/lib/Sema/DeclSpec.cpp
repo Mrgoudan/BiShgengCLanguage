@@ -476,9 +476,9 @@ unsigned DeclSpec::getParsedSpecifiers() const {
 
   if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
       FS_noreturn_specified || FS_forceinline_specified
-      #if ENABLE_BSC
-      || FS_safe_specified || FS_async_specified
-      #endif
+#if ENABLE_BSC
+      || FS_async_specified
+#endif
       )
     Res |= PQ_FunctionSpecifier;
   return Res;

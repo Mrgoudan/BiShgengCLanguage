@@ -656,12 +656,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     HandlePragmaUnused();
     return false;
 
-#if ENABLE_BSC
-  case tok::annot_pragma_safe:
-    HandlePragmaSafe();
-    return false;
-#endif
-
   case tok::kw_export:
     switch (NextToken().getKind()) {
     case tok::kw_module:

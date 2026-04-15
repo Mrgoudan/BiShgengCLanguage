@@ -313,13 +313,6 @@ Default:
   }
 
 #if ENABLE_BSC
-  case tok::kw___Safe__:
-  case tok::kw___Unsafe__: {
-    Token Next = NextToken();
-    if (Next.is(tok::l_brace))
-      return ParseCompoundStatement();
-    goto Default;
-  }
   case tok::kw__Safe:
   case tok::kw__Unsafe: {
     Token Next = NextToken();
@@ -570,12 +563,6 @@ Default:
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return StmtEmpty();
-
-#if ENABLE_BSC
-  case tok::annot_pragma_safe:
-    HandlePragmaSafe();
-    return StmtEmpty();
-#endif
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -1071,17 +1058,6 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
                                           unsigned ScopeFlags) {
 #if ENABLE_BSC
   // Add security scope identification processing.
-  SafeScopeSpecifier SafeSpec = SS_None;
-  SourceLocation SafeLoc;
-
-  if (Tok.is(tok::kw___Safe__)) {
-    SafeSpec = SS_Safe;
-    SafeLoc = ConsumeToken();
-  } else if (Tok.is(tok::kw___Unsafe__)) {
-    SafeSpec = SS_Unsafe;
-    SafeLoc = ConsumeToken();
-  }
-
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   SourceLocation SafeZoneLoc;
   if (Tok.is(tok::kw__Safe)) {
@@ -1106,12 +1082,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   }
 #endif
   // Parse the statements in the body.
-  StmtResult Stmt(ParseCompoundStatementBody(isStmtExpr
-#if ENABLE_BSC
-                                             ,
-                                             SafeSpec, SafeLoc
-#endif
-                                             ));
+  StmtResult Stmt(ParseCompoundStatementBody(isStmtExpr));
 #if ENABLE_BSC
   Actions.CollectDestructMap(Stmt, getCurScope(), getCurScope());
 #endif
@@ -1177,11 +1148,6 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_dump:
       HandlePragmaDump();
       break;
-#if ENABLE_BSC
-    case tok::annot_pragma_safe:
-      HandlePragmaSafe();
-      break;
-#endif
     default:
       checkForPragmas = false;
       break;
@@ -1243,13 +1209,7 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
 /// ActOnCompoundStmt action.  This expects the '{' to be the current token, and
 /// consume the '}' at the end of the block.  It does not manipulate the scope
 /// stack.
-StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr
-#if ENABLE_BSC
-                                              ,
-                                              SafeScopeSpecifier SafeSpec,
-                                              SourceLocation SafeLoc
-#endif
-) {
+StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
                                 Tok.getLocation(),
                                 "in compound statement ('{}')");
@@ -1421,13 +1381,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr
   if (T.getCloseLocation().isValid())
     CloseLoc = T.getCloseLocation();
 
-  return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc, Stmts,
-                                   isStmtExpr
-#if ENABLE_BSC
-                                   ,
-                                   SafeSpec, SafeLoc
-#endif
-  );
+  return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,
+                                   Stmts, isStmtExpr);
 }
 
 /// ParseParenExprOrCondition:

@@ -398,13 +398,7 @@ namespace clang {
     llvm_unreachable("Unknown AccessSpecifier");
   }
 
-  #if ENABLE_BSC
-  enum SafeScopeSpecifier {
-    SS_None = 0,
-    SS_Safe = 1,
-    SS_Unsafe = 2,
-  };
-
+#if ENABLE_BSC
   enum SafeZoneSpecifier {
     SZ_None = 0,
     SZ_Safe = 1,
@@ -417,7 +411,7 @@ namespace clang {
     SZS_Compound = 2,
     SZS_SafeStmt = 3,
   };
-  #endif
+#endif
 } // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_SPECIFIERS_H

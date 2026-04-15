@@ -10011,12 +10011,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (!NewFD) return nullptr;
 
 #if ENABLE_BSC
-  SafeScopeSpecifier FuncSpec = D.getDeclSpec().getSafeSpecifier();
-  if (FuncSpec == SS_None) {
-    FuncSpec = GetPragmaSafeInfo();
-  }
-  NewFD->setSafeSpecifier(FuncSpec);
-
   SafeZoneSpecifier FuncZoneSpec = D.getDeclSpec().getSafeZoneSpecifier();
   NewFD->setSafeZoneSpecifier(FuncZoneSpec);
 #endif
