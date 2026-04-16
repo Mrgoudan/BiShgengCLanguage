@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// TODO: FIXME: fix the error message
+
+void foo() {
+    _Trait T** a;
+    int *b = (int *)a; // expected-error{{use of undeclared identifier 'a'}}
+}

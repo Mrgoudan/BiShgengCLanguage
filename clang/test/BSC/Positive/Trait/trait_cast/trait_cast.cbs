@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// expected-no-diagnostics
+
+// Exercise C-style casts from trait-related types to non-trait pointers.
+
+_Trait T{};
+_Impl _Trait T for int;
+
+void b() {
+  _Trait T **c0;
+  int *c = (int *)c0;
+  void *c0v = (void *)c0;
+  char *c0c = (char *)c0;
+
+  _Trait T *p;
+  void *pv = (void *)p;
+  char *pc = (char *)p;
+
+  _Trait T **pp;
+  void *pd = (void *)(*pp);
+  int *pi = (int *)(*pp);
+
+  _Trait T ***ppp;
+  void *pt = (void *)ppp;
+  int **ppt = (int **)ppp;
+
+  void *pf = (void *)(**ppp);
+}

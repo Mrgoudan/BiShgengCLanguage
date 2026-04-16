@@ -1067,12 +1067,16 @@ ExprResult Sema::ActOnTraitReassignNull(Scope *S, SourceLocation TokLoc,
 
 // Handling the cast operation for trait pointers, ensuring proper type casting:
 // @code
-// trait F* f = &b;
+// _Trait F* f = &b;
 // void *p = (void *)f;
 // @endcode
 ExprResult Sema::ActOnTraitPointerCast(Expr *RHSExpr) {
-  RecordDecl *RD =
-      dyn_cast<RecordType>(RHSExpr->getType().getCanonicalType())->getDecl();
+  const auto *RT = dyn_cast<RecordType>(RHSExpr->getType().getCanonicalType());
+  if (!RT) {
+    // Reject _Trait F**
+    return RHSExpr;
+  }
+  RecordDecl *RD = RT->getDecl();
   for (RecordDecl::field_iterator I = RD->field_begin(), E = RD->field_end();
        I != E; ++I) {
     if (I->getNameAsString() == "data") {
@@ -1085,7 +1089,7 @@ ExprResult Sema::ActOnTraitPointerCast(Expr *RHSExpr) {
                                       FPOptionsOverride());
     }
   }
-  assert(false);
+  // Unreachable
   return ExprError();
 }
 
