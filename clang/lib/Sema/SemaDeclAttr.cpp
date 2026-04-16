@@ -8296,10 +8296,6 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
 }
 
 #if ENABLE_BSC
-static void handleFunctionLikeMacro(Sema &S, Decl *D, const ParsedAttr &Attrs) {
-  D->addAttr(::new (S.Context) FunctionLikeMacroAttr(S.Context, Attrs));
-}
-
 static void handleOperatorAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
   D->addAttr(::new (S.Context) OperatorAttr(
       S.Context, Attrs, Attrs.getOperatorTypeBuffer().Kind));
@@ -9115,11 +9111,8 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
     break;
-#if ENABLE_BSC
-  case ParsedAttr::AT_FunctionLikeMacro:
-    handleFunctionLikeMacro(S, D, AL);
-    break;
 
+#if ENABLE_BSC
   case ParsedAttr::AT_Operator:
     handleOperatorAttr(S, D, AL);
     break;
