@@ -1942,34 +1942,39 @@ QualType Sema::ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
   } else {
     BSS.setExtendedType(T);
     // build declcontext map
-    if (getASTContext().BSCDeclContextMap.find(BasedType) ==
-        getASTContext().BSCDeclContextMap.end()) {
-      if (const RecordType *RTy = dyn_cast<const RecordType>(
-              BasedType)) { // struct type or union type
-        getASTContext().BSCDeclContextMap[BasedType] = RTy->getDecl();
-      } else if (const EnumType *ETy =
-                     dyn_cast<const EnumType>(BasedType)) { // enum type
-        getASTContext().BSCDeclContextMap[BasedType] = ETy->getDecl();
-      } else if (const BuiltinType *BTy =
-                     dyn_cast<const BuiltinType>(BasedType)) { // builtin type
-        std::string Prefix = "__";
-        std::string BuiltinTypeName =
-            Prefix + BTy->getNameAsCString(getPrintingPolicy());
-        auto TmpRecord =
-            getASTContext().buildImplicitRecord(StringRef(BuiltinTypeName));
-        TmpRecord->startDefinition();
-        TmpRecord->completeDefinition();
-        getASTContext().BSCDeclContextMap[BasedType] = TmpRecord;
-      } else if (const TemplateSpecializationType *TemplateTy =
-                     dyn_cast<const TemplateSpecializationType>(BasedType)) {
-        auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
-                                            .getAsTemplateDecl()
-                                            ->getTemplatedDecl());
-        getASTContext().BSCDeclContextMap[BasedType] = DC;
-      }
-    }
+    AddToBSCDeclContextMap(BasedType);
   }
   return T;
+}
+
+void Sema::AddToBSCDeclContextMap(const Type *BasedType) {
+  if (getASTContext().BSCDeclContextMap.find(BasedType) !=
+      getASTContext().BSCDeclContextMap.end())
+    return;
+
+  if (const RecordType *RTy = dyn_cast<const RecordType>(
+          BasedType)) { // struct type or union type
+    getASTContext().BSCDeclContextMap[BasedType] = RTy->getDecl();
+  } else if (const EnumType *ETy =
+                  dyn_cast<const EnumType>(BasedType)) { // enum type
+    getASTContext().BSCDeclContextMap[BasedType] = ETy->getDecl();
+  } else if (const BuiltinType *BTy =
+                  dyn_cast<const BuiltinType>(BasedType)) { // builtin type
+    std::string Prefix = "__";
+    std::string BuiltinTypeName =
+        Prefix + BTy->getNameAsCString(getPrintingPolicy());
+    auto TmpRecord =
+        getASTContext().buildImplicitRecord(StringRef(BuiltinTypeName));
+    TmpRecord->startDefinition();
+    TmpRecord->completeDefinition();
+    getASTContext().BSCDeclContextMap[BasedType] = TmpRecord;
+  } else if (const TemplateSpecializationType *TemplateTy =
+                  dyn_cast<const TemplateSpecializationType>(BasedType)) {
+    auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
+                                        .getAsTemplateDecl()
+                                        ->getTemplatedDecl());
+    getASTContext().BSCDeclContextMap[BasedType] = DC;
+  }
 }
 #endif
 

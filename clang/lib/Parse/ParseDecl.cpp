@@ -6324,32 +6324,12 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
       if (const InjectedClassNameType *ICT =
               dyn_cast<const InjectedClassNameType>(BasedType)) {
         ExtendedTy = ICT->getInjectedSpecializationType();
+        BasedType = ExtendedTy.getCanonicalType().getTypePtr();
       }
       // add owned qualifiers for ExtendedTy.
       ExtendedTy.addFastQualifiers(Qualifiers::Owned);
       BSS.setExtendedType(ExtendedTy);
-      if (Actions.Context.BSCDeclContextMap.find(BasedType) ==
-          Actions.Context.BSCDeclContextMap.end()) {
-        if (const RecordType *RTy = dyn_cast<const RecordType>(
-                BasedType)) { // struct type or union type
-          Actions.Context.BSCDeclContextMap[BasedType] = RTy->getDecl();
-        } else if (const TemplateSpecializationType *TemplateTy =
-                       dyn_cast<const TemplateSpecializationType>(BasedType)) {
-          auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
-                                              .getAsTemplateDecl()
-                                              ->getTemplatedDecl());
-          Actions.Context.BSCDeclContextMap[BasedType] = DC;
-        } else if (const InjectedClassNameType *ICT =
-                       dyn_cast<const InjectedClassNameType>(BasedType)) {
-          QualType UP = ICT->getInjectedSpecializationType();
-          const TemplateSpecializationType *TemplateTy =
-              UP.getCanonicalType()->castAs<TemplateSpecializationType>();
-          auto DC = dyn_cast<DeclContext>(TemplateTy->getTemplateName()
-                                              .getAsTemplateDecl()
-                                              ->getTemplatedDecl());
-          Actions.Context.BSCDeclContextMap[TemplateTy] = DC;
-        }
-      }
+      Actions.AddToBSCDeclContextMap(BasedType);
       D.getBSCScopeSpec() = BSS;
     }
   }

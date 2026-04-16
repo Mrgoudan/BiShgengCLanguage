@@ -2924,11 +2924,12 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
-  #if ENABLE_BSC
+#if ENABLE_BSC
   QualType ConvertBSCScopeSpecToType(Declarator &D, SourceLocation Loc,
                                      bool AddToContextMap, BSCScopeSpec &BSS,
                                      DeclSpec &DS);
-  #endif
+  void AddToBSCDeclContextMap(const Type *BasedType);
+#endif
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
