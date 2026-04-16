@@ -2290,7 +2290,12 @@ private:
     DSC_template_type_arg, // template type argument context
     DSC_objc_method_result, // ObjC method result context, enables 'instancetype'
     DSC_condition, // condition declaration context
+#if ENABLE_BSC
+    DSC_association, // A _Generic selection expression's type association
+    DSC_BSC_scope_specifier, // BSC scope
+#else
     DSC_association // A _Generic selection expression's type association
+#endif
   };
 
   /// Is this a context in which we are parsing just a type-specifier (or
@@ -2303,6 +2308,9 @@ private:
     case DeclSpecContext::DSC_top_level:
     case DeclSpecContext::DSC_objc_method_result:
     case DeclSpecContext::DSC_condition:
+#if ENABLE_BSC
+    case DeclSpecContext::DSC_BSC_scope_specifier:
+#endif
       return false;
 
     case DeclSpecContext::DSC_template_type_arg:
@@ -2341,6 +2349,9 @@ private:
     case DeclSpecContext::DSC_top_level:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_objc_method_result:
+#if ENABLE_BSC
+    case DeclSpecContext::DSC_BSC_scope_specifier:
+#endif
       return AllowDefiningTypeSpec::Yes;
 
     case DeclSpecContext::DSC_condition:
@@ -2367,6 +2378,9 @@ private:
     case DeclSpecContext::DSC_normal:
     case DeclSpecContext::DSC_class:
     case DeclSpecContext::DSC_top_level:
+#if ENABLE_BSC
+    case DeclSpecContext::DSC_BSC_scope_specifier:
+#endif
       return true;
 
     case DeclSpecContext::DSC_alias_declaration:
@@ -2393,6 +2407,9 @@ private:
     case DeclSpecContext::DSC_condition:
     case DeclSpecContext::DSC_type_specifier:
     case DeclSpecContext::DSC_association:
+#if ENABLE_BSC
+    case DeclSpecContext::DSC_BSC_scope_specifier:
+#endif
       return true;
 
     case DeclSpecContext::DSC_objc_method_result:
@@ -2459,12 +2476,7 @@ private:
       const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
       AccessSpecifier AS = AS_none,
       DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-      LateParsedAttrList *LateAttrs = nullptr
-#if ENABLE_BSC
-      ,
-      bool BSCScopeSpecFlag = false
-#endif
-  );
+      LateParsedAttrList *LateAttrs = nullptr);
 #if ENABLE_BSC
   // Record BSC Generic Look-Ahead when parsing '<>'
   int BSCGenericLookAhead;

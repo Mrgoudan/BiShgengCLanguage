@@ -25,10 +25,8 @@
 using namespace clang;
 
 void Parser::ParseBSCScopeSpecifiers(DeclSpec &DS) {
-  bool BSCScopeSpecFlag = true;
   ParseDeclarationSpecifiers(DS, ParsedTemplateInfo(), AS_none,
-                             DeclSpecContext::DSC_normal, nullptr,
-                             BSCScopeSpecFlag);
+                             DeclSpecContext::DSC_BSC_scope_specifier, nullptr);
 }
 
 bool Parser::ParseTraitMemberDeclaratorBeforeInitializer(

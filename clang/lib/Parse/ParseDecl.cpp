@@ -3245,15 +3245,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                                         const ParsedTemplateInfo &TemplateInfo,
                                         AccessSpecifier AS,
                                         DeclSpecContext DSContext,
-                                        LateParsedAttrList *LateAttrs
-#if ENABLE_BSC
-                                        ,
-                                        bool BSCScopeSpecFlag
-#endif
-) {
+                                        LateParsedAttrList *LateAttrs) {
 #if ENABLE_BSC
   bool BSCMethodFlag = false;
-  if (getLangOpts().BSC && !BSCScopeSpecFlag)
+  if (getLangOpts().BSC && DSContext != DeclSpecContext::DSC_BSC_scope_specifier)
     BSCMethodFlag = FindUntil(tok::coloncolon);
 #endif
   if (DS.getSourceRange().isInvalid()) {
@@ -3482,7 +3477,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::coloncolon: // ::foo::bar
       // C++ scope specifier.  Annotate and loop, or bail out on error.
 #if ENABLE_BSC
-      if (BSCScopeSpecFlag)
+      if (DSContext == DeclSpecContext::DSC_BSC_scope_specifier)
         goto DoneWithDeclSpec;
       if (getLangOpts().BSC) {
         Diag(Tok, diag::err_unsupport_global_scope);
@@ -3758,14 +3753,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
         bool Success = false;
 #if ENABLE_BSC
-        if (BSCScopeSpecFlag && ExtendedTypeOfBSCMemberFunctionIsTypealias(DS)) {
-          continue;
-        }
         // In BSC, extend type of a member function may be a generic type without tag, for example:
         //   struct S<T> {};
         //   void S<T>::foo<T>(This* this) {}
-        // extended type `S<T>` shoule be annotated,
-        if (BSCScopeSpecFlag) {
+        // extended type `S<T>` should be annotated,
+        if (DSContext == DeclSpecContext::DSC_BSC_scope_specifier) {
+          if (ExtendedTypeOfBSCMemberFunctionIsTypealias(DS)) {
+            continue;
+          }
           CXXScopeSpec Spec;
           if (ParseOptionalBSCGenericSpecifier(Spec, /*ObjectType=*/nullptr,
                                                /*ObjectHadErrors=*/false,
