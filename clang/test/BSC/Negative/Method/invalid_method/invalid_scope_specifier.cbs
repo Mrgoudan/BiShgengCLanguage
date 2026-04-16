@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -verify %s
+
+// Several cases below are separated by a line that contains only `;`. That is
+// deliberate: on a parse error, Clang discards tokens until the next `;` and
+// then resumes (same recovery strategy as C++). Without that sync point, the
+// parser would keep skipping or merging the broken declaration with what
+// follows, and the later `expected-error` lines would not fire.
+
+int i0 i0::foo() {
+  // expected-error@-1 {{expected ';' after top level declarator}}
+  // expected-error@-2 {{unknown type name 'i0'}}
+  return 0;
+}
+;
+
+int i1 i1::foo();
+// expected-error@-1 {{expected ';' after top level declarator}}
+// expected-error@-2 {{unknown type name 'i1'}}
+
+int i2 i2::foo(), x;
+// expected-error@-1 {{expected ';' after top level declarator}}
+// expected-error@-2 {{unknown type name 'i2'}}
+
+const int i3 i3::foo() { return 0; }
+// expected-error@-1 {{expected ';' after top level declarator}}
+// expected-error@-2 {{unknown type name 'i3'}}
+;
+
+unsigned long i4 i4::foo() { return 0; }
+// expected-error@-1 {{expected ';' after top level declarator}}
+// expected-error@-2 {{unknown type name 'i4'}}

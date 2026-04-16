@@ -6295,16 +6295,24 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   // BSC
   if (getLangOpts().BSC && FindUntil(tok::coloncolon) &&
       !IsParsingBSCGenericParameters) {
+    TentativeParsingAction TPA(*this);
     DeclSpec DS(AttrFactory);
     ParseBSCScopeSpecifiers(DS);
-    TryConsumeToken(tok::coloncolon);
-
-    BSCScopeSpec BSS;
-    BSS.setBeginLoc(DS.getBeginLoc());
-    Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), true, BSS, DS);
-    D.getBSCScopeSpec() = BSS;
-    (this->*DirectDeclParser)(D);
-    return;
+    // Qualified BSC member declarator requires `::` right after the extended-type
+    // specifier sequence. If not, we mis-disambiguated (e.g. `int i i::foo()`):
+    // revert the scope-spec parse and fall through so the declarator is parsed
+    // normally. (Without revert, the first `i` is already consumed and Sema may
+    // be driven down a bogus path before we bail.)
+    if (TryConsumeToken(tok::coloncolon)) {
+      TPA.Commit();
+      BSCScopeSpec BSS;
+      BSS.setBeginLoc(DS.getBeginLoc());
+      Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), true, BSS, DS);
+      D.getBSCScopeSpec() = BSS;
+      (this->*DirectDeclParser)(D);
+      return;
+    }
+    TPA.Revert();
   }
 
   // Member function which is defined inside owned struct.

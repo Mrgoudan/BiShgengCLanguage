@@ -1409,7 +1409,9 @@ bool Parser::ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS) {
     if (TATD) {
       Diag(CurNameLoc, diag::err_extended_type_not_generic_typealias);
       DS.SetTypeSpecError();
-      SkipUntil(tok::coloncolon);
+      // Leave '::' as the current token: callers (e.g. ParseDeclaratorInternal)
+      // consume it to continue the BSC qualified declarator.
+      SkipUntil(tok::coloncolon, StopBeforeMatch);
       return true;
     }
   }
