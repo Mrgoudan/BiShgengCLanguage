@@ -1592,8 +1592,14 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
 
 #if ENABLE_BSC
   // BSCMethodDecls shouldn't be pushed into scope in BSC.
-  if (getLangOpts().BSC && isa<BSCMethodDecl>(D)) {
-    return;
+  // For generic BSCMethods, the BSCMethodDecl is wrapped in a
+  // FunctionTemplateDecl — check through the wrapper as well.
+  if (getLangOpts().BSC) {
+    if (isa<BSCMethodDecl>(D))
+      return;
+    if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+      if (isa<BSCMethodDecl>(FTD->getTemplatedDecl()))
+        return;
   }
 #endif
 
