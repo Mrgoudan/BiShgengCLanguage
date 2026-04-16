@@ -315,30 +315,40 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr) {
 }
 
 bool Sema::CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr) {
-  const FunctionProtoType* LSHFuncType = LHSType->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>();
-  const FunctionProtoType* RSHFuncType = RHSExpr->getType()->isFunctionPointerType()?
+  const FunctionProtoType* LHSFuncType = LHSType->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>();
+  const FunctionProtoType* RHSFuncType = RHSExpr->getType()->isFunctionPointerType()?
     RHSExpr->getType()->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>():
     RHSExpr->getType()->getAs<FunctionProtoType>();
 
-  // For heterogeneous redeclarations, select the best matching declaration.
-  if (FunctionDecl *SelectedFD =
-          SelectFunctionDeclForPointerAssignment(RHSExpr, LSHFuncType))
-    RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
-
-  // return if no 'owned' in both side
-  if (!LSHFuncType->hasOwnedRetOrParams() && !RSHFuncType->hasOwnedRetOrParams()) {
+  // K&R-style functions use FunctionNoProtoType. BSC function qualifier checks
+  // only apply when both sides are prototype function types.
+  if (!LHSFuncType || !RHSFuncType) {
     return true;
   }
-  if ((LSHFuncType->getReturnType().isOwnedQualified() && !RSHFuncType->getReturnType().isOwnedQualified())
-       || (!LSHFuncType->getReturnType().isOwnedQualified() && RSHFuncType->getReturnType().isOwnedQualified())) {
+
+  // For heterogeneous redeclarations, select the best matching declaration.
+  if (FunctionDecl *SelectedFD =
+          SelectFunctionDeclForPointerAssignment(RHSExpr, LHSFuncType))
+    RHSFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+
+  if (!RHSFuncType) {
+    return true;
+  }
+
+  // return if no 'owned' in both side
+  if (!LHSFuncType->hasOwnedRetOrParams() && !RHSFuncType->hasOwnedRetOrParams()) {
+    return true;
+  }
+  if ((LHSFuncType->getReturnType().isOwnedQualified() && !RHSFuncType->getReturnType().isOwnedQualified())
+       || (!LHSFuncType->getReturnType().isOwnedQualified() && RHSFuncType->getReturnType().isOwnedQualified())) {
     return false;
   }
-  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
+  if (LHSFuncType->getNumParams() != RHSFuncType->getNumParams()) {
     return false;
   }
-  for (unsigned i = 0; i < LSHFuncType->getNumParams(); i++) {
-    if ((LSHFuncType->getParamType(i).isOwnedQualified() && !RSHFuncType->getParamType(i).isOwnedQualified())
-         || (!LSHFuncType->getParamType(i).isOwnedQualified() && RSHFuncType->getParamType(i).isOwnedQualified())) {
+  for (unsigned i = 0; i < LHSFuncType->getNumParams(); i++) {
+    if ((LHSFuncType->getParamType(i).isOwnedQualified() && !RHSFuncType->getParamType(i).isOwnedQualified())
+         || (!LHSFuncType->getParamType(i).isOwnedQualified() && RHSFuncType->getParamType(i).isOwnedQualified())) {
       return false;
     }
   }
@@ -376,6 +386,21 @@ Sema::CheckBSCQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
 
 Sema::AssignConvertType
 Sema::CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
+  const FunctionProtoType *LHSFuncType =
+      LHSType->getAs<PointerType>()->getPointeeType()->getAs<FunctionProtoType>();
+  const FunctionProtoType *RHSFuncType =
+      RHSExpr->getType()->isFunctionPointerType()
+          ? RHSExpr->getType()
+                ->getAs<PointerType>()
+                ->getPointeeType()
+                ->getAs<FunctionProtoType>()
+          : RHSExpr->getType()->getAs<FunctionProtoType>();
+
+  // K&R-style functions use FunctionNoProtoType. BSC-specific function
+  // qualifier checks only apply when both sides are prototype function types.
+  if (!LHSFuncType || !RHSFuncType)
+    return Compatible;
+
   if (!CheckOwnedFunctionPointerType(LHSType, RHSExpr))
     return IncompatibleOwnedPointer;
   if (!CheckBorrowFunctionPointerType(LHSType, RHSExpr))
@@ -647,10 +672,10 @@ bool Sema::CheckBorrowFunctionType(QualType ReturnTy,
 }
 
 bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
-  const FunctionProtoType *LSHFuncType = LHSType->getAs<PointerType>()
+  const FunctionProtoType *LHSFuncType = LHSType->getAs<PointerType>()
                                              ->getPointeeType()
                                              ->getAs<FunctionProtoType>();
-  const FunctionProtoType *RSHFuncType =
+  const FunctionProtoType *RHSFuncType =
       RHSExpr->getType()->isFunctionPointerType()
           ? RHSExpr->getType()
                 ->getAs<PointerType>()
@@ -658,14 +683,22 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
                 ->getAs<FunctionProtoType>()
           : RHSExpr->getType()->getAs<FunctionProtoType>();
 
+  // K&R-style functions use FunctionNoProtoType. BSC function qualifier checks
+  // only apply when both sides are prototype function types.
+  if (!LHSFuncType || !RHSFuncType)
+    return true;
+
   // For heterogeneous redeclarations, select the best matching declaration.
   if (FunctionDecl *SelectedFD =
-          SelectFunctionDeclForPointerAssignment(RHSExpr, LSHFuncType))
-    RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+          SelectFunctionDeclForPointerAssignment(RHSExpr, LHSFuncType))
+    RHSFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+
+  if (!RHSFuncType)
+    return true;
 
   // return if no 'borrow' in both side
-  if (!LSHFuncType->hasBorrowRetOrParams() &&
-      !RSHFuncType->hasBorrowRetOrParams()) {
+  if (!LHSFuncType->hasBorrowRetOrParams() &&
+      !RHSFuncType->hasBorrowRetOrParams()) {
     return true;
   }
   
@@ -692,15 +725,15 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
   };
 
   bool Compatible = true;
-  if (LSHFuncType->getNumParams() != RSHFuncType->getNumParams()) {
+  if (LHSFuncType->getNumParams() != RHSFuncType->getNumParams()) {
     Compatible = false;
   } else {
-    if (!BorrowParamTypesMatch(LSHFuncType->getReturnType(),
-                               RSHFuncType->getReturnType()))
+    if (!BorrowParamTypesMatch(LHSFuncType->getReturnType(),
+                               RHSFuncType->getReturnType()))
       Compatible = false;
-    for (unsigned I = 0, N = LSHFuncType->getNumParams(); Compatible && I < N; ++I) {
-      if (!BorrowParamTypesMatch(LSHFuncType->getParamType(I),
-                                 RSHFuncType->getParamType(I)))
+    for (unsigned I = 0, N = LHSFuncType->getNumParams(); Compatible && I < N; ++I) {
+      if (!BorrowParamTypesMatch(LHSFuncType->getParamType(I),
+                                 RHSFuncType->getParamType(I)))
         Compatible = false;
     }
   }

@@ -106,6 +106,37 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
     << type;
 }
 
+#if ENABLE_BSC
+static void checkNoBSCQualifiersInKNRFunction(
+    Sema &S, Declarator &D, QualType ReturnType,
+    const DeclaratorChunk::FunctionTypeInfo &FTI) {
+  if (!S.getLangOpts().BSC || !FTI.isKNRPrototype())
+    return;
+
+  SourceLocation DiagLoc = D.getIdentifierLoc();
+
+  bool HasOwnedQualifier = ReturnType.hasOwned();
+  bool HasBorrowQualifier = ReturnType.hasBorrow();
+  for (unsigned I = 0, E = FTI.NumParams; I != E; ++I) {
+    if (FTI.Params[I].Param == nullptr)
+      continue;
+    ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
+    QualType ParamTy = Param->getType();
+    HasOwnedQualifier |= ParamTy.hasOwned();
+    HasBorrowQualifier |= ParamTy.hasBorrow();
+  }
+
+  if (HasOwnedQualifier) {
+    S.Diag(DiagLoc, diag::err_bsc_qualifier_in_knr_function) << "_Owned";
+    D.setInvalidType(true);
+  }
+  if (HasBorrowQualifier) {
+    S.Diag(DiagLoc, diag::err_bsc_qualifier_in_knr_function) << "_Borrow";
+    D.setInvalidType(true);
+  }
+}
+#endif
+
 // objc_gc applies to Objective-C pointers or, otherwise, to the
 // smallest available pointer type (i.e. 'void*' in 'void**').
 #define OBJC_POINTER_TYPE_ATTRS_CASELIST                                       \
@@ -5442,6 +5473,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           getCCForDeclaratorChunk(S, D, DeclType.getAttrs(), FTI, chunkIndex));
 
 #if ENABLE_BSC
+      checkNoBSCQualifiersInKNRFunction(S, D, T, FTI);
+
       // empty param or variadic param is forbidden in the safe zone
       if (S.getLangOpts().BSC &&
           D.getDeclSpec().getSafeZoneSpecifier() == SZ_Safe) {

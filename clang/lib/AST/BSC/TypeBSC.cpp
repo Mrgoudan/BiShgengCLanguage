@@ -528,6 +528,13 @@ QualType ConditionalType::desugar() const {
 
   return QualType(this, 0);
 }
+
+bool QualType::hasOwned() const {
+  if (isOwnedQualified())
+    return true;
+  return getTypePtr()->hasOwnedFields();
+}
+
 bool QualType::hasBorrow() const {
   if (isBorrowQualified())
     return true;

@@ -68,6 +68,8 @@ def err_borrow_qualcheck_compare : Error<
 def err_typecheck_borrow_func : Error<"no _Borrow qualified type found in the function parameters, the return type is not allowed to be _Borrow qualified">;
 def err_typecheck_borrow_subscript : Error<"subscript of _Borrow pointer is not allowed">;
 def err_owned_and_borrow_conflict : Error<"cannot combine '_Owned' and '_Borrow' qualifiers on the same type">;
+def err_bsc_qualifier_in_knr_function : Error<
+  "type with '%0' semantics is not allowed in a K&R-style function definition">;
 def err_owned_qualifier_non_pointer : Error<
   "type of %1 cannot be qualified by '%0'">;
 
