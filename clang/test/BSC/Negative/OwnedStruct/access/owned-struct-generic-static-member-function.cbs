@@ -8,6 +8,8 @@ _Public:
 };
 
 int A::goo<T>(){
+// expected-error@-1 {{expected ';' at end of declaration}}
+// expected-error@-2 {{expected identifier or '('}}
        return 6;
 }
 

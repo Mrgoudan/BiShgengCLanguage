@@ -2,6 +2,8 @@
 
 ;a<b[c>(
 // expected-error@-1 {{unknown type name 'b'}}
-// expected-error@-2 {{expected identifier}}
-// expected-error@-3 {{expected ',' or '>' in template-parameter-list}}
-// expected-error@-4 {{expected identifier or '('}}
+// expected-error@-2 {{use of undeclared identifier 'c'}}
+
+// expected-error@+2 {{expected expression}}
+// expected-error@+1 {{expected ',' or '>' in template-parameter-list}}
+// expected-error@+0 {{expected '>'}}

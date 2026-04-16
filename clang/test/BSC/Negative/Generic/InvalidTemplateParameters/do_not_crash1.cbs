@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 a<b,>();c
-// expected-error@-1 {{expected identifier}}
-// expected-error@-2 {{expected template parameter}}
-// expected-error@-3 {{expected ',' or '>' in template-parameter-list}}
-// expected-error@-4 {{expected '>'}}
-// expected-error@-5 {{unknown type name 'c'}}
+// expected-error@-1 {{expected template parameter}}
+// expected-error@-2 {{unknown type name 'a'}}
+// expected-error@-3 {{expected identifier or '('}}
+// expected-error@-4 {{unknown type name 'c'}}
+
 // expected-error {{expected identifier or '('}}

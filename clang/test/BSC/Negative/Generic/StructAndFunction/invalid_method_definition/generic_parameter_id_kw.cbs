@@ -2,6 +2,4 @@
 
 void test<T switch>() { }
 // expected-error@-1 {{unknown type name 'T'}}
-// expected-error@-2 {{expected identifier}}
-// expected-error@-3 {{use of undeclared identifier 'T'}}
-// expected-error@-4 {{expected identifier or '('}}
+// expected-error@-2 {{expected ',' or '>' in template-parameter-list}}

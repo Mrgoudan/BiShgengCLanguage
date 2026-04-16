@@ -1,0 +1,57 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+// Regression test: nested generic types that produce >> and >>> tokens
+// must be handled correctly by the BSC template parameter parser.
+
+struct Box<T> {
+    T val;
+};
+
+// Nested generic in a function parameter (>> at close)
+int unbox_nested(Box<Box<int>> outer) {
+    return outer.val.val;
+}
+
+// Nested generic as return type (>> at close)
+Box<Box<int>> make_nested(int x) {
+    Box<Box<int>> result;
+    Box<int> inner;
+    inner.val = x;
+    result.val = inner;
+    return result;
+}
+
+// Triple nesting (>>> at close)
+Box<Box<Box<int>>> make_triple(int x) {
+    Box<Box<Box<int>>> result;
+    Box<Box<int>> mid;
+    Box<int> inner;
+    inner.val = x;
+    mid.val = inner;
+    result.val = mid;
+    return result;
+}
+
+int main() {
+    Box<int> b1;
+    b1.val = 42;
+
+    Box<Box<int>> b2;
+    b2.val = b1;
+
+    int v = unbox_nested(b2);
+    if (v != 42) return 1;
+
+    Box<Box<int>> b3 = make_nested(7);
+    if (b3.val.val != 7) return 2;
+
+    Box<Box<Box<int>>> b4 = make_triple(99);
+    if (b4.val.val.val != 99) return 3;
+
+    return 0;
+}

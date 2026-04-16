@@ -2,6 +2,4 @@
 
 // TODO: improve the error message
 *t<int N>{}
-// expected-error@-1{{expected identifier}}
-// expected-error@-2{{expected ',' or '>' in template-parameter-list}}
-// expected-error{{expected '>'}}
+// expected-error@-1{{expected '('}}

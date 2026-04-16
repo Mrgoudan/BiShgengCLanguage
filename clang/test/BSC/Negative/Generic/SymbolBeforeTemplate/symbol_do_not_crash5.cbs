@@ -2,6 +2,5 @@
 
 // TODO: improve the error message
 **t<int N,>();
-// expected-error@-1{{expected identifier}}
-// expected-error@-2{{expected ',' or '>' in template-parameter-list}}
-// expected-error@-3{{expected '>'}}
+// expected-error@-1{{expected template parameter}}
+// expected-warning@-2{{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}

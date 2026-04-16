@@ -2478,9 +2478,10 @@ private:
       DeclSpecContext DSC = DeclSpecContext::DSC_normal,
       LateParsedAttrList *LateAttrs = nullptr);
 #if ENABLE_BSC
-  // Record BSC Generic Look-Ahead when parsing '<>'
-  int BSCGenericLookAhead;
-  bool IsParsingBSCGenericParameters = false;
+  /// Capture '<' ... '>' tokens (nested) without advancing the real parse
+  /// cursor; used to replay the generic list after Sema commits parameters.
+  bool CollectBSCAngleTokensForGenericReplay(SmallVectorImpl<Token> &Out);
+  bool BSCTemplateIdIsImmediatelyFollowedByColonColon();
   void ParseBSCScopeSpecifiers(DeclSpec &DS);
   // check if it is a BSC static member function call in template argument list
   bool IsBSCStaticMemberFunctionCallInTemplateArgumentList();
@@ -2488,7 +2489,7 @@ private:
   void TryParseBSCGenericClassSpecifier(ParsedAttributes &DeclSpecAttrs);
   bool ExtendedTypeOfBSCMemberFunctionIsTypealias(DeclSpec &DS);
   void ParseConditionalSpecifier(DeclSpec &DS);
-  bool HandleBSCUnknownTypeName(DeclSpec &DS, Token Tok);
+  bool HandleBSCUnknownTypeName(DeclSpec &DS);
   bool IsSupportedOverloadType(OverloadedOperatorKind Op);
 #endif
   bool DiagnoseMissingSemiAfterTagDefinition(
@@ -3555,6 +3556,12 @@ private:
                                    SourceLocation &DeclEnd,
                                    ParsedAttributes &AccessAttrs,
                                    AccessSpecifier AS);
+  Decl *ParseBSCDeclarationAfterTemplateAngles(
+      DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
+      ParsingDeclRAIIObject &ParsingTemplateParams, SourceLocation &DeclEnd,
+      ParsedAttributes &AccessAttrs, AccessSpecifier AS,
+      const SmallVectorImpl<Token> &PrefixToks,
+      const SmallVectorImpl<Token> &AngleToks, const Token &SuffixTok);
   Decl *ParseTemplateDeclarationOrSpecializationBSCCompact(
       DeclaratorContext Context, SourceLocation &DeclEnd,
       ParsedAttributes &AccessAttrs, AccessSpecifier AS);

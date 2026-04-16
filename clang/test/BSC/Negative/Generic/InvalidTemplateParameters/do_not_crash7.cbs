@@ -3,5 +3,6 @@
 a b c<`x`>();
 // expected-error@-1 {{use of undeclared identifier 'x'}}
 // expected-error@-2 {{expected identifier}}
-// expected-error@-3 {{expected template parameter}}
-// expected-error@-4 {{unknown type name 'b'}}
+// expected-error@-3 2 {{expected template parameter}}
+// expected-error@-4 {{unknown type name 'a'}}
+// expected-error@-5 {{expected ';' at end of declaration}}

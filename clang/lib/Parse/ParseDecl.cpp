@@ -3255,15 +3255,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // Start the range at the current token but make the end of the range
     // invalid.  This will make the entire range invalid unless we successfully
     // consume a token.
-#if ENABLE_BSC
-    if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
-      DS.SetRangeStart(PP.LookAhead(BSCGenericLookAhead).getLocation());
-    } else {
-#endif
-      DS.SetRangeStart(Tok.getLocation());
-#if ENABLE_BSC
-    }
-#endif
+    DS.SetRangeStart(Tok.getLocation());
     DS.SetRangeEnd(SourceLocation());
   }
 
@@ -3282,15 +3274,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     // This value needs to be set to the location of the last token if the last
     // token of the specifier is already consumed.
     SourceLocation ConsumedEnd;
-  #if ENABLE_BSC
-    // Get Switch Tok for BSC constant generic.
-    Token SwitchTok;
-    if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
-      SwitchTok = PP.LookAhead(BSCGenericLookAhead);
-    } else {
-      SwitchTok = Tok;
-    }
-#endif
     // HACK: MSVC doesn't consider _Atomic to be a keyword and its STL
     // implementation for VS2013 uses _Atomic as an identifier for one of the
     // classes in <atomic>.
@@ -3301,20 +3284,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     if (getLangOpts().MSVCCompat && Tok.is(tok::kw__Atomic) &&
         DS.getStorageClassSpec() == clang::DeclSpec::SCS_typedef &&
         !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less))
-#if ENABLE_BSC
-    {
-#endif
       Tok.setKind(tok::identifier);
-#if ENABLE_BSC
-      SwitchTok.setKind(tok::identifier);
-    }
-#endif
 
-#if ENABLE_BSC
-    SourceLocation Loc = SwitchTok.getLocation();
-#else
     SourceLocation Loc = Tok.getLocation();
-#endif
 
     // Helper for image types in OpenCL.
     auto handleOpenCLImageKW = [&] (StringRef Ext, TypeSpecifierType ImageTypeSpec) {
@@ -3342,36 +3314,36 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                   || DS.getTypeSpecType() == DeclSpec::TST_union
                   || DS.getTypeSpecType() == DeclSpec::TST_enum
                   || DS.getTypeSpecType() == DeclSpec::TST_typename;
-      // SwithTok cannot be tok::eof to avoid core dump
-      if (SwitchTok.isNot(tok::eof) && PP.LookAhead(0).is(tok::coloncolon))
+      // Tok cannot be tok::eof to avoid core dump
+      if (Tok.isNot(tok::eof) && PP.LookAhead(0).is(tok::coloncolon))
         goto DoneWithDeclSpec;
-      if (SwitchTok.isOneOf(tok::kw_struct, tok::kw_union, tok::kw_enum)) {
+      if (Tok.isOneOf(tok::kw_struct, tok::kw_union, tok::kw_enum)) {
         if (DS.hasTypeSpecifier())
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.isOneOf(tok::kw_signed, tok::kw_unsigned)) {
+      if (Tok.isOneOf(tok::kw_signed, tok::kw_unsigned)) {
         if (DS.getTypeSpecSign() != TypeSpecifierSign::Unspecified
             || Uncombinable
             || DS.getTypeSpecType() == DeclSpec::TST_float
             || DS.getTypeSpecType() == DeclSpec::TST_double)
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict)) {
+      if (Tok.isOneOf(tok::kw_const, tok::kw_volatile, tok::kw_restrict)) {
         if (DS.getTypeQualifiers() != DeclSpec::TQ_unspecified)
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int,
+      if (Tok.isOneOf(tok::kw_void, tok::kw_char, tok::kw_int,
                             tok::kw_float, tok::kw_double, tok::kw_bool,
                             tok::kw__Bool)) {
         if (DS.getTypeSpecType() != DeclSpec::TST_unspecified)
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.is(tok::kw_short)) {
+      if (Tok.is(tok::kw_short)) {
         if (DS.getTypeSpecWidth() != TypeSpecifierWidth::Unspecified
             || Uncombinable)
           goto DoneWithDeclSpec;
       }
-      if (SwitchTok.is(tok::kw_long)) {
+      if (Tok.is(tok::kw_long)) {
         if (DS.getTypeSpecWidth() == TypeSpecifierWidth::Short ||
             DS.getTypeSpecWidth() == TypeSpecifierWidth::LongLong ||
             Uncombinable)
@@ -3380,11 +3352,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     }
 #endif
 
-#if ENABLE_BSC
-    switch (SwitchTok.getKind()) {
-#else
     switch (Tok.getKind()) {
-#endif
     default:
     DoneWithDeclSpec:
       if (!AttrsLastTime)
@@ -3687,7 +3655,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::identifier: {
 #if ENABLE_BSC
       if (getLangOpts().BSC &&
-          SwitchTok.getIdentifierInfo()->getName().equals("This")) {
+          Tok.getIdentifierInfo()->getName().equals("This")) {
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_This, Loc, PrevSpec,
                                        DiagID, Policy);
         break;
@@ -3823,12 +3791,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       }
 #endif
       ParsedType TypeRep = Actions.getTypeName(
-#if ENABLE_BSC
-          *SwitchTok.getIdentifierInfo(), SwitchTok.getLocation(),
-          getCurScope(), nullptr,
-#else
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
-#endif
           false, false, nullptr, false, false,
           isClassTemplateDeductionContext(DSContext), nullptr
 #if ENABLE_BSC
@@ -3842,18 +3805,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (!TypeRep) {
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
-#if ENABLE_BSC
-        // FIXME: ParseImplicitInt is handling `Tok`, hence it's not correct
-        // here. Create an issue for this:
-        // https://gitee.com/bisheng_c_language_dep/llvm-project/issues/I8HS93
-        if (SwitchTok.isNot(tok::identifier))
-          continue;
-        if (IsParsingBSCGenericParameters &&
-            HandleBSCUnknownTypeName(DS, SwitchTok))
-          continue;
-#endif
         if (Tok.isNot(tok::identifier))
           continue;
+#if ENABLE_BSC
+        if (getLangOpts().BSC && getCurScope() && getCurScope()->isTemplateParamScope() &&
+            HandleBSCUnknownTypeName(DS))
+          continue;
+#endif
         ParsedAttributes Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
@@ -3881,17 +3839,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (isInvalid)
         break;
 
-#if ENABLE_BSC
-      DS.SetRangeEnd(SwitchTok.getLocation());
-      if (IsParsingBSCGenericParameters) {
-        BSCGenericLookAhead++;
-      } else {
-        ConsumeToken(); // The identifier
-      }
-#else
       DS.SetRangeEnd(Tok.getLocation());
       ConsumeToken(); // The identifier
-#endif
 
       // Objective-C supports type arguments and protocol references
       // following an Objective-C object or object pointer
@@ -4632,7 +4581,6 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 
 #if ENABLE_BSC
-    DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : SwitchTok.getLocation());
     // Handle the case where the "_Safe" keyword modifies the function pointer
     if (getCurScope() &&
         getCurScope()->getScopeSafeZoneSource() == SZS_SafeStmt) {
@@ -4660,17 +4608,8 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     }
 
     if (DiagID != diag::err_bool_redeclaration && ConsumedEnd.isInvalid()) {
-#if ENABLE_BSC
-      if (getLangOpts().BSC && IsParsingBSCGenericParameters) {
-        // Assuming that clang consumed this token
-        BSCGenericLookAhead++;
-      } else {
-#endif
-        // After an error the next token can be an annotation token.
-        ConsumeAnyToken();
-#if ENABLE_BSC
-      }
-#endif
+      // After an error the next token can be an annotation token.
+      ConsumeAnyToken();
     }
 
     AttrsLastTime = false;
@@ -6293,26 +6232,44 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
 
 #if ENABLE_BSC
   // BSC
-  if (getLangOpts().BSC && FindUntil(tok::coloncolon) &&
-      !IsParsingBSCGenericParameters) {
-    TentativeParsingAction TPA(*this);
-    DeclSpec DS(AttrFactory);
-    ParseBSCScopeSpecifiers(DS);
-    // Qualified BSC member declarator requires `::` right after the extended-type
-    // specifier sequence. If not, we mis-disambiguated (e.g. `int i i::foo()`):
-    // revert the scope-spec parse and fall through so the declarator is parsed
-    // normally. (Without revert, the first `i` is already consumed and Sema may
-    // be driven down a bogus path before we bail.)
-    if (TryConsumeToken(tok::coloncolon)) {
-      TPA.Commit();
-      BSCScopeSpec BSS;
-      BSS.setBeginLoc(DS.getBeginLoc());
-      Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), true, BSS, DS);
-      D.getBSCScopeSpec() = BSS;
-      (this->*DirectDeclParser)(D);
-      return;
+  // Skip tentative extended-type parse inside a template-parameter list
+  // (e.g. `T Foo<T>(...)`) except for the class-key extended member form
+  // `void struct S<T>::member` / `void union U<T>::member`, where Sema may
+  // re-enter template parameter scope for the class template's parameters.
+  if (getLangOpts().BSC && FindUntil(tok::coloncolon)) {
+    const bool InTmplParamScope =
+        getCurScope() && getCurScope()->isTemplateParamScope();
+    bool AllowTentativeBSCScopeSpec = !InTmplParamScope;
+    if (InTmplParamScope) {
+      const bool BSCClassKeyExtendedMember =
+          Tok.isOneOf(tok::kw_struct, tok::kw_union, tok::kw_enum) &&
+          NextToken().is(tok::identifier) && GetLookAheadToken(2).is(tok::less);
+      const bool BSCIdTemplateExtendedMember =
+          BSCTemplateIdIsImmediatelyFollowedByColonColon() &&
+          !DeclSpec::isDeclRep(D.getDeclSpec().getTypeSpecType());
+      AllowTentativeBSCScopeSpec =
+          BSCClassKeyExtendedMember || BSCIdTemplateExtendedMember;
     }
-    TPA.Revert();
+    if (AllowTentativeBSCScopeSpec) {
+      TentativeParsingAction TPA(*this);
+      DeclSpec DS(AttrFactory);
+      ParseBSCScopeSpecifiers(DS);
+      // Qualified BSC member declarator requires `::` right after the extended-type
+      // specifier sequence. If not, we mis-disambiguated (e.g. `int i i::foo()`):
+      // revert the scope-spec parse and fall through so the declarator is parsed
+      // normally. (Without revert, the first `i` is already consumed and Sema may
+      // be driven down a bogus path before we bail.)
+      if (TryConsumeToken(tok::coloncolon)) {
+        TPA.Commit();
+        BSCScopeSpec BSS;
+        BSS.setBeginLoc(DS.getBeginLoc());
+        Actions.ConvertBSCScopeSpecToType(D, DS.getBeginLoc(), true, BSS, DS);
+        D.getBSCScopeSpec() = BSS;
+        (this->*DirectDeclParser)(D);
+        return;
+      }
+      TPA.Revert();
+    }
   }
 
   // Member function which is defined inside owned struct.
@@ -6572,25 +6529,6 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
 #endif
            ) &&
       D.mayHaveIdentifier()) {
-#if ENABLE_BSC
-    if (IsParsingBSCGenericParameters) {
-      Token SwitchTok = PP.LookAhead(BSCGenericLookAhead);
-      UnqualifiedId &Result = D.getName();
-      if (SwitchTok.is(tok::identifier)) {
-        IdentifierInfo *Id = SwitchTok.getIdentifierInfo();
-        SourceLocation IdLoc = SwitchTok.getLocation();
-        Result.setIdentifier(Id, IdLoc);
-        BSCGenericLookAhead++;
-        D.SetRangeEnd(D.getName().getSourceRange().getEnd());
-      } else {
-        Diag(SwitchTok, diag::err_expected) << tok::identifier;
-        D.SetIdentifier(nullptr, SwitchTok.getLocation());
-        ConsumeToken();
-      }
-      goto PastIdentifier;
-    }
-#endif
-
     // This might be a C++17 structured binding.
     if (Tok.is(tok::l_square) && !D.mayOmitIdentifier() &&
         D.getCXXScopeSpec().isEmpty())

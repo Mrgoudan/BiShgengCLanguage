@@ -3,7 +3,5 @@
 a b<c a d>()})
 // expected-error@-1 {{unknown type name 'c'}}
 // expected-error@-2 {{expected ',' or '>' in template-parameter-list}}
-// expected-error@-3 {{unknown type name 'a'}}
-// expected-error@-4 {{use of undeclared identifier 'd'}}
-// expected-error@-5 {{extraneous closing brace ('}')}}
-// expected-error@-6 {{expected identifier or '('}}
+// expected-error@-3 {{extraneous closing brace ('}')}}
+// expected-error@-4 {{expected identifier or '('}}
