@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -verify %s
+
+struct S<> void b<c>(){const struct a<
+// expected-error@-1 {{explicit specialization of undeclared template struct 'S'}}
+// expected-error@-2 {{cannot combine with previous 'struct' declaration specifier}}
+// expected-error@-3 {{incomplete result type 'struct S' in function definition}}
+// expected-note@-4 {{forward declaration of 'struct S'}}
+// expected-note@-5 {{to match this '{'}}
+
+// expected-error@+2 {{expected ',' or '>' in template-parameter-list}}
+// expected-error@+1 {{expected identifier or '('}}
+// expected-error@+0 {{expected '}'}}

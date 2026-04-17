@@ -71,6 +71,9 @@ ExprResult Parser::ParseOptionalBSCScopeSpecifier(
 }
 
 bool Parser::IsBSCStaticMemberFunctionCallInTemplateArgumentList() {
+  if (Tok.isOneOf(tok::eof, tok::semi, tok::l_brace, tok::equal))
+    return false;
+
   int LessCount = 0;
   int i = 0;
   Token CurrTok = Tok;

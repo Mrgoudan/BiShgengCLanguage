@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -verify %s
+
+// Regression: incomplete `_Static_assert(a<int,` must not crash the compiler.
+_Static_assert(a<int,
+// expected-error@-1 {{expected '>'}}
+// expected-note@-2 {{to match this '<'}}
+
+// expected-error@+0 {{expected expression}}
