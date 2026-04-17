@@ -750,15 +750,33 @@ void Ownership::OwnershipStatus::setToAllMoved(const Expr *E) {
           for (const string &str : allPrefixStrs) {
             OPSOwnedOwnedFields[VD].erase(str);
           }
+          resetAll(VD);
+          if (OPSOwnedOwnedFields[VD].size() == 0) {
+            set(VD, Ownership::Status::AllMoved);
+          } else if (OPSOwnedOwnedFields[VD].size() < OPSAllOwnedFields[VD].size()) {
+            set(VD, Ownership::Status::PartialMoved);
+          } else {
+            set(VD, Ownership::Status::Owned);
+          }
         }
       }
       if (SStatus.count(VD)) {
         if (SAllOwnedFields[VD].count(memberField.second)) {
           SOwnedOwnedFields[VD].insert(memberField.second);
+          SNullOwnedFields[VD].erase(memberField.second);
           auto allPrefixStrs =
               findPrefixStrings(SAllOwnedFields[VD], memberField.second + ".");
           for (const string &str : allPrefixStrs) {
             SOwnedOwnedFields[VD].erase(str);
+            SNullOwnedFields[VD].erase(str);
+          }
+          resetAll(VD);
+          if (SOwnedOwnedFields[VD].size() == 0) {
+            set(VD, Ownership::Status::AllMoved);
+          } else if (SOwnedOwnedFields[VD].size() < SAllOwnedFields[VD].size()) {
+            set(VD, Ownership::Status::PartialMoved);
+          } else {
+            set(VD, Ownership::Status::Owned);
           }
         }
       }

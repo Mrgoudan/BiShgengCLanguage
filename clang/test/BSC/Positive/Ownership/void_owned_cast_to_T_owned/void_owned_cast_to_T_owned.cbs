@@ -17,6 +17,18 @@ struct Holder {
   struct Inner *_Owned inner;
 };
 
+typedef struct {
+  int p;
+} S;
+
+struct One {
+  int *_Owned p;
+};
+
+void consume_s(S *_Owned);
+void consume_one(struct One *_Owned);
+void safe_free(void *_Owned);
+
 void test1(int *_Owned p) {
   void *_Owned erased = (void *_Owned)p;
   int *_Owned typed = (int *_Owned)erased;
@@ -103,4 +115,18 @@ void test10() {
   safe_free((void *_Owned)hp->inner);
   safe_free((void *_Owned)hp->leaf);
   safe_free((void *_Owned)hp);
+}
+
+S *_Owned test11(void *_Owned p) {
+  return (S *_Owned)p;
+}
+
+void test12(void *_Owned p) {
+  consume_s((S *_Owned)p);
+}
+
+void test13(struct One *_Owned h, void *_Owned erased) {
+  safe_free((void *_Owned)h->p);
+  h->p = (int *_Owned)erased;
+  consume_one(h);
 }
