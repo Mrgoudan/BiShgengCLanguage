@@ -13,10 +13,15 @@ struct Holder {
   struct Inner *_Owned inner;
 };
 
+typedef struct {
+  int *_Owned p;
+} S;
+
 void consume_int(int *_Owned p);
 void consume_node(struct Node *_Owned p);
 void consume_inner(struct Inner *_Owned p);
 void consume_holder(struct Holder *_Owned p);
+void consume_s(S *_Owned);
 void safe_free(void *_Owned p);
 
 void test1(struct Inner *_Owned p) {
@@ -62,4 +67,12 @@ void test5(struct Holder *_Owned h, void *_Owned erased) {
   safe_free((void *_Owned)h->inner);
   h->inner = (struct Inner *_Owned)erased;
   consume_holder(h); // expected-error {{use of partially moved value: `h`, h.inner.data is moved}}
+}
+
+S *_Owned test6(void *_Owned p) {
+  return (S *_Owned)p; // expected-error {{cannot pass or return a cast from 'void *_Owned' to 'S *_Owned' because it would use a moved value}}
+}
+
+void test7(void *_Owned p) {
+  consume_s((S *_Owned)p); // expected-error {{cannot pass or return a cast from 'void *_Owned' to 'S *_Owned' because it would use a moved value}}
 }

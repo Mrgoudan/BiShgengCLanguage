@@ -217,6 +217,8 @@ def err_ownership_owned_struct_patially_moved : Error<
   "partially moved _Owned struct:`%0` at scope end, %1 moved">;
 def err_ownership_owned_struct_not_properly_freed : Error<
   "destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually">;
+def err_ownership_cast_pass_to_arg_or_ret: Error<
+  "cannot pass or return a cast from 'void *_Owned' to %0 because it would use a moved value">;
 
 // New BSC Borrow Checker errors.
 def err_borrow_assign_when_borrowed : Error<
@@ -269,4 +271,3 @@ def err_mut_borrow_string_literal_indirect : Error<
   "cannot take mutable borrow through string literal with '&_Mut *'; string literals are immutable">;
 def err_pass_string_literal_to_mut_borrow : Error<
   "cannot pass string literal to parameter of type %0; string literals are immutable">;
-

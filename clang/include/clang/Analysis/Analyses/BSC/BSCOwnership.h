@@ -49,6 +49,7 @@ enum OwnershipDiagKind {
   MemoryLeak,
   OwnedStructPartiallyMoved,
   OwnedStructNotProperlyFreed,
+  PassCastToArgOrRet,
   OwnershipMaxDiagKind
 };
 
@@ -59,12 +60,17 @@ class OwnershipDiagInfo {
     std::string Name;
     std::string Fields;
     SourceLocation Location;
+    QualType Type = QualType();
   
     OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
                       std::string Name)
         : Loc(Loc), Kind(Kind), Name(Name), Fields(""),
           Location(SourceLocation()) {}
-  
+
+    OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind, QualType QT)
+        : Loc(Loc), Kind(Kind), Name(""), Fields(""),
+          Location(SourceLocation()), Type(QT) {}
+
     OwnershipDiagInfo(SourceLocation Loc, OwnershipDiagKind Kind,
                       std::string Name, std::string fields)
         : Loc(Loc), Kind(Kind), Name(Name), Fields(fields),
@@ -77,7 +83,8 @@ class OwnershipDiagInfo {
   
     bool operator==(const OwnershipDiagInfo &other) const {
       return Loc == other.Loc && Kind == other.Kind && Name == other.Name &&
-             Fields == other.Fields && Location == other.Location;
+             Fields == other.Fields && Location == other.Location &&
+             Type == other.Type;
     }
   };
 
@@ -236,7 +243,8 @@ static const unsigned OwnershipDiagIdList[] = {
     diag::err_ownership_memory_leak_field,
     diag::err_ownership_memory_leak,
     diag::err_ownership_owned_struct_patially_moved,
-    diag::err_ownership_owned_struct_not_properly_freed};
+    diag::err_ownership_owned_struct_not_properly_freed,
+    diag::err_ownership_cast_pass_to_arg_or_ret};
 
 class OwnershipDiagReporter {
   Sema &S;
@@ -308,6 +316,9 @@ public:
       case OwnedStructPartiallyMoved:
       case OwnedStructNotProperlyFreed:
         S.Diag(DI.Loc, getOwnershipDiagID(DI.Kind)) << DI.Name << DI.Fields;
+        break;
+      case PassCastToArgOrRet:
+        S.Diag(DI.Loc, getOwnershipDiagID(DI.Kind)) << DI.Type;
         break;
       default:
         llvm_unreachable("Unknown error type");

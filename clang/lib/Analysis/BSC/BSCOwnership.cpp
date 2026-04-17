@@ -2186,6 +2186,13 @@ void TransferFunctions::VisitCallExpr(CallExpr *CE) {
 
   for (auto it = CE->arg_begin(), ei = CE->arg_end(); it != ei; ++it) {
     Expr *Arg = *it;
+    if (IsCastFromVoidPointer(Arg) && Arg->getType()->hasOwnedFields()) {
+      SmallVector<OwnershipDiagInfo> diags;
+      diags.push_back(OwnershipDiagInfo(Arg->getExprLoc(),
+                                        OwnershipDiagKind::PassCastToArgOrRet,
+                                        Arg->getType()));
+      reporter.addDiags(diags);
+    }
     // Passing to _Bool parameter should not consume ownership
     op = Arg->getType()->isBooleanType() ? GetAddr : Move;
     Visit(Arg);
@@ -2372,6 +2379,13 @@ void TransferFunctions::VisitInitListExpr(InitListExpr *ILE) {
 
 void TransferFunctions::VisitReturnStmt(ReturnStmt *RS) {
   if (Expr *RV = RS->getRetValue()) {
+    if (IsCastFromVoidPointer(RV) && RV->getType()->hasOwnedFields()) {
+      SmallVector<OwnershipDiagInfo> diags;
+      diags.push_back(OwnershipDiagInfo(RV->getExprLoc(),
+                                        OwnershipDiagKind::PassCastToArgOrRet,
+                                        RV->getType()));
+      reporter.addDiags(diags);
+    }
     const FunctionDecl *FD =
         dyn_cast<FunctionDecl>(OS.analysisContext.getDecl());
     // Functions returning integers(including _Bool) cannot consume ownership
