@@ -3687,7 +3687,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     case tok::identifier: {
 #if ENABLE_BSC
       if (getLangOpts().BSC &&
-          Tok.getIdentifierInfo()->getName().equals("This")) {
+          SwitchTok.getIdentifierInfo()->getName().equals("This")) {
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_This, Loc, PrevSpec,
                                        DiagID, Policy);
         break;
