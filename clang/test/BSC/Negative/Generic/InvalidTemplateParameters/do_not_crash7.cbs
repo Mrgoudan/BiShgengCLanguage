@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+a b c<`x`>();
+// expected-error@-1 {{use of undeclared identifier 'x'}}
+// expected-error@-2 {{expected identifier}}
+// expected-error@-3 {{expected template parameter}}
+// expected-error@-4 {{unknown type name 'b'}}

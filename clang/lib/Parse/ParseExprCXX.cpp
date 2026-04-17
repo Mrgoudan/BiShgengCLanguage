@@ -3202,7 +3202,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
         // TODO: we should refactoring check logic, abandon assert.
         assert(Tok.is(tok::less) && "expected 'less' token");
         while (!Tok.is(tok::greater) && !Tok.is(tok::eof)) {
-          ConsumeToken();
+          ConsumeAnyToken();
         }
         if (Tok.is(tok::greater)) {
           ConsumeToken();

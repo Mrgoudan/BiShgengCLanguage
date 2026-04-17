@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+a b c<[d>();
+// expected-error@-1 {{unknown type name 'b'}}
+// expected-error@-2 {{expected template parameter}}
+// expected-error@-3 {{expected identifier}}

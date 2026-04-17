@@ -1,0 +1,5 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+a b c<"x">();
+// expected-error@-1 {{unknown type name 'a'}}
+// expected-error@-2 {{expected ';' after top level declarator}}
