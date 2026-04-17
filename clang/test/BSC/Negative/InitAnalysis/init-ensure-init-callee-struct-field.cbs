@@ -145,3 +145,45 @@ void arr_field_with_assume(struct WithArr *__attribute__((ensure_init)) out) {
 void arr_ptr_with_assume(int (*__attribute__((ensure_init)) out)[3]) {
     _Unsafe { __assume_initialized(&out); }
 } // no error: whole array marked initialized
+
+// --- __assume_initialized(&out->field) through pointer deref ----------------
+// Field projection through an ensure_init pointer's deref: marks that
+// specific field, and tryPromoteParent lifts to whole-pointee when all
+// siblings are covered.
+
+// Only one field, covering it via field-through-deref promotes *out.
+struct Single { int arr[2]; };
+void single_field_with_deref_assume(struct Single *__attribute__((ensure_init)) out) {
+    _Unsafe { __assume_initialized(&out->arr); }
+} // no error: sole field covered → *out promoted
+
+// Array field + scalar field: writing scalar and assuming array covers both.
+void arr_field_deref_assume(struct WithArr *__attribute__((ensure_init)) out) {
+    out->x = 1;
+    _Unsafe { __assume_initialized(&out->arr); }
+} // no error: arr field + x written → all siblings init → *out promoted
+
+// Nested struct field through deref.
+void nested_deref_assume(struct Nested *__attribute__((ensure_init)) out) {
+    out->p.a = 1;
+    out->p.b = 2;
+    _Unsafe { __assume_initialized(&out->x); }
+} // no error: all fields init via mix of writes and field-through-deref assume
+
+// Deeply nested: every leaf reached via &out->p.a-style paths. Exercises
+// recursive parent promotion (p.a + p.b → p; p + x → *out).
+void nested_leaf_deref_assume(struct Nested *__attribute__((ensure_init)) out) {
+    _Unsafe { __assume_initialized(&out->p.a); }
+    _Unsafe { __assume_initialized(&out->p.b); }
+    _Unsafe { __assume_initialized(&out->x); }
+} // no error: leaves promote to out->p, then to *out
+
+// Partial: only marking one of multiple fields is NOT enough.
+void partial_deref_assume(struct Pair *__attribute__((ensure_init)) out) {
+    _Unsafe { __assume_initialized(&out->a); }
+} // expected-error {{'*out' not initialized at return in __attribute__((ensure_init)) function}}
+
+// Whole-deref form: &*out is equivalent to covering the whole pointee.
+void whole_deref_assume(struct WithArr *__attribute__((ensure_init)) out) {
+    _Unsafe { __assume_initialized(&*out); }
+} // no error: whole pointee covered

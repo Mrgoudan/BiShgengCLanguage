@@ -158,32 +158,21 @@ bool InitAnalysis::transferStatement(const Statement &S,
     if (!S.getAssign().Dest.Projections.empty() &&
         S.getAssign().Dest.Projections[0].K == ProjectionElem::Deref) {
       LocalId Base = S.getAssign().Dest.Base;
-      auto It = State.EnsureInitDerefStates.find(Base);
-      if (It != State.EnsureInitDerefStates.end()) {
-        const auto &Projs = S.getAssign().Dest.Projections;
-        if (Projs.size() == 1) {
-          // Whole deref write: *p = val
-          if (It->second != InitState::Initialized) {
-            It->second = InitState::Initialized;
-            Changed = true;
-          }
-          QualType PointeeTy = getEnsureInitPointeeType(Base);
-          if (!PointeeTy.isNull()) {
-            SmallVector<unsigned, 4> Prefix;
-            markAllFieldsInit(State, Base, PointeeTy, Prefix);
-          }
-        } else if (!getEnsureInitPointeeType(Base).isNull()) {
-          // Struct pointee field write: reuse getFieldPath on the
-          // post-Deref sub-place (same as local struct tracking).
-          Place SubPlace(Base, Projs.slice(1),
-                         S.getAssign().Dest.Ty, S.getAssign().Dest.Loc);
-          if (auto FP = getFieldPath(SubPlace)) {
-            if (!getFieldType(FP->Base, FP->Indices)->isArrayType())
-              markFieldInit(State, *FP, Changed);
-          }
+      const auto &Projs = S.getAssign().Dest.Projections;
+      if (Projs.size() == 1) {
+        // Whole deref write: *p = val
+        markPointeeFullyInit(State, Base, Changed);
+      } else if (!getEnsureInitPointeeType(Base).isNull()) {
+        // Struct pointee field write: reuse getFieldPath on the
+        // post-Deref sub-place (same as local struct tracking).
+        Place SubPlace(Base, Projs.slice(1),
+                       S.getAssign().Dest.Ty, S.getAssign().Dest.Loc);
+        if (auto FP = getFieldPath(SubPlace)) {
+          if (!getFieldType(FP->Base, FP->Indices)->isArrayType())
+            markFieldInit(State, *FP, Changed);
         }
-        // else: non-struct element write (e.g. array index) — skip.
       }
+      // else: non-struct element write (e.g. array index) — skip.
     }
     break;
   }
@@ -245,29 +234,38 @@ InitLattice InitAnalysis::transferTerminator(const Terminator &T,
       Result.LocalStates[CD.Dest.Base] = InitState::Initialized;
     }
 
-    // __assume_initialized(&x): mark x as initialized at this point.
+    // __assume_initialized: mark the addressed memory as initialized.
+    // Supported argument shapes:
+    //   &x          — whole local (and pointee if x is an ensure_init param)
+    //   &x.f...     — specific field of a local struct
+    //   &*p         — whole pointee of an ensure_init pointer param
+    //   &p->f...    — specific field of an ensure_init pointer's struct pointee
     if (CD.Decl &&
         CD.Decl->getBuiltinID() == Builtin::BI__assume_initialized) {
       if (!CD.ArgPlaces.empty() && CD.ArgPlaces[0]) {
         const Place &ArgPlace = *CD.ArgPlaces[0];
+        bool Changed = false;
         if (ArgPlace.Projections.empty()) {
+          // &x: whole local, plus pointee if x is an ensure_init param.
           Result.LocalStates[ArgPlace.Base] = InitState::Initialized;
           SmallVector<unsigned, 4> Prefix;
           markAllFieldsInit(Result, ArgPlace.Base,
                             B.getLocal(ArgPlace.Base).Ty, Prefix);
-          // __assume_initialized(&out) where out is ensure_init param:
-          // also mark *out as initialized in EnsureInitDerefStates.
-          auto DerefIt = Result.EnsureInitDerefStates.find(ArgPlace.Base);
-          if (DerefIt != Result.EnsureInitDerefStates.end()) {
-            DerefIt->second = InitState::Initialized;
-            QualType PointeeTy = getEnsureInitPointeeType(ArgPlace.Base);
-            if (!PointeeTy.isNull()) {
-              SmallVector<unsigned, 4> Prefix2;
-              markAllFieldsInit(Result, ArgPlace.Base, PointeeTy, Prefix2);
-            }
+          markPointeeFullyInit(Result, ArgPlace.Base, Changed);
+        } else if (ArgPlace.Projections[0].K == ProjectionElem::Deref) {
+          // &*p or &p->field... on an ensure_init pointer param.
+          if (ArgPlace.Projections.size() == 1) {
+            markPointeeFullyInit(Result, ArgPlace.Base, Changed);
+          } else if (!getEnsureInitPointeeType(ArgPlace.Base).isNull()) {
+            // Field through pointer deref: reuse getFieldPath on the
+            // post-Deref sub-place. tryPromoteParent lifts state to the
+            // whole-pointee level when all siblings become initialized.
+            Place SubPlace(ArgPlace.Base, ArgPlace.Projections.slice(1),
+                           ArgPlace.Ty, ArgPlace.Loc);
+            if (auto FP = getFieldPath(SubPlace))
+              markFieldInit(Result, *FP, Changed);
           }
         } else if (auto FP = getFieldPath(ArgPlace)) {
-          bool Changed = false;
           markFieldInit(Result, *FP, Changed);
         }
       }
@@ -613,6 +611,22 @@ void InitAnalysis::clearFieldStates(InitLattice &State, LocalId Id,
   while (It != State.FieldStates.end() && It->first.Base == Id) {
     It = State.FieldStates.erase(It);
     Changed = true;
+  }
+}
+
+void InitAnalysis::markPointeeFullyInit(InitLattice &State, LocalId Base,
+                                        bool &Changed) const {
+  auto It = State.EnsureInitDerefStates.find(Base);
+  if (It == State.EnsureInitDerefStates.end())
+    return;
+  if (It->second != InitState::Initialized) {
+    It->second = InitState::Initialized;
+    Changed = true;
+  }
+  QualType PointeeTy = getEnsureInitPointeeType(Base);
+  if (!PointeeTy.isNull()) {
+    SmallVector<unsigned, 4> Prefix;
+    markAllFieldsInit(State, Base, PointeeTy, Prefix);
   }
 }
 

@@ -181,6 +181,12 @@ private:
   void markAllFieldsInit(InitLattice &State, LocalId Base,
                          QualType Ty, SmallVector<unsigned, 4> &Prefix) const;
 
+  /// Mark the whole pointee of an ensure_init pointer param as initialized:
+  /// updates the deref state and, for struct pointees, all nested fields.
+  /// No-op if Base is not an ensure_init pointer with tracked deref state.
+  void markPointeeFullyInit(InitLattice &State, LocalId Base,
+                            bool &Changed) const;
+
   /// Build a human-readable field-qualified name from a FieldPath.
   std::string buildFieldName(const FieldPath &FP) const;
 
