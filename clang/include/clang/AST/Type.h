@@ -4954,14 +4954,7 @@ protected:
     withOwned,
     withoutOwned
   };
-
-  enum borrowStatus {
-    unInitBorrow,
-    withBorrow,
-    withoutBorrow
-  };
   mutable ownedStatus hasOwn = ownedStatus::unInitOwned;
-  mutable borrowStatus hasBorrow = borrowStatus::unInitBorrow;
 #endif
 
 public:
@@ -4983,8 +4976,6 @@ public:
   /// Recursively check all fields in the record for borrow-ness. If any field
   /// is declared borrow, return true. Otherwise, return false.
   bool withBorrowFields() const;
-
-  void initBorrowStatus() const;
   #endif
 
   bool isSugared() const { return false; }

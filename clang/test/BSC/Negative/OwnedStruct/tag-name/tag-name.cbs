@@ -4,7 +4,7 @@ _Owned struct A;
 
 _Owned struct A {};
 _Owned struct A a; // expected-error {{must ignore '_Owned struct' tag before struct name}}
-                  // expected-error@-1 {{type of global variable cannot qualified by '_Owned'}}
+                  // expected-error@-1 {{type of global variable cannot be qualified by '_Owned'}}
 struct B{
     _Owned struct A b;// expected-error {{must ignore '_Owned struct' tag before struct name}}
 };

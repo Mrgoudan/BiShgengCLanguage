@@ -29,13 +29,13 @@ void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, Stri
     ownedFields
   };
   if (T.getCanonicalType().isOwnedQualified() && !T.getTypePtr()->getAs<TypedefType>()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
         << ownedQualified << "_Owned" << Env;
   } else if (T.getCanonicalType().isOwnedQualified() && T.getTypePtr()->getAs<TypedefType>()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
         << ownedTypedef << "_Owned" << Env << T;
   } else if (T.getCanonicalType().getTypePtr()->isMoveSemanticType()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
         << ownedFields << "_Owned" << Env << T;
   }
 }
@@ -448,6 +448,35 @@ bool isCastingAwayConst(QualType LHS, QualType RHS) {
   // For non-pointer types: casting away const means RHS has const that LHS doesn't
   return RHS.isConstQualified() && !LHS.isConstQualified();
 }
+
+enum BorrowIndirectTypeCheckKind {
+  BorrowQualified,
+  BorrowTypedef,
+  BorrowFields,
+  NotNestedBorrow
+};
+
+/// Returns whether T has multiple levels of borrow qualifiers,
+/// including containing borrow fields.
+BorrowIndirectTypeCheckKind isNestedBorrow(QualType T) {
+  unsigned BorrowPtrLevel = 0;
+  QualType CurType = T;
+  while (const auto *PT = CurType->getAs<PointerType>()) {
+    bool IsBorrowTypedef = CurType->getAs<TypedefType>() &&
+                           CurType.getCanonicalType().isBorrowQualified();
+    if (BorrowPtrLevel != 0 && IsBorrowTypedef)
+      return BorrowTypedef;
+
+    if (CurType.isBorrowQualified() && ++BorrowPtrLevel > 1)
+      return BorrowQualified;
+
+    CurType = PT->getPointeeType();
+  }
+  if (BorrowPtrLevel != 0 && CurType->hasBorrowFields())
+    return BorrowFields;
+
+  return NotNestedBorrow;
+}
 } // namespace
 
 bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
@@ -790,15 +819,29 @@ void Sema::CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
   enum { BorrowQualified, BorrowTypedef, BorrowFields };
   if (T.getCanonicalType().isBorrowQualified() &&
       !T.getTypePtr()->getAs<TypedefType>()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
         << BorrowQualified << "_Borrow" << Env;
   } else if (T.getCanonicalType().isBorrowQualified() &&
              T.getTypePtr()->getAs<TypedefType>()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
         << BorrowTypedef << "_Borrow" << Env << T;
   } else if (T.getCanonicalType().getTypePtr()->hasBorrowFields()) {
-    Diag(ErrLoc, diag::err_owned_inderictOwned_type_check)
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
         << BorrowFields << "_Borrow" << Env << T;
   }
+}
+
+void Sema::CheckNestedBorrowType(SourceLocation ErrLoc, QualType T) {
+  BorrowIndirectTypeCheckKind Kind = isNestedBorrow(T);
+  if (Kind == NotNestedBorrow)
+    return;
+  QualType Pointee = T->getPointeeType();
+  if (Kind == BorrowQualified) {
+    Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
+        << Kind << "_Borrow" << Pointee;
+    return;
+  }
+  Diag(ErrLoc, diag::err_nested_owned_borrow_type_check)
+      << Kind << "_Borrow" << Pointee << Pointee;
 }
 #endif

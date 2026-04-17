@@ -40,3 +40,47 @@ __attribute__((operator ->))
 int *memberDeref2(int * s) {               // expected-error {{overloaded function 'memberDeref2' first parameter or return type must be struct or enumeration pointer type}}
     return s;
 }
+
+// _Borrow point parameter
+struct CPB {
+  struct A *_Borrow a;
+};
+
+__attribute__((operator ->))
+struct A *_Borrow memberDerefC(struct CPB * _Borrow s) { // expected-error {{type of 'struct CPB' cannot be qualified by '_Borrow'(even indirectly), 'struct CPB' contains '_Borrow' type}}
+    return s->a;
+}
+
+int test3() {
+    struct A sa = {1};
+    struct CPB scpb = {&_Mut sa};
+    int b = scpb->a;
+    if (b != 1) {
+        return -1;
+    }
+    scpb->a = 2;
+    if (scpb->a != 2) {
+        return -1;
+    }
+    return 0;
+}
+
+// const _Borrow point parameter
+struct DP {
+   struct A *_Borrow a;
+};
+
+__attribute__((operator ->))
+ struct A *_Borrow memberDerefD(const struct DP * _Borrow s) { // expected-error {{type of 'const struct DP' cannot be qualified by '_Borrow'(even indirectly), 'const struct DP' contains '_Borrow' type}}
+    return s->a;
+}
+
+int test4() {
+    struct A sa = {1};
+    struct DP sdp = {&_Mut sa};
+    int b = sdp->a;
+    if (b != 1) {
+        return -1;
+    }
+    return 0;
+}

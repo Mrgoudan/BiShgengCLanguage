@@ -67,6 +67,7 @@ bool Type::hasBorrowFields() const {
   return false;
 }
 
+
 bool Type::withBorrowFields() const {
   if (const auto *RT = dyn_cast<RecordType>(CanonicalType)) {
     return RT->withBorrowFields();
@@ -417,50 +418,37 @@ bool RecordType::hasOwnedFields() const {
   return false;
 }
 
-void RecordType::initBorrowStatus() const {
-  if (hasBorrow != borrowStatus::unInitBorrow)
-    return;
-  std::vector<const RecordType *> RecordTypeList;
-  RecordTypeList.push_back(this);
-  unsigned NextToCheckIndex = 0;
-
-  while (RecordTypeList.size() > NextToCheckIndex) {
-    for (FieldDecl *FD :
-         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+bool RecordType::hasBorrowFields() const {
+  llvm::SmallPtrSet<const RecordType *, 16> Visited;
+  llvm::SmallVector<const RecordType *, 16> Queue;
+  Queue.push_back(this);
+  Visited.insert(this);
+  for (unsigned i = 0; i < Queue.size(); ++i) {
+    // traverse all fields
+    for (FieldDecl *FD : Queue[i]->getDecl()->fields()) {
+      // basic case
       QualType FieldTy = FD->getType();
       if (FieldTy.isBorrowQualified()) {
-        hasBorrow = borrowStatus::withBorrow;
-        return;
+        return true;
       }
-      QualType tempQT = FieldTy;
-      const Type *tempT = tempQT.getTypePtr();
-      while (tempT->isPointerType()) {
-        tempQT = tempT->getPointeeType();
-        if (tempQT.isBorrowQualified()) {
-          hasBorrow = borrowStatus::withBorrow;
-          return;
-        } else {
-          tempQT = tempQT.getCanonicalType();
-          tempT = tempQT.getTypePtr();
+      // pointer: dereference to the final pointee
+      QualType TempQT = FieldTy;
+      for (const Type *TempT = TempQT.getTypePtr(); TempT->isPointerType();
+           TempT = TempQT.getTypePtr()) {
+        TempQT = TempT->getPointeeType();
+        if (TempQT.isBorrowQualified()) {
+          return true;
         }
+        TempQT = TempQT.getCanonicalType();
       }
-      FieldTy = tempQT.getCanonicalType();
+      FieldTy = TempQT.getCanonicalType();
+      // extend the bfs frontier
       if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
-        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
-          RecordTypeList.push_back(FieldRecTy);
+        if (Visited.insert(FieldRecTy).second)
+          Queue.push_back(FieldRecTy);
       }
     }
-    ++NextToCheckIndex;
   }
-  hasBorrow = borrowStatus::withoutBorrow;
-  return;
-}
-
-bool RecordType::hasBorrowFields() const {
-  if (hasBorrow == borrowStatus::unInitBorrow)
-    initBorrowStatus();
-  if (hasBorrow == borrowStatus::withBorrow)
-    return true;
   return false;
 }
 

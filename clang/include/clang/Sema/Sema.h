@@ -12440,6 +12440,9 @@ public:
   bool CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType);
   void CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
                                        StringRef Env);
+  /// Check if T contains multi-levels of borrow qualifiers,
+  /// no matter of directly or indirectly via members, report error if so.
+  void CheckNestedBorrowType(SourceLocation ErrLoc, QualType T);
   QualType GetBorrowAddressOperandQualType(QualType resultType,
                                            ExprResult &Input,
                                            const Expr *InputExpr,

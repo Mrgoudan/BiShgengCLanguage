@@ -14,7 +14,7 @@ void test() {
     safe_free((void *_Owned)p2);
 }
 void test2(){
-    int *_Owned arr[1];  // expected-error {{type of array cannot qualified by '_Owned'}}
+    int *_Owned arr[1];  // expected-error {{type of array cannot be qualified by '_Owned'}}
 }
 T func2<T>(T t) {
   T array2d[1][1] = {{t}};       // expected-error {{type of 'int *_Owned[1][1]' cannot be qualified by '_Owned'}}

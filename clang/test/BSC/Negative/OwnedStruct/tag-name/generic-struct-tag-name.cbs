@@ -5,7 +5,7 @@ _Owned struct D<T> {
 };
 
 _Owned struct D<int> b; // expected-error {{must ignore '_Owned struct' tag before struct name}}
-                       // expected-error@-1 {{type of global variable cannot qualified by '_Owned'}}
+                       // expected-error@-1 {{type of global variable cannot be qualified by '_Owned'}}
 int _Owned struct D<T>::f() { // expected-error {{must ignore '_Owned struct' tag before struct name}}
                              // expected-error@-1 {{type of 'int' cannot be qualified by '_Owned'}}
     return 0;

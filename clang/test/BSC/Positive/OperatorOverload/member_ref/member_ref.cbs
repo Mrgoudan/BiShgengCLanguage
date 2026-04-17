@@ -70,49 +70,6 @@ int test2() {
     return 0;
 }
 
-// _Borrow point parameter
-struct CP {
-  struct A *_Borrow a;
-};
-
-__attribute__((operator ->))
-struct A *_Borrow memberDerefC(struct CP * _Borrow s) {
-    return s->a;
-}
-
-int test3() {
-    struct A sa = {1};
-    struct CP scp = {&_Mut sa};
-    int b = scp->m;
-    if (b != 1) {
-        return -1;
-    }
-    scp->m = 2;
-    if (scp->m != 2) {
-        return -1;
-    }
-    return 0;
-}
-
-// const _Borrow point parameter
-struct DP {
-   struct A *_Borrow a;
-};
-
-__attribute__((operator ->))
- struct A *_Borrow memberDerefD(const struct DP * _Borrow s) {
-    return s->a;
-}
-
-int test4() {
-    struct A sa = {1};
-    struct DP sdp = {&_Mut sa};
-    int b = sdp->m;
-    if (b != 1) {
-        return -1;
-    }
-    return 0;
-}
 // multiple deref
 struct FP {
     struct A* a;
@@ -207,7 +164,7 @@ int test7() {
 }
 
 int main(){
-    return test1() || test2() || test3() || test4() || test5() || test6() || test7();
+    return test1() || test2() || test5() || test6() || test7();
 }
 
 // CHECK: #include <stdlib.h>
@@ -217,8 +174,6 @@ int main(){
 // CHECK-NEXT: struct AP;
 // CHECK-NEXT: struct B;
 // CHECK-NEXT: struct BP;
-// CHECK-NEXT: struct CP;
-// CHECK-NEXT: struct DP;
 // CHECK-NEXT: struct FP;
 // CHECK-NEXT: struct GP;
 // CHECK-NEXT: struct RcData_int;
@@ -240,14 +195,6 @@ int main(){
 // CHECK-NEXT: struct BP {
 // CHECK-NEXT:   struct A *a;
 // CHECK-NEXT:   struct B *b;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK-NEXT: struct CP {
-// CHECK-NEXT:     struct A * a;
-// CHECK-NEXT: };
-// CHECK-EMPTY: 
-// CHECK-NEXT: struct DP {
-// CHECK-NEXT:     struct A * a;
 // CHECK-NEXT: };
 // CHECK-EMPTY: 
 // CHECK-NEXT: struct FP {
@@ -317,38 +264,6 @@ int main(){
 // CHECK-NEXT:     memberDerefB(&sbp)->x = 4;
 // CHECK-NEXT:     memberDerefB(&sbp)->y = 5;
 // CHECK-NEXT:     if ((memberDerefB(&sbp)->x + memberDerefB(&sbp)->y) != 9) {
-// CHECK-NEXT:         return -1;
-// CHECK-NEXT:     }
-// CHECK-NEXT:     return 0;
-// CHECK-NEXT: }
-// CHECK-EMPTY: 
-// CHECK:      struct A * memberDerefC(struct CP * s) {
-// CHECK-NEXT:     return s->a;
-// CHECK-NEXT: }
-// CHECK-EMPTY: 
-// CHECK:      int test3(void) {
-// CHECK-NEXT:     struct A sa = {1};
-// CHECK-NEXT:     struct CP scp = {&sa};
-// CHECK-NEXT:     int b = memberDerefC(&scp)->m;
-// CHECK-NEXT:     if (b != 1) {
-// CHECK-NEXT:         return -1;
-// CHECK-NEXT:     }
-// CHECK-NEXT:     memberDerefC(&scp)->m = 2;
-// CHECK-NEXT:     if (memberDerefC(&scp)->m != 2) {
-// CHECK-NEXT:         return -1;
-// CHECK-NEXT:     }
-// CHECK-NEXT:     return 0;
-// CHECK-NEXT: }
-// CHECK-EMPTY: 
-// CHECK:      struct A * memberDerefD(const struct DP * s) {
-// CHECK-NEXT:     return s->a;
-// CHECK-NEXT: }
-// CHECK-EMPTY: 
-// CHECK:      int test4(void) {
-// CHECK-NEXT:     struct A sa = {1};
-// CHECK-NEXT:     struct DP sdp = {&sa};
-// CHECK-NEXT:     int b = memberDerefD(&sdp)->m;
-// CHECK-NEXT:     if (b != 1) {
 // CHECK-NEXT:         return -1;
 // CHECK-NEXT:     }
 // CHECK-NEXT:     return 0;
@@ -426,7 +341,7 @@ int main(){
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      int main(){
-// CHECK-NEXT:     return test1() || test2() || test3() || test4() || test5() || test6() || test7();
+// CHECK-NEXT:     return test1() || test2() || test5() || test6() || test7();
 // CHECK-NEXT: }
 // CHECK-EMPTY: 
 // CHECK:      static  struct Rc_int struct_Rc_int_new(int data) {

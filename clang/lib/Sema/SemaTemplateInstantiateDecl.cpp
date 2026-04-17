@@ -1147,12 +1147,12 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
     QualType T = Var->getType().getCanonicalType();
     if (T.isOwnedQualified() && T->isArrayType()) {
-      // diag::err_owned_inderictOwned_type_check uses a %select{...}0 in the
+      // diag::err_nested_owned_borrow_type_check uses a %select{...}0 in the
       // .td definition, so argument #0 is required to choose (ownedQualified
       // here).
       enum { ownedQualified };
       StringRef Env = "template instantiation";
-      SemaRef.Diag(Var->getBeginLoc(), diag::err_owned_inderictOwned_type_check)
+      SemaRef.Diag(Var->getBeginLoc(), diag::err_nested_owned_borrow_type_check)
           << ownedQualified << "_Owned" << Env;
     }
   }

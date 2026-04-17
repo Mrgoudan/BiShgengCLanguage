@@ -2088,7 +2088,13 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     }
   }
 
-  return Context.getQualifiedType(T, Qs);
+  QualType Result = Context.getQualifiedType(T, Qs);
+#if ENABLE_BSC
+  if (getLangOpts().BSC && !T.isBorrowQualified() && Result.isBorrowQualified()) {
+    CheckNestedBorrowType(Loc, Result);
+  }
+#endif
+  return Result;
 }
 
 QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
