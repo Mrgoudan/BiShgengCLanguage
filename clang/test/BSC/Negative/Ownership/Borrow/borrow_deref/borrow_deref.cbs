@@ -107,7 +107,7 @@ void test() {
     a3 = *b7; // expected-error {{_Borrow type does not allow move ownership}}
     a3 = ((int * _Owned)*b7); // expected-error {{_Borrow type does not allow move ownership}}
     *b7; // expected-warning {{expression result unused}}
-    *b7 = a3; // expected-error {{assign to _Owned value by dereferencing _Borrow}}
+    *b7 = a3; // legal
 
     // Mutable borrow of const int * allows assignment through (direct pointee is not const-qualified on pointer level)
     const int * tmp = &a;

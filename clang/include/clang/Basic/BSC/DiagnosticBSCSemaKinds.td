@@ -189,8 +189,6 @@ def err_ownership_assign_possibly_partially_moved : Error<
   "assign to possibly partially moved value: `%0`, %1 possibly moved">;
 def err_ownership_assign_all_moved : Error<
   "assign to all moved value: `%0`">;
-def err_assign_owned_via_borrow : Error<
-  "assign to _Owned value by dereferencing _Borrow">;
 // field assign
 def err_ownership_assign_field_uninit : Error<
   "assign to part of uninitialized value: `%0`">;

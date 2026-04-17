@@ -751,42 +751,6 @@ bool Sema::CheckEnsureInitFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
   return true;
 }
 
-namespace {
-/// Determine if an expression is dereferencing a borrow pointer
-/// The caller must ensure E is not nullptr
-bool IsDerefBorrow(const Expr *E) {
-  if (const auto *UO =
-          dyn_cast<UnaryOperator>(E->IgnoreParenCasts())) {
-    if (UO->getOpcode() == UO_Deref) {
-      // dereferencing a borrow pointer: *borrow_ptr
-      // or nested: *(*borrow_ptr)
-      return UO->getSubExpr()->getType().isBorrowQualified() ||
-             IsDerefBorrow(UO->getSubExpr());
-    }
-  } else if (const auto *ME =
-                 dyn_cast<MemberExpr>(E->IgnoreParenCasts())) {
-    // accessing a member of a borrow pointer: borrow_ptr->member
-    // or member access without dereferencing semantic: (*borrow_ptr).member
-    return (ME->isArrow() && ME->getBase()->getType().isBorrowQualified()) ||
-           IsDerefBorrow(ME->getBase());
-  }
-  // Since borrow pointers cannot use array subscripting
-  // ArraySubscriptExpr is omitted
-  return false;
-}
-} // namespace
-
-bool Sema::IsDerefBorrowToOwnedPointer(const Expr *E) const {
-  if (!E) {
-    return false;
-  }
-  QualType LValueType = E->getType();
-  if (LValueType.isOwnedQualified() && LValueType->isPointerType()) {
-    return IsDerefBorrow(E);
-  }
-  return false;
-}
-
 // for global borrow variable type check
 void Sema::CheckBorrowOrIndirectBorrowType(SourceLocation ErrLoc, QualType T,
                                            StringRef Env) {

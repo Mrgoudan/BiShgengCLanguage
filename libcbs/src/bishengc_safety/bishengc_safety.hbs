@@ -49,11 +49,9 @@ _Safe T *_Owned safe_malloc<T>(T t) {
 
 _Safe void safe_swap<T>(T* _Borrow left, T* _Borrow right) {
     _Unsafe {
-        T *_Nonnull raw_left = (T *_Nonnull)left;
-        T *_Nonnull raw_right = (T *_Nonnull)right;
-        T tmp = *raw_left;
-        *raw_left = *raw_right;
-        *raw_right = tmp;
+        T tmp = *(T *_Nonnull)left;
+        *left = *(T *_Nonnull)right;
+        *right = tmp;
     }
 }
 

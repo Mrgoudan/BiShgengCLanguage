@@ -14793,33 +14793,26 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
 #if ENABLE_BSC
   // BSC: For function pointer assignment with heterogeneous redeclarations,
   // select the appropriate function declaration based on the destination type.
-  if (getLangOpts().BSC) {
-    if (LHSExpr->getType()->isFunctionPointerType()) {
-      Expr *RHSExpr = RHS.get()->IgnoreParenImpCasts();
-      if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(RHSExpr)) {
-        if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-          const FunctionProtoType *DestFuncType =
-              LHSExpr->getType()
-                  ->getAs<PointerType>()
-                  ->getPointeeType()
-                  ->getAs<FunctionProtoType>();
-          if (DestFuncType) {
-            FunctionDecl *SelectedFD =
-                SelectFunctionDeclForPointerAssignment(RHS.get(), DestFuncType);
-            if (SelectedFD && SelectedFD != FD) {
-              RHS = DeclRefExpr::Create(
-                  Context, SelectedFD->getQualifierLoc(), SourceLocation(),
-                  SelectedFD, false, DRE->getLocation(), SelectedFD->getType(),
-                  DRE->getValueKind());
-            }
+  if (getLangOpts().BSC && LHSExpr->getType()->isFunctionPointerType()) {
+    Expr *RHSExpr = RHS.get()->IgnoreParenImpCasts();
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(RHSExpr)) {
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
+        const FunctionProtoType *DestFuncType =
+            LHSExpr->getType()
+                ->getAs<PointerType>()
+                ->getPointeeType()
+                ->getAs<FunctionProtoType>();
+        if (DestFuncType) {
+          FunctionDecl *SelectedFD =
+              SelectFunctionDeclForPointerAssignment(RHS.get(), DestFuncType);
+          if (SelectedFD && SelectedFD != FD) {
+            RHS = DeclRefExpr::Create(
+                Context, SelectedFD->getQualifierLoc(), SourceLocation(),
+                SelectedFD, false, DRE->getLocation(), SelectedFD->getType(),
+                DRE->getValueKind());
           }
         }
       }
-    }
-    if (IsDerefBorrowToOwnedPointer(LHSExpr)) {
-      Diag(Loc, diag::err_assign_owned_via_borrow)
-          << LHSExpr->getSourceRange();
-      return QualType();
     }
   }
 #endif
