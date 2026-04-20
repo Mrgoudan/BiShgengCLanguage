@@ -4100,6 +4100,8 @@ _Safe int main(void) {
 2. 不被 `volatile` 修饰（指针自己不是 volatile）
 3. 不是通过访问数组得到的指针
 
+不满足以上要求的指针无法通过判空操作修改指针的可空性。如果不可跟踪的指针 `p1` 为 `_Nullable` 且用户需要对其解引用，请先创建一个可跟踪的指针变量 `p2` 并用 `p1` 对其初始化，再对 `p2` 进行判空、解引用。
+
 例子：
 
 ```c
@@ -4119,16 +4121,28 @@ _Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable volatile vp) {
     *q = 2; // ok：逗号表达式最终提取到 q，仍可跟踪
   }
 
-  if (identity(p) != nullptr) {
-    *identity(p) = 3; // error：不是左值，不做可空性状态转移
+  if (identity(p) != nullptr) { // 不是左值，无法更新其可空性
+    *identity(p) = 3; // error
+  }
+  int *_Borrow _Nullable t1 = identity(p); // 应创建可跟踪的临时变量去接
+  if (t1 != nullptr) {
+    *t1 = 3; // ok
   }
 
-  if (vp != nullptr) {
-    *vp = 4; // error：volatile 指针不做可空性状态转移
+  if (vp != nullptr) { // volatile 指针，无法更新其可空性
+    *vp = 4; // error
+  }
+  int *_Borrow _Nullable t2 = vp; // 应创建可跟踪的临时变量去接
+  if (t2 != nullptr) {
+    *t2 = 4; // ok
   }
 
-  if (arr[1] != nullptr) {
-    *arr[1] = 5; // error：通过 [] 得到的指针不做可空性状态转移
+  if (arr[1] != nullptr) { // 指针表达式中有下标运算 '[]'，无法更新指针的可空性
+    *arr[1] = 5; // error
+  }
+  int *_Borrow _Nullable t3 = arr[1];  // 应创建可跟踪的临时变量去接
+  if (t3 != nullptr) {
+    *t3 = 5; // ok
   }
 }
 ```
