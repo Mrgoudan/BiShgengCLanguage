@@ -5789,6 +5789,44 @@ _Safe void array_example(void) {
 }
 ```
 
+支持的参数形式（取地址表达式的 lvalue 必须是下列之一的组合）：
+
+| 形式 | 说明 |
+|------|------|
+| `&x` | 局部变量；若 `x` 是 `ensure_init` 指针参数，同时将 `*x` 标记为已初始化 |
+| `&x.f.g...` | 局部变量的结构体字段（任意嵌套深度，纯字段访问） |
+| `&*p` | `ensure_init` 指针参数所指向的整个对象 |
+| `&p->f.g...` | `ensure_init` 指针所指向结构体的字段（任意嵌套深度，纯字段访问） |
+
+对于 `&p->f...` 形式，当所指向结构体的所有字段都被标记为已初始化后，`*p` 会被自动提升为已初始化（满足 `ensure_init` 契约）。
+
+```c
+struct Pair { int a; int b; };
+
+void assume_through_ptr(struct Pair *__attribute__((ensure_init)) out) {
+    out->a = 1;
+    _Unsafe { __assume_initialized(&out->b); } // 所有字段已覆盖 → *out 已初始化
+}
+```
+
+**限制：参数路径中不能包含数组下标（`[i]`）。** 初始化分析将数组视为整体单元（不追踪单个元素的状态），因此必须对整个数组断言，而不能断言某个元素。
+
+```c
+struct WithArr { int arr[3]; };
+struct Outer { struct WithArr s[2]; };
+
+_Safe void array_subscript_example(void) {
+    struct WithArr w;
+    _Unsafe { __assume_initialized(&w.arr); }    // ok: 断言整个数组字段
+    // _Unsafe { __assume_initialized(&w.arr[0]); } // error: 参数不能包含数组下标
+
+    struct Outer o;
+    _Unsafe { __assume_initialized(&o); }        // ok: 断言整个结构体
+    // _Unsafe { __assume_initialized(&o.s[0].arr); }    // error: 路径中间含下标
+    // _Unsafe { __assume_initialized(&o.s[0].arr[0]); } // error: 末端含下标
+}
+```
+
 #### 3.6.6. 检查模式
 
 通过编译选项 `-uninit-check=<mode>` 控制初始化分析的范围：

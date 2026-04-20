@@ -2232,14 +2232,33 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     }
     Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
-    bool Valid = false;
-    if (auto *UO = dyn_cast<UnaryOperator>(Arg)) {
-      if (UO->getOpcode() == UO_AddrOf)
-        Valid = true;
-    }
-    if (!Valid) {
+    auto *UO = dyn_cast<UnaryOperator>(Arg);
+    if (!UO || UO->getOpcode() != UO_AddrOf) {
       Diag(Arg->getBeginLoc(), diag::err_assume_init_bad_arg);
       return ExprError();
+    }
+    // The init analysis tracks state at (local, [FieldIndex...]) granularity;
+    // it cannot represent "element i of some array". Reject any path
+    // containing an array subscript so users rewrite to the enclosing
+    // array (e.g. '&x.arr' instead of '&x.arr[i]').
+    const Expr *E = UO->getSubExpr()->IgnoreParenCasts();
+    while (E) {
+      if (isa<ArraySubscriptExpr>(E)) {
+        Diag(E->getBeginLoc(), diag::err_assume_init_array_subscript);
+        Diag(E->getBeginLoc(), diag::note_assume_init_array_subscript_hint);
+        return ExprError();
+      }
+      if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+        E = ME->getBase()->IgnoreParenCasts();
+        continue;
+      }
+      if (const auto *Inner = dyn_cast<UnaryOperator>(E)) {
+        if (Inner->getOpcode() == UO_Deref) {
+          E = Inner->getSubExpr()->IgnoreParenCasts();
+          continue;
+        }
+      }
+      break;
     }
     break;
   }

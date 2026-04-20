@@ -76,3 +76,26 @@ void test_array(void) {
     _Unsafe { __assume_initialized(&arr); }
     use_int(arr[0]); // ok
 }
+
+// Whole-array field as leaf: &x.arr addresses the array as a whole (no
+// subscript), so it's accepted and marks the array field initialized.
+struct WithArr { int arr[3]; };
+_Safe void use_with_arr(struct WithArr w);
+
+_Safe void test_whole_array_field(void) {
+    struct WithArr w;
+    _Unsafe { __assume_initialized(&w.arr); }
+    use_with_arr(w); // ok — sole field covered, struct promoted
+}
+
+// Nested struct field: &x.inner.f is accepted (pure Field path).
+struct Leaf { int x; };
+struct Nest { struct Leaf l; int y; };
+_Safe void use_nest(struct Nest n);
+
+_Safe void test_nested_field(void) {
+    struct Nest n;
+    _Unsafe { __assume_initialized(&n.l.x); }
+    n.y = 0;
+    use_nest(n); // ok — l.x + y → promotes l → promotes n
+}

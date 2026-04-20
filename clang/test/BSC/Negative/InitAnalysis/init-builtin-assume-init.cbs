@@ -42,3 +42,43 @@ _Safe void test_array_decay(void) {
     _Unsafe { __assume_initialized(arr); } // expected-error {{__assume_initialized requires '&' expression as argument}}
     use_int(arr[0]);
 }
+
+// --- Array-subscript rejection ---------------------------------------------
+// The init analysis tracks state at (local, [FieldIndex...]) granularity —
+// it cannot represent "element i of some array". Any array subscript in the
+// address-of path is rejected; users must assert the enclosing array whole.
+
+struct Sub { int a[2]; };
+struct Outer { struct Sub s[2]; };
+struct WithArr { int arr[3]; };
+
+// Subscript on a plain array: reject.
+_Safe void test_reject_arr_element(void) {
+    int arr[3];
+    _Unsafe { __assume_initialized(&arr[0]); } // expected-error {{__assume_initialized argument cannot contain an array subscript}} expected-note {{the init analysis tracks arrays as whole units}}
+}
+
+// Subscript on a struct's array field: reject.
+_Safe void test_reject_field_element(void) {
+    struct WithArr w;
+    _Unsafe { __assume_initialized(&w.arr[0]); } // expected-error {{__assume_initialized argument cannot contain an array subscript}} expected-note {{the init analysis tracks arrays as whole units}}
+}
+
+// Subscript in the middle of the path: reject even though leaf is a Field
+// (the path segment "s[0].a" is not representable).
+_Safe void test_reject_mid_subscript(void) {
+    struct Outer ss1;
+    _Unsafe { __assume_initialized(&ss1.s[0].a); } // expected-error {{__assume_initialized argument cannot contain an array subscript}} expected-note {{the init analysis tracks arrays as whole units}}
+}
+
+// Two subscripts deep: reject.
+_Safe void test_reject_two_subscripts(void) {
+    struct Outer ss1;
+    _Unsafe { __assume_initialized(&ss1.s[0].a[0]); } // expected-error {{__assume_initialized argument cannot contain an array subscript}} expected-note {{the init analysis tracks arrays as whole units}}
+}
+
+// Subscript through an ensure_init pointer: reject (same rule).
+_Safe void test_reject_ensure_init_subscript(
+    struct WithArr *__attribute__((ensure_init)) out) {
+    _Unsafe { __assume_initialized(&out->arr[0]); } // expected-error {{__assume_initialized argument cannot contain an array subscript}} expected-note {{the init analysis tracks arrays as whole units}}
+}

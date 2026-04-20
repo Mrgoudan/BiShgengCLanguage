@@ -179,6 +179,11 @@ def err_ensure_init_funcptr_incompatible : Error<
 // __assume_initialized
 def err_assume_init_bad_arg : Error<
   "__assume_initialized requires '&' expression as argument">;
+def err_assume_init_array_subscript : Error<
+  "__assume_initialized argument cannot contain an array subscript">;
+def note_assume_init_array_subscript_hint : Note<
+  "the init analysis tracks arrays as whole units (no per-element state); "
+  "address the enclosing array instead (e.g. '&x.arr' for '&x.arr[i]')">;
 
 // assign
 def err_ownership_assign_owned : Error<

@@ -260,13 +260,19 @@ InitLattice InitAnalysis::transferTerminator(const Terminator &T,
             // Field through pointer deref: reuse getFieldPath on the
             // post-Deref sub-place. tryPromoteParent lifts state to the
             // whole-pointee level when all siblings become initialized.
+            // Defense-in-depth: Sema already rejects array subscripts in
+            // the address-of path, so we additionally require the remaining
+            // projections to be pure Field (no Index/other).
             Place SubPlace(ArgPlace.Base, ArgPlace.Projections.slice(1),
                            ArgPlace.Ty, ArgPlace.Loc);
             if (auto FP = getFieldPath(SubPlace))
-              markFieldInit(Result, *FP, Changed);
+              if (FP->Indices.size() == SubPlace.Projections.size())
+                markFieldInit(Result, *FP, Changed);
           }
         } else if (auto FP = getFieldPath(ArgPlace)) {
-          markFieldInit(Result, *FP, Changed);
+          // Same defense-in-depth for &x.f... on a local.
+          if (FP->Indices.size() == ArgPlace.Projections.size())
+            markFieldInit(Result, *FP, Changed);
         }
       }
       return Result;
