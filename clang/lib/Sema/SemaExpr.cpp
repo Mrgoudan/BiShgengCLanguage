@@ -14323,18 +14323,7 @@ static bool IsReadonlyMessage(Expr *E, Sema &S) {
 /// 'const' due to being captured within a block?
 enum NonConstCaptureKind { NCCK_None, NCCK_Block, NCCK_Lambda };
 static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
-  #if ENABLE_BSC
-  if (S.getLangOpts().BSC) {
-    // FIXME: Change these ASSERT to Diagostic
-    if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
-      assert(E->isLValue() && (E->getType().isConstQualified()
-             || UO->getSubExpr()->getType().isConstBorrow()));
-    else
-      assert(E->isLValue() && (E->getType().isConstQualified()));
-  }
-  #else
   assert(E->isLValue() && E->getType().isConstQualified());
-  #endif
   E = E->IgnoreParens();
 
   // Must be a reference to a declaration from an enclosing scope.
