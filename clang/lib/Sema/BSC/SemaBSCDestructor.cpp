@@ -787,7 +787,9 @@ void Sema::DesugarDestructor(RecordDecl *RD) {
   std::stack<FieldDecl *> Fields = CollectInstanceFieldWithDestructor(RD);
   BSCDataflowAnalysisFlag = true;
   HandleBSCDestructorBody(RD, Destructor, Fields);
-  BSCDataflowAnalysis(Destructor);
+  if (getDiagnostics().areAllErrorsFromBSCAnalyses()) {
+    BSCDataflowAnalysis(Destructor);
+  }
   BSCDataflowAnalysisFlag = false;
 }
 

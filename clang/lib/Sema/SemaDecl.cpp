@@ -16399,11 +16399,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (LangOpts.BSC) {
     if (auto FD = dyn_cast_or_null<FunctionDecl>(dcl)) {
       BSCDataflowAnalysisFlag = true;
-      if (getDiagnostics().getNumErrors() ==
-              getDiagnostics().getNumOwnershipErrors() +
-              getDiagnostics().getNumBorrowCheckErrors() +
-              getDiagnostics().getNumNullabilityCheckErrors() +
-              getDiagnostics().getNumInitCheckErrors()) {
+      if (getDiagnostics().areAllErrorsFromBSCAnalyses()) {
         bool DoAnalysis = true;
         // Skip function template and class template
         if (const auto *RD = dyn_cast<RecordDecl>(FD->getParent())) {

@@ -879,6 +879,13 @@ public:
   void increaseNullabilityCheckErrors() { NumNullabilityCheckErrors++; }
   unsigned getNumInitCheckErrors() const { return NumInitCheckErrors; }
   void increaseInitCheckErrors() { NumInitCheckErrors++; }
+  bool areAllErrorsFromBSCAnalyses() const {
+    return getNumErrors() ==
+      getNumOwnershipErrors() +
+      getNumBorrowCheckErrors() +
+      getNumNullabilityCheckErrors() +
+      getNumInitCheckErrors();
+  }
   #endif
 
   /// Return an ID for a diagnostic with the specified format string and
