@@ -76,3 +76,20 @@ S *_Owned test6(void *_Owned p) {
 void test7(void *_Owned p) {
   consume_s((S *_Owned)p); // expected-error {{cannot pass or return a cast from 'void *_Owned' to 'S *_Owned' because it would use a moved value}}
 }
+
+S *_Owned test8(int cond, void *_Owned a, void *_Owned b) {
+  return cond ? (S *_Owned)a : (S *_Owned)b; // expected-error {{cannot pass or return a cast from 'void *_Owned' to 'S *_Owned' because it would use a moved value}}
+} // expected-error {{memory leak of value: `a`}}
+  // expected-error@-1 {{memory leak of value: `b`}}
+
+void test9(int cond, void *_Owned a, void *_Owned b) {
+  consume_s(cond ? (S *_Owned)a : (S *_Owned)b); // expected-error {{cannot pass or return a cast from 'void *_Owned' to 'S *_Owned' because it would use a moved value}}
+} // expected-error {{memory leak of value: `a`}}
+  // expected-error@-1 {{memory leak of value: `b`}}
+
+void test10(int cond, void *_Owned a, S *_Owned b) {
+  S *_Owned s = cond ? (S *_Owned)a : b;
+  consume_s(s); // expected-error {{use of all moved value: `s`}}
+} // expected-error {{memory leak of value: `a`}}
+  // expected-error@-1 {{memory leak of value: `b`}}
+  // expected-error@-2 {{field memory leak of value: `b`, b.p is leak}}

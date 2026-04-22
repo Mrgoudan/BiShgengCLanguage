@@ -130,3 +130,16 @@ void test13(struct One *_Owned h, void *_Owned erased) {
   h->p = (int *_Owned)erased;
   consume_one(h);
 }
+
+S *_Owned test14(int cond, void *_Owned a) {
+  return cond ? (S *_Owned)a : (S *_Owned)a;
+}
+
+void test15(int cond, void *_Owned a) {
+  consume_s(cond ? (S *_Owned)a : (S *_Owned)a);
+}
+
+void test16(int cond, void *_Owned a) {
+  S *_Owned s = cond ? (S *_Owned)a : (S *_Owned)a;
+  consume_s(s);
+}

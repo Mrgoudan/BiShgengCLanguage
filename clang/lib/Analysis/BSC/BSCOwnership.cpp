@@ -174,6 +174,11 @@ static bool IsCastFromVoidPointer(Expr *E) {
     }
   }
 
+  if (AbstractConditionalOperator *ACO =
+          dyn_cast<AbstractConditionalOperator>(E)) {
+    return IsCastFromVoidPointer(ACO->getTrueExpr()) ||
+           IsCastFromVoidPointer(ACO->getFalseExpr());
+  }
   if (CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(E)) {
     QualType QT = CSCE->getType();
     if (QT->isPointerType() && QT.isOwnedQualified() &&
