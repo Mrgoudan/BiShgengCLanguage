@@ -2154,12 +2154,21 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
       stat.setToAllMoved(LHS);
     }
   } else {
+    // for operators doesn't consume ownership, change the operation to GetAddr
+    // instead of inheritance from parent operation
+    Operation VisitMode =
+        BO->isComparisonOp() || BO->isLogicalOp() || BO->isAdditiveOp()
+            ? GetAddr
+            : op;
+    op = VisitMode;
     Visit(BO->getLHS());
+    op = VisitMode;
     Visit(BO->getRHS());
   }
 }
 
-void TransferFunctions::VisitAbstractConditionalOperator(AbstractConditionalOperator* ACO) {
+void TransferFunctions::VisitAbstractConditionalOperator(
+    AbstractConditionalOperator *ACO) {
   Operation Inherited = op;
 
   op = None;
@@ -2368,12 +2377,10 @@ void TransferFunctions::HandleInitListExpr(VarDecl *VD, RecordDecl *RD, InitList
 }
 
 void TransferFunctions::VisitInitListExpr(InitListExpr *ILE) {
-  for (unsigned int i = 0, e = ILE->getNumInits(); i != e; ++i) {
-    if (Expr *Init = ILE->getInit(i)) {
-      op = Move;
-      Visit(Init);
-      op = None;
-    }
+  for (auto *Init : ILE->inits()) {
+    op = Move;
+    Visit(Init);
+    op = None;
   }
 }
 

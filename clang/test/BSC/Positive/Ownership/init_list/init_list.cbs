@@ -1,0 +1,112 @@
+// RUN: %clang_cc1 %s
+// expected-no-diagnostics
+
+void exhaust<T>(T *_Owned);
+
+typedef struct {} Empty;
+typedef struct {
+    int a;
+} Plain;
+
+typedef struct {
+    Plain p;
+} Nested;
+
+typedef struct {
+    int a[2];
+} ArrayWrapper;
+
+typedef struct {
+    int *_Borrow _Nullable bp;
+    Plain p;
+} BorrowNullableMember;
+
+typedef struct {
+    BorrowNullableMember member;
+    ArrayWrapper arrays[2];
+    Nested nested[2];
+} DeepNested;
+
+int *_Owned _Nullable fundamental(int *_Owned _Nullable p,
+                                  int *_Owned _Nullable q) {
+    int a = { p != nullptr };
+    int b = { q == nullptr };
+    int c = { (!p) || q };
+    int d = { p && (!q) };
+    int e = { (p != nullptr) + (q != nullptr) };
+    int f = { ((p != nullptr), (q == nullptr)) };
+    exhaust(q);
+    return p;
+}
+
+Empty *_Owned _Nullable case_empty_param(Empty *_Owned _Nullable p,
+                                         Empty *_Owned _Nullable q) {
+    int tag = { (!p) || q };
+    Plain plain = { p != q };
+    Nested nested = { { p == nullptr } };
+    ArrayWrapper arr = { { p != nullptr, q == nullptr } };
+    Empty e = {};
+    exhaust(q);
+    return p;
+}
+
+Plain *_Owned _Nullable case_plain_param(Plain *_Owned _Nullable p,
+                                         Plain *_Owned _Nullable q) {
+    int tag = { p && (!q) };
+    Empty e = {};
+    Plain plain = { p != q };
+    Nested nested = { { q == nullptr } };
+    ArrayWrapper arr = { { p != nullptr, q != nullptr } };
+    exhaust(q);
+    return p;
+}
+
+Nested *_Owned _Nullable case_nested_param(Nested *_Owned _Nullable p,
+                                           Nested *_Owned _Nullable q) {
+    int tag = { (!p) || (q != nullptr) };
+    Empty e = {};
+    Plain plain = { p != q };
+    Nested nested = { { p != nullptr } };
+    ArrayWrapper arr = { { p != nullptr, q == nullptr } };
+    exhaust(q);
+    return p;
+}
+
+ArrayWrapper *_Owned _Nullable case_array_wrapper_param(
+    ArrayWrapper *_Owned _Nullable p, ArrayWrapper *_Owned _Nullable q) {
+    int tag = { (p && (!q)) || (p != q) };
+    Empty e = {};
+    Plain plain = { p != q };
+    Nested nested = { { p == nullptr } };
+    ArrayWrapper arr = { { p != nullptr, q == nullptr } };
+    exhaust(q);
+    return p;
+}
+
+BorrowNullableMember *_Owned _Nullable case_borrow_member_param(
+    BorrowNullableMember *_Owned _Nullable p,
+    BorrowNullableMember *_Owned _Nullable q) {
+    int tag = { (!p) || q };
+    Plain plain = { p != q };
+    Nested nested = { { q == nullptr } };
+    ArrayWrapper arr = { { p != nullptr, q != nullptr } };
+    BorrowNullableMember member = { nullptr, { p != q } };
+    exhaust(q);
+    return p;
+}
+
+DeepNested *_Owned _Nullable case_deep_nested_param(
+    DeepNested *_Owned _Nullable p, DeepNested *_Owned _Nullable q) {
+    int tag = { ((!p) || q) && (p != q) };
+    Plain plain = { p != q };
+    Nested nested = { { q == nullptr } };
+    ArrayWrapper arr = { { p != nullptr, q != nullptr } };
+    BorrowNullableMember member = { nullptr, { p != q } };
+    DeepNested dn = {
+        { nullptr, { p != q } },
+        { { { p != nullptr, q == nullptr } }, { { p != q, q != nullptr } } },
+        { { { p != nullptr } }, { { q == nullptr } } }
+    };
+    exhaust(q);
+    return p;
+}
