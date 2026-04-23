@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+struct S<T>;  // expected-note {{template is declared here}}
+S<int> a;  // expected-error {{implicit instantiation of undefined template 'struct S<int>'}}
+
+struct U<T>;  // expected-note {{template is declared here}}
+struct U<int> b;  // expected-error {{implicit instantiation of undefined template 'struct U<int>'}}
+
+struct V<T>;  // expected-note {{template is declared here}}
+void f(void) {
+  V<int> v;  // expected-error {{implicit instantiation of undefined template 'struct V<int>'}}
+}

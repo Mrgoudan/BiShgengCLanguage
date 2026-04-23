@@ -2678,6 +2678,13 @@ bool Sema::InstantiateClass(SourceLocation PointOfInstantiation,
                             TemplateSpecializationKind TSK, bool Complain) {
 #if ENABLE_BSC
   RecordDecl *PatternDef = cast_or_null<RecordDecl>(Pattern->getDefinition());
+  if (getLangOpts().BSC) {
+    if (DiagnoseUninstantiableTemplate(
+            PointOfInstantiation, Instantiation,
+            Instantiation->getInstantiatedFromMemberClass(),
+            Pattern, PatternDef, TSK, Complain))
+      return true;
+  }
   if (getLangOpts().CPlusPlus) {
     if (DiagnoseUninstantiableTemplate(
             PointOfInstantiation, Instantiation,

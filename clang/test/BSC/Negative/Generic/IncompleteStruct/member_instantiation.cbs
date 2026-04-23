@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// TODO: Improve the error message to 'implicit instantiation of template 'struct S<int>' within its own definition'
+
+struct S<T> { // expected-note {{template is declared here}}
+  struct S<int> a; // expected-error {{implicit instantiation of undefined template 'struct S<int>'}}
+};
