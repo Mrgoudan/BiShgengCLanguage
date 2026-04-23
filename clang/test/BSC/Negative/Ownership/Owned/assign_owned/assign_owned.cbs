@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify %s
 
 _Safe T *_Owned safe_malloc<T>(T t);
+_Safe void safe_free(void* _Owned p);
+
 _Safe void test1(void) {
     int *_Owned _Nullable p = nullptr;
     int cond = 1;
@@ -9,4 +11,98 @@ _Safe void test1(void) {
         *p = 10;
     }
     p = nullptr; // expected-error{{assign to _Owned value: `p`}}
+}
+
+_Safe int *_Owned basic(int *_Owned p, int val) {
+    safe_free((void *_Owned) p);
+    *p = val; // expected-error {{use of moved value: `p`}}
+    return p; // expected-error {{use of moved value: `p`}}
+}
+
+typedef struct {
+    int a;
+} Plain;
+
+_Safe Plain *_Owned custom(Plain *_Owned p, Plain val){
+    safe_free((void *_Owned) p);
+    *p = val; // expected-error {{use of moved value: `p`}}
+    return p; // expected-error {{use of moved value: `p`}}
+}
+
+typedef struct {
+    int id;
+    int scores[4];
+    int *_Owned head;
+    int *_Owned _Nullable maybe_head;
+} OwnedLeaf;
+
+typedef struct {
+    int kind;
+    int ids[2];
+    int *_Borrow alias;
+    int *_Borrow _Nullable maybe_alias;
+} BorrowLeaf;
+
+typedef struct {
+    Plain plain;
+    OwnedLeaf owned_leaf;
+    BorrowLeaf borrow_leaf;
+    Plain plain_items[2];
+    OwnedLeaf *_Owned child;
+    OwnedLeaf *_Owned _Nullable maybe_child;
+    int *_Borrow view;
+    int *_Borrow _Nullable maybe_view;
+    int flags[3];
+} MixedTop;
+
+_Safe MixedTop *_Owned custom_nested(MixedTop *_Owned p, MixedTop val) {
+    safe_free((void *_Owned) p->owned_leaf.head);
+    if (p->owned_leaf.maybe_head) {
+        safe_free((void *_Owned) p->owned_leaf.maybe_head);
+    }
+    safe_free((void *_Owned) p->child->head);
+    if (p->child->maybe_head) {
+        safe_free((void *_Owned) p->child->maybe_head);
+    }
+    safe_free((void *_Owned) p->child);
+    if (p->maybe_child) {
+        safe_free((void *_Owned) p->maybe_child->head);
+        if (p->maybe_child->maybe_head) {
+            safe_free((void *_Owned) p->maybe_child->maybe_head);
+        }
+        safe_free((void *_Owned) p->maybe_child);
+    }
+
+    safe_free((void *_Owned) p);
+    *p = val; // expected-error {{use of moved value: `p`}}
+    return p; // expected-error {{use of moved value: `p`}}
+}
+
+_Safe MixedTop *_Owned custom_star_assign_uninit(MixedTop val) {
+    MixedTop *_Owned p;
+    *p = val; // expected-error {{use of uninitialized value: `p`}}
+    return p; // expected-error {{use of uninitialized value: `p`}}
+}
+
+_Safe void custom_star_assign_possibly_uninit(int cond, MixedTop val) {
+    MixedTop *_Owned _Nullable p;
+    if (cond) {
+        p = nullptr;
+    }
+    *p = val; // expected-error {{nullable pointer cannot be dereferenced}}
+    // expected-error@-1 {{use of possibly uninitialized value: `p`}}
+}
+
+typedef struct {
+    int *_Owned left;
+    int *_Owned right;
+} PairOwned;
+
+_Safe PairOwned *_Owned custom_star_assign_all_moved(PairOwned *_Owned p,
+                                                     PairOwned val) {
+    safe_free((void *_Owned) p->left);
+    safe_free((void *_Owned) p->right);
+    // *p is all moved
+    *p = val;
+    return p;
 }

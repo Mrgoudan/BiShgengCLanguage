@@ -151,7 +151,7 @@ public:
     llvm::SmallVector<OwnershipDiagInfo>
     checkOPSAssign(const VarDecl *VD, const SourceLocation &Loc);
     llvm::SmallVector<OwnershipDiagInfo>
-    checkOPSAssignStar(const VarDecl *VD, const SourceLocation &Loc);
+    checkOPSDerefAssign(const VarDecl *VD, const SourceLocation &Loc);
     llvm::SmallVector<OwnershipDiagInfo>
     checkOPSFieldAssign(const VarDecl *VD, const SourceLocation &Loc,
                         std::string fullFieldName);

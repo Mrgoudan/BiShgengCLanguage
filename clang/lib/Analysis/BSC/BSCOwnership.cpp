@@ -1112,12 +1112,16 @@ Ownership::OwnershipStatus::checkOPSAssign(const VarDecl *VD,
 }
 
 SmallVector<OwnershipDiagInfo>
-Ownership::OwnershipStatus::checkOPSAssignStar(const VarDecl *VD,
+Ownership::OwnershipStatus::checkOPSDerefAssign(const VarDecl *VD,
                                                const SourceLocation &Loc) {
   SmallVector<OwnershipDiagInfo> diags;
 
-  if (!is(VD, AllMoved)) {
-    if (has(VD, Ownership::Status::Owned) || is(VD, Ownership::Status::Owned)) {
+  if (!is(VD, Ownership::Status::AllMoved)) {
+    if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) {
+      diags.push_back(OwnershipDiagInfo(
+          Loc, OwnershipDiagKind::InvalidUseOfMoved, VD->getNameAsString()));
+    } else if (has(VD, Ownership::Status::Owned) ||
+               is(VD, Ownership::Status::Owned)) {
       diags.push_back(OwnershipDiagInfo(
           Loc, OwnershipDiagKind::InvalidAssignOfOwned, VD->getNameAsString()));
     } else if (is(VD, Ownership::Status::PartialMoved)) {
@@ -1134,7 +1138,7 @@ Ownership::OwnershipStatus::checkOPSAssignStar(const VarDecl *VD,
   if (diags.empty()) {
     OPSOwnedOwnedFields[VD] = OPSAllOwnedFields[VD];
     resetAll(VD);
-    set(VD, Owned);
+    set(VD, Ownership::Status::Owned);
   }
   return diags;
 }
@@ -1639,7 +1643,7 @@ Ownership::OwnershipStatus::checkBOPAssign(const VarDecl *VD,
       diags.push_back(OwnershipDiagInfo(
           Loc, OwnershipDiagKind::InvalidAssignOfPossiblyPartiallyMoved,
           VD->getNameAsString(), collectMovedFields(VD)));
-    } else if (is(VD, AllMoved)) {
+    } else if (is(VD, Ownership::Status::AllMoved)) {
       diags.push_back(
           OwnershipDiagInfo(Loc, OwnershipDiagKind::InvalidAssignOfAllMoved,
                             VD->getNameAsString()));
@@ -2434,7 +2438,7 @@ void TransferFunctions::HandleDREAssign(const DeclRefExpr *DRE,
         reporter.addDiags(diags);
       } else if (fullFieldName == "*") {
         SmallVector<OwnershipDiagInfo> diags =
-            stat.checkOPSAssignStar(VD, DRE->getLocation());
+            stat.checkOPSDerefAssign(VD, DRE->getLocation());
         reporter.addDiags(diags);
       } else {
         if (fullFieldName[fullFieldName.size() - 1] == '*') {
