@@ -1,0 +1,8 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Owned struct S{~S
+// expected-note@-1 {{to match this '{'}}
+// expected-error@-2 {{'~S' cannot be the name of a variable or data member}}
+// expected-error@-3 {{expected ';' at end of declaration list}}
+// expected-error@-4 {{expected ';' after struct}}
+// expected-error {{expected '}'}}

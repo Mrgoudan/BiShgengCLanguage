@@ -1288,7 +1288,7 @@ Parser::ParseBSCClassMemberDeclaration(AccessSpecifier AS,
     // or an error, bail out.
     SourceLocation CommaLoc;
     if (!TryConsumeToken(tok::comma, CommaLoc)) {
-      if (getLangOpts().BSC && ThisDecl->getAsFunction()) {
+      if (getLangOpts().BSC && ThisDecl && ThisDecl->getAsFunction()) {
         if (BSCMethodDecl *BSCMD =
                 dyn_cast<BSCMethodDecl>(ThisDecl->getAsFunction())) {
           if (BSCMD->isDestructor() && !ThisDecl->isInvalidDecl()) {
