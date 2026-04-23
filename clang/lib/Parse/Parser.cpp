@@ -2099,15 +2099,27 @@ bool Parser::TryAnnotateTypeOrScopeToken(
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
 
   CXXScopeSpec SS;
-  // For code like:
-  // @Code
-  //    foo<int, int>(1,2);
-  if (getLangOpts().CPlusPlus
+
 #if ENABLE_BSC
-      || (getLangOpts().BSC && Tok.is(tok::identifier) &&
-          PP.LookAhead(0).is(tok::less))
+  if (getLangOpts().BSC) {
+    // For code like:
+    // @Code
+    //    ; ::
+    //    { :: }
+    if (Tok.is(tok::coloncolon))
+      return true;
+    // For code like:
+    // @Code
+    //    foo<int, int>(1,2);
+    if (Tok.is(tok::identifier) && PP.LookAhead(0).is(tok::less))
+      if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                         /*ObjectHasErrors=*/false,
+                                         /*EnteringContext*/ false))
+        return true;
+  }
 #endif
-  )
+
+  if (getLangOpts().CPlusPlus)
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                        /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))

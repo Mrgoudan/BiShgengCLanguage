@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+void foo1() {
+  ::
+// expected-error@-1 {{unsupported global scope specifier '::'}}
+}
+// expected-error@-1 {{expected identifier or '('}}
+
+void foo2() {
+  ::;
+// expected-error@-1 {{unsupported global scope specifier '::'}}
+// expected-warning@-2 {{declaration does not declare anything}}
+}
+
+void foo3() {
+  ::func;
+// expected-error@-1 {{unsupported global scope specifier '::'}}
+// expected-warning@-2 {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}
+}
