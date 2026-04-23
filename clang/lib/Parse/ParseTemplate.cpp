@@ -47,7 +47,7 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
 #if ENABLE_BSC
   // Parse BSC template declaration
   // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
-  if (isBSCTemplateDecl(Tok)) {
+  if (isBSCTemplateDecl()) {
     return ParseBSCGenericDeclaration(Context, DeclEnd, AccessAttrs, AS);
   }
 #endif

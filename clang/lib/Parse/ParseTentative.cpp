@@ -1127,7 +1127,7 @@ bool Parser::isTentativelyDeclared(IdentifierInfo *II) {
 //   1. find template parameter list syntax structure "identifier <T, ..>"
 //   2. find declaration syntax(different from spcialization syntax)
 //     "<T, ..> ()" in template function, structure, typealias
-bool Parser::isBSCTemplateDecl(Token tok) {
+bool Parser::isBSCTemplateDecl() {
   // 1. check language
   if (!getLangOpts().BSC)
     return false;

@@ -1064,7 +1064,7 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
 #if ENABLE_BSC
     // parse BSC template declaration
     // TODO: change if entrance condition, abandon isBSCTemplateDecl()
-    if (isBSCTemplateDecl(Tok)) {
+    if (isBSCTemplateDecl()) {
       // parsing function (enter next level of parsing function)
       SourceLocation DeclEnd;
       ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);

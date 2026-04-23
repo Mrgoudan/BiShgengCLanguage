@@ -2698,7 +2698,7 @@ private:
   bool isTentativelyDeclared(IdentifierInfo *II);
 
 #if ENABLE_BSC
-  bool isBSCTemplateDecl(Token tok);
+  bool isBSCTemplateDecl();
 #endif
 
   // "Tentative parsing" functions, used for disambiguation. If a parsing error

@@ -1802,7 +1802,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     }
 
 #if ENABLE_BSC
-    if (isBSCTemplateDecl(Tok)) {
+    if (isBSCTemplateDecl()) {
       ProhibitAttributes(DeclAttrs);
       SingleDecl =
           ParseDeclarationStartingWithTemplate(Context, DeclEnd, DeclAttrs);
@@ -1844,7 +1844,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     }
     // parse BSC generic declaration
     // TODO: change if statement entrance condition, abandon isBSCTemplateDecl()
-    if (isBSCTemplateDecl(Tok)) {
+    if (isBSCTemplateDecl()) {
       ProhibitAttributes(DeclAttrs);
       SingleDecl =
           ParseDeclarationStartingWithTemplate(Context, DeclEnd, DeclAttrs);
