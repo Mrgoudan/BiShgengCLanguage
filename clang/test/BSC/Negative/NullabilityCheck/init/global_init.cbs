@@ -1,0 +1,81 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+#define NULL ((void *)0)
+
+int var = 1;
+int *_Nonnull globalP1 = &var;
+int *_Nonnull globalP2; // expected-error {{type contains nonnull pointer must be properly initialized}}
+int *_Nonnull arr[1]={nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+int* _Nonnull p2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+// Test global brace initialization with null
+int *_Nonnull globalP3 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+int *_Nonnull globalP4 = {0}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+int *_Nonnull globalP5 = {NULL}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+struct T {
+  int a;
+  int* _Nonnull p;
+};
+
+// _Nonnull can't be zero init
+struct T t2={0}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+
+struct S{
+  int *_Nonnull p;
+};
+
+struct S2{
+  struct S s1;
+};
+
+struct S s1;  // expected-error {{type contains nonnull pointer must be properly initialized}}
+struct S2 s2; // expected-error {{type contains nonnull pointer must be properly initialized}}
+
+// Test global struct with null initialization
+struct S s3 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+struct S s4 = {0}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+struct S s5 = {NULL}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+// Test global array of nonnull pointers with null
+int *_Nonnull globalArr[2] = {&var, nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+int *_Nonnull globalArr2[2] = {nullptr, &var}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+int *_Nonnull globalArr3[2] = {nullptr, nullptr}; // expected-error 2 {{nonnull pointer cannot be assigned by nullable pointer}}
+
+union U {
+  int a[2];
+  int* _Nonnull p;
+};
+
+// Test global union with null
+union U u1 = { .p = nullptr }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+// Test static global variables with null
+static int *_Nonnull staticP1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+static int *_Nonnull staticP2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+static int *_Nonnull staticP3 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+static struct S staticS; // expected-error {{type contains nonnull pointer must be properly initialized}}
+static struct S staticS2 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+// Test thread-local global variables with null
+_Thread_local int *_Nonnull tlP1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+_Thread_local int *_Nonnull tlP2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+_Thread_local struct S tlS; // expected-error {{type contains nonnull pointer must be properly initialized}}
+
+// Test const global variables with null
+const int *_Nonnull constP1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+const int *_Nonnull constP2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+// Test volatile global variables with null
+volatile int *_Nonnull volatileP1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+volatile int *_Nonnull volatileP2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
+// Test nested struct with null in global scope
+struct Nested {
+  struct S s;
+  int *_Nonnull arr[2];
+};
+
+struct Nested nested1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+struct Nested nested2 = { {nullptr}, {&var, &var} }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+struct Nested nested3 = { {&var}, {nullptr, &var} }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}

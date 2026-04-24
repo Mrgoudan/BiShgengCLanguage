@@ -3132,10 +3132,8 @@ private:
 
 #if ENABLE_BSC
   // global nullability check
-  const NamedDecl *FindNonnull(QualType T, const NamedDecl *D);
   NullabilityKind GetExprNK(Expr *E);
-  void CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init, 
-                 std::string Path, bool IsInsideStruct);
+  void CheckGlobalInit(VarDecl *VD, QualType QT, Expr *Init, std::string Path);
 #endif
 
 public:

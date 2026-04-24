@@ -25,6 +25,8 @@ namespace clang {
 /// explicit _Nonnull/_Nullable if present, otherwise owned/borrow -> nonnull
 /// and raw pointer -> nullable.
 NullabilityKind getDefNullability(QualType QT, const ASTContext &Ctx);
+bool FindNonnull(QualType QT, const ASTContext &Ctx);
+Expr *NormalizeInitExpr(Expr *E);
 
 enum NullabilityCheckDiagKind {
   NonnullAssignedByNullable,

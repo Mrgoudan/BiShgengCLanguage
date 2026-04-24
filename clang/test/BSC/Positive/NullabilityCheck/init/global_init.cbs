@@ -1,0 +1,70 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+// expected-no-diagnostics
+
+union U {
+  int a[2];
+  int* _Nonnull p;
+};
+
+struct S {
+  int *_Nonnull p;
+  int *q;
+};
+
+struct Nested {
+  struct S s;
+  int *_Nonnull arr[2];
+};
+
+int x = 1;
+int y = 2;
+
+// Test global nonnull pointer initialization
+int *_Nonnull globalP1 = &x;
+int *_Nonnull globalP2 = &y;
+
+// Test global union initialization
+union U u1 = { .p = &x };
+union U u2 = { {1, 2} }; // Using other union member
+
+// Test global struct initialization
+struct S s1 = { &x, &y };
+struct S s2 = { &x };
+
+// Test global array of nonnull pointers
+int *_Nonnull globalArr1[2] = { &x, &y };
+int *_Nonnull globalArr2[2][2] = { { &x, &y }, { &x, &y } };
+
+// Test global nested struct initialization
+struct Nested nested = { { &x, &y }, { &x, &y } };
+
+// Test global brace initialization
+int *_Nonnull globalP3 = { &x };
+int *_Nonnull globalP4 = { &y + 0 };
+
+// Test global const nonnull pointer
+const char * _Nonnull globalStr = "hello";
+
+// Test static global variables
+static int *_Nonnull staticP1 = &x;
+static int *_Nonnull staticP2 = { &y };
+static struct S staticS = { &x, &y };
+static int *_Nonnull staticArr[2] = { &x, &y };
+static union U staticU = { .p = &x };
+
+// Test extern global variables
+extern int *_Nonnull externP;
+extern int *_Nonnull externArr[2];
+extern struct S externS;
+extern union U externU;
+
+// Test thread-local global variables
+_Thread_local int *_Nonnull tlP = &x;
+_Thread_local struct S tlS = { &x, &y };
+
+// Test const global variables
+const int *_Nonnull constP = &x;
+const struct S constS = { &x, &y };
+
+// Test volatile global variables
+volatile int *_Nonnull volatileP = &x;

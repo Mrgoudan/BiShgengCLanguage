@@ -305,10 +305,10 @@ Expr *NormalizeInitExpr(Expr *E) {
 //   5. int *p = s.p;       // s.p is MemberExpr
 //   6. int *p = a == 1 ? nullptr : &a; // ConditionOperator
 NullabilityKind TransferFunctions::getExprPathNullability(Expr *E) {
-  if (E->getStmtClass() == Expr::StringLiteralClass)
-    return NullabilityKind::NonNull;
   if (E->isNullExpr(Ctx))
     return NullabilityKind::Nullable;
+  if (E->getStmtClass() == Expr::StringLiteralClass)
+    return NullabilityKind::NonNull;
   QualType QT = E->getType();
   QualType CanQT = QT.getCanonicalType();
   if (CanQT->isPointerType()) {
