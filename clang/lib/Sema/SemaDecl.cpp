@@ -14630,7 +14630,7 @@ void Sema::CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init,
 
       // struct init in '{0}'
       if (IsImplicit || (IsInsideStruct && IsNullConst)) {
-        Diag(Loc, diag::err_nonnull_init_by_default) << Path; 
+        Diag(Loc, diag::err_nonnull_init_by_default);
       }
       else if (IsNullConst ||
                GetExprNK(Init) != NullabilityKind::NonNull) {
@@ -14665,7 +14665,7 @@ void Sema::CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init,
           Idx++;
         } else {
           if (FindNonnull(FD->getType(), FD))
-            Diag(Loc, diag::err_nonnull_init_by_default) << FieldPath;
+            Diag(Loc, diag::err_nonnull_init_by_default);
         }
       }
     } else if (const ArrayType *AT = Context.getAsArrayType(TargetType)) {
@@ -14681,7 +14681,7 @@ void Sema::CheckInit(SourceLocation Loc, QualType TargetType, Expr *Init,
       if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
         if (SemanticILE->getNumInits() < CAT->getSize().getZExtValue()) {
           if (FindNonnull(ElemTy, nullptr)) {
-            Diag(Loc, diag::err_nonnull_init_by_default) << (Path + "[]");
+            Diag(Loc, diag::err_nonnull_init_by_default);
           }
         }
       }
@@ -14724,8 +14724,7 @@ if (getLangOpts().BSC && VD && VD->isFileVarDecl() &&
     if (!VD->hasInit()) {
       if (const NamedDecl *BadDecl =
               FindNonnull(VD->getType(), VD)) {
-        Diag(VD->getLocation(), diag::err_nonnull_init_by_default)
-            << BadDecl->getDeclName();
+        Diag(VD->getLocation(), diag::err_nonnull_init_by_default);
       }
     } else {
       // Start from variable name, not inside struct

@@ -12,7 +12,7 @@ void case1() {
 
   union UInt u1 = {};
   union UInt u2 = {x};
-  union UPtr u3 = {};  // expected-error{{`u3.p` is a _Nonnull pointer and must be properly initialized.}}
+  union UPtr u3 = {};  // expected-error{{type contains nonnull pointer must be properly initialized}}
   union UPtr u4 = {p};
 }
 
@@ -26,8 +26,8 @@ void case2() {
   int x = 1;
   int *p = &x;
 
-  union UOut u1 = {};  // expected-error{{`u1.u.p` is a _Nonnull pointer and must be properly initialized.}}
-  union UOut u2 = {{}};  // expected-error{{`u2.u.p` is a _Nonnull pointer and must be properly initialized.}}
+  union UOut u1 = {};  // expected-error{{type contains nonnull pointer must be properly initialized}}
+  union UOut u2 = {{}};  // expected-error{{type contains nonnull pointer must be properly initialized}}
   union UOut u3 = {{p}};
 }
 
@@ -41,8 +41,8 @@ void case3() {
   int x = 1;
   int *p = &x;
 
-  struct SOut s1 = {};  // expected-error{{`s1.u.p` is a _Nonnull pointer and must be properly initialized.}}
-  struct SOut s2 = {{}};  // expected-error{{`s2.u.p` is a _Nonnull pointer and must be properly initialized.}}
+  struct SOut s1 = {};  // expected-error{{type contains nonnull pointer must be properly initialized}}
+  struct SOut s2 = {{}};  // expected-error{{type contains nonnull pointer must be properly initialized}}
   struct SOut s3 = {{p}};
 }
 
@@ -56,7 +56,7 @@ void case4() {
   int x = 1;
   int *p = &x;
 
-  union UOut u1 = {};  // expected-error{{`u1.s.p` is a _Nonnull pointer and must be properly initialized.}}
-  union UOut u2 = {{}};  // expected-error{{`u2.s.p` is a _Nonnull pointer and must be properly initialized.}}
+  union UOut u1 = {};  // expected-error{{type contains nonnull pointer must be properly initialized}}
+  union UOut u2 = {{}};  // expected-error{{type contains nonnull pointer must be properly initialized}}
   union UOut u3 = {{p}};
 }

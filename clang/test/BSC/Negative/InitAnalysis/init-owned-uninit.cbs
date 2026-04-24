@@ -14,9 +14,9 @@ _Safe void test_owned_ptr_uninit(void) {
 _Safe void test_owned_branch(int cond) {
     int *_Owned p;
     if (cond) {
-        p = (int *_Owned)nullptr;
+        p = (int *_Owned)nullptr; // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     }
-    consume(p); // expected-error 2 {{use of possibly uninitialized value: `p`}}
+    consume(p); // expected-error {{use of possibly uninitialized value: `p`}}
 }
 
 // Struct with _Owned field, field not written → error.

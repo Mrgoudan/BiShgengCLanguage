@@ -24,26 +24,25 @@ _Owned struct A{
 };
 
 void test1(){
-    A a ={};// #1
-    B b = {};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
+    A a = {};// #1
+    B b = {};// expected-error {{type contains nonnull pointer must be properly initialized}}
 }
-// expected-error@#1 {{`a.b.p` is a _Nonnull pointer and must be properly initialized.}}
-// expected-error@#1 {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+// expected-error@#1 {{type contains nonnull pointer must be properly initialized}}
 
 void test2(){
-    B b ={};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
-    A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
-    A c = {};// expected-error {{`c.p` is a _Nonnull pointer and must be properly initialized.}}  expected-error {{`c.b.p` is a _Nonnull pointer and must be properly initialized.}}
+    B b ={};// expected-error {{type contains nonnull pointer must be properly initialized}}
+    A a = {.b=b};// expected-error {{type contains nonnull pointer must be properly initialized}}
+    A c = {};// expected-error {{type contains nonnull pointer must be properly initialized}}
 }
 
 void test3(){
-    B b = {.p=nullptr};// expected-error {{`b.p` is a _Nonnull pointer and must be properly initialized.}}
-    A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+    B b = {.p=nullptr};// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+    A a = {.b=b};// expected-error {{type contains nonnull pointer must be properly initialized}}
 }
 
 void test4(){
     B b = {.p=safe_malloc(42)};
-    A a = {.b=b};// expected-error {{`a.p` is a _Nonnull pointer and must be properly initialized.}}
+    A a = {.b=b};// expected-error {{type contains nonnull pointer must be properly initialized}}
 }
 
 void test5(){

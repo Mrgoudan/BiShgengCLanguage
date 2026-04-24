@@ -17,7 +17,7 @@ _Owned struct A{
 };
 
 int main(){
-    B b1={};// expected-error {{`b1.p` is a _Nonnull pointer and must be properly initialized.}}
+    B b1={};// expected-error {{type contains nonnull pointer must be properly initialized}}
     return 0;
 }
 

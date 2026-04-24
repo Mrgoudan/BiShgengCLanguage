@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -nullability-check=all -verify %s
 int var = 1;
 int *_Nonnull globalP1 = &var;
-int *_Nonnull globalP2; // expected-error {{`'globalP2'` is a _Nonnull pointer and must be properly initialized.}}
-int *_Nonnull arr[1]={nullptr}; // expected-error {{`arr[]` is a _Nonnull pointer and must be properly initialized.}}
+int *_Nonnull globalP2; // expected-error {{type contains nonnull pointer must be properly initialized}}
+int *_Nonnull arr[1]={nullptr}; // expected-error {{type contains nonnull pointer must be properly initialized}}
 int* _Nonnull p2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
 
 struct T {
@@ -11,7 +11,7 @@ struct T {
 };
 
 // _Nonnull can't be zero init
-struct T t2={0}; // expected-error {{`t2.p` is a _Nonnull pointer and must be properly initialized.}}
+struct T t2={0}; // expected-error {{type contains nonnull pointer must be properly initialized}}
 
 struct S{
   int *_Nonnull p;
@@ -21,8 +21,8 @@ struct S2{
   struct S s1;
 };
 
-struct S s1;  // expected-error {{`'p'` is a _Nonnull pointer and must be properly initialized.}}
-struct S2 s2; // expected-error {{`'p'` is a _Nonnull pointer and must be properly initialized.}}
+struct S s1;  // expected-error {{type contains nonnull pointer must be properly initialized}}
+struct S2 s2; // expected-error {{type contains nonnull pointer must be properly initialized}}
 
 int main() { 
 

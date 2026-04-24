@@ -16,12 +16,6 @@ void test_nullptr_const_owned(void) {
   const void * _Owned cpo2 = (const void * _Owned)nullptr;
 }
 
-// nullptr in safe zone with _Owned
-_Safe void test_safe_nullptr_owned(void) {
-  int * _Owned po = (int * _Owned)nullptr;
-  void * _Owned vo = (void * _Owned)nullptr;
-}
-
 // nullptr casts with _Owned qualifiers
 void test_nullptr_owned_casts(void) {
   void * _Owned vo = (void * _Owned)nullptr;

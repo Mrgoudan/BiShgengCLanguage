@@ -8,7 +8,7 @@ void case_safezone(int *_Borrow p, int *_Borrow q) {
 
   _Safe {
     // Inside safe zone: error even without -nullability-check=all
-    // expected-error@+1 {{`arr_safe` is a _Nonnull pointer and must be properly initialized.}}
+    // expected-error@+1 {{type contains nonnull pointer must be properly initialized}}
     int *_Borrow arr_safe[2] = {p};
 
     // OK inside safe zone: fully initialized

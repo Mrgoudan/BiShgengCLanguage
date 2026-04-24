@@ -10,12 +10,12 @@ _Safe void use_op(struct OuterP s);
 
 // _Nonnull struct with empty init: pointer field is null-initialized.
 _Safe void test_nonnull_empty(void) {
-    struct SP s = {}; // expected-error {{`s.p` is a _Nonnull pointer and must be properly initialized}}
+    struct SP s = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
     use_sp(s);
 }
 
 // Nested _Nonnull struct with empty init.
 _Safe void test_nested_nonnull_empty(void) {
-    struct OuterP o = {}; // expected-error {{`o.inner.p` is a _Nonnull pointer and must be properly initialized}}
+    struct OuterP o = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
     use_op(o);
 }

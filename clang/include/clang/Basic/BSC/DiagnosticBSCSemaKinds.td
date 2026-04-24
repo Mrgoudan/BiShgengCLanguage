@@ -269,7 +269,7 @@ def err_nullable_pointer_access_member : Error<
 def err_nonnull_assigned_by_nullable : Error<
   "nonnull pointer cannot be assigned by nullable pointer">;
 def err_nonnull_init_by_default : Error<
-  "`%0` is a _Nonnull pointer and must be properly initialized.">;
+  "type contains nonnull pointer must be properly initialized">;
 
 // BSC string literal borrow errors.
 def err_mut_borrow_string_literal : Error<

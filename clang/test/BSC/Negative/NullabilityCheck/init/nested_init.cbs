@@ -1,0 +1,240 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+
+#define NULL ((void *)0)
+
+void test_nonnull_ptr() {
+  int *_Nonnull p01 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull p02 = NULL; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull p03 = 0; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull p11 = { nullptr }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull p12 = { NULL }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull p13 = { 0 }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Owned p21 = (int *_Owned)nullptr; // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Owned p22 = (int *_Owned)__take_from_raw(NULL); // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Owned p23 = (int *_Owned)__take_from_raw((void*)0); // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Borrow p31 = (int *_Borrow)nullptr; // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Borrow p32 = (int *_Borrow)NULL; // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Borrow p33 = (int *_Borrow)(void*)0; // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+}
+
+void test_nonnull_union() {
+  union U {
+    int *_Nonnull p1;
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  union U u1 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U u2 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U u3 = {p};
+  union U u4 = {.p2=q};
+}
+
+void test_nonnull_struct() {
+  struct S {
+    int *_Nonnull p1;
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  struct S s1 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S s2 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S s3 = {p};
+  struct S s4 = {.p2=q}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+}
+
+void test_nonnull_array() {
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  int *_Nonnull a1[2] = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  int *_Nonnull a2[2] = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  int *_Nonnull a3[2] = {nullptr, nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull a4[2] = {p, nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull a5[2] = {nullptr, p}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  int *_Nonnull a6[2] = {p}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  int *_Nonnull a7[2] = {p, p};
+}
+
+void test_nonnull_array_in_union() {
+  union U {
+    int *_Nonnull p1[2];
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  union U u0 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U u1 = {{}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U u2 = {{nullptr}}; // expected-error {{type contains nonnull pointer must be properly initialized}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U u3 = {{nullptr, nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U u4 = {{p, nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U u5 = {{nullptr, p}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U u6 = {{p}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U u7 = {{p, p}};
+  union U u8 = {.p2=q};
+}
+
+void test_nonnull_array_in_struct() {
+  struct S {
+    int *_Nonnull p1[2];
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  struct S s0 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S s1 = {{}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S s2 = {{nullptr}}; // expected-error {{type contains nonnull pointer must be properly initialized}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S s3 = {{nullptr, nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S s4 = {{p, nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S s5 = {{nullptr, p}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S s6 = {{p}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S s7 = {{p, p}};
+  struct S s8 = {.p2=q}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+}
+
+void test_nonnull_union_in_array() {
+  union U {
+    int *_Nonnull p;
+    int *q;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *q = &x;
+  union U arr1[2] = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U arr2[2] = {{nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U arr3[2] = {{nullptr}, {nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U arr4[2] = {{p}, {nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U arr5[2] = {{nullptr}, {p}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U arr6[2] = {{p}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U arr7[2] = {{p}, {p}};
+  union U arr8[2] = {{.q=q}, {.q=q}};
+}
+
+void test_nonnull_struct_in_array() {
+  struct S {
+    int *_Nonnull p;
+    int *q;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *q = &x;
+  struct S arr1[2] = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S arr2[2] = {{nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S arr3[2] = {{nullptr}, {nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S arr4[2] = {{p}, {nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S arr5[2] = {{nullptr}, {p}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S arr6[2] = {{p}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S arr7[2] = {{p}, {p}};
+  struct S arr8[2] = {{.q=q}, {.q=q}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+}
+
+void test_nonnull_nested_type() {
+  struct S1 {
+    int *_Nonnull p1[2];
+  };
+  struct S2 {
+    struct S1 s;
+  };
+  int a = 1;
+  int *_Nonnull p = &a;
+  struct S2 s1 = {};// expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S2 s2 = {{}};// expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S2 s3 = {{{}}};// expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S2 s4 = {{{nullptr}}};// expected-error {{type contains nonnull pointer must be properly initialized}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S2 s5 = {{{nullptr, nullptr}}};// expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S2 s6 = {{{p, nullptr}}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S2 s7 = {{{nullptr, p}}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S2 s8 = {{{p}}}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S2 s9 = {{{p, p}}};
+}
+
+void test_nonnull_complex_nested() {
+  struct Inner {
+    int *_Nonnull p;
+  };
+  union Middle {
+    struct Inner inner;
+    int *_Nonnull q;
+  };
+  struct Outer {
+    union Middle middle[2];
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  struct Outer o1 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct Outer o2 = {{{{nullptr}}}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct Outer o3 = {{{{p}}, {{nullptr}}}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct Outer o4 = {{{{p}}, {{p}}}};
+}
+
+void test_nonnull_multi_dim_array() {
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *_Nonnull arr1[2][2] = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  int *_Nonnull arr2[2][2] = {{nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  int *_Nonnull arr3[2][2] = {{p, nullptr}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  int *_Nonnull arr4[2][2] = {{p, p}, {p, p}};
+}
+
+void test_nonnull_mixed_types() {
+  struct S {
+    int *_Nonnull p;
+    int *_Borrow b;
+    int *n;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *n = &x;
+  struct S s1 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S s2 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct S s3 = {p, (int *_Borrow)nullptr}; // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct S s4 = {p, (int *_Borrow)p, n};
+}
+
+void test_nonnull_union_with_struct() {
+  struct S {
+    int *_Nonnull p[2];
+  };
+  union U {
+    struct S s;
+    int *_Nonnull q;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  union U u1 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  union U u2 = {{nullptr}}; // expected-error {{type contains nonnull pointer must be properly initialized}} expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  union U u3 = {{p, p}};
+  union U u4 = {.q=p};
+}
+
+void test_nonnull_struct_array_in_struct() {
+  struct Inner {
+    int *_Nonnull p;
+  };
+  struct Outer {
+    struct Inner arr[2];
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  struct Outer o1 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct Outer o2 = {{{nullptr}}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}} expected-error {{type contains nonnull pointer must be properly initialized}}
+  struct Outer o3 = {{{p}, {nullptr}}}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+  struct Outer o4 = {{{p}, {p}}};
+}
+
+void test_nonnull_static() {
+  struct S1 {
+    int *_Nonnull p;
+  };
+  union U1 {
+    int *_Nonnull p;
+  };
+  static int* _Nonnull p1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  static int* _Nonnull arr[2]; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  static struct S1 s1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+  static union U1 u1; // expected-error {{type contains nonnull pointer must be properly initialized}}
+}

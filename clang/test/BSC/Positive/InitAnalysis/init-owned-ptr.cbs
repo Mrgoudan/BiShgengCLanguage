@@ -3,18 +3,19 @@
 
 // Test: _Owned pointer initialization in _Safe zones.
 
+_Safe int *_Owned safe_malloc(int a);
 _Safe void consume(int *_Owned p);
 
 // Init at declaration.
 _Safe void test_owned_init_at_decl(void) {
-    int *_Owned p = (int *_Owned)nullptr;
+    int *_Owned p = safe_malloc(1);
     consume(p);
 }
 
 // Declared uninit, then assigned before use.
 _Safe void test_owned_assign_then_use(void) {
     int *_Owned p;
-    p = (int *_Owned)nullptr;
+    p = safe_malloc(1);
     consume(p);
 }
 
@@ -22,9 +23,9 @@ _Safe void test_owned_assign_then_use(void) {
 _Safe void test_owned_branch_both(int cond) {
     int *_Owned p;
     if (cond) {
-        p = (int *_Owned)nullptr;
+        p = safe_malloc(1);
     } else {
-        p = (int *_Owned)nullptr;
+        p = safe_malloc(1);
     }
     consume(p);
 }
@@ -35,7 +36,7 @@ _Safe void use_so(struct SO s);
 
 _Safe void test_owned_struct_full(void) {
     struct SO s;
-    s.p = (int *_Owned)nullptr;
+    s.p = safe_malloc(1);
     s.v = 1;
     use_so(s);
 }

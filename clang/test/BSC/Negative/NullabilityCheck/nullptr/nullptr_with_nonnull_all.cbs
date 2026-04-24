@@ -29,7 +29,7 @@ void take_nonnull_borrow(int * _Nonnull _Borrow p) {
 
 void test_nonnull_borrow_args(void) {
   take_nonnull_borrow(nullptr); // expected-error {{cannot pass nullable pointer argument}}
-  take_nonnull_borrow((int * _Borrow)nullptr);
+  take_nonnull_borrow((int * _Borrow)nullptr); // expected-error {{cannot cast nullable pointer to nonnull type}} expected-error {{cannot pass nullable pointer argument}}
 }
 
 // _Nonnull in safe zone

@@ -129,11 +129,8 @@ public:
   bool IsStmtInSafeZone(Stmt *S);
   bool ShouldReportNullPtrError(Stmt *S);
   void VisitDeclStmt(DeclStmt *S);
-  void HandleVarDeclInit(DeclStmt *DS, VarDecl *VD);
-  void HandlePointerInit(DeclStmt *DS, VarDecl *VD);
-  void HandleRecordInit(DeclStmt *DS, VarDecl *VD, RecordDecl *RD);
-  void HandleFieldInit(DeclStmt *DS, VarDecl *VD, FieldDecl *FD,
-                       Expr *FieldInit, std::string FullFieldPath);
+  void CheckInit(DeclStmt *DS, VarDecl *VD,
+                 QualType QT, Expr *Init, std::string Path);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitUnaryOperator(UnaryOperator *UO);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
@@ -141,16 +138,11 @@ public:
   void VisitCallExpr(CallExpr *CE);
   void VisitReturnStmt(ReturnStmt *RS);
   void VisitCStyleCastExpr(CStyleCastExpr *CSCE);
-  NullabilityKind getExprPathNullability(Expr *E, bool Point = false);
+  NullabilityKind getExprPathNullability(Expr *E);
   void SetCFGBlocksByExpr(Expr *PtrE, const CFGBlock *NonNullBlock,
                           const CFGBlock *NullableBlock);
   void PassConditionStatusToSuccBlocks(Expr *CondExpr);
   void InvalidateDerefStatusForVar(VarDecl *VD);
-  Expr *NormalizeInitExpr(Expr *E);
-  void HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD, RecordDecl *RD,
-                              InitListExpr *InitList, std::string FieldPrefix);
-  void HandleArrayInit(DeclStmt *DS, VarDecl *VD, const ArrayType *AT,
-                       InitListExpr *ILE, std::string FieldPath);
 };
 
 void VisitMEForFieldPath(Expr *E, FieldPath &FP) {
@@ -239,7 +231,7 @@ void InvalidateDeeperDerefStatusForPath(StatusDPVD &Status, DerefPathVD DP) {
 
 namespace clang {
 // basic tool for CFG check and global Nullability check
-NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
+NullabilityKind getDefNullability(QualType QT, const ASTContext &Ctx) {
   QualType CanQT = QT.getCanonicalType();
   if (CanQT->isPointerType()) {
     Optional<NullabilityKind> Kind = QT->getNullability(Ctx);
@@ -247,14 +239,63 @@ NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
                  *Kind == NullabilityKind::Nullable)) {
       return *Kind;
     } else if (CanQT.isOwnedQualified() || CanQT.isBorrowQualified()) {
+      if (Kind && (*Kind == NullabilityKind::Nullable))
+        return NullabilityKind::Nullable;
       return NullabilityKind::NonNull;
     } else // Raw Pointer is nullable by default.
       return NullabilityKind::Nullable;
   }
   return NullabilityKind::Unspecified;
 }
-} // namespace clang
 
+bool FindNonnull(QualType QT, const ASTContext &Ctx) {
+  QualType CanQT = QT.getCanonicalType();
+  if (CanQT->isPointerType()) {
+    Optional<NullabilityKind> Kind = QT->getNullability(Ctx);
+    if (Kind && (*Kind == NullabilityKind::NonNull)) {
+      return true;
+    } else if (CanQT.isBorrowQualified() || CanQT.isOwnedQualified()) {
+      if (Kind && (*Kind == NullabilityKind::Nullable))
+        return false;
+      return true;
+    }
+  } else if (CanQT->isArrayType()) {
+    auto ArrayTy = QT->getAsArrayTypeUnsafe();
+    QualType ElemTy = ArrayTy->getElementType();
+    return FindNonnull(ElemTy, Ctx);
+  } else if (CanQT->isRecordType()) {
+    auto RT = QT->getAs<RecordType>();
+    if (RecordDecl *RD = RT->getDecl()) {
+      for (FieldDecl *FD : RD->fields()) {
+        QualType FieldTy = FD->getType();
+        if (FindNonnull(FieldTy, Ctx))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Normalize init expr (ignore casts, compound literal)
+Expr *NormalizeInitExpr(Expr *E) {
+  if (!E)
+    return nullptr;
+  while (true) {
+    if (auto *CSE = dyn_cast<CStyleCastExpr>(E)) {
+      E = CSE->getSubExpr()->IgnoreParenImpCasts();
+      continue;
+    }
+    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(E)) {
+      if (Expr *Sub = CLE->getInitializer()) {
+        E = Sub->IgnoreParenImpCasts();
+        continue;
+      }
+    }
+    break;
+  }
+  return E;
+}
+} // namespace clang
 
 // We can get PathNullability for these exprs:
 //   1. int *p = nullptr;   // nullptr is NullExpr
@@ -263,34 +304,37 @@ NullabilityKind getDefNullability(QualType QT, ASTContext &Ctx) {
 //   4. int *p = p1;        // p1 is VarDecl
 //   5. int *p = s.p;       // s.p is MemberExpr
 //   6. int *p = a == 1 ? nullptr : &a; // ConditionOperator
-NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
+NullabilityKind TransferFunctions::getExprPathNullability(Expr *E) {
+  if (E->getStmtClass() == Expr::StringLiteralClass)
+    return NullabilityKind::NonNull;
+  if (E->isNullExpr(Ctx))
+    return NullabilityKind::Nullable;
   QualType QT = E->getType();
   QualType CanQT = QT.getCanonicalType();
-  if (Point || CanQT->isPointerType()) {
+  if (CanQT->isPointerType()) {
     switch (E->getStmtClass()) {
     case Expr::ParenExprClass:
-      return getExprPathNullability(cast<ParenExpr>(E)->getSubExpr(), true);
+      return getExprPathNullability(cast<ParenExpr>(E)->getSubExpr());
     case Expr::SafeExprClass:
-      return getExprPathNullability(cast<SafeExpr>(E)->getSubExpr(), true);
+      return getExprPathNullability(cast<SafeExpr>(E)->getSubExpr());
     case Expr::ImplicitCastExprClass:
-      return getExprPathNullability(cast<ImplicitCastExpr>(E)->getSubExpr(),
-                                    true);
+      return getExprPathNullability(cast<ImplicitCastExpr>(E)->getSubExpr());
     case Expr::CallExprClass: {
       CallExpr *CE = cast<CallExpr>(E);
       if (FunctionDecl *FD = CE->getDirectCallee()) {
         if (CE->getNumArgs() == 1 &&
             (FD->getBuiltinID() == Builtin::BI__move_to_raw ||
              FD->getBuiltinID() == Builtin::BI__take_from_raw)) {
-          return getExprPathNullability(CE->getArg(0), true);
+          return getExprPathNullability(CE->getArg(0));
         }
       }
       return getDefNullability(CE->getType(), Ctx);
     }
     case Expr::ConditionalOperatorClass: {
       NullabilityKind LHSNK =
-          getExprPathNullability(cast<ConditionalOperator>(E)->getLHS(), true);
+          getExprPathNullability(cast<ConditionalOperator>(E)->getLHS());
       NullabilityKind RHSNK =
-          getExprPathNullability(cast<ConditionalOperator>(E)->getRHS(), true);
+          getExprPathNullability(cast<ConditionalOperator>(E)->getRHS());
       if (LHSNK == NullabilityKind::Nullable ||
           RHSNK == NullabilityKind::Nullable)
         return NullabilityKind::Nullable;
@@ -318,14 +362,21 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
         return getDefNullability(cast<UnaryOperator>(E)->getType(), Ctx);
       }
       if (Op == UO_AddrMutDeref || Op == UO_AddrConstDeref) {
-        return getExprPathNullability(cast<UnaryOperator>(E)->getSubExpr(), true);
+        return getExprPathNullability(cast<UnaryOperator>(E)->getSubExpr());
       }
       break;
     }
     case Expr::BinaryOperatorClass: {
       BinaryOperator::Opcode Op = cast<BinaryOperator>(E)->getOpcode();
       if (Op == BO_Comma || Op == BO_Assign) {
-        return getExprPathNullability(cast<BinaryOperator>(E)->getRHS(), true);
+        return getExprPathNullability(cast<BinaryOperator>(E)->getRHS());
+      }
+      break;
+    }
+    case Expr::InitListExprClass: {
+      InitListExpr *ILE = cast<InitListExpr>(E);
+      if (ILE->getNumInits() > 0) {
+        return getExprPathNullability(ILE->getInit(0));
       }
       break;
     }
@@ -361,20 +412,8 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E, bool Point) {
       }
       break;
     }
-    case Expr::IntegerLiteralClass: {
-      if (cast<IntegerLiteral>(E)->getValue().getZExtValue() == 0)
-        return NullabilityKind::Nullable;
-      break;
-    }
     default:
       break;
-    }
-    if (QT->isNullPtrType()) {
-      return NullabilityKind::Nullable;
-    }
-    if (Optional<llvm::APSInt> I = E->getIntegerConstantExpr(Ctx)) {
-      if (*I == 0)
-        return NullabilityKind::Nullable;
     }
   }
   // For no-pointer type, we treat it as Unspecified.
@@ -424,241 +463,114 @@ bool TransferFunctions::ShouldReportNullPtrError(Stmt *S) {
 }
 
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
-  for (Decl *D : DS->decls())
-    if (VarDecl *VD = dyn_cast<VarDecl>(D))
-      if (VD->getInit())
-        HandleVarDeclInit(DS, VD);
-}
-
-void TransferFunctions::HandleVarDeclInit(DeclStmt *DS, VarDecl *VD) {
-  if (VD->getType()->isPointerType())
-    HandlePointerInit(DS, VD);
-  else if (auto RecTy =
-               dyn_cast<RecordType>(VD->getType().getCanonicalType())) {
-    if (RecordDecl *RD = RecTy->getDecl())
-      HandleRecordInit(DS, VD, RD);
-  } else if (auto *AT = VD->getType()->getAsArrayTypeUnsafe()) {
-    if (auto *ILE = dyn_cast<InitListExpr>(VD->getInit()))
-      HandleArrayInit(DS, VD, AT, ILE, "");
+  for (Decl *D : DS->decls()) {
+    if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      Expr *Init = VD->getInit();
+      if (Init || VD->isStaticLocal()) {
+        CheckInit(DS, VD, VD->getType(), Init, "");
+      }
+    }
   }
 }
 
-// Init a pointer variable
-void TransferFunctions::HandlePointerInit(DeclStmt *DS, VarDecl *VD) {
-  NullabilityKind LHSKind = getDefNullability(VD->getType(), Ctx);
-  NullabilityKind RHSKind = getExprPathNullability(VD->getInit());
-  if (LHSKind == NullabilityKind::NonNull) {
-    // NonNull pointer cannot be assigned by expr
-    // whose PathNullability is nullable.
-    if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(DS)) {
-      NullabilityCheckDiagInfo DI(VD->getLocation(), NonnullAssignedByNullable);
+void TransferFunctions::CheckInit(DeclStmt *DS, VarDecl *VD,
+                                  QualType QT, Expr *Init,
+                                  std::string path) {
+  QualType CanQT = QT.getCanonicalType();
+  // early return if no initialization
+  if (!Init || isa<ImplicitValueInitExpr>(Init)) {
+    if (ShouldReportNullPtrError(DS) && FindNonnull(QT, Ctx)) {
+      NullabilityCheckDiagInfo DI(VD->getLocation(), NonnullInitByDefault);
       Reporter.addDiagInfo(DI);
     }
-  } else if (CurrStatusVD.count(VD))
-    // Here we update PathNullability of nullable pointer.
-    CurrStatusVD[VD] = RHSKind;
-
-  // Declaration-time rebinding can stale existing dereference-chain facts.
-  // Example:
-  //   if (*p) { /* (*p) is NonNull on this path */ }
-  //   int **p = q; // root pointer changes, old (*p) fact must be dropped.
-  InvalidateDerefStatusForVar(VD);
+    return;
+  }
+  if (CanQT->isPointerType()) {
+    // check pointer initialization
+    NullabilityKind LHSKind = getDefNullability(QT, Ctx);
+    NullabilityKind RHSKind = getExprPathNullability(Init);
+    if (LHSKind == NullabilityKind::NonNull) {
+      if (RHSKind == NullabilityKind::Nullable && ShouldReportNullPtrError(DS)) {
+        NullabilityCheckDiagInfo DI(VD->getLocation(), NonnullAssignedByNullable);
+        Reporter.addDiagInfo(DI);
+      }
+    } else {
+      if (path.empty()) {
+        if (CurrStatusVD.count(VD)) {
+          // Here we update PathNullability of nullable pointer.
+          CurrStatusVD[VD] = RHSKind;
+        }
+      } else {
+        FieldPath FP(VD, path);
+        if (CurrStatusFP.count(FP)) {
+          CurrStatusFP[FP] = RHSKind;
+        }
+      }
+    }
+    if (path.empty()) {
+      // Declaration-time rebinding can stale existing dereference-chain facts.
+      // Example:
+      //   if (*p) { /* (*p) is NonNull on this path */ }
+      //   int **p = q; // root pointer changes, old (*p) fact must be dropped.
+      InvalidateDerefStatusForVar(VD);
+    }
+    return;
+  }
+  // check record/array initialization recursively
+  Init = NormalizeInitExpr(Init->IgnoreParenImpCasts());
+  if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
+    unsigned NumInits = ILE->getNumInits();
+    if (CanQT->isRecordType()) {
+      // check record initialization
+      if (NumInits == 0) {
+        // check implicitly initialized record which has non-null fields
+        CheckInit(DS, VD, QT, nullptr, path);
+        return;
+      }
+      auto *RT = CanQT->getAs<RecordType>();
+      RecordDecl *RD = RT->getDecl();
+      if (!RD || RD->field_empty())
+        return;
+      // prepare fields to process
+      std::vector<FieldDecl *> FieldsToProcess;
+      if (RD->isUnion()) {
+        FieldsToProcess.push_back(ILE->getInitializedFieldInUnion());
+      } else if (RD->isStruct()) {
+        for (FieldDecl *FD : RD->fields())
+          FieldsToProcess.push_back(FD);
+      }
+      // check fields to process
+      for (FieldDecl *FD : FieldsToProcess) {
+        unsigned idx = RD->isStruct() ? FD->getFieldIndex() : 0;
+        Expr *FieldInit = idx < NumInits ? ILE->getInit(idx) : nullptr;
+        std::string newPath = path + "." + FD->getNameAsString();
+        CheckInit(DS, VD, FD->getType(), FieldInit, newPath);
+      }
+    } else if (CanQT->isArrayType()) {
+      // check array initialization
+      auto *AT = QT->getAsArrayTypeUnsafe();
+      QualType ElemTy = AT->getElementType();
+      // check explicitly provided initializers
+      for (unsigned i = 0; i < NumInits; ++i) {
+        Expr *ElemInit = ILE->getInit(i);
+        std::string newPath = path + "[" + std::to_string(i) + "]";
+        CheckInit(DS, VD, ElemTy, ElemInit, newPath);
+      }
+      // check implicitly zero-initialized trailing elements
+      if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+        unsigned ArraySize = (unsigned)CAT->getSize().getZExtValue();
+        if (NumInits < ArraySize) {
+          std::string newPath = path + "[" + std::to_string(NumInits) + ":" + std::to_string(ArraySize) + "]";
+          CheckInit(DS, VD, ElemTy, nullptr, newPath);
+        }
+      }
+    }
+  }
 }
 
 void TransferFunctions::InvalidateDerefStatusForVar(VarDecl *VD) {
   // Use (VD, 0) as a dummy deref-path to invalidate all facts rooted at VD.
   InvalidateDeeperDerefStatusForPath(CurrStatusDPVD, std::make_pair(VD, 0));
-}
-
-// Init a record type variable.
-void TransferFunctions::HandleRecordInit(DeclStmt *DS, VarDecl *VD,
-                                             RecordDecl *RD) {
-  if (RD->field_empty())
-    return;
-  if (Expr *Init = VD->getInit()) {
-    Init = Init->IgnoreParenImpCasts();
-    while (true) {
-      if (auto *CSE = dyn_cast<CStyleCastExpr>(Init)) {
-        Init = CSE->getSubExpr()->IgnoreParenImpCasts();
-        continue;
-      }
-      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
-        if (Expr *Sub = CLE->getInitializer()) {
-          Init = Sub->IgnoreParenImpCasts();
-          continue;
-        }
-      }
-      break;
-    }
-    if (auto *InitListE = dyn_cast<InitListExpr>(Init)) {
-      HandleNestedRecordInit(DS, VD, RD, InitListE, "");
-    }
-  }
-}
-
-void TransferFunctions::HandleArrayInit(DeclStmt *DS, VarDecl *VD,
-                                        const ArrayType *AT,
-                                        InitListExpr *ILE,
-                                        std::string FieldPath) {
-  QualType ElemTy = AT->getElementType();
-  unsigned NumInits = ILE->getNumInits();
-
-  // Determine array size for constant-size arrays.
-  unsigned ArraySize = 0;
-  bool HasKnownSize = false;
-  if (auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-    ArraySize = (unsigned)CAT->getSize().getZExtValue();
-    HasKnownSize = true;
-  }
-
-  // Check explicitly provided initializers.
-  for (unsigned i = 0; i < NumInits; ++i) {
-    Expr *ElemInit = ILE->getInit(i)->IgnoreParenImpCasts();
-    while (true) {
-      if (auto *CSE = dyn_cast<CStyleCastExpr>(ElemInit)) {
-        ElemInit = CSE->getSubExpr()->IgnoreParenImpCasts();
-        continue;
-      }
-      if (auto *CLE = dyn_cast<CompoundLiteralExpr>(ElemInit)) {
-        if (Expr *Sub = CLE->getInitializer()) {
-          ElemInit = Sub->IgnoreParenImpCasts();
-          continue;
-        }
-      }
-      break;
-    }
-
-    if (ElemTy->isPointerType()) {
-      NullabilityKind LHSKind = getDefNullability(ElemTy, Ctx);
-      NullabilityKind RHSKind = getExprPathNullability(ElemInit);
-      if (LHSKind == NullabilityKind::NonNull &&
-          RHSKind != NullabilityKind::NonNull && ShouldReportNullPtrError(DS)) {
-        NullabilityCheckDiagInfo DI(ILE->getBeginLoc(), NonnullInitByDefault,
-                                    VD->getNameAsString() + FieldPath);
-        Reporter.addDiagInfo(DI);
-        return;
-      }
-    } else if (auto NestedRecTy =
-                   dyn_cast<RecordType>(ElemTy.getCanonicalType())) {
-      if (RecordDecl *NestedRD = NestedRecTy->getDecl()) {
-        if (auto *NestedILE = dyn_cast<InitListExpr>(ElemInit)) {
-          HandleNestedRecordInit(DS, VD, NestedRD, NestedILE, "");
-        }
-      }
-    } else if (auto *NestedAT = ElemTy->getAsArrayTypeUnsafe()) {
-      if (auto *NestedILE = dyn_cast<InitListExpr>(ElemInit))
-        HandleArrayInit(DS, VD, NestedAT, NestedILE, "");
-    }
-  }
-
-  // Check implicitly zero-initialized trailing elements.
-  if (HasKnownSize && NumInits < ArraySize) {
-    if (ElemTy->isPointerType()) {
-      if (getDefNullability(ElemTy, Ctx) == NullabilityKind::NonNull &&
-          ShouldReportNullPtrError(DS)) {
-        NullabilityCheckDiagInfo DI(VD->getBeginLoc(), NonnullInitByDefault,
-                                    VD->getNameAsString());
-        Reporter.addDiagInfo(DI);
-      }
-    }
-  }
-}
-
-Expr *TransferFunctions::NormalizeInitExpr(Expr *E) {
-  if (!E)
-    return nullptr;
-  while (true) {
-    if (auto *CSE = dyn_cast<CStyleCastExpr>(E)) {
-      E = CSE->getSubExpr()->IgnoreParenImpCasts();
-      continue;
-    }
-    if (auto *CLE = dyn_cast<CompoundLiteralExpr>(E)) {
-      if (Expr *Sub = CLE->getInitializer()) {
-        E = Sub->IgnoreParenImpCasts();
-        continue;
-      }
-    }
-    break;
-  }
-  return E;
-}
-
-void TransferFunctions::HandleNestedRecordInit(DeclStmt *DS, VarDecl *TopVD,
-                                               RecordDecl *RD,
-                                               InitListExpr *InitList,
-                                               std::string FieldPrefix) {
-  if (!RD || RD->field_empty())
-    return;
-  std::vector<FieldDecl *> FieldsToProcess;
-  if (RD->isUnion()) {
-    if (!RD->field_empty())
-      FieldsToProcess.push_back(*RD->field_begin());
-  } else if (RD->isStruct()) {
-    for (FieldDecl *FD : RD->fields())
-      FieldsToProcess.push_back(FD);
-  }
-  for (FieldDecl *FD : FieldsToProcess) {
-    std::string fullFieldPath = FieldPrefix + "." + FD->getNameAsString();
-
-    Expr *fieldInit = nullptr;
-    if (InitList && !InitList->inits().empty()) {
-      unsigned idx = RD->isStruct() ? FD->getFieldIndex() : 0;
-      fieldInit = InitList->getInit(idx);
-    }
-    // normalize init (ignore casts, compound literal)
-    fieldInit = NormalizeInitExpr(fieldInit);
-    if (FD->getType()->isPointerType()) {
-      if (!fieldInit) {
-        // handle ImplicitValueInitExpr / empty init
-        if (!ShouldReportNullPtrError(DS))
-          continue;
-        if (getDefNullability(FD->getType(), Ctx) != NullabilityKind::NonNull)
-          continue;
-        NullabilityCheckDiagInfo DI(TopVD->getLocation(), NonnullInitByDefault,
-                                    TopVD->getNameAsString() + fullFieldPath);
-        Reporter.addDiagInfo(DI);
-        continue;
-      }
-      HandleFieldInit(DS, TopVD, FD, fieldInit, fullFieldPath);
-    } else if (auto *AT = FD->getType()->getAsArrayTypeUnsafe()) {
-      if (fieldInit) {
-        if (auto *ILE = dyn_cast<InitListExpr>(fieldInit)) {
-          HandleArrayInit(DS, TopVD, AT, ILE, fullFieldPath);
-        }
-      }
-    } else if (auto *nestedRecTy =
-                   dyn_cast<RecordType>(FD->getType().getCanonicalType())) {
-      if (RecordDecl *nestedRD = nestedRecTy->getDecl()) {
-        if (!fieldInit || isa<ImplicitValueInitExpr>(fieldInit) ||
-            isa<InitListExpr>(fieldInit)) {
-          HandleNestedRecordInit(DS, TopVD, nestedRD,
-                                 dyn_cast_or_null<InitListExpr>(fieldInit),
-                                 fullFieldPath);
-        }
-      }
-    }
-  }
-}
-
-void TransferFunctions::HandleFieldInit(DeclStmt *DS, VarDecl *VD,
-                                        FieldDecl *FD, Expr *FieldInit,
-                                        std::string FullFieldPath) {
-  FieldPath FP(VD, FullFieldPath);
-
-  NullabilityKind LHSKind = getDefNullability(FD->getType(), Ctx);
-  NullabilityKind RHSKind = getExprPathNullability(FieldInit);
-
-  if (LHSKind == NullabilityKind::NonNull) {
-    if (RHSKind != NullabilityKind::NonNull && ShouldReportNullPtrError(DS)) {
-      NullabilityCheckDiagInfo DI(VD->getBeginLoc(), NonnullInitByDefault,
-                                  VD->getNameAsString() + FullFieldPath);
-      Reporter.addDiagInfo(DI);
-    }
-  } else {
-    if (CurrStatusFP.count(FP)) {
-      CurrStatusFP[FP] = RHSKind;
-    }
-  }
 }
 
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {

@@ -9,10 +9,10 @@ void case_partial_borrow(int *_Borrow p, int *_Borrow q) {
   // OK: all elements explicitly initialized
   int *_Borrow arr1[2] = {p, q};
 
-  // expected-error@+1 {{`arr2` is a _Nonnull pointer and must be properly initialized.}}
+  // expected-error@+1 {{type contains nonnull pointer must be properly initialized}}
   int *_Borrow arr2[2] = {p};
 
-  // expected-error@+1 {{`arr3` is a _Nonnull pointer and must be properly initialized.}}
+  // expected-error@+1 {{type contains nonnull pointer must be properly initialized}}
   int *_Borrow arr3[3] = {p};
 
   // OK: single-element array fully initialized
@@ -23,7 +23,7 @@ void case_partial_nonnull(int *_Nonnull p, int *_Nonnull q) {
   // OK: all elements explicitly initialized
   int *_Nonnull arr1[2] = {p, q};
 
-  // expected-error@+1 {{`arr2` is a _Nonnull pointer and must be properly initialized.}}
+  // expected-error@+1 {{type contains nonnull pointer must be properly initialized}}
   int *_Nonnull arr2[2] = {p};
 }
 

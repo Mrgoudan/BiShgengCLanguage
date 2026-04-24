@@ -1,0 +1,198 @@
+// RUN: %clang_cc1 -nullability-check=all -verify %s
+// expected-no-diagnostics
+
+int* _Owned safe_malloc(int);
+void safe_free(void * _Nullable _Owned p);
+
+#define NULL ((void *)0)
+
+void test_nonnull_ptr() {
+  int x = 1;
+  int *p = &x;
+  int *_Nonnull p1 = p;
+  int *_Nonnull p2 = {p};
+  int *_Nonnull p3 = {&x};
+  int *_Nonnull p4 = p+0;
+  int *_Borrow p5 = (int *_Borrow)p;
+  int *_Owned q1 = {safe_malloc(1)};
+  safe_free((void *_Owned)q1);
+  int *_Owned q2 = __take_from_raw(p);
+  safe_free((void *_Owned)q2);
+  int *_Owned q3 = __take_from_raw(&x);
+  safe_free((void *_Owned)q3);
+  const char * _Nonnull s = "hello";
+}
+
+void test_nonnull_union() {
+  union U {
+    int *_Nonnull p1;
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  union U u3 = {p};
+  union U u4 = {.p2=q};
+}
+
+void test_nonnull_struct() {
+  struct S {
+    int *_Nonnull p1;
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  struct S s0 = {&x};
+  struct S s1 = {p};
+  struct S s2 = {p, q};
+  struct S s3 = {p, nullptr};
+  struct S s4 = {p, NULL};
+  struct S s5 = {p, 0};
+}
+
+void test_nonnull_array() {
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *_Nonnull a1[2] = {&x, &x};
+  int *_Nonnull a2[2] = {p, p};
+  int *_Nonnull a3[2] = {p, &x};
+  int *_Nonnull a4[2] = {&x, p};
+}
+
+void test_nonnull_array_in_union() {
+  union U {
+    int *_Nonnull p1[2];
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  union U u1 = {{p, p}};
+  union U u2 = {.p2=q};
+}
+
+void test_nonnull_array_in_struct() {
+  struct S {
+    int *_Nonnull p1[2];
+    int * p2;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int * q = &x;
+  struct S s1 = {{p, p}};
+  struct S s2 = {{p, p}, q};
+}
+
+void test_nonnull_union_in_array() {
+  union U {
+    int *_Nonnull p;
+    int *q;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *q = &x;
+  union U arr7[2] = {{p}, {p}};
+  union U arr8[2] = {{.q=q}, {.q=q}};
+}
+
+void test_nonnull_struct_in_array() {
+  struct S {
+    int *_Nonnull p;
+    int *q;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *q = &x;
+  struct S arr7[2] = {{p}, {p}};
+  struct S arr9[2] = {{p, q}, {p, q}};
+}
+
+void test_nonnull_nested_type() {
+  struct Inner {
+    int *_Nonnull p[2];
+  };
+  struct Outer {
+    struct Inner inner;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  struct Outer o1 = {{p, p}};
+  struct Outer o2[2] = {{{p, p}}, {{p, p}}};
+}
+
+void test_nonnull_complex_nested() {
+  struct Inner {
+    int *_Nonnull p;
+  };
+  union Middle {
+    struct Inner inner;
+    int *_Nonnull q;
+  };
+  struct Outer {
+    union Middle middle[2];
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  struct Outer o4 = {{{{p}}, {{p}}}};
+}
+
+void test_nonnull_multi_dim_array() {
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *_Nonnull arr1[2][2] = {{p, p}, {p, p}};
+  int *_Nonnull arr2[2][2][2] = {{{p, p}, {p, p}}, {{p, p}, {p, p}}};
+  int *_Nonnull arr3[2][2][2][2] = {{{{p, p}, {p, p}}, {{p, p}, {p, p}}}, {{{p, p}, {p, p}}, {{p, p}, {p, p}}}};
+}
+
+void test_nonnull_mixed_types() {
+  struct S {
+    int *_Nonnull p;
+    int *_Borrow b;
+    int *n;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  int *n = &x;
+  struct S s4 = {p, (int *_Borrow)p, n};
+}
+
+void test_nonnull_union_with_struct() {
+  struct S {
+    int *_Nonnull p[2];
+  };
+  union U {
+    struct S s;
+    int *_Nonnull q;
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  union U u3 = {{p, p}};
+  union U u4 = {.q=p};
+}
+
+void test_nonnull_struct_array_in_struct() {
+  struct Inner {
+    int *_Nonnull p;
+  };
+  struct Outer {
+    struct Inner arr[2];
+  };
+  int x = 1;
+  int *_Nonnull p = &x;
+  struct Outer o4 = {{{p}, {p}}};
+}
+
+void test_nonnull_static() {
+  struct S1 {
+    int *_Nonnull p;
+  };
+  union U1 {
+    int *_Nonnull p;
+  };
+  static int x = 1;
+  static int* _Nonnull p = &x;
+  static int* _Nonnull arr[2] = {&x, &x};
+  static struct S1 s1 = {&x};
+  static union U1 u1 = {&x};
+}

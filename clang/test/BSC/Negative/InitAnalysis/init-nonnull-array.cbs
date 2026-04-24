@@ -7,30 +7,30 @@ _Safe void use_borrow(int *_Borrow p);
 
 // Empty init: all elements are null-initialized, violates _Nonnull.
 _Safe void test_nonnull_empty(void) {
-    int *_Nonnull arr[2] = {}; // expected-error {{`arr` is a _Nonnull pointer and must be properly initialized}}
+    int *_Nonnull arr[2] = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
     use_ptr(arr[0]);
 }
 
 // Mixed init: {a, nullptr} — nullptr violates _Nonnull.
 _Safe void test_nonnull_mixed(int *_Nonnull a) {
-    int *_Nonnull arr[2] = {a, nullptr}; // expected-error {{`arr` is a _Nonnull pointer and must be properly initialized}}
+    int *_Nonnull arr[2] = {a, nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
     use_ptr(arr[0]);
 }
 
 // Partial init: {a} — second element is null-initialized, violates _Nonnull.
 _Safe void test_nonnull_partial(int *_Nonnull a) {
-    int *_Nonnull arr[2] = {a}; // expected-error {{`arr` is a _Nonnull pointer and must be properly initialized}}
+    int *_Nonnull arr[2] = {a}; // expected-error {{type contains nonnull pointer must be properly initialized}}
     use_ptr(arr[0]);
 }
 
 // _Borrow empty init: null-initialized, violates _Borrow (implies _Nonnull).
 _Safe void test_borrow_empty(void) {
-    int *_Borrow arr[2] = {}; // expected-error {{`arr` is a _Nonnull pointer and must be properly initialized}}
+    int *_Borrow arr[2] = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
     use_borrow(arr[0]);
 }
 
 // _Borrow partial init: {a} — second element null-initialized.
 _Safe void test_borrow_partial(int *_Borrow a) {
-    int *_Borrow arr[2] = {a}; // expected-error {{`arr` is a _Nonnull pointer and must be properly initialized}}
+    int *_Borrow arr[2] = {a}; // expected-error {{type contains nonnull pointer must be properly initialized}}
     use_borrow(arr[0]);
 }

@@ -34,13 +34,6 @@ void * _Borrow return_void_borrow_nullptr(void * _Borrow dummy) {
   return (void * _Borrow)nullptr;
 }
 
-// nullptr with _Borrow in safe zone
-_Safe void test_safe_borrow_nullptr(int * _Borrow p) {
-  int * _Borrow bp = (int * _Borrow)nullptr;
-  (void)bp;
-  (void)p;
-}
-
 // Struct with _Borrow pointers initialized to nullptr
 struct BorrowPointers {
   int * _Borrow bp;
