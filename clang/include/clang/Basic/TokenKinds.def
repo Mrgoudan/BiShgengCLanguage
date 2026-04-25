@@ -599,6 +599,7 @@ TYPE_TRAIT_1(__is_unsigned, IsUnsigned, KEYCXX|KEYBSC)
 TYPE_TRAIT_1(__is_struct, IsStruct, KEYBSC)
 TYPE_TRAIT_1(__is_move_semantic, IsMoveSemantic, KEYBSC)
 TYPE_TRAIT_1(__is_owned_pointer, IsOwnedPointer, KEYBSC)
+TYPE_TRAIT_1(__is_borrow, IsBorrow, KEYBSC)
 TYPE_TRAIT_1(__is_owned_struct, IsOwnedStruct, KEYBSC)
 TYPE_TRAIT_1(__is_trivial_data, IsTrivialData, KEYBSC)
 #else

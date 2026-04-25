@@ -74,13 +74,7 @@ _Safe constexpr bool is_owned_struct<T>(void) {
 }
 
 _Safe constexpr bool is_borrow<T>(void) {
-    if constexpr(!is_pointer<T>()) {
-        return false;
-    } else if constexpr(is_owned_pointer<T>()) {
-        return false;
-    } else {
-        return __is_same(T, T _Borrow);
-    }
+    return __is_borrow(T);
 }
 
 typedef __remove_pointer<T> = __typeof(*(T)nullptr);
