@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -verify %s
-// UNSUPPORTED: ENABLE_BSC_FUTURE
 
 // Test that union member access (both read and write) is forbidden in safe zones
 
@@ -56,7 +55,6 @@ _Safe void test_union_pointer_access(union U *_Borrow p) {
 _Safe void test_union_array_access(void) {
   union U arr[3] = {};
 
-  // Note: [] operator restriction on raw pointers requires ENABLE_BSC_FUTURE
   // error: accessing union member in array element
   arr[0].x = 5; // expected-error{{access to union field is _Unsafe and requires _Unsafe block}}
 

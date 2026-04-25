@@ -6013,15 +6013,6 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
        << LHSExp->getSourceRange() << RHSExp->getSourceRange());
   }
 
-  #if ENABLE_BSC && ENABLE_BSC_FUTURE
-  // Check if array subscript on raw pointer is used in safe zone
-  // Array subscript ptr[i] is equivalent to *(ptr + i), so we apply
-  // the same safety check as dereference operator
-  if (getLangOpts().BSC) {
-    DiagnoseInvalidArraySubscriptInSafeZone(LLoc, BaseExpr->getType());
-  }
-  #endif
-
   // C99 6.5.2.1p1
 #if ENABLE_BSC
   if (!IndexExpr->getType()->isIntegerType() && !IndexExpr->isTypeDependent()) {
@@ -14762,22 +14753,6 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // Verify that LHS is a modifiable lvalue, and emit error if not.
   if (CheckForModifiableLvalue(LHSExpr, Loc, *this))
     return QualType();
-
-  #if ENABLE_BSC && ENABLE_BSC_FUTURE
-  // BSC: Check for global variable modification in safe zone
-  if (getLangOpts().BSC && IsInSafeZone()) {
-    // Strip away any parentheses or implicit casts to get to the underlying expression
-    Expr *UnderlyingExpr = LHSExpr->IgnoreParenImpCasts();
-    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(UnderlyingExpr)) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-        if (VD->hasGlobalStorage()) {
-          Diag(Loc, diag::err_unsafe_action) << "modifying global variable";
-          return QualType();
-        }
-      }
-    }
-  }
-#endif
 
 #if ENABLE_BSC
   // BSC: For function pointer assignment with heterogeneous redeclarations,

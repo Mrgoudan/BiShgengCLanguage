@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// UNSUPPORTED: ENABLE_BSC_FUTURE
 
 // Now valid as mixed mode declaration
 _Unsafe int add(int x, int y);
@@ -53,8 +52,7 @@ int main() {
   pfun = fun;
 
 _Safe {
-  // Note: Global variable modification restriction requires ENABLE_BSC_FUTURE
-  unpfun = safun;   
+  unpfun = safun;
   unpfun = unfun;
   unpfun = fun;
 }

@@ -1,20 +1,16 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// UNSUPPORTED: ENABLE_BSC_FUTURE
-
-// Test that global variable modification is ALLOWED when ENABLE_BSC_FUTURE is disabled
-// This verifies that the feature is properly disabled by default
 
 int *g;
 static int *s;
 
 _Safe void foo(void) {
-  // ok: modifying global variable is allowed when feature is disabled
+  // ok
   g = nullptr;
 
-  // ok: modifying through parentheses is also allowed
+  // ok
   (g) = nullptr;
 
-  // ok: modifying static global variable is allowed
+  // ok
   s = nullptr;
 
   // ok: reading global variable is always allowed
@@ -34,7 +30,7 @@ void test_static_in_function() {
     // ok: reading static variable is allowed
     int *read_static = local_static;
 
-    // ok: modifying function static variable is allowed when feature is disabled
+    // ok
     local_static = nullptr;
   }
 }
@@ -43,7 +39,7 @@ _Safe void test_multiple_assignments(void) {
   int *local1 = nullptr;
   int *local2 = nullptr;
 
-  // ok: modifying global variables is allowed when feature is disabled
+  // ok
   g = local1;
   s = local2;
 

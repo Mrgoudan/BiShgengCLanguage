@@ -420,7 +420,6 @@ endif ()
 
 # Determine whether to build BSC version of clang
 option(ENABLE_BSC "Enable BiSheng C" ON)
-option(ENABLE_BSC_FUTURE "Enable BSC experimental future features" OFF)
 
 # Apply BSC configuration
 if (ENABLE_BSC)
@@ -428,30 +427,10 @@ if (ENABLE_BSC)
   set(ENABLE_BSC 1)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_BSC=1")
   set(BSC_OPTION "-DBSC")
-
-  if (ENABLE_BSC_FUTURE)
-    message(STATUS "BSC future features are enabled")
-    add_compile_definitions(ENABLE_BSC_FUTURE=1)
-  endif()
 else()
   set(BSC_OPTION "")
-
-  # Validate: ENABLE_BSC_FUTURE requires ENABLE_BSC
-  if (ENABLE_BSC_FUTURE)
-      message(STATUS "ENABLE_BSC_FUTURE is disabled because ENABLE_BSC is OFF")
-    set(ENABLE_BSC_FUTURE OFF CACHE BOOL "ENABLE_BSC_FUTURE is disabled because ENABLE_BSC is OFF" FORCE)
-  endif()
 endif()
-
-# Save ENABLE_BSC_FUTURE value for test configuration before unsetting
-if (ENABLE_BSC_FUTURE)
-  set(CLANG_ENABLE_BSC_FUTURE ON)
-else()
-  set(CLANG_ENABLE_BSC_FUTURE OFF)
-endif()
-
 unset(ENABLE_BSC CACHE)
-unset(ENABLE_BSC_FUTURE CACHE)
 
 # Determine HOST_LINK_VERSION on Darwin.
 set(HOST_LINK_VERSION)

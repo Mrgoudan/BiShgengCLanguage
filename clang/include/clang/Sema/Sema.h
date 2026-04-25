@@ -12410,10 +12410,6 @@ public:
   void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
                                           UnaryOperatorKind Opc, QualType Type,
                                           Expr *InputExpr = nullptr);
-#if ENABLE_BSC_FUTURE
-  void DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
-                                               QualType BaseType);
-#endif
   void PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec);
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;

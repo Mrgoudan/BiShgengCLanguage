@@ -221,9 +221,6 @@ if lit.util.which('xmllint'):
 if config.enable_backtrace:
     config.available_features.add('backtrace')
 
-if config.enable_bsc_future:
-    config.available_features.add('ENABLE_BSC_FUTURE')
-
 if config.enable_threads:
     config.available_features.add('thread_support')
 

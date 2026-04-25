@@ -1108,22 +1108,6 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   }
 }
 
-#if ENABLE_BSC_FUTURE
-void Sema::DiagnoseInvalidArraySubscriptInSafeZone(SourceLocation LBracLoc,
-                                                   QualType BaseType) {
-  if (!IsInSafeZone())
-    return;
-
-  // Array subscript on a raw pointer is equivalent to dereferencing,
-  // so we apply the same check as UO_Deref
-  if (!BaseType.isNull() && BaseType->isPointerType() &&
-      !BaseType.getCanonicalType().isOwnedQualified() &&
-      !BaseType.getCanonicalType().isBorrowQualified()) {
-    Diag(LBracLoc, diag::err_unsafe_action) << "'[]' operator";
-  }
-}
-#endif
-
 void Sema::PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec) {
   getCurFunction()->InsCompoundSafeZone.push_back(
       InsCompoundSafeZoneInfo(SafeZoneSpec));

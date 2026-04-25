@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// UNSUPPORTED: ENABLE_BSC_FUTURE
 
 int main(void) {
   int a = 0;
@@ -8,7 +7,6 @@ int main(void) {
     ++a;          // ok: ++ on integers is allowed
     --a;          // ok: -- on integers is allowed
     int c = *b;   // expected-error {{'*' operator is forbidden in the safe zone}}
-    // Note: [] operator restriction on raw pointers requires ENABLE_BSC_FUTURE
     int d = b[0];
     int x = 0;
     const int *_Borrow cb = &_Const x;
