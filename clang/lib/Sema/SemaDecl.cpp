@@ -12028,19 +12028,41 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       FunctionTemplateDecl *NewTemplateDecl
         = NewFD->getDescribedFunctionTemplate();
 #if ENABLE_BSC
-      if (!NewTemplateDecl) {
-        // Check for conflicts between a function template and a non-template
-        // function. If the previous declaration (OldFD) is a function template
-        // while the current declaration (NewFD) is not, they cannot be treated
-        // as redeclarations of the same function. This constitutes a semantic
-        // conflict. In such cases, emit an error, mark the current declaration
-        // as invalid, and prevent further analysis to avoid downstream crashes.
-        Diag(NewFD->getLocation(),
-             diag::err_conflicting_function_declarations)
-            << NewFD->getDeclName();
-        Diag(OldFD->getLocation(), diag::note_previous_definition);
-        NewFD->setInvalidDecl();
-        return Redeclaration;
+      if (getLangOpts().BSC) {
+        if (!NewTemplateDecl) {
+          // Check for conflicts between a function template and a non-template
+          // function. If the previous declaration (OldFD) is a function template
+          // while the current declaration (NewFD) is not, they cannot be treated
+          // as redeclarations of the same function. This constitutes a semantic
+          // conflict. In such cases, emit an error, mark the current declaration
+          // as invalid, and prevent further analysis to avoid downstream crashes.
+          Diag(NewFD->getLocation(),
+              diag::err_conflicting_function_declarations)
+              << NewFD->getDeclName();
+          Diag(OldFD->getLocation(), OldFD->isThisDeclarationADefinition()
+                                         ? diag::note_previous_definition
+                                         : diag::note_previous_declaration);
+          NewFD->setInvalidDecl();
+          return Redeclaration;
+        }
+
+        // BSC uses C language mode for overload resolution but allows generic
+        // functions. A second declaration with the same name must use the same
+        // template-parameter-list as the first; otherwise Sema would merge them
+        // as redeclarations and CheckTemplateParameterList would walk mismatched
+        // lists. Diagnose like a type conflict instead of merging.
+        if (!TemplateParameterListsAreEqual(
+                NewTemplateDecl->getTemplateParameters(),
+                OldTemplateDecl->getTemplateParameters(), false,
+                TPL_TemplateMatch)) {
+          Diag(NewFD->getLocation(), diag::err_conflicting_types) << NewFD->getDeclName();
+          Diag(OldFD->getLocation(), OldFD->isThisDeclarationADefinition()
+                                         ? diag::note_previous_definition
+                                         : diag::note_previous_declaration);
+          NewFD->setInvalidDecl();
+          NewTemplateDecl->setInvalidDecl();
+          return Redeclaration;
+        }
       }
 #endif
       assert(NewTemplateDecl && "Template/non-template mismatch");
@@ -12081,13 +12103,15 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       // developer mistakenly re-declares a function as a template. Emit diagnostics to indicate the mismatch, mark the newer
       // declaration as invalid, and exit early to avoid inconsistent
       // redeclaration handling or potential crashes in later stages.
-      if ((NewFD->getDescribedFunctionTemplate() != nullptr) !=
-          (cast<FunctionDecl>(OldDecl)->getDescribedFunctionTemplate() !=
-           nullptr)) {
+      if (getLangOpts().BSC &&
+          ((NewFD->getDescribedFunctionTemplate() != nullptr) !=
+           (cast<FunctionDecl>(OldDecl)->getDescribedFunctionTemplate() != nullptr))) {
         Diag(NewFD->getLocation(),
              diag::err_conflicting_function_declarations)
             << NewFD->getDeclName();
-        Diag(OldDecl->getLocation(), diag::note_previous_definition);
+        Diag(OldDecl->getLocation(), cast<FunctionDecl>(OldDecl)->isThisDeclarationADefinition()
+                                         ? diag::note_previous_definition
+                                         : diag::note_previous_declaration);
         NewFD->setInvalidDecl();
         return Redeclaration;
       }

@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+void func1<T>() {} // expected-note {{previous definition is here}}
+void func1<T, U>() {} // expected-error {{conflicting types for 'func1'}}
+void func2<T, U>() {} // expected-note {{previous definition is here}}
+void func2<T>() {} // expected-error {{conflicting types for 'func2'}}
+void func3<int N>() {} // expected-note {{previous definition is here}}
+void func3<T>() {} // expected-error {{conflicting types for 'func3'}}
+void func4<T>() {} // expected-note {{previous definition is here}}
+void func4<int N>() {} // expected-error {{conflicting types for 'func4'}}
+void func5<T>(int a) {} // expected-note {{previous definition is here}}
+void func5<T>(int a, int b) {} // expected-error {{conflicting types for 'func5'}}
+void func6<T>(int a, int b) {} // expected-note {{previous definition is here}}
+void func6<T>(int a) {} // expected-error {{conflicting types for 'func6'}}
+void func7<T>(void) {} // expected-note {{previous definition is here}}
+void func7<T>(int a) {} // expected-error {{conflicting types for 'func7'}}
+void func8<T>(int a) {} // expected-note {{previous definition is here}}
+void func8<T>(void) {} // expected-error {{conflicting types for 'func8'}}

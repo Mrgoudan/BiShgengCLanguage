@@ -1,0 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+void func1<T>() {} // expected-note {{previous definition is here}}
+void func1<T>() {} // expected-error {{redefinition of 'func1'}}

@@ -1,0 +1,10 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+int func1<T>();
+int func1<T>();
+
+typedef int MyInt;
+int func2<MyInt N>();
+int func2<int N>();
+int func2<int N>();

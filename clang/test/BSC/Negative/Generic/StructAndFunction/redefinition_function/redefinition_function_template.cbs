@@ -1,0 +1,18 @@
+// RUN: %clang_cc1 -verify %s
+
+void func1() {} // expected-note {{previous definition is here}}
+void func1<T>() {} // expected-error {{conflicting function declarations for 'func1'}}
+void func2<T>() {} // expected-note {{previous definition is here}}
+void func2() {} // expected-error {{conflicting function declarations for 'func2'}}
+void func3(); // expected-note {{previous declaration is here}}
+void func3<T>(); // expected-error {{conflicting function declarations for 'func3'}}
+void func4<T>(); // expected-note {{previous declaration is here}}
+void func4(); // expected-error {{conflicting function declarations for 'func4'}}
+void func5() {} // expected-note {{previous definition is here}}
+void func5<T>(); // expected-error {{conflicting function declarations for 'func5'}}
+void func6<T>() {} // expected-note {{previous definition is here}}
+void func6(); // expected-error {{conflicting function declarations for 'func6'}}
+void func7(); // expected-note {{previous declaration is here}}
+void func7<T>() {} // expected-error {{conflicting function declarations for 'func7'}}
+void func8<T>(); // expected-note {{previous declaration is here}}
+void func8() {} // expected-error {{conflicting function declarations for 'func8'}}
