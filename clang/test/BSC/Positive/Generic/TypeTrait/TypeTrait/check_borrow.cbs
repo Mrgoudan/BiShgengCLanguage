@@ -16,6 +16,10 @@ typedef union U { int a; } U;
 typedef int *_Owned OwnedInt;
 typedef int *_Borrow MutBorrowInt;
 typedef const int *_Borrow ImmutBorrowInt;
+typedef MutBorrowInt MutBorrowAlias;
+typedef ImmutBorrowInt ImmutBorrowAlias;
+typedef int *_Borrow IntBorrowArray3[3];
+typedef int (*IntBorrowFnArray3[3])(int);
 typedef struct SB { int *_Borrow a; } SB;
 
 // The three tests below use the same type list in the same order. Expected
@@ -25,8 +29,9 @@ typedef struct SB { int *_Borrow a; } SB;
 //   const void* _Borrow                                                    -> (T,F,T)
 //   int* _Borrow                                                           -> (T,T,F)
 //   int* _Borrow*                                                          -> (F,F,F)
-//   MutBorrowInt                                                           -> (T,T,F)
-//   ImmutBorrowInt                                                         -> (T,F,T)
+//   IntBorrowArray3, IntBorrowFnArray3                                     -> (F,F,F)
+//   MutBorrowInt, MutBorrowAlias                                           -> (T,T,F)
+//   ImmutBorrowInt, ImmutBorrowAlias                                       -> (T,F,T)
 
 int test_is_borrow() {
     _Static_assert(is_borrow<void>() == false, "fail");
@@ -48,8 +53,12 @@ int test_is_borrow() {
     _Static_assert(is_borrow<const void *_Borrow>() == true, "fail");
     _Static_assert(is_borrow<int *_Borrow>() == true, "fail");
     _Static_assert(is_borrow<int *_Borrow *>() == false, "fail");
+    _Static_assert(is_borrow<IntBorrowArray3>() == false, "fail");
+    _Static_assert(is_borrow<IntBorrowFnArray3>() == false, "fail");
     _Static_assert(is_borrow<MutBorrowInt>() == true, "fail");
+    _Static_assert(is_borrow<MutBorrowAlias>() == true, "fail");
     _Static_assert(is_borrow<ImmutBorrowInt>() == true, "fail");
+    _Static_assert(is_borrow<ImmutBorrowAlias>() == true, "fail");
     return 0;
 }
 
@@ -73,8 +82,12 @@ int test_is_mut_borrow() {
     _Static_assert(is_mut_borrow<const void *_Borrow>() == false, "fail");
     _Static_assert(is_mut_borrow<int *_Borrow>() == true, "fail");
     _Static_assert(is_mut_borrow<int *_Borrow *>() == false, "fail");
+    _Static_assert(is_mut_borrow<IntBorrowArray3>() == false, "fail");
+    _Static_assert(is_mut_borrow<IntBorrowFnArray3>() == false, "fail");
     _Static_assert(is_mut_borrow<MutBorrowInt>() == true, "fail");
+    _Static_assert(is_mut_borrow<MutBorrowAlias>() == true, "fail");
     _Static_assert(is_mut_borrow<ImmutBorrowInt>() == false, "fail");
+    _Static_assert(is_mut_borrow<ImmutBorrowAlias>() == false, "fail");
     return 0;
 }
 
@@ -98,8 +111,12 @@ int test_is_immut_borrow() {
     _Static_assert(is_immut_borrow<const void *_Borrow>() == true, "fail");
     _Static_assert(is_immut_borrow<int *_Borrow>() == false, "fail");
     _Static_assert(is_immut_borrow<int *_Borrow *>() == false, "fail");
+    _Static_assert(is_immut_borrow<IntBorrowArray3>() == false, "fail");
+    _Static_assert(is_immut_borrow<IntBorrowFnArray3>() == false, "fail");
     _Static_assert(is_immut_borrow<MutBorrowInt>() == false, "fail");
+    _Static_assert(is_immut_borrow<MutBorrowAlias>() == false, "fail");
     _Static_assert(is_immut_borrow<ImmutBorrowInt>() == true, "fail");
+    _Static_assert(is_immut_borrow<ImmutBorrowAlias>() == true, "fail");
     return 0;
 }
 

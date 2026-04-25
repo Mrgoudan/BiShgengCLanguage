@@ -4924,7 +4924,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
   case UTT_IsOwnedPointer:
     return T->isPointerType() && T.getCanonicalType().isOwnedQualified();
   case UTT_IsBorrow:
-    return T.getCanonicalType().isBorrowQualified();
+    return T->isPointerType() && T.getCanonicalType().isBorrowQualified();
   case UTT_IsOwnedStruct:
     return T->isOwnedStructureType();
   case UTT_IsTrivialData:
