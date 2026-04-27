@@ -2110,6 +2110,19 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       }
       if ((DS.getTypeQualifiers() & DeclSpec::TQ_owned) &&
           (TagType == DeclSpec::TST_struct || TagType == DeclSpec::TST_class)) {
+        if (getCurScope()->getFnParent()) {
+          Diag(DS.getOwnedSpecLoc(),
+               diag::err_owned_struct_in_function_scope);
+          // Parse the body as an _Owned struct to keep the parser in sync,
+          // but do not register it as owned for semantic analysis.
+          RecordDecl *RD = cast<RecordDecl>(D);
+          RD->setOwnedDecl(true);
+          ParseBSCMemberSpecification(StartLoc, AttrFixitLoc, attrs, TagType,
+                                      RD);
+          RD->setOwnedDecl(false);
+          DS.SetTypeSpecError();
+          return;
+        }
         if (RecordDecl *RD = dyn_cast<RecordDecl>(D)) {
           RD->setOwnedDecl(true);
         }

@@ -9,6 +9,7 @@ def err_multi_trait_call_func : Error<"%0 cannot directly call functions">;
 // BSC _Owned struct
 def err_tag_name : Error<"must ignore '_Owned struct' tag before struct name">;
 def err_inconsistent_tag_name : Error<"inconsistent tag before struct name">;
+def err_owned_struct_in_function_scope : Error<"_Owned struct cannot be defined in function scope; move the definition to file scope">;
 
 // BSC generic warnings and errors.
 def err_extended_type_not_generic_typealias : Error<"extended type of a BSC member function cannot be a generic typealias">;

@@ -4495,6 +4495,9 @@ int main() {
 
 #### 3.4.1. 定义 `_Owned struct` 类型
 `_Owned struct` 类型的定义由关键字 `_Owned struct` 和自定义的名字组成，紧跟着是定义在一对花括号中 `_Owned struct` 定义体，在定义体中可以定义成员变量、析构函数、成员函数和访问修饰符。允许定义泛型 `_Owned struct`。
+
+**限制：** `_Owned struct` 必须在翻译单元的声明层级定义（与 `_Trait` 定义、普通函数定义等同级），不允许在函数体或块作用域内定义（例如在任何函数、`main`、条件/循环等块内直接写 `_Owned struct S { ... };`）。这与标准 C 允许在函数内定义 `struct` 不同。违反时编译器报错：`_Owned struct cannot be defined in function scope; move the definition to file scope`。若在函数里需要该类型，应将 `_Owned struct` 定义放在函数外部，再在函数内使用。
+
 示例：
 ```c
 #include <stdio.h>
@@ -4513,6 +4516,7 @@ _Public:
 
 int main() {
   Person p = {.name = "Tom", .age = 18};
+  _Owned struct S { }; // error: _Owned struct cannot be defined in function scope; move the definition to file scope
   return 0;
 }
 ```

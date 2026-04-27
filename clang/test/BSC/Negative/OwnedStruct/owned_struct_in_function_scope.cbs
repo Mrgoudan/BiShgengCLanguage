@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -verify %s
+
+void foo() {
+    _Owned struct A { // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+    _Private:
+        int x;
+    _Public:
+        void bar(This this) { }
+    };
+}
+
+void foo2() {
+    _Owned struct A2 { // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+        int x;
+        ~A2() { } // expected-error {{the parameter of destructor must be 'A2 this'}}
+    };
+}
+
+int main() {
+    _Owned struct B { // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+        int y;
+        int get(This this) { return this.y; } // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type, please fix it}}
+    };
+
+    _Owned struct B2 { // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+        int y;
+        ~B2() { } // expected-error {{the parameter of destructor must be 'B2 this'}}
+    };
+
+    _Owned struct B3 { }; // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+    return 0;
+}
