@@ -55,32 +55,25 @@ void test6(int** _Owned p) {
 
 void multicast_integer_ptr_rev() {
     char *_Owned _Nullable ptr1 = (char *_Owned _Nullable) (char) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'char' to 'char *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'char' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'char'}}
     unsigned char *_Owned _Nullable ptr2 = (unsigned char *_Owned _Nullable) (unsigned char) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'unsigned char' to 'unsigned char *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'unsigned char' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'unsigned char'}}
     signed char *_Owned _Nullable ptr3 = (signed char *_Owned _Nullable) (signed char) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'signed char' to 'signed char *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'signed char' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'signed char'}}
     short *_Owned _Nullable ptr4 = (short *_Owned _Nullable) (short) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'short' to 'short *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'short' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'short'}}
     unsigned short *_Owned _Nullable ptr5 = (unsigned short *_Owned _Nullable) (unsigned short) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'unsigned short' to 'unsigned short *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'unsigned short' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'unsigned short'}}
     int *_Owned _Nullable ptr6 = (int *_Owned _Nullable) (int) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'int' to 'int *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'int' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'int'}}
     unsigned int *_Owned _Nullable ptr7 = (unsigned int *_Owned _Nullable) (unsigned int) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'unsigned int' to 'unsigned int *_Owned'}}
-    // expected-warning@-2 {{cast to smaller integer type 'unsigned int' from 'std::nullptr_t'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'unsigned int'}}
     long *_Owned _Nullable ptr8 = (long *_Owned _Nullable) (long) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'long' to 'long *_Owned'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'long'}}
     unsigned long *_Owned _Nullable ptr9 = (unsigned long *_Owned _Nullable) (unsigned long) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'unsigned long' to 'unsigned long *_Owned'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'unsigned long'}}
     long long *_Owned _Nullable ptr10 = (long long *_Owned _Nullable) (long long) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'long long' to 'long long *_Owned'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'long long'}}
     unsigned long long *_Owned _Nullable ptr11 = (unsigned long long *_Owned _Nullable) (unsigned long long) nullptr;
-    // expected-error@-1 {{incompatible _Owned types, cannot cast 'unsigned long long' to 'unsigned long long *_Owned'}}
+    // expected-error@-1 {{cannot cast an object of type 'nullptr_t' to 'unsigned long long'}}
 }

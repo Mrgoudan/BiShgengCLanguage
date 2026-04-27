@@ -3141,6 +3141,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Char32:
     return "char32_t";
   case NullPtr:
+#if ENABLE_BSC
+    if (Policy.NullptrTypeInBSC)
+      return "nullptr_t";
+#endif
     return "std::nullptr_t";
   case Overload:
     return "<overloaded function type>";

@@ -4,10 +4,10 @@
 
 // nullptr cast to non-pointer types (should warn)
 void test_nullptr_to_non_pointer(void) {
-  int i = (int)nullptr; // expected-warning {{cast to smaller integer type 'int' from 'std::nullptr_t'}}
-  char c = (char)nullptr; // expected-warning {{cast to smaller integer type 'char' from 'std::nullptr_t'}}
-  short s = (short)nullptr; // expected-warning {{cast to smaller integer type 'short' from 'std::nullptr_t'}}
-  unsigned u = (unsigned)nullptr; // expected-warning {{cast to smaller integer type 'unsigned int' from 'std::nullptr_t'}}
+  int i = (int)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'int'}}
+  char c = (char)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'char'}}
+  short s = (short)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'short'}}
+  unsigned u = (unsigned)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'unsigned int'}}
 }
 
 // nullptr cast to struct/union/enum (should error)
@@ -26,9 +26,9 @@ enum TestEnum {
 };
 
 void test_nullptr_to_aggregate(void) {
-  struct TestStruct s = (struct TestStruct)nullptr; // expected-error {{used type 'struct TestStruct' where arithmetic or pointer type is required}}
-  union TestUnion u = (union TestUnion)nullptr; // expected-error {{cast to union type from type 'std::nullptr_t' not present in union}}
-  enum TestEnum e = (enum TestEnum)nullptr; // expected-warning {{cast to smaller integer type 'enum TestEnum' from 'std::nullptr_t'}}
+  struct TestStruct s = (struct TestStruct)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'struct TestStruct'}}
+  union TestUnion u = (union TestUnion)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'union TestUnion'}}
+  enum TestEnum e = (enum TestEnum)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'enum TestEnum'}}
 }
 
 // nullptr in safe zone with incompatible pointer types
@@ -44,15 +44,15 @@ _Safe void test_safe_zone_incompatible_cast(void) {
 
 // nullptr arithmetic (should error)
 void test_nullptr_arithmetic(void) {
-  void *p1 = nullptr + 1; // expected-error {{invalid operands to binary expression ('std::nullptr_t' and 'int')}}
-  void *p2 = nullptr - 1; // expected-error {{invalid operands to binary expression ('std::nullptr_t' and 'int')}}
-  void *p3 = 1 + nullptr; // expected-error {{invalid operands to binary expression ('int' and 'std::nullptr_t')}}
+  void *p1 = nullptr + 1; // expected-error {{invalid operands to binary expression ('nullptr_t' and 'int')}}
+  void *p2 = nullptr - 1; // expected-error {{invalid operands to binary expression ('nullptr_t' and 'int')}}
+  void *p3 = 1 + nullptr; // expected-error {{invalid operands to binary expression ('int' and 'nullptr_t')}}
 }
 
 // nullptr with array types (arrays cannot be assigned)
 void test_nullptr_array_assignment(void) {
   int arr[10];
-  arr = (int [10])nullptr; // expected-error {{used type 'int[10]' where arithmetic or pointer type is required}}
+  arr = (int [10])nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'int[10]'}}
 }
 
 // Safe zone: _Owned/_Borrow qualifier mismatches

@@ -1,0 +1,15 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+enum E {
+  A,
+  B
+};
+
+void test1(enum E e) {
+  (int)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'int'}}
+  (long)nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'long'}}
+  (typeof(nullptr))1; // expected-error {{cannot cast an object of type 'int' to 'nullptr_t'}}
+  (typeof(nullptr))(void *)0; // expected-error {{cannot cast an object of type 'void *' to 'nullptr_t'}}
+  (typeof(nullptr))e; // expected-error {{cannot cast an object of type 'enum E' to 'nullptr_t'}}
+  (void)(typeof(nullptr))nullptr;
+}

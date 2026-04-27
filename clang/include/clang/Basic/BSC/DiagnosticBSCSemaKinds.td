@@ -278,3 +278,6 @@ def err_mut_borrow_string_literal_indirect : Error<
   "cannot take mutable borrow through string literal with '&_Mut *'; string literals are immutable">;
 def err_pass_string_literal_to_mut_borrow : Error<
   "cannot pass string literal to parameter of type %0; string literals are immutable">;
+
+def err_bsc_nullptr_cast : Error<
+  "cannot cast an object of type %select{'nullptr_t' to %1|%1 to 'nullptr_t'}0">;

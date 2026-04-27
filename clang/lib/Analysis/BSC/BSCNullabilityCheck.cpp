@@ -695,7 +695,8 @@ void TransferFunctions::VisitMemberExpr(MemberExpr *ME) {
 // when p has nullable PathNullability.
 void TransferFunctions::VisitCStyleCastExpr(CStyleCastExpr *CSCE) {
   if (getDefNullability(CSCE->getTypeAsWritten(), Ctx) == NullabilityKind::NonNull) {
-    if (getExprPathNullability(CSCE->getSubExpr()) == NullabilityKind::Nullable &&
+    if (getExprPathNullability(CSCE->getSubExpr()->IgnoreParenImpCasts()) ==
+            NullabilityKind::Nullable &&
         ShouldReportNullPtrError(CSCE)) {
       NullabilityCheckDiagInfo DI(CSCE->getBeginLoc(), NullableCastNonnull);
       Reporter.addDiagInfo(DI);

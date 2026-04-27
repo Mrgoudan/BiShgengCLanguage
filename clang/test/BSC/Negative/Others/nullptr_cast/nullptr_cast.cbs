@@ -28,6 +28,6 @@ void test_nullptr_comprehensive() {
     int is_null2 = (nullptr != p4);
 
     // Negative Tests: Verify expected errors, ensure no core dumps.
-    int val = nullptr;       // expected-error {{initializing 'int' with an expression of incompatible type 'std::nullptr_t'}}
+    int val = nullptr;       // expected-error {{initializing 'int' with an expression of incompatible type 'nullptr_t'}}
     void * p9 = (void*)nullptr;
 }

@@ -1,0 +1,19 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+void test1() {
+  typeof(nullptr) p = nullptr;
+  p = nullptr;
+  typeof(nullptr) q = p;
+  (void)nullptr;
+  int *a = (int *)nullptr;
+  _Bool b = (_Bool)nullptr;
+  int *_Owned p1 = (int *_Owned)nullptr;
+  int *p2 = __move_to_raw(p1);
+  int *_Borrow p3 = (int *_Borrow)nullptr;
+}
+
+int main() {
+  return 0;
+}

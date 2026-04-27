@@ -2877,12 +2877,35 @@ void CastOperation::CheckCStyleCast() {
       assert(Kind == CK_Dependent);
       return;
     }
-    // Intercept explicit casts from nullptr_t to pointer.
-    // Prevents PrepareScalarCast in C mode from crashing, because it will
-    // get the address space of nullptr_t's non-existent pointee type.
-    if (SrcExpr.get()->getType()->isNullPtrType() &&
-        DestType->isPointerType()) {
-      Kind = CK_NullToPointer;
+    // The type nullptr_t shall not be converted to any type other than void,
+    // bool, or a pointer type. No type other than nullptr_t shall be converted
+    // to nullptr_t.
+    if (SrcExpr.get()->getType()->isNullPtrType()) {
+      if (!DestType->isVoidType() && !DestType->isBooleanType() &&
+          !DestType->isPointerType() && !DestType->isNullPtrType()) {
+        Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_bsc_nullptr_cast)
+            << /*nullptr to type*/ 0 << DestType;
+        SrcExpr = ExprError();
+        return;
+      }
+      if (DestType->isBooleanType()) {
+        SrcExpr = ImplicitCastExpr::Create(
+            Self.Context, DestType, CK_PointerToBoolean, SrcExpr.get(), nullptr,
+            VK_PRValue, Self.CurFPFeatureOverrides());
+      } else if (!DestType->isNullPtrType()) {
+        // Implicitly cast from the null pointer type to the type of the
+        // destination.
+        CastKind CK = DestType->isPointerType() ? CK_NullToPointer : CK_BitCast;
+        SrcExpr = ImplicitCastExpr::Create(Self.Context, DestType, CK,
+                                           SrcExpr.get(), nullptr, VK_PRValue,
+                                           Self.CurFPFeatureOverrides());
+      }
+    }
+    if (DestType->isNullPtrType() &&
+        !SrcExpr.get()->getType()->isNullPtrType()) {
+      Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_bsc_nullptr_cast)
+          << /*type to nullptr*/ 1 << SrcExpr.get()->getType();
+      SrcExpr = ExprError();
       return;
     }
     if (!Self.IsSafeConversion(DestType, SrcExpr.get(), /*IsExplicitCast=*/true)) {

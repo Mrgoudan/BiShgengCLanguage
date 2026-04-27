@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-everything %s
-// expected-no-diagnostics
 
 void exhaust<T>(T *_Owned _Nullable);
 
@@ -105,16 +104,16 @@ void multicast_void_integer() {
 }
 
 void multicast_integer_ptr() {
-    char* ptr1 = (char*) (char) nullptr;
-    unsigned char* ptr2 = (unsigned char*) (unsigned char) nullptr;
-    signed char* ptr3 = (signed char*) (signed char) nullptr;
-    short* ptr4 = (short*) (short) nullptr;
-    unsigned short* ptr5 = (unsigned short*) (unsigned short) nullptr;
-    int* ptr6 = (int*) (int) nullptr;
-    unsigned int* ptr7 = (unsigned int*) (unsigned int) nullptr;
-    long* ptr8 = (long*) (long) nullptr;
-    unsigned long* ptr9 = (unsigned long*) (unsigned long) nullptr;
-    long long* ptr10 = (long long*) (long long) nullptr;
-    unsigned long long* ptr11 = (unsigned long long*) (unsigned long long) nullptr;
+    char* ptr1 = (char*) (char) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'char'}}
+    unsigned char* ptr2 = (unsigned char*) (unsigned char) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'unsigned char'}}
+    signed char* ptr3 = (signed char*) (signed char) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'signed char'}}
+    short* ptr4 = (short*) (short) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'short'}}
+    unsigned short* ptr5 = (unsigned short*) (unsigned short) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'unsigned short'}}
+    int* ptr6 = (int*) (int) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'int'}}
+    unsigned int* ptr7 = (unsigned int*) (unsigned int) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'unsigned int'}}
+    long* ptr8 = (long*) (long) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'long'}}
+    unsigned long* ptr9 = (unsigned long*) (unsigned long) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'unsigned long'}}
+    long long* ptr10 = (long long*) (long long) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'long long'}}
+    unsigned long long* ptr11 = (unsigned long long*) (unsigned long long) nullptr; // expected-error {{cannot cast an object of type 'nullptr_t' to 'unsigned long long'}}
 }
 
