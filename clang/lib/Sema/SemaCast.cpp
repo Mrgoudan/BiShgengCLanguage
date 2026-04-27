@@ -2925,15 +2925,13 @@ void CastOperation::CheckCStyleCast() {
       }
     }
     // bsc borrow type CStyleCast
-    // Skip when types are still dependent; the check runs again at
-    // instantiation time with concrete types.
-    if (!DestType->isDependentType() && !SrcExpr.get()->getType()->isDependentType()) {
-      if (SrcExpr.get()->getType().getCanonicalType().isBorrowQualified() ||
-         DestType.getCanonicalType().isBorrowQualified()) {
-        if (!Self.CheckBorrowQualTypeCStyleCast(DestType, SrcExpr.get()->getType(), SrcExpr.get()->getExprLoc())) {
-          SrcExpr = ExprError();
-          return;
-        }
+    if (SrcExpr.get()->getType().getCanonicalType().isBorrowQualified() ||
+        DestType.getCanonicalType().isBorrowQualified()) {
+      if (!Self.CheckBorrowQualTypeCStyleCast(DestType,
+                                              SrcExpr.get()->getType(),
+                                              SrcExpr.get()->getExprLoc())) {
+        SrcExpr = ExprError();
+        return;
       }
     }
     {
