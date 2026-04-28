@@ -14,32 +14,44 @@
 
 #include "clang/Analysis/Analyses/BSC/BSCBorrowChecker.h"
 #include "clang/AST/StmtVisitor.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace clang::borrow;
 
 namespace {
-bool IsTrackedType(const Environment &env, QualType type) {
+bool IsTrackedTypeImpl(const Environment &env, QualType type,
+                       llvm::SmallPtrSetImpl<const RecordDecl *> &visited) {
   type = type.getCanonicalType();
   if (type->isPointerType() && type.isOwnedQualified()) {
-    return IsTrackedType(env, type->getPointeeType());
+    return IsTrackedTypeImpl(env, type->getPointeeType(), visited);
   }
   if (type->isArrayType()) {
     if (const ArrayType *AT = env.Ctx.getAsArrayType(type)) {
-      return IsTrackedType(env, AT->getElementType());
+      return IsTrackedTypeImpl(env, AT->getElementType(), visited);
     }
   }
   if (type.isBorrowQualified())
     return true;
   if (const RecordType *RT = type->getAs<RecordType>()) {
-    for (const FieldDecl *FD : RT->getDecl()->fields()) {
-      if (IsTrackedType(env, FD->getType())) {
-        return true;
+    if (const RecordDecl *RD = RT->getDecl()->getDefinition()) {
+      if (!visited.insert(RD).second) {
+        return false;
+      }
+      for (const FieldDecl *FD : RD->fields()) {
+        if (IsTrackedTypeImpl(env, FD->getType(), visited)) {
+          return true;
+        }
       }
     }
   }
   return false;
+}
+
+bool IsTrackedType(const Environment &env, QualType type) {
+  llvm::SmallPtrSet<const RecordDecl *, 8> visited;
+  return IsTrackedTypeImpl(env, type, visited);
 }
 } // namespace
 

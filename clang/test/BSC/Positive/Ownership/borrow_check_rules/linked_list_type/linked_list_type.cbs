@@ -1,0 +1,21 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+typedef struct Node {
+  int value;
+  struct Node *_Owned _Nullable next;
+} Node;
+
+typedef struct {
+  Node *_Owned _Nullable head;
+  int count;
+} List;
+
+_Safe List *_Owned _Nullable test_nested_access(List *_Owned _Nullable list) {
+  return list;
+}
+
+int main() {
+  return 0;
+}
