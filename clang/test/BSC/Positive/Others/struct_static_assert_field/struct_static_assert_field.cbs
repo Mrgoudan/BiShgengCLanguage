@@ -1,0 +1,22 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+constexpr int b = 1;
+struct SB {
+    int b;
+    _Static_assert(b, "");
+};
+
+// Field does not shadow outer enum constant.
+enum { EC = 1 };
+struct SC {
+    int EC;
+    _Static_assert(EC, "");
+};
+
+int main() {
+    struct SB b = {1};
+    struct SC c = {2};
+    return c.EC - b.b * 2;
+}

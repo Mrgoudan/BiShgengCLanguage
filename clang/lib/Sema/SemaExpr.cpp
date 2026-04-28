@@ -2787,6 +2787,32 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   bool ADL = UseArgumentDependentLookup(SS, R, HasTrailingLParen);
 
   if (R.empty() && !ADL) {
+#if ENABLE_BSC
+    // In BSC, when an identifier is undeclared inside an owned struct method
+    // body, check if it is a member of the parent struct. If so, emit a
+    // specific diagnostic instead of "use of undeclared identifier".
+    if (getLangOpts().BSC && SS.isEmpty()) {
+      if (FunctionDecl *FD = getCurFunctionDecl()) {
+        RecordDecl *ParentRD = nullptr;
+        if (auto *BSCMD = dyn_cast<BSCMethodDecl>(FD)) {
+          ParentRD = dyn_cast_or_null<RecordDecl>(BSCMD->getParent());
+        }
+        if (ParentRD && ParentRD->isOwnedDecl()) {
+          DeclarationName LookupName = NameInfo.getName();
+          auto MemberResult = ParentRD->lookup(LookupName);
+          for (NamedDecl *ND : MemberResult) {
+            if (isa<FieldDecl>(ND) || isa<VarDecl>(ND)) {
+              Diag(NameInfo.getLoc(),
+                   diag::err_invalid_member_use_in_class_method)
+                  << NameInfo.getName();
+              return ExprError();
+            }
+          }
+        }
+      }
+    }
+#endif
+
     if (SS.isEmpty() && getLangOpts().MSVCCompat) {
       if (Expr *E = recoverFromMSUnqualifiedLookup(*this, Context, NameInfo,
                                                    TemplateKWLoc, TemplateArgs))

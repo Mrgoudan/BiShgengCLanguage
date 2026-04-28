@@ -4,5 +4,5 @@ struct Point {
 }; 
 
 int main() {
-    Point::print(42); // expected-error {{must use 'struct' tag to refer to type 'Point'}}
+    Point::print(42); // expected-error {{must use 'struct' tag to refer to type 'Point'}} expected-error {{use of undeclared identifier 'print'}}
 }

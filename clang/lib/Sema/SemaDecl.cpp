@@ -10580,6 +10580,23 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         CheckBSCOverloadedOperatorDeclaration(NewFD)) {
       NewFD->setInvalidDecl();
     }
+    // Manually check for naming conflicts between BSC methods and existing
+    // fields/static members in the parent record.
+    if (BSCMD && !NewFD->isInvalidDecl()) {
+      if (RecordDecl *RD = dyn_cast<RecordDecl>(DC)) {
+        DeclarationName MethodName = NewFD->getDeclName();
+        auto Result = RD->lookup(MethodName);
+        for (NamedDecl *D : Result) {
+          if (!isa<FunctionDecl>(D) && !isa<FunctionTemplateDecl>(D)) {
+            Diag(NewFD->getLocation(), diag::err_redefinition_different_kind)
+                << MethodName;
+            Diag(D->getLocation(), diag::note_previous_definition);
+            NewFD->setInvalidDecl();
+            break;
+          }
+        }
+      }
+    }
   }
 #endif
 

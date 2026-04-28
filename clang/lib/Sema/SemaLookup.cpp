@@ -230,7 +230,6 @@ static inline unsigned getIDNS(Sema::LookupNameKind NameKind, bool CPlusPlus,
     }
 #if ENABLE_BSC
     if (BSC) {
-      IDNS |= Decl::IDNS_Member; // TODO: check if there are side-effects.
       if (NameKind == Sema::LookupBSCOwnedStructName ||
           NameKind == Sema::LookupDestructorName)
         IDNS |= Decl::IDNS_Tag;

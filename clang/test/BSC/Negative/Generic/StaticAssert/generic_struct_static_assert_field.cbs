@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -verify %s
+
+struct SA<T> {
+    int a;
+    _Static_assert(a, ""); // expected-error {{use of undeclared identifier 'a'}}
+};
