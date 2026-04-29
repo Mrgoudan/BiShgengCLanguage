@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+_Safe int *_Owned _ArrayElem safe_malloc_array(unsigned long size, int init);
+_Safe void safe_free_array(int *_Owned _ArrayElem p);
+
+_Safe void test_safe_malloc_array_api(void) {
+  int *_Owned _ArrayElem arr = safe_malloc_array(4, 7);
+  arr[0] = arr[1] + arr[2];
+  safe_free_array(arr);
+
+  int *_Owned _ArrayElem zero = safe_malloc_array(0, 99);
+  safe_free_array(zero);
+}
+
+_Unsafe int *move_to_raw_then_take_back(void) {
+  int *_Owned _ArrayElem arr = safe_malloc_array(2, 11);
+  int *raw = __move_array_to_raw(arr);
+  int *_Owned _ArrayElem arr2 = __take_array_from_raw(raw);
+  int *raw2 = __move_array_to_raw(arr2);
+  return raw2;
+}

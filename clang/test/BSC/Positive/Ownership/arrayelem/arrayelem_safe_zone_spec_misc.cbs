@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+_Safe int safe_array_star_and_subscript(void) {
+  int a[3] = {1, 2, 3};
+  int x = *a;
+  int y = a[1];
+  return x + y;
+}
+
+_Safe int borrow_arrayelem_star_mix(int *_Borrow _ArrayElem p) {
+  return *p + p[1];
+}
+
+_Safe void borrow_arrayelem_assign_star_mix(int *_Borrow _ArrayElem p) {
+  p[0] = *p + p[1];
+}
+
+_Unsafe void unsafe_take_void(void *p) { (void)p; }
+_Unsafe void unsafe_pass_array_to_void(void) {
+  int a[2];
+  unsafe_take_void(a);
+}

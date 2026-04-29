@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Invalid qualifier combinations in API-like declarations.
+_Safe int *_ArrayElem bad_ret1(unsigned long size, int init); // expected-error {{'_ArrayElem' must be used with '_Owned' or '_Borrow' together to qualify a pointer type}}
+_Safe int _Owned _ArrayElem bad_ret2(unsigned long size, int init); // expected-error {{type of 'int' cannot be qualified by '_ArrayElem'}} expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+_Safe void bad_free1(int _Owned _ArrayElem p); // expected-error {{type of 'int' cannot be qualified by '_ArrayElem'}} expected-error {{type of 'int' cannot be qualified by '_Owned'}}
+
+_Safe int *_Owned _ArrayElem safe_malloc_array(unsigned long size, int init);
+
+// Malformed generic-like spellings must diagnose cleanly (no crash/recovery loop).
+_Safe void bad_calls(void) {
+  int *_Owned _ArrayElem p = safe_malloc_array<>(2, 1); // expected-error {{expected expression}} expected-warning {{left operand of comma operator has no effect}}
+  int *_Owned _ArrayElem q = safe_malloc_array<int>(2); // expected-error {{expected expression}}
+  (void)p;
+  (void)q;
+}

@@ -1,0 +1,13 @@
+// RUN: %clang -g -c %s -o %t.o
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+_Safe int *_Owned _ArrayElem safe_malloc_array(unsigned long size, int init);
+_Safe void safe_free_array(int *_Owned _ArrayElem p);
+
+_Safe int test_local_owned_arrayelem_debug_info(void) {
+  int *_Owned _ArrayElem arr = safe_malloc_array(3, 5);
+  int v = arr[0];
+  safe_free_array(arr);
+  return v;
+}

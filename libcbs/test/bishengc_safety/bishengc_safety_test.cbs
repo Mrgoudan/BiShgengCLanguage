@@ -35,8 +35,65 @@ _Safe void test2(void) {
     forget<int *_Owned>(p);
 }
 
+void test3() {
+    int *_Owned _ArrayElem arr = safe_malloc_array(4, 7);
+    if (arr[0] != 7 || arr[1] != 7 || arr[2] != 7 || arr[3] != 7) {
+        _Unsafe { abort(); }
+    }
+
+    arr[2] = 42;
+    if (arr[2] != 42 || arr[1] != 7) {
+        _Unsafe { abort(); }
+    }
+
+    safe_free_array(arr);
+
+    int *_Owned _ArrayElem zero = safe_malloc_array(0, 99);
+    safe_free_array(zero);
+}
+
+void test4() {
+    const unsigned long n = 64;
+    int *_Owned _ArrayElem arr = safe_malloc_array(n, 3);
+    for (unsigned long i = 0; i < n; ++i) {
+        if (arr[i] != 3) {
+            _Unsafe { abort(); }
+        }
+    }
+
+    for (unsigned long i = 0; i < n; ++i) {
+        arr[i] = (int)(i * 2 + 1);
+    }
+    for (unsigned long i = 0; i < n; ++i) {
+        if (arr[i] != (int)(i * 2 + 1)) {
+            _Unsafe { abort(); }
+        }
+    }
+    safe_free_array(arr);
+
+    for (unsigned long round = 0; round < 16; ++round) {
+        unsigned long len = (round % 7) + 1;
+        int init = (int)round + 5;
+        int *_Owned _ArrayElem tmp = safe_malloc_array(len, init);
+        for (unsigned long i = 0; i < len; ++i) {
+            if (tmp[i] != init) {
+                _Unsafe { abort(); }
+            }
+            tmp[i] = (int)(i + round);
+        }
+        for (unsigned long i = 0; i < len; ++i) {
+            if (tmp[i] != (int)(i + round)) {
+                _Unsafe { abort(); }
+            }
+        }
+        safe_free_array(tmp);
+    }
+}
+
 int main() {
     test1();
     test2();
+    test3();
+    test4();
     return 0;
 }

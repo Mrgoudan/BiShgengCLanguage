@@ -47,6 +47,41 @@ _Safe T *_Owned safe_malloc<T>(T t) {
     }
 }
 
+_Safe T *_Owned _ArrayElem safe_malloc_array<T>(size_t size, T initializer) {
+    _Unsafe {
+        size_t bytes = 0;
+        if (size == 0) {
+            // Keep zero-length arrays representable and releasable.
+            bytes = 1;
+        } else if (__builtin_mul_overflow(size, sizeof(T), &bytes)) {
+            T *tmp = &initializer;
+            (void)tmp;
+            forget<T>(initializer);
+            bsc_overflow_handler();
+        }
+
+        T *addr = (T *)malloc(bytes);
+        if (!addr) {
+            T *tmp = &initializer;
+            (void)tmp;
+            forget<T>(initializer);
+            bsc_bad_alloc_handler(bytes);
+        }
+
+        for (size_t i = 0; i < size; ++i) {
+            addr[i] = initializer;
+        }
+
+        return __take_array_from_raw(addr);
+    }
+}
+
+_Safe void safe_free_array<T>(T * _Owned _ArrayElem p) {
+    _Unsafe {
+        free(__move_array_to_raw(p));
+    }
+}
+
 _Safe void safe_swap<T>(T* _Borrow left, T* _Borrow right) {
     _Unsafe {
         T tmp = *(T *_Nonnull)left;
