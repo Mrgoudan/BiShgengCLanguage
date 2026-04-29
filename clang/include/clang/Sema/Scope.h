@@ -237,6 +237,9 @@ private:
   SafeZoneSpecifier SafeZoneSpec;
   SafeZoneSource SafeZoneSrc;
   SourceLocation SafeZoneLoc;
+  /// For a CompoundStmt scope, the location of its opening '{'.
+  /// Used by safe-zone diagnostics to point notes at the offending block.
+  SourceLocation BraceLoc;
 #endif
 
 public:
@@ -288,10 +291,14 @@ public:
   void setScopeSafeZoneLoc(SourceLocation SafeZoneLoc) {
     const_cast<Scope *>(this)->SafeZoneLoc = SafeZoneLoc;
   }
+  void setScopeBraceLoc(SourceLocation Loc) {
+    const_cast<Scope *>(this)->BraceLoc = Loc;
+  }
 
   SafeZoneSpecifier getScopeSafeZoneSpecifier() const { return SafeZoneSpec; }
   SafeZoneSource getScopeSafeZoneSource() const { return SafeZoneSrc; }
   SourceLocation getScopeSafeZoneLoc() const { return SafeZoneLoc; }
+  SourceLocation getScopeBraceLoc() const { return BraceLoc; }
 #endif
   // Set whether we're in the scope of a condition variable, where 'continue'
   // is disallowed despite being a continue scope.

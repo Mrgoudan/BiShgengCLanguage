@@ -42,13 +42,13 @@ _Safe int main(void) {
       break;
     }
     {
-      case 1:     // expected-error {{case statement not in top-level switch block is forbidden in the safe zone}}
+      case 1:     // expected-error {{'case' label inside a nested '{ }' in the safe zone}} expected-note@-1 {{remove the nested '{ }', or wrap the switch in '_Unsafe { ... }'}}
         break; 
     }
     {   
       {
-        case 2:     // expected-error {{case statement not in top-level switch block is forbidden in the safe zone}}
-        case 3:     // expected-error {{case statement not in top-level switch block is forbidden in the safe zone}}
+        case 2:     // expected-error {{'case' label inside a nested '{ }' in the safe zone}} expected-note@-1 {{remove the nested '{ }', or wrap the switch in '_Unsafe { ... }'}}
+        case 3:     // expected-error {{'case' label inside a nested '{ }' in the safe zone}} expected-note@-2 {{remove the nested '{ }', or wrap the switch in '_Unsafe { ... }'}}
           break;
       }
     }
@@ -60,7 +60,7 @@ _Safe int main(void) {
         case 1:     // ok
           break;
         {
-          case 2: // expected-error {{case statement not in top-level switch block is forbidden in the safe zone}}
+          case 2: // expected-error {{'case' label inside a nested '{ }' in the safe zone}} expected-note@-1 {{remove the nested '{ }', or wrap the switch in '_Unsafe { ... }'}}
           break;
         }
         default:    // ok

@@ -25,8 +25,6 @@ def err_not_a_async_call : Error<
   "the _Await expression's external function declaration must be modified by _Async or return 'Future' type">;
 def err_function_not_found : Error <
   "'%0' was not found, you need to include %1 before using the '_Async' keyword">;
-def err_await_expression_not_found: Error <
-  "_Await expression was not found in _Async function">;
 def err_invalid_async_function : Error <
   "function which returns 'Future' type should not be modified by '_Async'">;
 
@@ -258,8 +256,6 @@ def note_borrowed_here : Note<"`%0` is borrowed here">;
 def err_borrow_mut_borrow_more_than_once : Error<
   "cannot borrow `%0` as mutable more than once at a time">;
 def note_first_mut_borrow_occurs_here : Note<"first mut borrow occurs here">;
-def err_borrow_return_local_borrow : Error<
-  "cannot return reference to local variable `%0`">;
 def err_borrow_not_live_long : Error<
   "`%0` does not live long enough">;
 def note_dropped_while_borrowed: Note<"`%0` dropped here while still borrowed">;

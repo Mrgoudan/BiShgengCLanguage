@@ -926,12 +926,15 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     }
 
 #if ENABLE_BSC
-    // In the bsc safe zone.
-    // 'case' can only appear in the top-level switch block.
+    // In the bsc safe zone, 'case' must appear directly inside the switch's
+    // '{ }', not nested inside any inner '{ }'. The note points at the
+    // innermost enclosing brace.
     if (Actions.IsInSafeZone() && getCurScope()->getParent() &&
         !(getCurScope()->getParent()->getFlags() & Scope::SwitchScope)) {
-      Diag(ColonLoc, diag::err_unsafe_action)
-          << "case statement not in top-level switch block";
+      Diag(CaseLoc, diag::err_safe_zone_case_in_nested_braces);
+      SourceLocation BraceLoc = getCurScope()->getScopeBraceLoc();
+      if (BraceLoc.isValid())
+        Diag(BraceLoc, diag::note_safe_zone_case_in_nested_braces);
     }
 #endif
 
@@ -1070,15 +1073,21 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
 #endif
 
   assert(Tok.is(tok::l_brace) && "Not a compount stmt!");
+#if ENABLE_BSC
+  SourceLocation LBraceLoc = Tok.getLocation();
+#endif
 
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
   ParseScope CompoundScope(this, ScopeFlags);
 #if ENABLE_BSC
-  if (getCurScope() && SafeZoneSpec != SZ_None) {
-    getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
-    getCurScope()->setScopeSafeZoneSource(SZS_Compound);
-    getCurScope()->setScopeSafeZoneLoc(SafeZoneLoc);
+  if (getCurScope()) {
+    getCurScope()->setScopeBraceLoc(LBraceLoc);
+    if (SafeZoneSpec != SZ_None) {
+      getCurScope()->setScopeSafeZoneSpecifier(SafeZoneSpec);
+      getCurScope()->setScopeSafeZoneSource(SZS_Compound);
+      getCurScope()->setScopeSafeZoneLoc(SafeZoneLoc);
+    }
   }
 #endif
   // Parse the statements in the body.
