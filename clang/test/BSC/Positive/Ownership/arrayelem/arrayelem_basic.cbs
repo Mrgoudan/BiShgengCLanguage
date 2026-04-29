@@ -1,0 +1,48 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+#include <stdlib.h>
+
+typedef int Elem;
+typedef Elem *_Borrow PlainBorrow;
+
+void take_borrow_array(int *_Borrow _ArrayElem p) {
+  p[1] = p[0] + p[2]; // a = {1, 4, 3, 4}
+}
+
+void take_borrow(int *_Borrow p) {
+  (void)p;
+}
+
+void take_const_borrow(const int *_Borrow p) {
+  (void)p;
+}
+
+int main(void) {
+  int a[4] = {1, 2, 3, 4};
+  take_borrow_array(&_Mut a[0]);
+  int *_Borrow _ArrayElem p = &_Mut a[0];
+  p = p + 1;
+  p += 1;
+  ++p;
+  p++;
+  p = p - 1;
+  p -= 1;
+  --p;
+  p--;
+  PlainBorrow plain = p;
+  const int *_Borrow _ArrayElem cp = &_Const p[1];
+  if (cp[-1] != 1)
+    return 1;
+  if (cp[0] != 4)
+    return 2;
+  if (p[2] != 3)
+    return 3;
+  if (a[3] != 4)
+    return 4;
+  return 0;
+}

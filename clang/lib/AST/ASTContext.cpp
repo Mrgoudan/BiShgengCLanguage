@@ -10451,6 +10451,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   RHS.removeLocalOwned();
   LHS.removeLocalBorrow();
   RHS.removeLocalBorrow();
+  LHS.removeLocalArrayElem(*this);
+  RHS.removeLocalArrayElem(*this);
 #endif
 
   QualType LHSCan = getCanonicalType(LHS),

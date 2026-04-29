@@ -17,9 +17,94 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 using namespace sema;
+
+namespace {
+bool HasInvalidArrayElemPointeeImpl(
+    QualType QT, llvm::SmallPtrSetImpl<const RecordType *> &Visited) {
+  QT = QT.getCanonicalType();
+
+  if (QT.isNull() || QT->isDependentType())
+    return false;
+
+  if (QT->isPointerType())
+    return QT.isOwnedQualified() || QT.isBorrowQualified();
+
+  if (const auto *AT = QT->getAsArrayTypeUnsafe())
+    return HasInvalidArrayElemPointeeImpl(AT->getElementType(), Visited);
+
+  if (QT->isOwnedStructureType())
+    return true;
+
+  if (const auto *RT = dyn_cast<RecordType>(QT)) {
+    if (!Visited.insert(RT).second)
+      return false;
+
+    if (RecordDecl *RD = RT->getDecl()) {
+      for (FieldDecl *FD : RD->fields()) {
+        if (HasInvalidArrayElemPointeeImpl(FD->getType(), Visited))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool HasInvalidArrayElemPointee(QualType Pointee) {
+  llvm::SmallPtrSet<const RecordType *, 8> Visited;
+  return HasInvalidArrayElemPointeeImpl(Pointee, Visited);
+}
+
+QualType StripLocalArrayElemQualifier(ASTContext &Context, QualType QT) {
+  if (QT.isNull() || !QT.isArrayElemQualified())
+    return QT;
+  QT.removeLocalArrayElem(Context);
+  return QT;
+}
+
+bool CheckArrayElemQualifierRules(Sema &S, QualType T, SourceLocation Loc) {
+  llvm::SmallVector<QualType, 4> Worklist;
+  Worklist.push_back(T);
+
+  while (!Worklist.empty()) {
+    QualType Current = Worklist.pop_back_val();
+
+    if (Current.isArrayElemQualified()) {
+      if (!Current->isPointerType() && !Current->isDependentType()) {
+        S.Diag(Loc, diag::err_owned_qualifier_non_pointer)
+            << "_ArrayElem"
+            << StripLocalArrayElemQualifier(S.Context, Current);
+        return false;
+      }
+
+      if (!Current->isDependentType() && !Current.isOwnedQualified() &&
+          !Current.isBorrowQualified()) {
+        S.Diag(Loc, diag::err_arrayelem_requires_safe_pointer);
+        return false;
+      }
+
+      if (Current->isPointerType()) {
+        QualType Pointee = Current->getPointeeType();
+        if (!Pointee->isDependentType() && HasInvalidArrayElemPointee(Pointee)) {
+          S.Diag(Loc, diag::err_arrayelem_invalid_pointee) << Current;
+          return false;
+        }
+      }
+    }
+
+    if (const auto *PT = Current->getAs<PointerType>())
+      Worklist.push_back(PT->getPointeeType());
+    if (const auto *AT = Current->getAsArrayTypeUnsafe())
+      Worklist.push_back(AT->getElementType());
+  }
+
+  return true;
+}
+}
 
 // for union fields/array/global variable type check
 void Sema::CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env) {
@@ -83,6 +168,13 @@ bool Sema::CheckInstantiatedTypeBorrowQualifiers(QualType T,
   }
 
   return true;
+}
+
+bool Sema::CheckInstantiatedTypeArrayElemQualifiers(QualType T,
+                                                    SourceLocation Loc) {
+  if (!getLangOpts().BSC)
+    return true;
+  return CheckArrayElemQualifierRules(*this, T, Loc);
 }
 
 // Check if 'owned' qualifier is applied to a non-pointer type
@@ -150,6 +242,16 @@ void Sema::CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T) {
   }
 }
 
+void Sema::CheckArrayElemQualifierOnType(const DeclSpec &DS, QualType T,
+                                         SourceLocation DiagLoc) {
+  if (!getLangOpts().BSC)
+    return;
+
+  if (DS.getArrayElemSpecLoc().isValid())
+    DiagLoc = DS.getArrayElemSpecLoc();
+  (void)CheckArrayElemQualifierRules(*this, T, DiagLoc);
+}
+
 namespace {
 bool IsOwnedRawPointerCastDisallowed(QualType LHSCanType, QualType RHSCanType) {
   const auto *LHSPtrType = LHSCanType->getAs<PointerType>();
@@ -202,6 +304,8 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
     if ((LHSRaw && RHSOwned) || (LHSOwned && RHSRaw)) {
       return false;
     }
+    if (LHSType.isArrayElemQualified() != RHSType.isArrayElemQualified())
+      return false;
     // Conversion between different raw pointers is allowed
     if (LHSRaw && RHSRaw) {
       return true;
@@ -226,8 +330,12 @@ bool Sema::CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, Sour
   if (!CheckOwnedQualTypeCStyleCast(LHSType, RHSType)) {
     QualType RHSCanType = RHSType.getCanonicalType();
     QualType LHSCanType = LHSType.getCanonicalType();
-    if (IsOwnedRawPointerCastDisallowed(LHSCanType, RHSCanType))
-      Diag(RLoc, diag::err_owned_raw_cast_disallowed);
+    if (IsOwnedRawPointerCastDisallowed(LHSCanType, RHSCanType)) {
+      if (LHSType.isArrayElemQualified() || RHSType.isArrayElemQualified())
+        Diag(RLoc, diag::err_owned_array_raw_cast_disallowed);
+      else
+        Diag(RLoc, diag::err_owned_raw_cast_disallowed);
+    }
     else
       Diag(RLoc, diag::err_owned_qualcheck_incompatible) << RHSType << LHSType;
     return false;
@@ -264,6 +372,8 @@ bool Sema::CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, Sour
     if (IsSameType) {
       return true;
     }
+    if (LHSType.isArrayElemQualified() != RHSType.isArrayElemQualified())
+      return false;
     if (IsTraitImplType) {
       return true;
     }
@@ -508,22 +618,20 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
     return true;
   }
 
-  bool IsSameType = (LHSCanType.getTypePtr() == RHSCanType.getTypePtr());
+  if (Context.hasSameType(LHSType, RHSType)) {
+    return true;
+  }
   const auto *LHSPtrType = LHSType->getAs<PointerType>();
   const auto *RHSPtrType = RHSType->getAs<PointerType>();
   bool IsPointer = LHSPtrType && RHSPtrType;
-  QualType RHSRawType = RHSCanType.getUnqualifiedType();
-  QualType LHSRawType = LHSCanType.getUnqualifiedType();
+  bool IsUnqualifiedTypeMatch = Context.hasSameUnqualifiedType(LHSCanType, RHSCanType);
 
-  if (IsSameType) {
-    return true;
-  }
   if (LHSCanType->isIntegerType() && RHSCanType.isBorrowQualified() &&
       RHSCanType->isPointerType()) {
     return true;
   }
   if (!IsPointer)
-    return false;
+    return IsUnqualifiedTypeMatch;
   if (LHSCanType->isVoidPointerType())
     return true;
   if (RHSCanType->isVoidPointerType() && !IsInSafeZone())
@@ -534,7 +642,17 @@ bool Sema::CheckBorrowQualTypeCStyleCast(QualType LHSType, QualType RHSType) {
   if (RHSCanType.isBorrowQualified() && LHSCanType.isBorrowQualified() &&
       (RHSCanType.isConstBorrow() != LHSCanType.isConstBorrow()))
     return false;
-  if (Context.hasSameType(LHSRawType, RHSRawType))
+  if (RHSCanType.isBorrowQualified() && LHSCanType.isBorrowQualified() &&
+      (RHSType.isArrayElemQualified() != LHSType.isArrayElemQualified())) {
+    if (!LHSType.isArrayElemQualified() && RHSType.isArrayElemQualified()) {
+      QualType LHSPointee = LHSCanType->getPointeeType();
+      QualType RHSPointee = RHSCanType->getPointeeType();
+      if (Context.hasSameType(LHSPointee, RHSPointee))
+        return true;
+    }
+    return false;
+  }
+  if (IsUnqualifiedTypeMatch)
     return true;
   if (TryDesugarTrait(RHSType))
     return true;
@@ -564,6 +682,13 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, Sou
   bool IsPointer = LHSPtrType && RHSPtrType;
 
   if (LHSCanType.isBorrowQualified() == RHSCanType.isBorrowQualified()) {
+    if (LHSType.isArrayElemQualified() != RHSType.isArrayElemQualified()) {
+      if (!(LHSCanType.isBorrowQualified() && RHSCanType.isBorrowQualified() &&
+            !LHSType.isArrayElemQualified() &&
+            RHSType.isArrayElemQualified())) {
+        return false;
+      }
+    }
     if (TraitDecl *TD = TryDesugarTrait(LHSCanType)) {
       if (TD->getTypeImpledVarDecl(RHSCanType->getPointeeType()))
         return true;
@@ -623,8 +748,13 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
     if (LHSCanType->isVoidPointerType()) {
       // Handle array-to-pointer decay: arrays decay to raw pointers (no borrow).
       if (RHSCanType->isArrayType()) {
-        // Arrays cannot match borrow pointers (they decay to raw pointers).
         if (LHSCanType.isBorrowQualified()) {
+          QualType RHSElementType =
+              RHSCanType->getAsArrayTypeUnsafe()->getElementType();
+          if (!IsInSafeZone() &&
+              LHSCanType->getPointeeType().isConstQualified() ==
+                  RHSElementType.isConstQualified())
+            return true;
           Res = false;
         } else {
           // Check const compatibility between void* and array element type.
@@ -641,8 +771,17 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
     }
 
     // Allow mutable borrow downgrading to immutable borrow (re-borrow)
+    // Allow `_Borrow _ArrayElem` to downgrade to plain `_Borrow` as well
     if (LHSCanType->isPointerType() && LHSCanType.isBorrowQualified() &&
         RHSCanType->isPointerType() && RHSCanType.isBorrowQualified()) {
+      if (!LHSType.isArrayElemQualified() &&
+          RHSExpr->getType().isArrayElemQualified()) {
+        QualType LHSPointee = LHSCanType->getPointeeType();
+        QualType RHSPointee = RHSCanType->getPointeeType();
+        if (Context.hasSameType(LHSPointee, RHSPointee)) {
+          return true;
+        }
+      }
       QualType LHSPointee = LHSCanType->getPointeeType();
       QualType RHSPointee = RHSCanType->getPointeeType();
       if (LHSPointee.isConstQualified() && !RHSPointee.isConstQualified()) {

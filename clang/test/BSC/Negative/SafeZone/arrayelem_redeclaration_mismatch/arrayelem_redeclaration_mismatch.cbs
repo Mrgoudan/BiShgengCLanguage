@@ -1,0 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
+
+_Safe void same_mode(int *_Borrow p); // expected-note {{previous declaration is here}}
+_Safe void same_mode(int *_Borrow _ArrayElem p); // expected-error {{conflicting types for 'same_mode'}}

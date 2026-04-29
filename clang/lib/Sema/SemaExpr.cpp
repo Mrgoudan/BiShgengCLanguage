@@ -5837,17 +5837,19 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
 #if ENABLE_BSC
   if (getLangOpts().BSC) {
     QualType BaseType = Base->getType();
-    // Check if owned/borrow pointer is allowed to arrscript.
-    // When -spatial-check=user, it's allowed. Otherwise, it's forbidden.
-    if (getLangOpts().getSpatialCheck() != LangOptions::SC_USER) {
-      if (BaseType->isPointerType()) {
-        if (BaseType.isOwnedQualified()) {
-          return ExprError(Diag(LLoc, diag::err_typecheck_invalid_owned_arrsub)
-                           << BaseType << Base->getSourceRange());
-        }
-        if (BaseType.isBorrowQualified()) {
-          return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
-        }
+    // Before the _ArrayElem proposal lands, we have -spatial-check=user to
+    // allow users to do array subscripting on owned/borrow pointers.
+    // We will remove this support after code depending on this feature is migrated
+    // to the new syntax.
+    if (BaseType->isPointerType()) {
+      bool IsAllowArraySubscript = BaseType.isArrayElemQualified() ||
+          (getLangOpts().getSpatialCheck() == LangOptions::SC_USER);
+      if (BaseType.isOwnedQualified() && !IsAllowArraySubscript) {
+        return ExprError(Diag(LLoc, diag::err_typecheck_invalid_owned_arrsub)
+                         << BaseType << Base->getSourceRange());
+      }
+      if (BaseType.isBorrowQualified() && !IsAllowArraySubscript) {
+        return ExprError(Diag(LLoc, diag::err_typecheck_borrow_subscript));
       }
     }
     // Array subscripting on owned/borrowed pointers to types with owned fields
@@ -11968,6 +11970,12 @@ static void diagnosePointerIncompatibility(Sema &S, SourceLocation Loc,
     << RHSExpr->getSourceRange();
 }
 
+#if ENABLE_BSC
+static bool isNonArrayElemBorrowType(QualType QT) {
+  return QT.isBorrowQualified() && !QT.isArrayElemQualified();
+}
+#endif
+
 // C99 6.5.6
 QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
                                      SourceLocation Loc, BinaryOperatorKind Opc,
@@ -11976,7 +11984,8 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
 
   #if ENABLE_BSC
   if (getLangOpts().BSC) {
-    if (LHS.get()->getType().isBorrowQualified() || RHS.get()->getType().isBorrowQualified()) {
+    if (isNonArrayElemBorrowType(LHS.get()->getType()) ||
+        isNonArrayElemBorrowType(RHS.get()->getType())) {
       return InvalidOperands(Loc, LHS, RHS);
     }
   }
@@ -12099,7 +12108,8 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
   #if ENABLE_BSC
   if (getLangOpts().BSC) {
-    if (LHS.get()->getType().isBorrowQualified() || RHS.get()->getType().isBorrowQualified()) {
+    if (isNonArrayElemBorrowType(LHS.get()->getType()) ||
+        isNonArrayElemBorrowType(RHS.get()->getType())) {
       return InvalidOperands(Loc, LHS, RHS);
     }
   }
@@ -15029,7 +15039,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     return S.Context.DependentTy;
 
   #if ENABLE_BSC
-  if (S.getLangOpts().BSC && Op->getType().isBorrowQualified()) {
+  if (S.getLangOpts().BSC && isNonArrayElemBorrowType(Op->getType())) {
     S.Diag(OpLoc, diag::err_typecheck_unary_expr)
       << Op->getType()<< Op->getSourceRange();
     return QualType();
@@ -15276,6 +15286,15 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
         resultType = resultType.addConstBorrow(Context);
       }
     }
+  }
+  // if &_Mut/&_Const produces a borrow pointer successfully and the expression
+  // is an array subscript, add _ArrayElem to the result type
+  if (!resultType.isNull() && resultType->isPointerType() &&
+      resultType.isLocalBorrowQualified() &&
+      isa<ArraySubscriptExpr>(InputExpr->IgnoreParenImpCasts())) {
+    resultType = Context.getQualifiedType(
+      resultType.getUnqualifiedType(),
+      resultType.getQualifiers().withArrayElem());
   }
   return resultType;
 }

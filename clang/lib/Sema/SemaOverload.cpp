@@ -8046,6 +8046,7 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
   #if ENABLE_BSC
   bool hasOwned = VisibleQuals.hasOwned();
   bool hasBorrow = VisibleQuals.hasBorrow();
+  bool hasArrayElem = VisibleQuals.hasArrayElem();
   #endif
 
   // Iterate through all strict supersets of BaseCVR.
@@ -8060,6 +8061,9 @@ BuiltinCandidateTypeSet::AddPointerWithMoreQualifiedTypeVariants(QualType Ty,
 
     // Skip over borrow if no borrow found anywhere in the types.
     if ((CVR & Qualifiers::Borrow) && !hasBorrow) continue;
+
+    // Skip over _ArrayElem if no _ArrayElem found anywhere in the types.
+    if ((CVR & Qualifiers::ArrayElem) && !hasArrayElem) continue;
     #endif
 
     // Skip over restrict if no restrict found anywhere in the types, or if

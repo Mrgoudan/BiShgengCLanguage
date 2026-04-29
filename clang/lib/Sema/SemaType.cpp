@@ -2042,6 +2042,17 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     if (TQs.hasOwned() && TQs.hasBorrow()) {
       Diag(Loc, diag::err_owned_and_borrow_conflict);
     }
+    if (Qs.hasArrayElem() && !T->isPointerType() && !T->isDependentType()) {
+      Diag(DS ? DS->getArrayElemSpecLoc() : Loc,
+           diag::err_owned_qualifier_non_pointer)
+          << "_ArrayElem" << T;
+      Qs.removeArrayElem();
+    } else if (Qs.hasArrayElem() && !T->isDependentType() &&
+               !TQs.hasOwned() && !TQs.hasBorrow()) {
+      Diag(DS ? DS->getArrayElemSpecLoc() : Loc,
+           diag::err_arrayelem_requires_safe_pointer);
+      Qs.removeArrayElem();
+    }
     // Check _Borrow qualifier should only be applied to pointer types.
     if (Qs.hasBorrow() && !T->isPointerType() && !T->isDependentType()) {
       Diag(DS ? DS->getBorrowSpecLoc() : Loc,
@@ -2151,7 +2162,15 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     return BuildQualifiedType(T, Loc, Split.Quals);
   }
 
+#if ENABLE_BSC
+  // Qualifiers::fromCVR[U]Mask will trigger assertion failure if we did not
+  // strip DeclSpec::TQ_arrayelem from CVR/CVRAU before the call
+  Qualifiers Q = Qualifiers::fromCVRMask(CVR & ~DeclSpec::TQ_arrayelem);
+  if (CVRAU & DeclSpec::TQ_arrayelem)
+    Q.addArrayElem();
+#else
   Qualifiers Q = Qualifiers::fromCVRMask(CVR);
+#endif
   Q.setUnaligned(CVRAU & DeclSpec::TQ_unaligned);
   return BuildQualifiedType(T, Loc, Q, DS);
 }
@@ -5584,9 +5603,21 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         EPI.Variadic = FTI.isVariadic;
         EPI.EllipsisLoc = FTI.getEllipsisLoc();
         EPI.HasTrailingReturn = FTI.hasTrailingReturnType();
+#if ENABLE_BSC
+        // _Atomic is DeclSpec-only; _ArrayElem is not part of addCVRUQualifiers.
+        if (FTI.MethodQualifiers) {
+          unsigned MethodTQ = FTI.MethodQualifiers->getTypeQualifiers();
+          unsigned tq = MethodTQ & ~DeclSpec::TQ_atomic;
+          Qualifiers MQ = Qualifiers::fromCVRUMask(tq & ~DeclSpec::TQ_arrayelem);
+          if (tq & DeclSpec::TQ_arrayelem)
+            MQ.addArrayElem();
+          EPI.TypeQuals = MQ;
+        }
+#else
         EPI.TypeQuals.addCVRUQualifiers(
             FTI.MethodQualifiers ? FTI.MethodQualifiers->getTypeQualifiers()
                                  : 0);
+#endif
         EPI.RefQualifier = !FTI.hasRefQualifier()? RQ_None
                     : FTI.RefQualifierIsLValueRef? RQ_LValue
                     : RQ_RValue;

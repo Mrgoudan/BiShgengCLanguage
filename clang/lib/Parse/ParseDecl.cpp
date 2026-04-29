@@ -4458,6 +4458,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_borrow, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+    // array element qualifier:
+    case tok::kw__ArrayElem:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_arrayelem, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
 #endif
 
     // C++ typename-specifier:
@@ -5545,6 +5550,7 @@ bool Parser::isTypeSpecifierQualifier() {
 #if ENABLE_BSC
   case tok::kw__Owned:
   case tok::kw__Borrow:
+  case tok::kw__ArrayElem:
 #endif
 
     // Debugger support.
@@ -5720,6 +5726,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
 #if ENABLE_BSC
   case tok::kw__Owned:
   case tok::kw__Borrow:
+  case tok::kw__ArrayElem:
 #endif
   case tok::kw__Sat:
 
@@ -6041,6 +6048,11 @@ void Parser::ParseTypeQualifierListOpt(
     // borrow-qualifier:
     case tok::kw__Borrow:
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_borrow, Loc, PrevSpec, DiagID,
+                                 getLangOpts());
+      break;
+    // array element qualifier:
+    case tok::kw__ArrayElem:
+      isInvalid = DS.SetTypeQual(DeclSpec::TQ_arrayelem, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
 #endif

@@ -921,6 +921,7 @@ static void stripUnusedQualifiers(Qualifiers &Q) {
 #if ENABLE_BSC
   Q.removeOwned();
   Q.removeBorrow();
+  Q.removeArrayElem();
 #endif
 }
 

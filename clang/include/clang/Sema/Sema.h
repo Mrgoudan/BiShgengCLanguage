@@ -12371,11 +12371,14 @@ public:
   AssignConvertType CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   void CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T);
+  void CheckArrayElemQualifierOnType(const DeclSpec &DS, QualType T,
+                                     SourceLocation DiagLoc);
   /// Check that owned qualifiers on an instantiated type are valid.
   /// Called after template instantiation to validate concrete types.
   /// Returns true if type is valid, false if an error was reported.
   bool CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc);
   bool CheckInstantiatedTypeBorrowQualifiers(QualType T, SourceLocation Loc);
+  bool CheckInstantiatedTypeArrayElemQualifiers(QualType T, SourceLocation Loc);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
   void BSCDataflowAnalysis(const Decl *D);
   void BSCBorrowChecker(FunctionDecl *FD);

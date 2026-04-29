@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+typedef int *IP;
+
+void bad(IP _Borrow p); // expected-note {{previous declaration is here}}
+void bad(int *_Borrow _ArrayElem p); // expected-error {{conflicting types for 'bad'}}

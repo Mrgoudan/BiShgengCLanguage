@@ -89,6 +89,9 @@ bool HasDiffBorrorOrOwnedQualifiers(QualType LHSType, QualType RHSType) {
   if (LHSType.isBorrowQualified() != RHSType.isBorrowQualified()) {
     return true;
   }
+  if (LHSType.isArrayElemQualified() != RHSType.isArrayElemQualified()) {
+    return true;
+  }
   if (LHSType->isPointerType() && RHSType->isPointerType()) {
     QualType LHSPType = LHSType->getPointeeType();
     QualType RHSPType = RHSType->getPointeeType();

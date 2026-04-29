@@ -1124,6 +1124,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
     if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(DI->getType(),
                                                        D->getLocation()))
       return nullptr;
+    if (!SemaRef.CheckInstantiatedTypeArrayElemQualifiers(DI->getType(),
+                                                          D->getLocation()))
+      return nullptr;
   }
 #endif
 
@@ -1250,6 +1253,10 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
     }
     if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(DI->getType(),
                                                        D->getLocation())) {
+      Invalid = true;
+    }
+    if (!SemaRef.CheckInstantiatedTypeArrayElemQualifiers(DI->getType(),
+                                                          D->getLocation())) {
       Invalid = true;
     }
   }
@@ -2108,6 +2115,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
                                                          D->getLocation())) {
         return nullptr;
       }
+      if (!SemaRef.CheckInstantiatedTypeArrayElemQualifiers(FPT->getReturnType(),
+                                                            D->getLocation())) {
+        return nullptr;
+      }
 
       // Check parameter types
       for (QualType ParamType : FPT->param_types()) {
@@ -2117,6 +2128,10 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
         }
         if (!SemaRef.CheckInstantiatedTypeBorrowQualifiers(ParamType,
                                                            D->getLocation())) {
+          return nullptr;
+        }
+        if (!SemaRef.CheckInstantiatedTypeArrayElemQualifiers(
+                ParamType, D->getLocation())) {
           return nullptr;
         }
       }

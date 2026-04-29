@@ -118,19 +118,30 @@ namespace clang {
 /// Check owned/borrow qualifier compatibility for heterogeneous redeclarations.
 /// UnsafeType is the unsafe decl, SafeType is the _Safe redeclaration.
 /// The _Safe redeclaration may only add qualifiers, not remove them.
+/// Exception: _ArrayElem must not appear on the safe side when the unsafe
+/// pointer is _Owned or _Borrow without _ArrayElem.
 static bool AreOwnedBorrowQualifiersCompatible(QualType UnsafeType,
                                                QualType SafeType) {
   bool UnsafeIsOwned =
       UnsafeType->isPointerType() && UnsafeType.isOwnedQualified();
   bool UnsafeIsBorrow =
       UnsafeType->isPointerType() && UnsafeType.isBorrowQualified();
+  bool UnsafeIsArrayElem =
+      UnsafeType->isPointerType() && UnsafeType.isArrayElemQualified();
   bool SafeIsOwned = SafeType->isPointerType() && SafeType.isOwnedQualified();
   bool SafeIsBorrow = SafeType->isPointerType() && SafeType.isBorrowQualified();
+  bool SafeIsArrayElem =
+      SafeType->isPointerType() && SafeType.isArrayElemQualified();
 
   // Safe redecl must not drop a qualifier present in the unsafe decl.
   if (UnsafeIsOwned && !SafeIsOwned)
     return false;
   if (UnsafeIsBorrow && !SafeIsBorrow)
+    return false;
+  if (UnsafeIsArrayElem && !SafeIsArrayElem)
+    return false;
+  if ((UnsafeIsOwned || UnsafeIsBorrow) &&
+      !UnsafeIsArrayElem && SafeIsArrayElem)
     return false;
   // owned ⟷ borrow is always incompatible.
   if ((SafeIsOwned && UnsafeIsBorrow) || (SafeIsBorrow && UnsafeIsOwned))
@@ -193,8 +204,10 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
     AttributedType::stripOuterNullability(SafeT);
     UnsafeT.removeLocalOwned();
     UnsafeT.removeLocalBorrow();
+    UnsafeT.removeLocalArrayElem(Ctx);
     SafeT.removeLocalOwned();
     SafeT.removeLocalBorrow();
+    SafeT.removeLocalArrayElem(Ctx);
 
     // Fast path: identical canonical unqualified types.
     if (UnsafeT.getCanonicalType().getUnqualifiedType() ==

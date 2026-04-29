@@ -1019,7 +1019,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
     ConsumeToken();
 
 #if ENABLE_BSC
-  if (Tok.isOneOf(tok::kw__Borrow, tok::kw__Owned))
+  if (Tok.isOneOf(tok::kw__Borrow, tok::kw__Owned, tok::kw__ArrayElem))
     ConsumeToken();
 #endif
 
@@ -1146,7 +1146,8 @@ bool Parser::isBSCTemplateDecl() {
           tok::kw_const, tok::kw_volatile, tok::kw_restrict,
           tok::kw_static, tok::kw_extern, tok::kw_inline, tok::kw_typedef,
           tok::kw_constexpr, tok::star, tok::kw___attribute, tok::kw___declspec,
-          tok::kw__Owned, tok::kw__Borrow, tok::kw__Safe, tok::kw__Unsafe,
+          tok::kw__Owned, tok::kw__Borrow, tok::kw__ArrayElem,
+          tok::kw__Safe, tok::kw__Unsafe,
           tok::kw__Async, tok::kw__Trait))
     return false;
 

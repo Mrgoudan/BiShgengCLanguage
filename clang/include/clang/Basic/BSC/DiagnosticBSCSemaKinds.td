@@ -47,6 +47,8 @@ def err_bsc_take_from_raw_function_pointer : Error<
   "__take_from_raw does not support function pointer type %0">;
 def err_owned_raw_cast_disallowed : Error<
   "cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer">;
+def err_owned_array_raw_cast_disallowed : Error<
+  "cannot cast between _Owned _ArrayElem and raw pointer; use __move_array_to_raw or __take_array_from_raw for ownership transfer">;
 def err_typecheck_invalid_owned_binOp : Error<
   "invalid operands to binary expression (%0 and %1)">;
 def err_typecheck_invalid_owned_unaOp : Error<
@@ -74,6 +76,10 @@ def err_bsc_qualifier_in_knr_function : Error<
   "type with '%0' semantics is not allowed in a K&R-style function definition">;
 def err_owned_qualifier_non_pointer : Error<
   "type of %1 cannot be qualified by '%0'">;
+def err_arrayelem_requires_safe_pointer : Error<
+  "'_ArrayElem' must be used with '_Owned' or '_Borrow' together to qualify a pointer type">;
+def err_arrayelem_invalid_pointee : Error<
+  "pointee type of %0 cannot be _Owned or _Borrow pointers or contain _Owned or _Borrow qualified fields">;
 
 
 // BSC trait warnings and errors.

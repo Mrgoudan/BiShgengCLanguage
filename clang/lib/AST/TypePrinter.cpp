@@ -202,6 +202,13 @@ static void AppendTypeQualList(raw_ostream &OS, unsigned TypeQuals,
     OS << "_Borrow";
     appendSpace = true;
   }
+  if ((TypeQuals & Qualifiers::ArrayElem) &&
+      (!IsRewriteBSC || MangleWithSafeQualifier)) {
+    if (appendSpace)
+      OS << ' ';
+    OS << "_ArrayElem";
+    appendSpace = true;
+  }
 #endif
   if (TypeQuals & Qualifiers::Volatile) {
     if (appendSpace) OS << ' ';
@@ -2384,6 +2391,11 @@ bool Qualifiers::isEmptyWhenPrinted(const PrintingPolicy &Policy) const {
   if (getCVRQualifiers())
     return false;
 
+#if ENABLE_BSC
+  if (hasArrayElem())
+    return false;
+#endif
+
   if (getAddressSpace() != LangAS::Default)
     return false;
 
@@ -2445,6 +2457,10 @@ void Qualifiers::print(raw_ostream &OS, const PrintingPolicy& Policy,
   bool addSpace = false;
 
   unsigned quals = getCVRQualifiers();
+#if ENABLE_BSC
+  if (hasArrayElem())
+    quals |= Qualifiers::ArrayElem;
+#endif
   if (quals) {
     AppendTypeQualList(OS, quals, Policy.Restrict
 #if ENABLE_BSC

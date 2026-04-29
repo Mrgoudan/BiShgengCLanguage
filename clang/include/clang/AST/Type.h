@@ -181,6 +181,11 @@ public:
     Strong
   };
 
+#if ENABLE_BSC
+  // this qualifier does not fit in the fast qualifier mask
+  static const uint32_t ArrayElem = 0x40;
+#endif
+
   enum ObjCLifetime {
     /// There is no lifetime qualification on this type.
     OCL_None,
@@ -258,6 +263,13 @@ public:
       L.removeAddressSpace();
       R.removeAddressSpace();
     }
+#if ENABLE_BSC
+    if (L.hasArrayElem() == R.hasArrayElem() && L.hasArrayElem()) {
+      Q.addArrayElem();
+      L.removeArrayElem();
+      R.removeArrayElem();
+    }
+#endif
     return Q;
   }
 
@@ -319,6 +331,15 @@ public:
   Qualifiers withBorrow() const {
     Qualifiers Qs = *this;
     Qs.addBorrow();
+    return Qs;
+  }
+  bool hasArrayElem() const { return Mask & ArrayElem; }
+  bool hasOnlyArrayElem() const { return Mask == ArrayElem; }
+  void removeArrayElem() { Mask &= ~ArrayElem; }
+  void addArrayElem() { Mask |= ArrayElem; }
+  Qualifiers withArrayElem() const {
+    Qualifiers Qs = *this;
+    Qs.addArrayElem();
     return Qs;
   }
   #endif
@@ -499,6 +520,10 @@ public:
       Mask |= Q.Mask;
     else {
       Mask |= (Q.Mask & CVRMask);
+#if ENABLE_BSC
+      if (Q.hasArrayElem())
+        addArrayElem();
+#endif
       if (Q.hasAddressSpace())
         addAddressSpace(Q.getAddressSpace());
       if (Q.hasObjCGCAttr())
@@ -516,6 +541,10 @@ public:
       Mask &= ~Q.Mask;
     else {
       Mask &= ~(Q.Mask & CVRMask);
+#if ENABLE_BSC
+      if (Q.hasArrayElem())
+        removeArrayElem();
+#endif
       if (getObjCGCAttr() == Q.getObjCGCAttr())
         removeObjCGCAttr();
       if (getObjCLifetime() == Q.getObjCLifetime())
@@ -661,17 +690,24 @@ public:
   }
 
 private:
-  // bits:     |0 1 2 3 4|5|6 .. 7|8  .. 10|11  ...   31|
-  //           |C R V O B|U|GCAttr|Lifetime|AddressSpace|
+  #if ENABLE_BSC
+  // bits:     |0 1 2 3 4|5|6|7 .. 8|9 .. 11|12 ...   31|
+  //           |C R V O B|U|A|GCAttr|Lifetime|AddressSpace|
+  #else
+  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
+  //           |C R V|U|GCAttr|Lifetime|AddressSpace|
+  #endif
   uint32_t Mask = 0;
 
   #if ENABLE_BSC
   static const uint32_t UMask = 0x20;
   static const uint32_t UShift = 5;
-  static const uint32_t GCAttrMask = 0xC0;
-  static const uint32_t GCAttrShift = 6;
-  static const uint32_t LifetimeMask = 0x700;
-  static const uint32_t LifetimeShift = 8;
+  static const uint32_t ArrayElemMask = ArrayElem; // 0x40
+  static const uint32_t ArrayElemShift = 6;
+  static const uint32_t GCAttrMask = 0x180;
+  static const uint32_t GCAttrShift = 7;
+  static const uint32_t LifetimeMask = 0xE00;
+  static const uint32_t LifetimeShift = 9;
   #else
   static const uint32_t UMask = 0x8;
   static const uint32_t UShift = 3;
@@ -681,9 +717,13 @@ private:
   static const uint32_t LifetimeShift = 6;
   #endif
   static const uint32_t AddressSpaceMask =
-      ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
   #if ENABLE_BSC
-  static const uint32_t AddressSpaceShift = 11;
+      ~(CVRMask | UMask | ArrayElemMask | GCAttrMask | LifetimeMask);
+  #else
+      ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
+  #endif
+  #if ENABLE_BSC
+  static const uint32_t AddressSpaceShift = 12;
   #else
   static const uint32_t AddressSpaceShift = 9;
   #endif
@@ -705,6 +745,7 @@ public:
   #if ENABLE_BSC
   bool hasOwned() const { return Quals.hasOwned(); }
   bool hasBorrow() const { return Quals.hasBorrow(); }
+  bool hasArrayElem() const { return Quals.hasArrayElem(); }
   #endif
   bool hasRestrict() const { return Quals.hasRestrict(); }
   bool hasAtomic() const { return HasAtomic; }
@@ -714,6 +755,7 @@ public:
   #if ENABLE_BSC
   void addOwned() { Quals.addOwned(); }
   void addBorrow() { Quals.addBorrow(); }
+  void addArrayElem() { Quals.addArrayElem(); }
   #endif
   void addRestrict() { Quals.addRestrict(); }
   void addAtomic() { HasAtomic = true; }
@@ -723,6 +765,7 @@ public:
   #if ENABLE_BSC
   void removeOwned() { Quals.removeOwned(); }
   void removeBorrow() { Quals.removeBorrow(); }
+  void removeArrayElem() { Quals.removeArrayElem(); }
   #endif
   void removeRestrict() { Quals.removeRestrict(); }
   void removeAtomic() { HasAtomic = false; }
@@ -734,6 +777,9 @@ public:
   #if ENABLE_BSC
   QualifiersAndAtomic withOwned() { return {Quals.withOwned(), HasAtomic}; }
   QualifiersAndAtomic withBorrow() { return {Quals.withBorrow(), HasAtomic}; }
+  QualifiersAndAtomic withArrayElem() {
+    return {Quals.withArrayElem(), HasAtomic};
+  }
   #endif
   QualifiersAndAtomic withRestrict() {
     return {Quals.withRestrict(), HasAtomic};
@@ -921,6 +967,14 @@ public:
 
   /// Determine whether this type is borrow-qualified.
   bool isBorrowQualified() const;
+
+  /// Determine whether this particular QualType instance has the
+  /// "arrayelem" qualifier set, without looking through typedefs that may have
+  /// added it at a different level.
+  bool isLocalArrayElemQualified() const;
+
+  /// Determine whether this type is arrayelem-qualified.
+  bool isArrayElemQualified() const;
   #endif
 
   /// Determine whether this particular QualType instance has the
@@ -1076,6 +1130,7 @@ public:
   #if ENABLE_BSC
   void removeLocalOwned();
   void removeLocalBorrow();
+  void removeLocalArrayElem(ASTContext &Ctx);
   #endif
   void removeLocalVolatile();
   void removeLocalRestrict();
@@ -1809,9 +1864,8 @@ protected:
     /// C++ 8.3.5p4: The return type, the parameter type list and the
     /// cv-qualifier-seq, [...], are part of the function type.
     ///
-    /// After add 'owned, borrow' qualifiers, the FastWidth is now 5(from 3 to 5),
-    /// then bitNumberOf(FunctionTypeBitFields) is now 65(63 to 65, greater than 8 bytes),
-    /// then sizeof(Type) is now increased by one byte.
+    /// BSC adds extra fast qualifiers here beyond the default C/C++ layout,
+    /// which can increase the bit count enough to grow sizeof(Type).
     unsigned FastTypeQuals : Qualifiers::FastWidth;
     /// Whether this function has extended Qualifiers.
     unsigned HasExtQuals : 1;
@@ -6999,6 +7053,15 @@ inline bool QualType::isBorrowQualified() const {
   return isLocalBorrowQualified() ||
          getCommonPtr()->CanonicalType.isLocalBorrowQualified();
 }
+
+inline bool QualType::isLocalArrayElemQualified() const {
+  return getLocalQualifiers().hasArrayElem();
+}
+
+inline bool QualType::isArrayElemQualified() const {
+  return isLocalArrayElemQualified() ||
+         getCommonPtr()->CanonicalType.isLocalArrayElemQualified();
+}
 #endif
 
 inline bool QualType::isRestrictQualified() const {
@@ -7018,18 +7081,26 @@ inline bool QualType::hasQualifiers() const {
 }
 
 inline QualType QualType::getUnqualifiedType() const {
-  #if ENABLE_BSC
+#if ENABLE_BSC
   int addOwned = getCanonicalType().isOwnedQualified() ? Qualifiers::Owned : 0;
   int addBorrow =
       getCanonicalType().isBorrowQualified() ? Qualifiers::Borrow : 0;
-  #else
-  int addOwned = 0;
-  int addBorrow = 0;
-  #endif
+  if (isArrayElemQualified()) {
+    QualType T = *this;
+    T.removeLocalFastQualifiers(Qualifiers::Const | Qualifiers::Restrict |
+                                Qualifiers::Volatile);
+    return T;
+  }
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
     return QualType(getTypePtr(), addOwned | addBorrow);
 
   return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, addOwned | addBorrow);
+#else
+  if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
+    return QualType(getTypePtr(), 0);
+
+  return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, 0);
+#endif
 }
 
 inline SplitQualType QualType::getSplitUnqualifiedType() const {

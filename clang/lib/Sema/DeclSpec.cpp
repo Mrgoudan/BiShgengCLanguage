@@ -438,6 +438,8 @@ void DeclSpec::forEachCVRUQualifier(
     Handle(TQ_owned, "_Owned", TQ_ownedLoc);
   if (TypeQualifiers & TQ_borrow)
     Handle(TQ_borrow, "_Borrow", TQ_borrowLoc);
+  if (TypeQualifiers & TQ_arrayelem)
+    Handle(TQ_arrayelem, "_ArrayElem", TQ_arrayelemLoc);
   #endif
   if (TypeQualifiers & TQ_volatile)
     Handle(TQ_volatile, "volatile", TQ_volatileLoc);
@@ -635,6 +637,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   #if ENABLE_BSC
   case DeclSpec::TQ_owned:       return "_Owned";
   case DeclSpec::TQ_borrow:      return "_Borrow";
+  case DeclSpec::TQ_arrayelem:   return "_ArrayElem";
   #endif
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
@@ -1010,6 +1013,9 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
     return false;
   case TQ_borrow:
     TQ_borrowLoc = Loc;
+    return false;
+  case TQ_arrayelem:
+    TQ_arrayelemLoc = Loc;
     return false;
   #endif
   case TQ_restrict: TQ_restrictLoc = Loc; return false;

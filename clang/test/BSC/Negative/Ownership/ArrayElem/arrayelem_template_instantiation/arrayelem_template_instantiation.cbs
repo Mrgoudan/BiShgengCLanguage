@@ -1,0 +1,10 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+struct NeedsArrayElemSafePointer<T> {
+  T *_ArrayElem p; // expected-error {{'_ArrayElem' must be used with '_Owned' or '_Borrow' together to qualify a pointer type}}
+};
+
+void test_arrayelem_checked_at_instantiation_time(void) {
+  struct NeedsArrayElemSafePointer<int> bad; // expected-note {{in instantiation of template class 'NeedsArrayElemSafePointer<int>' requested here}}
+  (void)bad;
+}

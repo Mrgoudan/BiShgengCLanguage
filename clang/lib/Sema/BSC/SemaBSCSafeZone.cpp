@@ -299,11 +299,16 @@ static bool AreBSCPointerQualifiersCompatible(QualType Dest, QualType Src,
     return true;
   }
 
-  // For pointer-to-pointer, owned and borrow must match exactly.
   if (Dest.isOwnedQualified() != Src.isOwnedQualified())
     return false;
   if (Dest.isBorrowQualified() != Src.isBorrowQualified())
     return false;
+  if (Dest.isArrayElemQualified() != Src.isArrayElemQualified()) {
+    if (Dest.isBorrowQualified() && Src.isBorrowQualified() &&
+        !Dest.isArrayElemQualified() && Src.isArrayElemQualified())
+      return true;
+    return false;
+  }
   return true;
 }
 
@@ -715,16 +720,21 @@ bool IsBooleanEvaluation(const Expr *E) {
 /// Assumes both `SrcCanPtr` and `DstCanPtr` are canonical pointer types.
 bool IsSafePointerConversion(const QualType SrcCanPtr,
                              const QualType DstCanPtr) {
-  const QualType SrcPointee = SrcCanPtr->getPointeeType();
+  QualType SrcPointee = SrcCanPtr->getPointeeType();
   QualType DstPointee = DstCanPtr->getPointeeType();
   bool SrcPointeeIsConst = SrcPointee.isConstQualified();
   bool DstPointeeIsConst = DstPointee.isConstQualified();
-  // allow `const T *borrow` <- `T *borrow`
-  // mirrors the logic in Sema::CheckBorrowQualTypeAssignment
-  if (DstPointeeIsConst && DstCanPtr.isBorrowQualified() &&
-      !SrcPointeeIsConst && SrcCanPtr.isBorrowQualified()) {
+  // for casts between borrow pointers:
+  // 1. allow `T *borrow` <- `T *borrow _ArrayElem`
+  // 2. allow `const T *borrow` <- `T *borrow`
+  if (SrcCanPtr.isBorrowQualified() && DstCanPtr.isBorrowQualified()) {
+    bool IsAddingArrayElem = !SrcCanPtr.isArrayElemQualified() &&
+                             DstCanPtr.isArrayElemQualified();
+    bool IsDroppingConst = !DstPointeeIsConst && SrcPointeeIsConst;
+    if (DstPointeeIsConst)
+      SrcPointee.removeLocalConst();
     DstPointee.removeLocalConst();
-    if (SrcPointee == DstPointee)
+    if (!IsAddingArrayElem && !IsDroppingConst && SrcPointee == DstPointee)
       return true;
   }
   // allow `void *owned` <- `T *owned`

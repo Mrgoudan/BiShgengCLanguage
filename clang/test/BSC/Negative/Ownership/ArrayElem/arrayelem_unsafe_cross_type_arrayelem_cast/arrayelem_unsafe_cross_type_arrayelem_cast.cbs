@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Unsafe void unsafe_cross_type_arrayelem_cast(void) {
+  int a[4];
+  int *_Borrow _ArrayElem p = &_Mut a[0];
+  float *_Borrow _ArrayElem q =
+      (float *_Borrow _ArrayElem)p; // expected-error {{incompatible _Borrow types, cannot cast 'int *_Borrow _ArrayElem' to 'float *_Borrow _ArrayElem'}}
+  (void)q;
+}

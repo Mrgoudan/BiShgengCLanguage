@@ -1513,6 +1513,18 @@ QualType QualType::getAtomicUnqualifiedType() const {
   return getUnqualifiedType();
 }
 
+#if ENABLE_BSC
+void QualType::removeLocalArrayElem(ASTContext &Ctx) {
+  if (!isLocalArrayElemQualified())
+    return;
+  SplitQualType S = split();
+  Qualifiers Qs = S.Quals;
+  assert(Qs.hasArrayElem() && "local _ArrayElem should live in split qualifiers");
+  Qs.removeArrayElem();
+  *this = Ctx.getQualifiedType(S.Ty, Qs);
+}
+#endif
+
 Optional<ArrayRef<QualType>> Type::getObjCSubstitutions(
                                const DeclContext *dc) const {
   // Look through method scopes.

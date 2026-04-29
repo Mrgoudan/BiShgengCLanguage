@@ -343,10 +343,12 @@ public:
 #if ENABLE_BSC
     TQ_owned       = 8,
     TQ_borrow      = 16,
+    // Match Qualifiers::{UMask, ArrayElem} in include/clang/AST/Type.h.
     TQ_unaligned   = 32,
+    TQ_arrayelem   = 64,
     // This has no corresponding Qualifiers::TQ value, because it's not treated
     // as a qualifier in our type system.
-    TQ_atomic      = 64
+    TQ_atomic      = 128
 #else
     TQ_unaligned   = 8,
     TQ_atomic      = 16
@@ -385,7 +387,7 @@ private:
 
   // type-qualifiers
 #if ENABLE_BSC
-  unsigned TypeQualifiers : 7; // Bitwise OR of TQ.
+  unsigned TypeQualifiers : 8; // Bitwise OR of TQ.
 #else
   unsigned TypeQualifiers : 5;
 #endif
@@ -450,7 +452,7 @@ private:
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
   SourceLocation TQ_pipeLoc;
 #if ENABLE_BSC
-  SourceLocation TQ_ownedLoc, TQ_borrowLoc;
+  SourceLocation TQ_ownedLoc, TQ_borrowLoc, TQ_arrayelemLoc;
   SourceLocation FS_asyncLoc, FS_safe_zone_loc;
   bool IsImplTrait = false; // if parsing impl trait decl
 #endif
@@ -622,6 +624,7 @@ public:
 #if ENABLE_BSC
   SourceLocation getOwnedSpecLoc() const { return TQ_ownedLoc; }
   SourceLocation getBorrowSpecLoc() const { return TQ_borrowLoc; }
+  SourceLocation getArrayElemSpecLoc() const { return TQ_arrayelemLoc; }
   void setImplTrait() { IsImplTrait = true; }
   bool getImplTrait() { return IsImplTrait; }
   llvm::Optional<bool> getConditionalCondResult() const { return ConditionalCondResult; }
@@ -637,6 +640,7 @@ public:
 #if ENABLE_BSC
     TQ_ownedLoc = SourceLocation();
     TQ_borrowLoc = SourceLocation();
+    TQ_arrayelemLoc = SourceLocation();
 #endif
     TQ_restrictLoc = SourceLocation();
     TQ_volatileLoc = SourceLocation();
@@ -1308,7 +1312,8 @@ struct DeclaratorChunk {
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/owned/unaligned/atomic.
 #if ENABLE_BSC
-    unsigned TypeQuals : 7;
+    // Must hold the full DeclSpec::TQ bitmask
+    unsigned TypeQuals : 8;
 #else
     unsigned TypeQuals : 5;
 #endif
@@ -1353,7 +1358,7 @@ struct DeclaratorChunk {
     /// The type qualifiers for the array:
     /// const/volatile/restrict/owned/__unaligned/_Atomic.
 #if ENABLE_BSC
-    unsigned TypeQuals : 7;
+    unsigned TypeQuals : 8;
 #else
     unsigned TypeQuals : 5;
 #endif
@@ -1645,7 +1650,7 @@ struct DeclaratorChunk {
     /// For now, sema will catch these as invalid.
     /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
 #if ENABLE_BSC
-    unsigned TypeQuals : 7;
+    unsigned TypeQuals : 8;
 #else
     unsigned TypeQuals : 5;
 #endif
@@ -1657,7 +1662,7 @@ struct DeclaratorChunk {
   struct MemberPointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/owned/__unaligned/_Atomic.
 #if ENABLE_BSC
-    unsigned TypeQuals : 7;
+    unsigned TypeQuals : 8;
 #else
     unsigned TypeQuals : 5;
 #endif

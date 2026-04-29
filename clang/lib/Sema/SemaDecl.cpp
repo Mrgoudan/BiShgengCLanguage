@@ -5541,6 +5541,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
       Diag(DS.getOwnedSpecLoc(), DiagID) << "_Owned";
     if (DS.getTypeQualifiers() & DeclSpec::TQ_borrow)
       Diag(DS.getBorrowSpecLoc(), DiagID) << "_Borrow";
+    if (DS.getTypeQualifiers() & DeclSpec::TQ_arrayelem)
+      Diag(DS.getArrayElemSpecLoc(), DiagID) << "_ArrayElem";
 #endif
     if (DS.getTypeQualifiers() & DeclSpec::TQ_volatile)
       Diag(DS.getConstSpecLoc(), DiagID) << "volatile";
@@ -6979,6 +6981,8 @@ Sema::ActOnTypedefDeclarator(Scope* S, Declarator& D, DeclContext* DC,
 #if ENABLE_BSC
   // Check if 'owned' qualifier is applied to a non-pointer type (typedefs)
   CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), TInfo->getType());
+  CheckArrayElemQualifierOnType(D.getDeclSpec(), TInfo->getType(),
+                                D.getIdentifierLoc());
 #endif
 
   if (D.getName().Kind != UnqualifiedIdKind::IK_Identifier) {
@@ -7739,6 +7743,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 #if ENABLE_BSC
   // Check if 'owned' qualifier is applied to a non-pointer type (variables)
   CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), R);
+  CheckArrayElemQualifierOnType(D.getDeclSpec(), R, D.getIdentifierLoc());
 #endif
 
   if (SCSpec == DeclSpec::SCS_mutable) {
@@ -9972,6 +9977,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Check if 'owned' qualifier is applied to a non-pointer return type
     QualType ReturnType = R->getAs<FunctionType>()->getReturnType();
     CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), ReturnType);
+    CheckArrayElemQualifierOnType(D.getDeclSpec(), ReturnType,
+                                  D.getIdentifierLoc());
 #endif
 
   SmallVector<TemplateParameterList *, 4> TemplateParamLists;
@@ -15198,6 +15205,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D
   #if ENABLE_BSC
   // Check if 'owned' qualifier is applied to a non-pointer type (parameters)
   CheckOwnedQualifierOnNonPointerType(DS, parmDeclType);
+  CheckArrayElemQualifierOnType(DS, parmDeclType, D.getIdentifierLoc());
   if (getLangOpts().BSC && DS.getSafeZoneSpecifier() != SZ_None) {
     Diag(DS.getSafeZoneSpecifierLoc(), diag::err_safe_zone_decl)
         << DS.getSafeZoneSpecifier();
@@ -18551,6 +18559,7 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record, SourceLocation DeclSt
   }
   // Check if 'owned' qualifier is applied to a non-pointer type (fields)
   CheckOwnedQualifierOnNonPointerType(D.getDeclSpec(), T);
+  CheckArrayElemQualifierOnType(D.getDeclSpec(), T, D.getIdentifierLoc());
   #endif
 
   // Check to see if this name was declared as a member previously
