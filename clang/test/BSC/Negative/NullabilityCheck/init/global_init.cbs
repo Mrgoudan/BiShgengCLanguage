@@ -50,6 +50,16 @@ union U {
 // Test global union with null
 union U u1 = { .p = nullptr }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
 
+union U2 {
+  int* _Nonnull p;
+  int a[2];
+};
+
+union U2 u21; // expected-error {{type contains nonnull pointer must be properly initialized}}
+union U2 u22 = {}; // expected-error {{type contains nonnull pointer must be properly initialized}}
+union U2 u23 = { nullptr }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+union U2 u24 = { .p = nullptr }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
+
 // Test static global variables with null
 static int *_Nonnull staticP1; // expected-error {{type contains nonnull pointer must be properly initialized}}
 static int *_Nonnull staticP2 = nullptr; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}

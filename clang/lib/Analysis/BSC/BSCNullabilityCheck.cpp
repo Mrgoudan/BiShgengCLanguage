@@ -522,15 +522,20 @@ void TransferFunctions::CheckInit(DeclStmt *DS, VarDecl *VD,
     unsigned NumInits = ILE->getNumInits();
     if (CanQT->isRecordType()) {
       // check record initialization
-      if (NumInits == 0) {
-        // check implicitly initialized record which has non-null fields
-        CheckInit(DS, VD, QT, nullptr, path);
-        return;
-      }
       auto *RT = CanQT->getAs<RecordType>();
       RecordDecl *RD = RT->getDecl();
       if (!RD || RD->field_empty())
         return;
+      // check empty initialized record which has non-null fields
+      if (NumInits == 0) {
+        if (RD->isUnion()) {
+          FieldDecl *FD = ILE->getInitializedFieldInUnion();
+          CheckInit(DS, VD, FD->getType(), nullptr, path);
+        } else {
+          CheckInit(DS, VD, QT, nullptr, path);
+        }
+        return;
+      }
       // prepare fields to process
       std::vector<FieldDecl *> FieldsToProcess;
       if (RD->isUnion()) {

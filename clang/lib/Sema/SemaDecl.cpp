@@ -14676,6 +14676,13 @@ void Sema::CheckGlobalInit(VarDecl *VD, QualType QT, Expr *Init, std::string pat
   QualType CanQT = QT.getCanonicalType();
   // early return if no initialization
   if (!Init || isa<ImplicitValueInitExpr>(Init)) {
+    if (CanQT->isRecordType()) {
+      auto *RT = CanQT->getAs<RecordType>();
+      RecordDecl *RD = RT->getDecl();
+      if (RD && !RD->field_empty() && RD->isUnion()) {
+        QT = RD->field_begin()->getType();
+      }
+    }
     if (FindNonnull(QT, Context))
       Diag(VD->getLocation(), diag::err_nonnull_init_by_default);
     return;
@@ -14701,14 +14708,19 @@ void Sema::CheckGlobalInit(VarDecl *VD, QualType QT, Expr *Init, std::string pat
     unsigned NumInits = SemanticILE->getNumInits();
     if (CanQT->isRecordType()) {
       // check record initialization
-      if (NumInits == 0) {
-        CheckGlobalInit(VD, QT, nullptr, path);
-        return;
-      }
       auto *RT = CanQT->getAs<RecordType>();
       RecordDecl *RD = RT->getDecl();
       if (!RD || RD->field_empty())
         return;
+      if (NumInits == 0) {
+        if (RD->isUnion()) {
+          FieldDecl *FD = ILE->getInitializedFieldInUnion();
+          CheckGlobalInit(VD, FD->getType(), nullptr, path);
+        } else {
+          CheckGlobalInit(VD, QT, nullptr, path);
+        }
+        return;
+      }
       // prepare fields to process
       std::vector<FieldDecl *> FieldsToProcess;
       if (RD->isUnion()) {

@@ -33,6 +33,13 @@ void test_nonnull_union() {
   int * q = &x;
   union U u3 = {p};
   union U u4 = {.p2=q};
+  union U2 {
+    int * p1;
+    int *_Nonnull p2;
+  };
+  union U2 v1;
+  union U2 v2 = {};
+  union U2 v3 = { nullptr };
 }
 
 void test_nonnull_struct() {

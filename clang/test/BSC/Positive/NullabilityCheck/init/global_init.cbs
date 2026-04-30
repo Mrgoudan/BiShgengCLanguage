@@ -24,8 +24,10 @@ int *_Nonnull globalP1 = &x;
 int *_Nonnull globalP2 = &y;
 
 // Test global union initialization
-union U u1 = { .p = &x };
-union U u2 = { {1, 2} }; // Using other union member
+union U u1;
+union U u2 = {};
+union U u3 = { {1, 2} };
+union U u4 = { .p = &x };
 
 // Test global struct initialization
 struct S s1 = { &x, &y };

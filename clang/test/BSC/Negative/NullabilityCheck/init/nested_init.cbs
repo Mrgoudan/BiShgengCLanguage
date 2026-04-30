@@ -29,6 +29,11 @@ void test_nonnull_union() {
   union U u2 = {nullptr}; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
   union U u3 = {p};
   union U u4 = {.p2=q};
+  union U2 {
+    int * p1;
+    int *_Nonnull p2;
+  };
+  union U2 v4 = { .p2 = nullptr }; // expected-error {{nonnull pointer cannot be assigned by nullable pointer}}
 }
 
 void test_nonnull_struct() {
