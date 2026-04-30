@@ -1,0 +1,25 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+_Safe void take_void(void *p) { (void)p; } // expected-note {{passing argument to parameter 'p' here}}
+_Safe void pass_array_to_void(void) {
+  int a[2];
+  take_void(a); // expected-error {{conversion from type 'int[2]' to 'void *' is forbidden in the safe zone}}
+}
+
+_Safe void take_void_borrow(void *_Borrow p) { (void)p; } // expected-note {{passing argument to parameter 'p' here}}
+_Safe void pass_array_to_void_borrow(void) {
+  int a[2];
+  take_void_borrow(a); // expected-error {{conversion from type 'int[2]' to 'void *_Borrow' is forbidden in the safe zone}}
+}
+
+_Safe void take_long(long *p) { (void)p; } // expected-note {{passing argument to parameter 'p' here}}
+_Safe void pass_array_to_incompatible_pointee(void) {
+  int a[2];
+  take_long(a); // expected-error {{conversion from type 'int[2]' to 'long *' is forbidden in the safe zone}}
+}
+
+_Safe void take_volatile(volatile int *p) { (void)p; } // expected-note {{passing argument to parameter 'p' here}}
+_Safe void pass_array_to_volatile_raw(void) {
+  int a[2];
+  take_volatile(a); // expected-error {{conversion from type 'int[2]' to 'volatile int *' is forbidden in the safe zone}}
+}

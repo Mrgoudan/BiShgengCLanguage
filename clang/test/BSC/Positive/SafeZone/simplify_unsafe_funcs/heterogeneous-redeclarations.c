@@ -26,6 +26,18 @@ _Safe int* _Borrow f_keep_borrow(int* _Borrow a);
 int* _Owned f_keep_owned(int* _Owned a);
 _Safe int* _Owned f_keep_owned(int* _Owned a);
 
+// _Safe redecl may add `_Borrow _ArrayElem` to a raw pointer parameter/return.
+int* f_add_borrow_arrayelem(int* a);
+_Safe int* _Borrow _ArrayElem f_add_borrow_arrayelem(int* _Borrow _ArrayElem a);
+
+// Heterogeneous redecls may keep `_Borrow _ArrayElem` on both sides.
+int* _Borrow _ArrayElem f_keep_borrow_arrayelem(int* _Borrow _ArrayElem a);
+_Safe int* _Borrow _ArrayElem f_keep_borrow_arrayelem(int* _Borrow _ArrayElem a);
+
+// Heterogeneous redecls may keep `_Owned _ArrayElem` on both sides.
+int* _Owned _ArrayElem f_keep_owned_arrayelem(int* _Owned _ArrayElem a);
+_Safe int* _Owned _ArrayElem f_keep_owned_arrayelem(int* _Owned _ArrayElem a);
+
 // Multiple parameters: safe adds qualifiers to all raw params.
 void f_multi(int* a, int* b);
 _Safe void f_multi(int* _Borrow a, int* _Owned b);

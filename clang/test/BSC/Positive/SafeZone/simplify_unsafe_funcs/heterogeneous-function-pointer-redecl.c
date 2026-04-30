@@ -42,6 +42,18 @@ typedef _Safe  void (*FuncPtr9)(int* _Owned p);
 typedef _Unsafe  void (*FuncPtr10)(int* p);
 typedef _Unsafe  void (*FuncPtr10)(int* p);
 
+// Test 11: Basic heterogeneous typedef redeclaration adding `_Borrow _ArrayElem`.
+typedef _Unsafe  int* (*FuncPtr11)(int* p);
+typedef _Safe  int* _Borrow _ArrayElem (*FuncPtr11)(int* _Borrow _ArrayElem p);
+
+// Test 12: Heterogeneous typedef redeclaration keeping `_Borrow _ArrayElem`.
+typedef _Unsafe  int* _Borrow _ArrayElem (*FuncPtr12)(int* _Borrow _ArrayElem p);
+typedef _Safe  int* _Borrow _ArrayElem (*FuncPtr12)(int* _Borrow _ArrayElem p);
+
+// Test 13: Heterogeneous typedef redeclaration keeping `_Owned _ArrayElem`.
+typedef _Unsafe  int* _Owned _ArrayElem (*FuncPtr13)(int* _Owned _ArrayElem p);
+typedef _Safe  int* _Owned _ArrayElem (*FuncPtr13)(int* _Owned _ArrayElem p);
+
 // Usage test
 void test_usage(void) {
     FuncPtr1 fp1 = 0;
@@ -54,9 +66,12 @@ void test_usage(void) {
     FuncPtr8 fp8 = 0;
     FuncPtr9 fp9 = 0;
     FuncPtr10 fp10 = 0;
+    FuncPtr11 fp11 = 0;
+    FuncPtr12 fp12 = 0;
+    FuncPtr13 fp13 = 0;
 }
 
-// Test 11: Heterogeneous function redeclaration where a parameter is itself a
+// Heterogeneous function redeclaration where a parameter is itself a
 // heterogeneous function pointer pair.  The unsafe decl uses a plain comparator
 // typedef and the _Safe decl uses a _Safe-qualified comparator typedef.
 // This was previously rejected with "incompatible _Safe and unsafe declarations".
@@ -66,14 +81,14 @@ typedef        int (*cmp_unsafe)(const void *, const void *);
 _Safe  void sort_safe(void * _Borrow base, unsigned int n, unsigned int sz, cmp_safe compar);
 void sort_safe(void * base, unsigned int n, unsigned int sz, cmp_unsafe compar);
 
-// Test 12: Same scenario but with the _Safe decl coming second (reverse order).
+// Same scenario but with the _Safe decl coming second (reverse order).
 typedef _Safe  int (*cmp2_safe)(int * _Borrow, int * _Borrow);
 typedef        int (*cmp2_unsafe)(int *, int *);
 
 void sort2(void * base, unsigned int n, cmp2_unsafe compar);
 _Safe  void sort2(void * _Borrow base, unsigned int n, cmp2_safe compar);
 
-// Test 13: Typedef redeclaration where the parameter is itself a heterogeneous
+// Typedef redeclaration where the parameter is itself a heterogeneous
 // function pointer pair.
 typedef _Safe  int (*inner_safe)(const void * _Borrow);
 typedef        int (*inner_unsafe)(const void *);
@@ -84,7 +99,7 @@ typedef        void (*Wrapper_unsafe)(inner_unsafe cb);
 typedef Wrapper_safe  Wrapper;
 typedef Wrapper_unsafe Wrapper;
 
-// Test 14: Calling a heterogeneous function with a func_safe argument in a _Safe
+// Calling a heterogeneous function with a func_safe argument in a _Safe
 // context — the _Safe overload should be selected and no error emitted.
 typedef _Safe  int (*cmp3_safe)(const void * _Borrow, const void * _Borrow);
 typedef        int (*cmp3_unsafe)(const void *, const void *);

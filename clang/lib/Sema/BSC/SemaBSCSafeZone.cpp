@@ -284,19 +284,15 @@ FunctionDecl *Sema::SelectDeclForHeterogeneousRedecl(
   return nullptr;
 }
 
-/// Check if BSC pointer qualifiers (owned/borrow) are compatible between Dest and Src.
-/// For array sources (which decay to raw pointers), owned/borrow dest is rejected.
-/// For pointer sources, owned and borrow must match exactly.
+/// Check if BSC pointer qualifiers are compatible between Dest and Src.
+/// For array sources, raw pointers and borrow pointers are compatible.
+/// For pointer sources, `_Owned` and `_Borrow` must match exactly, and
+/// `_Borrow _ArrayElem` may implicitly reborrow to plain `_Borrow`.
 static bool AreBSCPointerQualifiersCompatible(QualType Dest, QualType Src,
                                               bool SrcIsArray) {
   if (SrcIsArray) {
-    // Arrays decay to raw pointers (no owned/borrow qualifiers).
-    // Only raw pointer parameters (no owned/borrow) can match.
-    // Exception: String literals CAN match borrow pointers via auto-borrow,
-    // but that check is done earlier with access to the Expr*.
-    if (Dest.isOwnedQualified() || Dest.isBorrowQualified())
-      return false;
-    return true;
+    // Arrays decay to raw pointers or destination-sensitive borrow pointers.
+    return !Dest.isOwnedQualified();
   }
 
   if (Dest.isOwnedQualified() != Src.isOwnedQualified())
@@ -751,6 +747,12 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
   return SrcCanPtr == DstCanPtr;
 }
 
+QualType GetSafeArrayDecayType(Sema &S, QualType SrcArrayType, QualType DestPtrType) {
+  if (S.isBorrowArrayDecayTypeMatch(SrcArrayType, DestPtrType))
+    return DestPtrType;
+  return S.Context.getArrayDecayedType(SrcArrayType);
+}
+
 } // namespace
 
 bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
@@ -802,7 +804,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   } else if (SrcType->isArrayType() && DestType->isPointerType()) {
     // Array-to-pointer decay: check compatibility after canonical decay.
     QualType SrcDecayedCanType =
-        Context.getArrayDecayedType(SrcType).getCanonicalType();
+        GetSafeArrayDecayType(*this, SrcType, DestType).getCanonicalType();
     QualType DestCanType = DestType.getCanonicalType();
     IsSafeBehavior = IsSafePointerConversion(SrcDecayedCanType, DestCanType);
   } else if (SrcType->isPointerType() || DestType->isPointerType()) {

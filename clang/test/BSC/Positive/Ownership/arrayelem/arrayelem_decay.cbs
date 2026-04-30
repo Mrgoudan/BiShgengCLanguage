@@ -1,0 +1,72 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+typedef int Elem;
+typedef Elem *_Borrow PlainBorrow;
+typedef struct {
+  int array[10];
+} S;
+
+_Safe void take_borrow_array(int *_Borrow _ArrayElem p) {
+  p[1] = p[0] + p[2]; // a = {1, 4, 3, 4}
+}
+_Safe void take_const_borrow_array(const int *_Borrow _ArrayElem p) {
+  (void)p;
+}
+_Safe void take_borrow(int *_Borrow p) {
+  (void)p;
+}
+_Safe void take_const_borrow(const int *_Borrow p) {
+  (void)p;
+}
+_Safe void take_raw(int * p){
+  (void)p;
+}
+
+_Safe int *_Borrow _ArrayElem return_borrow_array(S *_Borrow p) {
+  return p->array;
+}
+
+_Safe const int *_Borrow _ArrayElem return_const_borrow_array(S *_Borrow p) {
+  return p->array;
+}
+
+_Safe int *_Borrow return_borrow(S *_Borrow p) {
+  return p->array;
+}
+
+_Safe const int *_Borrow return_const_borrow(S *_Borrow p) {
+  return p->array;
+}
+
+_Safe int *return_raw_array(S *_Borrow p) {
+  return p->array;
+}
+
+_Safe int safe_decay_sum(void) {
+  int local[3] = {4, 5, 6};
+  take_borrow_array(local);
+  int *_Borrow _ArrayElem p = local;
+  return p[1];
+}
+
+_Safe int test1(void) {
+  int a[4] = {1, 2, 3, 4};
+  take_borrow_array(a);
+  take_const_borrow_array(a);
+  take_borrow(a);
+  take_const_borrow(a);
+  take_borrow(&_Mut a[0]);
+  take_const_borrow(&_Const a[0]);
+  take_raw(a);
+  {
+    int *_Borrow _ArrayElem p1 = a;
+    const int *_Borrow _ArrayElem p2 = a;
+    int *_Borrow p3 = a;
+    const int *_Borrow p4 = a;
+    int *_Borrow p5 = &_Mut a[0];
+    const int *_Borrow p6 = &_Const a[0];
+    int * p7 = a;
+  }
+  return 0;
+}

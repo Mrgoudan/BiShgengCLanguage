@@ -541,6 +541,75 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
   return E;
 }
 
+#if ENABLE_BSC
+bool Sema::isBorrowArrayDecayTypeMatch(QualType SrcArrayType,
+                                       QualType DestPtrType) const {
+  // return true when SrcArrayType can decay to DestPtrType as a borrow pointer
+  // (with or without _ArrayElem). this function should not accept decaying to
+  // raw pointers.
+  if (!DestPtrType->isPointerType() || !DestPtrType.isBorrowQualified())
+    return false;
+  if (!SrcArrayType->isArrayType())
+    return false;
+
+  QualType ElemType = SrcArrayType->getAsArrayTypeUnsafe()->getElementType();
+  QualType DestPointee = DestPtrType->getPointeeType();
+  QualType CompareDestPointee = DestPointee;
+
+  if (DestPointee.isConstQualified() && !ElemType.isConstQualified())
+    CompareDestPointee.removeLocalConst();
+  if (DestPointee.isVolatileQualified() && !ElemType.isVolatileQualified())
+    CompareDestPointee.removeLocalVolatile();
+  if (DestPointee.isRestrictQualified() && !ElemType.isRestrictQualified())
+    CompareDestPointee.removeLocalRestrict();
+
+  return Context.hasSameType(CompareDestPointee, ElemType);
+}
+
+ExprResult Sema::MaybeDecayArrayToBorrowArrayElemPointer(Expr *E,
+                                                         QualType ToType) {
+  assert(getLangOpts().BSC && "MaybeDecayArrayToBorrowArrayElemPointer is BSC-only");
+
+  if (E->hasPlaceholderType()) {
+    ExprResult Result = CheckPlaceholderExpr(E);
+    if (Result.isInvalid())
+      return ExprError();
+    E = Result.get();
+  }
+
+  QualType FromType = E->getType();
+  if (!isBorrowArrayDecayTypeMatch(FromType, ToType))
+    return E;
+
+  QualType ToPointeeType = ToType->getPointeeType();
+  // String literals and __FUNCTION__ are not mutable; do not apply borrow-array
+  // decay to `char * _Borrow` (mut borrow) — leave that to assignment/call checks.
+  if (IsStringLiteralExpr(E) && !ToPointeeType.isConstQualified())
+    return E;
+
+  SourceLocation Loc = E->getExprLoc();
+  ExprResult Zero = ActOnIntegerConstant(Loc, 0);
+  if (Zero.isInvalid())
+    return ExprError();
+
+  ExprResult Elem = CreateBuiltinArraySubscriptExpr(E, Loc, Zero.get(), Loc);
+  if (Elem.isInvalid())
+    return ExprError();
+
+  UnaryOperatorKind BorrowOp =
+      ToPointeeType.isConstQualified() ? UO_AddrConst : UO_AddrMut;
+  ExprResult BorrowExpr = CreateBuiltinUnaryOp(Loc, BorrowOp, Elem.get());
+  if (BorrowExpr.isInvalid() || ToType.isArrayElemQualified())
+    return BorrowExpr;
+
+  ExprResult DerefExpr = CreateBuiltinUnaryOp(Loc, UO_Deref, BorrowExpr.get());
+  if (DerefExpr.isInvalid())
+    return ExprError();
+
+  return CreateBuiltinUnaryOp(Loc, BorrowOp, DerefExpr.get());
+}
+#endif
+
 static void CheckForNullPointerDereference(Sema &S, Expr *E) {
   // Check to see if we are dereferencing a null pointer.  If so,
   // and if not volatile-qualified, this is undefined behavior that the
@@ -6645,19 +6714,18 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       }
       CheckMoveVarMemoryLeak(Arg, Arg->getBeginLoc());
 
-      // BSC: Handle string literal to borrow pointer conversion
-      if (getLangOpts().BSC && ProtoArgType->isPointerType() &&
-          ProtoArgType.isBorrowQualified()) {
-        // Check if parameter is a pointer to char (const char * borrow or char * borrow)
-        QualType PointeeType = ProtoArgType->getPointeeType();
-        if (PointeeType.getUnqualifiedType()->isCharType() &&
-            IsStringLiteralExpr(Arg)) {
-          // Check if it's a const borrow (OK) or mut borrow (ERROR)
-          if (PointeeType.isConstQualified()) {
-            // Auto-insert &const * for const char * borrow
-            Arg = InsertConstBorrowForStringLiteral(Arg, Arg->getBeginLoc());
-          } else {
-            // Error: cannot mutably borrow string literal or __FUNCTION__
+      if (getLangOpts().BSC) {
+        ExprResult BorrowDecayArg =
+            MaybeDecayArrayToBorrowArrayElemPointer(Arg, ProtoArgType);
+        if (BorrowDecayArg.isInvalid())
+          return true;
+        Arg = BorrowDecayArg.get();
+
+        // BSC: Reject mutably borrowing a string literal or __FUNCTION__.
+        if (ProtoArgType->isPointerType() && ProtoArgType.isBorrowQualified()) {
+          QualType PointeeType = ProtoArgType->getPointeeType();
+          if (PointeeType.getUnqualifiedType()->isCharType() &&
+              IsStringLiteralExpr(Arg) && !PointeeType.isConstQualified()) {
             Diag(Arg->getBeginLoc(), diag::err_pass_string_literal_to_mut_borrow)
               << ProtoArgType;
             return true;
@@ -7185,11 +7253,10 @@ static bool DoesCallSatisfyAssignmentConstraints(Sema &S, FunctionDecl *FD,
     // expressions) can auto-borrow to borrow pointers.
     if (ArgType->isArrayType() && ParamType->isPointerType() &&
         ParamType.isBorrowQualified()) {
-      if (!S.IsStringLiteralExpr(Arg)) {
-        // Not a string literal - regular arrays cannot match borrow pointers.
+      if (!S.IsStringLiteralExpr(Arg))
         return false;
-      }
-      // String literal can auto-borrow - skip the constraint check and allow it.
+      // String literal can auto-borrow, and regular arrays may match
+      // destination-sensitive borrow parameters.
       continue;
     }
 
@@ -10822,6 +10889,13 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
   //
   // Suppress this for references: C++ 8.5.3p5.
   if (!LHSType->isReferenceType()) {
+#if ENABLE_BSC
+    if (getLangOpts().BSC) {
+      RHS = MaybeDecayArrayToBorrowArrayElemPointer(RHS.get(), LHSType);
+      if (RHS.isInvalid())
+        return Incompatible;
+    }
+#endif
     // FIXME: We potentially allocate here even if ConvertRHS is false.
     RHS = DefaultFunctionArrayLvalueConversion(RHS.get(), Diagnose);
     if (RHS.isInvalid())
@@ -10829,9 +10903,11 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
   }
 
 #if ENABLE_BSC
-  // BSC: Convert string literals to const char *_Borrow before type checking.
+  // Ternary / other string-like expressions may decay to `char *` before they
+  // match `const char * _Borrow`; MaybeDecay only handles array-shaped sources.
   if (getLangOpts().BSC && IsStringLiteralExpr(RHS.get()) &&
-      IsConstCharPtrBorrow(LHSType)) {
+      IsConstCharPtrBorrow(LHSType) &&
+      !Context.hasSameType(RHS.get()->getType(), LHSType)) {
     RHS = InsertConstBorrowForStringLiteral(RHS.get(), RHS.get()->getBeginLoc());
   }
 #endif

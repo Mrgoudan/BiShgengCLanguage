@@ -56,5 +56,23 @@ _Safe int* test_drop_owned_param(int* a); // expected-error {{function 'test_dro
 int* _Borrow test_drop_borrow_ret(int* _Borrow a); // expected-note {{previous declaration is here}}
 _Safe int* test_drop_borrow_ret(int* _Borrow a); // expected-error {{function 'test_drop_borrow_ret' has incompatible _Safe and _Unsafe declarations}}
 
+int* _Borrow _ArrayElem test_drop_arrayelem_from_borrow_param(int* _Borrow _ArrayElem a); // expected-note {{previous declaration is here}}
+_Safe int* _Borrow test_drop_arrayelem_from_borrow_param(int* _Borrow a); // expected-error {{function 'test_drop_arrayelem_from_borrow_param' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Borrow _ArrayElem test_drop_arrayelem_from_borrow_ret(int* _Borrow _ArrayElem a); // expected-note {{previous declaration is here}}
+_Safe int* _Borrow test_drop_arrayelem_from_borrow_ret(int* _Borrow _ArrayElem a); // expected-error {{function 'test_drop_arrayelem_from_borrow_ret' has incompatible _Safe and _Unsafe declarations}}
+
 int* _Owned test_drop_owned_ret(int* _Owned a); // expected-note {{previous declaration is here}}
 _Safe int* test_drop_owned_ret(int* _Owned a); // expected-error {{function 'test_drop_owned_ret' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Owned test_add_arrayelem_owned_param(int* _Owned a); // expected-note {{previous declaration is here}}
+_Safe int* _Owned test_add_arrayelem_owned_param(int* _Owned _ArrayElem a); // expected-error {{function 'test_add_arrayelem_owned_param' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Owned test_add_arrayelem_owned_ret(int* _Owned a); // expected-note {{previous declaration is here}}
+_Safe int* _Owned _ArrayElem test_add_arrayelem_owned_ret(int* _Owned a); // expected-error {{function 'test_add_arrayelem_owned_ret' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Borrow test_add_arrayelem_borrow_param(int* _Borrow a); // expected-note {{previous declaration is here}}
+_Safe int* _Borrow test_add_arrayelem_borrow_param(int* _Borrow _ArrayElem a); // expected-error {{function 'test_add_arrayelem_borrow_param' has incompatible _Safe and _Unsafe declarations}}
+
+int* _Borrow test_add_arrayelem_borrow_ret(int* _Borrow a); // expected-note {{previous declaration is here}}
+_Safe int* _Borrow _ArrayElem test_add_arrayelem_borrow_ret(int* _Borrow a); // expected-error {{function 'test_add_arrayelem_borrow_ret' has incompatible _Safe and _Unsafe declarations}}

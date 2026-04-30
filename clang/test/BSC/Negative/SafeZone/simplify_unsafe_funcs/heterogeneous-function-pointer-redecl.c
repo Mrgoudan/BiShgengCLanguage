@@ -44,3 +44,28 @@ typedef        int (*cmp3_unsafe)(const void *); // one fewer param
 
 _Safe  void bad_sort2(void * _Borrow base, unsigned int n, cmp3_safe compar); // expected-note {{previous declaration is here}}
 void bad_sort2(void * base, unsigned int n, cmp3_unsafe compar); // expected-error {{function 'bad_sort2' has incompatible _Safe and _Unsafe declarations}}
+
+// Test 10: _Safe typedef must not add _ArrayElem to an unsafe `_Owned` parameter.
+_Unsafe typedef void (*BadFuncPtr10)(int* _Owned p); // expected-note {{previous definition is here}}
+_Safe typedef void (*BadFuncPtr10)(int* _Owned _ArrayElem p); // expected-error {{function 'BadFuncPtr10' has incompatible _Safe and _Unsafe declarations}}
+
+// Test 11: _Safe typedef must not add _ArrayElem to an unsafe `_Owned` return type.
+_Unsafe typedef int* _Owned (*BadFuncPtr11)(void); // expected-note {{previous definition is here}}
+_Safe typedef int* _Owned _ArrayElem (*BadFuncPtr11)(void); // expected-error {{function 'BadFuncPtr11' has incompatible _Safe and _Unsafe declarations}}
+
+// Test 11a: _Safe typedef must not add _ArrayElem to an unsafe `_Borrow` parameter.
+_Unsafe typedef void (*BadFuncPtr11a)(int* _Borrow p); // expected-note {{previous definition is here}}
+_Safe typedef void (*BadFuncPtr11a)(int* _Borrow _ArrayElem p); // expected-error {{function 'BadFuncPtr11a' has incompatible _Safe and _Unsafe declarations}}
+
+// Test 11b: _Safe typedef must not add _ArrayElem to an unsafe `_Borrow` return type
+// (parameters include _Borrow so a _Borrow return is allowed).
+_Unsafe typedef int* _Borrow (*BadFuncPtr11b)(int* _Borrow p); // expected-note {{previous definition is here}}
+_Safe typedef int* _Borrow _ArrayElem (*BadFuncPtr11b)(int* _Borrow p); // expected-error {{function 'BadFuncPtr11b' has incompatible _Safe and _Unsafe declarations}}
+
+// Test 12: _Safe typedef must not drop `_ArrayElem` from an unsafe `_Borrow _ArrayElem` parameter.
+_Unsafe typedef int* _Borrow _ArrayElem (*BadFuncPtr12)(int* _Borrow _ArrayElem p); // expected-note {{previous definition is here}}
+_Safe typedef int* _Borrow (*BadFuncPtr12)(int* _Borrow p); // expected-error {{function 'BadFuncPtr12' has incompatible _Safe and _Unsafe declarations}}
+
+// Test 13: _Safe typedef must not drop `_ArrayElem` from an unsafe `_Borrow _ArrayElem` return type.
+_Unsafe typedef int* _Borrow _ArrayElem (*BadFuncPtr13)(int* _Borrow _ArrayElem p); // expected-note {{previous definition is here}}
+_Safe typedef int* _Borrow (*BadFuncPtr13)(int* _Borrow _ArrayElem p); // expected-error {{function 'BadFuncPtr13' has incompatible _Safe and _Unsafe declarations}}

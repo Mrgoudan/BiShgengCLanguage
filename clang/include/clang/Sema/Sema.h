@@ -12369,6 +12369,9 @@ public:
   bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   AssignConvertType CheckBSCQualTypeAssignment(QualType LHSType, ExprResult &RHS);
   AssignConvertType CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr);
+  bool isBorrowArrayDecayTypeMatch(QualType SrcArrayType,
+                                   QualType DestPtrType) const;
+  ExprResult MaybeDecayArrayToBorrowArrayElemPointer(Expr *E, QualType ToType);
   void CheckOwnedOrIndirectOwnedType(SourceLocation ErrLoc, QualType T, StringRef Env);
   void CheckOwnedQualifierOnNonPointerType(const DeclSpec &DS, QualType T);
   void CheckArrayElemQualifierOnType(const DeclSpec &DS, QualType T,
