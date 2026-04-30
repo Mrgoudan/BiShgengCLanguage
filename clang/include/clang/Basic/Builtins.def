@@ -1710,6 +1710,8 @@ LANGBUILTIN(__builtin_hlsl_wave_active_count_bits, "Uib", "nc", HLSL_LANG)
 // BSC (BiShengC) ownership transfer
 LANGBUILTIN(__move_to_raw, "v.", "tn", BSC_LANG)
 LANGBUILTIN(__take_from_raw, "v.", "tn", BSC_LANG)
+LANGBUILTIN(__move_array_to_raw, "v.", "tn", BSC_LANG)
+LANGBUILTIN(__take_array_from_raw, "v.", "tn", BSC_LANG)
 #endif
 
 // Builtins for XRay

@@ -8,7 +8,8 @@ void test_borrow_casts(int raw[4], int x) {
   int *_Borrow plain3 = (int *_Borrow)p; // ok
 }
 
-void test_owned_casts_1(int *_Owned _ArrayElem owned_array) {
+void test_owned_casts_1(int *raw) {
+  int *_Owned _ArrayElem owned_array = __take_array_from_raw(raw);
   int *_Owned owned_plain = (int *_Owned)owned_array; // expected-error {{incompatible _Owned types, cannot cast 'int *_Owned _ArrayElem' to 'int *_Owned'}}
   (void)owned_plain;
 }

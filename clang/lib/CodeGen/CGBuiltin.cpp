@@ -5370,7 +5370,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 #if ENABLE_BSC
   // BSC ownership transfer builtins: behave like casts (no-op at codegen).
   if (BuiltinID == Builtin::BI__move_to_raw ||
-      BuiltinID == Builtin::BI__take_from_raw) {
+      BuiltinID == Builtin::BI__take_from_raw ||
+      BuiltinID == Builtin::BI__move_array_to_raw ||
+      BuiltinID == Builtin::BI__take_array_from_raw) {
     assert(E->getNumArgs() == 1 && "expected one argument");
     Value *ArgVal = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());

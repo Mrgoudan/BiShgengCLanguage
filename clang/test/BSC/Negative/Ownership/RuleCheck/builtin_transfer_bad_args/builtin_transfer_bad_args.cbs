@@ -6,6 +6,18 @@ void test_move_to_raw_bad_type(int *raw, int v, int *_Borrow b) {
   __move_to_raw(b);   // expected-error {{argument must be an _Owned pointer type}}
 }
 
+void test_move_to_raw_wrong_intrinsic(int *_Owned _ArrayElem a) {
+  // expected-error@+2 {{argument must be an _Owned pointer type}}
+  // expected-note@+1 {{use '__move_array_to_raw' for an _Owned _ArrayElem pointer}}
+  __move_to_raw(a);
+}
+
+void test_move_array_to_raw_wrong_intrinsic(int *_Owned o) {
+  // expected-error@+2 {{argument must be an _Owned _ArrayElem pointer type}}
+  // expected-note@+1 {{use '__move_to_raw' for an _Owned pointer that is not _ArrayElem}}
+  __move_array_to_raw(o);
+}
+
 void test_take_from_raw_bad_type(int *_Owned o, int v, int *_Borrow b) {
   __take_from_raw(o); // expected-error {{argument must be a raw pointer type}}
   __take_from_raw(v); // expected-error {{argument must be a raw pointer type}}

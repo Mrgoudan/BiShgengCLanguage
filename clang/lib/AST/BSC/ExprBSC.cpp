@@ -40,7 +40,9 @@ bool Expr::isNullExpr(ASTContext &Ctx) const {
       if (CE->getNumArgs() == 1) {
         auto BuiltinID = FD->getBuiltinID();
         if (BuiltinID == Builtin::BI__take_from_raw ||
-            BuiltinID == Builtin::BI__move_to_raw) {
+            BuiltinID == Builtin::BI__move_to_raw ||
+            BuiltinID == Builtin::BI__take_array_from_raw ||
+            BuiltinID == Builtin::BI__move_array_to_raw) {
           return CE->getArg(0)->isNullExpr(Ctx);
         }
       }

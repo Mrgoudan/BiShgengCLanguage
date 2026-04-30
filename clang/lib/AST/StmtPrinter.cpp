@@ -1686,7 +1686,9 @@ void StmtPrinter::VisitCallExpr(CallExpr *Call) {
       Call->getNumArgs() == 1) {
     unsigned BuiltinID = Call->getDirectCallee()->getBuiltinID();
     if (BuiltinID == Builtin::BI__move_to_raw ||
-        BuiltinID == Builtin::BI__take_from_raw) {
+        BuiltinID == Builtin::BI__take_from_raw ||
+        BuiltinID == Builtin::BI__move_array_to_raw ||
+        BuiltinID == Builtin::BI__take_array_from_raw) {
       OS << '(';
       Call->getType().print(OS, Policy);
       OS << ')';

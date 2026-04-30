@@ -179,6 +179,96 @@ static QualType applyNullabilityToType(QualType QT, NullabilityKind NK,
   return Ctx.getAttributedType(AttrKind, BaseTy, BaseTy);
 }
 
+/// common checks for __move[_array]_to_raw / __take[_array]_from_raw
+static bool checkBSCRawTransferBuiltinCommon(Sema &S, CallExpr *TheCall,
+                                             StringRef Name) {
+  // must not be in safe zone
+  if (S.getLangOpts().BSC && S.IsInSafeZone()) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_unsafe_action) << Name;
+    return true;
+  }
+  // must only have one argument
+  if (checkArgCount(S, TheCall, 1))
+    return true;
+  return false;
+}
+
+/// Validate first argument for __move[_array]_to_raw
+/// \p RequireArrayElem true for __move_array_to_raw, false for __move_to_raw
+static bool checkMoveToRawArgumentShape(Sema &S, CallExpr *TheCall,
+                                        bool RequireArrayElem) {
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
+  bool IsNotOwnedPtr = !ArgTy->isPointerType() || !ArgTy.isOwnedQualified();
+  if (!RequireArrayElem) {
+    if (IsNotOwnedPtr || ArgTy.isArrayElemQualified()) {
+      S.Diag(ArgLoc, diag::err_bsc_move_to_raw_not_owned) << ArgTy;
+      if (!IsNotOwnedPtr && ArgTy.isArrayElemQualified())
+        S.Diag(ArgLoc, diag::note_bsc_move_to_raw_use_move_array_to_raw);
+      return true;
+    }
+  } else {
+    if (IsNotOwnedPtr || !ArgTy.isArrayElemQualified()) {
+      S.Diag(ArgLoc, diag::err_bsc_move_array_to_raw_not_owned_array) << ArgTy;
+      if (!IsNotOwnedPtr && !ArgTy.isArrayElemQualified())
+        S.Diag(ArgLoc, diag::note_bsc_move_array_to_raw_use_move_to_raw);
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Validate first argument for __take[_array]_from_raw
+static bool checkTakeFromRawArgumentShape(Sema &S, CallExpr *TheCall,
+                                          bool ForArray) {
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  SourceLocation ArgLoc = TheCall->getArg(0)->getBeginLoc();
+  if (!ArgTy->isPointerType() || ArgTy.isOwnedQualified() ||
+      ArgTy.isBorrowQualified() || ArgTy.isArrayElemQualified()) {
+    if (ForArray)
+      S.Diag(ArgLoc, diag::err_bsc_take_array_from_raw_not_raw) << ArgTy;
+    else
+      S.Diag(ArgLoc, diag::err_bsc_take_from_raw_not_raw) << ArgTy;
+    return true;
+  }
+  if (ArgTy->isFunctionPointerType()) {
+    if (ForArray)
+      S.Diag(ArgLoc, diag::err_bsc_take_array_from_raw_function_pointer) << ArgTy;
+    else
+      S.Diag(ArgLoc, diag::err_bsc_take_from_raw_function_pointer) << ArgTy;
+    return true;
+  }
+  return false;
+}
+
+/// Common handling for __move[_array]_to_raw / __take[_array]_from_raw
+static void handleBSCRawTransferBuiltin(Sema &S, CallExpr *TheCall,
+                                       unsigned BuiltinID) {
+  QualType ArgTy = TheCall->getArg(0)->getType();
+  QualType ResultTy = ArgTy.getUnqualifiedType();
+  ResultTy.removeLocalOwned();
+  ResultTy.removeLocalBorrow();
+  ResultTy.removeLocalArrayElem(S.Context);
+  Qualifiers Qs = ResultTy.getQualifiers();
+  Qs.removeArrayElem();
+  switch (BuiltinID) {
+    default: break;
+    case Builtin::BI__take_from_raw:
+      Qs.addOwned();
+      break;
+    case Builtin::BI__take_array_from_raw: {
+      Qs.addOwned();
+      Qs.addArrayElem();
+      break;
+    }
+  }
+  ResultTy = S.Context.getQualifiedType(ResultTy.getTypePtr(), Qs);
+  NullabilityKind SrcNullability = getBSCDefNullability(ArgTy, S.Context);
+  NullabilityKind DstNullability = getBSCDefNullability(ResultTy, S.Context);
+  if (SrcNullability != DstNullability)
+    ResultTy = applyNullabilityToType(ResultTy, SrcNullability, S.Context);
+  TheCall->setType(ResultTy);
+}
 #endif
 
 /// Check that the first argument to __builtin_annotation is an integer
@@ -2102,59 +2192,30 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
 
 #if ENABLE_BSC
-  case Builtin::BI__move_to_raw: {
-    if (getLangOpts().BSC && IsInSafeZone()) {
-      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
-                       << "__move_to_raw");
-    }
-    if (checkArgCount(*this, TheCall, 1))
+  case Builtin::BI__move_to_raw:
+    if (checkBSCRawTransferBuiltinCommon(*this, TheCall, "__move_to_raw")
+        || checkMoveToRawArgumentShape(*this, TheCall, false))
       return ExprError();
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (!ArgTy->isPointerType() || !ArgTy.isOwnedQualified()) {
-      return ExprError(Diag(TheCall->getArg(0)->getBeginLoc(),
-                            diag::err_bsc_move_to_raw_not_owned)
-                       << ArgTy);
-    }
-    NullabilityKind SrcNullability = getBSCDefNullability(ArgTy, Context);
-    QualType ResultTy = ArgTy.getUnqualifiedType();
-    ResultTy.removeLocalOwned();
-    ResultTy.removeLocalBorrow();
-    NullabilityKind DstNullability = getBSCDefNullability(ResultTy, Context);
-    if (SrcNullability != DstNullability)
-      ResultTy = applyNullabilityToType(ResultTy, SrcNullability, Context);
-    TheCall->setType(ResultTy);
+    handleBSCRawTransferBuiltin(*this, TheCall, BuiltinID);
     break;
-  }
-  case Builtin::BI__take_from_raw: {
-    if (getLangOpts().BSC && IsInSafeZone()) {
-      return ExprError(Diag(TheCall->getBeginLoc(), diag::err_unsafe_action)
-                       << "__take_from_raw");
-    }
-    if (checkArgCount(*this, TheCall, 1))
+  case Builtin::BI__move_array_to_raw:
+    if (checkBSCRawTransferBuiltinCommon(*this, TheCall, "__move_array_to_raw")
+        || checkMoveToRawArgumentShape(*this, TheCall, true))
       return ExprError();
-    QualType ArgTy = TheCall->getArg(0)->getType();
-    if (!ArgTy->isPointerType() || ArgTy.isOwnedQualified() ||
-        ArgTy.isBorrowQualified()) {
-      return ExprError(Diag(TheCall->getArg(0)->getBeginLoc(),
-                            diag::err_bsc_take_from_raw_not_raw)
-                       << ArgTy);
-    }
-    if (ArgTy->isFunctionPointerType()) {
-      return ExprError(Diag(TheCall->getArg(0)->getBeginLoc(),
-                            diag::err_bsc_take_from_raw_function_pointer)
-                       << ArgTy);
-    }
-    NullabilityKind SrcNullability = getBSCDefNullability(ArgTy, Context);
-    QualType ResultTy = ArgTy.getUnqualifiedType();
-    ResultTy.removeLocalOwned();
-    ResultTy.removeLocalBorrow();
-    ResultTy = ResultTy.withOwned();
-    NullabilityKind DstNullability = getBSCDefNullability(ResultTy, Context);
-    if (SrcNullability != DstNullability)
-      ResultTy = applyNullabilityToType(ResultTy, SrcNullability, Context);
-    TheCall->setType(ResultTy);
+    handleBSCRawTransferBuiltin(*this, TheCall, BuiltinID);
     break;
-  }
+  case Builtin::BI__take_from_raw:
+    if (checkBSCRawTransferBuiltinCommon(*this, TheCall, "__take_from_raw")
+        || checkTakeFromRawArgumentShape(*this, TheCall, false))
+      return ExprError();
+    handleBSCRawTransferBuiltin(*this, TheCall, BuiltinID);
+    break;
+  case Builtin::BI__take_array_from_raw:
+    if (checkBSCRawTransferBuiltinCommon(*this, TheCall, "__take_array_from_raw")
+        || checkTakeFromRawArgumentShape(*this, TheCall, true))
+      return ExprError();
+    handleBSCRawTransferBuiltin(*this, TheCall, BuiltinID);
+    break;
 #endif
 
   // The acquire, release, and no fence variants are ARM and AArch64 only.

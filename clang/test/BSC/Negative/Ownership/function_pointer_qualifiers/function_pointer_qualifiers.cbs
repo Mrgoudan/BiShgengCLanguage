@@ -66,6 +66,10 @@ void direct_local_cases(void) {
   // expected-error@-1 {{__take_from_raw does not support function pointer type 'int (*)(void)'}}
   (void)from_take_from_raw;
 
+  int (*from_take_array_from_raw)(void) = __take_array_from_raw(&plain);
+  // expected-error@-1 {{__take_array_from_raw does not support function pointer type 'int (*)(void)'}}
+  (void)from_take_array_from_raw;
+
   int local = 0;
   int *_Owned owned_int = __take_from_raw(&local);
   int borrow_local = 0;

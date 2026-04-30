@@ -1,0 +1,43 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+typedef int *IP;
+typedef int Elem;
+typedef Elem *ElemPtr;
+
+// Compatible redeclarations: typedef-sugar vs spelled-out (merge / canonical).
+void take_ip(IP _Borrow _ArrayElem p);
+void take_ip(int *_Borrow _ArrayElem p) { (void)p; }
+
+void take_elem(ElemPtr _Borrow _ArrayElem p);
+void take_elem(Elem *_Borrow _ArrayElem p) { (void)p; }
+
+_Static_assert(__is_same(IP _Borrow _ArrayElem, int *_Borrow _ArrayElem),
+               "ip borrow arrayelem canonical");
+
+void static_assert_local_types(void) {
+  int arr[2];
+  IP _Borrow _ArrayElem a = &_Mut arr[0];
+  int *_Borrow _ArrayElem b = &_Mut arr[0];
+  _Static_assert(__is_same(typeof(a), typeof(b)), "local typedef vs spelled");
+
+  ElemPtr _Borrow _ArrayElem c = &_Mut arr[0];
+  Elem *_Borrow _ArrayElem d = &_Mut arr[0];
+  _Static_assert(__is_same(typeof(c), typeof(d)), "elem typedef chain");
+}
+
+typedef int *_Owned _ArrayElem OwnedArrPtr;
+
+_Static_assert(__is_same(OwnedArrPtr, int *_Owned _ArrayElem),
+               "owned _ArrayElem typedef matches spelled form");
+_Static_assert(__is_same(typeof(__take_array_from_raw((int *)0)),
+                         OwnedArrPtr),
+               "take_array_from_raw matches typedef result type");
+
+void builtin_move_result(void) {
+  int buf[1];
+  int *_Owned _ArrayElem owned = __take_array_from_raw((int *)buf);
+  _Static_assert(__is_same(typeof(__move_array_to_raw(owned)), int *),
+                 "__move_array_to_raw spelled operand");
+  (void)__move_array_to_raw(owned);
+}

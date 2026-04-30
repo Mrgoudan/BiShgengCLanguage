@@ -1,0 +1,13 @@
+// RUN: %clang_cc1 -verify %s
+
+_Safe int *get_raw(void);
+_Safe int *_Owned _ArrayElem get_owned_array(void);
+
+_Safe void test_builtin_forbidden_in_safe_zone(void) {
+  int *_Owned _ArrayElem p = get_owned_array();
+  int *raw = get_raw();
+  int *x = __move_array_to_raw(p); // expected-error {{__move_array_to_raw is forbidden in the safe zone}}
+  int *_Owned _ArrayElem y = __take_array_from_raw(raw); // expected-error {{__take_array_from_raw is forbidden in the safe zone}}
+  (void)x;
+  (void)y;
+}

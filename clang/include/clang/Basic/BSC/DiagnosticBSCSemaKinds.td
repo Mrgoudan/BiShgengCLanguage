@@ -45,6 +45,16 @@ def err_bsc_take_from_raw_not_raw : Error<
   "argument must be a raw pointer type (have %0)">;
 def err_bsc_take_from_raw_function_pointer : Error<
   "__take_from_raw does not support function pointer type %0">;
+def err_bsc_move_array_to_raw_not_owned_array : Error<
+  "argument must be an _Owned _ArrayElem pointer type (have %0)">;
+def note_bsc_move_to_raw_use_move_array_to_raw : Note<
+  "use '__move_array_to_raw' for an _Owned _ArrayElem pointer">;
+def note_bsc_move_array_to_raw_use_move_to_raw : Note<
+  "use '__move_to_raw' for an _Owned pointer that is not _ArrayElem">;
+def err_bsc_take_array_from_raw_not_raw : Error<
+  "argument must be a raw pointer type (have %0)">;
+def err_bsc_take_array_from_raw_function_pointer : Error<
+  "__take_array_from_raw does not support function pointer type %0">;
 def err_owned_raw_cast_disallowed : Error<
   "cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer">;
 def err_owned_array_raw_cast_disallowed : Error<

@@ -324,7 +324,9 @@ NullabilityKind TransferFunctions::getExprPathNullability(Expr *E) {
       if (FunctionDecl *FD = CE->getDirectCallee()) {
         if (CE->getNumArgs() == 1 &&
             (FD->getBuiltinID() == Builtin::BI__move_to_raw ||
-             FD->getBuiltinID() == Builtin::BI__take_from_raw)) {
+             FD->getBuiltinID() == Builtin::BI__take_from_raw ||
+             FD->getBuiltinID() == Builtin::BI__move_array_to_raw ||
+             FD->getBuiltinID() == Builtin::BI__take_array_from_raw)) {
           return getExprPathNullability(CE->getArg(0));
         }
       }
