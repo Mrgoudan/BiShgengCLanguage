@@ -365,56 +365,40 @@ bool Type::isTrivialDataType() const {
   return isTrivialDataTypeImpl(CanonicalType, Visited);
 }
 
-void RecordType::initOwnedStatus() const {
-  if (hasOwn != ownedStatus::unInitOwned)
-    return;
-  std::vector<const RecordType *> RecordTypeList;
-  RecordTypeList.push_back(this);
-  unsigned NextToCheckIndex = 0;
-
-  while (RecordTypeList.size() > NextToCheckIndex) {
-    for (FieldDecl *FD :
-         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
-      QualType FieldTy = FD->getType().getCanonicalType();
-      bool isOwnedStructType = FieldTy->isOwnedStructureType();
-      if (FieldTy.isOwnedQualified() || isOwnedStructType) {
-        hasOwn = ownedStatus::withOwned;
-        return;
-      }
-      QualType tempQT = FieldTy;
-      const Type *tempT = tempQT.getTypePtr();
-      while (tempT->isPointerType()) {
-        tempQT = tempT->getPointeeType();
-        isOwnedStructType = tempQT.getCanonicalType()->isOwnedStructureType();
-        if (tempQT.isOwnedQualified() && !isOwnedStructType) {
-          hasOwn = ownedStatus::withOwned;
-          return;
-        } else {
-          tempQT = tempQT.getCanonicalType();
-          tempT = tempQT.getTypePtr();
-        }
-      }
-      FieldTy = tempQT.getCanonicalType();
-      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
-        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
-          RecordTypeList.push_back(FieldRecTy);
-      }
-    }
-    ++NextToCheckIndex;
-  }
-  hasOwn = ownedStatus::withoutOwned;
-  return;
-}
-
 // hasOwnedFields is used to determine whether a type has a field
 // that is directly or indirectly qualified by owned.
 // If you want to determine whether a type is a move semantic type,
 // use isMoveSemanticType instead.
 bool RecordType::hasOwnedFields() const {
-  if (hasOwn == ownedStatus::unInitOwned)
-    initOwnedStatus();
-  if (hasOwn == ownedStatus::withOwned)
-    return true;
+  llvm::SmallPtrSet<const RecordType *, 16> Visited;
+  llvm::SmallVector<const RecordType *, 16> Queue;
+  Queue.push_back(this);
+  Visited.insert(this);
+  for (unsigned i = 0; i < Queue.size(); ++i) {
+    // traverse all fields
+    for (FieldDecl *FD : Queue[i]->getDecl()->fields()) {
+      // basic case
+      QualType FieldTy = FD->getType().getCanonicalType();
+      if (FieldTy.isOwnedQualified() || FieldTy->isOwnedStructureType()) {
+        return true;
+      }
+      // pointer: dereference to the final pointee
+      QualType TempQT = FieldTy;
+      for (const Type *TempT = TempQT.getTypePtr(); TempT->isPointerType();
+           TempT = TempQT.getTypePtr()) {
+        TempQT = TempT->getPointeeType().getCanonicalType();
+        if (TempQT.isOwnedQualified() && !TempQT->isOwnedStructureType()) {
+          return true;
+        }
+      }
+      FieldTy = TempQT.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (Visited.insert(FieldRecTy).second) {
+          Queue.push_back(FieldRecTy);
+        }
+      }
+    }
+  }
   return false;
 }
 

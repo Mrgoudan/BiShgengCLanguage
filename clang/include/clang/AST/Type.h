@@ -4948,15 +4948,6 @@ protected:
   explicit RecordType(TypeClass TC, RecordDecl *D)
       : TagType(TC, reinterpret_cast<const TagDecl*>(D), QualType()) {}
 
-  #if ENABLE_BSC
-  enum ownedStatus {
-    unInitOwned,
-    withOwned,
-    withoutOwned
-  };
-  mutable ownedStatus hasOwn = ownedStatus::unInitOwned;
-#endif
-
 public:
   RecordDecl *getDecl() const {
     return reinterpret_cast<RecordDecl*>(TagType::getDecl());
@@ -4966,17 +4957,15 @@ public:
   /// is declared const, return true. Otherwise, return false.
   bool hasConstFields() const;
 
-  #if ENABLE_BSC
+#if ENABLE_BSC
   bool hasOwnedFields() const;
-
-  void initOwnedStatus() const;
 
   bool hasBorrowFields() const;
 
   /// Recursively check all fields in the record for borrow-ness. If any field
   /// is declared borrow, return true. Otherwise, return false.
   bool withBorrowFields() const;
-  #endif
+#endif
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
