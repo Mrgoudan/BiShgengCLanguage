@@ -3779,7 +3779,9 @@ int main() {
   return 0;
 }
 ```
-2. 允许指向类型 T 的借用隐式转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的隐式转换，是不允许的，但强制类型转换是允许的。
+
+2. 指向类型不同时，允许指向 T 的借用隐式转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的转换必须显式进行。其他指向类型不同的借用指针之间的类型转换均不允许。
+
 ```C
 void test() {
   int x = 10;
@@ -5200,7 +5202,9 @@ int main() {
 }
 ```
 
-17. 安全区内不允许指向类型不同的指针类型之间转换，但允许其他类型owned指针显式转换为void类型的owned指针。
+17. 安全区内不允许指向类型不同的指针类型之间转换，但有以下例外：
+    1. 允许指向其他类型的owned指针显式转换为指向void类型的owned指针，该转换需要符合 [3.1.4.3 owned指针强制类型转换](#3143-强制类型转换) 的规则。
+    2. 允许指向其他类型的borrow指针隐式转换为指向void类型的borrow指针，但原类型必须满足 is_trivial_data 的条件（不含指针和 _Owned struct），否则不允许转换。
 
     安全区内不允许指针和非指针类型之间的转换（允许数组退化到裸指针），不允许`_Owned/_Borrow/raw`指针之间的转换。
 
@@ -5224,6 +5228,15 @@ void test() {
     pd = pa; // error：不允许 _Owned/raw 指针之间的转换
 
     void *_Owned pe = (void *_Owned)pd; // ok: 允许显式转换为void类型的owned指针
+  }
+  struct S {int *ptr;};
+  struct S s = {.ptr = nullptr};
+  int a = 0;
+  _Safe {
+    int *_Borrow p1 = &_Mut a;
+    void *_Borrow p2 = p1; // ok: int 满足 is_trivial_data 约束，允许 int *_Borrow 隐式转换到 void *_Borrow
+    struct S *_Borrow p3 = &_Mut s;
+    void *_Borrow p4 = (void *_Borrow)p3; // error: struct S 不满足 is_trivial_data，不允许 struct S *_Borrow 转换到 void *_Borrow
   }
 }
 

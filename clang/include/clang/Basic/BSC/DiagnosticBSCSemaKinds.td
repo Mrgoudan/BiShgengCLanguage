@@ -113,6 +113,8 @@ def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the s
 def err_unsafe_implicit_cast : Error<"implicit conversion from type %0 to %1 is forbidden in the safe zone; please use explicit cast or other means instead">;
 def note_unsafe_cast_implicit_conversion : Note<
   "source type %0 is implicit converted from type %1">;
+def note_unsafe_cast_non_trivial_pointee_type : Note<
+  "source pointee type %0 is not a trivial data type">;
 def note_inc_dec_void_in_safe_zone : Note<
   "prefix/postfix '++' and '--' in safe zone produce void; use only for side effect">;
 def err_return_inc_dec_void_in_safe_zone : Error<

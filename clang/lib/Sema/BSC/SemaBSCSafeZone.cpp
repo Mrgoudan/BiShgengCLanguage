@@ -694,10 +694,12 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
                              const QualType DstCanPtr) {
   const QualType SrcPointee = SrcCanPtr->getPointeeType();
   QualType DstPointee = DstCanPtr->getPointeeType();
+  bool SrcPointeeIsConst = SrcPointee.isConstQualified();
+  bool DstPointeeIsConst = DstPointee.isConstQualified();
   // allow `const T *borrow` <- `T *borrow`
   // mirrors the logic in Sema::CheckBorrowQualTypeAssignment
-  if (DstPointee.isConstQualified() && DstCanPtr.isBorrowQualified() &&
-      !SrcPointee.isConstQualified() && SrcCanPtr.isBorrowQualified()) {
+  if (DstPointeeIsConst && DstCanPtr.isBorrowQualified() &&
+      !SrcPointeeIsConst && SrcCanPtr.isBorrowQualified()) {
     DstPointee.removeLocalConst();
     if (SrcPointee == DstPointee)
       return true;
@@ -705,6 +707,11 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
   // allow `void *owned` <- `T *owned`
   if (SrcCanPtr.isOwnedQualified() && DstCanPtr->isVoidPointerType() &&
       DstCanPtr.isOwnedQualified())
+    return true;
+  // allow `void *borrow` <- `T *borrow` if T is a trivial data type
+  if (SrcCanPtr.isBorrowQualified() && SrcPointee->isTrivialDataType() &&
+      DstCanPtr.isBorrowQualified() && DstCanPtr->isVoidPointerType() &&
+      SrcPointeeIsConst == DstPointeeIsConst)
     return true;
 
   // fallback: disallow conversion between different pointer types
@@ -921,8 +928,18 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
                                                             << DestType;
     } else {
       Diag(E->getExprLoc(), diag::err_unsafe_cast) << SrcType << DestType;
-      if (SrcType->isVoidType() && IsSafeZoneIncDecVoidExpr(E))
+      if (SrcType->isVoidType() && IsSafeZoneIncDecVoidExpr(E)) {
         Diag(E->getExprLoc(), diag::note_inc_dec_void_in_safe_zone);
+      } else if (SrcType->isPointerType() && DestType->isPointerType()) {
+        QualType SrcCanType = SrcType.getCanonicalType();
+        QualType DestCanType = DestType.getCanonicalType();
+        QualType SrcPointee = SrcCanType->getPointeeType();
+        // "T* borrow -> void* borrow" conversion is not allowed if T is a non-trivial data type
+        if (SrcCanType.isBorrowQualified() && !SrcPointee->isTrivialDataType() &&
+            DestCanType.isBorrowQualified() && DestCanType->isVoidPointerType()) {
+          Diag(E->getExprLoc(), diag::note_unsafe_cast_non_trivial_pointee_type) << SrcPointee;
+        }
+      }
     }
     bool hasImplicitCast = false;
     QualType DiagSrcType = getDiagnosticSourceType(E, Context, hasImplicitCast);

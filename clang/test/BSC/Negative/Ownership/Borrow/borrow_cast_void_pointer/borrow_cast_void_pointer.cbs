@@ -30,13 +30,95 @@ void test() {
 
   _Safe {
      // T --> void
-     void * _Borrow v5 = (void * _Borrow)p1; // expected-error {{conversion from type 'int *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}}
-     const void * _Borrow v6 = (const void * _Borrow)p2; // expected-error {{conversion from type 'const int *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}}
-     v5 = p1; // expected-error {{conversion from type 'int *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}}
-     v6 = p2; // expected-error {{conversion from type 'const int *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}}
+     void * _Borrow v5 = (void * _Borrow)p1;
+     const void * _Borrow v6 = (const void * _Borrow)p2;
+     v5 = p1;
+     v6 = p2;
+     v5 = p2; // expected-error {{conversion from type 'const int *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}}
+     v6 = p1; // expected-error {{conversion from type 'int *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}}
 
      // void --> T
      (int * _Borrow)v5; // expected-error {{conversion from type 'void *_Borrow' to 'int *_Borrow' is forbidden in the safe zone}}
      (const int * _Borrow)v6; // expected-error {{conversion from type 'const void *_Borrow' to 'const int *_Borrow' is forbidden in the safe zone}}
   }
+}
+
+struct S {
+  int *p;
+};
+
+_Safe void test_struct_with_pointer_field(struct S *_Borrow p1, const struct S *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'struct S *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct S' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'struct S *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct S' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const struct S *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct S' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const struct S *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct S' is not a trivial data type}}
+}
+
+union U {
+  int *p;
+};
+
+_Safe void test_union_with_pointer_field(union U *_Borrow p1, const union U *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'union U *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'union U' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'union U *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'union U' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const union U *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const union U' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const union U *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const union U' is not a trivial data type}}
+}
+
+struct WithOwnedField {
+  int *_Owned o;
+};
+
+_Safe void test_struct_with_owned_field(struct WithOwnedField *_Borrow p1, const struct WithOwnedField *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'struct WithOwnedField *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct WithOwnedField' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'struct WithOwnedField *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct WithOwnedField' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const struct WithOwnedField *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct WithOwnedField' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const struct WithOwnedField *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct WithOwnedField' is not a trivial data type}}
+}
+
+struct NestedPointerStruct {
+  struct S nested;
+};
+
+_Safe void test_nested_pointer_struct(struct NestedPointerStruct *_Borrow p1, const struct NestedPointerStruct *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'struct NestedPointerStruct *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct NestedPointerStruct' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'struct NestedPointerStruct *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct NestedPointerStruct' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const struct NestedPointerStruct *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct NestedPointerStruct' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const struct NestedPointerStruct *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct NestedPointerStruct' is not a trivial data type}}
+}
+
+struct ArrayOfPointer {
+  int *arr[5];
+};
+
+_Safe void test_array_of_pointer(struct ArrayOfPointer *_Borrow p1, const struct ArrayOfPointer *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'struct ArrayOfPointer *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct ArrayOfPointer' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'struct ArrayOfPointer *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct ArrayOfPointer' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const struct ArrayOfPointer *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct ArrayOfPointer' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const struct ArrayOfPointer *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct ArrayOfPointer' is not a trivial data type}}
+}
+
+union UnionWithPointer {
+  int *p;
+  double d;
+};
+
+_Safe void test_union_with_pointer(union UnionWithPointer *_Borrow p1, const union UnionWithPointer *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'union UnionWithPointer *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'union UnionWithPointer' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'union UnionWithPointer *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'union UnionWithPointer' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const union UnionWithPointer *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const union UnionWithPointer' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const union UnionWithPointer *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const union UnionWithPointer' is not a trivial data type}}
+}
+
+struct MixedStruct {
+  int a;
+  int *p;
+  double b;
+};
+
+_Safe void test_mixed_struct(struct MixedStruct *_Borrow p1, const struct MixedStruct *_Borrow p2) {
+  void *_Borrow v1 = p1; // expected-error {{conversion from type 'struct MixedStruct *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct MixedStruct' is not a trivial data type}}
+  void *_Borrow v2 = (void *_Borrow)p1; // expected-error {{conversion from type 'struct MixedStruct *_Borrow' to 'void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'struct MixedStruct' is not a trivial data type}}
+  const void *_Borrow c1 = p2; // expected-error {{conversion from type 'const struct MixedStruct *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct MixedStruct' is not a trivial data type}}
+  const void *_Borrow c2 = (const void *_Borrow)p2; // expected-error {{conversion from type 'const struct MixedStruct *_Borrow' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note {{source pointee type 'const struct MixedStruct' is not a trivial data type}}
 }

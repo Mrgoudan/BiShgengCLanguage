@@ -1,0 +1,140 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+_Safe void test_int(int *_Borrow p1, const int *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_char(char *_Borrow p1, const char *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_short(short *_Borrow p1, const short *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_long(long *_Borrow p1, const long *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_longlong(long long *_Borrow p1, const long long *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_float(float *_Borrow p1, const float *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_double(double *_Borrow p1, const double *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_unsigned_int(unsigned int *_Borrow p1, const unsigned int *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_unsigned_char(unsigned char *_Borrow p1, const unsigned char *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+_Safe void test_unsigned_long(unsigned long *_Borrow p1, const unsigned long *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+struct S {
+  int a;
+};
+
+_Safe void test_struct(struct S *_Borrow p1, const struct S *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+union U {
+  int a;
+  double b;
+};
+
+_Safe void test_union(union U *_Borrow p1, const union U *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+enum Color { Red, Green, Blue };
+
+_Safe void test_enum(enum Color *_Borrow p1, const enum Color *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+struct NestedStruct {
+  int x;
+  struct S s;
+};
+
+_Safe void test_nested_struct(struct NestedStruct *_Borrow p1, const struct NestedStruct *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+struct ArrayStruct {
+  int arr[10];
+};
+
+_Safe void test_array_struct(struct ArrayStruct *_Borrow p1, const struct ArrayStruct *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
+
+union MixedUnion {
+  char c;
+  int i;
+  struct S s;
+};
+
+_Safe void test_mixed_union(union MixedUnion *_Borrow p1, const union MixedUnion *_Borrow p2) {
+  void * _Borrow v1 = p1;
+  void * _Borrow v2 = (void * _Borrow)p1;
+  const void * _Borrow c1 = p2;
+  const void * _Borrow c2 = (const void * _Borrow)p2;
+}
