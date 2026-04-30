@@ -1,0 +1,22 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-pc-windows-msvc
+
+// LLP64: narrowing long long -> int / long (same grid as ILP32 for these pairs).
+
+_Static_assert(sizeof(int) == 4 && sizeof(long) == 4 && sizeof(long long) == 8,
+               "LLP64 integer widths");
+
+_Safe void signed_narrow_llp64(void) {
+  int d_i = 0;
+  long long s_ll = 0;
+  d_i = s_ll; // expected-error {{implicit conversion from type 'long long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  long d_l = 0;
+  d_l = s_ll; // expected-error {{implicit conversion from type 'long long' to 'long' is forbidden in the safe zone; please use explicit cast or other means instead}}
+}
+
+_Safe void unsigned_narrow_llp64(void) {
+  unsigned int d_ui = 0;
+  unsigned long long s_ull = 0;
+  d_ui = s_ull; // expected-error {{implicit conversion from type 'unsigned long long' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  unsigned long d_ul = 0;
+  d_ul = s_ull; // expected-error {{implicit conversion from type 'unsigned long long' to 'unsigned long' is forbidden in the safe zone; please use explicit cast or other means instead}}
+}

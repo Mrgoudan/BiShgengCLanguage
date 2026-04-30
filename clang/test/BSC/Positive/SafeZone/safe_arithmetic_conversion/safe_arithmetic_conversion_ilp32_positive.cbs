@@ -1,0 +1,32 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple i386-pc-linux-gnu
+// expected-no-diagnostics
+
+// ILP32: implicit conversions among int / long / long long (signed grid) and
+// unsigned int / unsigned long / unsigned long long (unsigned grid).
+// Positive cases: distinct types only, sizeof(Src) <= sizeof(Dest), same signedness.
+
+_Static_assert(sizeof(int) == 4 && sizeof(long) == 4 && sizeof(long long) == 8,
+               "ILP32 integer widths");
+
+#define SAFE_ASSIGN(dstTy, srcTy, dname, sname)                              \
+  do {                                                                         \
+    dstTy dname = 0;                                                           \
+    srcTy sname = 0;                                                           \
+    dname = sname;                                                             \
+  } while (0)
+
+_Safe void signed_pairs_ilp32(void) {
+  SAFE_ASSIGN(long, int, d_il, s_il);
+  SAFE_ASSIGN(long long, int, d_ill, s_ill);
+  SAFE_ASSIGN(int, long, d_li, s_li);
+  SAFE_ASSIGN(long long, long, d_lll, s_lll);
+}
+
+_Safe void unsigned_pairs_ilp32(void) {
+  SAFE_ASSIGN(unsigned long, unsigned int, d_il, s_il);
+  SAFE_ASSIGN(unsigned long long, unsigned int, d_ill, s_ill);
+  SAFE_ASSIGN(unsigned int, unsigned long, d_li, s_li);
+  SAFE_ASSIGN(unsigned long long, unsigned long, d_lll, s_lll);
+}
+
+#undef SAFE_ASSIGN

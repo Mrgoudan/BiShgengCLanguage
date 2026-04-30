@@ -1,0 +1,30 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple x86_64-pc-windows-msvc
+// expected-no-diagnostics
+
+// LLP64: int / long 32-bit; long long 64-bit.
+
+_Static_assert(sizeof(int) == 4 && sizeof(long) == 4 && sizeof(long long) == 8,
+               "LLP64 integer widths");
+
+#define SAFE_ASSIGN(dstTy, srcTy, dname, sname)                              \
+  do {                                                                         \
+    dstTy dname = 0;                                                           \
+    srcTy sname = 0;                                                           \
+    dname = sname;                                                             \
+  } while (0)
+
+_Safe void signed_pairs_llp64(void) {
+  SAFE_ASSIGN(long, int, d_il, s_il);
+  SAFE_ASSIGN(long long, int, d_ill, s_ill);
+  SAFE_ASSIGN(int, long, d_li, s_li);
+  SAFE_ASSIGN(long long, long, d_lll, s_lll);
+}
+
+_Safe void unsigned_pairs_llp64(void) {
+  SAFE_ASSIGN(unsigned long, unsigned int, d_il, s_il);
+  SAFE_ASSIGN(unsigned long long, unsigned int, d_ill, s_ill);
+  SAFE_ASSIGN(unsigned int, unsigned long, d_li, s_li);
+  SAFE_ASSIGN(unsigned long long, unsigned long, d_lll, s_lll);
+}
+
+#undef SAFE_ASSIGN

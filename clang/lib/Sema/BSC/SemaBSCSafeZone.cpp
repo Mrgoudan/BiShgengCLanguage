@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #if ENABLE_BSC
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Sema/ScopeInfo.h"
@@ -85,8 +86,8 @@ bool Sema::IsSafeFunctionPointerType(QualType Type) {
 // ........13 | N | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | N |
 // ........14 | N | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
 
-bool Sema::IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
-                                       BuiltinType::Kind DestType) {
+bool Sema::IsSafeBuiltinTypeConversion(const ASTContext &Ctx, QualType SrcType,
+                                       QualType DestType) {
   static const std::map<BuiltinType::Kind, int> SafeZoneMap = {
       {BuiltinType::Void, 0},       {BuiltinType::Bool, 1},
       {BuiltinType::Char_U, 2},     {BuiltinType::UChar, 2},
@@ -118,10 +119,32 @@ bool Sema::IsSafeBuiltinTypeConversion(BuiltinType::Kind SourceType,
       {N, Y, Y, Y, Y, Y, Y, Y, Y, Y, Y, Y, Y, Y, Y},
   };
 
-  auto ItSource = SafeZoneMap.find(SourceType);
-  auto ItDest = SafeZoneMap.find(DestType);
+  const auto *SBT =
+      dyn_cast<BuiltinType>(SrcType->getUnqualifiedDesugaredType());
+  const auto *DBT =
+      dyn_cast<BuiltinType>(DestType->getUnqualifiedDesugaredType());
+  if (!SBT || !DBT)
+    return false;
+
+  BuiltinType::Kind SourceKind = SBT->getKind();
+  BuiltinType::Kind DestKind = DBT->getKind();
+  auto ItSource = SafeZoneMap.find(SourceKind);
+  auto ItDest = SafeZoneMap.find(DestKind);
   if (ItSource != SafeZoneMap.end() && ItDest != SafeZoneMap.end()) {
-    return EnableToConvert[ItDest->second][ItSource->second];
+    if (EnableToConvert[ItDest->second][ItSource->second])
+      return true;
+    // the matrix above assumes a strict ordering that matches LP64
+    // but in ILP32, unsigned long and unsigned int are both 32-bit, and
+    // their conversion should be allowed. Here if the test fails,
+    // we check if the source and destination are both integral types
+    // and the destination have the same signedness and same or larger width.
+    if (SourceKind != DestKind && SrcType->isIntegralType(Ctx) &&
+        DestType->isIntegralType(Ctx) && !SrcType->isBooleanType() &&
+        !DestType->isBooleanType() &&
+        Ctx.getTypeSize(SrcType) <= Ctx.getTypeSize(DestType) &&
+        SrcType->hasSignedIntegerRepresentation() ==
+            DestType->hasSignedIntegerRepresentation())
+      return true;
   }
   return false;
 }
@@ -791,7 +814,7 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
         if (!IsExplicitCast) {
           // conversion from high-precision to low-precision is not allowed
           // conversion from wide range to narrow range is not allowed
-          if (!IsSafeBuiltinTypeConversion(SBT->getKind(), DBT->getKind())) {
+          if (!IsSafeBuiltinTypeConversion(Context, SrcType, DestType)) {
             if (!DestType->isIntegerType() || !IsBooleanEvaluation(E)) {
               IsSafeBehavior = false;
               if (!SrcType->isVoidType())
