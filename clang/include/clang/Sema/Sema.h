@@ -12375,6 +12375,7 @@ public:
   /// Called after template instantiation to validate concrete types.
   /// Returns true if type is valid, false if an error was reported.
   bool CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc);
+  bool CheckInstantiatedTypeBorrowQualifiers(QualType T, SourceLocation Loc);
   bool CheckTemporaryVarMemoryLeak(Expr* E);
   void BSCDataflowAnalysis(const Decl *D);
   void BSCBorrowChecker(FunctionDecl *FD);

@@ -57,7 +57,8 @@ bool Sema::CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc) 
 
   // Helper to check if a type can validly have owned qualifier
   auto isValidOwnedType = [](QualType Ty) {
-    return Ty->isPointerType() || Ty->isOwnedStructureType() ||
+    return (Ty->isPointerType() && !Ty->isFunctionPointerType()) ||
+           Ty->isOwnedStructureType() ||
            Ty->isOwnedTemplateSpecializationType();
   };
 
@@ -66,6 +67,18 @@ bool Sema::CheckInstantiatedTypeOwnedQualifiers(QualType T, SourceLocation Loc) 
     QualType UnqualType = T;
     UnqualType.removeLocalFastQualifiers(Qualifiers::Owned);
     Diag(Loc, diag::err_owned_qualifier_non_pointer) << "_Owned" << UnqualType;
+    return false;
+  }
+
+  return true;
+}
+
+bool Sema::CheckInstantiatedTypeBorrowQualifiers(QualType T,
+                                                 SourceLocation Loc) {
+  if (T.isBorrowQualified() && T->isFunctionPointerType()) {
+    QualType UnqualType = T;
+    UnqualType.removeLocalBorrow();
+    Diag(Loc, diag::err_owned_qualifier_non_pointer) << "_Borrow" << UnqualType;
     return false;
   }
 

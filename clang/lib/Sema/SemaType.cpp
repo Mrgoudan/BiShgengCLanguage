@@ -2049,6 +2049,21 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
           << T;
       Qs.removeBorrow();
     }
+    // Check _Owned/_Borrow qualifier cannot be applied to function pointer types.
+    if (T->isFunctionPointerType()) {
+      if (Qs.hasOwned()) {
+        Diag(DS ? DS->getOwnedSpecLoc() : Loc,
+             diag::err_owned_qualifier_non_pointer)
+            << "_Owned" << T;
+        Qs.removeOwned();
+      }
+      if (Qs.hasBorrow()) {
+        Diag(DS ? DS->getBorrowSpecLoc() : Loc,
+             diag::err_owned_qualifier_non_pointer)
+            << "_Borrow" << T;
+        Qs.removeBorrow();
+      }
+    }
   }
 #endif
 

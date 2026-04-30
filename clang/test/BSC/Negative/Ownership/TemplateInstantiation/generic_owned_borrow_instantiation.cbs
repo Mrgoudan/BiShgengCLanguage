@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -ast-dump -verify %s
 
 // Test _Owned/_Borrow qualifiers on generic template instantiation
-// This tests CheckInstantiatedTypeOwnedQualifiers and CheckInstantiatedTypeBorrowQualifiers
 
 struct ClassOwned<T> {
     _Owned T member;   // expected-error {{type of 'int' cannot be qualified by '_Owned'}}

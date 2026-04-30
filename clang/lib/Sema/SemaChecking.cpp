@@ -2139,6 +2139,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                             diag::err_bsc_take_from_raw_not_raw)
                        << ArgTy);
     }
+    if (ArgTy->isFunctionPointerType()) {
+      return ExprError(Diag(TheCall->getArg(0)->getBeginLoc(),
+                            diag::err_bsc_take_from_raw_function_pointer)
+                       << ArgTy);
+    }
     NullabilityKind SrcNullability = getBSCDefNullability(ArgTy, Context);
     QualType ResultTy = ArgTy.getUnqualifiedType();
     ResultTy.removeLocalOwned();

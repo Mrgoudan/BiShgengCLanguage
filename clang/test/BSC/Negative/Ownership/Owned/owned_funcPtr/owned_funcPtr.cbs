@@ -24,7 +24,7 @@ void test1() {
 
 // case2: unOwned to _Owned
 void test2() {
-    FTP _Owned ftp1 = myadd; //expected-error {{incompatible _Owned types, cannot cast 'int (int *, int *)' to '_Owned FTP' (aka 'int (*_Owned)(int *, int *)')}}
+    FTP _Owned ftp1 = myadd; //expected-error {{type of 'FTP' (aka 'int (*)(int *, int *)') cannot be qualified by '_Owned'}}
 }
 
 // case3: inner _Owned check

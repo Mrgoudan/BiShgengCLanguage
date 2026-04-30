@@ -1,0 +1,116 @@
+// RUN: %clang_cc1 -verify %s
+
+int plain(void) { return 0; }
+int takes_owned_arg(int *_Owned p);
+int *_Borrow returns_borrow(int *_Borrow p);
+
+typedef int (*PlainFPWithOwnedArg)(int *_Owned);
+typedef int *_Borrow (*PlainFPWithBorrowRet)(int *_Borrow);
+
+int (*_Owned global_owned_fp)(void);
+// expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+
+typedef int (*_Owned OwnedTypedefFP)(void);
+// expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+
+typedef int (*_Borrow BorrowTypedefFP)(void);
+// expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+
+void takes_owned_fp(int (*_Owned cb)(void));
+// expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+
+void takes_borrow_fp(int (*_Borrow cb)(void));
+// expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+
+struct Holder {
+  PlainFPWithOwnedArg _Owned owned_member;
+  // expected-error@-1 {{type of 'PlainFPWithOwnedArg' (aka 'int (*)(int *_Owned)') cannot be qualified by '_Owned'}}
+
+  PlainFPWithBorrowRet _Borrow borrow_member;
+  // expected-error@-1 {{type of 'PlainFPWithBorrowRet' (aka 'int *_Borrow (*)(int *_Borrow)') cannot be qualified by '_Borrow'}}
+};
+
+void direct_local_cases(void) {
+  int (*_Owned local_owned_fp)(void) = &plain;
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+
+  int (*_Borrow local_borrow_fp)(void) = &plain;
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+
+  PlainFPWithOwnedArg _Owned owned_via_typedef = &takes_owned_arg;
+  // expected-error@-1 {{type of 'PlainFPWithOwnedArg' (aka 'int (*)(int *_Owned)') cannot be qualified by '_Owned'}}
+
+  PlainFPWithBorrowRet _Borrow borrow_via_typedef = &returns_borrow;
+  // expected-error@-1 {{type of 'PlainFPWithBorrowRet' (aka 'int *_Borrow (*)(int *_Borrow)') cannot be qualified by '_Borrow'}}
+
+  int (*cast_owned)(void) = (int (*_Owned)(void))&plain;
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+  (void)cast_owned;
+
+  int (*cast_borrow)(void) = (int (*_Borrow)(void))&plain;
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+  (void)cast_borrow;
+
+  int (*const const_borrow_from_addrconst)(void) = &_Const plain; // expected-error {{'&_Const' for function pointer is not allowed}}
+  (void)const_borrow_from_addrconst;
+
+  int (*const _Borrow illegal_const_borrow_from_addrconst)(void) = &_Const plain; // expected-error {{'&_Const' for function pointer is not allowed}}
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+  (void)illegal_const_borrow_from_addrconst;
+
+  int (*from_addrmut)(void) = &_Mut plain;
+  // expected-error@-1 {{'&_Mut' for function pointer is not allowed}}
+  (void)from_addrmut;
+
+  int (*from_take_from_raw)(void) = __take_from_raw(&plain);
+  // expected-error@-1 {{__take_from_raw does not support function pointer type 'int (*)(void)'}}
+  (void)from_take_from_raw;
+
+  int local = 0;
+  int *_Owned owned_int = __take_from_raw(&local);
+  int borrow_local = 0;
+  int *_Borrow borrow_int = &_Mut borrow_local;
+  PlainFPWithOwnedArg legal_owned_arg_fp = &takes_owned_arg;
+  PlainFPWithBorrowRet legal_borrow_ret_fp = &returns_borrow;
+  legal_owned_arg_fp(owned_int);
+  (void)legal_borrow_ret_fp(borrow_int);
+}
+
+struct OwnedMemberTemplate<T> {
+  T _Owned member;
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+};
+
+struct BorrowMemberTemplate<T> {
+  T _Borrow member;
+  // expected-error@-1 {{type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+};
+
+void instantiate_member_templates(void) {
+  struct OwnedMemberTemplate<int (*)(void)> owned_member;
+  // expected-note@-1 {{in instantiation of template class 'OwnedMemberTemplate<int (*)(void)>' requested here}}
+  struct BorrowMemberTemplate<int (*)(void)> borrow_member;
+  // expected-note@-1 {{in instantiation of template class 'BorrowMemberTemplate<int (*)(void)>' requested here}}
+  (void)owned_member;
+  (void)borrow_member;
+}
+
+void takes_owned_generic<T>(T _Owned value)
+// expected-note@-1 {{candidate template ignored: substitution failure [with T = int (*)(void)]: type of 'int (*)(void)' cannot be qualified by '_Owned'}}
+{
+  (void)value;
+}
+
+void takes_borrow_generic<T>(T _Borrow value)
+// expected-note@-1 {{candidate template ignored: substitution failure [with T = int (*)(void)]: type of 'int (*)(void)' cannot be qualified by '_Borrow'}}
+{
+  (void)value;
+}
+
+void test_function_template_instantiation(void) {
+  takes_owned_generic<int (*)(void)>(&plain);
+  // expected-error@-1 {{no matching function for call to 'takes_owned_generic'}}
+
+  takes_borrow_generic<int (*)(void)>(&plain);
+  // expected-error@-1 {{no matching function for call to 'takes_borrow_generic'}}
+}

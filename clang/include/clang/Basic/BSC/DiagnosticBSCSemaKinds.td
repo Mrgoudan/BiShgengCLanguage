@@ -43,6 +43,8 @@ def err_bsc_move_to_raw_not_owned : Error<
   "argument must be an _Owned pointer type (have %0)">;
 def err_bsc_take_from_raw_not_raw : Error<
   "argument must be a raw pointer type (have %0)">;
+def err_bsc_take_from_raw_function_pointer : Error<
+  "__take_from_raw does not support function pointer type %0">;
 def err_owned_raw_cast_disallowed : Error<
   "cannot cast between _Owned and raw pointer; use __move_to_raw or __take_from_raw for ownership transfer">;
 def err_typecheck_invalid_owned_binOp : Error<
@@ -57,7 +59,7 @@ def err_funcPtr_incompatible : Error<
   "incompatible _Borrow function pointer types, cannot cast %0 to %1">;
 def err_borrow_on_borrow : Error<"%0 on a '_Borrow' qualified type is not allowed">;
 def err_mut_expr_unmodifiable  : Error<"the expression after '&_Mut' must be modifiable">;
-def err_mut_expr_func : Error<"'&_Mut' for function pointer is not allowed">;
+def err_mut_or_const_expr_func : Error<"'%0' for function pointer is not allowed">;
 def err_safe_mut : Error<"global or static variables are not allowed to be mutably borrowed within the safe zone">;
 def err_move_borrow : Error<"_Borrow type does not allow move ownership">;
 def err_typecheck_invalid_borrow_not_pointer : Error<"_Borrow type requires a pointer or reference (%0 is invalid)">;

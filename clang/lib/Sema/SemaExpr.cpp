@@ -15233,8 +15233,11 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
       if (InputExpr->getType().isConstQualified())
         Diag(OpLoc, diag::err_mut_expr_unmodifiable)
             << InputExpr->getSourceRange();
-      if (InputExpr->getType()->isFunctionProtoType())
-        Diag(OpLoc, diag::err_mut_expr_func) << InputExpr->getSourceRange();
+      if (InputExpr->getType()->isFunctionProtoType()) {
+        Diag(OpLoc, diag::err_mut_or_const_expr_func)
+            << "&_Mut" << InputExpr->getSourceRange();
+        Input = ExprError();
+      }
       if (IsInSafeZone()) {
         if (VarDecl *VD = dyn_cast_or_null<VarDecl>(getPrimaryDecl(
                 const_cast<Expr *>(InputExpr->IgnoreParenCasts())))) {
@@ -15262,8 +15265,9 @@ QualType Sema::GetBorrowAddressOperandQualType(QualType resultType,
     }
     if (!resultType.isNull()) {
       if (resultType->isFunctionPointerType()) {
-        resultType.addConst();
-        resultType.addBorrow();
+        Diag(OpLoc, diag::err_mut_or_const_expr_func)
+            << "&_Const" << InputExpr->getSourceRange();
+        Input = ExprError();
       } else if (resultType->isPointerType()) {
         resultType = resultType.getUnqualifiedType();
         resultType.removeLocalOwned();

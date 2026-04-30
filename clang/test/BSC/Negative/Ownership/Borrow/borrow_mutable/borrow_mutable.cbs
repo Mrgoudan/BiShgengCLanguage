@@ -44,6 +44,5 @@ void test() {
   _Trait T *t1 = &_Mut b;
   const _Trait T *t2 = &_Const b;
   &_Mut foo; // expected-error {{'&_Mut' for function pointer is not allowed}}
-            // expected-warning@-1 {{expression result unused}}
-  &_Const foo; // expected-warning {{expression result unused}}
+  &_Const foo; // expected-error {{'&_Const' for function pointer is not allowed}}
 }
