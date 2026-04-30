@@ -18400,7 +18400,7 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     isInvalid = true;
     MayHaveFunctionDiff = true;
     break;
-  #if ENABLE_BSC
+#if ENABLE_BSC
   case IncompatibleOwnedPointer: {
     bool outerOwnedDiffers =
         DstType.getCanonicalType().isOwnedQualified() !=
@@ -18408,8 +18408,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     if (!outerOwnedDiffers &&
         (DstType->isFunctionPointerType() || SrcType->isFunctionPointerType())) {
       DiagKind = diag::err_owned_funcPtr_incompatible;
-      BSCFirstType = DstType;
-      BSCSecondType = SrcType;
+      BSCFirstType = SrcType;
+      BSCSecondType = DstType;
     } else {
       DiagKind = diag::err_owned_qualcheck_incompatible;
       BSCFirstType = SrcType;
@@ -18420,8 +18420,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case IncompatibleBorrowPointer: {
     if (DstType->isFunctionPointerType() || SrcType->isFunctionPointerType()) {
       DiagKind = diag::err_funcPtr_incompatible;
-      BSCFirstType = DstType;
-      BSCSecondType = SrcType;
+      BSCFirstType = SrcType;
+      BSCSecondType = DstType;
     } else if (SrcExpr && isa<StringLiteral>(SrcExpr->IgnoreParenImpCasts())) {
       DiagKind = diag::err_pass_string_literal_to_mut_borrow;
       BSCFirstType = DstType;

@@ -918,10 +918,8 @@ bool Sema::CheckBorrowFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
         Compatible = false;
     }
   }
-  if (!Compatible) {
-    return false;
-  }
-  return true;
+
+  return Compatible;
 }
 
 bool Sema::CheckEnsureInitFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
