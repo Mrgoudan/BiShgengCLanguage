@@ -65,8 +65,9 @@ $ ninja install
 ```shell
 $ mkdir -p bsc_project && cd bsc_project
 $ touch demo.cbs
-# 向demo.cbs写入如下内容：
 ```
+
+向demo.cbs写入如下内容：
 
 ```c
 #include <stdio.h>
@@ -89,14 +90,8 @@ int main() {
 使用编译命令编译该文件，得到可执行文件，如下：
 
 ```shell
-# clang + llvm 编译运行
 $ clang demo.cbs -o demo
 $ ./demo
-foo.getA() = 1
-
-# clang + maple 编译运行
-$ maple demo.cbs -o demo
-$ qemu-aarch64 demo
 foo.getA() = 1
 ```
 
