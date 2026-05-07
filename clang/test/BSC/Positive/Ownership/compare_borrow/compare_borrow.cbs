@@ -1,0 +1,328 @@
+// RUN: %clang_cc1 -verify %s
+// expected-no-diagnostics
+
+struct Empty {};
+struct One { int x; };
+struct Two {
+    struct One one;
+    int y;
+};
+struct Arr { int x[2]; };
+struct TwoArr { 
+    struct Arr arr;
+    int y[2];
+};
+
+void const_comparison<T>(T *_Borrow p, const T *_Borrow q) {
+    if (p == q) {}
+    if (q == p) {}
+    if (p != q) {}
+    if (q != p) {}
+    if (p >= q) {}
+    if (q >= p) {}
+    if (p <= q) {}
+    if (q <= p) {}
+    if (p > q) {}
+    if (q > p) {}
+    if (p < q) {}
+    if (q < p) {}
+}
+
+void const_instantiation(void *p, void *q) {
+    const_comparison((void *_Borrow) p, (const void *_Borrow) q);
+    const_comparison((char *_Borrow) p, (const char *_Borrow) q);
+    const_comparison((unsigned char *_Borrow) p, (const unsigned char *_Borrow) q);
+    const_comparison((signed char *_Borrow) p, (const signed char *_Borrow) q);
+    const_comparison((short *_Borrow) p, (const short *_Borrow) q);
+    const_comparison((unsigned short *_Borrow) p, (const unsigned short *_Borrow) q);
+    const_comparison((int *_Borrow) p, (const int *_Borrow) q);
+    const_comparison((unsigned *_Borrow) p, (const unsigned *_Borrow) q);
+    const_comparison((long *_Borrow) p, (const long *_Borrow) q);
+    const_comparison((unsigned long *_Borrow) p, (const unsigned long *_Borrow) q);
+    const_comparison((long long *_Borrow) p, (const long long *_Borrow) q);
+    const_comparison((unsigned long long *_Borrow) p, (const unsigned long long *_Borrow) q);
+    const_comparison((float *_Borrow) p, (const float *_Borrow) q);
+    const_comparison((double *_Borrow) p, (const double *_Borrow) q);
+    const_comparison((long double *_Borrow) p, (const long double *_Borrow) q);
+
+    const_comparison((struct Empty *_Borrow) p, (const struct Empty *_Borrow) q);
+    const_comparison((struct One *_Borrow) p, (const struct One *_Borrow) q);
+    const_comparison((struct Two *_Borrow) p, (const struct Two *_Borrow) q);
+    const_comparison((struct TwoArr *_Borrow) p, (const struct TwoArr *_Borrow) q);
+    
+    const_comparison((char (*_Borrow)[2]) p, (const char (*_Borrow)[2]) q);
+    const_comparison((unsigned char (*_Borrow)[2]) p, (const unsigned char (*_Borrow)[2]) q);
+    const_comparison((signed char (*_Borrow)[2]) p, (const signed char (*_Borrow)[2]) q);
+    const_comparison((short (*_Borrow)[2]) p, (const short (*_Borrow)[2]) q);
+    const_comparison((unsigned short (*_Borrow)[2]) p, (const unsigned short (*_Borrow)[2]) q);
+    const_comparison((int (*_Borrow)[2]) p, (const int (*_Borrow)[2]) q);
+    const_comparison((unsigned (*_Borrow)[2]) p, (const unsigned (*_Borrow)[2]) q);
+    const_comparison((long (*_Borrow)[2]) p, (const long (*_Borrow)[2]) q);
+    const_comparison((unsigned long (*_Borrow)[2]) p, (const unsigned long (*_Borrow)[2]) q);
+    const_comparison((long long (*_Borrow)[2]) p, (const long long (*_Borrow)[2]) q);
+    const_comparison((unsigned long long (*_Borrow)[2]) p, (const unsigned long long (*_Borrow)[2]) q);
+    const_comparison((float (*_Borrow)[2]) p, (const float (*_Borrow)[2]) q);
+    const_comparison((double (*_Borrow)[2]) p, (const double (*_Borrow)[2]) q);
+    const_comparison((long double (*_Borrow)[2]) p, (const long double (*_Borrow)[2]) q);
+
+    const_comparison((struct Empty (*_Borrow)[2]) p, (const struct Empty (*_Borrow)[2]) q);
+    const_comparison((struct One (*_Borrow)[2]) p, (const struct One (*_Borrow)[2]) q);
+    const_comparison((struct Two (*_Borrow)[2]) p, (const struct Two (*_Borrow)[2]) q);
+    const_comparison((struct TwoArr (*_Borrow)[2]) p, (const struct TwoArr (*_Borrow)[2]) q);
+}
+
+void volatile_comparison<T>(T *_Borrow p, volatile T *_Borrow q) {
+    if (p == q) {}
+    if (q == p) {}
+    if (p != q) {}
+    if (q != p) {}
+    if (p >= q) {}
+    if (q >= p) {}
+    if (p <= q) {}
+    if (q <= p) {}
+    if (p > q) {}
+    if (q > p) {}
+    if (p < q) {}
+    if (q < p) {}
+}
+
+void volatile_instantiation(void *p, void *q) {
+    volatile_comparison((void *_Borrow) p, (volatile void *_Borrow) q);
+    volatile_comparison((char *_Borrow) p, (volatile char *_Borrow) q);
+    volatile_comparison((unsigned char *_Borrow) p, (volatile unsigned char *_Borrow) q);
+    volatile_comparison((signed char *_Borrow) p, (volatile signed char *_Borrow) q);
+    volatile_comparison((short *_Borrow) p, (volatile short *_Borrow) q);
+    volatile_comparison((unsigned short *_Borrow) p, (volatile unsigned short *_Borrow) q);
+    volatile_comparison((int *_Borrow) p, (volatile int *_Borrow) q);
+    volatile_comparison((unsigned *_Borrow) p, (volatile unsigned *_Borrow) q);
+    volatile_comparison((long *_Borrow) p, (volatile long *_Borrow) q);
+    volatile_comparison((unsigned long *_Borrow) p, (volatile unsigned long *_Borrow) q);
+    volatile_comparison((long long *_Borrow) p, (volatile long long *_Borrow) q);
+    volatile_comparison((unsigned long long *_Borrow) p, (volatile unsigned long long *_Borrow) q);
+    volatile_comparison((float *_Borrow) p, (volatile float *_Borrow) q);
+    volatile_comparison((double *_Borrow) p, (volatile double *_Borrow) q);
+    volatile_comparison((long double *_Borrow) p, (volatile long double *_Borrow) q);
+
+    volatile_comparison((struct Empty *_Borrow) p, (volatile struct Empty *_Borrow) q);
+    volatile_comparison((struct One *_Borrow) p, (volatile struct One *_Borrow) q);
+    volatile_comparison((struct Two *_Borrow) p, (volatile struct Two *_Borrow) q);
+    volatile_comparison((struct TwoArr *_Borrow) p, (volatile struct TwoArr *_Borrow) q);
+    
+    volatile_comparison((char (*_Borrow)[2]) p, (volatile char (*_Borrow)[2]) q);
+    volatile_comparison((unsigned char (*_Borrow)[2]) p, (volatile unsigned char (*_Borrow)[2]) q);
+    volatile_comparison((signed char (*_Borrow)[2]) p, (volatile signed char (*_Borrow)[2]) q);
+    volatile_comparison((short (*_Borrow)[2]) p, (volatile short (*_Borrow)[2]) q);
+    volatile_comparison((unsigned short (*_Borrow)[2]) p, (volatile unsigned short (*_Borrow)[2]) q);
+    volatile_comparison((int (*_Borrow)[2]) p, (volatile int (*_Borrow)[2]) q);
+    volatile_comparison((unsigned (*_Borrow)[2]) p, (volatile unsigned (*_Borrow)[2]) q);
+    volatile_comparison((long (*_Borrow)[2]) p, (volatile long (*_Borrow)[2]) q);
+    volatile_comparison((unsigned long (*_Borrow)[2]) p, (volatile unsigned long (*_Borrow)[2]) q);
+    volatile_comparison((long long (*_Borrow)[2]) p, (volatile long long (*_Borrow)[2]) q);
+    volatile_comparison((unsigned long long (*_Borrow)[2]) p, (volatile unsigned long long (*_Borrow)[2]) q);
+    volatile_comparison((float (*_Borrow)[2]) p, (volatile float (*_Borrow)[2]) q);
+    volatile_comparison((double (*_Borrow)[2]) p, (volatile double (*_Borrow)[2]) q);
+    volatile_comparison((long double (*_Borrow)[2]) p, (volatile long double (*_Borrow)[2]) q);
+
+    volatile_comparison((struct Empty (*_Borrow)[2]) p, (volatile struct Empty (*_Borrow)[2]) q);
+    volatile_comparison((struct One (*_Borrow)[2]) p, (volatile struct One (*_Borrow)[2]) q);
+    volatile_comparison((struct Two (*_Borrow)[2]) p, (volatile struct Two (*_Borrow)[2]) q);
+    volatile_comparison((struct TwoArr (*_Borrow)[2]) p, (volatile struct TwoArr (*_Borrow)[2]) q);
+}
+
+
+void const_volatile_comparison<T>(T *_Borrow p, const volatile T *_Borrow q) {
+    if (p == q) {}
+    if (q == p) {}
+    if (p != q) {}
+    if (q != p) {}
+    if (p >= q) {}
+    if (q >= p) {}
+    if (p <= q) {}
+    if (q <= p) {}
+    if (p > q) {}
+    if (q > p) {}
+    if (p < q) {}
+    if (q < p) {}
+}
+
+void const_volatile_instantiation(void *p, void *q) {
+    const_volatile_comparison((void *_Borrow) p, (const volatile void *_Borrow) q);
+    const_volatile_comparison((char *_Borrow) p, (const volatile char *_Borrow) q);
+    const_volatile_comparison((unsigned char *_Borrow) p, (const volatile unsigned char *_Borrow) q);
+    const_volatile_comparison((signed char *_Borrow) p, (const volatile signed char *_Borrow) q);
+    const_volatile_comparison((short *_Borrow) p, (const volatile short *_Borrow) q);
+    const_volatile_comparison((unsigned short *_Borrow) p, (const volatile unsigned short *_Borrow) q);
+    const_volatile_comparison((int *_Borrow) p, (const volatile int *_Borrow) q);
+    const_volatile_comparison((unsigned *_Borrow) p, (const volatile unsigned *_Borrow) q);
+    const_volatile_comparison((long *_Borrow) p, (const volatile long *_Borrow) q);
+    const_volatile_comparison((unsigned long *_Borrow) p, (const volatile unsigned long *_Borrow) q);
+    const_volatile_comparison((long long *_Borrow) p, (const volatile long long *_Borrow) q);
+    const_volatile_comparison((unsigned long long *_Borrow) p, (const volatile unsigned long long *_Borrow) q);
+    const_volatile_comparison((float *_Borrow) p, (const volatile float *_Borrow) q);
+    const_volatile_comparison((double *_Borrow) p, (const volatile double *_Borrow) q);
+    const_volatile_comparison((long double *_Borrow) p, (const volatile long double *_Borrow) q);
+
+    const_volatile_comparison((struct Empty *_Borrow) p, (const volatile struct Empty *_Borrow) q);
+    const_volatile_comparison((struct One *_Borrow) p, (const volatile struct One *_Borrow) q);
+    const_volatile_comparison((struct Two *_Borrow) p, (const volatile struct Two *_Borrow) q);
+    const_volatile_comparison((struct TwoArr *_Borrow) p, (const volatile struct TwoArr *_Borrow) q);
+    
+    const_volatile_comparison((char (*_Borrow)[2]) p, (const volatile char (*_Borrow)[2]) q);
+    const_volatile_comparison((unsigned char (*_Borrow)[2]) p, (const volatile unsigned char (*_Borrow)[2]) q);
+    const_volatile_comparison((signed char (*_Borrow)[2]) p, (const volatile signed char (*_Borrow)[2]) q);
+    const_volatile_comparison((short (*_Borrow)[2]) p, (const volatile short (*_Borrow)[2]) q);
+    const_volatile_comparison((unsigned short (*_Borrow)[2]) p, (const volatile unsigned short (*_Borrow)[2]) q);
+    const_volatile_comparison((int (*_Borrow)[2]) p, (const volatile int (*_Borrow)[2]) q);
+    const_volatile_comparison((unsigned (*_Borrow)[2]) p, (const volatile unsigned (*_Borrow)[2]) q);
+    const_volatile_comparison((long (*_Borrow)[2]) p, (const volatile long (*_Borrow)[2]) q);
+    const_volatile_comparison((unsigned long (*_Borrow)[2]) p, (const volatile unsigned long (*_Borrow)[2]) q);
+    const_volatile_comparison((long long (*_Borrow)[2]) p, (const volatile long long (*_Borrow)[2]) q);
+    const_volatile_comparison((unsigned long long (*_Borrow)[2]) p, (const volatile unsigned long long (*_Borrow)[2]) q);
+    const_volatile_comparison((float (*_Borrow)[2]) p, (const volatile float (*_Borrow)[2]) q);
+    const_volatile_comparison((double (*_Borrow)[2]) p, (const volatile double (*_Borrow)[2]) q);
+    const_volatile_comparison((long double (*_Borrow)[2]) p, (const volatile long double (*_Borrow)[2]) q);
+
+    const_volatile_comparison((struct Empty (*_Borrow)[2]) p, (const volatile struct Empty (*_Borrow)[2]) q);
+    const_volatile_comparison((struct One (*_Borrow)[2]) p, (const volatile struct One (*_Borrow)[2]) q);
+    const_volatile_comparison((struct Two (*_Borrow)[2]) p, (const volatile struct Two (*_Borrow)[2]) q);
+    const_volatile_comparison((struct TwoArr (*_Borrow)[2]) p, (const volatile struct TwoArr (*_Borrow)[2]) q);
+}
+
+void const_comparison_volatile<T>(volatile T *_Borrow p, const T *_Borrow q) {
+    if (p == q) {}
+    if (q == p) {}
+    if (p != q) {}
+    if (q != p) {}
+    if (p >= q) {}
+    if (q >= p) {}
+    if (p <= q) {}
+    if (q <= p) {}
+    if (p > q) {}
+    if (q > p) {}
+    if (p < q) {}
+    if (q < p) {}
+}
+
+void const_instantiation_volatile(void *p, void *q) {
+    const_comparison_volatile((volatile void *_Borrow) p, (const void *_Borrow) q);
+    const_comparison_volatile((volatile char *_Borrow) p, (const char *_Borrow) q);
+    const_comparison_volatile((volatile unsigned char *_Borrow) p, (const unsigned char *_Borrow) q);
+    const_comparison_volatile((volatile signed char *_Borrow) p, (const signed char *_Borrow) q);
+    const_comparison_volatile((volatile short *_Borrow) p, (const short *_Borrow) q);
+    const_comparison_volatile((volatile unsigned short *_Borrow) p, (const unsigned short *_Borrow) q);
+    const_comparison_volatile((volatile int *_Borrow) p, (const int *_Borrow) q);
+    const_comparison_volatile((volatile unsigned *_Borrow) p, (const unsigned *_Borrow) q);
+    const_comparison_volatile((volatile long *_Borrow) p, (const long *_Borrow) q);
+    const_comparison_volatile((volatile unsigned long *_Borrow) p, (const unsigned long *_Borrow) q);
+    const_comparison_volatile((volatile long long *_Borrow) p, (const long long *_Borrow) q);
+    const_comparison_volatile((volatile unsigned long long *_Borrow) p, (const unsigned long long *_Borrow) q);
+    const_comparison_volatile((volatile float *_Borrow) p, (const float *_Borrow) q);
+    const_comparison_volatile((volatile double *_Borrow) p, (const double *_Borrow) q);
+    const_comparison_volatile((volatile long double *_Borrow) p, (const long double *_Borrow) q);
+
+    const_comparison_volatile((volatile struct Empty *_Borrow) p, (const struct Empty *_Borrow) q);
+    const_comparison_volatile((volatile struct One *_Borrow) p, (const struct One *_Borrow) q);
+    const_comparison_volatile((volatile struct Two *_Borrow) p, (const struct Two *_Borrow) q);
+    const_comparison_volatile((volatile struct TwoArr *_Borrow) p, (const struct TwoArr *_Borrow) q);
+    
+    const_comparison_volatile((volatile char (*_Borrow)[2]) p, (const char (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile unsigned char (*_Borrow)[2]) p, (const unsigned char (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile signed char (*_Borrow)[2]) p, (const signed char (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile short (*_Borrow)[2]) p, (const short (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile unsigned short (*_Borrow)[2]) p, (const unsigned short (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile int (*_Borrow)[2]) p, (const int (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile unsigned (*_Borrow)[2]) p, (const unsigned (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile long (*_Borrow)[2]) p, (const long (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile unsigned long (*_Borrow)[2]) p, (const unsigned long (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile long long (*_Borrow)[2]) p, (const long long (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile unsigned long long (*_Borrow)[2]) p, (const unsigned long long (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile float (*_Borrow)[2]) p, (const float (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile double (*_Borrow)[2]) p, (const double (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile long double (*_Borrow)[2]) p, (const long double (*_Borrow)[2]) q);
+
+    const_comparison_volatile((volatile struct Empty (*_Borrow)[2]) p, (const struct Empty (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile struct One (*_Borrow)[2]) p, (const struct One (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile struct Two (*_Borrow)[2]) p, (const struct Two (*_Borrow)[2]) q);
+    const_comparison_volatile((volatile struct TwoArr (*_Borrow)[2]) p, (const struct TwoArr (*_Borrow)[2]) q);
+}
+
+void loose_comparison<T, U>(T *_Borrow p, U *_Borrow q) {
+    if (p == q) {}
+    if (q == p) {}
+    if (p != q) {}
+    if (q != p) {}
+    if (p >= q) {}
+    if (q >= p) {}
+    if (p <= q) {}
+    if (q <= p) {}
+    if (p > q) {}
+    if (q > p) {}
+    if (p < q) {}
+    if (q < p) {}
+}
+
+void loose_instantiation(void *p, void *q) {
+    loose_comparison((void **_Borrow) p, (void *const *_Borrow) q);
+    loose_comparison((char **_Borrow) p, (char *const *_Borrow) q);
+    loose_comparison((unsigned char **_Borrow) p, (unsigned char *const *_Borrow) q);
+    loose_comparison((signed char **_Borrow) p, (signed char *const *_Borrow) q);
+    loose_comparison((short **_Borrow) p, (short *const *_Borrow) q);
+    loose_comparison((unsigned short **_Borrow) p, (unsigned short *const *_Borrow) q);
+    loose_comparison((int **_Borrow) p, (int *const *_Borrow) q);
+    loose_comparison((unsigned **_Borrow) p, (unsigned *const *_Borrow) q);
+    loose_comparison((long **_Borrow) p, (long *const *_Borrow) q);
+    loose_comparison((unsigned long **_Borrow) p, (unsigned long *const *_Borrow) q);
+    loose_comparison((long long **_Borrow) p, (long long *const *_Borrow) q);
+    loose_comparison((unsigned long long **_Borrow) p, (unsigned long long *const *_Borrow) q);
+    loose_comparison((float **_Borrow) p, (float *const *_Borrow) q);
+    loose_comparison((double **_Borrow) p, (double *const *_Borrow) q);
+    loose_comparison((long double **_Borrow) p, (long double *const *_Borrow) q);
+
+    loose_comparison((struct Empty **_Borrow) p, (struct Empty *const *_Borrow) q);
+    loose_comparison((struct One **_Borrow) p, (struct One *const *_Borrow) q);
+    loose_comparison((struct Two **_Borrow) p, (struct Two *const *_Borrow) q);
+    loose_comparison((struct TwoArr **_Borrow) p, (struct TwoArr *const *_Borrow) q);
+
+    loose_comparison((void **_Borrow) p, (void *volatile *_Borrow) q);
+    loose_comparison((char **_Borrow) p, (char *volatile *_Borrow) q);
+    loose_comparison((unsigned char **_Borrow) p, (unsigned char *volatile *_Borrow) q);
+    loose_comparison((signed char **_Borrow) p, (signed char *volatile *_Borrow) q);
+    loose_comparison((short **_Borrow) p, (short *volatile *_Borrow) q);
+    loose_comparison((unsigned short **_Borrow) p, (unsigned short *volatile *_Borrow) q);
+    loose_comparison((int **_Borrow) p, (int *volatile *_Borrow) q);
+    loose_comparison((unsigned **_Borrow) p, (unsigned *volatile *_Borrow) q);
+    loose_comparison((long **_Borrow) p, (long *volatile *_Borrow) q);
+    loose_comparison((unsigned long **_Borrow) p, (unsigned long *volatile *_Borrow) q);
+    loose_comparison((long long **_Borrow) p, (long long *volatile *_Borrow) q);
+    loose_comparison((unsigned long long **_Borrow) p, (unsigned long long *volatile *_Borrow) q);
+    loose_comparison((float **_Borrow) p, (float *volatile *_Borrow) q);
+    loose_comparison((double **_Borrow) p, (double *volatile *_Borrow) q);
+    loose_comparison((long double **_Borrow) p, (long double *volatile *_Borrow) q);
+
+    loose_comparison((struct Empty **_Borrow) p, (struct Empty *volatile *_Borrow) q);
+    loose_comparison((struct One **_Borrow) p, (struct One *volatile *_Borrow) q);
+    loose_comparison((struct Two **_Borrow) p, (struct Two *volatile *_Borrow) q);
+    loose_comparison((struct TwoArr **_Borrow) p, (struct TwoArr *volatile *_Borrow) q);
+
+    loose_comparison((void **_Borrow) p, (void *restrict *_Borrow) q);
+    loose_comparison((char **_Borrow) p, (char *restrict *_Borrow) q);
+    loose_comparison((unsigned char **_Borrow) p, (unsigned char *restrict *_Borrow) q);
+    loose_comparison((signed char **_Borrow) p, (signed char *restrict *_Borrow) q);
+    loose_comparison((short **_Borrow) p, (short *restrict *_Borrow) q);
+    loose_comparison((unsigned short **_Borrow) p, (unsigned short *restrict *_Borrow) q);
+    loose_comparison((int **_Borrow) p, (int *restrict *_Borrow) q);
+    loose_comparison((unsigned **_Borrow) p, (unsigned *restrict *_Borrow) q);
+    loose_comparison((long **_Borrow) p, (long *restrict *_Borrow) q);
+    loose_comparison((unsigned long **_Borrow) p, (unsigned long *restrict *_Borrow) q);
+    loose_comparison((long long **_Borrow) p, (long long *restrict *_Borrow) q);
+    loose_comparison((unsigned long long **_Borrow) p, (unsigned long long *restrict *_Borrow) q);
+    loose_comparison((float **_Borrow) p, (float *restrict *_Borrow) q);
+    loose_comparison((double **_Borrow) p, (double *restrict *_Borrow) q);
+    loose_comparison((long double **_Borrow) p, (long double *restrict *_Borrow) q);
+
+    loose_comparison((struct Empty **_Borrow) p, (struct Empty *restrict *_Borrow) q);
+    loose_comparison((struct One **_Borrow) p, (struct One *restrict *_Borrow) q);
+    loose_comparison((struct Two **_Borrow) p, (struct Two *restrict *_Borrow) q);
+    loose_comparison((struct TwoArr **_Borrow) p, (struct TwoArr *restrict *_Borrow) q);
+}
+

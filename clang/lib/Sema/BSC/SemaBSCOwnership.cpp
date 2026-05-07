@@ -815,12 +815,15 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
 bool Sema::CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType) {
   QualType RHSCanType = RHSType.getCanonicalType();
   QualType LHSCanType = LHSType.getCanonicalType();
-  if (LHSCanType.isBorrowQualified() || RHSCanType.isBorrowQualified()) {
-    if (RHSCanType != LHSCanType) {
-      return false;
-    }
-  }
-  return true;
+  bool LHSBorrow = LHSCanType.isBorrowQualified();
+  bool RHSBorrow = RHSCanType.isBorrowQualified();
+  if (LHSBorrow != RHSBorrow)
+    return false;
+  if (!LHSBorrow)
+    return true;
+
+  return LHSCanType->getPointeeType().getUnqualifiedType() ==
+         RHSCanType->getPointeeType().getUnqualifiedType();
 }
 
 bool Sema::CheckBorrowFunctionType(QualType ReturnTy,

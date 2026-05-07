@@ -1,0 +1,63 @@
+// RUN: %clang_cc1 -verify -verify-ignore-unexpected=note %s
+
+struct ConstOne {
+    const int x;
+};
+struct One {
+    int x;
+};
+struct One2 {
+    int x;
+};
+
+void comparison<T>(T *_Borrow p, T *_Borrow q) {
+    if (p == q) {}
+    if (q == p) {}
+    if (p != q) {}
+    if (q != p) {}
+    if (p >= q) {}
+    if (q >= p) {}
+    if (p <= q) {}
+    if (q <= p) {}
+    if (p > q) {}
+    if (q > p) {}
+    if (p < q) {}
+    if (q < p) {}
+}
+
+void instantiation(void *p, void *q) {
+    comparison((struct One *_Borrow) p, (struct One2 *_Borrow) q);
+    // expected-error@-1 {{no matching function for call to 'comparison'}}
+    comparison((struct One *_Borrow) p, (struct ConstOne *_Borrow) q);
+    // expected-error@-1 {{no matching function for call to 'comparison'}}
+}
+
+void ptr_pointee_comparison(int *_Owned *_Borrow p, int **_Borrow q) {
+    if (p == q) {} // expected-error {{incompatible _Borrow types, 'int **_Borrow' and 'int *_Owned *_Borrow' cannot be compared}}
+    if (q == p) {} // expected-error {{incompatible _Borrow types, 'int *_Owned *_Borrow' and 'int **_Borrow' cannot be compared}}
+    if (p != q) {} // expected-error {{incompatible _Borrow types, 'int **_Borrow' and 'int *_Owned *_Borrow' cannot be compared}}
+    if (q != p) {} // expected-error {{incompatible _Borrow types, 'int *_Owned *_Borrow' and 'int **_Borrow' cannot be compared}}
+    if (p >= q) {} // expected-error {{incompatible _Borrow types, 'int **_Borrow' and 'int *_Owned *_Borrow' cannot be compared}}
+    if (q >= p) {} // expected-error {{incompatible _Borrow types, 'int *_Owned *_Borrow' and 'int **_Borrow' cannot be compared}}
+    if (p <= q) {} // expected-error {{incompatible _Borrow types, 'int **_Borrow' and 'int *_Owned *_Borrow' cannot be compared}}
+    if (q <= p) {} // expected-error {{incompatible _Borrow types, 'int *_Owned *_Borrow' and 'int **_Borrow' cannot be compared}}
+    if (p > q) {} // expected-error {{incompatible _Borrow types, 'int **_Borrow' and 'int *_Owned *_Borrow' cannot be compared}}
+    if (q > p) {} // expected-error {{incompatible _Borrow types, 'int *_Owned *_Borrow' and 'int **_Borrow' cannot be compared}}
+    if (p < q) {} // expected-error {{incompatible _Borrow types, 'int **_Borrow' and 'int *_Owned *_Borrow' cannot be compared}}
+    if (q < p) {} // expected-error {{incompatible _Borrow types, 'int *_Owned *_Borrow' and 'int **_Borrow' cannot be compared}}
+}
+
+void ptr_bottom_qualifier_comparison(const int **_Borrow p, int *const *_Borrow q) {
+    if (p == q) {} // expected-error {{incompatible _Borrow types, 'int *const *_Borrow' and 'const int **_Borrow' cannot be compared}}
+    if (q == p) {} // expected-error {{incompatible _Borrow types, 'const int **_Borrow' and 'int *const *_Borrow' cannot be compared}}
+    if (p != q) {} // expected-error {{incompatible _Borrow types, 'int *const *_Borrow' and 'const int **_Borrow' cannot be compared}}
+    if (q != p) {} // expected-error {{incompatible _Borrow types, 'const int **_Borrow' and 'int *const *_Borrow' cannot be compared}}
+    if (p >= q) {} // expected-error {{incompatible _Borrow types, 'int *const *_Borrow' and 'const int **_Borrow' cannot be compared}}
+    if (q >= p) {} // expected-error {{incompatible _Borrow types, 'const int **_Borrow' and 'int *const *_Borrow' cannot be compared}}
+    if (p <= q) {} // expected-error {{incompatible _Borrow types, 'int *const *_Borrow' and 'const int **_Borrow' cannot be compared}}
+    if (q <= p) {} // expected-error {{incompatible _Borrow types, 'const int **_Borrow' and 'int *const *_Borrow' cannot be compared}}
+    if (p > q) {} // expected-error {{incompatible _Borrow types, 'int *const *_Borrow' and 'const int **_Borrow' cannot be compared}}
+    if (q > p) {} // expected-error {{incompatible _Borrow types, 'const int **_Borrow' and 'int *const *_Borrow' cannot be compared}}
+    if (p < q) {} // expected-error {{incompatible _Borrow types, 'int *const *_Borrow' and 'const int **_Borrow' cannot be compared}}
+    if (q < p) {} // expected-error {{incompatible _Borrow types, 'const int **_Borrow' and 'int *const *_Borrow' cannot be compared}}
+}

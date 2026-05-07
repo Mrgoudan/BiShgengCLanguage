@@ -22,7 +22,7 @@ int test() {
   float *_Borrow p7 = &_Mut b;
   if (p3 == p4) {} // legal
   if (p5 != p6) {} // legal
-  if (p3 == p5) {} // expected-error {{incompatible _Borrow types, 'const int *_Borrow' and 'int *_Borrow' cannot be compared}}
+  if (p3 == p5) {}
   if (p3 == p7) {} // expected-error {{incompatible _Borrow types, 'float *_Borrow' and 'int *_Borrow' cannot be compared}}
   if (p3 >= &_Mut a) {} // legal
   if (p5 < &a) {} // expected-error {{incompatible _Borrow types, 'int *' and 'const int *_Borrow' cannot be compared}}
