@@ -3999,26 +3999,7 @@ _Safe int foo(void) {
 }
 ```
 
-16. 如果一个借用指针变量指向的是函数，那么可以通过这个借用指针变量来调用函数。
-```C
-#include <stdio.h>
-
-void f() { printf("f()\n"); }
-
-void test() {
-  void (*_Borrow const p)() = &_Const f; // ok: 对函数取不可变借用
-  p();
-}
-
-int main() {
-  test();
-  return 0;
-}
-```
-
-17. 不允许对函数做可变借用，只能做只读借用。
-
-18. 允许 _Borrow 指针作为 `if` `while` `do-while` `for` 语句和三元表达式的条件，不允许作为 `switch` 语句的条件
+16. 允许 _Borrow 指针作为 `if` `while` `do-while` `for` 语句和三元表达式的条件，不允许作为 `switch` 语句的条件
 
 ```c
 void foo(int *_Borrow _Nullable p) {
