@@ -1,0 +1,144 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+enum Color { RED, GREEN, BLUE, YELLOW };
+enum Small { S0, S1 };
+enum Signed { NEG4 = -4, NEG1 = -1, ZERO_S = 0, POS3 = 3 };
+enum Flags { F0 = 0x1, F1 = 0x2, F2 = 0x4, F3 = 0x8 };
+enum SmallFlags { SA = 0, SB = 1, SC = 2, SD = 3 };
+
+struct S {
+  unsigned int color : 3;
+  unsigned int flag : 1;
+  signed int val : 4;
+  unsigned short wide : 10;
+  unsigned int x : 3;
+  unsigned int y : 2;
+  unsigned int z : 1;
+  signed int w : 4;
+  unsigned int wider : 8;
+};
+
+// --- Assignment tests ---
+
+// Enum constants that fit within the bitfield width
+_Safe void test_enum_constant_fits(void) {
+  struct S s;
+  s.color = RED;     // 0 fits in 3-bit unsigned
+  s.color = YELLOW;  // 3 fits in 3-bit unsigned [0,7]
+  s.flag = S0;       // 0 fits in 1-bit unsigned
+  s.flag = S1;       // 1 fits in 1-bit unsigned
+  s.val = ZERO_S;    // 0 fits in 4-bit signed [-8,7]
+  s.val = POS3;      // 3 fits in 4-bit signed
+  s.val = NEG4;      // -4 fits in 4-bit signed
+  s.val = NEG1;      // -1 fits in 4-bit signed
+}
+
+// Enum constants in initialization that fit
+_Safe void test_enum_init_fits(void) {
+  struct S s1 = { .color = BLUE };    // 2 fits in 3-bit unsigned
+  struct S s2 = { .flag = S1 };       // 1 fits in 1-bit unsigned
+  struct S s3 = { .val = NEG4 };      // -4 fits in 4-bit signed
+  struct S s4 = { .val = POS3 };      // 3 fits in 4-bit signed
+  (void)s1; (void)s2; (void)s3; (void)s4;
+}
+
+// Enum to wider bitfield (all values fit)
+_Safe void test_enum_to_wide_bitfield(void) {
+  struct S s;
+  s.wide = RED;      // 0 fits in 10-bit unsigned
+  s.wide = YELLOW;   // 3 fits in 10-bit unsigned
+}
+
+// --- Bitwise operator tests ---
+
+// Enum variable & mask that narrows to fit the bitfield
+_Safe void test_enum_and_fits(void) {
+  struct S s;
+  enum Flags f = F0;
+  enum SmallFlags sm = SA;
+
+  // f & 0x7u: mask width is 3, fits unsigned:3
+  s.x = f & 0x7u;
+  // f & 0x3u: mask width is 2, fits unsigned:2
+  s.y = f & 0x3u;
+  // f & 0x1u: mask width is 1, fits unsigned:1
+  s.z = f & 0x1u;
+  // sm & 0x3u: mask width is 2, fits unsigned:2
+  s.y = sm & 0x3u;
+  // f & 0x7: mask width is 3, non-negative, fits signed:4
+  s.w = f & 0x7;
+}
+
+// Enum constant & enum constant — result evaluated at compile time, fits
+_Safe void test_enum_constant_and_fits(void) {
+  struct S s;
+  // F0 & F1 = 0x1 & 0x2 = 0, fits anything
+  s.x = F0 & F1;
+  s.z = F0 & F1;
+  // F0 & F0 = 0x1, fits unsigned:3
+  s.x = F0 & F0;
+  // F0 & F2 = 0x1 & 0x4 = 0, fits unsigned:1
+  s.z = F0 & F2;
+}
+
+// Enum constant | enum constant — result fits
+_Safe void test_enum_constant_or_fits(void) {
+  struct S s;
+  // F0 | F1 = 0x1 | 0x2 = 3, fits unsigned:3 [0,7]
+  s.x = F0 | F1;
+  // F0 | F1 = 3, fits signed:4 [-8,7]
+  s.w = F0 | F1;
+  // SA | SB = 0 | 1 = 1, fits unsigned:1
+  s.z = SA | SB;
+}
+
+// Enum constant ^ enum constant — result fits
+_Safe void test_enum_constant_xor_fits(void) {
+  struct S s;
+  // F0 ^ F1 = 0x1 ^ 0x2 = 3, fits unsigned:3
+  s.x = F0 ^ F1;
+  // F0 ^ F0 = 0, fits unsigned:1
+  s.z = F0 ^ F0;
+  // SA ^ SD = 0 ^ 3 = 3, fits unsigned:2
+  s.y = SA ^ SD;
+}
+
+// Enum variable & bitfield — mask narrows the result
+_Safe void test_enum_var_and_bitfield(void) {
+  struct S s;
+  enum Flags f = F0;
+  s.x = 7; s.y = 3; s.z = 1;
+
+  // (f & 0x7u) fits unsigned:3
+  s.x = f & 0x7u;
+  // (f & 0x1u) fits unsigned:1
+  s.z = f & 0x1u;
+}
+
+// Mixed: enum in wider bitfield context
+_Safe void test_enum_bitwise_to_wide_bitfield(void) {
+  struct S s;
+  enum Flags f = F0;
+
+  // f & 0xffu: mask width is 8, fits unsigned:8
+  s.wider = f & 0xffu;
+  // F0 | F1 | F2 | F3 = 0xf = 15, fits unsigned:8
+  s.wider = F0 | F1 | F2 | F3;
+}
+
+int main(void) {
+  test_enum_constant_fits();
+  test_enum_init_fits();
+  test_enum_to_wide_bitfield();
+  test_enum_and_fits();
+  test_enum_constant_and_fits();
+  test_enum_constant_or_fits();
+  test_enum_constant_xor_fits();
+  test_enum_var_and_bitfield();
+  test_enum_bitwise_to_wide_bitfield();
+  return 0;
+}

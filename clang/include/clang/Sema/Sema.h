@@ -12394,6 +12394,19 @@ public:
   /// fits in DestType. Used by BSC safe zone for implicit conversion checks.
   /// Only applicable for integral types.
   bool DoesExprValueRangeFitInType(Expr *E, QualType DestType);
+  /// Returns true if the value range of integer expression E fits in a
+  /// destination of the given bit width and signedness. Used as a shared
+  /// primitive by both type-based and bitfield-width-based safe-zone checks.
+  bool DoesExprValueRangeFitInBitWidth(Expr *E, unsigned BitWidth,
+                                       bool TargetIsUnsigned);
+  /// Emit err_unsafe_implicit_bitfield_assign and the mask-hint note for a
+  /// value that does not fit the target bitfield width.
+  void DiagnoseBitfieldWidthOverflow(SourceLocation Loc, QualType SrcType,
+                                     unsigned BitWidth, bool TargetIsUnsigned);
+  /// BSC safe-zone check for assignment to a bitfield. Returns true if RHS
+  /// fits the bitfield's declared width; otherwise emits a diagnostic and
+  /// returns false. Caller must guard on safe-zone + Diagnose.
+  bool CheckBSCSafeZoneBitfieldAssign(FieldDecl *BF, Expr *RHS);
   bool IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr);
   FunctionDecl *SelectFunctionDeclForPointerAssignment(
       Expr *SrcExpr, const FunctionProtoType *DestFuncType);

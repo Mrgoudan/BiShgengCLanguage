@@ -14906,6 +14906,14 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
 
     CheckIdentityFieldAssignment(LHSExpr, RHSCheck, Loc, *this);
 
+#if ENABLE_BSC
+    if (getLangOpts().BSC) {
+      if (!CheckBSCSafeZoneBitfieldAssign(LHSExpr->getSourceBitField(),
+                                          RHS.get()))
+        return QualType();
+    }
+#endif
+
     QualType LHSTy(LHSType);
     ConvTy = CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())

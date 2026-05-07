@@ -171,6 +171,40 @@ _Safe void rule10_value_range_analysis(void) {
   sc = uc & 0x7F;             // ok: AND with 0x7F gives [0,127], fits in signed char
   short ss = 0;
   ss = uc | 0x10;             // ok: [0,255] | 0x10 fits in short
+
+  // Bitfield operands in bitwise operations assigned to non-bitfield targets
+  struct BF {
+    unsigned int bx : 3;
+    unsigned int by : 5;
+    unsigned int bz : 1;
+    unsigned short bus : 10;
+  };
+  struct BF bf;
+  bf.bx = 5; bf.by = 15; bf.bz = 1; bf.bus = 100;
+
+  // & of bitfield with constant: narrows to min width
+  flag = bf.by & 0x0F;           // ok: min(5,4) = 4 bits, fits in unsigned char
+  flag = bf.bus & 0xFF;          // ok: min(10,8) = 8 bits, fits in unsigned char
+
+  // | of bitfield with small constant: max width fits target
+  s = bf.bx | 0x10;             // ok: max(3,5) = 5 bits, fits in unsigned short
+  s = bf.bus | 0x01;            // ok: max(10,1) = 10 bits, fits in unsigned short
+
+  // ^ of bitfield with small constant: max width fits target
+  s = bf.bx ^ 0x10;             // ok: max(3,5) = 5 bits, fits in unsigned short
+  s = bf.bus ^ 0x01;            // ok: max(10,1) = 10 bits, fits in unsigned short
+
+  // & of two bitfields: narrows to min width
+  flag = bf.bx & bf.bz;         // ok: min(3,1) = 1 bit, fits in unsigned char
+  flag = bf.bx & bf.by;         // ok: min(3,5) = 3 bits, fits in unsigned char
+
+  // | of two bitfields: max width fits target
+  s = bf.bx | bf.bus;           // ok: max(3,10) = 10 bits, fits in unsigned short
+  flag = bf.bx | bf.bz;         // ok: max(3,1) = 3 bits, fits in unsigned char
+
+  // ^ of two bitfields: max width fits target
+  s = bf.bx ^ bf.bus;           // ok: max(3,10) = 10 bits, fits in unsigned short
+  flag = bf.bx ^ bf.bz;         // ok: max(3,1) = 3 bits, fits in unsigned char
 }
 
 int main(void) {

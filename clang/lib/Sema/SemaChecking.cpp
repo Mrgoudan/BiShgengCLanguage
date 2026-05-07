@@ -12663,25 +12663,34 @@ bool Sema::DoesExprValueRangeFitInType(Expr *E, QualType DestType) {
   if (!E->getType()->isIntegerType() || !DestType->isIntegerType())
     return false;
 
-  IntRange SourceRange =
-      GetExprRange(Context, E, isConstantEvaluated(), /*Approximate*/ false);
   IntRange TargetRange = IntRange::forTargetOfCanonicalType(
       Context, DestType->getCanonicalTypeInternal().getTypePtr());
+  return DoesExprValueRangeFitInBitWidth(E, TargetRange.Width,
+                                         TargetRange.NonNegative);
+}
+
+bool Sema::DoesExprValueRangeFitInBitWidth(Expr *E, unsigned BitWidth,
+                                           bool TargetIsUnsigned) {
+  if (!E->getType()->isIntegerType())
+    return false;
+
+  IntRange SourceRange =
+      GetExprRange(Context, E, isConstantEvaluated(), /*Approximate*/ false);
 
   // Source range too wide for target.
-  if (SourceRange.Width > TargetRange.Width)
+  if (SourceRange.Width > BitWidth)
     return false;
 
   // Unsigned target cannot hold negative values.
-  if (TargetRange.NonNegative && !SourceRange.NonNegative)
+  if (TargetIsUnsigned && !SourceRange.NonNegative)
     return false;
 
-  // Signed target with non-negative source: value 2^(w-1) would become negative
-  // when stored, so require strict inequality.
-  if (!TargetRange.NonNegative && SourceRange.NonNegative)
-    return SourceRange.Width < TargetRange.Width;
+  // Signed target with non-negative source: value 2^(w-1) would become
+  // negative when stored, so require strict inequality.
+  if (!TargetIsUnsigned && SourceRange.NonNegative)
+    return SourceRange.Width < BitWidth;
 
-  return SourceRange.Width <= TargetRange.Width;
+  return SourceRange.Width <= BitWidth;
 }
 #endif
 
@@ -15695,6 +15704,10 @@ void Sema::CheckCompletedExpr(Expr *E, SourceLocation CheckLoc,
 void Sema::CheckBitFieldInitialization(SourceLocation InitLoc,
                                        FieldDecl *BitField,
                                        Expr *Init) {
+#if ENABLE_BSC
+  if (getLangOpts().BSC && !CheckBSCSafeZoneBitfieldAssign(BitField, Init))
+    return;
+#endif
   (void) AnalyzeBitFieldAssignment(*this, BitField, Init, InitLoc);
 }
 

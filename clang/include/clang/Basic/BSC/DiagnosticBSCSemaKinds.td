@@ -124,6 +124,8 @@ def err_constexpr_if_cond_expr_unsupported_type : Error<
 // BSC safe scope warnings and errors.
 def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
 def err_unsafe_implicit_cast : Error<"implicit conversion from type %0 to %1 is forbidden in the safe zone; please use explicit cast or other means instead">;
+def err_unsafe_implicit_bitfield_assign : Error<"implicit conversion from type %0 to %select{unsigned|signed}1 bit-field of width %2 is forbidden in the safe zone">;
+def note_unsafe_bitfield_mask_hint : Note<"value can be masked to fit, e.g. '(expr) & %0'">;
 def note_unsafe_cast_implicit_conversion : Note<
   "source type %0 is implicit converted from type %1">;
 def note_unsafe_cast_non_trivial_pointee_type : Note<
