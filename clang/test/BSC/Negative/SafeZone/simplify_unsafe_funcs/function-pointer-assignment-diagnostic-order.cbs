@@ -5,10 +5,10 @@ _Safe void take_borrow(char * _Borrow p);
 
 void test_owned_diag_order(void) {
   _Safe void (*dst)(int * _Borrow) = 0;
-  dst = take_owned; // expected-error {{cannot cast '_Safe void (int *_Owned)' to '_Safe void (*)(int *_Borrow)'}}
+  dst = take_owned; // expected-warning {{incompatible function pointer types assigning to '_Safe void (*)(int *_Borrow)' from '_Safe void (int *_Owned)'}}
 }
 
 void test_borrow_diag_order(void) {
   _Safe void (*dst)(const char * _Borrow) = 0;
-  dst = take_borrow; // expected-error {{incompatible _Borrow function pointer types, cannot cast '_Safe void (char *_Borrow)' to '_Safe void (*)(const char *_Borrow)'}}
+  dst = take_borrow; // expected-warning {{incompatible function pointer types assigning to '_Safe void (*)(const char *_Borrow)' from '_Safe void (char *_Borrow)'}}
 }

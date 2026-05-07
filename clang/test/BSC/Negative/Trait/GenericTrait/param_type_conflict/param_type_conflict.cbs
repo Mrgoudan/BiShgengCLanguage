@@ -12,6 +12,5 @@ int struct S::foo(struct S* this, float a) {
   return this->x;
 }
 
-_Impl _Trait F<int> for struct S; // expected-error {{type of 'foo' conflicts with that of '_Trait F<int>'}}
+_Impl _Trait F<int> for struct S; // expected-error {{type of 'foo' conflicts with that of '_Trait F<int>'}} expected-warning {{incompatible function pointer types initializing 'int (*)(void *, int)' with an expression of type 'int (*)(void *, float)'}}
                                 
-

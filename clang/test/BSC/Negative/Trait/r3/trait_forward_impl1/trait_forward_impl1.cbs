@@ -15,7 +15,7 @@ float float::print(float *this) {
     return *this;
 }
 
-_Impl _Trait T for float; 
+_Impl _Trait T for float; // expected-warning {{incompatible function pointer types initializing 'float (*)(volatile void *, int)' with an expression of type 'float (*)(void *, int)'}}
 
 volatile _Trait T* get(_Trait T* t){
     float a = 6.0;
@@ -33,4 +33,3 @@ int main()
     p->print();
     return 0;
 }
-

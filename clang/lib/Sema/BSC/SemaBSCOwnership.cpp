@@ -525,9 +525,9 @@ Sema::CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr) {
     return Compatible;
 
   if (!CheckOwnedFunctionPointerType(LHSType, RHSExpr))
-    return IncompatibleOwnedPointer;
+    return IncompatibleFunctionPointer;
   if (!CheckBorrowFunctionPointerType(LHSType, RHSExpr))
-    return IncompatibleBorrowPointer;
+    return IncompatibleFunctionPointer;
   return Compatible;
 }
 

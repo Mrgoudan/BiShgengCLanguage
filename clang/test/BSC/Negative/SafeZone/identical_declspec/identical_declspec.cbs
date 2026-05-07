@@ -38,21 +38,19 @@ int main() {
   _Safe int (*qq)(int x, int y);   // expected-error {{redefinition of 'qq' with a different type: '_Safe int (*)(int, int)' vs 'int (*)(int, int)'}}
 
   sapfun = safun;
-  sapfun = unfun;  // expected-error {{conversion from type 'int (*)(int, int)' to '_Safe int (*)(int, int)' is forbidden}}
-  // expected-note@-1 {{assigning an unsafe function pointer to a safe function pointer type is not allowed}}
-  sapfun = fun;    // expected-error {{conversion from type 'int (*)(int, int)' to '_Safe int (*)(int, int)' is forbidden}}
-  // expected-note@-1 {{assigning an unsafe function pointer to a safe function pointer type is not allowed}}
+  sapfun = unfun;  // expected-warning {{incompatible function pointer types assigning to '_Safe int (*)(int, int)' from 'int (int, int)'}}
+  sapfun = fun;    // expected-warning {{incompatible function pointer types assigning to '_Safe int (*)(int, int)' from 'int (int, int)'}}
 
-  unpfun = safun;  
+  unpfun = safun;  // expected-warning {{incompatible function pointer types assigning to 'int (*)(int, int)' from '_Safe int (int, int)'}}
   unpfun = unfun;
   unpfun = fun;
 
-  pfun = safun;    
+  pfun = safun;    // expected-warning {{incompatible function pointer types assigning to 'int (*)(int, int)' from '_Safe int (int, int)'}}
   pfun = unfun;
   pfun = fun;
 
 _Safe {
-  unpfun = safun;
+  unpfun = safun;  // expected-error {{incompatible function pointer types assigning to 'int (*)(int, int)' from '_Safe int (int, int)'}}
   unpfun = unfun;
   unpfun = fun;
 }

@@ -20,20 +20,20 @@ int main() {
   TP tp = add;  // ok
 
   _Safe int (*pa)(int a);
-  pa = add;                          // expected-error {{conversion from type '_Safe int (*)(int, int)' to '_Safe int (*)(int)' is forbidden}}
+  pa = add;                          // expected-warning {{incompatible function pointer types assigning to '_Safe int (*)(int)' from '_Safe int (int, int)'}}
 
   _Safe int (*pp)(double a, double b) = dadd2;
-  pp = add;                          // expected-error {{conversion from type '_Safe int (*)(int, int)' to '_Safe int (*)(double, double)' is forbidden}}
-  pp = dadd;                         // expected-error {{conversion from type '_Safe double (*)(double, double)' to '_Safe int (*)(double, double)' is forbidden}}
+  pp = add;                          // expected-warning {{incompatible function pointer types assigning to '_Safe int (*)(double, double)' from '_Safe int (int, int)'}}
+  pp = dadd;                         // expected-warning {{incompatible function pointer types assigning to '_Safe int (*)(double, double)' from '_Safe double (double, double)'}}
 
   _Unsafe int (*up)(double a, double b);
-  up = add;           
-  up = dadd;        
+  up = add;                          // expected-warning {{incompatible function pointer types assigning to 'int (*)(double, double)' from '_Safe int (int, int)'}}
+  up = dadd;                         // expected-warning {{incompatible function pointer types assigning to 'int (*)(double, double)' from '_Safe double (double, double)'}}
   _Safe {
     p = &add;       // ok
     TP tp = &add;   // ok
-    up = &add;     
-    up = &dadd;     
+    up = &add;      // expected-error {{incompatible function pointer types assigning to 'int (*)(double, double)' from '_Safe int (*)(int, int)'}}
+    up = &dadd;     // expected-error {{incompatible function pointer types assigning to 'int (*)(double, double)' from '_Safe double (*)(double, double)'}}
     p = (TP)add;
     p = (TP)dadd;   // expected-error {{conversion from type '_Safe double (*)(double, double)' to 'TP' (aka 'int (*)(int, int)') is forbidden}}
   }

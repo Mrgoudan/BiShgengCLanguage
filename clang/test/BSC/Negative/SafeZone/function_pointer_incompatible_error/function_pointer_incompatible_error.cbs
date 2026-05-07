@@ -1,0 +1,28 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+void unsafe_foo(int);
+_Safe void safe_foo(int);
+
+void test_safe_function_pointer_target_error(void) {
+  _Safe void (*fp)(void) = unsafe_foo;
+  // expected-error@-1 {{incompatible function pointer types initializing '_Safe void (*)(void)' with an expression of type 'void (int)'}}
+  (void)fp;
+}
+
+_Safe void test_in_safe_zone_error(void) {
+  int (*fp)(void) = safe_foo;
+  // expected-error@-1 {{incompatible function pointer types initializing 'int (*)(void)' with an expression of type '_Safe void (int)'}}
+  fp = safe_foo;
+  // expected-error@-1 {{incompatible function pointer types assigning to 'int (*)(void)' from '_Safe void (int)'}}
+  (void)fp;
+}
+
+void test_compound_safe_zone_error(void) {
+  _Safe {
+    int (*fp)(void) = safe_foo;
+    // expected-error@-1 {{incompatible function pointer types initializing 'int (*)(void)' with an expression of type '_Safe void (int)'}}
+    fp = safe_foo;
+    // expected-error@-1 {{incompatible function pointer types assigning to 'int (*)(void)' from '_Safe void (int)'}}
+    (void)fp;
+  }
+}

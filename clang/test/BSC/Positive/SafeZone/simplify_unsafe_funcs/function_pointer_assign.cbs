@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 typedef unsigned int (*HOOK)(unsigned int a, unsigned int b, unsigned char * const c);
 
@@ -8,13 +7,14 @@ unsigned int naked(unsigned int a, unsigned int b, unsigned char * const c){
 }
 _Safe unsigned int naked(unsigned int a, unsigned int b, unsigned char * _Borrow const c);
 _Safe void test(void){
-         _Unsafe HOOK readhook = naked;
+         _Unsafe HOOK readhook = naked; // expected-warning {{incompatible function pointer types initializing 'HOOK' (aka 'unsigned int (*)(unsigned int, unsigned int, unsigned char *const)') with an expression of type '_Safe unsigned int (unsigned int, unsigned int, unsigned char *const _Borrow)'}}
 }
-_Safe void test1(void){
-          HOOK readhook = naked;
+void test1(void){
+          HOOK readhook = naked; // expected-warning {{incompatible function pointer types initializing 'HOOK' (aka 'unsigned int (*)(unsigned int, unsigned int, unsigned char *const)') with an expression of type '_Safe unsigned int (unsigned int, unsigned int, unsigned char *const _Borrow)'}}
 }
-// Hook typedef has _Borrow on parameter: assigning heterogeneous _Safe function
-// to a non-_Safe function pointer must succeed (manual section 9, safe->unsafe allowed).
+// Hook typedef has _Borrow on parameter: assigning a heterogeneous _Safe
+// function to a non-_Safe function pointer succeeds with a C warning outside
+// the safe zone.
 typedef unsigned int (*Hook)(unsigned int a, unsigned int b,
                              unsigned short *_Borrow const buff);
 unsigned int func(unsigned int a, unsigned int b, unsigned short *const buff) {
@@ -22,8 +22,8 @@ unsigned int func(unsigned int a, unsigned int b, unsigned short *const buff) {
 }
 _Safe unsigned int func(unsigned int a, unsigned int b,
                         unsigned short *_Borrow const buff);
-_Safe void test2(void) {
-    Hook readflash = func;
+void test2(void) {
+    Hook readflash = func; // expected-warning {{incompatible function pointer types initializing 'Hook' (aka 'unsigned int (*)(unsigned int, unsigned int, unsigned short *const _Borrow)') with an expression of type '_Safe unsigned int (unsigned int, unsigned int, unsigned short *const _Borrow)'}}
 }
 
 int mian(){
