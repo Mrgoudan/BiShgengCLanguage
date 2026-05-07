@@ -787,15 +787,11 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
       if (LHSPointee.isConstQualified() && !RHSPointee.isConstQualified()) {
         LHSPointee.removeLocalConst();
         if (LHSPointee == RHSPointee) {
-          ExprResult DerefExpr =
-              CreateBuiltinUnaryOp(ExprLoc, UO_Deref, RHSExpr);
-          if (!DerefExpr.isInvalid()) {
-            ExprResult ReBorrowExpr =
-                CreateBuiltinUnaryOp(ExprLoc, UO_AddrConst, DerefExpr.get());
-            if (!ReBorrowExpr.isInvalid()) {
-              RHS = ReBorrowExpr;
-              return true;
-            }
+          ExprResult ReBorrowExpr =
+              CreateBuiltinUnaryOp(ExprLoc, UO_AddrConstDeref, RHSExpr);
+          if (!ReBorrowExpr.isInvalid()) {
+            RHS = ReBorrowExpr;
+            return true;
           }
           Res = false;
         }
