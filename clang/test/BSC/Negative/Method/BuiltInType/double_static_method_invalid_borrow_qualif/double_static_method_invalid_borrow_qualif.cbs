@@ -1,0 +1,12 @@
+// RUN: %clang_cc1 -verify %s
+
+static unsigned double::getA(double* this);
+
+int main() {
+    double a = 1;
+    unsigned b = 1;
+    unsigned (*const _Borrow p)(double* this) = &_Const double::getA; // expected-error {{type of 'unsigned int (*)(double *)' cannot be qualified by '_Borrow'}} \
+                                                                       // expected-error {{'&_Const' for function pointer is not allowed}}
+    b = p(&a);
+    return (int)(a + b);
+}

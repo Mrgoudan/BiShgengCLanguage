@@ -1,0 +1,31 @@
+// RUN: %clang_cc1 -verify %s
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+// Regression: taking the address of a static member function used to crash
+// in ExprClassification because the DeclRefExpr was built with VK_LValue
+// while non-C++ classification reclassifies function-typed expressions as
+// CL_Function (a prvalue kind).
+
+static int int::getA() {
+    return 0;
+}
+
+int main() {
+    int (*fp1)(void) = int::getA;
+    int (*fp2)(void) = &int::getA;
+    return fp1() + fp2();
+}
+
+// CHECK: static int int_getA(void) {
+// CHECK-NEXT:     return 0;
+// CHECK-NEXT: }
+
+// CHECK: int main(void) {
+// CHECK-NEXT:     int (*fp1)(void) = int_getA;
+// CHECK-NEXT:     int (*fp2)(void) = &int_getA;
+// CHECK-NEXT:     return fp1() + fp2();
+// CHECK-NEXT: }

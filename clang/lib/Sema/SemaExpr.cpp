@@ -3691,6 +3691,10 @@ ExprResult Sema::BuildDeclarationNameExpr(
     break;
   }
 
+#if ENABLE_BSC
+  // A BSC method is just a C function with a name-mangled by the extended type
+  case Decl::BSCMethod:
+#endif
   case Decl::Function: {
     if (unsigned BID = cast<FunctionDecl>(VD)->getBuiltinID()) {
       if (!Context.BuiltinInfo.isDirectlyAddressable(BID)) {
@@ -3744,23 +3748,6 @@ ExprResult Sema::BuildDeclarationNameExpr(
   case Decl::UnnamedGlobalConstant:
     valueKind = VK_LValue;
     break;
-
-  #if ENABLE_BSC
-  case Decl::BSCMethod:
-    if (const FunctionProtoType *proto =
-            dyn_cast<FunctionProtoType>(VD->getType()))
-      if (proto->getReturnType() == Context.UnknownAnyTy) {
-        type = Context.UnknownAnyTy;
-        valueKind = VK_PRValue;
-        break;
-      }
-
-      // BSC methods are l-values if static, r-values if non-static.
-    if (cast<BSCMethodDecl>(VD)->isStatic()) {
-      valueKind = VK_LValue;
-    }
-    break;
-  #endif
 
   case Decl::CXXMethod:
     // If we're referring to a method with an __unknown_anytype
