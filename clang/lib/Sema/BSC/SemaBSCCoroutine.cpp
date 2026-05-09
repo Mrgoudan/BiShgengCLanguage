@@ -1653,6 +1653,8 @@ public:
     }
 
     int BOSize = BOStmts.size();
+    if (BOSize == 0 && DeclStmts.empty())
+      return S;
     if (BOSize == 0) {
       Result = DeclStmts[DeclStmts.size() - 1];
       DeclStmts.erase(DeclStmts.end() - 1);

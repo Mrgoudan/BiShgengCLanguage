@@ -1,0 +1,8 @@
+// RUN: %clang -fsyntax-only -xbsc %s
+
+#include "future.hbs"
+#include <stdlib.h>
+
+_Async void foo() {
+    void bar(void);
+}
