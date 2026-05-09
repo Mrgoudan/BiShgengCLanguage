@@ -495,10 +495,10 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   if (SrcExpr->IsDesugaredCastExpr) {
     return true;
   }
-  const FunctionProtoType *LSHFuncType = DestType->getAs<PointerType>()
+  const FunctionProtoType *LHSFuncType = DestType->getAs<PointerType>()
                                              ->getPointeeType()
                                              ->getAs<FunctionProtoType>();
-  const FunctionProtoType *RSHFuncType =
+  const FunctionProtoType *RHSFuncType =
       SrcExpr->getType()->isFunctionPointerType()
           ? SrcExpr->getType()
                 ->getAs<PointerType>()
@@ -506,14 +506,19 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
                 ->getAs<FunctionProtoType>()
           : SrcExpr->getType()->getAs<FunctionProtoType>();
 
+  // If either type is a FunctionNoProtoType (e.g. from an invalid typedef with
+  // untyped parameters), we cannot check safe zone constraints.
+  if (!LHSFuncType || !RHSFuncType)
+    return true;
+
   // For heterogeneous function redeclarations (functions with both safe and
   // unsafe declarations), select the appropriate declaration based on the
   // destination function pointer type and assignment constraints.
   FunctionDecl *SelectedFD =
-      SelectFunctionDeclForPointerAssignment(SrcExpr, LSHFuncType);
+      SelectFunctionDeclForPointerAssignment(SrcExpr, LHSFuncType);
   if (SelectedFD) {
-    // Update RSHFuncType to the selected declaration's function type.
-    RSHFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
+    // Update RHSFuncType to the selected declaration's function type.
+    RHSFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
   } else {
     // SelectFunctionDeclForPointerAssignment returns nullptr only when the
     // source is a heterogeneous redeclaration and no decl satisfies the
@@ -531,7 +536,7 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
 
   // conversion to an unsafe type is allowed in the unsafe zone
   // only need to care about the safe zone or safe type
-  if (!IsInSafeZone() && LSHFuncType->getFunSafeZoneSpecifier() != SZ_Safe) {
+  if (!IsInSafeZone() && LHSFuncType->getFunSafeZoneSpecifier() != SZ_Safe) {
     return true;
   }
 
@@ -539,17 +544,17 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   // - safe -> unsafe: allowed (widening, safe functions can be used in
   //                   unsafe contexts)
   // - unsafe -> safe: forbidden (narrowing, loss of safety guarantee)
-  if (LSHFuncType->getFunSafeZoneSpecifier() !=
-      RSHFuncType->getFunSafeZoneSpecifier()) {
-    SafeZoneSpecifier DestSZS = LSHFuncType->getFunSafeZoneSpecifier();
-    SafeZoneSpecifier SrcSZS = RSHFuncType->getFunSafeZoneSpecifier();
+  if (LHSFuncType->getFunSafeZoneSpecifier() !=
+      RHSFuncType->getFunSafeZoneSpecifier()) {
+    SafeZoneSpecifier DestSZS = LHSFuncType->getFunSafeZoneSpecifier();
+    SafeZoneSpecifier SrcSZS = RHSFuncType->getFunSafeZoneSpecifier();
 
     // Assigning unsafe function to safe function pointer is forbidden.
     if (DestSZS == SZ_Safe &&
         (SrcSZS == SZ_Unsafe || SrcSZS == SZ_None)) {
       // Emit error with proper type strings that include safe/unsafe specifiers
       Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
-          << Context.getPointerType(QualType(RSHFuncType, 0)) << DestType;
+          << Context.getPointerType(QualType(RHSFuncType, 0)) << DestType;
       Diag(SrcExpr->getBeginLoc(), diag::note_unsafe_to_safe_function_pointer);
       return false;
     }
@@ -562,11 +567,11 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
   }
 
   // Check return type constraints using the constraint-aware helper.
-  if (!DoesFunctionPointerSatisfyConstraints(*this, LSHFuncType, RSHFuncType,
+  if (!DoesFunctionPointerSatisfyConstraints(*this, LHSFuncType, RHSFuncType,
                                               SrcExpr->getBeginLoc())) {
     // Emit error with proper type strings that include the actual function signatures
     Diag(SrcExpr->getBeginLoc(), diag::err_unsafe_fun_cast)
-        << Context.getPointerType(QualType(RSHFuncType, 0)) << DestType;
+        << Context.getPointerType(QualType(RHSFuncType, 0)) << DestType;
     return false;
   }
 

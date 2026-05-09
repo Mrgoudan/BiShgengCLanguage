@@ -1,0 +1,6 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+typedef void (*FuncPtr)(a); // expected-error {{a parameter list without types is only allowed in a function definition}}
+void b() {
+    FuncPtr c = (FuncPtr)nullptr;
+}
