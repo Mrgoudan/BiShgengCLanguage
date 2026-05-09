@@ -225,19 +225,22 @@ static void remapTerminator(Terminator &T,
 static bool collapseGotoChains(Body &B) {
   bool Changed = false;
   for (auto &BB : B.Blocks) {
-    // For each successor of this block, follow goto chains
+    // Resolve each successor through its goto chain; write back once at the end
+    // to avoid mutating the terminator we are reading from.
     auto followChain = [&](BasicBlockId &Target) {
+      unsigned Cur = Target.Index;
       llvm::SmallDenseSet<unsigned, 8> Visited;
-      while (true) {
-        if (Target.Index >= B.Blocks.size())
-          break;
-        const BasicBlock &TB = B.Blocks[Target.Index];
+      while (Cur < B.Blocks.size()) {
+        const BasicBlock &TB = B.Blocks[Cur];
         if (TB.Term.K != Terminator::Goto || !TB.Statements.empty())
           break;
-        BasicBlockId Next = TB.Term.getGoto().Target;
-        if (!Visited.insert(Next.Index).second)
+        unsigned Next = TB.Term.getGoto().Target.Index;
+        if (!Visited.insert(Next).second)
           break; // cycle
-        Target = Next;
+        Cur = Next;
+      }
+      if (Cur != Target.Index) {
+        Target.Index = Cur;
         Changed = true;
       }
     };

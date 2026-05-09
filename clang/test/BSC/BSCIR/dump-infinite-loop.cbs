@@ -1,0 +1,70 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Regression: empty infinite loops used to hang Body::simplify() because
+// collapseGotoChains kept reporting Changed=true on no-op self-loop walks.
+
+// --- for(;;){} ---
+// CHECK-LABEL: fn inf_for
+// CHECK:        StorageLive(_1)
+// CHECK-NEXT:   goto -> bb1
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   goto -> bb1
+_Safe void inf_for(void) {
+    int *e;
+    for (;;) {}
+}
+
+// --- while(1){} ---
+// CHECK-LABEL: fn inf_while
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   goto -> bb1
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   goto -> bb1
+_Safe void inf_while(void) {
+    while (1) {}
+}
+
+// --- do{}while(1) ---
+// CHECK-LABEL: fn inf_dowhile
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   goto -> bb1
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   goto -> bb1
+_Safe void inf_dowhile(void) {
+    do {} while (1);
+}
+
+// --- code before the loop must still be emitted in entry block ---
+// CHECK-LABEL: fn inf_with_lead
+// CHECK:      bb0: {{[{]}}
+// CHECK:        _1 = const 1
+// CHECK:        goto -> bb1
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   goto -> bb1
+_Safe void inf_with_lead(void) {
+    int x;
+    x = 1;
+    for (;;) {}
+}
+
+// --- explicit `continue` inside an infinite loop forms a 2-cycle ---
+// CHECK-LABEL: fn inf_continue
+// CHECK:      goto -> bb{{[0-9]+}}
+_Safe void inf_continue(void) {
+    while (1) { continue; }
+}
+
+// --- nested empty infinite loops (multi-block cycle stress) ---
+// CHECK-LABEL: fn nested_inf
+// CHECK:      goto -> bb{{[0-9]+}}
+_Safe void nested_inf(void) {
+    for (;;) for (;;) {}
+}
+
+// --- code after an infinite loop is unreachable; must not crash ---
+// CHECK-LABEL: fn inf_then_dead
+// CHECK:      goto -> bb{{[0-9]+}}
+_Safe void inf_then_dead(void) {
+    while (1) {}
+    int unreachable = 0;
+}
