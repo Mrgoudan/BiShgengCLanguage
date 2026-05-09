@@ -1115,23 +1115,27 @@ SmallVector<OwnershipDiagInfo>
 Ownership::OwnershipStatus::checkOPSDerefAssign(const VarDecl *VD,
                                                const SourceLocation &Loc) {
   SmallVector<OwnershipDiagInfo> diags;
-
-  if (!is(VD, Ownership::Status::AllMoved)) {
-    if (has(VD, Ownership::Status::Moved) || is(VD, Ownership::Status::Moved)) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidUseOfMoved, VD->getNameAsString()));
-    } else if (has(VD, Ownership::Status::Owned) ||
-               is(VD, Ownership::Status::Owned)) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidAssignOfOwned, VD->getNameAsString()));
-    } else if (is(VD, Ownership::Status::PartialMoved)) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidAssignOfPartiallyMoved,
-          VD->getNameAsString(), collectMovedFields(VD)));
-    } else if (has(VD, Ownership::Status::PartialMoved)) {
-      diags.push_back(OwnershipDiagInfo(
-          Loc, OwnershipDiagKind::InvalidAssignOfPossiblyPartiallyMoved,
-          VD->getNameAsString(), collectMovedFields(VD)));
+  if (!is(VD, AllMoved)) {
+    if (is(VD, Moved) || has(VD, Moved)) {
+      OwnershipDiagInfo Info(Loc, InvalidUseOfMoved, VD->getNameAsString());
+      diags.push_back(Info);
+    } else if (const Type *Pointee =
+                   VD->getType()->getPointeeType().getTypePtr()) {
+      if (Pointee->isMoveSemanticType()) {
+        if (has(VD, Owned) || is(VD, Owned)) {
+          OwnershipDiagInfo Info(Loc, InvalidAssignOfOwned,
+                                 VD->getNameAsString());
+          diags.push_back(Info);
+        } else if (is(VD, PartialMoved)) {
+          OwnershipDiagInfo Info(Loc, InvalidAssignOfPartiallyMoved,
+                                 VD->getNameAsString(), collectMovedFields(VD));
+          diags.push_back(Info);
+        } else if (has(VD, PartialMoved)) {
+          OwnershipDiagInfo Info(Loc, InvalidAssignOfPossiblyPartiallyMoved,
+                                 VD->getNameAsString(), collectMovedFields(VD));
+          diags.push_back(Info);
+        }
+      }
     }
   }
 

@@ -1,0 +1,134 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+// expected-no-diagnostics
+
+void *malloc(unsigned long size);
+void free(void *ptr);
+
+T* _Owned safe_malloc<T>(T value) {
+  T * p = (T *) malloc(sizeof(T));
+  *p = value;
+  return __take_from_raw(p);
+}
+
+void safe_free(void* _Owned p) {
+  free(__move_to_raw(p));
+}
+
+typedef struct {
+  int a;
+  int b;
+} S;
+
+typedef struct {
+  int a;
+} Plain;
+
+S *_Owned test_basic_non_owned_fields(S *_Owned p) {
+  *p = (S){};
+  return p;
+}
+
+typedef struct {
+} Empty;
+
+Empty *_Owned test_empty_struct(Empty *_Owned p) {
+  *p = (Empty){};
+  return p;
+}
+
+typedef struct {
+  int *_Borrow p;
+} OneBorrowPtr;
+
+OneBorrowPtr *_Owned test_one_non_owned_ptr(OneBorrowPtr *_Owned p,
+                                            int *_Borrow b) {
+  *p = (OneBorrowPtr){.p = b};
+  return p;
+}
+
+typedef struct {
+  int *_Borrow p;
+  int *_Borrow q;
+  int n;
+} MultiNonOwnedPtr;
+
+MultiNonOwnedPtr *_Owned
+test_multi_non_owned_ptr(MultiNonOwnedPtr *_Owned p, int *_Borrow a,
+                         int *_Borrow b) {
+  *p = (MultiNonOwnedPtr){.p = a, .q = b, .n = 7};
+  return p;
+}
+
+typedef struct {
+  int *_Borrow p;
+  int x;
+} Inner;
+
+typedef struct {
+  Inner i;
+  int y;
+} Outer;
+
+Outer *_Owned test_nested_non_owned_ptr(Outer *_Owned p, int *_Borrow b) {
+  *p = (Outer){.i = {.p = b, .x = 1}, .y = 2};
+  return p;
+}
+
+Plain *_Owned test_merge_recover_owned(Plain *_Owned p, int cond) {
+  if (cond) {
+    safe_free((void *_Owned)p);
+    p = safe_malloc((Plain){.a = 11});
+  } else {
+    p->a = 9;
+  }
+
+  *p = (Plain){.a = 13};
+  return p;
+}
+
+int main() {
+  int a = 10;
+  int b = 20;
+  int c = 30;
+  int d = 40;
+
+  S s = {.a = 1, .b = 2};
+  S *_Owned ps = safe_malloc(s);
+  ps = test_basic_non_owned_fields(ps);
+  safe_free((void *_Owned)ps);
+
+  Empty e = {};
+  Empty *_Owned pe = safe_malloc(e);
+  pe = test_empty_struct(pe);
+  safe_free((void *_Owned)pe);
+
+  OneBorrowPtr ob = {.p = &_Mut a};
+  OneBorrowPtr *_Owned pob = safe_malloc(ob);
+  pob = test_one_non_owned_ptr(pob, &_Mut b);
+  safe_free((void *_Owned)pob);
+
+  MultiNonOwnedPtr mn = {.p = &_Mut a, .q = &_Mut b, .n = 0};
+  MultiNonOwnedPtr *_Owned pmn = safe_malloc(mn);
+  pmn = test_multi_non_owned_ptr(pmn, &_Mut c, &_Mut d);
+  safe_free((void *_Owned)pmn);
+
+  Outer o = {.i = {.p = &_Mut a, .x = 3}, .y = 4};
+  Outer *_Owned po = safe_malloc(o);
+  po = test_nested_non_owned_ptr(po, &_Mut b);
+  safe_free((void *_Owned)po);
+
+  Plain pl = {.a = 5};
+  Plain *_Owned ppl = safe_malloc(pl);
+  ppl = test_merge_recover_owned(ppl, 1);
+  safe_free((void *_Owned)ppl);
+
+  ppl = safe_malloc((Plain){.a = 6});
+  ppl = test_merge_recover_owned(ppl, 0);
+  safe_free((void *_Owned)ppl);
+
+  return 0;
+}
