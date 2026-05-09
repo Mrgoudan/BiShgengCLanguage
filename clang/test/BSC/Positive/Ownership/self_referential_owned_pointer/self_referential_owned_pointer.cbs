@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify -x bsc %s
+
+_Safe T *_Owned safe_malloc<T>(T t);
+
+typedef struct Node {
+  int value;
+  struct Node *_Owned _Nullable next;
+} Node;
+
+typedef struct {
+  Node *_Owned _Nullable head;
+  int count;
+} List;
+
+_Safe void list_init(List *_Owned _Nullable *_Borrow l) {
+  _Unsafe {
+    Node temp_node = {0, nullptr};
+    Node *_Owned _Nullable first = safe_malloc<Node>(temp_node);
+
+    List temp_list = {first, 1};
+    List *_Owned _Nullable new_list = safe_malloc<List>(temp_list);
+    *l = new_list;
+  }
+}
+
+// expected-no-diagnostics

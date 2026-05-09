@@ -19,6 +19,37 @@
 
 using namespace clang;
 
+namespace {
+bool withBorrowFieldsImpl(QualType QT,
+                          llvm::SmallPtrSetImpl<const RecordType *> &Visited) {
+  if (QT.isBorrowQualified())
+    return true;
+
+  if (QT->isPointerType() && QT.isOwnedQualified())
+    QT = QT->getPointeeType();
+
+  QT = QT.getCanonicalType();
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return false;
+
+  // Avoid revisiting records in self-referential owned-pointer graphs.
+  if (!Visited.insert(RT).second)
+    return false;
+
+  RecordDecl *RD = RT->getDecl();
+  if (!RD)
+    return false;
+
+  for (FieldDecl *FD : RD->fields()) {
+    if (withBorrowFieldsImpl(FD->getType(), Visited))
+      return true;
+  }
+
+  return false;
+}
+} // namespace
+
 // hasOwnedFields is used to determine whether a type has a field
 // that is directly or indirectly qualified by owned.
 // If you want to determine whether a type is a move semantic type,
@@ -67,12 +98,12 @@ bool Type::hasBorrowFields() const {
   return false;
 }
 
-
 bool Type::withBorrowFields() const {
-  if (const auto *RT = dyn_cast<RecordType>(CanonicalType)) {
-    return RT->withBorrowFields();
-  }
-  return false;
+  if (!isa<RecordType>(CanonicalType))
+    return false;
+
+  llvm::SmallPtrSet<const RecordType *, 16> Visited;
+  return withBorrowFieldsImpl(CanonicalType, Visited);
 }
 
 bool FunctionProtoType::hasOwnedRetOrParams() const {
@@ -450,27 +481,8 @@ bool RecordType::hasBorrowFields() const {
 }
 
 bool RecordType::withBorrowFields() const {
-  std::vector<const RecordType*> RecordTypeList;
-  RecordTypeList.push_back(this);
-  unsigned NextToCheckIndex = 0;
-
-  while (RecordTypeList.size() > NextToCheckIndex) {
-    for (FieldDecl *FD :
-         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
-      QualType FieldTy = FD->getType();
-      if (FieldTy->isPointerType() && FieldTy.isOwnedQualified())
-        return FieldTy->getPointeeType()->withBorrowFields();
-      if (FieldTy.isBorrowQualified())
-        return true;
-      FieldTy = FieldTy.getCanonicalType();
-      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
-        if (!llvm::is_contained(RecordTypeList, FieldRecTy))
-          RecordTypeList.push_back(FieldRecTy);
-      }
-    }
-    ++NextToCheckIndex;
-  }
-  return false;
+  llvm::SmallPtrSet<const RecordType *, 16> Visited;
+  return withBorrowFieldsImpl(QualType(this, 0), Visited);
 }
 
 bool Type::isBSCFutureType() const {
