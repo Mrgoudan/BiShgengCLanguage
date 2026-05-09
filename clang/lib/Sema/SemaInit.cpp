@@ -231,6 +231,17 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
              diag::err_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
   } else {
+#if ENABLE_BSC
+    if (S.getLangOpts().BSC && S.IsInSafeZone()) {
+      if (StrLength > CAT->getSize().getZExtValue()) {
+        S.Diag(Str->getBeginLoc(), diag::err_safe_string_init_too_long)
+            << CAT->getSize().getZExtValue() << StrLength
+            << Str->getSourceRange();
+        S.Diag(Str->getBeginLoc(), diag::note_safe_string_init_too_long_hint)
+            << Str->getSourceRange();
+      }
+    } else
+#endif
     // C99 6.7.8p14.
     if (StrLength-1 > CAT->getSize().getZExtValue())
       S.Diag(Str->getBeginLoc(),

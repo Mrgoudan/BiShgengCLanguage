@@ -18,7 +18,7 @@ _Safe void test_string_literal_pass(void) {
     const char p4[] = "array decay test";
     const char *p44 = p4;
 
-    char p5[5] = "abcde";
+    char p5[6] = "abcde";
     const char *p55 = p5;
 
     const char* ptr_source = "original";

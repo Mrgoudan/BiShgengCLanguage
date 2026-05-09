@@ -1,0 +1,125 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test that standard C behavior is preserved outside safe zones:
+// - null terminator may be dropped (C99 6.7.8p14)
+// - only real overflow triggers the extension warning
+
+// --- Direct array initialization (non-safe zone) ---
+
+void test_null_dropped_is_ok(void) {
+  char arr[3] = "abc"; // null dropped, allowed in C99
+}
+
+void test_exact_fit(void) {
+  char arr[4] = "abc"; // 'a','b','c','\0' — fits perfectly
+}
+
+void test_extra_space(void) {
+  char arr[10] = "abc"; // plenty of room
+}
+
+void test_empty_string(void) {
+  char arr[1] = ""; // just the null terminator
+}
+
+void test_empty_string_larger(void) {
+  char arr[5] = ""; // empty string in larger array
+}
+
+void test_incomplete_array(void) {
+  char arr[] = "abc"; // auto-sized, always fits
+}
+
+void test_incomplete_empty(void) {
+  char arr[] = ""; // auto-sized empty string
+}
+
+void test_null_dropped_various(void) {
+  char a[5] = "abcde";  // 5 chars, 5 slots, null dropped
+  char b[1] = "a";      // 1 char, 1 slot, null dropped
+  char c[6] = "hello";  // 5 chars + null = 6, perfect fit
+}
+
+// --- Struct member (explicit _Unsafe) ---
+
+typedef struct Simple {
+  int id;
+  char content[3];
+} Simple;
+
+_Unsafe void test_struct_null_dropped(void) {
+  Simple s = { 1, "abc" }; // null dropped in struct member, OK in C
+}
+
+_Unsafe void test_struct_exact_fit(void) {
+  Simple s = { 2, "ab" }; // 'a','b','\0' fits in [3]
+}
+
+typedef struct Larger {
+  char name[10];
+  int count;
+} Larger;
+
+_Unsafe void test_struct_extra_space(void) {
+  Larger l = { "hello", 5 }; // 6 bytes in 10, plenty
+}
+
+// --- Multi-dimensional array (explicit _Unsafe) ---
+
+_Unsafe void test_multi_dim_fit(void) {
+  char arr[][4] = { "abc", "def", "ghi" }; // all fit
+}
+
+_Unsafe void test_multi_dim_null_dropped(void) {
+  char arr[][3] = { "abc", "def" }; // null dropped for each
+}
+
+// --- Array of structs with string members (explicit _Unsafe) ---
+
+_Unsafe void test_struct_array_fit(void) {
+  Simple arr[] = {
+    { 1, "ab" },
+    { 2, "cd" },
+  };
+}
+
+// --- Typedef'd array type (explicit _Unsafe) ---
+
+typedef char Label[10];
+
+_Unsafe void test_typedef_array(void) {
+  Label l = "hello"; // 6 bytes in 10, fits
+}
+
+// --- Deep nesting _Unsafe → _Safe → _Unsafe ---
+
+_Unsafe void test_deep_nesting_unsafe_inner(void) {
+  _Safe {
+    _Unsafe {
+      char arr[3] = "abc"; // _Unsafe inner, null dropped OK
+    }
+  }
+}
+
+// --- Wide / Unicode char types (non-safe zone) ---
+
+typedef int wchar_t;
+typedef unsigned short char16_t;
+typedef unsigned int char32_t;
+
+void test_wide_null_dropped(void) {
+  wchar_t arr[3] = L"abc"; // null dropped, OK in C
+}
+
+void test_wide_exact_fit(void) {
+  wchar_t arr[4] = L"abc"; // exact fit with null
+}
+
+_Unsafe void test_char16_unsafe_ok(void) {
+  char16_t arr[3] = u"ab"; // 'a','b','\0' fits in [3]
+}
+
+_Unsafe void test_char32_null_dropped(void) {
+  char32_t arr[3] = U"abc"; // null dropped, OK in _Unsafe
+}

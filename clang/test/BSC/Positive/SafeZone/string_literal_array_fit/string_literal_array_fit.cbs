@@ -1,0 +1,175 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Test that string literals that fit (including null terminator)
+// in a character array compile successfully in safe zones.
+
+// --- _Safe function: exact fit ---
+
+_Safe void test_exact_fit(void) {
+  char arr[4] = "abc"; // exactly fits: 'a','b','c','\0'
+}
+
+_Safe void test_extra_space(void) {
+  char arr[10] = "abc"; // plenty of space
+}
+
+_Safe void test_empty_string(void) {
+  char arr[1] = ""; // just the null terminator
+}
+
+_Safe void test_empty_string_larger(void) {
+  char arr[5] = ""; // empty string in larger array
+}
+
+// --- Incomplete array (auto-sized) ---
+
+_Safe void test_incomplete_array(void) {
+  char arr[] = "abc"; // auto-sized, always fits
+}
+
+_Safe void test_incomplete_empty(void) {
+  char arr[] = ""; // auto-sized empty string
+}
+
+// --- _Safe block ---
+
+void test_safe_block_fit(void) {
+  _Safe {
+    char arr[4] = "abc";
+  }
+}
+
+void test_safe_block_exact(void) {
+  _Safe {
+    char arr[6] = "hello"; // 'h','e','l','l','o','\0'
+  }
+}
+
+// --- Nested safe zone ---
+
+_Safe void test_nested_safe_ok(void) {
+  _Safe {
+    char arr[5] = "test"; // 't','e','s','t','\0'
+  }
+}
+
+// --- Struct member (safe zone) ---
+
+typedef struct Msg {
+  int id;
+  char content[4];
+} Msg;
+
+_Safe void test_struct_member_fit(void) {
+  Msg m = { 1, "abc" }; // 'a','b','c','\0' fits in [4]
+}
+
+_Safe void test_struct_member_extra(void) {
+  Msg m = { 2, "a" }; // 2 bytes in 4, plenty
+}
+
+typedef struct Wide {
+  char tag;
+  char name[10];
+} Wide;
+
+_Safe void test_struct_large_field(void) {
+  Wide w = { 'X', "hello" }; // 6 bytes in 10
+}
+
+// --- Nested struct (safe zone) ---
+
+typedef struct Inner {
+  char data[5];
+} Inner;
+
+typedef struct Outer {
+  int id;
+  Inner inner;
+} Outer;
+
+_Safe void test_nested_struct_fit(void) {
+  Outer o = { 1, { "test" } }; // 5 bytes in 5, exactly fits
+}
+
+// --- Array of structs (safe zone) ---
+
+_Safe void test_struct_array_fit(void) {
+  Msg arr[] = {
+    { 1, "abc" },
+    { 2, "def" },
+    { 3, "ghi" },
+  };
+}
+
+_Safe void test_struct_array_empty(void) {
+  Msg arr[] = {
+    { 1, "" },
+    { 2, "xy" },
+  };
+}
+
+// --- Multi-dimensional array (safe zone) ---
+
+_Safe void test_multi_dim_fit(void) {
+  char arr[][4] = { "abc", "def", "ghi" }; // all exactly fit
+}
+
+_Safe void test_multi_dim_partial(void) {
+  char arr[][5] = { "ab", "test", "" }; // all fit with room
+}
+
+// --- _Unsafe function with _Safe block ---
+
+_Unsafe void test_unsafe_fn_safe_block_fit(void) {
+  _Safe {
+    char arr[4] = "abc"; // exact fit in safe zone
+  }
+}
+
+// --- Deeply nested _Safe / _Unsafe ---
+
+_Safe void test_deep_nesting_fit(void) {
+  _Unsafe {
+    _Safe {
+      char arr[5] = "test"; // safe zone exact fit
+    }
+  }
+}
+
+// --- Wide / Unicode char types (element-based check) ---
+
+typedef int wchar_t;
+typedef unsigned short char16_t;
+typedef unsigned int char32_t;
+
+_Safe void test_wide_exact_fit(void) {
+  wchar_t arr[4] = L"abc"; // 3 wide chars + null
+}
+
+_Safe void test_wide_room(void) {
+  wchar_t arr[10] = L"abc";
+}
+
+_Safe void test_char16_fit(void) {
+  char16_t arr[4] = u"abc";
+}
+
+_Safe void test_char32_fit(void) {
+  char32_t arr[4] = U"abc";
+}
+
+_Safe void test_wide_auto_size(void) {
+  wchar_t arr[] = L"hello"; // auto-sized
+}
+
+// --- Pointer to string literal (not array init, always OK) ---
+
+_Safe void test_pointer_assign(void) {
+  const char *p = "hello"; // pointer, not array — always OK
+}
+
+_Safe void test_pointer_ternary(void) {
+  const char *p = 1 ? "yes" : "no"; // pointer, not array — always OK
+}

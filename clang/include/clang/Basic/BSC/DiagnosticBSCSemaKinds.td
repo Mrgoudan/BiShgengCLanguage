@@ -143,6 +143,10 @@ def err_safe_global_var : Error<"defining mutable global variables is not allowe
 def err_bsc_generic_heterogeneous_redecl : Error<"generic function %0 cannot have both _Safe and _Unsafe declarations">;
 def err_bsc_incompatible_heterogeneous_redecl : Error<"function %0 has incompatible _Safe and _Unsafe declarations">;
 def err_bsc_no_matching_heterogeneous_function : Error<"no matching function for call to %0; argument types do not match any _Safe or _Unsafe declaration">;
+def err_safe_string_init_too_long : Error<
+  "too-long initializer-string for char array is forbidden in safe zone; array size %0 cannot hold string of length %1 (including null terminator)">;
+def note_safe_string_init_too_long_hint : Note<
+  "adjust the length of the array or string, or wrap it with `_Unsafe`">;
 
 // BSC _Owned struct
 def err_invalid_member_use_in_class_method : Error <

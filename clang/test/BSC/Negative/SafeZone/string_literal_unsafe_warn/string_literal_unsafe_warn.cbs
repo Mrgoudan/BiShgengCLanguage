@@ -1,0 +1,117 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Test that standard C extension warning fires for real overflow
+// outside safe zones (StrLength-1 > array_size).
+
+// --- Direct array overflow ---
+
+void test_overflow(void) {
+  char arr[2] = "abc"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+void test_severe_overflow(void) {
+  char arr[1] = "hello"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+void test_two_char_overflow(void) {
+  char arr[1] = "ab"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+void test_exact_minus_one(void) {
+  char arr[3] = "abcd"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+// --- Struct member overflow (explicit _Unsafe) ---
+
+typedef struct Small {
+  int id;
+  char buf[3];
+} Small;
+
+_Unsafe void test_struct_member_overflow(void) {
+  Small s = { 1, "abcd" }; // expected-warning {{initializer-string for char array is too long}}
+}
+
+_Unsafe void test_struct_member_severe_overflow(void) {
+  Small s = { 2, "hello world" }; // expected-warning {{initializer-string for char array is too long}}
+}
+
+// --- Nested struct overflow (explicit _Unsafe) ---
+
+typedef struct Inner {
+  char data[2];
+} Inner;
+
+typedef struct Outer {
+  int id;
+  Inner inner;
+} Outer;
+
+_Unsafe void test_nested_struct_overflow(void) {
+  Outer o = { 1, { "abc" } }; // expected-warning {{initializer-string for char array is too long}}
+}
+
+// --- Multi-dimensional array overflow (explicit _Unsafe) ---
+
+_Unsafe void test_multi_dim_overflow(void) {
+  char arr[][3] = { "ab", "abcde" }; // expected-warning {{initializer-string for char array is too long}}
+}
+
+_Unsafe void test_multi_dim_all_overflow(void) {
+  char arr[][2] = { "abcdef", "ghijkl" }; // expected-warning 2 {{initializer-string for char array is too long}}
+}
+
+// --- Array of structs overflow (explicit _Unsafe) ---
+
+_Unsafe void test_struct_array_overflow(void) {
+  Small arr[] = {
+    { 1, "ab" },
+    { 2, "abcdef" }, // expected-warning {{initializer-string for char array is too long}}
+  };
+}
+
+// --- _Safe function with _Unsafe block (C99 warning, not safe error) ---
+
+_Safe void test_safe_fn_unsafe_block_warn(void) {
+  _Unsafe {
+    char arr[2] = "abc"; // expected-warning {{initializer-string for char array is too long}}
+  }
+}
+
+_Safe void test_safe_fn_unsafe_block_struct_warn(void) {
+  _Unsafe {
+    Small s = { 1, "abcdef" }; // expected-warning {{initializer-string for char array is too long}}
+  }
+}
+
+// --- Deep nesting: _Safe → _Unsafe → overflow ---
+
+_Safe void test_deep_nesting_unsafe_inner_warn(void) {
+  _Safe {
+    _Unsafe {
+      char arr[2] = "abc"; // expected-warning {{initializer-string for char array is too long}}
+    }
+  }
+}
+
+// --- Wide / Unicode char types (non-safe zone overflow) ---
+
+typedef int wchar_t;
+typedef unsigned short char16_t;
+typedef unsigned int char32_t;
+
+void test_wide_overflow_warn(void) {
+  wchar_t arr[2] = L"abc"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+void test_char16_overflow_warn(void) {
+  char16_t arr[2] = u"abc"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+void test_char32_overflow_warn(void) {
+  char32_t arr[2] = U"abc"; // expected-warning {{initializer-string for char array is too long}}
+}
+
+_Unsafe void test_wide_unsafe_overflow(void) {
+  wchar_t arr[1] = L"abc"; // expected-warning {{initializer-string for char array is too long}}
+}
