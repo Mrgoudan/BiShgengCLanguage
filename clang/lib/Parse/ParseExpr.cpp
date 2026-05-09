@@ -2382,9 +2382,15 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       if (MayBePseudoDestructor && !LHS.isInvalid()) {
+#if ENABLE_BSC
+        if (!getLangOpts().BSC) {
+#endif
         LHS = ParseCXXPseudoDestructor(LHS.get(), OpLoc, OpKind, SS,
                                        ObjectType);
         break;
+#if ENABLE_BSC
+        }
+#endif
       }
 
       // Either the action has told us that this cannot be a

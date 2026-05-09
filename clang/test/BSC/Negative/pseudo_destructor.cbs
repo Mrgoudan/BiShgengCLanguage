@@ -1,0 +1,7 @@
+// RUN: %clang_cc1 -verify %s
+// Test that pseudo-destructor expressions on scalar types don't crash in BSC mode.
+
+void foo(void) {
+  int *b;
+  b->~d; // expected-error {{undeclared identifier 'd' in destructor name}}
+}
