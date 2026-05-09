@@ -1811,7 +1811,7 @@ bool Parser::ParseBSCTemplateParameterList(
     } else {
       for (; Tok.isNot(tok::semi);) {
         if (Tok.isOneOf(tok::comma, tok::greater, tok::greatergreater,
-                        tok::greatergreatergreater, tok::semi))
+                        tok::greatergreatergreater, tok::semi, tok::eof))
           break;
         ConsumeAnyToken();
       }
