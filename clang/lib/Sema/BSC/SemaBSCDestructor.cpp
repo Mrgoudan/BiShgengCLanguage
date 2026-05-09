@@ -359,6 +359,10 @@ public:
 
   // Create xx_is_moved = 1;
   Stmt *MoveFlagStatusUpdate(VarDecl *D, uint64_t Value = 1) {
+    // Skip variables not declared in the current function (e.g., captured from
+    // an enclosing scope in a nested _Owned struct defined in function scope).
+    if (FlagMap.find(D) == FlagMap.end())
+      return nullptr;
     Expr *LHS = SemaRef.BuildDeclRefExpr(FlagMap[D], FlagMap[D]->getType(),
                                          VK_LValue, SourceLocation());
     llvm::APInt One(SemaRef.Context.getTypeSize(SemaRef.Context.IntTy), Value);
@@ -435,10 +439,12 @@ public:
         DeclRefFinder Finder = DeclRefFinder();
         Finder.TraverseStmt(S);
         for (auto *D : Finder.ReAssignedDecls) {
-          Statements.push_back(MoveFlagStatusUpdate(D, 0));
+          if (Stmt *S2 = MoveFlagStatusUpdate(D, 0))
+            Statements.push_back(S2);
         }
         for (auto *D : Finder.MovedDecls) {
-          Statements.push_back(MoveFlagStatusUpdate(D));
+          if (Stmt *S2 = MoveFlagStatusUpdate(D))
+            Statements.push_back(S2);
         }
       }
     }
@@ -477,10 +483,12 @@ public:
       DeclRefFinder Finder = DeclRefFinder();
       Finder.TraverseStmt(S);
       for (auto *D : Finder.ReAssignedDecls) {
-        Statements.push_back(MoveFlagStatusUpdate(D, 0));
+        if (Stmt *S2 = MoveFlagStatusUpdate(D, 0))
+          Statements.push_back(S2);
       }
       for (auto *D : Finder.MovedDecls) {
-        Statements.push_back(MoveFlagStatusUpdate(D));
+        if (Stmt *S2 = MoveFlagStatusUpdate(D))
+          Statements.push_back(S2);
       }
     }
     return Statements;

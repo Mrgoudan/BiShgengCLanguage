@@ -28,5 +28,15 @@ int main() {
     };
 
     _Owned struct B3 { }; // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+    B3 b;
     return 0;
 }
+
+// Nested _Owned struct inside another _Owned struct's method body must not crash.
+_Owned struct C {
+    void m(This this) {
+        _Owned struct D { // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+            void n(This this) { }
+        };
+    }
+};
