@@ -14,7 +14,19 @@
 using namespace clang;
 using namespace sema;
 
-static BSCMethodDecl *buildBSCMethodDecl(ASTContext &C, DeclContext *DC,
+namespace {
+/// Unwrap one SafeStmt wrapper (_Safe / _Unsafe regions in BSC).
+Stmt *bscStripSafeStmt(Stmt *S) {
+  if (auto *SS = dyn_cast<SafeStmt>(S))
+    return SS->getSubStmt();
+  return S;
+}
+
+CompoundStmt *bscGetBodyCompound(Stmt *Body) {
+  return dyn_cast<CompoundStmt>(bscStripSafeStmt(Body));
+}
+
+BSCMethodDecl *buildBSCMethodDecl(ASTContext &C, DeclContext *DC,
                                          SourceLocation StartLoc,
                                          SourceLocation NLoc, DeclarationName N,
                                          QualType T, TypeSourceInfo *TInfo,
@@ -48,6 +60,7 @@ std::stack<FieldDecl *> CollectInstanceFieldWithDestructor(RecordDecl *RD) {
   }
   return OwnedStructFields;
 }
+} // namespace
 
 BSCMethodDecl *Sema::getOrInsertBSCDestructor(RecordDecl *RD) {
   if (RD->isInvalidDecl()) {
@@ -102,9 +115,10 @@ BSCMethodDecl *Sema::getOrInsertBSCDestructor(RecordDecl *RD) {
   return Destructor;
 }
 
+namespace {
 // Collect all owned struct type fields that has destructor,
 // including nested owned struct type fields.
-static void CollectAllFieldsWithPendingInstantiatedDestructor(RecordDecl *RD,
+void CollectAllFieldsWithPendingInstantiatedDestructor(RecordDecl *RD,
                                                               std::stack<RecordDecl *> &OwnedStructFields) {
   for (RecordDecl::field_iterator FieldIt = RD->field_begin();
        FieldIt != RD->field_end(); ++FieldIt) {
@@ -118,6 +132,7 @@ static void CollectAllFieldsWithPendingInstantiatedDestructor(RecordDecl *RD,
     }
   }
 }
+} // namespace
 
 void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
                                    std::stack<FieldDecl *> InstanceFields) {
@@ -126,7 +141,7 @@ void Sema::HandleBSCDestructorBody(RecordDecl *RD, BSCMethodDecl *Destructor,
   Stmt *FuncBody = Destructor->getBody();
   if (FuncBody) {
     if (auto *CS = dyn_cast<CompoundStmt>(FuncBody)) {
-      std::vector<Stmt *> Stmts;
+      SmallVector<Stmt *> Stmts;
       for (auto *C : CS->children()) {
         Stmts.push_back(C);
       }
@@ -273,9 +288,45 @@ llvm::DenseMap<CompoundStmt *, CompoundStmt *> ReplaceCompoundMap;
 class InsertDestructorCallStmt
     : public RecursiveASTVisitor<InsertDestructorCallStmt> {
   Sema &SemaRef;
-  std::vector<CompoundStmt *> CompoundStmts;
   llvm::DenseMap<VarDecl *, VarDecl *> FlagMap;
   FunctionDecl *FD;
+
+  /// Append move-flag updates for BinaryOperator / DeclStmt / CallExpr Inner.
+  void appendMoveFlagUpdates(SmallVectorImpl<Stmt *> &Out, Stmt *Inner) {
+    if (!isa<BinaryOperator>(Inner) && !isa<DeclStmt>(Inner) &&
+        !isa<CallExpr>(Inner))
+      return;
+    DeclRefFinder Finder;
+    Finder.TraverseStmt(Inner);
+    for (auto *D : Finder.ReAssignedDecls) {
+      if (Stmt *Update = MoveFlagStatusUpdate(D, 0))
+        Out.push_back(Update);
+    }
+    for (auto *D : Finder.MovedDecls) {
+      if (Stmt *Update = MoveFlagStatusUpdate(D))
+        Out.push_back(Update);
+    }
+  }
+
+  /// Emit destructor-before-reassign + statement + move-flag updates for a
+  /// BinaryOperator that reassigns an owned struct.
+  void emitReassignSequence(SmallVectorImpl<Stmt *> &Out, Stmt *S, Stmt *Inner) {
+    DeclRefFinder Finder;
+    Finder.TraverseStmt(Inner);
+    for (auto *D : Finder.ReAssignedDecls) {
+      if (Stmt *IfStmt = AddIfStmt(D))
+        Out.push_back(IfStmt);
+    }
+    Out.push_back(S);
+    for (auto *D : Finder.ReAssignedDecls) {
+      if (Stmt *Update = MoveFlagStatusUpdate(D, 0))
+        Out.push_back(Update);
+    }
+    for (auto *D : Finder.MovedDecls) {
+      if (Stmt *Update = MoveFlagStatusUpdate(D))
+        Out.push_back(Update);
+    }
+  }
 
 public:
   explicit InsertDestructorCallStmt(Sema &SemaRef) : SemaRef(SemaRef) {}
@@ -325,8 +376,8 @@ public:
   }
 
   // Add if stmt for owned struct type vardecl.
-  std::vector<Stmt *> AddIfStmts(Stmt *S) {
-    std::vector<Stmt *> IfStmts;
+  SmallVector<Stmt *> AddIfStmts(Stmt *S) {
+    SmallVector<Stmt *> IfStmts;
     SmallVector<VarDecl *> VarDecls = SemaRef.Context.DestructMap[FD][S];
     for (auto *VD : VarDecls) {
       Stmt *If = AddIfStmt(VD);
@@ -379,8 +430,7 @@ public:
   }
 
   bool VisitCompoundStmt(CompoundStmt *CS) {
-    CompoundStmts.push_back(CS);
-    std::vector<Stmt *> Statements;
+    SmallVector<Stmt *> Statements;
     if (CS == FD->getBody()) {
       for (ParmVarDecl *PVD : FD->parameters()) {
         if (IsVarDeclWithOwnedStructureType(PVD)) {
@@ -391,17 +441,29 @@ public:
     bool HasControlTransferExpr = false;
     for (auto *C : CS->children()) {
       Stmt *S = const_cast<Stmt *>(C);
+      Stmt *Inner = bscStripSafeStmt(S);
       // Add destructor call if-stmt for all defined vardecls before exit current block
-      if (isa<ReturnStmt>(S) || isa<BreakStmt>(S) || isa<ContinueStmt>(S)) {
+      if (isa<ReturnStmt>(Inner) || isa<BreakStmt>(Inner) || isa<ContinueStmt>(Inner)) {
         HasControlTransferExpr = true;
-        std::vector<Stmt *> IfStmts = AddIfStmts(S);
+        SmallVector<Stmt *> IfStmts = AddIfStmts(Inner);
         Statements.insert(Statements.end(), IfStmts.begin(), IfStmts.end());
       }
       RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(C);
       if (isa<CompoundStmt>(S)) {
-        Statements.push_back(ReplaceCompoundMap[dyn_cast<CompoundStmt>(S)]);
+        Statements.push_back(ReplaceCompoundMap.lookup(cast<CompoundStmt>(S)));
+      } else if (auto *SS = dyn_cast<SafeStmt>(S)) {
+        if (auto *InnerCS = dyn_cast<CompoundStmt>(SS->getSubStmt())) {
+          if (CompoundStmt *NewC = ReplaceCompoundMap.lookup(InnerCS))
+            SS->setSubStmt(NewC);
+          Statements.push_back(S);
+        } else if (isa<BinaryOperator>(Inner)) {
+          emitReassignSequence(Statements, S, Inner);
+        } else {
+          Statements.push_back(S);
+          appendMoveFlagUpdates(Statements, Inner);
+        }
       } else if (isa<LabelStmt>(S)) {
-        auto labelStmt = cast<LabelStmt>(S);
+        auto *labelStmt = cast<LabelStmt>(S);
         if (!isa<CompoundStmt>(labelStmt->getSubStmt())) {
           auto stmts = CreateStatements(labelStmt->getSubStmt());
           labelStmt->setSubStmt(stmts[0]);
@@ -411,20 +473,15 @@ public:
           Statements.push_back(C);
         }
       } else {
-        // add destructor call if-stmt for reassigned decl in BinaryOperator
-        if (isa<BinaryOperator>(S)) {
-          DeclRefFinder Finder = DeclRefFinder();
-          Finder.TraverseStmt(S);
-          for (auto *D : Finder.ReAssignedDecls) {
-            Stmt *IfStmt = AddIfStmt(D);
-            Statements.push_back(IfStmt);
-          }
+        if (isa<BinaryOperator>(Inner)) {
+          emitReassignSequence(Statements, C, Inner);
+        } else {
+          Statements.push_back(C);
         }
-        Statements.push_back(C);
       }
-      if (isa<DeclStmt>(S)) {
+      if (isa<DeclStmt>(Inner)) {
         // add _Bool xx_is_moved = 0;
-        for (auto *D : cast<DeclStmt>(S)->decls()) {
+        for (auto *D : cast<DeclStmt>(Inner)->decls()) {
           if (isa<VarDecl>(D)) {
             VarDecl *VD = cast<VarDecl>(D);
             if (IsVarDeclWithOwnedStructureType(VD)) {
@@ -434,19 +491,9 @@ public:
         }
       }
 
-      if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
-        // change reassigned_decl_is_moved = 0, and moved_decl_is_moved = 1
-        DeclRefFinder Finder = DeclRefFinder();
-        Finder.TraverseStmt(S);
-        for (auto *D : Finder.ReAssignedDecls) {
-          if (Stmt *S2 = MoveFlagStatusUpdate(D, 0))
-            Statements.push_back(S2);
-        }
-        for (auto *D : Finder.MovedDecls) {
-          if (Stmt *S2 = MoveFlagStatusUpdate(D))
-            Statements.push_back(S2);
-        }
-      }
+      // change reassigned_decl_is_moved = 0, and moved_decl_is_moved = 1
+      if (!isa<BinaryOperator>(Inner))
+        appendMoveFlagUpdates(Statements, Inner);
     }
     if (!HasControlTransferExpr) {
       // If no return/break/continue stmts, create destructor call if-stmt for all defined vardecls before exit
@@ -461,15 +508,20 @@ public:
     return false;
   }
 
-  std::vector<Stmt *> CreateStatements(Stmt *S) {
-    std::vector<Stmt *> Statements;
-    if (isa<ReturnStmt>(S) || isa<BreakStmt>(S) || isa<ContinueStmt>(S)) {
-      std::vector<Stmt *> IfStmts = AddIfStmts(S);
+  SmallVector<Stmt *> CreateStatements(Stmt *S) {
+    SmallVector<Stmt *> Statements;
+    Stmt *Inner = bscStripSafeStmt(S);
+    if (isa<ReturnStmt>(Inner) || isa<BreakStmt>(Inner) || isa<ContinueStmt>(Inner)) {
+      SmallVector<Stmt *> IfStmts = AddIfStmts(Inner);
       Statements.insert(Statements.end(), IfStmts.begin(), IfStmts.end());
     }
+    if (isa<BinaryOperator>(Inner)) {
+      emitReassignSequence(Statements, S, Inner);
+      return Statements;
+    }
     Statements.push_back(S);
-    if (isa<DeclStmt>(S)) {
-      for (auto *D : cast<DeclStmt>(S)->decls()) {
+    if (isa<DeclStmt>(Inner)) {
+      for (auto *D : cast<DeclStmt>(Inner)->decls()) {
         if (isa<VarDecl>(D)) {
           VarDecl *VD = cast<VarDecl>(D);
           if (IsVarDeclWithOwnedStructureType(VD)) {
@@ -479,18 +531,7 @@ public:
         }
       }
     }
-    if (isa<BinaryOperator>(S) || isa<DeclStmt>(S) || isa<CallExpr>(S)) {
-      DeclRefFinder Finder = DeclRefFinder();
-      Finder.TraverseStmt(S);
-      for (auto *D : Finder.ReAssignedDecls) {
-        if (Stmt *S2 = MoveFlagStatusUpdate(D, 0))
-          Statements.push_back(S2);
-      }
-      for (auto *D : Finder.MovedDecls) {
-        if (Stmt *S2 = MoveFlagStatusUpdate(D))
-          Statements.push_back(S2);
-      }
-    }
+    appendMoveFlagUpdates(Statements, Inner);
     return Statements;
   }
 
@@ -503,95 +544,91 @@ public:
                                 S->getEndLoc());
   }
 
+  // Replace a body stmt: if compound, look up in ReplaceCompoundMap;
+  // otherwise synthesize a compound via CreateNewCompoundStmt.
+  // Handles SafeStmt wrapping transparently.
+  template <typename SetBodyFn>
+  void ReplaceBody(Stmt *Body, SetBodyFn SetBody) {
+    SafeStmt *SS = dyn_cast<SafeStmt>(Body);
+    Stmt *Inner = bscStripSafeStmt(Body);
+    if (auto *CS = dyn_cast<CompoundStmt>(Inner)) {
+      if (auto *NewCompound = ReplaceCompoundMap.lookup(CS)) {
+        if (SS)
+          SS->setSubStmt(NewCompound);
+        else
+          SetBody(NewCompound);
+      }
+    } else {
+      SetBody(CreateNewCompoundStmt(Body));
+    }
+  }
+
+  // Traverse a loop/branch body, replacing its CompoundStmt via the map.
+  // Handles the case where the body is wrapped in a SafeStmt.
+  template <typename SetBodyFn>
+  void TraverseAndReplaceBody(Stmt *Body, SetBodyFn SetBody) {
+    RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(Body);
+    ReplaceBody(Body, SetBody);
+  }
+
   bool TraverseWhileStmt(WhileStmt *WS) {
     if (WS->getBody()) {
-      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(WS->getBody());
-      if (auto NewCompound =
-              ReplaceCompoundMap[dyn_cast<CompoundStmt>(WS->getBody())]) {
-        WS->setBody(NewCompound);
-      } else {
-        WS->setBody(CreateNewCompoundStmt(WS->getBody()));
-      }
+      TraverseAndReplaceBody(WS->getBody(),
+                             [WS](Stmt *S) { WS->setBody(S); });
     }
     return false;
   }
 
   bool TraverseIfStmt(IfStmt *IS) {
     if (IS->getThen()) {
-      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(
-          IS->getThen());
-      if (auto NewCompound = dyn_cast<CompoundStmt>(IS->getThen())) {
-        IS->setThen(ReplaceCompoundMap[NewCompound]);
-      } else {
-        IS->setThen(CreateNewCompoundStmt(IS->getThen()));
-      }
+      TraverseAndReplaceBody(IS->getThen(),
+                             [IS](Stmt *S) { IS->setThen(S); });
     }
     if (IS->getElse()) {
-      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(
-          IS->getElse());
-      if (auto NewCompound = dyn_cast<CompoundStmt>(IS->getElse())) {
-        IS->setElse(ReplaceCompoundMap[NewCompound]);
-      } else {
-        IS->setElse(CreateNewCompoundStmt(IS->getElse()));
-      }
+      TraverseAndReplaceBody(IS->getElse(),
+                             [IS](Stmt *S) { IS->setElse(S); });
     }
     return false;
   }
 
   bool TraverseDoStmt(DoStmt *DS) {
     if (DS->getBody()) {
-      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(DS->getBody());
-      if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getBody())) {
-        DS->setBody(ReplaceCompoundMap[NewCompound]);
-      } else {
-        DS->setBody(CreateNewCompoundStmt(DS->getBody()));
-      }
+      TraverseAndReplaceBody(DS->getBody(),
+                             [DS](Stmt *S) { DS->setBody(S); });
     }
     return false;
   }
   bool TraverseForStmt(ForStmt *FS) {
     if (FS->getBody()) {
-      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(FS->getBody());
-      if (auto NewCompound = dyn_cast<CompoundStmt>(FS->getBody())) {
-        FS->setBody(ReplaceCompoundMap[NewCompound]);
-      } else {
-        FS->setBody(CreateNewCompoundStmt(FS->getBody()));
-      }
+      TraverseAndReplaceBody(FS->getBody(),
+                             [FS](Stmt *S) { FS->setBody(S); });
     }
     return false;
   }
 
   bool TraverseLabelStmt(LabelStmt *LS) {
     RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseLabelStmt(LS);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(LS->getSubStmt())) {
-      LS->setSubStmt(ReplaceCompoundMap[NewCompound]);
-    }
+    ReplaceBody(LS->getSubStmt(), [LS](Stmt *S) { LS->setSubStmt(S); });
     return false;
   }
 
   bool TraverseSwitchStmt(SwitchStmt *SS) {
     if (SS->getBody()) {
-      RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseStmt(SS->getBody());
-      if (auto NewCompound = dyn_cast<CompoundStmt>(SS->getBody())) {
-        SS->setBody(ReplaceCompoundMap[NewCompound]);
-      }
+      TraverseAndReplaceBody(SS->getBody(),
+                             [SS](Stmt *S) { SS->setBody(S); });
     }
     return false;
   }
 
   bool TraverseDefaultStmt(DefaultStmt *DS) {
     RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseDefaultStmt(DS);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(DS->getSubStmt())) {
-      DS->setSubStmt(ReplaceCompoundMap[NewCompound]);
-    }
+    ReplaceBody(DS->getSubStmt(), [DS](Stmt *S) { DS->setSubStmt(S); });
     return false;
   }
 
   bool TraverseCaseStmt(CaseStmt *CS) {
     RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseCaseStmt(CS);
-    if (auto NewCompound = dyn_cast<CompoundStmt>(CS->getSubStmt())) {
-      CS->setSubStmt(ReplaceCompoundMap[NewCompound]);
-    }
+    ReplaceBody(CS->getSubStmt(), [CS](Stmt *S) { CS->setSubStmt(S); });
     return false;
   }
 
@@ -599,16 +636,14 @@ public:
     FD = D;
     RecursiveASTVisitor<InsertDestructorCallStmt>::TraverseFunctionDecl(D);
     if (D->getBody() != nullptr) {
-      if (auto NewCompound =
-              ReplaceCompoundMap[dyn_cast<CompoundStmt>(D->getBody())]) {
-        D->setBody(NewCompound);
+      if (auto *CS = dyn_cast<CompoundStmt>(D->getBody())) {
+        if (auto *NewCompound = ReplaceCompoundMap.lookup(CS))
+          D->setBody(NewCompound);
       }
     }
     return false;
   }
 };
-
-} // namespace
 
 class CalcDestructorMapForIns
     : public RecursiveASTVisitor<CalcDestructorMapForIns> {
@@ -714,49 +749,42 @@ public:
   }
 
   bool TraverseSwitchStmt(SwitchStmt *SS) {
-    if (isa<CompoundStmt>(SS->getBody())) {
-      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(SS->getBody()));
-    }
+    CompoundStmt *BodyCS = bscGetBodyCompound(SS->getBody());
+    if (BodyCS)
+      VisitLoopCompoundStmtStack.push(BodyCS);
     RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseSwitchStmt(SS);
-
-    if (isa<CompoundStmt>(SS->getBody())) {
+    if (BodyCS)
       VisitLoopCompoundStmtStack.pop();
-    }
     return false;
   }
 
   bool TraverseWhileStmt(WhileStmt *WS) {
-    if (isa<CompoundStmt>(WS->getBody())) {
-      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(WS->getBody()));
-    }
+    CompoundStmt *BodyCS = bscGetBodyCompound(WS->getBody());
+    if (BodyCS)
+      VisitLoopCompoundStmtStack.push(BodyCS);
     RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseWhileStmt(WS);
-
-    if (isa<CompoundStmt>(WS->getBody())) {
+    if (BodyCS)
       VisitLoopCompoundStmtStack.pop();
-    }
     return false;
   }
 
   bool TraverseDoStmt(DoStmt *DS) {
-    if (isa<CompoundStmt>(DS->getBody())) {
-      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(DS->getBody()));
-    }
+    CompoundStmt *BodyCS = bscGetBodyCompound(DS->getBody());
+    if (BodyCS)
+      VisitLoopCompoundStmtStack.push(BodyCS);
     RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseDoStmt(DS);
-
-    if (isa<CompoundStmt>(DS->getBody())) {
+    if (BodyCS)
       VisitLoopCompoundStmtStack.pop();
-    }
     return false;
   }
-  bool TraverseForStmt(ForStmt *FS) {
-    if (isa<CompoundStmt>(FS->getBody())) {
-      VisitLoopCompoundStmtStack.push(dyn_cast<CompoundStmt>(FS->getBody()));
-    }
 
+  bool TraverseForStmt(ForStmt *FS) {
+    CompoundStmt *BodyCS = bscGetBodyCompound(FS->getBody());
+    if (BodyCS)
+      VisitLoopCompoundStmtStack.push(BodyCS);
     RecursiveASTVisitor<CalcDestructorMapForIns>::TraverseForStmt(FS);
-    if (isa<CompoundStmt>(FS->getBody())) {
+    if (BodyCS)
       VisitLoopCompoundStmtStack.pop();
-    }
     return false;
   }
   bool TraverseFunctionDecl(FunctionDecl *D) {
@@ -768,6 +796,7 @@ public:
         D);
   }
 };
+} // namespace
 
 void Sema::DesugarDestructorCall(FunctionDecl *FD) {
   if (!getLangOpts().BSC)

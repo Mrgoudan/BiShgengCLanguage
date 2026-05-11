@@ -1,0 +1,316 @@
+// RUN: %clang %s -o %test.output
+// RUN: %test.output
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: %clang %t-rw.c -o %t-rw.output
+// RUN: %t-rw.output
+
+int dtor_count = 0;
+
+_Owned struct S {
+_Public:
+  int x;
+  ~S(This this) {
+    dtor_count++;
+  }
+};
+
+int foo1(void) {
+  _Safe S s = {21};
+  int retn = s.x;
+  return retn;
+}
+
+int foo2(void) {
+  _Unsafe S s = {42};
+  int retn = s.x;
+  return retn;
+}
+
+int foo3(int cond) {
+  int retn = 0;
+  if (cond)
+    _Safe {
+      S s = {84};
+      retn = s.x;
+    }
+  return retn;
+}
+
+int foo4(int cond) {
+  S s = {7};
+  int retn = s.x;
+  if (cond)
+    _Unsafe return retn;
+  return 0;
+}
+
+int foo5(void) {
+  S s = {1};
+  int retn = s.x;
+label:
+  _Unsafe return retn;
+}
+
+// Standalone _Safe block (not child of if/while/etc)
+void foo6(void) {
+  _Safe {
+    S s = {1};
+  }
+}
+
+// Standalone _Unsafe block
+void foo7(void) {
+  _Unsafe {
+    S s = {2};
+  }
+}
+
+// _Safe block inside while loop
+void foo8(int n) {
+  while (n > 0) {
+    _Safe {
+      S s = {n};
+    }
+    n--;
+  }
+}
+
+// _Safe block inside do-while loop
+void foo9(int n) {
+  do {
+    _Safe {
+      S s = {n};
+    }
+    n--;
+  } while (n > 0);
+}
+
+// _Safe block inside for loop
+void foo10(void) {
+  for (int i = 0; i < 3; i++) {
+    _Safe {
+      S s = {i};
+    }
+  }
+}
+
+// break inside _Safe-wrapped while loop body
+int foo11(int n) {
+  int sum = 0;
+  while (n > 0)
+    _Safe {
+      S s = {n};
+      sum += s.x;
+      if (n == 2) break;
+      n--;
+    }
+  return sum;
+}
+
+// continue inside _Safe-wrapped for loop body
+void foo12(void) {
+  for (int i = 0; i < 4; i++)
+    _Safe {
+      S s = {i};
+      if (i == 1) continue;
+    }
+}
+
+// break inside _Unsafe-wrapped do-while loop body
+int foo13(int n) {
+  int sum = 0;
+  do
+    _Unsafe {
+      S s = {n};
+      sum += s.x;
+      if (n == 2) break;
+      n--;
+    }
+  while (n > 0);
+  return sum;
+}
+
+// label: _Safe { S s = {...}; }
+void foo14(void) {
+  goto lbl;
+lbl:
+  _Safe {
+    S s = {99};
+  }
+}
+
+// switch with case: _Safe { ... break; }
+int foo15(int v) {
+  int result = 0;
+  switch (v) {
+  case 1:
+    _Safe {
+      S s = {10};
+      result = s.x;
+      break;
+    }
+  case 2:
+    _Safe {
+      S s = {20};
+      result = s.x;
+      break;
+    }
+  default:
+    _Unsafe {
+      S s = {30};
+      result = s.x;
+      break;
+    }
+  }
+  return result;
+}
+
+// switch with non-compound wrapped substatement (no braces)
+int foo16(int v) {
+  int result = 0;
+  S s = {50};
+  switch (v) {
+  case 1:
+    _Unsafe {
+      result = s.x;
+      break;
+    }
+  default:
+    _Safe result = s.x + 1;
+  }
+  return result;
+}
+
+// _Safe wrapped owned-struct reassignment (destructor before reassign)
+int foo17(void) {
+  S a = {100};
+  S b = {200};
+  _Safe a = b;
+  int retn = a.x;
+  return retn;
+}
+
+// _Unsafe wrapped owned-struct reassignment
+int foo18(void) {
+  S a = {300};
+  S b = {400};
+  _Unsafe a = b;
+  int retn = a.x;
+  return retn;
+}
+
+int main() {
+  dtor_count = 0;
+  int r1 = foo1();
+  if (dtor_count != 1) return 1;
+
+  dtor_count = 0;
+  int r2 = foo2();
+  if (dtor_count != 1) return 2;
+
+  dtor_count = 0;
+  int r3 = foo3(1);
+  if (r3 != 84) return 3;
+  if (dtor_count != 1) return 4;
+
+  dtor_count = 0;
+  int r4 = foo4(1);
+  if (r4 != 7) return 5;
+  if (dtor_count != 1) return 6;
+
+  dtor_count = 0;
+  int r5 = foo5();
+  if (r5 != 1) return 7;
+  if (dtor_count != 1) return 8;
+
+  // Standalone _Safe block
+  dtor_count = 0;
+  foo6();
+  if (dtor_count != 1) return 9;
+
+  // Standalone _Unsafe block
+  dtor_count = 0;
+  foo7();
+  if (dtor_count != 1) return 10;
+
+  // _Safe in while loop (3 iterations)
+  dtor_count = 0;
+  foo8(3);
+  if (dtor_count != 3) return 11;
+
+  // _Safe in do-while loop (3 iterations)
+  dtor_count = 0;
+  foo9(3);
+  if (dtor_count != 3) return 12;
+
+  // _Safe in for loop (3 iterations)
+  dtor_count = 0;
+  foo10();
+  if (dtor_count != 3) return 13;
+
+  // break inside _Safe-wrapped while body: loops 3,2 then breaks at n==2
+  // s is constructed 2 times, destructed 2 times
+  dtor_count = 0;
+  int r11 = foo11(3);
+  if (dtor_count != 2) return 14;
+  if (r11 != 5) return 15; // 3 + 2
+
+  // continue inside _Safe-wrapped for body (4 iterations, all destruct)
+  dtor_count = 0;
+  foo12();
+  if (dtor_count != 4) return 16;
+
+  // break inside _Unsafe-wrapped do-while body: loops 3,2 then breaks at n==2
+  dtor_count = 0;
+  int r13 = foo13(3);
+  if (dtor_count != 2) return 17;
+  if (r13 != 5) return 18; // 3 + 2
+
+  // label: _Safe { S s; }
+  dtor_count = 0;
+  foo14();
+  if (dtor_count != 1) return 19;
+
+  // switch case: _Safe { S s; break; }
+  dtor_count = 0;
+  int r15 = foo15(1);
+  if (r15 != 10) return 20;
+  if (dtor_count != 1) return 21;
+
+  dtor_count = 0;
+  r15 = foo15(2);
+  if (r15 != 20) return 22;
+  if (dtor_count != 1) return 23;
+
+  // switch default: _Unsafe { S s; break; }
+  dtor_count = 0;
+  r15 = foo15(99);
+  if (r15 != 30) return 24;
+  if (dtor_count != 1) return 25;
+
+  // switch with non-compound wrapped assignment (case 1: _Unsafe { ... })
+  dtor_count = 0;
+  int r16 = foo16(1);
+  if (r16 != 50) return 26;
+  if (dtor_count != 1) return 27;
+
+  // switch with non-compound wrapped assignment (default: _Safe expr;)
+  dtor_count = 0;
+  r16 = foo16(99);
+  if (r16 != 51) return 28;
+  if (dtor_count != 1) return 29;
+
+  // _Safe wrapped owned-struct reassignment: destructor called for old value
+  dtor_count = 0;
+  int r17 = foo17();
+  if (r17 != 200) return 30;
+  if (dtor_count != 2) return 31; // once for reassign, once at end
+
+  // _Unsafe wrapped owned-struct reassignment with move
+  dtor_count = 0;
+  int r18 = foo18();
+  if (r18 != 400) return 32;
+  if (dtor_count != 2) return 33; // once for reassign of a, once for a at end (b is moved)
+
+  return 0;
+}
