@@ -2174,6 +2174,10 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *BO) {
             ? GetAddr
             : op;
     op = VisitMode;
+    if (BO->getOpcode() == BO_Comma) {
+      // comma operator is not symmetric, the LHS never consumes ownership
+      op = GetAddr;
+    }
     Visit(BO->getLHS());
     op = VisitMode;
     Visit(BO->getRHS());

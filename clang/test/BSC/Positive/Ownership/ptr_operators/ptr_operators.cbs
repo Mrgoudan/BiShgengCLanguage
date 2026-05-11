@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -verify -Wno-unused-value %s
 // expected-no-diagnostics
 
 
@@ -34,6 +34,47 @@ void owned_control_flow(int *_Owned _Nullable p) {
     }
     int x = p ? 2 : 1;
     exhaust(p);
+}
+
+void comma_condition(int *_Owned _Nullable p) {
+    int a = 0;
+    if (++a, p) {
+        exhaust(p);
+    }
+}
+
+void comma_init(int *_Owned _Nullable p) {
+    int a = 0;
+    int *_Owned _Nullable q = (++a, p);
+    exhaust(q);
+}
+
+void comma_assign(int *_Owned _Nullable p) {
+    int a = 0;
+    int *_Owned _Nullable q = nullptr;
+    q = (++a, p);
+    exhaust(q);
+}
+
+void comma_call(int *_Owned _Nullable p) {
+    int a = 0;
+    exhaust((++a, p));
+}
+
+void comma_reuse_same(int *_Owned _Nullable p) {
+    if ((p, p)) {
+        exhaust(p);
+    }
+}
+
+void comma_lhs_explicit_assign(int *_Owned _Nullable p, int x) {
+    int *_Owned _Nullable q = nullptr;
+    (q = p, ++x);
+    exhaust(q);
+}
+
+void comma_lhs_explicit_call(int *_Owned _Nullable p, int x) {
+    (exhaust(p), ++x);
 }
 
 void borrow_operators(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {

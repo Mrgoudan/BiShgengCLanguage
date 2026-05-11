@@ -2654,6 +2654,22 @@ void baz(int *_Owned _Nullable p) {
 }
 ```
 
+17. 可以在逗号表达式中使用 _Owned 指针，逗号表达式是否消耗所有权取决于使用逗号表达式的场合
+
+```c
+int *_Owned _Nullable bar(int *_Owned _Nullable x) { return x; }
+
+int *_Owned _Nullable foo(int *_Owned _Nullable p, int a) {
+  if (++a, p) { // if 条件中不消耗所有权
+    int *_Owned _Nullable q = (++a, p); // 初始化消耗 p 的所有权转移到 q
+    int *_Owned _Nullable r = nullptr;
+    r = bar((++a, q)); // 传参消耗 q 的所有权转移到形参 x，再由返回值通过赋值转移到 r
+    return r;
+  }
+  return p;
+}
+```
+
 #### 3.1.4. 所有权状态转移规则
 
 在对所有权特性的语法和部分语义有了解后，本节将对所有权的状态转移规则进行详细阐述。

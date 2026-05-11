@@ -16445,6 +16445,7 @@ static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
   case BO_Assign:
   case BO_LAnd:
   case BO_LOr:
+  case BO_Comma:
     return;
   default:
     Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_binOp)
