@@ -7830,6 +7830,7 @@ void test() {
 - `_Unsafe`: 用于声明非安全区
 - `_Owned`: 用于修饰拥有所有权的指针类型或`_Owned struct`
 - `_Borrow`: 用于修饰借用指针类型
+- `_ArrayElem`: 用于修饰指向数组的带所有权的指针或指向数组元素的借用指针
 - `_Const`: 用于获取不可变借用
 - `_Mut`: 用于获取可变借用
 - `_Private`: 用于修饰`_Owned struct`的私有成员
@@ -7862,7 +7863,7 @@ void test() {
 
 `_keyword`的产生式规则有如下变化：
 
-1. 新增 18 个关键字，为`_keyword`新增 18 条产生式：
+1. 新增 19 个关键字，为`_keyword`新增 19 条产生式：
 
 ```text
 _keyword : one of
@@ -7872,7 +7873,7 @@ _keyword : one of
     _Borrow      _Private      _Unsafe
     constexpr    _Public       _Nonnull
     _Safe        _Nullable     _Const
-    _Mut
+    _Mut         _ArrayElem
 ```
 
 ##### B.1.3. Identifiers
@@ -8064,7 +8065,7 @@ _struct-or-union-specifier :
 
 `_type-qualifier`的产生式规则有如下变化：
 
-1. 新增 4 种类型说明符，为`_type-qualifier`新增 4 条产生式。
+1. 新增 5 种类型限定符，为`_type-qualifier`新增 5 条产生式。
 
 ```text
 _type-qualifier :
