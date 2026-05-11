@@ -776,6 +776,8 @@ void Sema::DesugarDestructorCall(FunctionDecl *FD) {
   if (auto RD = dyn_cast<RecordDecl>(FD->getParent())) {
     if (RD->getDescribedClassTemplate() != nullptr)
       return;
+    if (RD->isInvalidDecl())
+      return;
   }
   if (FD->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate)
     return;

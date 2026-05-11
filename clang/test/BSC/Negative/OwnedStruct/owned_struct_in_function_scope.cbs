@@ -40,3 +40,11 @@ _Owned struct C {
         };
     }
 };
+
+// _Owned struct with unknown type and method inside function scope must not crash.
+void foo3() {
+    _Owned struct E { // expected-error {{_Owned struct cannot be defined in function scope; move the definition to file scope}}
+        c *d; // expected-error {{unknown type name 'c'}}
+        void e(This this) { }
+    };
+}
