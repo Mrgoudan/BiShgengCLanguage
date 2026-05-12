@@ -14,6 +14,12 @@ int main(void) {
     int *_Borrow mb = &_Mut x;
     int z = ++*mb; // expected-error {{conversion from type 'void' to 'int' is forbidden in the safe zone}} expected-note {{prefix/postfix '++' and '--' in safe zone produce void; use only for side effect}}
     int w = *mb++; //#1
+    int *_Borrow plain_iv = &_Mut x;
+    ++plain_iv; // expected-error {{'++' operator is forbidden in the safe zone}} expected-error {{invalid argument type 'int *_Borrow' to unary expression}}
+    int pair[2] = {3, 4};
+    int *_Borrow _ArrayElem ap = &_Mut pair[0];
+    ++ap;
+    ap--;
     int * p = &x; // expected-error {{'&' operator is forbidden in the safe zone}}
   }
   return 0;

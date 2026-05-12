@@ -1,0 +1,40 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+// In the safe zone, ++/-- on scalars and on `_Borrow _ArrayElem` are allowed;
+// their expression type is `void` (side effect only).
+
+_Safe int borrow_arrayelem_incdec_in_safe(void) {
+  int arr[4] = {10, 20, 30, 40};
+  int *_Borrow _ArrayElem p = &_Mut arr[0];
+  if (p[0] != 10)
+    return 1;
+  ++p;
+  if (p[0] != 20)
+    return 2;
+  p++;
+  if (p[0] != 30)
+    return 3;
+  --p;
+  if (p[0] != 20)
+    return 4;
+  p--;
+  if (p[0] != 10)
+    return 5;
+
+  const int *_Borrow _ArrayElem cp = &_Const arr[2];
+  if (cp[0] != 30)
+    return 6;
+  ++cp;
+  if (cp[0] != 40)
+    return 7;
+  cp--;
+  if (cp[0] != 30)
+    return 8;
+
+  return 0;
+}
+
+int main(void) { return borrow_arrayelem_incdec_in_safe(); }

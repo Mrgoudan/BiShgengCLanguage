@@ -1130,13 +1130,19 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   case UO_PreInc:
   case UO_PostInc:
     if (T->isPointerType()) {
-      Diag(OpLoc, diag::err_unsafe_action) << "'++' operator";
+      QualType CT = T.getCanonicalType();
+      // `_Borrow _ArrayElem` supports pointer ++/-- in the safe zone;
+      // plain `_Borrow` and raw pointers remain forbidden here.
+      if (!(CT.isBorrowQualified() && CT.isArrayElemQualified()))
+        Diag(OpLoc, diag::err_unsafe_action) << "'++' operator";
     }
     break;
   case UO_PreDec:
   case UO_PostDec:
     if (T->isPointerType()) {
-      Diag(OpLoc, diag::err_unsafe_action) << "'--' operator";
+      QualType CT = T.getCanonicalType();
+      if (!(CT.isBorrowQualified() && CT.isArrayElemQualified()))
+        Diag(OpLoc, diag::err_unsafe_action) << "'--' operator";
     }
     break;
   case UO_AddrOf: {
