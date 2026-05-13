@@ -1,0 +1,115 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+_Safe void take_void(void *_Borrow p) { (void)p; }
+_Safe void take_void_arrayelem(void *_Borrow _ArrayElem p) { (void)p; }
+_Safe void take_const_void(const void *_Borrow p) { (void)p; }
+_Safe void take_const_void_arrayelem(const void *_Borrow _ArrayElem p) {
+  (void)p;
+}
+
+_Safe void test_call_plain(void) {
+  int x[4] = {1, 2, 3, 4};
+  take_void(x);
+}
+
+_Safe void test_call_arrayelem(void) {
+  int y[4] = {1, 2, 3, 4};
+  take_void_arrayelem(y);
+}
+
+_Safe void test_mut_array_to_const_void_call(void) {
+  int z[2] = {0, 1};
+  take_const_void(z);
+  take_const_void_arrayelem(z);
+}
+
+_Safe void test_assign_plain(int *_Borrow u) {
+  (void)u;
+  int a[3] = {1, 2, 3};
+  void *_Borrow p1 = a;
+  (void)p1;
+}
+
+_Safe void test_assign_arrayelem(int *_Borrow u) {
+  (void)u;
+  int b[3] = {1, 2, 3};
+  void *_Borrow _ArrayElem p2 = b;
+  (void)p2;
+}
+
+_Safe void test_assign_const(int *_Borrow u) {
+  (void)u;
+  const int c[2] = {0, 0};
+  const void *_Borrow pc = c;
+  (void)pc;
+}
+
+_Safe void test_mut_array_to_const_void_assign(int *_Borrow u) {
+  (void)u;
+  int d[2] = {0, 1};
+  const void *_Borrow q1 = d;
+  const void *_Borrow _ArrayElem q2 = d;
+  (void)q1;
+  (void)q2;
+}
+
+typedef struct {
+  int a[4];
+} S;
+
+_Safe void *_Borrow test_return_borrow(S *_Borrow s) {
+  return s->a;
+}
+
+_Safe void *_Borrow _ArrayElem test_return_borrow_arrayelem(S *_Borrow s) {
+  return s->a;
+}
+
+_Safe const void *_Borrow test_return_const_borrow(S *_Borrow s) {
+  return s->a;
+}
+
+_Safe const void *_Borrow _ArrayElem test_return_const_borrow_arrayelem(S *_Borrow s) {
+  return s->a;
+}
+
+typedef struct {
+  int * ptr;
+} U;
+
+void test_unsafe_nontrivial_decay(void) {
+  U a[4] = {0};
+  take_void(a);
+  take_void_arrayelem(a);
+  take_const_void(a);
+  take_const_void_arrayelem(a);
+  void *_Borrow p1 = a;
+  (void)p1;
+  void *_Borrow _ArrayElem p2 = a;
+  (void)p2;
+  const void *_Borrow p3 = a;
+  (void)p3;
+  const void *_Borrow _ArrayElem p4 = a;
+  (void)p4;
+}
+
+typedef struct {
+  U a[4];
+} U2;
+
+void *_Borrow test_unsafe_nontrivial_return_borrow(U2 *_Borrow s) {
+  return s->a;
+}
+
+void *_Borrow _ArrayElem test_unsafe_nontrivial_return_borrow_arrayelem(U2 *_Borrow s) {
+  return s->a;
+}
+
+const void *_Borrow test_unsafe_nontrivial_return_const_borrow(U2 *_Borrow s) {
+  return s->a;
+}
+
+const void *_Borrow _ArrayElem test_unsafe_nontrivial_return_const_borrow_arrayelem(U2 *_Borrow s) {
+  return s->a;
+}

@@ -563,7 +563,16 @@ bool Sema::isBorrowArrayDecayTypeMatch(QualType SrcArrayType,
   if (DestPointee.isRestrictQualified() && !ElemType.isRestrictQualified())
     CompareDestPointee.removeLocalRestrict();
 
-  return Context.hasSameType(CompareDestPointee, ElemType);
+  if (Context.hasSameType(CompareDestPointee, ElemType))
+    return true;
+
+  // `T[]` -> `void * _Borrow` / `void * _Borrow _ArrayElem`
+  // can add const to the element type
+  if (!CompareDestPointee->isVoidType())
+    return false;
+  if (IsInSafeZone() && !ElemType->isTrivialDataType())
+    return false;
+  return !ElemType.isConstQualified() || DestPointee.isConstQualified();
 }
 
 ExprResult Sema::MaybeDecayArrayToBorrowArrayElemPointer(Expr *E,
@@ -599,7 +608,21 @@ ExprResult Sema::MaybeDecayArrayToBorrowArrayElemPointer(Expr *E,
   UnaryOperatorKind BorrowOp =
       ToPointeeType.isConstQualified() ? UO_AddrConst : UO_AddrMut;
   ExprResult BorrowExpr = CreateBuiltinUnaryOp(Loc, BorrowOp, Elem.get());
-  if (BorrowExpr.isInvalid() || ToType.isArrayElemQualified())
+  if (BorrowExpr.isInvalid())
+    return ExprError();
+
+  if (ToPointeeType->isVoidType()) {
+    // Borrow of `a[0]` then erase to `void *` / `const void *`
+    // plain-borrow reborrow path (deref + borrow) does not work for void
+    Expr *BE = BorrowExpr.get();
+    if (Context.hasSameType(BE->getType(), ToType))
+      return BorrowExpr;
+    CastKind CK = Context.hasCvrSimilarType(BE->getType(), ToType) ? CK_NoOp
+                                                                   : CK_BitCast;
+    return ImpCastExprToType(BE, ToType, CK, VK_PRValue);
+  }
+
+  if (ToType.isArrayElemQualified())
     return BorrowExpr;
 
   ExprResult DerefExpr = CreateBuiltinUnaryOp(Loc, UO_Deref, BorrowExpr.get());

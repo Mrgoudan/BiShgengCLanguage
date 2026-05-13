@@ -1,8 +1,0 @@
-// RUN: %clang_cc1 -ast-dump -verify %s
-
-int bar(void* _Borrow ptr); // expected-note {{passing argument to parameter 'ptr' here}}
-
-void foo(void) {
-  int array[10];
-  bar(array); // expected-error {{incompatible _Borrow types, cannot cast 'int[10]' to 'void *_Borrow'}}
-}

@@ -1,0 +1,9 @@
+// RUN: %clang_cc1 -ast-dump -verify %s
+// expected-no-diagnostics
+
+int bar(void *_Borrow ptr);
+
+void foo(void) {
+  int array[10];
+  bar(array);
+}

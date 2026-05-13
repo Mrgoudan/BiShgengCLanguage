@@ -12384,7 +12384,7 @@ public:
   bool CheckTemporaryVarMemoryLeak(Expr* E);
   void BSCDataflowAnalysis(const Decl *D);
   void BSCBorrowChecker(FunctionDecl *FD);
-  bool IsInSafeZone();
+  bool IsInSafeZone() const;
   bool IsSafeBuiltinTypeConversion(const ASTContext &Ctx, QualType SrcType,
                                    QualType DestType);
   bool IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast = false);
@@ -12434,7 +12434,7 @@ public:
   void PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec);
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;
-  SafeZoneSpecifier getInstantiationSafeZoneSpecifier();
+  SafeZoneSpecifier getInstantiationSafeZoneSpecifier() const;
   void setInstantiationSafeZoneSpecifier(SafeZoneSpecifier SZ);
   bool HasDiffBorrowOrOwnedParamsTypeAtBothFunction(QualType LHS,
                                                     QualType RHS);

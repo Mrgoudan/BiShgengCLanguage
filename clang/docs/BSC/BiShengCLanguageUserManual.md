@@ -3862,7 +3862,114 @@ _Bool foobar (int *_Borrow _Nullable p) {
 
 注意:允许同类型的借用之间的转换(可变到可变,只读到只读)。
 
-#### 3.2.10. 借用的其它规则
+#### 3.2.10. 数组退化
+
+在赋值、函数传参和返回值场景中，数组 `T[N]`/`T[n]`/`T[]` 可以按目标类型退化为以下指针类型：
+
+- `T* _Borrow _ArrayElem` 与 `const T* _Borrow _ArrayElem`
+- `T* _Borrow` 与 `const T* _Borrow`
+- `T*`（标准C行为）
+- `void* _Borrow` 与 `const void* _Borrow`（安全区要求 `T` 满足 `is_trivial_data`）
+- `void* _Borrow _ArrayElem` 与 `const void* _Borrow _ArrayElem`（安全区要求 `T` 满足 `is_trivial_data`）
+
+退化为 `_Borrow _ArrayElem` 指针或 `_Borrow` 指针时视为取借用，适用于借用检查已有规则。
+
+除以上场景外，数组到指针的退化规则与C规则一致。
+
+```c
+void f1(int *_Borrow _ArrayElem p) {}
+void f2(int *_Borrow p) {}
+void f3(int *) {}
+void f4(void *_Borrow _ArrayElem p) {}
+void f5(void *_Borrow p) {}
+
+void foo(void) {
+  int arr[4] = {1, 2, 3, 4};
+  f1(arr); // ok: 数组退化为 T *_Borrow _ArrayElem
+  f2(arr); // ok: 数组退化为 T *_Borrow
+  f3(arr); // ok: 数组退化为 T *
+  f4(arr); // ok: 数组退化为 void *_Borrow _ArrayElem
+  f5(arr); // ok: 数组退化为 void *_Borrow
+  int *_Borrow _ArrayElem p1 = arr;  // ok: 数组退化为 T *_Borrow _ArrayElem
+  int *_Borrow p2 = arr;             // ok: 数组退化为 T *_Borrow
+  int * p3 = arr;                    // ok: 数组退化为 T *
+  void *_Borrow _ArrayElem p4 = arr; // ok: 数组退化为 void *_Borrow _ArrayElem
+  void *_Borrow p5 = arr;            // ok: 数组退化为 void *_Borrow
+}
+
+typedef struct {
+  int data[4];
+} S;
+
+int *_Borrow _ArrayElem f6(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
+}
+
+int *_Borrow f7(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow
+}
+
+int * f8(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *
+}
+
+void *_Borrow _ArrayElem f9(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 void *_Borrow _ArrayElem
+}
+
+void *_Borrow f10(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 void *_Borrow
+}
+
+typedef struct {
+  int * ptr;
+} U;
+
+_Safe void f11(U *_Borrow _ArrayElem p) {}
+_Safe void f12(U *_Borrow p) {}
+_Safe void f13(U *) {}
+_Safe void f14(void *_Borrow _ArrayElem p) {}
+_Safe void f15(void *_Borrow p) {}
+_Safe void bar(void) {
+  U arr[4] = {0};
+  f11(arr); // ok
+  f12(arr); // ok
+  f13(arr); // ok
+  f14(arr); // error: T 不满足 is_trivial_data
+  f15(arr); // error: T 不满足 is_trivial_data
+  U *_Borrow _ArrayElem p1 = arr;    // ok: 数组退化为 T *_Borrow _ArrayElem
+  U *_Borrow p2 = arr;               // ok: 数组退化为 T *_Borrow
+  U * p3 = arr;                      // ok: 数组退化为 T *
+  void *_Borrow _ArrayElem p4 = arr; // error: T 不满足 is_trivial_data
+  void *_Borrow p5 = arr;            // error: T 不满足 is_trivial_data
+}
+
+typedef struct {
+  U data[4];
+} U2;
+
+_Safe U *_Borrow _ArrayElem f16(U2 *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
+}
+
+_Safe U *_Borrow f17(U2 *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow
+}
+
+_Safe U * f18(U2 *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *
+}
+
+_Safe void *_Borrow _ArrayElem f19(U2 *_Borrow s) {
+  return s->data; // error: T 不满足 is_trivial_data
+}
+
+_Safe void *_Borrow f20(U2 *_Borrow s) {
+  return s->data; // error: T 不满足 is_trivial_data
+}
+```
+
+#### 3.2.11. 借用的其它规则
 
 除了上面的那些规则，对于借用，我们还有如下规则：
 1. 对于全局变量，我们无法在函数签名中跟踪哪个函数读取了全局变量，哪个函数修改了全局变量。为了保证安全性，毕昇 C 规定：在安全区内，只允许对全局变量取只读借用，不允许取可变借用。如果是对函数名做借用，从生命周期的角度，可以当做是对全局变量做借用。
@@ -5174,7 +5281,7 @@ int main() {
 
 16. 安全区内不允许使用取地址符`&`（允许对函数取地址），只允许`&_Const`，`&_Mut`取借用。
 
-    安全区内不允许解引用裸指针，但可以解引用`_Owned`指针、`_Borrow`指针和非空函数指针。
+    安全区内不允许解引用裸指针，但可以解引用`_Owned`指针、`_Borrow`指针和非空函数指针。安全区中允许对数组类型取下标、解引用，解读为直接对数组进行操作、不会将其视为对退化后的裸指针解引用。
 ```C
 
 _Safe int inc(int a) { return a + 1; }
@@ -5226,7 +5333,7 @@ int main() {
     1. 允许指向其他类型的owned指针显式转换为指向void类型的owned指针，该转换需要符合 [3.1.4.3 owned指针强制类型转换](#3143-强制类型转换) 的规则。
     2. 允许指向其他类型的borrow指针隐式转换为指向void类型的borrow指针，但原类型必须满足 is_trivial_data 的条件（不含指针和 _Owned struct），否则不允许转换。
 
-    安全区内不允许指针和非指针类型之间的转换。数组默认可以退化到裸指针；在赋值、函数传参和返回值场景中，如果目标类型是与数组元素类型匹配的 `T *_Borrow` 或 `T *_Borrow _ArrayElem`，则数组也允许退化到对应的借用指针。除这一数组退化规则外，安全区内不允许`_Owned/_Borrow/raw`指针之间的转换；另外，允许 `T *_Borrow _ArrayElem` 转换为 `T *_Borrow`。
+    安全区内不允许指针和非指针类型之间的转换。关于数组退化到指针的完整规则，详见 [3.2.10 数组退化](#3210-数组退化)。除数组退化规则外，安全区内不允许`_Owned/_Borrow/raw`指针之间的转换；另外，允许 `T *_Borrow _ArrayElem` 转换为 `T *_Borrow`。
 
 ```c
 void test() {
@@ -5263,38 +5370,6 @@ void test() {
 int main() {
   test();
   return 0;
-}
-```
-
-```c
-_Safe void f1(int *_Borrow _ArrayElem p) {}
-_Safe void f2(int *_Borrow p) {}
-_Safe void f3(int *) {}
-
-typedef struct {
-  int data[4];
-} S;
-
-_Safe int *_Borrow _ArrayElem f4(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
-}
-
-_Safe int *_Borrow f5(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *_Borrow
-}
-
-_Safe int * f6(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *
-}
-
-_Safe void test_decay(void) {
-  int arr[4] = {1, 2, 3, 4};
-  f1(arr); // ok
-  f2(arr); // ok
-  f3(arr); // ok
-  int *_Borrow _ArrayElem p = arr; // ok
-  int *_Borrow q = arr; // ok
-  int * r = arr; // ok
 }
 ```
 

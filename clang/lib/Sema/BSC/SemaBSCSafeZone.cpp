@@ -23,7 +23,7 @@
 using namespace clang;
 using namespace sema;
 
-bool Sema::IsInSafeZone() {
+bool Sema::IsInSafeZone() const {
   if (!getLangOpts().BSC) {
     return false;
   }
@@ -728,6 +728,7 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
   // for casts between borrow pointers:
   // 1. allow `T *borrow` <- `T *borrow _ArrayElem`
   // 2. allow `const T *borrow` <- `T *borrow`
+  // 3. if converting to void *borrow, allow when the element type is trivial
   if (SrcCanPtr.isBorrowQualified() && DstCanPtr.isBorrowQualified()) {
     bool IsAddingArrayElem = !SrcCanPtr.isArrayElemQualified() &&
                              DstCanPtr.isArrayElemQualified();
@@ -735,17 +736,17 @@ bool IsSafePointerConversion(const QualType SrcCanPtr,
     if (DstPointeeIsConst)
       SrcPointee.removeLocalConst();
     DstPointee.removeLocalConst();
-    if (!IsAddingArrayElem && !IsDroppingConst && SrcPointee == DstPointee)
-      return true;
+    if (!IsAddingArrayElem && !IsDroppingConst) {
+      if (SrcPointee == DstPointee)
+        return true;
+      if (SrcPointee->isTrivialDataType() && DstPointee->isVoidType() &&
+          DstPointeeIsConst == SrcPointeeIsConst)
+        return true;
+    }
   }
   // allow `void *owned` <- `T *owned`
   if (SrcCanPtr.isOwnedQualified() && DstCanPtr->isVoidPointerType() &&
       DstCanPtr.isOwnedQualified())
-    return true;
-  // allow `void *borrow` <- `T *borrow` if T is a trivial data type
-  if (SrcCanPtr.isBorrowQualified() && SrcPointee->isTrivialDataType() &&
-      DstCanPtr.isBorrowQualified() && DstCanPtr->isVoidPointerType() &&
-      SrcPointeeIsConst == DstPointeeIsConst)
     return true;
 
   // fallback: disallow conversion between different pointer types
@@ -1251,7 +1252,7 @@ void Sema::setInstantiationSafeZoneSpecifier(SafeZoneSpecifier SZ) {
   }
 }
 
-SafeZoneSpecifier Sema::getInstantiationSafeZoneSpecifier() {
+SafeZoneSpecifier Sema::getInstantiationSafeZoneSpecifier() const {
   SafeZoneSpecifier SafeZoneSpec = SZ_None;
   if (getCurFunction()) {
     if (getCurFunction()->InsCompoundSafeZone.size() == 0) {

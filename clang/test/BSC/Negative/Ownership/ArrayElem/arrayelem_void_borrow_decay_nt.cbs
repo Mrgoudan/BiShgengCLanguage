@@ -1,0 +1,39 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+struct S {
+  int *p;
+};
+
+_Safe void take_void_borrow(void *_Borrow p) { (void)p; }
+_Safe void take_void_borrow_arrayelem(void *_Borrow _ArrayElem p) { (void)p; }
+_Safe void take_const_void_borrow(const void *_Borrow p) { (void)p; }
+_Safe void take_const_void_borrow_arrayelem(const void *_Borrow _ArrayElem p) { (void)p; }
+
+_Safe void test_non_trivial_array(void) {
+  struct S arr[2];
+  void *_Borrow p1 = arr; // expected-error {{conversion from type 'struct S[2]' to 'void *_Borrow' is forbidden in the safe zone}}
+  take_void_borrow(arr);  // expected-error {{conversion from type 'struct S[2]' to 'void *_Borrow' is forbidden in the safe zone}} expected-note@7 {{passing argument to parameter 'p' here}}
+  void *_Borrow _ArrayElem p2 = arr; // expected-error {{conversion from type 'struct S[2]' to 'void *_Borrow _ArrayElem' is forbidden in the safe zone}}
+  take_void_borrow_arrayelem(arr);   // expected-error {{conversion from type 'struct S[2]' to 'void *_Borrow _ArrayElem' is forbidden in the safe zone}} expected-note@8 {{passing argument to parameter 'p' here}}
+  const void *_Borrow p3 = arr; // expected-error {{conversion from type 'struct S[2]' to 'const void *_Borrow' is forbidden in the safe zone}}
+  take_const_void_borrow(arr);  // expected-error {{conversion from type 'struct S[2]' to 'const void *_Borrow' is forbidden in the safe zone}} expected-note@9 {{passing argument to parameter 'p' here}}
+  const void *_Borrow _ArrayElem p4 = arr; // expected-error {{conversion from type 'struct S[2]' to 'const void *_Borrow _ArrayElem' is forbidden in the safe zone}}
+  take_const_void_borrow_arrayelem(arr);  // expected-error {{conversion from type 'struct S[2]' to 'const void *_Borrow _ArrayElem' is forbidden in the safe zone}} expected-note@10 {{passing argument to parameter 'p' here}}
+}
+
+struct U {
+  struct S arr[2];
+};
+
+_Safe void * _Borrow test_return_borrow(struct U *_Borrow u) {
+  return u->arr; // expected-error {{conversion from type 'struct S[2]' to 'void *_Borrow' is forbidden in the safe zone}}
+}
+_Safe void * _Borrow _ArrayElem test_return_borrow_arrayelem(struct U *_Borrow u) {
+  return u->arr; // expected-error {{conversion from type 'struct S[2]' to 'void *_Borrow _ArrayElem' is forbidden in the safe zone}}
+}
+_Safe const void * _Borrow test_return_const_borrow(struct U *_Borrow u) {
+  return u->arr; // expected-error {{conversion from type 'struct S[2]' to 'const void *_Borrow' is forbidden in the safe zone}}
+}
+_Safe const void * _Borrow _ArrayElem test_return_const_borrow_arrayelem(struct U *_Borrow u) {
+  return u->arr; // expected-error {{conversion from type 'struct S[2]' to 'const void *_Borrow _ArrayElem' is forbidden in the safe zone}}
+}

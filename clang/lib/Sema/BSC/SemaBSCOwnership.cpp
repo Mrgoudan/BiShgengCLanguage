@@ -768,15 +768,18 @@ bool Sema::CheckBorrowQualTypeAssignment(QualType LHSType, ExprResult &RHS) {
       return true;
 
     if (LHSCanType->isVoidPointerType()) {
-      // Handle array-to-pointer decay: arrays decay to raw pointers (no borrow).
       if (RHSCanType->isArrayType()) {
         if (LHSCanType.isBorrowQualified()) {
           QualType RHSElementType =
               RHSCanType->getAsArrayTypeUnsafe()->getElementType();
-          if (!IsInSafeZone() &&
-              LHSCanType->getPointeeType().isConstQualified() ==
-                  RHSElementType.isConstQualified())
-            return true;
+          if (!(RHSElementType.isConstQualified() &&
+              !LHSCanType->getPointeeType().isConstQualified())) {
+            // this conversion does not drop const on the element type
+            // unsafe zone: allow conversion unconditionally;
+            // safe zone: require trivial element type
+            if (!IsInSafeZone() || RHSElementType->isTrivialDataType())
+              return true;
+          }
           Res = false;
         } else {
           // Check const compatibility between void* and array element type.
