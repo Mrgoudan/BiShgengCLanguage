@@ -11936,6 +11936,19 @@ static bool checkArithmeticOpPointerOperand(Sema &S, SourceLocation Loc,
   return true;
 }
 
+#if ENABLE_BSC
+static bool checkRawPtrIncDecInSafeZone(Sema &S, SourceLocation OpLoc,
+                                        bool IsInc, Expr *Op) {
+  if (!S.getLangOpts().BSC || !S.IsInSafeZone())
+    return true;
+  QualType T = Op->getType().getCanonicalType();
+  if (T.isOwnedQualified() || T.isBorrowQualified())
+    return true;
+  S.DiagnoseRawPtrIncDec(OpLoc, IsInc, Op);
+  return false;
+}
+#endif
+
 /// Check the validity of a binary arithmetic operation w.r.t. pointer
 /// operands.
 ///
@@ -15165,9 +15178,10 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     return S.Context.DependentTy;
 
   #if ENABLE_BSC
-  if (S.getLangOpts().BSC && isNonArrayElemBorrowType(Op->getType())) {
-    S.Diag(OpLoc, diag::err_typecheck_unary_expr)
-      << Op->getType()<< Op->getSourceRange();
+  if (S.getLangOpts().BSC &&
+      (isNonArrayElemBorrowType(Op->getType()) ||
+       Op->getType().getCanonicalType().isOwnedQualified())) {
+    S.DiagnoseBSCPtrIncDec(OpLoc, IsInc, Op);
     return QualType();
   }
   #endif
@@ -15198,6 +15212,13 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
   } else if (ResType->isRealType()) {
     // OK!
   } else if (ResType->isPointerType()) {
+#if ENABLE_BSC
+    // Run the BSC safe-zone check first so its error doesn't pile on top
+    // of C-level pedantic warnings (e.g. void* / function-pointer arith)
+    // that wouldn't be reachable here anyway.
+    if (!checkRawPtrIncDecInSafeZone(S, OpLoc, IsInc, Op))
+      return QualType();
+#endif
     // C99 6.5.2.4p2, 6.5.6p2
     if (!checkArithmeticOpPointerOperand(S, OpLoc, Op))
       return QualType();
@@ -16492,23 +16513,6 @@ static void DiagnoseOwnedPointerBinaryOp(Sema &Self, BinaryOperatorKind Opc,
   }
 }
 
-static void DiagnoseOwnedPointerUnaryOp(Sema &Self, UnaryOperatorKind Opc,
-                                        SourceLocation OpLoc, Expr *Input) {
-  switch (Opc) {
-  case UO_AddrOf:
-  case UO_Deref:
-  case UO_AddrMut:
-  case UO_AddrConst:
-  case UO_AddrMutDeref:
-  case UO_AddrConstDeref:
-  case UO_LNot:
-    return;
-  default:
-    Self.Diag(OpLoc, diag::err_typecheck_invalid_owned_unaOp)
-        << Input->getType() << Input->getSourceRange();
-    return;
-  }
-}
 #endif
 
 /// DiagnoseBinOpPrecedence - Emit warnings for expressions with tricky
@@ -17030,7 +17034,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
 
 #if ENABLE_BSC
   // In safe zone, prefix/postfix ++/-- have void type so only side effect is used.
-  if (getLangOpts().BSC && IsInSafeZone() &&
+  // null guard: don't clobber a failed operand check (suppresses cascades).
+  if (getLangOpts().BSC && IsInSafeZone() && !resultType.isNull() &&
       (Opc == UO_PreInc || Opc == UO_PostInc || Opc == UO_PreDec ||
        Opc == UO_PostDec)) {
     resultType = Context.VoidTy;
@@ -17153,7 +17158,6 @@ ExprResult Sema::BuildUnaryOp(Scope *S, SourceLocation OpLoc,
 #if ENABLE_BSC
   if (getLangOpts().BSC && Input->getType().getCanonicalType()->isPointerType()
       && Input->getType().getCanonicalType().isOwnedQualified()) {
-    DiagnoseOwnedPointerUnaryOp(*this, Opc, OpLoc, Input);
     if (Opc == UO_Deref && CheckTemporaryVarMemoryLeak(Input))
       return ExprError();
   }

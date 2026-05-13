@@ -12432,6 +12432,8 @@ public:
   void DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
                                           UnaryOperatorKind Opc, QualType Type,
                                           Expr *InputExpr = nullptr);
+  void DiagnoseRawPtrIncDec(SourceLocation OpLoc, bool IsInc, Expr *Op);
+  void DiagnoseBSCPtrIncDec(SourceLocation OpLoc, bool IsInc, Expr *Op);
   void PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec);
   void PopInsSafeZone();
   sema::InsCompoundSafeZoneInfo &getCurInsCompoundSafeZone() const;

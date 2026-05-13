@@ -7,7 +7,7 @@ struct R {
 int f() { return 2; }
 int test() {
   int arr[3] = {1, 2, 3};
-  int * _Borrow p1 = &_Mut arr[0];
+  int * _Borrow p1 = &_Mut arr[0]; // expected-note {{pointer 'p1' declared here}}
   // unary *
   *p1 += 1; // legal
 
@@ -15,9 +15,9 @@ int test() {
   int a = 1;
   float b = 1.0;
   int * p2 = &a;
-  int *_Borrow  p3 = &_Mut a;
+  int *_Borrow  p3 = &_Mut a; // expected-note 2 {{pointer 'p3' declared here}}
   int *_Borrow  p4 = &_Mut a;
-  const int *_Borrow p5 = &_Const a;
+  const int *_Borrow p5 = &_Const a; // expected-note 2 {{pointer 'p5' declared here}}
   const int *_Borrow p6 = &_Const a;
   float *_Borrow p7 = &_Mut b;
   if (p3 == p4) {} // legal
@@ -71,10 +71,11 @@ int test() {
              // expected-warning@-1 {{expression result unused}}
 
   // unary -- ++
-  p3++; // expected-error {{invalid argument type 'int *_Borrow' to unary expression}}
-  --p3; // expected-error {{invalid argument type 'int *_Borrow' to unary expression}}
-  p5--; // expected-error {{invalid argument type 'const int *_Borrow' to unary expression}}
-  ++p5; // expected-error {{invalid argument type 'const int *_Borrow' to unary expression}}
+  p3++; // expected-error {{'++' is not supported on 'int *_Borrow'}} expected-note {{declare 'p3' as a raw pointer for pointer arithmetic}}
+  --p3; // expected-error {{'--' is not supported on 'int *_Borrow'}} expected-note {{declare 'p3' as a raw pointer for pointer arithmetic}}
+  p5--; // expected-error {{'--' is not supported on 'const int *_Borrow'}} expected-note {{declare 'p5' as a raw pointer for pointer arithmetic}}
+  ++p5; // expected-error {{'++' is not supported on 'const int *_Borrow'}} expected-note {{declare 'p5' as a raw pointer for pointer arithmetic}}
+  p1++; // expected-error {{'++' is not supported on 'int *_Borrow'}} expected-note {{use '_Borrow _ArrayElem' or declare 'p1' as a raw pointer for pointer arithmetic}}
 
   // binary - +
   a = *p3 + *p5;

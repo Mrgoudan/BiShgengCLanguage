@@ -34,7 +34,7 @@ Codes follow a `FEATURE-NNN` scheme: each feature numbers its errors independent
 | OWN-022 | err_owned_qualifier_non_pointer | type of %1 cannot be qualified by `%0` | — |
 | OWN-023 | err_owned_and_borrow_conflict | cannot combine `_Owned` and `_Borrow` qualifiers on the same type | — |
 | OWN-024 | err_typecheck_invalid_owned_binOp | invalid operands to binary expression (%0 and %1) | — |
-| OWN-025 | err_typecheck_invalid_owned_unaOp | invalid operands to unary expression (%0) | fires for unary `+`/`-`/`~`, `++`, `--` on owned |
+| OWN-025 | err_bsc_ptr_inc_dec | `'++'`/`'--'` is not supported on `%1` | fires for `++`/`--` on _Owned pointers and on non-_ArrayElem _Borrow pointers, regardless of safe zone; `note_bsc_ptr_declared_here` — pointer `%0` declared here; `note_bsc_ptr_inc_dec_fix_named` — declare `%1` as a raw pointer for pointer arithmetic (prefixed with "use `_Borrow _ArrayElem` or " when the _Borrow was initialized from `&arr[i]`); `note_bsc_ptr_inc_dec_fix_anon` — use a raw pointer for pointer arithmetic (when the operand is not a `DeclRefExpr`) |
 | OWN-026 | err_typecheck_invalid_owned_arrsub | _Owned pointer type (%0) do not support ArraySubscript operate | — |
 | OWN-027 | err_owned_raw_cast_disallowed | cannot cast between _Owned and raw pointer; use `__move_to_raw` or `__take_from_raw` for ownership transfer | — |
 | OWN-028 | err_owned_array_raw_cast_disallowed | cannot cast between _Owned _ArrayElem and raw pointer; use `__move_array_to_raw` or `__take_array_from_raw` for ownership transfer | — |
@@ -87,6 +87,8 @@ Every borrow-check error is emitted with one note from `BSCBorrowChecker.h::flus
 | BOR-019 | err_mut_borrow_string_literal_indirect | cannot take mutable borrow through string literal with `&_Mut *`; string literals are immutable | — |
 | BOR-020 | err_pass_string_literal_to_mut_borrow | cannot pass string literal to parameter of type %0; string literals are immutable | — |
 
+(`err_bsc_ptr_inc_dec` also fires for `++`/`--` on non-_ArrayElem _Borrow pointers; filed under **OWN** as `OWN-025`. _Borrow pointers qualified with `_ArrayElem` are explicitly allowed.)
+
 ---
 
 ## INIT — initialization (14 errors, 1 warning)
@@ -127,7 +129,7 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 
 ---
 
-## SZONE — safe zone (11 errors)
+## SZONE — safe zone (12 errors)
 
 | Code | Diagnostic | Message | Notes |
 |------|------------|---------|-------|
@@ -142,6 +144,7 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 | SZONE-009 | err_safe_global_var | defining mutable global variables is not allowed within the safe zone | — |
 | SZONE-010 | err_return_inc_dec_void_in_safe_zone | result of `++` or `--` cannot be used as return value in safe zone; move the increment/decrement out of the return statement (or add an explicit cast to `void` to suppress) | — |
 | SZONE-011 | err_safe_string_init_too_long | too-long initializer-string for char array is forbidden in safe zone; array size %0 cannot hold string of length %1 (including null terminator) | `note_safe_string_init_too_long_hint` — adjust the length of the array or string, or wrap it with `_Unsafe` |
+| SZONE-012 | err_safe_zone_ptr_arithmetic | use of `'++'`/`'--'` on raw pointer not supported in safe zone; consider wrap in `'_Unsafe { ... }'` | fires only for raw pointers (`_Owned`/`_Borrow` cases hit OWN-025 first); `note_bsc_ptr_declared_here` — pointer `%0` declared here (emitted when operand is a `DeclRefExpr`) |
 
 `note_inc_dec_void_in_safe_zone` is also attached to several **non-BSC** Clang errors when the offending expression sits in a safe zone (`err_typecheck_subscript_not_integer`, `err_typecheck_convert_incompatible`, `err_typecheck_statement_requires_scalar`). Those parent diagnostics are out of scope for this table.
 
@@ -178,11 +181,11 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 | BOR-       | borrow                        | 20     | 0        |
 | INIT-      | initialization                | 14     | 1        |
 | MISC-      | declaration / dispatch        | 7      | 0        |
-| SZONE-     | safe zone                     | 11     | 0        |
+| SZONE-     | safe zone                     | 12     | 0        |
 | NONNULL-   | nonnull pointer               | 2      | 0        |
 | NULLABLE-  | nullable pointer              | 5      | 0        |
-| **Total**  |                               | **105** | **2**   |
+| **Total**  |                               | **106** | **2**   |
 
-Plus **19 BSC-specific notes**, each tied to one or more of the errors above (see the Notes column per row).
+Plus **22 BSC-specific notes**, each tied to one or more of the errors above (see the Notes column per row).
 
 Out-of-scope BSC features (not coded here): traits, async/await, generic, constexpr, operator overload, instance member functions. These contribute several more errors, one warning (`warn_type_has_not_impl_trait`), and one note (`note_no_this_parameter`).

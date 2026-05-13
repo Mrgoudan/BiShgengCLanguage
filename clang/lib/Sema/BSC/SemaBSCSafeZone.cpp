@@ -1180,24 +1180,6 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
     return;
 
   switch (Opc) {
-  case UO_PreInc:
-  case UO_PostInc:
-    if (T->isPointerType()) {
-      QualType CT = T.getCanonicalType();
-      // `_Borrow _ArrayElem` supports pointer ++/-- in the safe zone;
-      // plain `_Borrow` and raw pointers remain forbidden here.
-      if (!(CT.isBorrowQualified() && CT.isArrayElemQualified()))
-        Diag(OpLoc, diag::err_unsafe_action) << "'++' operator";
-    }
-    break;
-  case UO_PreDec:
-  case UO_PostDec:
-    if (T->isPointerType()) {
-      QualType CT = T.getCanonicalType();
-      if (!(CT.isBorrowQualified() && CT.isArrayElemQualified()))
-        Diag(OpLoc, diag::err_unsafe_action) << "'--' operator";
-    }
-    break;
   case UO_AddrOf: {
     if (T.isNull() || !T->isFunctionType()) {
       Diag(OpLoc, diag::err_unsafe_action) << "'&' operator";
@@ -1222,6 +1204,45 @@ void Sema::DiagnoseInvalidUnaryExprInSafeZone(SourceLocation OpLoc,
   default:
     break;
   }
+}
+
+void Sema::DiagnoseRawPtrIncDec(SourceLocation OpLoc, bool IsInc, Expr *Op) {
+  Diag(OpLoc, diag::err_safe_zone_ptr_arithmetic) << (IsInc ? 0 : 1);
+  if (!Op)
+    return;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Op->IgnoreParenImpCasts())) {
+    const ValueDecl *VD = DRE->getDecl();
+    Diag(VD->getLocation(), diag::note_bsc_ptr_declared_here) << VD;
+  }
+}
+
+void Sema::DiagnoseBSCPtrIncDec(SourceLocation OpLoc, bool IsInc, Expr *Op) {
+  Diag(OpLoc, diag::err_bsc_ptr_inc_dec) << (IsInc ? 0 : 1) << Op->getType();
+  const auto *DRE = dyn_cast<DeclRefExpr>(Op->IgnoreParenImpCasts());
+  if (!DRE) {
+    Diag(OpLoc, diag::note_bsc_ptr_inc_dec_fix_anon);
+    return;
+  }
+  const ValueDecl *VD = DRE->getDecl();
+  Diag(VD->getLocation(), diag::note_bsc_ptr_declared_here) << VD;
+
+  bool suggestArrayElem = false;
+  if (Op->getType().getCanonicalType().isBorrowQualified()) {
+    if (const auto *VarD = dyn_cast<VarDecl>(VD)) {
+      if (const Expr *Init = VarD->getInit()) {
+        const Expr *Stripped = Init->IgnoreParenImpCasts();
+        if (const auto *UO = dyn_cast<UnaryOperator>(Stripped)) {
+          if (UO->getOpcode() == UO_AddrMut ||
+              UO->getOpcode() == UO_AddrConst) {
+            const Expr *Sub = UO->getSubExpr()->IgnoreParenImpCasts();
+            suggestArrayElem = isa<ArraySubscriptExpr>(Sub);
+          }
+        }
+      }
+    }
+  }
+  Diag(OpLoc, diag::note_bsc_ptr_inc_dec_fix_named)
+      << (suggestArrayElem ? 1 : 0) << VD;
 }
 
 void Sema::PushInsSafeZone(SafeZoneSpecifier SafeZoneSpec) {

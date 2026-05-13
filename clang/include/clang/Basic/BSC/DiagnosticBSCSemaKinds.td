@@ -59,8 +59,6 @@ def err_owned_array_raw_cast_disallowed : Error<
   "cannot cast between _Owned _ArrayElem and raw pointer; use __move_array_to_raw or __take_array_from_raw for ownership transfer">;
 def err_typecheck_invalid_owned_binOp : Error<
   "invalid operands to binary expression (%0 and %1)">;
-def err_typecheck_invalid_owned_unaOp : Error<
-  "invalid operands to unary expression (%0)">;
 def err_typecheck_invalid_owned_arrsub : Error<
   "_Owned pointer type (%0) do not support ArraySubscript operate">;
 def err_owned_temporary_memLeak : Error<
@@ -135,6 +133,17 @@ def note_unsafe_cast_non_trivial_pointee_type : Note<
   "source pointee type %0 is not a trivial data type">;
 def note_inc_dec_void_in_safe_zone : Note<
   "prefix/postfix '++' and '--' in safe zone produce void; use only for side effect">;
+def err_safe_zone_ptr_arithmetic : Error<
+  "use of %select{'++'|'--'}0 on raw pointer not supported in safe zone; "
+  "consider wrap in '_Unsafe { ... }'">;
+def note_bsc_ptr_declared_here : Note<
+  "pointer %0 declared here">;
+def err_bsc_ptr_inc_dec : Error<
+  "%select{'++'|'--'}0 is not supported on %1">;
+def note_bsc_ptr_inc_dec_fix_named : Note<
+  "%select{|use '_Borrow _ArrayElem' or }0declare %1 as a raw pointer for pointer arithmetic">;
+def note_bsc_ptr_inc_dec_fix_anon : Note<
+  "use a raw pointer for pointer arithmetic">;
 def err_return_inc_dec_void_in_safe_zone : Error<
   "result of '++' or '--' cannot be used as return value in safe zone; move the increment/decrement out of the return statement (or add an explicit cast to void to suppress)">;
 def err_unsafe_fun_cast : Error<"conversion from type %0 to %1 is forbidden">;
