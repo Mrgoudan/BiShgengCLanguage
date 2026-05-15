@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-// Manual 2897-3017: Safe zone arithmetic and type conversion rules.
+// Safe zone arithmetic and type conversion rules.
 
 // Rule 1: Arithmetic to _Bool (zero -> 0, non-zero -> 1)
 _Safe void rule1_bool(void) {
@@ -119,12 +119,47 @@ _Safe void rule9_literals_and_literal_expressions(void) {
   float fl = 1.0f + 2.0f;
 }
 
-// Rule 10: Value range analysis - flag | small_constant fits in unsigned char
-_Safe void rule10_value_range_flag_ops(void) {
+// Rule 10: Value range analysis - non-const expressions whose range fits in target
+_Safe void rule10_value_range_analysis(void) {
+  // Bitwise OR with small constants
   unsigned char flag = 0;
-  flag = flag | 0x10;   // ok: 0x10 fits, result in [0,255]
+  flag = flag | 0x10;   // ok: [0,255] | 0x10 fits in unsigned char
   flag = flag | 0x01;   // ok
-  flag = flag & 0xFF;   // ok: result in [0,255]
+
+  // Bitwise AND narrows range
+  unsigned short wide = 0;
+  flag = wide & 0xFF;         // ok: AND with 0xFF limits result to [0,255]
+  flag = wide & 0x7F;         // ok: AND with 0x7F limits result to [0,127]
+  unsigned int w32 = 0;
+  flag = w32 & 0xFF;          // ok: AND with 0xFF limits to [0,255]
+  unsigned short s = 0;
+  s = w32 & 0xFFFF;           // ok: AND with 0xFFFF limits to [0,65535]
+
+  // Bitwise XOR
+  unsigned char a = 0;
+  unsigned char b = 0;
+  flag = a ^ b;               // ok: both [0,255], xor result in [0,255]
+  flag = a ^ 0x0F;            // ok: [0,255] ^ 0x0F fits in [0,255]
+
+  // Parenthesized expressions
+  flag = (flag | 0x10);       // ok: parenthesized, same range
+  flag = ((flag | 0x01));     // ok: nested parens
+
+  // Chained bitwise ops
+  flag = (flag | 0x01) & 0xFF;  // ok: OR then AND, result in [0,255]
+  flag = (flag ^ 0x0F) & 0xFF;  // ok: XOR then AND
+  flag = (flag | 0x10) | 0x20;  // ok: multiple ORs, all fit in [0,255]
+
+  // unsigned short target with wider source
+  s = flag | 0x100;           // ok: [0,255] | 0x100 fits in [0,65535]
+  s = s | 0x10;               // ok: [0,65535] | 0x10 fits in [0,65535]
+
+  // Signed target with non-negative source that fits
+  unsigned char uc = 0;
+  signed char sc = 0;
+  sc = uc & 0x7F;             // ok: AND with 0x7F gives [0,127], fits in signed char
+  short ss = 0;
+  ss = uc | 0x10;             // ok: [0,255] | 0x10 fits in short
 }
 
 int main(void) {
@@ -138,6 +173,6 @@ int main(void) {
   rule7_comparison_result();
   rule8_constants();
   rule9_literals_and_literal_expressions();
-  rule10_value_range_flag_ops();
+  rule10_value_range_analysis();
   return 0;
 }
