@@ -10870,12 +10870,18 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
       RHS.get()->isNullPointerConstant(Context,
                                        Expr::NPC_ValueDependentIsNull)) {
 #if ENABLE_BSC
-    // BSC: owned pointers only accept nullptr, not integer 0.
-    // This early return bypasses CheckAssignmentConstraints where BSC checks
-    // live, so we must reject non-nullptr here.
-    if (getLangOpts().BSC && LHSType.isOwnedQualified() &&
-        !isa<CXXNullPtrLiteralExpr>(RHS.get()->IgnoreParens()))
-      return IncompatibleOwnedPointer;
+    // In BSC, owned/borrow pointers only accept nullptr and integer 0,
+    // not (void *)0.
+    if (getLangOpts().BSC) {
+      if (LHSType.isOwnedQualified() &&
+          RHS.get()->getType()->isVoidPointerType()) {
+        return IncompatibleOwnedPointer;
+      }
+      if (LHSType.isBorrowQualified() &&
+          RHS.get()->getType()->isVoidPointerType()) {
+        return IncompatibleBorrowPointer;
+      }
+    }
 #endif
     if (Diagnose || ConvertRHS) {
       CastKind Kind;

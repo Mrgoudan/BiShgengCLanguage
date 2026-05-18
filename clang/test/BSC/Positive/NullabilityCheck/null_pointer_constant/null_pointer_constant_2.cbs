@@ -1,0 +1,459 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+typedef struct {
+  int *p;
+} S1;
+
+typedef struct {
+  int *_Owned _Nullable p;
+} S2;
+
+typedef struct {
+  int *_Borrow _Nullable p;
+} S3;
+
+typedef struct {
+  int *p;
+  int *_Borrow _Nullable q;
+} S4;
+
+// S1 raw pointer field initialization accepts nullptr.
+void init_s1_field(void) {
+  S1 s = {nullptr};
+}
+
+// S1 raw pointer field assignment accepts nullptr.
+void assign_s1_field(void) {
+  S1 s;
+  s = (S1){nullptr};
+  s.p = nullptr;
+}
+
+void take_s1_struct(S1 s) {}
+
+// S1 raw pointer field arguments accept nullptr.
+void call_s1_struct(void) {
+  take_s1_struct((S1){nullptr});
+}
+
+// S1 raw pointer field returns accept nullptr.
+S1 return_s1_struct(void) {
+  return (S1){nullptr};
+}
+
+// S2 _Owned nullable field initialization accepts nullptr.
+void init_s2_field(void) {
+  S2 s = {nullptr};
+  __move_to_raw(s.p);
+}
+
+// S2 _Owned nullable field assignment accepts nullptr.
+void assign_s2_field(void) {
+  S2 s = {nullptr};
+  s = (S2){nullptr};
+  __move_to_raw(s.p);
+}
+
+void take_s2_struct(S2 s) {
+  __move_to_raw(s.p);
+}
+
+// S2 _Owned nullable field arguments accept nullptr.
+void call_s2_struct(void) {
+  take_s2_struct((S2){nullptr});
+}
+
+// S2 _Owned nullable field returns accept nullptr.
+S2 return_s2_struct(void) {
+  return (S2){nullptr};
+}
+
+// S3 _Borrow nullable field initialization accepts nullptr.
+void init_s3_field(void) {
+  S3 s = {nullptr};
+}
+
+// S3 _Borrow nullable field assignment accepts nullptr.
+void assign_s3_field(void) {
+  S3 s;
+  s = (S3){nullptr};
+  s.p = nullptr;
+}
+
+void take_s3_struct(S3 s) {}
+
+// S3 _Borrow nullable field arguments accept nullptr.
+void call_s3_struct(void) {
+  take_s3_struct((S3){nullptr});
+}
+
+// S3 _Borrow nullable field returns accept nullptr.
+S3 return_s3_struct(int *_Borrow _Nullable anchor) {
+  return (S3){nullptr};
+}
+
+// S4 raw and _Borrow nullable fields initialization accepts nullptr.
+void init_s4_fields(void) {
+  S4 s = {nullptr, nullptr};
+}
+
+// S4 raw and _Borrow nullable fields assignment accepts nullptr.
+void assign_s4_fields(void) {
+  S4 s;
+  s = (S4){nullptr, nullptr};
+  s.p = nullptr;
+  s.q = nullptr;
+}
+
+void take_s4_struct(S4 s) {}
+
+// S4 raw and _Borrow nullable field arguments accept nullptr.
+void call_s4_struct(void) {
+  take_s4_struct((S4){nullptr, nullptr});
+}
+
+// S4 raw and _Borrow nullable field returns accept nullptr.
+S4 return_s4_struct(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr, nullptr};
+}
+
+// S1 raw pointer field initialization in a safe function accepts nullptr.
+_Safe void safe_func_init_s1_field(void) {
+  S1 s = {nullptr};
+}
+
+// S1 raw pointer field assignment in a safe function accepts nullptr.
+_Safe void safe_func_assign_s1_field(void) {
+  S1 s;
+  s = (S1){nullptr};
+  s.p = nullptr;
+}
+
+_Safe void safe_take_s1_struct(S1 s) {}
+
+// S1 raw pointer field arguments in a safe function accept nullptr.
+_Safe void safe_func_call_s1_struct(void) {
+  safe_take_s1_struct((S1){nullptr});
+}
+
+// S1 raw pointer field returns from a safe function accept nullptr.
+_Safe S1 safe_return_s1_struct(void) {
+  return (S1){nullptr};
+}
+
+// S2 _Owned nullable field initialization in a safe function accepts nullptr.
+_Safe void safe_func_init_s2_field(void) {
+  S2 s = {nullptr};
+  _Unsafe((void)__move_to_raw(s.p));
+}
+
+// S2 _Owned nullable field assignment in a safe function accepts nullptr.
+_Safe void safe_func_assign_s2_field(void) {
+  S2 s = {nullptr};
+  s = (S2){nullptr};
+  _Unsafe((void)__move_to_raw(s.p));
+}
+
+_Safe void safe_take_s2_struct(S2 s) {
+  _Unsafe((void)__move_to_raw(s.p));
+}
+
+// S2 _Owned nullable field arguments in a safe function accept nullptr.
+_Safe void safe_func_call_s2_struct(void) {
+  safe_take_s2_struct((S2){nullptr});
+}
+
+// S2 _Owned nullable field returns from a safe function accept nullptr.
+_Safe S2 safe_return_s2_struct(void) {
+  return (S2){nullptr};
+}
+
+// S3 _Borrow nullable field initialization in a safe function accepts nullptr.
+_Safe void safe_func_init_s3_field(void) {
+  S3 s = {nullptr};
+}
+
+// S3 _Borrow nullable field assignment in a safe function accepts nullptr.
+_Safe void safe_func_assign_s3_field(void) {
+  S3 s;
+  s = (S3){nullptr};
+  s.p = nullptr;
+}
+
+_Safe void safe_take_s3_struct(S3 s) {}
+
+// S3 _Borrow nullable field arguments in a safe function accept nullptr.
+_Safe void safe_func_call_s3_struct(void) {
+  safe_take_s3_struct((S3){nullptr});
+}
+
+// S3 _Borrow nullable field returns from a safe function accept nullptr.
+_Safe S3 safe_return_s3_struct(int *_Borrow _Nullable anchor) {
+  return (S3){nullptr};
+}
+
+// S4 raw and _Borrow nullable fields initialization in a safe function accepts nullptr.
+_Safe void safe_func_init_s4_fields(void) {
+  S4 s = {nullptr, nullptr};
+}
+
+// S4 raw and _Borrow nullable fields assignment in a safe function accepts nullptr.
+_Safe void safe_func_assign_s4_fields(void) {
+  S4 s;
+  s = (S4){nullptr, nullptr};
+  s.p = nullptr;
+  s.q = nullptr;
+}
+
+_Safe void safe_take_s4_struct(S4 s) {}
+
+// S4 raw and _Borrow nullable field arguments in a safe function accept nullptr.
+_Safe void safe_func_call_s4_struct(void) {
+  safe_take_s4_struct((S4){nullptr, nullptr});
+}
+
+// S4 raw and _Borrow nullable field returns from a safe function accept nullptr.
+_Safe S4 safe_return_s4_struct(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr, nullptr};
+}
+
+// S2 _Owned nullable field initialization accepts integer zero null constants.
+void init_s2_integer_null_field(void) {
+  S2 s0 = {0};
+  __move_to_raw(s0.p);
+  S2 s1 = {(0)};
+  __move_to_raw(s1.p);
+}
+
+// S2 _Owned nullable field assignment accepts integer zero null constants.
+void assign_s2_integer_null_field(void) {
+  S2 s = {nullptr};
+  s = (S2){0};
+  __move_to_raw(s.p);
+}
+
+void take_s2_integer_null_struct(S2 s) {
+  __move_to_raw(s.p);
+}
+
+// S2 _Owned nullable field arguments accept integer zero null constants.
+void call_s2_integer_null_struct(void) {
+  take_s2_integer_null_struct((S2){0});
+  take_s2_integer_null_struct((S2){(0)});
+}
+
+// S2 _Owned nullable field returns accept integer zero null constants.
+S2 return_s2_integer_null_zero(void) {
+  return (S2){0};
+}
+
+S2 return_s2_integer_null_paren_zero(void) {
+  return (S2){(0)};
+}
+
+// S3 _Borrow nullable field initialization accepts integer zero null constants.
+void init_s3_integer_null_field(void) {
+  S3 s0 = {0};
+  S3 s1 = {(0)};
+}
+
+// S3 _Borrow nullable field assignment accepts integer zero null constants.
+void assign_s3_integer_null_field(void) {
+  S3 s;
+  s = (S3){0};
+  s.p = (0);
+}
+
+void take_s3_integer_null_struct(S3 s) {}
+
+// S3 _Borrow nullable field arguments accept integer zero null constants.
+void call_s3_integer_null_struct(void) {
+  take_s3_integer_null_struct((S3){0});
+  take_s3_integer_null_struct((S3){(0)});
+}
+
+// S3 _Borrow nullable field returns accept integer zero null constants.
+S3 return_s3_integer_null_zero(int *_Borrow _Nullable anchor) {
+  return (S3){0};
+}
+
+S3 return_s3_integer_null_paren_zero(int *_Borrow _Nullable anchor) {
+  return (S3){(0)};
+}
+
+// S4 _Borrow nullable field initialization accepts integer zero null constants.
+void init_s4_integer_null_field(void) {
+  S4 s0 = {nullptr, 0};
+  S4 s1 = {nullptr, (0)};
+}
+
+// S4 _Borrow nullable field assignment accepts integer zero null constants.
+void assign_s4_integer_null_field(void) {
+  S4 s;
+  s = (S4){nullptr, 0};
+  s.q = (0);
+}
+
+void take_s4_integer_null_struct(S4 s) {}
+
+// S4 _Borrow nullable field arguments accept integer zero null constants.
+void call_s4_integer_null_struct(void) {
+  take_s4_integer_null_struct((S4){nullptr, 0});
+  take_s4_integer_null_struct((S4){nullptr, (0)});
+}
+
+// S4 _Borrow nullable field returns accept integer zero null constants.
+S4 return_s4_integer_null_zero(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr, 0};
+}
+
+S4 return_s4_integer_null_paren_zero(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr, (0)};
+}
+
+// S2 _Owned nullable field initialization in a safe function accepts integer zero null constants.
+_Safe void safe_func_init_s2_integer_null_field(void) {
+  S2 s0 = {0};
+  _Unsafe((void)__move_to_raw(s0.p));
+  S2 s1 = {(0)};
+  _Unsafe((void)__move_to_raw(s1.p));
+}
+
+// S2 _Owned nullable field assignment in a safe function accepts integer zero null constants.
+_Safe void safe_func_assign_s2_integer_null_field(void) {
+  S2 s = {nullptr};
+  s = (S2){0};
+  _Unsafe((void)__move_to_raw(s.p));
+}
+
+_Safe void safe_take_s2_integer_null_struct(S2 s) {
+  _Unsafe((void)__move_to_raw(s.p));
+}
+
+// S2 _Owned nullable field arguments in a safe function accept integer zero null constants.
+_Safe void safe_func_call_s2_integer_null_struct(void) {
+  safe_take_s2_integer_null_struct((S2){0});
+  safe_take_s2_integer_null_struct((S2){(0)});
+}
+
+// S2 _Owned nullable field returns from a safe function accept integer zero null constants.
+_Safe S2 safe_return_s2_integer_null_zero(void) {
+  return (S2){0};
+}
+
+_Safe S2 safe_return_s2_integer_null_paren_zero(void) {
+  return (S2){(0)};
+}
+
+// S3 _Borrow nullable field initialization in a safe function accepts integer zero null constants.
+_Safe void safe_func_init_s3_integer_null_field(void) {
+  S3 s0 = {0};
+  S3 s1 = {(0)};
+}
+
+// S3 _Borrow nullable field assignment in a safe function accepts integer zero null constants.
+_Safe void safe_func_assign_s3_integer_null_field(void) {
+  S3 s;
+  s = (S3){0};
+  s.p = (0);
+}
+
+_Safe void safe_take_s3_integer_null_struct(S3 s) {}
+
+// S3 _Borrow nullable field arguments in a safe function accept integer zero null constants.
+_Safe void safe_func_call_s3_integer_null_struct(void) {
+  safe_take_s3_integer_null_struct((S3){0});
+  safe_take_s3_integer_null_struct((S3){(0)});
+}
+
+// S3 _Borrow nullable field returns from a safe function accept integer zero null constants.
+_Safe S3 safe_return_s3_integer_null_zero(int *_Borrow _Nullable anchor) {
+  return (S3){0};
+}
+
+_Safe S3 safe_return_s3_integer_null_paren_zero(int *_Borrow _Nullable anchor) {
+  return (S3){(0)};
+}
+
+// S4 _Borrow nullable field initialization in a safe function accepts integer zero null constants.
+_Safe void safe_func_init_s4_integer_null_field(void) {
+  S4 s0 = {nullptr, 0};
+  S4 s1 = {nullptr, (0)};
+}
+
+// S4 _Borrow nullable field assignment in a safe function accepts integer zero null constants.
+_Safe void safe_func_assign_s4_integer_null_field(void) {
+  S4 s;
+  s = (S4){nullptr, 0};
+  s.q = (0);
+}
+
+_Safe void safe_take_s4_integer_null_struct(S4 s) {}
+
+// S4 _Borrow nullable field arguments in a safe function accept integer zero null constants.
+_Safe void safe_func_call_s4_integer_null_struct(void) {
+  safe_take_s4_integer_null_struct((S4){nullptr, 0});
+  safe_take_s4_integer_null_struct((S4){nullptr, (0)});
+}
+
+// S4 _Borrow nullable field returns from a safe function accept integer zero null constants.
+_Safe S4 safe_return_s4_integer_null_zero(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr, 0};
+}
+
+_Safe S4 safe_return_s4_integer_null_paren_zero(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr, (0)};
+}
+
+// Mixed struct initialization may omit the _Borrow nullable field.
+void init_mixed_omitted_borrow_field(void) {
+  S4 s = {nullptr};
+}
+
+// Mixed struct assignment may use a compound literal that omits the _Borrow nullable field.
+void assign_mixed_omitted_borrow_field(void) {
+  S4 s;
+  s = (S4){nullptr};
+}
+
+void take_mixed_omitted_borrow_field(S4 s) {}
+
+// Mixed struct arguments may omit the _Borrow nullable field in a compound literal.
+void call_mixed_omitted_borrow_field(void) {
+  take_mixed_omitted_borrow_field((S4){nullptr});
+}
+
+// Mixed struct returns may omit the _Borrow nullable field in a compound literal.
+S4 return_mixed_omitted_borrow_field(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr};
+}
+
+// Mixed struct initialization in a safe function may omit the _Borrow nullable field.
+_Safe void safe_func_init_mixed_omitted_borrow_field(void) {
+  S4 s = {nullptr};
+}
+
+// Mixed struct assignment in a safe function may use a compound literal that omits the _Borrow nullable field.
+_Safe void safe_func_assign_mixed_omitted_borrow_field(void) {
+  S4 s;
+  s = (S4){nullptr};
+}
+
+_Safe void safe_take_mixed_omitted_borrow_field(S4 s) {}
+
+// Mixed struct arguments in a safe function may omit the _Borrow nullable field in a compound literal.
+_Safe void safe_func_call_mixed_omitted_borrow_field(void) {
+  safe_take_mixed_omitted_borrow_field((S4){nullptr});
+}
+
+// Mixed struct returns from a safe function may omit the _Borrow nullable field in a compound literal.
+_Safe S4
+safe_return_mixed_omitted_borrow_field(int *_Borrow _Nullable anchor) {
+  return (S4){nullptr};
+}
+
+int main(void) {
+  return 0;
+}

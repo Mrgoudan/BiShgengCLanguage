@@ -69,7 +69,7 @@ int _Owned test_return1() {    // expected-error {{type of 'int' cannot be quali
 }
 
 int * _Owned test_return2() {  // OK - pointer type
-    return 0;                // expected-error {{incompatible _Owned types, cannot cast 'int' to 'int *_Owned'}}
+    return 0;
 }
 
 OwnedS test_return3() {       // OK - using _Owned struct type directly
@@ -80,4 +80,16 @@ OwnedS test_return3() {       // OK - using _Owned struct type directly
 OwnedT<int> test_return4() {  // OK - using template _Owned struct type directly
     OwnedT<int> t;
     return t;
+}
+
+int *_Owned test_return5() {
+    return 1; // expected-error {{incompatible _Owned types, cannot cast 'int' to 'int *_Owned'}}
+}
+
+_Safe int *_Owned test_return6(void) {
+    return 1; // expected-error {{conversion from type 'int' to 'int *_Owned' is forbidden in the safe zone}}
+}
+
+_Safe int *_Owned _Nullable test_return7(void) {
+    return (int *_Owned _Nullable)0; // expected-error {{incompatible _Owned types, cannot cast 'int' to 'int *_Owned'}}
 }

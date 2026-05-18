@@ -812,7 +812,9 @@ bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
         GetSafeArrayDecayType(*this, SrcType, DestType).getCanonicalType();
     QualType DestCanType = DestType.getCanonicalType();
     IsSafeBehavior = IsSafePointerConversion(SrcDecayedCanType, DestCanType);
-  } else if (SrcType->isPointerType() || DestType->isPointerType()) {
+  } else if ((SrcType->isPointerType() || DestType->isPointerType()) &&
+             !E->isNullPointerConstant(Context,
+                                       Expr::NPC_ValueDependentIsNull)) {
     // conversion from pointer to non-pointer or non-pointer to pointer is not
     // allowed
     IsSafeBehavior = false;

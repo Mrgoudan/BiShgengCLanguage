@@ -1,0 +1,233 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+// Raw pointer initialization accepts all null pointer constant spellings.
+void init_raw_pointer(void) {
+  int *p0 = 0;
+  int *p1 = nullptr;
+  int *p2 = (void *)0;
+  int *p3 = (0);
+  int *p4 = {0};
+}
+
+// Raw pointer assignment accepts all null pointer constant spellings.
+void assign_raw_pointer(void) {
+  int *p;
+  p = 0;
+  p = nullptr;
+  p = (void *)0;
+  p = (0);
+}
+
+void take_raw(int *p) {}
+
+// Raw pointer arguments accept all null pointer constant spellings.
+void call_raw_pointer(void) {
+  take_raw(0);
+  take_raw(nullptr);
+  take_raw((void *)0);
+  take_raw((0));
+}
+
+// Raw pointer returns accept all null pointer constant spellings.
+int *return_raw_zero(void) { return 0; }
+int *return_raw_nullptr(void) { return nullptr; }
+int *return_raw_void_zero(void) { return (void *)0; }
+int *return_raw_paren_zero(void) { return (0); }
+
+// _Owned pointer initialization accepts nullptr as the BSC null pointer spelling.
+void init_owned_pointer(void) {
+  int *_Owned p = nullptr;
+}
+
+// _Owned pointer assignment accepts nullptr as the BSC null pointer spelling.
+void assign_owned_pointer(void) {
+  int *_Owned p = nullptr;
+  p = nullptr;
+}
+
+void take_owned(int *_Owned p) {
+  __move_to_raw(p);
+}
+
+// _Owned pointer arguments accept nullptr as the BSC null pointer spelling.
+void call_owned_pointer(void) {
+  take_owned(nullptr);
+}
+
+// _Owned pointer returns accept nullptr as the BSC null pointer spelling.
+int *_Owned return_owned_nullptr(void) { return nullptr; }
+
+// _Borrow pointer initialization accepts nullptr as the BSC null pointer spelling.
+void init_borrow_pointer(void) {
+  int *_Borrow p = nullptr;
+}
+
+// _Borrow pointer assignment accepts nullptr as the BSC null pointer spelling.
+void assign_borrow_pointer(int *_Borrow p) {
+  p = nullptr;
+}
+
+void take_borrow(int *_Borrow p) {
+}
+
+// _Borrow pointer arguments accept nullptr as the BSC null pointer spelling.
+void call_borrow_pointer(void) {
+  take_borrow(nullptr);
+}
+
+// _Borrow pointer returns accept nullptr as the BSC null pointer spelling.
+int *_Borrow return_borrow_nullptr(int *_Borrow p) { return nullptr; }
+
+// _Owned pointer initialization accepts integer zero null constants.
+void init_owned_integer_null_pointer(void) {
+  int *_Owned p0 = 0;
+  int *_Owned p1 = (0);
+  int *_Owned p2 = {0};
+  __move_to_raw(p2);
+}
+
+// _Owned pointer assignment accepts integer zero null constants.
+void assign_owned_integer_null_pointer(void) {
+  int *_Owned p = nullptr;
+  p = 0;
+  p = (0);
+}
+
+// _Owned pointer arguments accept integer zero null constants.
+void call_owned_integer_null_pointer(void) {
+  take_owned(0);
+  take_owned((0));
+}
+
+// _Owned pointer returns accept integer zero null constants.
+int *_Owned return_owned_zero(void) { return 0; }
+int *_Owned return_owned_paren_zero(void) { return (0); }
+
+// _Borrow pointer initialization accepts integer zero null constants.
+void init_borrow_integer_null_pointer(void) {
+  int *_Borrow p0 = 0;
+  int *_Borrow p1 = (0);
+}
+
+// _Borrow pointer assignment accepts integer zero null constants.
+void assign_borrow_integer_null_pointer(int *_Borrow p) {
+  p = 0;
+  p = (0);
+}
+
+// _Borrow pointer arguments accept integer zero null constants.
+void call_borrow_integer_null_pointer(void) {
+  take_borrow(0);
+  take_borrow((0));
+}
+
+// _Borrow pointer returns accept integer zero null constants.
+int *_Borrow return_borrow_zero(int *_Borrow p) { return 0; }
+int *_Borrow return_borrow_paren_zero(int *_Borrow p) { return (0); }
+
+// _Owned nullable pointer initialization in a safe function accepts nullptr.
+_Safe void safe_func_init_owned_nullable_pointer(void) {
+  int *_Owned _Nullable p = nullptr;
+}
+
+// _Owned nullable pointer assignment in a safe function accepts nullptr.
+_Safe void safe_func_assign_owned_nullable_pointer(void) {
+  int *_Owned _Nullable p;
+  p = nullptr;
+}
+
+_Safe void safe_take_owned_nullable(int *_Owned _Nullable p) {
+  _Unsafe((void)__move_to_raw(p));
+}
+
+// _Owned nullable pointer arguments in a safe function accept nullptr.
+_Safe void safe_func_call_owned_nullable_pointer(void) {
+  safe_take_owned_nullable(nullptr);
+}
+
+// _Owned nullable pointer returns from a safe function accept nullptr.
+_Safe int *_Owned _Nullable safe_return_owned_nullable_nullptr(void) {
+  return nullptr;
+}
+
+// _Borrow nullable pointer initialization in a safe function accepts nullptr.
+_Safe void safe_func_init_borrow_nullable_pointer(void) {
+  int *_Borrow _Nullable p = nullptr;
+}
+
+// _Borrow nullable pointer assignment in a safe function accepts nullptr.
+_Safe void safe_func_assign_borrow_nullable_pointer(int *_Borrow _Nullable p) {
+  p = nullptr;
+}
+
+_Safe void safe_take_borrow_nullable(int *_Borrow _Nullable p) {
+}
+
+// _Borrow nullable pointer arguments in a safe function accept nullptr.
+_Safe void safe_func_call_borrow_nullable_pointer(void) {
+  safe_take_borrow_nullable(nullptr);
+}
+
+// _Borrow nullable pointer returns from a safe function accept nullptr.
+_Safe int *_Borrow _Nullable
+safe_return_borrow_nullable_nullptr(int *_Borrow _Nullable p) {
+  return nullptr;
+}
+
+// _Owned nullable pointer initialization in a safe function accepts integer zero null constants.
+_Safe void safe_func_init_owned_integer_null_pointer(void) {
+  int *_Owned _Nullable p0 = 0;
+  int *_Owned _Nullable p1 = (0);
+}
+
+// _Owned nullable pointer assignment in a safe function accepts integer zero null constants.
+_Safe void safe_func_assign_owned_integer_null_pointer(void) {
+  int *_Owned _Nullable p = nullptr;
+  p = 0;
+  p = (0);
+}
+
+_Safe void safe_take_owned_integer_null(int *_Owned _Nullable p) {
+  _Unsafe((void)__move_to_raw(p));
+}
+
+// _Owned nullable pointer arguments in a safe function accept integer zero null constants.
+_Safe void safe_func_call_owned_integer_null_pointer(void) {
+  safe_take_owned_integer_null(0);
+  safe_take_owned_integer_null((0));
+}
+
+// _Owned nullable pointer returns from a safe function accept integer zero null constants.
+_Safe int *_Owned _Nullable safe_return_owned_zero(void) { return 0; }
+_Safe int *_Owned _Nullable safe_return_owned_paren_zero(void) { return (0); }
+
+// _Borrow nullable pointer initialization in a safe function accepts integer zero null constants.
+_Safe void safe_func_init_borrow_integer_null_pointer(void) {
+  int *_Borrow _Nullable p0 = 0;
+  int *_Borrow _Nullable p1 = (0);
+}
+
+// _Borrow nullable pointer assignment in a safe function accepts integer zero null constants.
+_Safe void safe_func_assign_borrow_integer_null_pointer(int *_Borrow _Nullable p) {
+  p = 0;
+  p = (0);
+}
+
+_Safe void safe_take_borrow_integer_null(int *_Borrow _Nullable p) {
+}
+
+// _Borrow nullable pointer arguments in a safe function accept integer zero null constants.
+_Safe void safe_func_call_borrow_integer_null_pointer(void) {
+  safe_take_borrow_integer_null(0);
+  safe_take_borrow_integer_null((0));
+}
+
+// _Borrow nullable pointer returns from a safe function accept integer zero null constants.
+_Safe int *_Borrow _Nullable safe_return_borrow_zero(int *_Borrow _Nullable p) { return 0; }
+_Safe int *_Borrow _Nullable safe_return_borrow_paren_zero(int *_Borrow _Nullable p) { return (0); }
+
+int main(void) {
+  return 0;
+}
