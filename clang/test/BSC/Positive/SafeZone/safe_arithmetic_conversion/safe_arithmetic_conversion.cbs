@@ -141,6 +141,17 @@ _Safe void rule10_value_range_analysis(void) {
   flag = a ^ b;               // ok: both [0,255], xor result in [0,255]
   flag = a ^ 0x0F;            // ok: [0,255] ^ 0x0F fits in [0,255]
 
+  // Non-constant operands: e1 OP e2 where neither is a constant expression
+  flag = a | b;               // ok: both [0,255], or result in [0,255]
+  flag = a & b;               // ok: both [0,255], and result in [0,255]
+  s = a | b;                  // ok: [0,255] | [0,255] fits in unsigned short
+  s = a ^ b;                  // ok: [0,255] ^ [0,255] fits in unsigned short
+  s = a & wide;              // ok: min([0,255],[0,65535]) = [0,255], fits in unsigned short
+  flag = a & wide;           // ok: min([0,255],[0,65535]) = [0,255], fits in unsigned char
+  s = wide | s;               // ok: both [0,65535], or result in [0,65535]
+  s = wide ^ s;               // ok: both [0,65535], xor result in [0,65535]
+  s = wide & s;               // ok: both [0,65535], and result in [0,65535]
+
   // Parenthesized expressions
   flag = (flag | 0x10);       // ok: parenthesized, same range
   flag = ((flag | 0x01));     // ok: nested parens

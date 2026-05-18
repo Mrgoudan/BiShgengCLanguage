@@ -85,6 +85,15 @@ _Safe void test_bitwise_op_exceeds_range(void) {
 
   // XOR with wide operand
   flag = w32 ^ 0x01; // expected-error {{implicit conversion from type 'unsigned int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+
+  // Non-constant operands: e1 OP e2 where neither is a constant expression
+  flag = w32 | flag2; // expected-error {{implicit conversion from type 'unsigned int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  flag = w32 ^ flag2; // expected-error {{implicit conversion from type 'unsigned int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  flag = w32 & flag2; // expected-error {{implicit conversion from type 'unsigned int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  flag2 = w32 | flag2; // expected-error {{implicit conversion from type 'unsigned int' to 'unsigned short' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  flag2 = w32 ^ flag2; // expected-error {{implicit conversion from type 'unsigned int' to 'unsigned short' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  flag = flag2 | flag; // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  flag = flag2 ^ flag; // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
 int main(void) {
