@@ -142,12 +142,15 @@ class UsingShadowDecl;
 using CanQualType = CanQual<Type>;
 
 #if ENABLE_BSC
+struct HeterogeneousRedeclMismatchInfo;
+
 /// Check if two function types are compatible for heterogeneous redeclarations
 /// (one safe, one unsafe). This is distinct from homogeneous redeclarations
 /// (both safe or both unsafe) which use standard type compatibility rules.
 bool areFunctionTypesCompatibleForHeterogeneousRedecl(
     ASTContext &Ctx, QualType Type1, QualType Type2,
-    SafeZoneSpecifier SZS1, SafeZoneSpecifier SZS2);
+    SafeZoneSpecifier SZS1, SafeZoneSpecifier SZS2,
+    HeterogeneousRedeclMismatchInfo *MismatchOut);
 #endif
 
 // Provide forward declarations for all of the *Type classes.
@@ -1574,6 +1577,23 @@ private:
 };
 
 raw_ostream &operator<<(raw_ostream &OS, QualType QT);
+
+#if ENABLE_BSC
+struct HeterogeneousRedeclMismatchInfo {
+  enum class Kind {
+    ReturnType,
+    Parameter,
+    ParamCount,
+    Variadic,
+    Other,
+  };
+  Kind MismatchKind = Kind::Other;
+  // 1-based when MismatchKind == Parameter; 0 otherwise.
+  unsigned ParamIndex = 0;
+  QualType Type1;
+  QualType Type2;
+};
+#endif
 
 } // namespace clang
 

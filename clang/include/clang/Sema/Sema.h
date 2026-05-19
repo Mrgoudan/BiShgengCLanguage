@@ -12401,6 +12401,18 @@ public:
   FunctionDecl *SelectDeclForHeterogeneousRedecl(
       FunctionDecl *CurrentDecl, bool IsInSafeContext,
       llvm::function_ref<bool(FunctionDecl *)> CheckConstraints);
+  void forEachZoneCallableRedecl(
+      FunctionDecl *FD, bool IsCallerSafe,
+      llvm::function_ref<void(FunctionDecl *)> F);
+  void noteHeterogeneousCandidates(FunctionDecl *FD, bool IsCallerSafe);
+  /// True if a call to \p FD with \p ArgExprs matches its parameters under
+  /// BSC's owned/borrow/nullability/literal-array rules.
+  bool IsCallAssignmentCompatible(FunctionDecl *FD, MultiExprArg ArgExprs);
+  /// Like noteHeterogeneousCandidates, but each note explains *why* the
+  /// candidate was rejected (param-count mismatch or which arg fails which
+  /// param). Used by call-expression diagnostics.
+  void noteHeterogeneousCallCandidates(FunctionDecl *FD,
+                                       MultiExprArg ArgExprs);
   bool IsSafeFunctionPointerType(QualType Type);
   bool IsUnsafeType(QualType Type);
   bool CanBeUninitializedInSafeZone(QualType Type);

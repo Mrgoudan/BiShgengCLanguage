@@ -150,8 +150,26 @@ def note_unsafe_to_safe_function_pointer : Note<
 def err_safe_function : Error<"%0 is forbidden in the _Safe function">;
 def err_safe_global_var : Error<"defining mutable global variables is not allowed within the safe zone"> ;
 def err_bsc_generic_heterogeneous_redecl : Error<"generic function %0 cannot have both _Safe and _Unsafe declarations">;
-def err_bsc_incompatible_heterogeneous_redecl : Error<"function %0 has incompatible _Safe and _Unsafe declarations">;
-def err_bsc_no_matching_heterogeneous_function : Error<"no matching function for call to %0; argument types do not match any _Safe or _Unsafe declaration">;
+def err_bsc_incompatible_heterogeneous_redecl_type : Error<
+  "redeclaration of %0 has incompatible "
+  "%select{parameter|return}1 type %2">;
+def err_bsc_incompatible_heterogeneous_redecl_param_count : Error<
+  "redeclaration of %0 takes %1 parameter%s1 instead of %2">;
+def err_bsc_incompatible_heterogeneous_redecl_variadic : Error<
+  "redeclaration of %0 %select{is not|is}1 variadic, "
+  "previous declaration %select{is|is not}1 variadic">;
+def note_bsc_redecl_previous : Note<
+  "previous declaration had %select{parameter of type|return type}0 %1">;
+def err_bsc_no_matching_heterogeneous_function_call : Error<
+  "no matching declaration of %0 for call type %1">;
+def err_bsc_no_matching_heterogeneous_function_assign : Error<
+  "no matching declaration of %0 for assignment to %1">;
+def note_bsc_heterogeneous_candidate : Note<
+  "candidate declaration has type %0">;
+def note_bsc_heterogeneous_candidate_arg_mismatch : Note<
+  "argument %0 of type %1 doesn't match parameter type %2">;
+def note_bsc_heterogeneous_candidate_arg_count : Note<
+  "call passes %0 argument%s0 but candidate takes %1">;
 def err_safe_string_init_too_long : Error<
   "too-long initializer-string for char array is forbidden in safe zone; array size %0 cannot hold string of length %1 (including null terminator)">;
 def note_safe_string_init_too_long_hint : Note<

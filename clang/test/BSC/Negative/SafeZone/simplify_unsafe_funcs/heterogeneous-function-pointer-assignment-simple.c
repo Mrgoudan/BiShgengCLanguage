@@ -30,11 +30,11 @@ void test3(void) {
 
 // Test 4: Type mismatch in parameters
 _Unsafe void int_param(int* p);
-_Safe void int_param(int* _Owned p);
+_Safe void int_param(int* _Owned p); // expected-note {{candidate declaration has type '_Safe void (int *_Owned)'}}
 
 void test4(void) {
     _Safe void (*ptr_float)(float* _Owned) = 0;
-    ptr_float = int_param;  // expected-error {{no matching function for call to 'int_param'; argument types do not match any _Safe or _Unsafe declaration}}
+    ptr_float = int_param;  // expected-error {{no matching declaration of 'int_param' for assignment to '_Safe void (*)(float *_Owned)'}}
 }
 
 // Test 5: void* _Owned/_Borrow mismatch in function pointer

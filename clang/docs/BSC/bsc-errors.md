@@ -123,8 +123,8 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 | MISC-002 | err_bsc_incompatible_heterogeneous_redecl_type | redeclaration of %0 has incompatible %select{parameter\|return}1 type %2 | `note_bsc_redecl_previous` — previous declaration had %select{parameter of type\|return type}0 %1 |
 | MISC-003 | err_bsc_incompatible_heterogeneous_redecl_param_count | redeclaration of %0 takes %1 parameter%s1 instead of %2 | `note_previous_declaration` |
 | MISC-004 | err_bsc_incompatible_heterogeneous_redecl_variadic | redeclaration of %0 %select{is not\|is}1 variadic, previous declaration %select{is\|is not}1 variadic | `note_previous_declaration` |
-| MISC-005 | err_bsc_no_matching_heterogeneous_function_call | no matching declaration of %0 for call type %1 | `note_bsc_heterogeneous_candidate_arg_mismatch` — argument %0 of type %1 doesn't match parameter type %2; `note_bsc_heterogeneous_candidate_arg_count` — call passes %0 argument%s0 but candidate takes %1; `note_bsc_heterogeneous_candidate` — candidate declaration has type %0 (fallback); `note_bsc_heterogeneous_no_candidates_in_safe_zone` — no _Safe declaration of %0 is callable from this safe zone (emitted when every redecl is filtered out by the caller's safe-zone context) |
-| MISC-006 | err_bsc_no_matching_heterogeneous_function_assign | no matching declaration of %0 for assignment to %1 | `note_bsc_heterogeneous_candidate`; `note_bsc_heterogeneous_no_candidates_in_safe_zone` (same fallback as MISC-005) |
+| MISC-005 | err_bsc_no_matching_heterogeneous_function_call | no matching declaration of %0 for call type %1 | One note per candidate redecl callable from the caller's safe zone: `note_bsc_heterogeneous_candidate_arg_count` — call passes %0 argument%s0 but candidate takes %1 (param count mismatch); `note_bsc_heterogeneous_candidate_arg_mismatch` — argument %0 of type %1 doesn't match parameter type %2 (per-argument mismatch); `note_bsc_heterogeneous_candidate` — candidate declaration has type %0 (fallback for other mismatches). When the caller is in a safe zone, only `_Safe` redecls are visited, so no notes are emitted if every redecl is `_Unsafe`. |
+| MISC-006 | err_bsc_no_matching_heterogeneous_function_assign | no matching declaration of %0 for assignment to %1 | `note_bsc_heterogeneous_candidate` — candidate declaration has type %0 (one per redecl visible from the destination's safe-zone context). |
 | MISC-007 | err_struct_member_redeclared | struct member cannot be redeclared | — |
 
 ---
@@ -186,6 +186,6 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 | NULLABLE-  | nullable pointer              | 5      | 0        |
 | **Total**  |                               | **106** | **2**   |
 
-Plus **22 BSC-specific notes**, each tied to one or more of the errors above (see the Notes column per row).
+Plus **21 BSC-specific notes**, each tied to one or more of the errors above (see the Notes column per row).
 
 Out-of-scope BSC features (not coded here): traits, async/await, generic, constexpr, operator overload, instance member functions. These contribute several more errors, one warning (`warn_type_has_not_impl_trait`), and one note (`note_no_this_parameter`).

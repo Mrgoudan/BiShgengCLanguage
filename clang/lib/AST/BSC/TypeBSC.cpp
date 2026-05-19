@@ -189,36 +189,43 @@ static bool AreOwnedBorrowQualifiersCompatible(QualType UnsafeType,
 /// 2. Add BSC-specific check: ensure owned and borrow are not mixed
 bool areFunctionTypesCompatibleForHeterogeneousRedecl(
     ASTContext &Ctx, QualType Type1, QualType Type2,
-    SafeZoneSpecifier SZS1, SafeZoneSpecifier SZS2) {
-  // Verify exactly one is safe and the other is unsafe (heterogeneous redeclaration).
-  // Safe: SZ_Safe
-  // Unsafe: SZ_Unsafe or SZ_None
+    SafeZoneSpecifier SZS1, SafeZoneSpecifier SZS2,
+    HeterogeneousRedeclMismatchInfo *MismatchOut) {
+  using Kind = HeterogeneousRedeclMismatchInfo::Kind;
+  auto Report = [&](Kind K, QualType T1, QualType T2, unsigned Idx = 0) {
+    if (MismatchOut) {
+      MismatchOut->MismatchKind = K;
+      MismatchOut->ParamIndex = Idx;
+      MismatchOut->Type1 = T1;
+      MismatchOut->Type2 = T2;
+    }
+  };
+
   bool Type1IsSafe = (SZS1 == SZ_Safe);
   bool Type2IsSafe = (SZS2 == SZ_Safe);
-
-  // Must be heterogeneous: exactly one safe, one unsafe (XOR)
-  if (Type1IsSafe == Type2IsSafe)
+  if (Type1IsSafe == Type2IsSafe) {
+    Report(Kind::Other, Type1, Type2);
     return false;
-
-  // Determine which is unsafe and which is safe for later use.
-  bool Type1IsUnsafe = !Type1IsSafe;
+  }
 
   const FunctionProtoType *FPT1 = Type1->getAs<FunctionProtoType>();
   const FunctionProtoType *FPT2 = Type2->getAs<FunctionProtoType>();
-
-  if (!FPT1 || !FPT2)
+  if (!FPT1 || !FPT2) {
+    Report(Kind::Other, Type1, Type2);
     return false;
+  }
 
-  // Verify parameter count and variadic consistency.
-  if (FPT1->getNumParams() != FPT2->getNumParams())
+  if (FPT1->getNumParams() != FPT2->getNumParams()) {
+    Report(Kind::ParamCount, Type1, Type2);
     return false;
-  if (FPT1->isVariadic() != FPT2->isVariadic())
+  }
+  if (FPT1->isVariadic() != FPT2->isVariadic()) {
+    Report(Kind::Variadic, Type1, Type2);
     return false;
+  }
 
-  // Identify which FunctionProtoType is unsafe and which is safe.
-  // Reuse the FPT1/FPT2 pointers we already retrieved.
-  const FunctionProtoType *UnsafeFPT = Type1IsUnsafe ? FPT1 : FPT2;
-  const FunctionProtoType *SafeFPT = Type1IsUnsafe ? FPT2 : FPT1;
+  const FunctionProtoType *UnsafeFPT = Type1IsSafe ? FPT2 : FPT1;
+  const FunctionProtoType *SafeFPT = Type1IsSafe ? FPT1 : FPT2;
 
   // Helper lambda: check if two (possibly function-pointer) types are compatible
   // in the context of a heterogeneous redeclaration. For function pointer types
@@ -265,7 +272,8 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
         bool SafeFPIsSafe = (SafeFPSZS == SZ_Safe);
         if (UnsafeFPIsSafe != SafeFPIsSafe) {
           return areFunctionTypesCompatibleForHeterogeneousRedecl(
-              Ctx, UnsafePointee, SafePointee, UnsafeFPSZS, SafeFPSZS);
+              Ctx, UnsafePointee, SafePointee, UnsafeFPSZS, SafeFPSZS,
+              /*MismatchOut=*/nullptr);
         }
       }
     }
@@ -277,20 +285,19 @@ bool areFunctionTypesCompatibleForHeterogeneousRedecl(
     return AreOwnedBorrowQualifiersCompatible(UnsafeTOrig, SafeTOrig);
   };
 
-  // Check return type compatibility.
-  QualType UnsafeRet = UnsafeFPT->getReturnType();
-  QualType SafeRet = SafeFPT->getReturnType();
-
-  if (!AreParamTypesCompatible(UnsafeRet, SafeRet))
+  if (!AreParamTypesCompatible(UnsafeFPT->getReturnType(),
+                               SafeFPT->getReturnType())) {
+    Report(Kind::ReturnType, FPT1->getReturnType(), FPT2->getReturnType());
     return false;
+  }
 
-  // Check parameter type compatibility for each parameter.
-  for (unsigned i = 0; i < FPT1->getNumParams(); ++i) {
-    QualType UnsafeParam = UnsafeFPT->getParamType(i);
-    QualType SafeParam = SafeFPT->getParamType(i);
-
-    if (!AreParamTypesCompatible(UnsafeParam, SafeParam))
+  for (unsigned I = 0, N = FPT1->getNumParams(); I < N; ++I) {
+    if (!AreParamTypesCompatible(UnsafeFPT->getParamType(I),
+                                 SafeFPT->getParamType(I))) {
+      Report(Kind::Parameter, FPT1->getParamType(I), FPT2->getParamType(I),
+             I + 1);
       return false;
+    }
   }
 
   return true;

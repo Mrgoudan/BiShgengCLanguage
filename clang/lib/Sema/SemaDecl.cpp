@@ -2538,23 +2538,148 @@ static SafeZoneSpecifier extractSafeZoneSpecFromFunctionPointer(QualType FPType)
 /// redeclarations (one safe, one unsafe typedef).
 static bool areFunctionPointerTypesCompatibleForHeterogeneousRedecl(
     ASTContext &Ctx, QualType OldType, QualType NewType,
-    SafeZoneSpecifier OldSZS, SafeZoneSpecifier NewSZS) {
-
-  // Extract the pointee function types.
+    SafeZoneSpecifier OldSZS, SafeZoneSpecifier NewSZS,
+    HeterogeneousRedeclMismatchInfo *MismatchOut) {
   QualType OldPointee = OldType->getPointeeType();
   QualType NewPointee = NewType->getPointeeType();
 
   const FunctionProtoType *OldFPT = OldPointee->getAs<FunctionProtoType>();
   const FunctionProtoType *NewFPT = NewPointee->getAs<FunctionProtoType>();
 
-  if (!OldFPT || !NewFPT)
+  if (!OldFPT || !NewFPT) {
+    if (MismatchOut) {
+      MismatchOut->MismatchKind =
+          HeterogeneousRedeclMismatchInfo::Kind::Other;
+      MismatchOut->Type1 = OldType;
+      MismatchOut->Type2 = NewType;
+    }
     return false;
+  }
 
-  // Reuse the existing heterogeneous compatibility check for the underlying
-  // function types.
   return areFunctionTypesCompatibleForHeterogeneousRedecl(
-      Ctx, OldPointee, NewPointee, OldSZS, NewSZS);
+      Ctx, OldPointee, NewPointee, OldSZS, NewSZS, MismatchOut);
 }
+
+#if ENABLE_BSC
+// %select indices for err_bsc_incompatible_heterogeneous_redecl_type and
+// note_bsc_redecl_previous: keep in lockstep with DiagnosticBSCSemaKinds.td.
+enum : unsigned { HeteroSelectParam = 0, HeteroSelectReturn = 1 };
+
+static FunctionProtoTypeLoc getInnerFunctionProtoTypeLoc(TypeSourceInfo *TSI) {
+  if (!TSI)
+    return FunctionProtoTypeLoc();
+  TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
+  while (true) {
+    if (auto FPL = TL.getAs<FunctionProtoTypeLoc>())
+      return FPL;
+    if (auto PTL = TL.getAs<PointerTypeLoc>()) {
+      TL = PTL.getPointeeLoc().getUnqualifiedLoc();
+      continue;
+    }
+    if (auto PNL = TL.getAs<ParenTypeLoc>()) {
+      TL = PNL.getInnerLoc().getUnqualifiedLoc();
+      continue;
+    }
+    if (auto ATL = TL.getAs<AttributedTypeLoc>()) {
+      TL = ATL.getModifiedLoc().getUnqualifiedLoc();
+      continue;
+    }
+    return FunctionProtoTypeLoc();
+  }
+}
+
+static SourceLocation getRedeclParamLocation(const NamedDecl *D,
+                                             unsigned ParamIdx1) {
+  assert(ParamIdx1 >= 1 && "ParamIdx1 is 1-based; use "
+                           "getRedeclReturnTypeLocation for the return type");
+  unsigned I = ParamIdx1 - 1;
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (I < FD->getNumParams())
+      return FD->getParamDecl(I)->getLocation();
+  } else if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    FunctionProtoTypeLoc FPL =
+        getInnerFunctionProtoTypeLoc(TD->getTypeSourceInfo());
+    if (FPL && I < FPL.getNumParams()) {
+      if (ParmVarDecl *P = FPL.getParam(I)) {
+        // Unnamed typedef params have an invalid loc; fall back to the decl.
+        if (P->getLocation().isValid())
+          return P->getLocation();
+      }
+    }
+  }
+  return D->getLocation();
+}
+
+static SourceLocation getRedeclReturnTypeLocation(const NamedDecl *D) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    SourceRange R = FD->getReturnTypeSourceRange();
+    if (R.isValid())
+      return R.getBegin();
+  } else if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
+    FunctionProtoTypeLoc FPL =
+        getInnerFunctionProtoTypeLoc(TD->getTypeSourceInfo());
+    if (FPL) {
+      SourceRange R = FPL.getReturnLoc().getSourceRange();
+      if (R.isValid())
+        return R.getBegin();
+    }
+  }
+  return D->getLocation();
+}
+
+static void diagnoseIncompatibleHeterogeneousRedecl(
+    Sema &S, const NamedDecl *NewDecl, const NamedDecl *OldDecl,
+    const HeterogeneousRedeclMismatchInfo &Info) {
+  switch (Info.MismatchKind) {
+  case HeterogeneousRedeclMismatchInfo::Kind::Parameter: {
+    SourceLocation NewLoc = getRedeclParamLocation(NewDecl, Info.ParamIndex);
+    SourceLocation OldLoc = getRedeclParamLocation(OldDecl, Info.ParamIndex);
+    S.Diag(NewLoc, diag::err_bsc_incompatible_heterogeneous_redecl_type)
+        << NewDecl << HeteroSelectParam << Info.Type2;
+    S.Diag(OldLoc, diag::note_bsc_redecl_previous)
+        << HeteroSelectParam << Info.Type1;
+    return;
+  }
+  case HeterogeneousRedeclMismatchInfo::Kind::ReturnType: {
+    SourceLocation NewLoc = getRedeclReturnTypeLocation(NewDecl);
+    SourceLocation OldLoc = getRedeclReturnTypeLocation(OldDecl);
+    S.Diag(NewLoc, diag::err_bsc_incompatible_heterogeneous_redecl_type)
+        << NewDecl << HeteroSelectReturn << Info.Type2;
+    S.Diag(OldLoc, diag::note_bsc_redecl_previous)
+        << HeteroSelectReturn << Info.Type1;
+    return;
+  }
+  case HeterogeneousRedeclMismatchInfo::Kind::ParamCount: {
+    const FunctionProtoType *FPT1 = Info.Type1->getAs<FunctionProtoType>();
+    const FunctionProtoType *FPT2 = Info.Type2->getAs<FunctionProtoType>();
+    if (FPT1 && FPT2) {
+      S.Diag(NewDecl->getLocation(),
+             diag::err_bsc_incompatible_heterogeneous_redecl_param_count)
+          << NewDecl << (unsigned)FPT2->getNumParams()
+          << (unsigned)FPT1->getNumParams();
+      S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
+      return;
+    }
+    break;
+  }
+  case HeterogeneousRedeclMismatchInfo::Kind::Variadic: {
+    const FunctionProtoType *FPT2 = Info.Type2->getAs<FunctionProtoType>();
+    bool NewIsVariadic = FPT2 && FPT2->isVariadic();
+    S.Diag(NewDecl->getLocation(),
+           diag::err_bsc_incompatible_heterogeneous_redecl_variadic)
+        << NewDecl << (NewIsVariadic ? 1 : 0);
+    S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
+    return;
+  }
+  case HeterogeneousRedeclMismatchInfo::Kind::Other:
+    break;
+  }
+  // Fallback for Kind::Other: callers screen this out, but emit something
+  // useful if a path slips through.
+  S.Diag(NewDecl->getLocation(), diag::err_conflicting_types) << NewDecl;
+  S.Diag(OldDecl->getLocation(), diag::note_previous_declaration);
+}
+#endif
 #endif // ENABLE_BSC
 
 bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
@@ -2607,19 +2732,12 @@ bool Sema::isIncompatibleTypedef(TypeDecl *Old, TypedefNameDecl *New) {
           return true;
         }
 
-        // Check if the function pointer types are compatible for heterogeneous
-        // redeclarations.
+        HeterogeneousRedeclMismatchInfo Mismatch;
         if (areFunctionPointerTypesCompatibleForHeterogeneousRedecl(
-                Context, OldType, NewType, OldSZS, NewSZS)) {
-          // Compatible heterogeneous redeclaration.
+                Context, OldType, NewType, OldSZS, NewSZS, &Mismatch))
           return false;
-        }
 
-        // Incompatible heterogeneous redeclaration.
-        Diag(New->getLocation(), diag::err_bsc_incompatible_heterogeneous_redecl)
-            << New->getDeclName();
-        if (Old->getLocation().isValid())
-          notePreviousDefinition(Old, New->getLocation());
+        diagnoseIncompatibleHeterogeneousRedecl(*this, New, Old, Mismatch);
         New->setInvalidDecl();
         return true;
       }
@@ -3984,9 +4102,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       for (unsigned I = 0; I < Old->getNumParams(); ++I) {
         if (Old->getParamDecl(I)->hasAttr<EnsureInitAttr>() !=
             New->getParamDecl(I)->hasAttr<EnsureInitAttr>()) {
-          Diag(New->getLocation(),
-               diag::err_bsc_incompatible_heterogeneous_redecl)
-              << New->getDeclName();
+          Diag(New->getLocation(), diag::err_conflicting_types) << New;
+          Diag(Old->getLocation(), diag::note_previous_declaration);
           return true;
         }
       }
@@ -4210,12 +4327,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         QualType OldFuncType = Old->getType();
         QualType NewFuncType = New->getType();
 
+        HeterogeneousRedeclMismatchInfo Mismatch;
         if (!areFunctionTypesCompatibleForHeterogeneousRedecl(
-                Context, OldFuncType, NewFuncType, OldSZS, NewSZS)) {
-          Diag(New->getLocation(),
-               diag::err_bsc_incompatible_heterogeneous_redecl)
-              << New;
-          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+                Context, OldFuncType, NewFuncType, OldSZS, NewSZS, &Mismatch)) {
+          diagnoseIncompatibleHeterogeneousRedecl(*this, New, Old, Mismatch);
           return true;
         }
         // Heterogeneous redeclaration is compatible, proceed with merge.
@@ -4285,12 +4400,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         QualType OldFuncType = Old->getType();
         QualType NewFuncType = New->getType();
 
+        HeterogeneousRedeclMismatchInfo Mismatch;
         if (!areFunctionTypesCompatibleForHeterogeneousRedecl(
-                Context, OldFuncType, NewFuncType, OldSZS, NewSZS)) {
-          Diag(New->getLocation(),
-               diag::err_bsc_incompatible_heterogeneous_redecl)
-              << New;
-          Diag(OldLocation, PrevDiag) << Old << Old->getType();
+                Context, OldFuncType, NewFuncType, OldSZS, NewSZS, &Mismatch)) {
+          diagnoseIncompatibleHeterogeneousRedecl(*this, New, Old, Mismatch);
           return true;
         }
         // Heterogeneous redeclaration is compatible - merge the declarations.

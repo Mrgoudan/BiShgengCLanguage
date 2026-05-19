@@ -7263,47 +7263,6 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 }
 
 #if ENABLE_BSC
-/// Check if arguments satisfy assignment constraints for a function call.
-/// The constraint rule: argument type must be a superset of (or compatible with)
-/// parameter type, with exact matching required for owned/borrow/nonnull/nullable.
-static bool DoesCallSatisfyAssignmentConstraints(Sema &S, FunctionDecl *FD,
-                                                  MultiExprArg Args) {
-  // Check parameter count.
-  unsigned NumParams = FD->getNumParams();
-  if (Args.size() < NumParams)
-    return false; // Too few arguments
-
-  // Variadic functions need at least the required parameters.
-  if (!FD->isVariadic() && Args.size() > NumParams)
-    return false; // Too many arguments for non-variadic
-
-  // Check each argument against its corresponding parameter.
-  for (unsigned i = 0; i < NumParams; ++i) {
-    ParmVarDecl *Param = FD->getParamDecl(i);
-    Expr *Arg = Args[i];
-
-    QualType ParamType = Param->getType();
-    QualType ArgType = Arg->getType();
-
-    // Special case: String literals (including __FUNCTION__ and ternary string
-    // expressions) can auto-borrow to borrow pointers.
-    if (ArgType->isArrayType() && ParamType->isPointerType() &&
-        ParamType.isBorrowQualified()) {
-      if (!S.IsStringLiteralExpr(Arg))
-        return false;
-      // String literal can auto-borrow, and regular arrays may match
-      // destination-sensitive borrow parameters.
-      continue;
-    }
-
-    // Use the shared helper to check pointer type constraints.
-    if (!S.DoPointerTypesSatisfyAssignmentConstraints(ParamType, ArgType))
-      return false;
-  }
-
-  return true;
-}
-
 #endif // ENABLE_BSC
 
 /// BuildCallExpr - Handle a call to Fn with the specified array of arguments.
@@ -7463,14 +7422,21 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     // (Manual section 8.2).
     if (getLangOpts().BSC) {
       auto CheckCallConstraints = [&](FunctionDecl *CandidateFD) -> bool {
-        return DoesCallSatisfyAssignmentConstraints(*this, CandidateFD, ArgExprs);
+        return IsCallAssignmentCompatible(CandidateFD, ArgExprs);
       };
       FunctionDecl *BestMatch = SelectDeclForHeterogeneousRedecl(
           FD, IsInSafeZone(), CheckCallConstraints);
       if (!BestMatch) {
-        // No matching declaration found - emit diagnostic and return error.
-        Diag(Fn->getBeginLoc(), diag::err_bsc_no_matching_heterogeneous_function)
-            << FD->getDeclName();
+        SmallVector<QualType, 4> ArgTypes;
+        ArgTypes.reserve(ArgExprs.size());
+        for (Expr *E : ArgExprs)
+          ArgTypes.push_back(E->getType());
+        QualType CallType = Context.getFunctionType(
+            Context.VoidTy, ArgTypes, FunctionProtoType::ExtProtoInfo());
+        Diag(Fn->getBeginLoc(),
+             diag::err_bsc_no_matching_heterogeneous_function_call)
+            << FD->getDeclName() << CallType;
+        noteHeterogeneousCallCandidates(FD, ArgExprs);
         return ExprError();
       }
       if (BestMatch != FD) {

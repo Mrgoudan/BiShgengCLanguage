@@ -80,25 +80,25 @@ void hetero_ei2(int *out) {
 // --- Same-safety mismatch: ERROR ---
 
 // _Safe/_Safe: first has, second doesn't.
-_Safe void mismatch_safe(int *__attribute__((ensure_init)) _Borrow out);
-_Safe void mismatch_safe(int *_Borrow out) { // expected-error {{function 'mismatch_safe' has incompatible _Safe and _Unsafe declarations}}
+_Safe void mismatch_safe(int *__attribute__((ensure_init)) _Borrow out); // expected-note {{previous declaration is here}}
+_Safe void mismatch_safe(int *_Borrow out) { // expected-error {{conflicting types for 'mismatch_safe'}}
     *out = 1;
 }
 
 // _Safe/_Safe: first doesn't, second adds.
-_Safe void mismatch_safe_add(int *_Borrow out);
-_Safe void mismatch_safe_add(int *__attribute__((ensure_init)) _Borrow out) { // expected-error {{function 'mismatch_safe_add' has incompatible _Safe and _Unsafe declarations}}
+_Safe void mismatch_safe_add(int *_Borrow out); // expected-note {{previous declaration is here}}
+_Safe void mismatch_safe_add(int *__attribute__((ensure_init)) _Borrow out) { // expected-error {{conflicting types for 'mismatch_safe_add'}}
     *out = 1;
 }
 
 // default/default: first has, second doesn't.
-void mismatch_unsafe(int *__attribute__((ensure_init)) out);
-void mismatch_unsafe(int *out) { // expected-error {{function 'mismatch_unsafe' has incompatible _Safe and _Unsafe declarations}}
+void mismatch_unsafe(int *__attribute__((ensure_init)) out); // expected-note {{previous declaration is here}}
+void mismatch_unsafe(int *out) { // expected-error {{conflicting types for 'mismatch_unsafe'}}
     *out = 1;
 }
 
 // default/default: first doesn't, second adds.
-void mismatch_add(int *out);
-void mismatch_add(int *__attribute__((ensure_init)) out) { // expected-error {{function 'mismatch_add' has incompatible _Safe and _Unsafe declarations}}
+void mismatch_add(int *out); // expected-note {{previous declaration is here}}
+void mismatch_add(int *__attribute__((ensure_init)) out) { // expected-error {{conflicting types for 'mismatch_add'}}
     *out = 1;
 }

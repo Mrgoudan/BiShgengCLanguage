@@ -284,6 +284,84 @@ FunctionDecl *Sema::SelectDeclForHeterogeneousRedecl(
   return nullptr;
 }
 
+void Sema::forEachZoneCallableRedecl(
+    FunctionDecl *FD, bool IsCallerSafe,
+    llvm::function_ref<void(FunctionDecl *)> F) {
+  for (auto *Redecl : FD->redecls()) {
+    auto *RFD = dyn_cast<FunctionDecl>(Redecl);
+    if (!RFD)
+      continue;
+    if (IsCallerSafe && RFD->getSafeZoneSpecifier() != SZ_Safe)
+      continue;
+    F(RFD);
+  }
+}
+
+void Sema::noteHeterogeneousCandidates(FunctionDecl *FD, bool IsCallerSafe) {
+  forEachZoneCallableRedecl(FD, IsCallerSafe, [&](FunctionDecl *RFD) {
+    Diag(RFD->getLocation(), diag::note_bsc_heterogeneous_candidate)
+        << RFD->getType();
+  });
+}
+
+// Sentinels for the internal call-match check.
+static constexpr int CallMatch_OK = -1;
+static constexpr int CallMatch_ArgCount = -2;
+
+// Returns CallMatch_OK if every arg satisfies its param; CallMatch_ArgCount
+// if param/arg counts don't match; otherwise the 0-based index of the first
+// failing arg.
+static int CheckCallAssignmentConstraints(Sema &S, FunctionDecl *FD,
+                                          MultiExprArg Args) {
+  unsigned NumParams = FD->getNumParams();
+  if (Args.size() < NumParams)
+    return CallMatch_ArgCount;
+  if (!FD->isVariadic() && Args.size() > NumParams)
+    return CallMatch_ArgCount;
+
+  for (unsigned I = 0; I < NumParams; ++I) {
+    QualType ParamType = FD->getParamDecl(I)->getType();
+    QualType ArgType = Args[I]->getType();
+
+    // String literals (including __FUNCTION__ and ternary string exprs) can
+    // auto-borrow to borrow pointers; plain arrays cannot.
+    if (ArgType->isArrayType() && ParamType->isPointerType() &&
+        ParamType.isBorrowQualified()) {
+      if (!S.IsStringLiteralExpr(Args[I]))
+        return (int)I;
+      continue;
+    }
+
+    if (!S.DoPointerTypesSatisfyAssignmentConstraints(ParamType, ArgType))
+      return (int)I;
+  }
+  return CallMatch_OK;
+}
+
+bool Sema::IsCallAssignmentCompatible(FunctionDecl *FD, MultiExprArg ArgExprs) {
+  return CheckCallAssignmentConstraints(*this, FD, ArgExprs) == CallMatch_OK;
+}
+
+void Sema::noteHeterogeneousCallCandidates(FunctionDecl *FD,
+                                            MultiExprArg ArgExprs) {
+  forEachZoneCallableRedecl(FD, IsInSafeZone(), [&](FunctionDecl *RFD) {
+    int R = CheckCallAssignmentConstraints(*this, RFD, ArgExprs);
+    if (R == CallMatch_ArgCount) {
+      Diag(RFD->getLocation(),
+           diag::note_bsc_heterogeneous_candidate_arg_count)
+          << (unsigned)ArgExprs.size() << RFD->getNumParams();
+    } else if (R >= 0) {
+      Diag(RFD->getLocation(),
+           diag::note_bsc_heterogeneous_candidate_arg_mismatch)
+          << (unsigned)(R + 1) << ArgExprs[R]->getType()
+          << RFD->getParamDecl(R)->getType();
+    } else {
+      Diag(RFD->getLocation(), diag::note_bsc_heterogeneous_candidate)
+          << RFD->getType();
+    }
+  });
+}
+
 /// Check if BSC pointer qualifiers are compatible between Dest and Src.
 /// For array sources, raw pointers and borrow pointers are compatible.
 /// For pointer sources, `_Owned` and `_Borrow` must match exactly, and
@@ -520,15 +598,16 @@ bool Sema::IsSafeFunctionPointerTypeCast(QualType DestType, Expr *SrcExpr) {
     // Update RHSFuncType to the selected declaration's function type.
     RHSFuncType = SelectedFD->getType()->getAs<FunctionProtoType>();
   } else {
-    // SelectFunctionDeclForPointerAssignment returns nullptr only when the
-    // source is a heterogeneous redeclaration and no decl satisfies the
-    // destination constraints.
+    // SelectFunctionDeclForPointerAssignment only returns nullptr when no
+    // heterogeneous redecl of the source satisfies the destination.
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SrcExpr->IgnoreParenImpCasts());
     if (DRE) {
       if (FunctionDecl *FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
         Diag(SrcExpr->getBeginLoc(),
-             diag::err_bsc_no_matching_heterogeneous_function)
-            << FD->getDeclName();
+             diag::err_bsc_no_matching_heterogeneous_function_assign)
+            << FD->getDeclName() << DestType;
+        noteHeterogeneousCandidates(
+            FD, LHSFuncType->getFunSafeZoneSpecifier() == SZ_Safe);
         return false;
       }
     }

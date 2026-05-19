@@ -19,35 +19,35 @@ void test2(const int* _Borrow const_borrow) {
 }
 
 // Test 3: Owned/_Borrow mismatch
-_Unsafe void take_owned(int* p);
-_Safe void take_owned(int* _Owned p);
+_Unsafe void take_owned(int* p);             // expected-note {{argument 1 of type 'int *_Borrow' doesn't match parameter type 'int *'}}
+_Safe void take_owned(int* _Owned p);        // expected-note {{argument 1 of type 'int *_Borrow' doesn't match parameter type 'int *_Owned'}}
 
 void test3(int* _Borrow borrow_p) {
-    take_owned(borrow_p);  // expected-error {{no matching function for call to 'take_owned'; argument types do not match any _Safe or _Unsafe declaration}}
+    take_owned(borrow_p);  // expected-error {{no matching declaration of 'take_owned' for call type 'void (int *_Borrow)'}}
 }
 
 // Test 4: Borrow/_Owned mismatch
-_Unsafe void take_borrow(int* p);
-_Safe void take_borrow(int* _Borrow p);
+_Unsafe void take_borrow(int* p);            // expected-note {{argument 1 of type 'int *_Owned' doesn't match parameter type 'int *'}}
+_Safe void take_borrow(int* _Borrow p);      // expected-note {{argument 1 of type 'int *_Owned' doesn't match parameter type 'int *_Borrow'}}
 
 void test4(int* _Owned owned_p) {
-    take_borrow(owned_p);  // expected-error {{no matching function for call to 'take_borrow'; argument types do not match any _Safe or _Unsafe declaration}}
+    take_borrow(owned_p);  // expected-error {{no matching declaration of 'take_borrow' for call type 'void (int *_Owned)'}}
 }
 
 // Test 5: Wrong argument count
-_Unsafe void two_params(int* p1, int* p2);
-_Safe void two_params(int* _Owned p1, int* _Owned p2);
+_Unsafe void two_params(int* p1, int* p2);                       // expected-note {{call passes 1 argument but candidate takes 2}}
+_Safe void two_params(int* _Owned p1, int* _Owned p2);           // expected-note {{call passes 1 argument but candidate takes 2}}
 
 void test5(int* _Owned p) {
-    two_params(p);  // expected-error {{no matching function for call to 'two_params'; argument types do not match any _Safe or _Unsafe declaration}}
+    two_params(p);  // expected-error {{no matching declaration of 'two_params' for call type 'void (int *_Owned)'}}
 }
 
 // Test 6: Type mismatch in parameters
-_Unsafe void int_param(int* p);
-_Safe void int_param(int* _Owned p);
+_Unsafe void int_param(int* p);              // expected-note {{argument 1 of type 'float *_Owned' doesn't match parameter type 'int *'}}
+_Safe void int_param(int* _Owned p);         // expected-note {{argument 1 of type 'float *_Owned' doesn't match parameter type 'int *_Owned'}}
 
 void test6(float* _Owned p) {
-    int_param(p);  // expected-error {{no matching function for call to 'int_param'; argument types do not match any _Safe or _Unsafe declaration}}
+    int_param(p);  // expected-error {{no matching declaration of 'int_param' for call type 'void (float *_Owned)'}}
 }
 
 // Test 7: Safe context with constraint mismatch (no _Safe declaration with compatible signature)
@@ -61,18 +61,18 @@ void test7(int* raw_p) {
 }
 
 // Test 8: Nested pointer qualifier mismatch
-_Unsafe void nested_func(int** pp);
-_Safe void nested_func(int** _Owned pp);
+_Unsafe void nested_func(int** pp);          // expected-note {{argument 1 of type 'int **_Borrow' doesn't match parameter type 'int **'}}
+_Safe void nested_func(int** _Owned pp);     // expected-note {{argument 1 of type 'int **_Borrow' doesn't match parameter type 'int **_Owned'}}
 
 void test8(int** _Borrow pp) {
-    nested_func(pp);  // expected-error {{no matching function for call to 'nested_func'; argument types do not match any _Safe or _Unsafe declaration}}
+    nested_func(pp);  // expected-error {{no matching declaration of 'nested_func' for call type 'void (int **_Borrow)'}}
 }
 
 // Test 9: Mixed _Owned and _Borrow with wrong combination
-_Unsafe void mixed_wrong(int* p1, int* p2);
-_Safe void mixed_wrong(int* _Owned p1, int* _Borrow p2);
+_Unsafe void mixed_wrong(int* p1, int* p2);                      // expected-note {{argument 1 of type 'int *_Borrow' doesn't match parameter type 'int *'}}
+_Safe void mixed_wrong(int* _Owned p1, int* _Borrow p2);         // expected-note {{argument 1 of type 'int *_Borrow' doesn't match parameter type 'int *_Owned'}}
 
 void test9(int* _Borrow borrow_p, int* _Owned owned_p) {
     // First parameter doesn't match (_Borrow vs _Owned), so error on first param
-    mixed_wrong(borrow_p, owned_p);  // expected-error {{no matching function for call to 'mixed_wrong'; argument types do not match any _Safe or _Unsafe declaration}}
+    mixed_wrong(borrow_p, owned_p);  // expected-error {{no matching declaration of 'mixed_wrong' for call type 'void (int *_Borrow, int *_Owned)'}}
 }
