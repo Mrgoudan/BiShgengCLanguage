@@ -1,0 +1,22 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output | FileCheck %s
+// expected-no-diagnostics
+
+#include <stdio.h>
+#include <complex.h>
+
+_Safe double _Complex mk(void) {
+    double _Complex z = 3.0 + 4.0 * I;
+    return z;
+}
+
+int main(void) {
+    _Unsafe {
+        double _Complex c = _Safe(mk());
+        double _Complex d = _Unsafe(mk());
+        printf("r=%g i=%g\n", __real__ c + __real__ d, __imag__ c + __imag__ d);
+    }
+    return 0;
+}
+
+// CHECK: r=6 i=8

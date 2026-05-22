@@ -91,7 +91,7 @@ Every borrow-check error is emitted with one note from `BSCBorrowChecker.h::flus
 
 ---
 
-## INIT — initialization (14 errors, 1 warning)
+## INIT — initialization (15 errors, 1 warning)
 
 | Code | Diagnostic | Message | Notes |
 |------|------------|---------|-------|
@@ -108,7 +108,8 @@ Every borrow-check error is emitted with one note from `BSCBorrowChecker.h::flus
 | INIT-011 | err_ensure_init_funcptr_incompatible | incompatible function pointer types: target expects `__attribute__((ensure_init))` on parameter %0 but source does not have it | — |
 | INIT-012 | err_assume_init_bad_arg | `__assume_initialized` requires `&` expression as argument | — |
 | INIT-013 | err_assume_init_array_subscript | `__assume_initialized` argument cannot contain an array subscript | `note_assume_init_array_subscript_hint` — the init analysis tracks arrays as whole units; address the enclosing array instead |
-| INIT-014 | err_nonnull_init_by_default | type contains nonnull pointer must be properly initialized | — |
+| INIT-014 | err_assume_init_complex_arg | unsupported `__assume_initialized` argument | `note_assume_init_complex_arg_hint` — the argument must be `&` applied to a variable, struct field access, or pointer dereference |
+| INIT-015 | err_nonnull_init_by_default | type contains nonnull pointer must be properly initialized | — |
 | **INIT-W001** | warn_ensure_init_not_addressof | ensure_init effect cannot be verified when argument is not an address-of expression | — |
 
 ---
@@ -157,7 +158,7 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 | NONNULL-001 | err_nullable_cast_nonnull | cannot cast nullable pointer to nonnull type | — |
 | NONNULL-002 | err_nonnull_assigned_by_nullable | nonnull pointer cannot be assigned by nullable pointer | — |
 
-(`err_nonnull_init_by_default` is filed under **INIT** as `INIT-014`.)
+(`err_nonnull_init_by_default` is filed under **INIT** as `INIT-015`.)
 
 ---
 

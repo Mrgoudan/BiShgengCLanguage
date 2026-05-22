@@ -235,6 +235,11 @@ def err_assume_init_array_subscript : Error<
 def note_assume_init_array_subscript_hint : Note<
   "the init analysis tracks arrays as whole units (no per-element state); "
   "address the enclosing array instead (e.g. '&x.arr' for '&x.arr[i]')">;
+def err_assume_init_complex_arg : Error<
+  "unsupported __assume_initialized argument">;
+def note_assume_init_complex_arg_hint : Note<
+  "the argument must be '&' applied to a variable, struct field access, "
+  "or pointer dereference">;
 
 // assign
 def err_ownership_assign_owned : Error<

@@ -112,6 +112,9 @@ public:
   ComplexPairTy VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     return Visit(GE->getResultExpr());
   }
+#if ENABLE_BSC
+  ComplexPairTy VisitSafeExpr(SafeExpr *E) { return Visit(E->getSubExpr()); }
+#endif
   ComplexPairTy VisitImaginaryLiteral(const ImaginaryLiteral *IL);
   ComplexPairTy
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *PE) {

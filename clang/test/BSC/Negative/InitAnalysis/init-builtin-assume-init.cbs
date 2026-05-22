@@ -82,3 +82,42 @@ _Safe void test_reject_ensure_init_subscript(
     struct WithArr *__attribute__((ensure_init)) out) {
     _Unsafe { __assume_initialized(&out->arr[0]); } // expected-error {{__assume_initialized argument cannot contain an array subscript}} expected-note {{the init analysis tracks arrays as whole units}}
 }
+
+// --- Non-addressing-path rejection -----------------------------------------
+// The argument must be a static addressing path: '&' applied to a chain of
+// member accesses (.f / ->f) and dereferences (*p) rooted at a DeclRefExpr.
+// __assume_initialized is a pure analyzer hint and codegen emits nothing, so
+// any other expression shape (call, ternary, compound literal, ++, comma,
+// ...) would be silently dropped at runtime.
+
+struct Inner { int x; };
+struct Inner *side_effect(void);
+
+// Function call in the address-of path: reject.
+_Safe void test_reject_call(void) {
+    _Unsafe { __assume_initialized(&side_effect()->x); } // expected-error {{unsupported __assume_initialized argument}} expected-note {{the argument must be '&' applied to a variable}}
+}
+
+// Pre/post-increment in the address-of path: reject.
+_Safe void test_reject_increment(struct Inner *__attribute__((ensure_init)) p) {
+    _Unsafe { __assume_initialized(&(++p)->x); } // expected-error {{unsupported __assume_initialized argument}} expected-note {{the argument must be '&' applied to a variable}}
+}
+
+// Comma expression in the address-of path: reject.
+_Safe void test_reject_comma(struct Inner *__attribute__((ensure_init)) q) {
+    _Unsafe { __assume_initialized(&(side_effect(), q)->x); } // expected-error {{unsupported __assume_initialized argument}} expected-note {{the argument must be '&' applied to a variable}}
+}
+
+// Ternary selecting between two pointers: still rejected (no side effect, but
+// not a static addressing path the analyzer can lower to a single Place).
+_Safe void test_reject_ternary(int cond,
+                                struct Inner *__attribute__((ensure_init)) p,
+                                struct Inner *__attribute__((ensure_init)) q) {
+    _Unsafe { __assume_initialized(&(cond ? p : q)->x); } // expected-error {{unsupported __assume_initialized argument}} expected-note {{the argument must be '&' applied to a variable}}
+}
+
+// Compound literal: addressable and side-effect-free, but not rooted at a
+// named local — reject.
+_Safe void test_reject_compound_literal(void) {
+    _Unsafe { __assume_initialized(&((struct Inner){0}).x); } // expected-error {{unsupported __assume_initialized argument}} expected-note {{the argument must be '&' applied to a variable}}
+}

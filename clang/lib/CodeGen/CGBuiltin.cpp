@@ -2794,7 +2794,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 #if ENABLE_BSC
   case Builtin::BI__assume_initialized:
-    // Semantic-only builtin for init analysis; no-op at runtime.
     return RValue::get(nullptr);
 #endif
   case Builtin::BI__assume:

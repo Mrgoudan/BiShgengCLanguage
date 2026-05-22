@@ -2303,12 +2303,18 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       Diag(Arg->getBeginLoc(), diag::err_assume_init_bad_arg);
       return ExprError();
     }
-    // The init analysis tracks state at (local, [FieldIndex...]) granularity;
-    // it cannot represent "element i of some array". Reject any path
-    // containing an array subscript so users rewrite to the enclosing
-    // array (e.g. '&x.arr' instead of '&x.arr[i]').
+    // The argument must be '&' applied to a static addressing path that the
+    // init analyzer can lower to a Place: a chain of field accesses and
+    // pointer dereferences rooted at a DeclRefExpr. ArraySubscriptExpr is
+    // rejected with a more specific diagnostic; anything else (call, ?:,
+    // compound literal, assignment, ++/--, comma, ...) is rejected as a
+    // non-addressing-path shape — __assume_initialized is a pure analyzer
+    // hint and codegen emits nothing, so any other expression would be
+    // silently dropped at runtime.
     const Expr *E = UO->getSubExpr()->IgnoreParenCasts();
-    while (E) {
+    while (true) {
+      if (isa<DeclRefExpr>(E))
+        break;
       if (isa<ArraySubscriptExpr>(E)) {
         Diag(E->getBeginLoc(), diag::err_assume_init_array_subscript);
         Diag(E->getBeginLoc(), diag::note_assume_init_array_subscript_hint);
@@ -2324,7 +2330,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
           continue;
         }
       }
-      break;
+      Diag(E->getBeginLoc(), diag::err_assume_init_complex_arg);
+      Diag(E->getBeginLoc(), diag::note_assume_init_complex_arg_hint);
+      return ExprError();
     }
     break;
   }

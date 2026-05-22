@@ -1,0 +1,25 @@
+// RUN: %clang %s -o %t.output
+// RUN: %t.output | FileCheck %s
+// expected-no-diagnostics
+
+#include <stdio.h>
+
+struct S { int a; int b; };
+
+_Safe struct S mk(void) {
+    struct S s;
+    s.a = 2;
+    s.b = 3;
+    return s;
+}
+
+int main(void) {
+    _Unsafe {
+        struct S t = _Safe(mk());
+        struct S u = _Unsafe(mk());
+        printf("t=%d u=%d\n", t.a + t.b, u.a + u.b);
+    }
+    return 0;
+}
+
+// CHECK: t=5 u=5
