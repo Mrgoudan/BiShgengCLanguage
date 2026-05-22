@@ -169,6 +169,8 @@ VarDecl *getVarDeclFromExpr(Expr *E) {
     return getVarDeclFromExpr(ICE->getSubExpr());
   } else if (auto PE = dyn_cast<ParenExpr>(E)) {
     return getVarDeclFromExpr(PE->getSubExpr());
+  } else if (auto SE = dyn_cast<SafeExpr>(E)) {
+    return getVarDeclFromExpr(SE->getSubExpr());
   } else if (auto BO = dyn_cast<BinaryOperator>(E)) {
     return getVarDeclFromExpr(BO->getLHS());
   }
@@ -182,6 +184,8 @@ MemberExpr *getMemberExprFromExpr(Expr *E) {
     return getMemberExprFromExpr(ICE->getSubExpr());
   } else if (auto PE = dyn_cast<ParenExpr>(E)) {
     return getMemberExprFromExpr(PE->getSubExpr());
+  } else if (auto SE = dyn_cast<SafeExpr>(E)) {
+    return getMemberExprFromExpr(SE->getSubExpr());
   }
   return nullptr;
 }
@@ -191,7 +195,7 @@ MemberExpr *getMemberExprFromExpr(Expr *E) {
 bool getDerefPathVDFromExpr(Expr *E, DerefPathVD &DP) {
   if (!E)
     return false;
-  E = E->IgnoreParenImpCasts();
+  E = E->IgnoreParenImpCastsSafe();
 
   if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {

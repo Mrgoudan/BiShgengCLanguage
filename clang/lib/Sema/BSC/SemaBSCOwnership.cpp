@@ -547,12 +547,12 @@ bool Sema::CheckTemporaryVarMemoryLeak(Expr* E) {
 void Sema::CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL) {
   if (E == nullptr)
     return;
-  if (auto UO = dyn_cast_or_null<UnaryOperator>(E->IgnoreParenCasts())) {
+  if (auto UO = dyn_cast_or_null<UnaryOperator>(E->IgnoreParenCastsSafe())) {
     if (UO->getOpcode() == UO_Deref && UO->getType().isOwnedQualified()
         && UO->getSubExpr()->getType().isBorrowQualified()) {
         Diag(SL, diag::err_move_borrow);
     }
-  } else if (auto ME = dyn_cast_or_null<MemberExpr>(E->IgnoreParenCasts())) {
+  } else if (auto ME = dyn_cast_or_null<MemberExpr>(E->IgnoreParenCastsSafe())) {
     if (ME->getType().isOwnedQualified() && ME->getBase()->getType().isBorrowQualified())
       Diag(SL, diag::err_move_borrow);
   }

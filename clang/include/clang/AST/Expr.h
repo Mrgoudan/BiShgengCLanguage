@@ -912,6 +912,28 @@ public:
     return const_cast<Expr *>(this)->IgnoreParenCasts();
   }
 
+#if ENABLE_BSC
+  /// BSC variants of the IgnoreParens / IgnoreParenImpCasts / IgnoreParenCasts
+  /// strip family that additionally peel BSC's SafeExpr (the AST node produced
+  /// by _Safe(...) / _Unsafe(...)). SafeExpr inherits its value, type, and
+  /// value-category from its sub-expression and so is transparent to "what is
+  /// the real expression we're checking?" questions; BSC predicates that resolve
+  /// trackable VarDecls or dispatch on AST shape should prefer these variants
+  /// over the generic ones.
+  Expr *IgnoreParensSafe() LLVM_READONLY;
+  const Expr *IgnoreParensSafe() const {
+    return const_cast<Expr *>(this)->IgnoreParensSafe();
+  }
+  Expr *IgnoreParenImpCastsSafe() LLVM_READONLY;
+  const Expr *IgnoreParenImpCastsSafe() const {
+    return const_cast<Expr *>(this)->IgnoreParenImpCastsSafe();
+  }
+  Expr *IgnoreParenCastsSafe() LLVM_READONLY;
+  const Expr *IgnoreParenCastsSafe() const {
+    return const_cast<Expr *>(this)->IgnoreParenCastsSafe();
+  }
+#endif
+
   /// Skip conversion operators. If this Expr is a call to a conversion
   /// operator, return the argument.
   Expr *IgnoreConversionOperatorSingleStep() LLVM_READONLY;

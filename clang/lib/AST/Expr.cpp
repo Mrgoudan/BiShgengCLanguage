@@ -2983,6 +2983,30 @@ Expr *Expr::IgnoreParenCasts() {
   return IgnoreExprNodes(this, IgnoreParensSingleStep, IgnoreCastsSingleStep);
 }
 
+#if ENABLE_BSC
+static inline Expr *IgnoreSafeExprSingleStep(Expr *E) {
+  if (auto *SE = dyn_cast<SafeExpr>(E))
+    return SE->getSubExpr();
+  return E;
+}
+
+Expr *Expr::IgnoreParensSafe() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep,
+                         IgnoreSafeExprSingleStep);
+}
+
+Expr *Expr::IgnoreParenImpCastsSafe() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep,
+                         IgnoreImplicitCastsExtraSingleStep,
+                         IgnoreSafeExprSingleStep);
+}
+
+Expr *Expr::IgnoreParenCastsSafe() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep, IgnoreCastsSingleStep,
+                         IgnoreSafeExprSingleStep);
+}
+#endif
+
 Expr *Expr::IgnoreConversionOperatorSingleStep() {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(this)) {
     if (MCE->getMethodDecl() && isa<CXXConversionDecl>(MCE->getMethodDecl()))

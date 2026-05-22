@@ -1,0 +1,50 @@
+// RUN: %clang -cc1 %s
+// expected-no-diagnostics
+
+// Regression: a `_Safe(p)` / `_Unsafe(p)` wrapper around the operand of
+// a null check must not defeat nullability narrowing. Before the fix,
+// `IgnoreParenImpCasts` failed to strip `SafeExpr`, so the narrowing
+// helpers in BSCNullabilityCheck/BSCNullCheckInfo could not resolve the
+// trackable VarDecl and the post-condition narrowing was lost.
+// Umbrella issue: IJP3AP (F65).
+
+_Safe void var_safe(int *_Borrow _Nullable p) {
+    if (_Safe(p) == nullptr) return;
+    int v = *p;
+    (void)v;
+}
+
+_Safe void var_unsafe(int *_Borrow _Nullable p) {
+    if (_Unsafe(p) == nullptr) return;
+    int v = *p;
+    (void)v;
+}
+
+_Safe void var_bare(int *_Borrow _Nullable p) {
+    if (!_Safe(p)) return;
+    int v = *p;
+    (void)v;
+}
+
+_Safe void var_paren(int *_Borrow _Nullable p) {
+    if (_Safe((p)) == nullptr) return;
+    int v = *p;
+    (void)v;
+}
+
+_Safe void var_double_wrap(int *_Borrow _Nullable p) {
+    if (_Safe(_Unsafe(p)) == nullptr) return;
+    int v = *p;
+    (void)v;
+}
+
+// BinaryOperator LHS resolution through SafeExpr on the RHS:
+// VisitBinaryOperator's getVarDeclFromExpr(LHS) sees the LHS as a
+// VarDecl, and the state propagation from the RHS must look through
+// the SafeExpr to read the source pointer's NonNull status.
+_Safe void bin_op_safe(int *_Borrow _Nonnull q) {
+    int *_Borrow _Nullable p = nullptr;
+    p = _Safe(q);
+    int v = *p;
+    (void)v;
+}
