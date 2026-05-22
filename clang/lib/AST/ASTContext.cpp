@@ -10819,43 +10819,20 @@ bool ASTContext::mergeExtParameterInfo(
     if (SecondHasInfo)
       SecondParam = SecondFnType->getExtParameterInfo(I);
 
-#if ENABLE_BSC
-    // Cannot merge unless everything except noescape and ensure_init matches.
-    if (FirstParam.withIsNoEscape(false).withIsEnsureInit(false) !=
-        SecondParam.withIsNoEscape(false).withIsEnsureInit(false))
-      return false;
-
-    bool FirstEnsureInit = FirstParam.isEnsureInit();
-    bool SecondEnsureInit = SecondParam.isEnsureInit();
-    bool IsEnsureInit = FirstEnsureInit && SecondEnsureInit;
-#else
     // Cannot merge unless everything except noescape matches.
     if (FirstParam.withIsNoEscape(false) != SecondParam.withIsNoEscape(false))
       return false;
-#endif
 
     bool FirstNoEscape = FirstParam.isNoEscape();
     bool SecondNoEscape = SecondParam.isNoEscape();
     bool IsNoEscape = FirstNoEscape && SecondNoEscape;
-#if ENABLE_BSC
-    NewParamInfos.push_back(
-        FirstParam.withIsNoEscape(IsNoEscape).withIsEnsureInit(IsEnsureInit));
-#else
     NewParamInfos.push_back(FirstParam.withIsNoEscape(IsNoEscape));
-#endif
     if (NewParamInfos.back().getOpaqueValue())
       NeedParamInfo = true;
-#if ENABLE_BSC
-    if (FirstNoEscape != IsNoEscape || FirstEnsureInit != IsEnsureInit)
-      CanUseFirst = false;
-    if (SecondNoEscape != IsNoEscape || SecondEnsureInit != IsEnsureInit)
-      CanUseSecond = false;
-#else
     if (FirstNoEscape != IsNoEscape)
       CanUseFirst = false;
     if (SecondNoEscape != IsNoEscape)
       CanUseSecond = false;
-#endif
   }
 
   if (!NeedParamInfo)

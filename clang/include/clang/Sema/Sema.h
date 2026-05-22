@@ -12366,6 +12366,7 @@ public:
   bool CheckOwnedQualTypeCStyleCast(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckOwnedQualTypeAssignment(QualType LHSType, Expr* RHSExpr);
   bool CheckOwnedQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
+  bool CheckOwnedFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   AssignConvertType CheckBSCQualTypeAssignment(QualType LHSType, ExprResult &RHS);
   AssignConvertType CheckBSCFunctionPointerType(QualType LHSType, Expr *RHSExpr);
   bool isBorrowArrayDecayTypeMatch(QualType SrcArrayType,
@@ -12451,6 +12452,7 @@ public:
   bool CheckBorrowQualTypeAssignment(QualType LHSType, QualType RHSType, SourceLocation RLoc);
   bool CheckBorrowFunctionType(QualType ReturnTy, ArrayRef<QualType> ParamTys,
                                SourceLocation SL);
+  bool CheckBorrowFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   bool CheckEnsureInitFunctionPointerType(QualType LHSType, Expr* RHSExpr);
   void CheckMoveVarMemoryLeak(Expr* E, SourceLocation SL);
   bool CheckBorrowQualTypeCompare(QualType LHSType, QualType RHSType);

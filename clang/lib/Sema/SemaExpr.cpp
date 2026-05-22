@@ -18272,12 +18272,20 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
   case IncompatibleFunctionPointer:
 #if ENABLE_BSC
-    // For BSC, when function pointer types are incompatible, emit an error in
-    // the safe zone and a warning in the unsafe zone.
-    if (getLangOpts().CPlusPlus || (getLangOpts().BSC && IsInSafeZone())) {
-#else
-    if (getLangOpts().CPlusPlus) {
+    // BSC: For function pointer assignments in BSC, we use IsSafeFunctionPointerTypeCast
+    // which handles heterogeneous selection and safe/unsafe checking.
+    // It emits BSC-specific errors when needed, so we suppress standard diagnostics.
+    if (getLangOpts().BSC) {
+      IsSafeFunctionPointerTypeCast(DstType, SrcExpr);
+      // Always return false to suppress standard diagnostic - BSC has handled it.
+      return false;
+    }
 #endif
+    if (getLangOpts().CPlusPlus
+#if ENABLE_BSC
+        || IsInSafeZone() || IsSafeFunctionPointerType(DstType)
+#endif
+    ) {
       DiagKind = diag::err_typecheck_convert_incompatible_function_pointer;
       isInvalid = true;
     } else {
@@ -18445,13 +18453,27 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     break;
 #if ENABLE_BSC
   case IncompatibleOwnedPointer: {
-    DiagKind = diag::err_owned_qualcheck_incompatible;
-    BSCFirstType = SrcType;
-    BSCSecondType = DstType;
+    bool outerOwnedDiffers =
+        DstType.getCanonicalType().isOwnedQualified() !=
+        SrcType.getCanonicalType().isOwnedQualified();
+    if (!outerOwnedDiffers &&
+        (DstType->isFunctionPointerType() || SrcType->isFunctionPointerType())) {
+      DiagKind = diag::err_owned_funcPtr_incompatible;
+      BSCFirstType = SrcType;
+      BSCSecondType = DstType;
+    } else {
+      DiagKind = diag::err_owned_qualcheck_incompatible;
+      BSCFirstType = SrcType;
+      BSCSecondType = DstType;
+    }
     break;
   }
   case IncompatibleBorrowPointer: {
-    if (SrcExpr && isa<StringLiteral>(SrcExpr->IgnoreParenImpCasts())) {
+    if (DstType->isFunctionPointerType() || SrcType->isFunctionPointerType()) {
+      DiagKind = diag::err_funcPtr_incompatible;
+      BSCFirstType = SrcType;
+      BSCSecondType = DstType;
+    } else if (SrcExpr && isa<StringLiteral>(SrcExpr->IgnoreParenImpCasts())) {
       DiagKind = diag::err_pass_string_literal_to_mut_borrow;
       BSCFirstType = DstType;
       BSCSecondType = QualType();

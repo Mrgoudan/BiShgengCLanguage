@@ -34,6 +34,7 @@ def err_nested_owned_borrow_type_check : Error<
   "type of %2 cannot be qualified by '%1' |"
   "type of %2 cannot be qualified by '%1', %3 contains '%1' type |"
   "type of %2 cannot be qualified by '%1'(even indirectly), %3 contains '%1' type}0">;
+def err_owned_funcPtr_incompatible : Error<"cannot cast %0 to %1">;
 def err_owned_qualcheck_incompatible : Error<
   "incompatible _Owned types, cannot cast %0 to %1">;
 def err_bsc_move_to_raw_not_owned : Error<
@@ -64,6 +65,8 @@ def err_typecheck_invalid_owned_arrsub : Error<
   "_Owned pointer type (%0) do not support ArraySubscript operate">;
 def err_owned_temporary_memLeak : Error<
   "memory leak because temporary variable '%0' is _Owned or indirect _Owned type, please fix it">;
+def err_funcPtr_incompatible : Error<
+  "incompatible _Borrow function pointer types, cannot cast %0 to %1">;
 def err_borrow_on_borrow : Error<"%0 on a '_Borrow' qualified type is not allowed">;
 def err_mut_expr_unmodifiable  : Error<"the expression after '&_Mut' must be modifiable">;
 def err_mut_or_const_expr_func : Error<"'%0' for function pointer is not allowed">;

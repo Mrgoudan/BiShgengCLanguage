@@ -32,6 +32,6 @@ typedef int* (*PF4)(struct R); // legal
 typedef float* _Borrow (*PF5)(struct R); // legal
 void test() {
   PF2 p1 = f3; // legal
-  PF4 p2 = f3; // expected-warning {{incompatible function pointer types initializing 'PF4' (aka 'int *(*)(struct R)') with an expression of type 'int *_Borrow (struct R)'}}
-  PF5 p3 = f3; // expected-warning {{incompatible function pointer types initializing 'PF5' (aka 'float *_Borrow (*)(struct R)') with an expression of type 'int *_Borrow (struct R)'}}
+  PF4 p2 = f3; // expected-error {{incompatible _Borrow function pointer types, cannot cast 'int *_Borrow (struct R)' to 'PF4' (aka 'int *(*)(struct R)')}}
+  PF5 p3 = f3; // expected-error {{incompatible _Borrow function pointer types, cannot cast 'int *_Borrow (struct R)' to 'PF5' (aka 'float *_Borrow (*)(struct R)')}}
 }
