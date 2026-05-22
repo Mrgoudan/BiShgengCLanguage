@@ -761,54 +761,6 @@ QualType GetSafeArrayDecayType(Sema &S, QualType SrcArrayType, QualType DestPtrT
 
 } // namespace
 
-void Sema::DiagnoseBitfieldWidthOverflow(SourceLocation Loc, QualType SrcType,
-                                         unsigned BitWidth,
-                                         bool TargetIsUnsigned) {
-  Diag(Loc, diag::err_unsafe_implicit_bitfield_assign)
-      << SrcType << (TargetIsUnsigned ? 0 : 1) << BitWidth;
-  // Do not emit note for signed bitfield width overflow
-  if (!TargetIsUnsigned)
-    return;
-  if (BitWidth > 0 && BitWidth < 64) {
-    uint64_t Mask = (uint64_t(1) << BitWidth) - 1;
-    llvm::SmallString<32> MaskStr;
-    llvm::raw_svector_ostream OS(MaskStr);
-    OS << "0x" << llvm::format_hex_no_prefix(Mask, 1)
-       << (TargetIsUnsigned ? "u" : "");
-    Diag(Loc, diag::note_unsafe_bitfield_mask_hint) << MaskStr.str();
-  }
-}
-
-bool Sema::CheckBSCSafeZoneBitfieldAssign(FieldDecl *BF, Expr *RHS) {
-  if (!IsInSafeZone())
-    return true;
-  if (!BF)
-    return true;
-  // _Bool bitfields are already handled by the type-level IsSafeConversion
-  // check; emitting a redundant bitfield-width diagnostic would be misleading.
-  if (BF->getType()->isBooleanType())
-    return true;
-  if (!RHS->getType()->isIntegralOrEnumerationType())
-    return true;
-  if (RHS->isValueDependent() || RHS->isInstantiationDependent())
-    return true;
-
-  unsigned BitWidth = BF->getBitWidthValue(Context);
-  bool TargetUnsigned =
-      BF->getType()->hasUnsignedIntegerRepresentation();
-
-  if (DoesExprValueRangeFitInBitWidth(RHS, BitWidth, TargetUnsigned))
-    return true;
-
-  // Use the pre-conversion source type for diagnostics (the assignment
-  // constraint check has already inserted an implicit cast to the bitfield's
-  // underlying integer type).
-  QualType SrcType = RHS->IgnoreImpCasts()->getType();
-  DiagnoseBitfieldWidthOverflow(RHS->getExprLoc(), SrcType, BitWidth,
-                                TargetUnsigned);
-  return false;
-}
-
 bool Sema::IsSafeConversion(QualType DestType, Expr *E, bool IsExplicitCast) {
   // check function pointer Type in 'IsSafeFunctionPointerTypeCast'
   if (DestType->isFunctionPointerType()) {

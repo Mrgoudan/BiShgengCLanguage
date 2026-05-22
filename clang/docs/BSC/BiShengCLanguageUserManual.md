@@ -5509,16 +5509,7 @@ int main() {
       flag2 = (unsigned int)flag2 | 0x100; // error: flag2 转为 unsigned int 后取值范围扩大到 unsigned int 的范围，超出 unsigned short 的表示范围
     }
     ```
-    18.9. **位域赋值：**在安全区内对整数类型的**位域**赋值时，还会按该位域声明的**位宽与有符号/无符号**检验右操作数（整型表达式），而不仅依据其底层的存储整数类型。
-    ```c
-    typedef struct {
-      unsigned int u_int_4 : 4;
-    } BF;
-    _Safe void bitfield_chk(BF *p) {
-      p->u_int_4 = 0x10; // error: 不能隐式赋值给 4 位无符号位域（可取 0～15）
-    }
-    ```
-    18.10. `if/while` 的条件对类型的要求目前与C一致，任何算术类型都可以作为条件。
+    18.9.  `if/while` 的条件对类型的要求目前与C一致，任何算术类型都可以作为条件。
     ```c
     int a = 2;
     _Safe {

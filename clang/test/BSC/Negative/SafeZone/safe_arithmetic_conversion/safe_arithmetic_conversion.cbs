@@ -96,34 +96,6 @@ _Safe void test_bitwise_op_exceeds_range(void) {
   flag = flag2 ^ flag; // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
 }
 
-// Bitfield operands in bitwise ops: result too wide for non-bitfield target
-struct BF {
-  unsigned int x : 3;
-  unsigned int y : 5;
-  unsigned short us : 10;
-};
-
-_Safe void test_bitfield_operand_bitwise_exceeds_range(void) {
-  struct BF bf;
-  bf.x = 5; bf.y = 15; bf.us = 100;
-
-  // | of bitfield with constant that overflows target
-  unsigned char c = 0;
-  c = bf.us | 0x01;   // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-
-  // ^ of bitfield with constant that overflows target
-  c = bf.us ^ 0x01;   // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-
-  // & with mask still too wide for target
-  c = bf.us & 0x1FF;  // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-
-  // | of two bitfields: result too wide for target
-  c = bf.x | bf.us;   // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-
-  // ^ of two bitfields: result too wide for target
-  c = bf.x ^ bf.us;   // expected-error {{implicit conversion from type 'int' to 'unsigned char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-}
-
 int main(void) {
   test_float_to_int_forbidden();
   test_implicit_int_to_double_forbidden();
@@ -135,6 +107,5 @@ int main(void) {
   test_literal_conversions_forbidden();
   test_literal_expression_conversions_forbidden();
   test_bitwise_op_exceeds_range();
-  test_bitfield_operand_bitwise_exceeds_range();
   return 0;
 }
