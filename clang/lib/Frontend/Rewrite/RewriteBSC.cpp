@@ -958,6 +958,11 @@ void RewriteBSC::RewriteNonGenericFuncAndVar(std::vector<Decl *> &DeclList) {
       Buf << ";\n\n";
       break;
     }
+    case Decl::StaticAssert: {
+      D->print(Buf, Policy);
+      Buf << ";\n\n";
+      break;
+    }
     default:
       break;
     }

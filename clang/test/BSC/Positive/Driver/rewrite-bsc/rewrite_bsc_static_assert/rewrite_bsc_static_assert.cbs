@@ -1,0 +1,20 @@
+// RUN: %clang -rewrite-bsc %s -o %t-rw.c
+// RUN: FileCheck --input-file=%t-rw.c %s
+// RUN: %clang -c %t-rw.c -o %t-rw.output
+// expected-no-diagnostics
+// Regression for F54.
+
+_Static_assert(sizeof(int) == 4, "int must be 4 bytes for this ABI");
+
+typedef int my_int_t;
+
+_Static_assert(sizeof(my_int_t) == 4, "typedef must also be 4 bytes");
+
+int g = 7;
+
+int main(void) {
+    return g;
+}
+
+// CHECK:      _Static_assert(sizeof(int) == 4, "int must be 4 bytes for this ABI")
+// CHECK:      _Static_assert(sizeof(my_int_t) == 4, "typedef must also be 4 bytes")
