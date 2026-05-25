@@ -5504,16 +5504,16 @@ int main() {
       unsigned short flag2 = 0;
       flag2 = flag | 0x100; // ok
       flag2 = flag2 | 0x10000; // error: [0, 65535] | 0x10000 超过了 unsigned short 的表示范围
-      unsigned int flag3 = 0; // 编译器当前实现不会分析 flag3 的精确值域，只使用保守的类型信息的值域
+      unsigned int flag3 = 0; // 编译器不会跟踪 flag3 的精确范围，只使用保守的类型信息的值域（整个 unsigned int 的范围）
       flag2 = flag3 | 0x10; // error: flag3 | 0x10 超过了 unsigned short 的表示范围
       flag2 = (unsigned int)flag2 | 0x100; // error: flag2 转为 unsigned int 后取值范围扩大到 unsigned int 的范围，超出 unsigned short 的表示范围
     }
     ```
-    18.9.  `if/while` 的条件对类型的要求目前与C一致，任何算术类型都可以作为条件。
+    18.9.  `if/while/do-while/for` 语句的条件对表达式类型的要求与C一致，任何算术类型和指针类型都可以作为条件。在条件中使用任何值不会视为额外发生类型转换。
     ```c
     int a = 2;
     _Safe {
-      if (a) { // ok: if 可以接受 int
+      if (a) { // ok: if 条件可以接受 int，不认为先转成了 _Bool
         a += 1;
       } else {
         a -= 1;
