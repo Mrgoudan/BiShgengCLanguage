@@ -1,0 +1,144 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang %s -o %t.output
+// RUN: %t.output
+// expected-no-diagnostics
+
+_Safe int cf_if_else_ok(void) {
+  int a[4] = {1, 2, 3, 4};
+  int * _Borrow _ArrayElem p = &_Mut a[0];
+  int cond = 1;
+  if (cond) {
+    p[1] = p[0] + 1;
+  } else {
+    ++p[2];
+    p[3]++;
+  }
+  return a[1] + a[2] + a[3];
+}
+
+_Safe int cf_while_ok(void) {
+  int a[5] = {0, 1, 2, 3, 4};
+  int * _Borrow _ArrayElem p = &_Mut a[0];
+  int i = 0;
+  while (i < 5) {
+    p[i] = i;
+    ++i;
+  }
+  return a[4];
+}
+
+_Safe int cf_reborrow_in_branch_ok(void) {
+  int a[8] = {0};
+  int * _Borrow _ArrayElem p1 = &_Mut a[0];
+  int * _Borrow _ArrayElem p2;
+  int use_left = 1;
+  if (use_left) {
+    p2 = p1 + 2;
+    *p2 = 7;
+    p2[1] = 8;
+  } else {
+    p2 = p1 + 5;
+    *p2 = 9;
+  }
+  return a[2] + a[3] + a[5];
+}
+
+_Safe int explicit_reborrow_star_p_ok(void) {
+  int a[3] = {10, 20, 30};
+  int * _Borrow _ArrayElem p = &_Mut a[0];
+  int saved = p[1];
+  int * _Borrow q = &_Mut *p;
+  *q = saved + 1;
+  return *q;
+}
+
+_Safe int cf_for_reborrow_ok(void) {
+  int a[6] = {0};
+  int * _Borrow _ArrayElem p1 = &_Mut a[0];
+  int * _Borrow _ArrayElem p2;
+  for (int i = 1; i <= 3; ++i) {
+    p2 = p1 + i;
+    p2[0] = i * 10;
+  }
+  return a[1] + a[2] + a[3];
+}
+
+_Safe int first_arithmetic_reborrow_ok(void) {
+  int a[4] = {0};
+  int * _Borrow _ArrayElem p1 = &_Mut a[0];
+  int * _Borrow _ArrayElem p2 = p1 + 1;
+  p2[0] = 7;
+  return a[1];
+}
+
+_Safe int first_arithmetic_reborrow_assign_ok(void) {
+  int a[4] = {0};
+  int * _Borrow _ArrayElem p1 = &_Mut a[0];
+  int * _Borrow _ArrayElem p2;
+  p2 = p1 + 2;
+  p2[0] = 8;
+  return a[2];
+}
+
+_Safe int first_arithmetic_reborrow_from_decay_ok(void) {
+  int a[4] = {0};
+  int * _Borrow _ArrayElem p1 = a;
+  int * _Borrow _ArrayElem p2 = p1 + 1;
+  p2[0] = 9;
+  return a[1];
+}
+
+_Safe int elem_incdec_ok(void) {
+  int a[3] = {1, 2, 3};
+  int * _Borrow _ArrayElem p = &_Mut a[0];
+  ++p[0];
+  p[1]++;
+  ++p[2];
+  if (p[0] != 2 || p[1] != 3 || p[2] != 4)
+    return 1;
+  return 0;
+}
+
+_Safe int star_p_and_subscript_ok(void) {
+  int a[2] = {5, 6};
+  int * _Borrow _ArrayElem p = &_Mut a[0];
+  *p = 7;
+  p[1] = *p + 1;
+  return p[0] + p[1];
+}
+
+_Safe int subscript_index_borrow_ok(void) {
+  int dummy = 0;
+  int a[4] = {0};
+  int * _Borrow _ArrayElem p1 = a;
+  int * _Borrow p2 = &_Mut dummy;
+  p1[*p2] = 42;
+  dummy += 1;
+  return a[0] + dummy;
+}
+
+int main(void) {
+  if (cf_if_else_ok() != 9)
+    return 1;
+  if (cf_while_ok() != 4)
+    return 2;
+  if (cf_reborrow_in_branch_ok() != 15)
+    return 3;
+  if (explicit_reborrow_star_p_ok() != 21)
+    return 4;
+  if (elem_incdec_ok() != 0)
+    return 5;
+  if (star_p_and_subscript_ok() != 15)
+    return 6;
+  if (cf_for_reborrow_ok() != 60)
+    return 7;
+  if (subscript_index_borrow_ok() != 43)
+    return 8;
+  if (first_arithmetic_reborrow_ok() != 7)
+    return 9;
+  if (first_arithmetic_reborrow_assign_ok() != 8)
+    return 10;
+  if (first_arithmetic_reborrow_from_decay_ok() != 9)
+    return 11;
+  return 0;
+}

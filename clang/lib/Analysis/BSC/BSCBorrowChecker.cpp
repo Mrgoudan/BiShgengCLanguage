@@ -86,6 +86,7 @@ public:
   void VisitStmt(Stmt *S);
   void VisitUnaryDeref(UnaryOperator *UO);
   void VisitUnaryOperator(UnaryOperator *UO);
+  void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
 };
 } // namespace
 
@@ -181,6 +182,18 @@ void DefUse::VisitUnaryOperator(UnaryOperator *UO) {
     Visit(UO->getSubExpr());
   } else {
     Visit(UO->getSubExpr());
+  }
+}
+
+void DefUse::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
+  if (Action == Use || Action == Def) {
+    // Subscript reads its base pointer even on the assignment LHS (`p[i] = …`).
+    Action = Use;
+    Visit(ASE->getBase());
+    Action = Use;
+    Visit(ASE->getIdx());
+  } else {
+    VisitStmt(ASE);
   }
 }
 
@@ -351,6 +364,13 @@ class ActionExtract : public clang::StmtVisitor<ActionExtract> {
   }
 
   void VisitIncrementDecrementOp(UnaryOperator *UO) {
+    QualType SubTy = UO->getSubExpr()->getType();
+    if (SubTy.isBorrowQualified() && SubTy.isArrayElemQualified()) {
+      Kind = Action::Use;
+      op = RHS;
+      Visit(UO->getSubExpr());
+      return;
+    }
     Kind = Action::Init;
     op = LHS;
     Visit(UO->getSubExpr());
@@ -426,6 +446,10 @@ void ActionExtract::VisitBinaryOperator(BinaryOperator *BO) {
   auto Opcode = BO->getOpcode();
   if ((Opcode >= BO_Mul && Opcode <= BO_Shr) ||
       (Opcode >= BO_And && Opcode <= BO_LOr)) {
+    op = RHS;
+    Visit(BO->getLHS());
+    Visit(BO->getRHS());
+  } else if (Opcode == BO_Add || Opcode == BO_Sub) {
     op = RHS;
     Visit(BO->getLHS());
     Visit(BO->getRHS());
