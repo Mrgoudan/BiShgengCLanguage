@@ -1,0 +1,29 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// expected-no-diagnostics
+// Regression for F52.
+
+_Safe int *_Owned mk(void);
+_Safe void take(int *_Owned p);
+
+_Safe void test_init(void) {
+    int *_Owned p;
+    __attribute__((nomerge)) p = mk();
+    take(p);
+}
+
+_Safe void test_two_writes(void) {
+    int *_Owned p;
+    int *_Owned q;
+    __attribute__((nomerge)) p = mk();
+    __attribute__((nomerge)) q = mk();
+    take(p);
+    take(q);
+}
+
+_Safe void test_attributed_block(void) {
+    int *_Owned p;
+    __attribute__((nomerge)) {
+        p = mk();
+    }
+    take(p);
+}

@@ -330,6 +330,11 @@ void BSCIRBuilder::lowerStmt(const Stmt *S) {
   if (isa<NullStmt>(S))
     return;
 
+  if (auto *AS = dyn_cast<AttributedStmt>(S)) {
+    lowerStmt(AS->getSubStmt());
+    return;
+  }
+
   // Expression statements
   if (auto *E = dyn_cast<Expr>(S)) {
     Visit(const_cast<Expr *>(E));

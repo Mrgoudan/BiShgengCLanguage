@@ -163,16 +163,12 @@ bool InitAnalysis::transferStatement(const Statement &S,
         // Whole deref write: *p = val
         markPointeeFullyInit(State, Base, Changed);
       } else if (!getEnsureInitPointeeType(Base).isNull()) {
-        // Struct pointee field write: reuse getFieldPath on the
-        // post-Deref sub-place (same as local struct tracking).
         Place SubPlace(Base, Projs.slice(1),
                        S.getAssign().Dest.Ty, S.getAssign().Dest.Loc);
-        if (auto FP = getFieldPath(SubPlace)) {
+        if (auto FP = getFieldPath(SubPlace))
           if (!getFieldType(FP->Base, FP->Indices)->isArrayType())
             markFieldInit(State, *FP, Changed);
-        }
       }
-      // else: non-struct element write (e.g. array index) — skip.
     }
     break;
   }
@@ -257,22 +253,12 @@ InitLattice InitAnalysis::transferTerminator(const Terminator &T,
           if (ArgPlace.Projections.size() == 1) {
             markPointeeFullyInit(Result, ArgPlace.Base, Changed);
           } else if (!getEnsureInitPointeeType(ArgPlace.Base).isNull()) {
-            // Field through pointer deref: reuse getFieldPath on the
-            // post-Deref sub-place. tryPromoteParent lifts state to the
-            // whole-pointee level when all siblings become initialized.
-            // Defense-in-depth: Sema already rejects array subscripts in
-            // the address-of path, so we additionally require the remaining
-            // projections to be pure Field (no Index/other).
             Place SubPlace(ArgPlace.Base, ArgPlace.Projections.slice(1),
                            ArgPlace.Ty, ArgPlace.Loc);
-            if (auto FP = getFieldPath(SubPlace))
-              if (FP->Indices.size() == SubPlace.Projections.size())
-                markFieldInit(Result, *FP, Changed);
+            markFieldInit(Result, SubPlace, Changed);
           }
-        } else if (auto FP = getFieldPath(ArgPlace)) {
-          // Same defense-in-depth for &x.f... on a local.
-          if (FP->Indices.size() == ArgPlace.Projections.size())
-            markFieldInit(Result, *FP, Changed);
+        } else {
+          markFieldInit(Result, ArgPlace, Changed);
         }
       }
       return Result;
@@ -324,10 +310,9 @@ InitLattice InitAnalysis::transferTerminator(const Terminator &T,
           SmallVector<unsigned, 4> Prefix;
           markAllFieldsInit(Result, ArgPlace.Base,
                             B.getLocal(ArgPlace.Base).Ty, Prefix);
-        } else if (auto FP = getFieldPath(ArgPlace)) {
-          // Field-level: mark specific field, promote parent
+        } else {
           bool Changed = false;
-          markFieldInit(Result, *FP, Changed);
+          markFieldInit(Result, ArgPlace, Changed);
         }
       }
     }
@@ -481,7 +466,16 @@ QualType InitAnalysis::getFieldType(LocalId Id,
   return Ty;
 }
 
-llvm::Optional<FieldPath> InitAnalysis::getFieldPath(const Place &P) const {
+llvm::Optional<FieldPath>
+InitAnalysis::getFieldPath(const Place &P) const {
+  auto FP = getFieldPathPrefix(P);
+  if (!FP || FP->Indices.size() != P.Projections.size())
+    return llvm::None;
+  return FP;
+}
+
+llvm::Optional<FieldPath>
+InitAnalysis::getFieldPathPrefix(const Place &P) const {
   if (P.Projections.empty())
     return llvm::None;
   if (P.Projections[0].K != ProjectionElem::Field)
@@ -530,6 +524,12 @@ void InitAnalysis::markFieldInit(InitLattice &State, const FieldPath &FP,
     Changed = true;
   }
   tryPromoteParent(State, FP, Changed);
+}
+
+void InitAnalysis::markFieldInit(InitLattice &State, const Place &P,
+                                 bool &Changed) const {
+  if (auto FP = getFieldPath(P))
+    markFieldInit(State, *FP, Changed);
 }
 
 void InitAnalysis::tryPromoteParent(InitLattice &State, const FieldPath &FP,
@@ -842,7 +842,7 @@ void InitAnalysis::checkOperand(const Operand &Op, const InitLattice &State,
   // Exception: reading a struct field within a union variant when there is
   // active field-level tracking (meaning a partial struct write happened).
   if (IS == InitState::Initialized) {
-    if (auto FP = getFieldPath(Op.getPlace())) {
+    if (auto FP = getFieldPathPrefix(Op.getPlace())) {
       unsigned UnionDepth = 0;
       if (isUnionStructFieldPath(*FP, UnionDepth)) {
         llvm::SmallVector<unsigned, 4> Prefix(FP->Indices.begin(),
@@ -869,7 +869,7 @@ void InitAnalysis::checkOperand(const Operand &Op, const InitLattice &State,
   }
 
   // Check field-level state if the operand has a field projection.
-  if (auto FP = getFieldPath(Op.getPlace())) {
+  if (auto FP = getFieldPathPrefix(Op.getPlace())) {
     InitState FS = getFieldInitState(State, *FP);
     if (FS == InitState::Initialized)
       return;

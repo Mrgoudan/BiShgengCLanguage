@@ -1,0 +1,41 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+// Regression for F52: AttributedStmt's sub-statement must be lowered into
+// BSCIR. Without the fix the assignment would be replaced by a single nop
+// and init analysis would see `p` as never assigned.
+
+_Safe int *_Owned mk(void);
+_Safe void take(int *_Owned p);
+
+// CHECK-LABEL: fn test_attributed_assign
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _2 = call mk() -> bb1 [safe]
+// CHECK-NEXT: }
+// CHECK-NEXT: bb1: {
+// CHECK-NEXT:   _1 = copy(_2) [safe]
+// CHECK-NEXT:   _3 = call take(move(_1)) -> bb2 [safe]
+// CHECK-NEXT: }
+// CHECK-NOT:    nop
+_Safe void test_attributed_assign(void) {
+    int *_Owned p;
+    __attribute__((nomerge)) p = mk();
+    take(p);
+}
+
+// CHECK-LABEL: fn test_attributed_block
+// CHECK:      bb0: {
+// CHECK-NEXT:   StorageLive(_1) [safe]
+// CHECK-NEXT:   _2 = call mk() -> bb1 [safe]
+// CHECK-NEXT: }
+// CHECK-NEXT: bb1: {
+// CHECK-NEXT:   _1 = copy(_2) [safe]
+// CHECK-NEXT:   _3 = call take(move(_1)) -> bb2 [safe]
+// CHECK-NEXT: }
+// CHECK-NOT:    nop
+_Safe void test_attributed_block(void) {
+    int *_Owned p;
+    __attribute__((nomerge)) {
+        p = mk();
+    }
+    take(p);
+}

@@ -161,6 +161,13 @@ private:
   void markFieldInit(InitLattice &State, const FieldPath &FP,
                      bool &Changed) const;
 
+  /// Mark `P` as initialized iff it names a FieldPath (no Deref/Index in
+  /// its projection chain). Silently does nothing otherwise — writing
+  /// through a pointer does not initialize the pointer's containing
+  /// allocation.
+  void markFieldInit(InitLattice &State, const Place &P,
+                     bool &Changed) const;
+
   /// Clear all field states for a local (on StorageLive/Dead).
   void clearFieldStates(InitLattice &State, LocalId Id, bool &Changed) const;
 
@@ -169,10 +176,15 @@ private:
   void tryPromoteParent(InitLattice &State, const FieldPath &FP,
                         bool &Changed) const;
 
-  /// Extract the full field path from a Place (consecutive leading Field
-  /// projections, stopping at Deref/Index or union boundary).
-  /// Returns None if no leading Field projection.
+  /// FieldPath of `P` iff `P` is a chain of Field projections within a
+  /// single allocation. Returns None when `P` contains a Deref or Index,
+  /// because no FieldPath names such a Place.
   llvm::Optional<FieldPath> getFieldPath(const Place &P) const;
+
+  /// Longest leading-Field prefix of `P`, even when `P` continues past
+  /// a non-Field projection. Use only for read-side state lookups that
+  /// want the closest tracked location.
+  llvm::Optional<FieldPath> getFieldPathPrefix(const Place &P) const;
 
   /// Get the QualType at a given field path prefix for a local.
   QualType getFieldType(LocalId Id, ArrayRef<unsigned> Path) const;
