@@ -1,0 +1,43 @@
+// RUN: %clang_cc1 -verify %s
+
+// Regression: getMemberFullField walked the MemberExpr base chain peeling
+// only MemberExpr and ImplicitCastExpr. A ParenExpr or SafeExpr at the
+// chain root broke the walk early, the returned base was not a DeclRefExpr,
+// and the move was silently never recorded -- leaving a subsequent reuse of
+// the same _Owned field as an unflagged use-after-move (runtime double-free).
+
+_Safe T *_Owned safe_malloc<T>(T);
+void sink(int *_Owned);
+
+struct Inner { int *_Owned p; };
+struct Outer { struct Inner inner; };
+
+void baseline(void) {
+  struct Outer s = { { safe_malloc<int>(1) } };
+  sink(s.inner.p);
+  sink(s.inner.p); // expected-error {{use of moved value: `s.inner.p`}}
+}
+
+void via_safeexpr_outer(void) {
+  struct Outer s = { { safe_malloc<int>(1) } };
+  sink((_Safe(s)).inner.p);
+  sink(s.inner.p); // expected-error {{use of moved value: `s.inner.p`}}
+}
+
+void via_paren_outer(void) {
+  struct Outer s = { { safe_malloc<int>(1) } };
+  sink(((s)).inner.p);
+  sink(s.inner.p); // expected-error {{use of moved value: `s.inner.p`}}
+}
+
+_Safe void via_safeexpr_outer_in_safe(void) {
+  struct Outer s = { { safe_malloc<int>(1) } };
+  _Unsafe { sink((_Safe(s)).inner.p); }
+  _Unsafe { sink(s.inner.p); } // expected-error {{use of moved value: `s.inner.p`}}
+}
+
+_Safe void via_paren_outer_in_safe(void) {
+  struct Outer s = { { safe_malloc<int>(1) } };
+  _Unsafe { sink(((s)).inner.p); }
+  _Unsafe { sink(s.inner.p); } // expected-error {{use of moved value: `s.inner.p`}}
+}

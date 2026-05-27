@@ -94,12 +94,11 @@ static pair<const Expr *, string> getMemberFullField(const MemberExpr *ME) {
   string memberFieldName = ME->getMemberNameInfo().getAsString();
 
   while (true) {
+    base = base->IgnoreParenImpCastsSafe();
     if (const MemberExpr *me = dyn_cast<MemberExpr>(base)) {
       memberFieldName =
           me->getMemberNameInfo().getAsString() + "." + memberFieldName;
       base = me->getBase();
-    } else if (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(base)) {
-      base = ice->getSubExpr();
     } else {
       break;
     }
