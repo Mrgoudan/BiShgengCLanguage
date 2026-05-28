@@ -5235,47 +5235,38 @@ int main() {
 }
 ```
 
-15. 安全区内不允许访问`union`的成员（读或写）。
-
-    安全区内允许定义和声明`union`类型，允许`union`作为函数参数和返回类型，但不允许通过`.`操作符访问`union`的任何成员。
+15. 安全区内允许定义和声明`union`类型变量，允许指向union的裸指针和安全指针，但不允许对`union`成员读写和取借用。
 
 ```c
-union AgeOrName {
+#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+union U {
   int age;
   char name[16];
 };
-struct AgeWrapper {
-  int age;
-};
 
-void foo(void) {
-  struct AgeWrapper d = {10};
-  struct AgeWrapper *e = &d;
-  struct AgeWrapper *_Owned f = (struct AgeWrapper * _Owned) & d;
-  struct AgeWrapper *_Borrow i = &_Mut d;
-  _Safe {
-    int a = 1;
-
-    a++; // ok: 安全区允许自增// ok : 允许显式转换为void类型的owned指针
-    a--; // ok: 安全区允许自减
-
-    a += 1; // ok: 安全区允许 += 运算符
-    a -= 1; // ok: 安全区允许 -= 运算符
-
-    union AgeOrName b = {10}; // ok: 安全区允许声明和初始化 union
-
-    int c = b.age; // error: 安全区不允许通过"."访问 union 成员（读操作）
-    b.age = 20; // error: 安全区不允许通过"."访问 union 成员（写操作）
-
-    int g = e->age; // error: 安全区不允许裸指针通过"->"访问成员
-    int h = f->age; // ok: 允许owned指针通过"->"访问成员
-    int j = i->age; // ok: 允许borrow指针通过"->"访问成员
+_Safe void foo(union U *p) {       // ok: 安全区允许指向union的裸指针
+  int py = p->age;                 // error: 安全区不允许对 union 成员读写
+  p->age = 20;                     // error: 安全区不允许对 union 成员读写
+  int *_Borrow pz = &_Mut p->age;  // error: 安全区不允许对 union 成员取借用
+  union U u = {10};                // ok: 安全区允许声明和初始化 union 类型变量
+  int y = u.age;                   // error: 安全区不允许对 union 成员读写
+  u.age = 20;                      // error: 安全区不允许对 union 成员读写
+  int *_Borrow z = &_Mut u.age;    // error: 安全区不允许对 union 成员取借用
+  _Unsafe {
+    int y2 = u.age;                // ok: 非安全区允许对 union 成员读写
+    u.age = 30;                    // ok: 非安全区允许对 union 成员读写
+    int *_Borrow z2 = &_Mut u.age; // ok: 非安全区允许对 union 成员取借用
   }
-}
-
-int main() {
-  foo();
-  return 0;
+  union U *_Owned p1 = safe_malloc(u);  // ok, 允许指向union的_Owned指针
+  int y3 = p1->age;                // error: 安全区不允许对 union 成员读写
+  p1->age = 40;                    // error: 安全区不允许对 union 成员读写
+  int *_Borrow z3 = &_Mut p1->age; // error: 安全区不允许对 union 成员取借用
+  safe_free((void * _Owned)p1);
+  union U *_Borrow p2 = &_Mut u;   // ok, 允许指向union的_Borrow指针
+  int y4 = p2->age;                // error: 安全区不允许对 union 成员读写
+  p2->age = 50;                    // error: 安全区不允许对 union 成员读写
+  int *_Borrow z4 = &_Mut p2->age; // error: 安全区不允许对 union 成员取借用
 }
 ```
 
