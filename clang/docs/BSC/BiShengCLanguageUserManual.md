@@ -2153,9 +2153,18 @@ int main() {
 
 ## 3. 内存安全
 
-毕昇 C 内存管理的目标是将常见的时间类内存安全问题，如悬挂引用/内存泄漏/重复释放堆内存/解引用空指针等常见的内存安全问题在编译阶段暴露出来。
+毕昇 C 内存管理的目标是将常见的时间类内存安全问题，如悬挂引用/内存泄漏/重复释放堆内存/解引用空指针等常见的内存安全问题在编译阶段暴露出来。为此，毕昇 C 引入了以下机制与规则：
+1. [所有权](#31-所有权)：引入 `_Owned` 关键字，确保对象分配、释放正确。
+2. [借用](#32-借用)：引入 `_Borrow` 关键字，与所有权结合以避免指针悬垂等问题。
+3. [数组与安全指针](#33-数组与安全指针)：引入 `_ArrayElem` 关键字配合 `_Owned` 与 `_Borrow`，明确区分指向单个对象的指针与指向数组元素的指针。
+4. [非空指针](#34-非空指针)：引入 `_Nonnull` 与 `_Nullable` 关键字以明确指针是否允许为空、阻止潜在的空指针解引用。
+5. [_Owned struct](#35-_owned-struct-类型)：代表带有析构函数、带所有权的结构体，使用户能用所有权管理非指针类型的资源。
+6. [安全区](#36-安全区)：引入 `_Safe` 与 `_Unsafe` 关键字，在 `_Safe` 的安全区中使用更严格的语法检查以阻止不安全操作。
+7. [初始化分析](#37-初始化分析)：通过更准确、更严格的初始化分析以更好地发现对未初始化内存的读取。
 
-为此，毕昇 C 引入了[所有权](###所有权)和[借用](###借用)两个新的概念，所有权用关键字`_Owned`实现，借用通过关键字`_Borrow`表示，并通过`_Safe`和`_Unsafe`两个关键字来约束所有权和借用的执行范围。
+毕昇C将 `_Owned` 或 `_Borrow` 修饰的指针称为安全指针，没有 `_Owned` 或 `_Borrow` 修饰的指针称为裸指针。C中所有时间类内存安全问题都是由裸指针的不慎使用导致的。比起裸指针，安全指针有更严格的类型检查和使用限制，可能导致悬垂引用、内层泄露等问题的代码均无法通过所有权和借用机制的检查，因此使用安全指针替代裸指针可以避免时间类内存安全问题。由于安全区中禁止解引用裸指针、只能解引用安全指针，且安全区有更严格的语法检查，因此毕昇C能够保证安全区内的代码不会导致时间类内存安全错误。其他机制在此基础上补充了额外的安全检查和保护覆盖。
+
+毕昇C的语言特性目前无法提供对空间内存安全的保护，空间安全将会通过运行时检查机制来保证。
 
 ### 3.1. 所有权
 
@@ -2253,11 +2262,11 @@ int main() {
 
 #### 3.1.3. 语法及语义规则
 
-为实现所有权特性，BiShengC 语言引入了`_Owned`关键字用于修饰指针类型的变量。为区分指向数组的带所有权指针，BiShengC 还引入了 `_ArrayElem` 关键字用于修饰带`_Owned`的指针类型。这两个关键字与`const`、`restrict`以及`volatile`均属于类型修饰符。
+为实现所有权特性，BiShengC 语言引入了`_Owned`关键字用于修饰指针类型的变量。`_Owned`关键字与`const`、`restrict`以及`volatile`均属于类型修饰符。
 
 具体而言，所有权特性的语法及部分语义规则有以下几点：
 
-1. `_Owned`与`_ArrayElem`关键字仅允许在 BiShengC 语言编译单元内使用；
+1. `_Owned`关键字仅允许在 BiShengC 语言编译单元内使用；
 
 2. `_Owned`关键字仅被允许用于修饰指针类型，不允许修饰非指针类型，修饰多级指针时，每级指针的类型修饰可以不一样，规则与`const`类似；
 
@@ -2344,7 +2353,7 @@ union A {
 };
 ```
 
-5. `_Owned`修饰的类型或拥有`_Owned`修饰的成员的类型不可以作为数组的成员、不可以作为 `_Owned _ArrayElem` 指针的指向类型或其成员；
+5. `_Owned`修饰的类型或拥有`_Owned`修饰的成员的类型不可以作为数组的成员、不可以作为 `_Owned _ArrayElem` 指针的指向类型或其成员。（`_ArrayElem` 指向类型限制详见 [3.3.1.1 节](#3311-指向类型限制)）
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2360,7 +2369,7 @@ _Safe void test(void) {
 _Safe struct A *_Owned _ArrayElem test2(void); // error: _Owned _ArrayElem 指针指向类型不能含有 _Owned 成员
 ```
 
-6. `_Owned`修饰的指针不支持下标运算、算术运算（指针偏移操作），但支持比较运算；
+6. `_Owned`指针不支持下标运算、算术运算（指针偏移操作），但支持比较运算。`_Owned _ArrayElem`指针支持下标运算（详见 [3.3.1.2 节](#3312-_owned-_arrayelem-指针)）。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2384,30 +2393,7 @@ _Safe int main(void) {
 }
 ```
 
-7. `_Owned _ArrayElem`修饰的指针表示指向数组的带所有权的指针，支持下标运算与比较运算，不支持算术运算。其分配与释放可以通过 `safe_malloc_array` 与 `safe_free_array` 实现。除非明确说明或单独列出 `_Owned _ArrayElem` 的情况，否则对 `_Owned` 指针的规则同样适用于`_Owned _ArrayElem`。 `_ArrayElem`不能修饰裸指针。
-
-```c
-#include "bishengc_safety.hbs"
-// _Safe T *_Owned _ArrayElem safe_malloc_array<T>(size_t size, T t);
-// _Safe void safe_free_array(void *_Owned _ArrayElem);
-
-_Safe int main(void) {
-  int * _ArrayElem ptr; // error: _ArrayElem 不能修饰裸指针
-  int *_Owned _ArrayElem p = safe_malloc_array(10, 2);
-  int *_Owned _ArrayElem q = safe_malloc_array(10, 3);
-
-  p += 1; // error: _Owned _ArrayElem 指针不支持算术运算符
-
-  p[3] = 3; // ok: _Owned _ArrayElem 指针支持下标运算符
-
-  if (p == q) { // ok: _Owned _ArrayElem 指针支持比较运算符
-  }
-  safe_free_array((void *_Owned _ArrayElem)p);
-  safe_free_array((void *_Owned _ArrayElem)q);
-}
-```
-
-8. `_Owned`修饰的类型与非`_Owned`修饰的类型之间不允许隐式类型转换；
+7. `_Owned`修饰的类型与非`_Owned`修饰的类型之间不允许隐式类型转换；
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2424,7 +2410,7 @@ _Safe int main(void) {
 }
 ```
 
-9. 禁止 `_Owned` 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 `_Owned` 指针时，必须使用内置函数 `__take_from_raw` 显式表达所有权转移；当用户需要将 `_Owned` 指针转换为裸指针时：若需转移所有权，必须使用 `__move_to_raw` 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 `(T *)&_Mut *p`。以上转换均需在非安全区进行。对 `_Owned` 指针与裸指针之间转换的限制只对最外层指针类型生效；形如 `T*_Owned*` 与 `T**` 之间的转换视为裸指针之间的转换，在安全区不允许、非安全区允许显式执行。
+8. 禁止 `_Owned` 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 `_Owned` 指针时，必须使用内置函数 `__take_from_raw` 显式表达所有权转移；当用户需要将 `_Owned` 指针转换为裸指针时：若需转移所有权，必须使用 `__move_to_raw` 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 `(T *)&_Mut *p`。以上转换均需在非安全区进行。对 `_Owned` 指针与裸指针之间转换的限制只对最外层指针类型生效；形如 `T*_Owned*` 与 `T**` 之间的转换视为裸指针之间的转换，在安全区不允许、非安全区允许显式执行。
 指向类型不一致时，只允许`void * _Owned`类型与`T * _Owned`类型之间的显式强制转换。此类转换在[下文](#3143-强制类型转换) 有额外说明。其他指向类型不一致的 `_Owned` 指针之间不允许转换。
 
     **显式所有权转移接口**（内置函数）：
@@ -2483,30 +2469,11 @@ int main() {
 }
 ```
 
-10. `_Owned _ArrayElem`指针与裸指针之间的转换规则与`_Owned`指针类似，但是必须使用数组版本的所有权转移接口。不允许通过 C 风格强制类型转换在 `T *`、`T *_Owned`、`T *_Owned _ArrayElem` 三者之间互转。
-
-    显式所有权转移接口（内置函数）：
-    - `__move_array_to_raw(p)`：将 `_Owned _ArrayElem` 指针转为裸指针并转移所有权。
-    - `__take_array_from_raw(p)`：将裸指针 `p` 转为 `_Owned _ArrayElem` 指针，并取得其所指数组的所有权。
-
-```c
-#include <stdlib.h>
-
-int main() {
-  int *raw = (int *)malloc(4 * sizeof(int));
-  int *_Owned _ArrayElem arr = __take_array_from_raw(raw); // ok
-  int *_Owned plain = (int *_Owned)arr; // error: 不允许从 T *_Owned _ArrayElem 转为 T *_Owned
-  int *raw2 = __move_array_to_raw(arr); // ok
-  int *_Owned _ArrayElem arr2 = (int *_Owned _ArrayElem)raw2; // error: 应使用 __take_array_from_raw
-  free(raw2);
-  return 0;
-}
-```
-
-11. `_Owned`允许修饰指向`_Trait`的指针，假设有一个具体类型`S`，它实现了`_Trait T`，则：
+9.  `_Owned`允许修饰指向`_Trait`的指针，假设有一个具体类型`S`，它实现了`_Trait T`，则：
 
     - `S * _Owned`类型可以隐式转换为`_Trait T * _Owned`类型；
     - `_Trait T * _Owned`类型允许被显式转换为`void * _Owned`类型。
+    - 不允许`_Trait T* _Owned`与`_Trait T*`之间的类型转换。
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2528,7 +2495,7 @@ int main() {
 }
 ```
 
-12. 通过函数指针调用函数的时候，规则与一般的函数调用一样，会在函数调用时检查形参类型与实参类型是否匹配及返回类型与返回值类型是否匹配；
+10. 通过函数指针调用函数的时候，规则与一般的函数调用一样，会在函数调用时检查形参类型与实参类型是否匹配及返回类型与返回值类型是否匹配；
 
 ```c
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -2554,54 +2521,7 @@ int main() {
 }
 ```
 
-13. `_Owned`可以修饰 _Trait 类型，即`_Trait T* _Owned`，也表示该变量拥有其内部存储的数据的所有权。
-    该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持`_Trait T* _Owned`与`_Trait T*`之间的类型转换。
-
-```c
-#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
-
-_Trait T { _Safe void release(This * _Owned this); };
-struct IPv4 {
-  char *buf1;
-};
-struct IPv6 {
-  char *buf1;
-  char *buf2;
-};
-_Safe void struct IPv4::release(struct IPv4 *_Owned this) {
-  _Unsafe { free(this->buf1); }
-  safe_free((void *_Owned)this);
-}
-_Safe void struct IPv6::release(struct IPv6 *_Owned this) {
-  _Unsafe {
-    free(this->buf1);
-    free(this->buf2);
-  }
-  safe_free((void *_Owned)this);
-}
-_Impl _Trait T for struct IPv4;
-_Impl _Trait T for struct IPv6;
-
-void cleanup(_Trait T *_Owned t) { t->release(); }
-
-int main() {
-  struct IPv4 ipv4 = {.buf1 = "192.168.1.1"};
-  struct IPv6 ipv6 = {.buf1 = "2001:0db8:85a3:0000",
-                      .buf2 = "0000:8a2e:0370:7334"};
-  struct IPv4 *_Owned sipv4 = safe_malloc(ipv4);
-  struct IPv6 *_Owned sipv6 = safe_malloc(ipv6);
-  _Trait T *_Owned tipv4 = sipv4;
-  _Trait T *_Owned tipv6 = sipv6;
-  // 使用 _Trait T* _Owned 作为入参
-  tipv4->release();
-  tipv6->release();
-  safe_free((void *_Owned)tipv4);
-  safe_free((void *_Owned)tipv6);
-  return 0;
-}
-```
-
-14. _Owned 指针可以使用逻辑运算符。
+11.  _Owned 指针可以使用逻辑运算符。
 
 ```c
 void logical_not(int *_Owned _Nullable p) {
@@ -2618,7 +2538,7 @@ void logical_or(int *_Owned _Nullable p, int *_Owned _Nullable q) {
 }
 ```
 
-15. 允许 _Owned 指针作为 if while do-while for 语句和三元表达式的条件，不允许作为 switch 的条件。
+12. 允许 _Owned 指针作为 if while do-while for 语句和三元表达式的条件，不允许作为 switch 的条件。
 
 ```c
 void foo(int *_Owned _Nullable p) {
@@ -2639,7 +2559,7 @@ void foo(int *_Owned _Nullable p) {
 }
 ```
 
-16. 允许在变量初始化、变量赋值和函数传参中将 _Owned 指针隐式转换为 _Bool，不会消耗其指向内容的所有权。
+13. 允许在变量初始化、变量赋值和函数传参中将 _Owned 指针隐式转换为 _Bool，不会消耗其指向内容的所有权。
 
 ```c
 void foo(int *_Owned _Nullable p) {
@@ -2654,7 +2574,7 @@ void baz(int *_Owned _Nullable p) {
 }
 ```
 
-17. 可以在逗号表达式中使用 _Owned 指针，逗号表达式是否消耗所有权取决于使用逗号表达式的场合
+14. 可以在逗号表达式中使用 _Owned 指针，逗号表达式是否消耗所有权取决于使用逗号表达式的场合
 
 ```c
 int *_Owned _Nullable bar(int *_Owned _Nullable x) { return x; }
@@ -3173,88 +3093,7 @@ int main() {
 }
 ```
 
-如果表达式 `e` 是数组下标表达式 `arr[i]`，则 `&_Mut arr[i]` 与 `&_Const arr[i]` 的结果类型为 `T *_Borrow _ArrayElem` 或 `const T *_Borrow _ArrayElem`（详见 [3.2.1.3 节](#3213-_borrow-_arrayelem-借用指针)）。
-
-##### 3.2.1.3. _Borrow _ArrayElem 借用指针
-
-普通借用指针 `T *_Borrow` 不支持下标 `[]` 与指针算术（`+`、`-`、`+=`、`-=`、`++`、`--` 等）。若需要在保持借用安全的前提下遍历数组，应使用 `T *_Borrow _ArrayElem`（只读借用为 `const T *_Borrow _ArrayElem`）。其与 [3.1 节](#31-所有权) 中的 `_Owned _ArrayElem` 类似：`_ArrayElem` 标记该借用指针在逻辑上指向数组内的某个元素，因此允许在借用检查通过的前提下进行下标与算术运算。
-
-**`_ArrayElem` 与指向类型限制**
-
-- `_ArrayElem` 只能与 `_Borrow` 或 `_Owned` 一起修饰指针类型，不能单独修饰非指针类型或裸指针。
-- `_Borrow _ArrayElem` 的指向类型不得为（或包含）`_Owned` / `_Borrow` 指针成员，也不得为 `_Owned struct` 类型（与 `_Owned _ArrayElem` 的指向类型限制一致）。
-
-```c
-int * _Borrow _ArrayElem p1 = ...; // ok
-int * _Borrow * _Borrow _ArrayElem p2 = ...; // error
-int * _Owned * _Borrow _ArrayElem p3 = ...; // error
-```
-
-**如何创建 `_Borrow _ArrayElem` 借用指针**
-
-1. 对数组下标取借用：`&_Mut arr[i]`、`&_Const arr[i]`（`arr` 为数组 lvalue）。
-2. 在赋值、函数传参、返回值等场景中，数组 `T[N]` / `T[]` 可按目标类型退化为 `T *_Borrow _ArrayElem`（见 [3.2.10 数组退化](#3210-数组退化)）。
-
-```c
-void foo(int *_Borrow _ArrayElem p);
-void bar() {
-  int arr[10];
-  foo(&_Mut arr[0]); // ok, 显式对数组下标取借用
-  foo(arr); // ok, 数组退化为 _Borrow _ArrayElem 指针
-}
-```
-
-**允许的操作**
-
-| 操作 | `T *_Borrow` | `T *_Borrow _ArrayElem` |
-| ---- | ------------ | ------------------------ |
-| 解引用 `*p`、成员访问 `p->field` | 允许 | 允许 |
-| 取下标 `p[i]` | 不允许 | 允许 |
-| 指针算术运算 `+` `-` `+=` `-=` `++` `--` | 不允许 | 允许 |
-| 同指向类型的 `==`、`!=` 等比较 | 允许 | 允许 |
-
-```c
-int foo(int *_Borrow _ArrayElem data, int n) {
-  int s = 0;
-  for (int i = 0; i < n; ++i) {
-    s += data[i]; // ok; 若为 int *_Borrow 则禁止取下标
-  }
-  return s;
-}
-```
-
-同类型的 `_Borrow _ArrayElem` 指针之间还支持指针间的减法。
-
-```c
-void foo(void) {
-  int a[10] = {0};
-  const int *_Borrow _ArrayElem p1 = &_Const a[0];
-  const int *_Borrow _ArrayElem p2 = &_Const a[5];
-  int n = p2 - p1; // ok, n = 5
-}
-```
-
-允许 `T *_Borrow` 之间以及 `T *_Borrow _ArrayElem` 之间（忽略 `T` 上的 `const`, `volatile`, `restrict`）使用比较运算符 `==`、`!=`、`>`、`<`、`<=`、`>=`。
-
-```c
-int foo(void) {
-  int a[5] = {1, 2, 3, 4, 5};
-  int sum = 0;
-  const int *_Borrow _ArrayElem p = &_Const a[0];
-  const int *_Borrow _ArrayElem q = &_Const a[4];
-  while (p <= q) { // ok
-    sum += *p;
-    p++;
-  }
-  return sum;
-}
-```
-
-**降级到普通借用**
-
-允许将 `T *_Borrow _ArrayElem` 隐式转换为 `T *_Borrow`，语义上等价于在当前位置对 `*p` 重新取借用（`&_Mut *p` / `&_Const *p`）。反向的强制转换 `T *_Borrow` → `T *_Borrow _ArrayElem` 不允许。降级后须遵守普通借用的限制（不支持下标与算术）。
-
-除非明确说明或单独列出 `_Borrow _ArrayElem` 的情形，否则本章对 `_Borrow` 指针的规则同样适用于 `_Borrow _ArrayElem`。
+如果表达式 `e` 是数组下标表达式 `arr[i]`，则 `&_Mut arr[i]` 与 `&_Const arr[i]` 的结果类型为 `T *_Borrow _ArrayElem` 或 `const T *_Borrow _ArrayElem`，它们可以分别隐式转换为 `T *_Borrow` 或 `const T *_Borrow`。详细规则见 [3.3.1.3 节](#3313-_borrow-_arrayelem-指针)。
 
 #### 3.2.2. 借用变量和被借用对象的生命周期
 
@@ -3299,13 +3138,14 @@ int main() {
 
 每个借用变量（也就是 _Borrow 指针变量）都会有一个或多个被借用对象，由以下规则决定：
 
-1. 对于取借用操作(`&_Mut e`, `&_Const e`)得到的借用指针，当`e`不是形如`*p`的指针解引用表达式时（`p`可以是任意指针类型），被借用对象即为`e`。
+1. 对于取借用操作(`&_Mut e`, `&_Const e`)得到的借用指针，除规则 2-5 所列的情形外，被借用对象即为`e`。
 2. 对于`&_Mut *p`, `&_Const *p`（`p`为`_Borrow`指针），被借用对象即为`p`的被借用对象。
 3. 对于`&_Mut *p`, `&_Const *p`（`p`为`_Owned`指针或裸指针），被借用对象为`p`所指向的对象。
 4. 对于 `&_Mut arr[i]` / `&_Const arr[i]`（`arr` 为数组 lvalue），被借用对象为 `arr[]`（整个数组）。
-5. 如果在不同分支、循环语句中，借用指针有不同的被借用对象，则在这些分支、循环语句结束后的执行路径交汇处，借用指针的被借用对象是每条执行路径上最后的被借用对象集合的并集。
-6. 对于借用指针类型的函数形参，被借用对象为调用点传递过来的被借用对象。
-7. 对于借用指针类型的函数返回值，该函数的形参中应有一个或多个借用类型的参数，返回值的被借用对象是所有借用类型参数的被借用对象的并集。
+5. 对于 `&_Mut p[i]` / `&_Const p[i]`（`p`为`_Owned _ArrayElem`指针，`_Borrow _ArrayElem`指针，或者裸指针），被借用对象为`p`所指向的对象所在的整个数组。
+6. 如果在不同分支、循环语句中，借用指针有不同的被借用对象，则在这些分支、循环语句结束后的执行路径交汇处，借用指针的被借用对象是每条执行路径上最后的被借用对象集合的并集。
+7. 对于借用指针类型的函数形参，被借用对象为调用点传递过来的被借用对象。
+8. 对于借用指针类型的函数返回值，该函数的形参中应有一个或多个借用类型的参数，返回值的被借用对象是所有借用类型参数的被借用对象的并集。
 
 ```C
 #include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
@@ -3399,7 +3239,7 @@ int main() {
 |  | e是`_Borrow`指针 | e 的被借用对象的生命周期 |
 |  | e是裸指针 | 全局生命周期[1] |
 
-[1] 毕昇C不会分析裸指针的实际指向对象、不会根据其实际指向对象来约束声明周期。例如：
+[1] 毕昇C不会分析裸指针的实际指向对象、不会根据其实际指向对象来约束生命周期。例如：
 
 ```C
 void f1() {
@@ -3604,7 +3444,7 @@ int main() {
 }
 ```
 
-如果同时存在对一个变量的可变借用和不可变借用，可能会出现通过可变借用修改被借用对象的内存状态，然后再使用不可借用访问被修改的内存，从而导致未定义行为的情况。
+如果同时存在对一个变量的可变借用和不可变借用，可能会出现通过可变借用修改被借用对象的内存状态，然后再使用不可变借用访问被修改的内存，从而导致未定义行为的情况。
 例如：
 
 ```C
@@ -3949,114 +3789,7 @@ void f5(int *_Borrow _Nullable p) {
 }
 ```
 
-#### 3.2.10. 数组退化
-
-在赋值、函数传参和返回值场景中，数组 `T[N]`/`T[n]`/`T[]` 可以按目标类型退化为以下指针类型：
-
-- `T* _Borrow _ArrayElem` 与 `const T* _Borrow _ArrayElem`
-- `T* _Borrow` 与 `const T* _Borrow`
-- `T*`（标准C行为）
-- `void* _Borrow` 与 `const void* _Borrow`（安全区要求 `T` 满足 `is_trivial_data`）
-- `void* _Borrow _ArrayElem` 与 `const void* _Borrow _ArrayElem`（安全区要求 `T` 满足 `is_trivial_data`）
-
-退化为 `_Borrow _ArrayElem` 指针或 `_Borrow` 指针时视为取借用，适用于借用检查已有规则。
-
-除以上场景外，数组到指针的退化规则与C规则一致。
-
-```c
-void f1(int *_Borrow _ArrayElem p) {}
-void f2(int *_Borrow p) {}
-void f3(int *) {}
-void f4(void *_Borrow _ArrayElem p) {}
-void f5(void *_Borrow p) {}
-
-void foo(void) {
-  int arr[4] = {1, 2, 3, 4};
-  f1(arr); // ok: 数组退化为 T *_Borrow _ArrayElem
-  f2(arr); // ok: 数组退化为 T *_Borrow
-  f3(arr); // ok: 数组退化为 T *
-  f4(arr); // ok: 数组退化为 void *_Borrow _ArrayElem
-  f5(arr); // ok: 数组退化为 void *_Borrow
-  int *_Borrow _ArrayElem p1 = arr;  // ok: 数组退化为 T *_Borrow _ArrayElem
-  int *_Borrow p2 = arr;             // ok: 数组退化为 T *_Borrow
-  int * p3 = arr;                    // ok: 数组退化为 T *
-  void *_Borrow _ArrayElem p4 = arr; // ok: 数组退化为 void *_Borrow _ArrayElem
-  void *_Borrow p5 = arr;            // ok: 数组退化为 void *_Borrow
-}
-
-typedef struct {
-  int data[4];
-} S;
-
-int *_Borrow _ArrayElem f6(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
-}
-
-int *_Borrow f7(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *_Borrow
-}
-
-int * f8(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *
-}
-
-void *_Borrow _ArrayElem f9(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 void *_Borrow _ArrayElem
-}
-
-void *_Borrow f10(S *_Borrow s) {
-  return s->data; // ok: 数组退化为 void *_Borrow
-}
-
-typedef struct {
-  int * ptr;
-} U;
-
-_Safe void f11(U *_Borrow _ArrayElem p) {}
-_Safe void f12(U *_Borrow p) {}
-_Safe void f13(U *) {}
-_Safe void f14(void *_Borrow _ArrayElem p) {}
-_Safe void f15(void *_Borrow p) {}
-_Safe void bar(void) {
-  U arr[4] = {0};
-  f11(arr); // ok
-  f12(arr); // ok
-  f13(arr); // ok
-  f14(arr); // error: T 不满足 is_trivial_data
-  f15(arr); // error: T 不满足 is_trivial_data
-  U *_Borrow _ArrayElem p1 = arr;    // ok: 数组退化为 T *_Borrow _ArrayElem
-  U *_Borrow p2 = arr;               // ok: 数组退化为 T *_Borrow
-  U * p3 = arr;                      // ok: 数组退化为 T *
-  void *_Borrow _ArrayElem p4 = arr; // error: T 不满足 is_trivial_data
-  void *_Borrow p5 = arr;            // error: T 不满足 is_trivial_data
-}
-
-typedef struct {
-  U data[4];
-} U2;
-
-_Safe U *_Borrow _ArrayElem f16(U2 *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
-}
-
-_Safe U *_Borrow f17(U2 *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *_Borrow
-}
-
-_Safe U * f18(U2 *_Borrow s) {
-  return s->data; // ok: 数组退化为 T *
-}
-
-_Safe void *_Borrow _ArrayElem f19(U2 *_Borrow s) {
-  return s->data; // error: T 不满足 is_trivial_data
-}
-
-_Safe void *_Borrow f20(U2 *_Borrow s) {
-  return s->data; // error: T 不满足 is_trivial_data
-}
-```
-
-#### 3.2.11. 借用的其它规则
+#### 3.2.10. 借用的其它规则
 
 除了上面的那些规则，对于借用，我们还有如下规则：
 1. 在安全区内，只允许对全局变量取只读借用，不允许取可变借用。这是为了保证安全性，因为对于全局变量，我们无法在函数签名中跟踪哪个函数读取了全局变量，哪个函数修改了全局变量。
@@ -4070,7 +3803,7 @@ _Safe void test() {
 }
 ```
 
-2. 借用变量在使用前必须初始化。详细规则在[3.6. 初始化分析](#36-初始化分析)章节中介绍。
+2. 借用变量在使用前必须初始化。详细规则在[3.7. 初始化分析](#37-初始化分析)章节中介绍。
 ```C
 void test() {
   int *_Borrow p; 
@@ -4142,35 +3875,394 @@ int main() { return 0; }
 
 7. 借用指针类型不能是泛型实参。
 
-8.  允许对借用类型使用 `sizeof`、`alignof`操作符，并且有：
-`sizeof(T* _Borrow) == sizeof(T*)`
-`_Alignof(T* _Borrow) == _Alignof(T*)`
-`sizeof(T* _Borrow _ArrayElem) == sizeof(T*)`
-`_Alignof(T* _Borrow _ArrayElem) == _Alignof(T*)`
+8.  允许对借用类型使用 `sizeof`、`alignof`操作符，并且借用类型的 `sizeof`、`alignof`结果与裸指针类型的结果一致。
 
-9.  允许对借用类型使用一元的`&`（取地址、获得裸指针）、`!`（判断指针是否为空）及二元的`&&`（逻辑与）、`||`（逻辑或）运算符。
+9. 没有 `_ArrayElem` 修饰的借用指针不支持下标运算、算术运算。关于 `_Borrow _ArrayElem` 允许的操作（下标、算术、比较等），详见 [3.3.1.3 节](#3313-_borrow-_arrayelem-指针)。
 
-10.  不允许对借用类型使用一元的`-`（取负数）、`~`（按位取反）、`&_Const`、`&_Mut`运算符，也不允许对借用类型使用二元的`&`（按位与）、`|`（按位或）、`<<`（左移）、`>>`（右移）运算符。
+10. 允许相同类型（可以忽略指向类型顶层的 `const` `volatile` `restrict` 修饰符）的借用指针之间，使用比较运算符 `==`、`!=`、`>`、`<`、`>=`、`<=`。
 
-```C
-_Safe int foo(void) {
-  int arr[4] = {1, 2, 3, 4};
-  int *_Borrow _ArrayElem p = &_Mut arr[0];
-  p = p + 1; // ok: _Borrow _ArrayElem 支持 +
-  p += 1; // ok: _Borrow _ArrayElem 支持 +=
-  ++p; // ok: _Borrow _ArrayElem 支持 ++
-  int x = p[0]; // ok: _Borrow _ArrayElem 支持 []
+11.  允许对借用类型使用一元的`&`（取地址、获得裸指针）、`!`（判断指针是否为空）及二元的`&&`（逻辑与）、`||`（逻辑或）运算符。
 
-  int *_Borrow q = p; // ok: 降级为普通借用
-  // q = q + 1; // error: 普通借用不支持 +
-  // q += 1; // error: 普通借用不支持 +=
-  // ++q; // error: 普通借用不支持 ++
-  // int y = q[0]; // error: 普通借用不支持 []
-  return x;
+12.  不允许对借用类型使用一元的`-`（取负数）、`~`（按位取反）、`&_Const`、`&_Mut`运算符，也不允许对借用类型使用二元的`&`（按位与）、`|`（按位或）、`<<`（左移）、`>>`（右移）运算符。
+
+### 3.3. 数组与安全指针
+
+数组和指针运算是系统编程语言中重要的语言特性，广泛使用于各类程序中。但是 C 语言中指针类型不区分指向数组元素的指针与指向单个对象的指针，因此 C 无法阻止对指向单个对象的指针进行指针运算。这会导致一些本可以在语言层面发现并阻止的越界行为漏到运行时。
+
+毕昇C 引入了 `_ArrayElem` 关键字用于表达指向数组元素的安全指针。没有 `_ArrayElem` 修饰的安全指针不能进行指针运算与取下标 `[]`。有了 `_ArrayElem`，毕昇C 中所有指向数组的安全指针都可以在类型上与指向单个对象的指针区分开，阻止用户误用指针运算导致越界。
+
+除此之外，毕昇C 将 C 的数组退化规则进行了修改，使数组在使用过程中可少写显式取借用与类型转换，改善其易用性。
+
+#### 3.3.1. 指向数组元素的安全指针
+
+毕昇C 引入了 `_ArrayElem` 关键字作为类型限定符，表明所标注的指针指向数组元素。
+`_ArrayElem` 必须加在已有 `_Owned` 或 `_Borrow` 标注的指针上，不能加在裸指针上，也不能加在非指针类型上。
+`_ArrayElem` 与 `_Owned`/`_Borrow` 的相对顺序无关，可以加在 `_Owned`/`_Borrow` 前面，也可以加在后面。本手册所有示例都使用将 `_ArrayElem` 后置的写法。
+
+```c
+int * _Owned _ArrayElem p1; // ok, _Owned _ArrayElem 指针是指向数组的带所有权的指针
+int * _Borrow _ArrayElem p2; // ok, _Borrow _ArrayElem 指针是指向数组元素的借用指针
+int * _ArrayElem p3; // error, _ArrayElem 不能加在裸指针上
+```
+
+##### 3.3.1.1. 指向类型限制
+
+对于 `T * _Owned _ArrayElem` 与 `T* _Borrow _ArrayElem` 指针，类型 `T` 以及（对结构体来说）其所有递归展开后的成员不能是安全指针或 `_Owned struct`。
+
+```c
+int * _Borrow _ArrayElem p1 = ...; // ok, T = int
+int * _Borrow * _Borrow _ArrayElem p2 = ...; // error, T = int * _Borrow
+int * _Owned * _Borrow _ArrayElem p3 = ...; // error, T = int * _Owned
+```
+
+该规则可理解为：只有当 `T[]` 与 `T * _Borrow` 都是毕昇C支持的类型时，毕昇C才支持 `T* _Owned _ArrayElem` 与 `T* _Borrow _ArrayElem` 类型。由于毕昇C目前不支持在数组内跟踪元素的所有权、不支持二级借用，这些限制也作用于 `_ArrayElem`。
+
+举例：`T` 不能包含 `_Owned` 指针：
+```c
+typedef struct {
+  int * _Owned ptr;
+} T;
+T a[10]; // error
+T * _Borrow b; // ok
+T * _Owned _ArrayElem ptr; // error
+T * _Borrow _ArrayElem ptr; // error
+```
+
+举例：`T` 不能包含 `_Borrow` 指针：
+```c
+typedef struct {
+  int * _Borrow ptr;
+} T;
+T a[10]; // ok
+T * _Borrow b; // error
+T * _Owned _ArrayElem ptr; // error
+T * _Borrow _ArrayElem ptr; // error
+```
+
+##### 3.3.1.2. `_Owned _ArrayElem` 指针
+
+`_Owned _ArrayElem` 修饰的指针表示指向数组的带所有权的指针。除非明确说明或单独列出 `_Owned _ArrayElem` 的情况，否则 [3.1 节](#31-所有权) 中对 `_Owned` 指针的规则同样适用于 `_Owned _ArrayElem`。
+
+**分配与释放**
+
+`_Owned _ArrayElem` 指针的分配与释放通过 `safe_malloc_array` 与 `safe_free_array` 实现：
+
+```c
+#include "bishengc_safety.hbs"
+// _Safe T *_Owned _ArrayElem safe_malloc_array<T>(size_t size, T initializer);
+// _Safe void safe_free_array(void *_Owned _ArrayElem);
+
+_Safe int main(void) {
+  int *_Owned _ArrayElem p = safe_malloc_array(10, 2); // 分配带有 10 个 int 的数组，每个元素初始化为 2
+  safe_free_array((void *_Owned _ArrayElem)p);
 }
 ```
 
-### 3.3. 非空指针
+当 `safe_malloc_array` 的 `size` 为 0 时，该调用返回一个非空但不能解引用的指针。该指针也需要释放，否则仍视为内存泄漏。
+
+`safe_malloc_array`、`safe_free_array` 实现会通过 `malloc`, `free` 进行分配、释放，因此由 `safe_malloc_array` 分配得到的 `_Owned _ArrayElem` 指针可以在转为裸指针后使用 `free` 释放，由 `malloc` 等分配函数分配得到的裸指针也可以在转为 `_Owned _ArrayElem` 指针后使用 `safe_free_array` 进行释放。
+
+**允许的运算**
+
+| 操作 | `T *_Owned` | `T *_Owned _ArrayElem` |
+| ---- | ----------- | ---------------------- |
+| 解引用 `*p`、成员访问 `p->field` | 允许 | 允许 |
+| 取下标 `p[i]` | 不允许 | 允许 |
+| 指针算术运算 `+` `-` `+=` `-=` `++` `--` | 不允许 | 不允许 |
+| 比较运算 `==` `!=` `>=` `<=` `>` `<` | 允许 | 允许 |
+
+`_Owned _ArrayElem` 指针可以取下标 `[]`，但是不能进行算术运算。这样可以保证 `safe_free_array` 入参指针是未偏移的，避免出现 invalid free。需要对指针进行算术运算、自增自减时可先取借用生成 `_Borrow _ArrayElem` 指针，再对其进行运算（该规则在 `_Borrow _ArrayElem` 指针部分讨论）。
+
+```c
+int * _Owned _ArrayElem p = safe_malloc_array(10, 42); // 分配 10 个 int 元素，初始值为 42
+p = p + 10; // error: _Owned _ArrayElem 不能进行算术运算
+safe_free_array((void * _Owned _ArrayElem)p); // 上一行报错可避免此处 invalid free
+```
+
+**类型转换**
+
+1. `_Owned _ArrayElem` 指针不能转换为其他安全指针类型（包括 `_Owned` 指针与任何借用指针），其他安全指针类型也不能转换为 `_Owned _ArrayElem` 指针。进行 `_Owned _ArrayElem`指针与裸指针之间的转换时不能使用C的强制类型转换语法，需要在非安全区使用以下两个内置函数进行转换：
+- `__take_array_from_raw(p)`：将裸指针 `p` 转为 `_Owned _ArrayElem` 指针，并取得其所指数组的所有权。
+- `__move_array_to_raw(p)`：将 `_Owned _ArrayElem` 指针转为裸指针并转移所有权。
+
+```c
+#include <stdlib.h>
+
+int main() {
+  int *raw = (int *)malloc(4 * sizeof(int));
+  int *_Owned _ArrayElem arr = __take_array_from_raw(raw); // ok
+  int *_Owned plain = (int *_Owned)arr; // error: 不允许从 T *_Owned _ArrayElem 转为 T *_Owned
+  int *raw2 = __move_array_to_raw(arr); // ok
+  int *_Owned _ArrayElem arr2 = (int *_Owned _ArrayElem)raw2; // error: 应使用 __take_array_from_raw
+  free(raw2);
+  return 0;
+}
+```
+
+2. 允许进行 `T * _Owned _ArrayElem` 与 `void * _Owned _ArrayElem` 之间的显式类型转换: `T * _Owned _ArrayElem` 可在安全区显式转为 `void * _Owned _ArrayElem`，但 `void * _Owned _ArrayElem` 只能在非安全区显式转为 `T * _Owned _ArrayElem`。其他指向类型不一致的转换（如 `T * _Owned _ArrayElem` 转 `U * _Owned _ArrayElem`）均不允许。
+
+##### 3.3.1.3. `_Borrow _ArrayElem` 指针
+
+`_Borrow _ArrayElem` 指针表示指向数组元素的借用指针。除非明确说明或单独列出 `_Borrow _ArrayElem` 的情况，否则 [3.2 节](#32-借用) 中对 `_Borrow` 指针的规则同样适用于 `_Borrow _ArrayElem`。
+
+**创建 `_Borrow _ArrayElem` 指针**
+
+除指针类型转换外，`_Borrow _ArrayElem` 指针主要由以下两种方式创建：
+1. 对数组下标表达式取借用：`&_Mut a[i]`、`&_Const a[i]`。`a` 可以是任何支持下标运算的类型，包括数组、`_Owned _ArrayElem`/`_Borrow _ArrayElem`指针，非安全区还包括裸指针。
+2. 在赋值、函数传参、返回值等场景中，元素类型为 `T` 的数组可退化为 `T *_Borrow _ArrayElem`（见 [3.3.2 数组退化规则拓展](#332-数组退化规则拓展)）。
+
+```c
+void foo(int *_Borrow _ArrayElem p);
+void bar() {
+  int arr[10];
+  foo(&_Mut arr[0]); // ok, 显式对数组下标取借用
+  foo(arr); // ok, 数组退化为 _Borrow _ArrayElem 指针
+}
+```
+
+为同时支持 `&_Mut a[i]`、`&_Const a[i]` 表达“取单个元素的借用”（需要`_Borrow`指针）和“取数组中元素的借用”（需要`_Borrow _ArrayElem`指针），对数组下标表达式取借用时固定返回`_Borrow _ArrayElem`指针，且`_Borrow _ArrayElem`指针可隐式转为`_Borrow`指针。详细的类型转换规则见下方“类型转换”部分。
+
+```c
+int a[10];
+int *_Borrow _ArrayElem p1 = &_Mut a[0]; // ok
+int *_Borrow p2 = &_Mut a[0]; // ok，隐式转换到 _Borrow 指针后不允许下标 [] 或指针算术运算
+```
+
+**允许的运算**
+
+| 操作 | `T *_Borrow` | `T *_Borrow _ArrayElem` |
+| ---- | ------------ | ------------------------ |
+| 解引用 `*p`、成员访问 `p->field` | 允许 | 允许 |
+| 取下标 `p[i]` | 不允许 | 允许 |
+| 指针算术运算 `+` `-` `+=` `-=` `++` `--` | 不允许 | 允许 |
+| 比较运算 `==` `!=` `>=` `<=` `>` `<` | 允许 | 允许 |
+
+```c
+int foo(int *_Borrow _ArrayElem data, int n) {
+  int s = 0;
+  for (int i = 0; i < n; ++i) {
+    s += data[i]; // ok; 若为 int *_Borrow 则禁止取下标
+  }
+  return s;
+}
+```
+
+其他额外规则：
+1. `_Borrow _ArrayElem` 指针算术运算后的结果视为对同一数组 reborrow 的借用。
+
+```c
+int a[10];
+int * _Borrow _ArrayElem p1 = &_Mut a[0];
+int * _Borrow _ArrayElem p2 = p1 + 5; // 等效于 &_Mut p1[5]， p2 生命周期开始，p1 冻结
+*p2 = 42;
+// p2 生命周期结束，p1 解冻
+p1[1] = 43; // ok
+```
+
+2. 当同一语句多次使用 `[]` 或 `*` 通过 `_Borrow _ArrayElem` 指针访问数组元素时，借用检查应将所有访问视为对原本的指针的使用，不认为产生临时的新借用。
+
+```c
+int * _Borrow _ArrayElem p = ...;
+p[0] = p[1] + p[2]; // ok，借用检查应将其视为多次使用 p 本身，不报错
+```
+
+3. 同类型的 `_Borrow _ArrayElem` 指针之间支持减法运算。
+
+```c
+void foo(void) {
+  int a[10] = {0};
+  const int *_Borrow _ArrayElem p1 = &_Const a[0];
+  const int *_Borrow _ArrayElem p2 = &_Const a[5];
+  int n = p2 - p1; // ok, n = 5
+}
+```
+
+4. 允许 `T *_Borrow _ArrayElem` 之间（忽略 `T` 上的 `const`, `volatile`, `restrict`）使用比较运算符 `==`、`!=`、`>`、`<`、`<=`、`>=`。
+
+```c
+int foo(void) {
+  int a[5] = {1, 2, 3, 4, 5};
+  int sum = 0;
+  const int *_Borrow _ArrayElem p = &_Const a[0];
+  const int *_Borrow _ArrayElem q = &_Const a[4];
+  while (p <= q) { // ok
+    sum += *p;
+    p++;
+  }
+  return sum;
+}
+```
+
+**类型转换**
+
+1. `_Borrow _ArrayElem` 指针可以隐式转换为 `_Borrow` 指针，除此之外 `_Borrow _ArrayElem` 指针不能转换为其他安全指针类型。其他安全指针类型（包括 `_Borrow` 指针）不能转换为 `_Borrow _ArrayElem` 指针。
+2. 可以在非安全区将 `_Borrow _ArrayElem` 指针显式转换为裸指针，或是从裸指针显式转换为 `_Borrow _ArrayElem` 指针。
+3. 安全区支持 `T * _Borrow _ArrayElem` 隐式转为 `void * _Borrow _ArrayElem`，不支持指向类型不同的 `_Borrow _ArrayElem` 指针间的类型转换。非安全区支持任意指向类型不同的 `_Borrow _ArrayElem` 指针之间的显式类型转换，以及  `T * _Borrow _ArrayElem` 隐式转为 `void * _Borrow _ArrayElem`。
+
+#### 3.3.2. 数组退化规则拓展
+
+为了在兼容 C 语言的数组相关规则的基础上让用户便于通过借用指针访问数组元素，毕昇C 在C的基础上拓展数组退化规则，使数组能够在特定情况下隐式退化为借用指针。
+
+注：毕昇C 语言中以下场景涉及数组但不属于数组退化范畴，此类规则与 C 语言一致：
+1. 当数组作为函数形参时，函数形参的类型调整会固定将数组转化为裸指针。
+    ```c
+    void foo(int a[10]); // 一定调整为 void foo(int *a)
+    ```
+2. 当数组在以下场景使用时，语义是使用数组整体，不发生退化：(1)在 `sizeof()`, `typeof()` 中作为参数, (2) 整体取地址、取借用，(3)作为字符串字面量初始化字符数组。
+
+##### 3.3.2.1. 数组退化为借用指针
+
+如果在赋值、函数传参和函数返回场景使用元素类型为 `T` 的数组，且数组需被转化为以下借用类型之一，则数组会自动退化为该类型：
+
+- `T* _Borrow _ArrayElem` 与 `const T* _Borrow _ArrayElem`
+- `T* _Borrow` 与 `const T* _Borrow`
+- `void* _Borrow` 与 `const void* _Borrow`（安全区要求 `T` 满足 `is_trivial_data`，否则报错）
+- `void* _Borrow _ArrayElem` 与 `const void* _Borrow _ArrayElem`（安全区要求 `T` 满足 `is_trivial_data`，否则报错）
+
+数组`a`退化为借用指针时视为对数组首元素取借用(`&_Mut a[0]`或`&_Const a[0]`)，适用于借用检查已有规则。目标类型不为以上之一时，数组会退化为裸指针 `T*`，详见 [3.3.2.2 节](#3322-数组退化为裸指针) 。
+
+```c
+void f1(int *_Borrow _ArrayElem p) {}
+void f2(int *_Borrow p) {}
+void f3(void *_Borrow _ArrayElem p) {}
+void f4(void *_Borrow p) {}
+
+void foo(void) {
+  int arr[4] = {1, 2, 3, 4};
+  f1(arr); // ok: 数组退化为 T *_Borrow _ArrayElem
+  f2(arr); // ok: 数组退化为 T *_Borrow
+  f3(arr); // ok: 数组退化为 void *_Borrow _ArrayElem
+  f4(arr); // ok: 数组退化为 void *_Borrow
+  int *_Borrow _ArrayElem p1 = arr;  // ok: 数组退化为 T *_Borrow _ArrayElem
+  int *_Borrow p2 = arr;             // ok: 数组退化为 T *_Borrow
+  void *_Borrow _ArrayElem p3 = arr; // ok: 数组退化为 void *_Borrow _ArrayElem
+  void *_Borrow p4 = arr;            // ok: 数组退化为 void *_Borrow
+}
+
+typedef struct {
+  int data[4];
+} S;
+
+int *_Borrow _ArrayElem f5(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
+}
+
+int *_Borrow f6(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow
+}
+
+void *_Borrow _ArrayElem f7(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 void *_Borrow _ArrayElem
+}
+
+void *_Borrow f8(S *_Borrow s) {
+  return s->data; // ok: 数组退化为 void *_Borrow
+}
+
+typedef struct {
+  int * ptr;
+} U;
+
+_Safe void f9(U *_Borrow _ArrayElem p) {}
+_Safe void f10(U *_Borrow p) {}
+_Safe void f11(void *_Borrow _ArrayElem p) {}
+_Safe void f12(void *_Borrow p) {}
+_Safe void bar(void) {
+  U arr[4] = {0};
+  f9(arr);  // ok
+  f10(arr); // ok
+  f11(arr); // error: T 不满足 is_trivial_data
+  f12(arr); // error: T 不满足 is_trivial_data
+  U *_Borrow _ArrayElem p1 = arr;    // ok: 数组退化为 T *_Borrow _ArrayElem
+  U *_Borrow p2 = arr;               // ok: 数组退化为 T *_Borrow
+  void *_Borrow _ArrayElem p3 = arr; // error: T 不满足 is_trivial_data
+  void *_Borrow p4 = arr;            // error: T 不满足 is_trivial_data
+}
+
+typedef struct {
+  U data[4];
+} U2;
+
+_Safe U *_Borrow _ArrayElem f13(U2 *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow _ArrayElem
+}
+
+_Safe U *_Borrow f14(U2 *_Borrow s) {
+  return s->data; // ok: 数组退化为 T *_Borrow
+}
+
+_Safe void *_Borrow _ArrayElem f15(U2 *_Borrow s) {
+  return s->data; // error: T 不满足 is_trivial_data
+}
+
+_Safe void *_Borrow f16(U2 *_Borrow s) {
+  return s->data; // error: T 不满足 is_trivial_data
+}
+```
+
+##### 3.3.2.2. 数组退化为裸指针
+
+当元素类型为 `T` 的数组需要退化为指针但是不满足 [3.3.2.1 节](#3321-数组退化为借用指针) 所描述的情形，则数组会退化为裸指针 `T*`。这条规则使得毕昇C 对数组的处理与 C 语言兼容，保证合法 C 语言代码的语义在毕昇C 中是相同的。
+
+数组在以下场景中会先退化为裸指针，再执行操作：
+1. 赋值、函数传参和函数返回场景，但目标类型不为 [3.3.2.1 节](#3321-数组退化为借用指针) 中列举的类型。
+
+    ```c
+    _Safe void f1(int * p);
+    _Safe void foo(void) {
+      int a[10];
+      f1(a); // ok
+      int * p = a; // ok
+    }
+
+    typedef struct {
+      int data[4];
+    } S;
+
+    _Safe int * f2(S * _Borrow p) {
+      return p->data; // ok
+    }
+    ```
+
+2. 算术运算，数组先退化到裸指针再进行运算，运算结果为裸指针类型。只允许对指针有良好定义的运算（`+,-`）。
+
+    ```c
+    int array[10];
+    int * p = array + 1;
+    int dist = (array + 1) - array; // 1
+    ```
+
+3. 比较
+
+    ```c
+    int array1[10];
+    int array2[10];
+
+    bool eq = array1 == array2;
+    bool ne = array1 != array2;
+    bool eq2 = array1 == &array1[0];
+    ```
+
+4. 作为三目运算(`?:`)的值，以及逗号(`,`)
+
+    ```c
+    int array[10];
+    int * p1 = (...)? array : nullptr; // 作为 ?: 中真分支/假分支的值
+    int * p2 = (... , array); // 作为逗号连接的一个表达式
+    ```
+
+5. 作为分支、循环语句和三目运算的条件
+
+    ```c
+    int array[10];
+    int value = array? 1 : 0;
+    if (array) {...}
+    if (!array) {...}
+    if (array && ...) {...}
+    if (array || ...) {...}
+    ```
+
+### 3.4. 非空指针
 
 为了提高指针使用的安全性，BSC 引入了指针的可空性（Nullability）概念。
 
@@ -4229,7 +4321,7 @@ _Safe int main(void) {
 }
 ```
 
-#### 3.3.1. 编译器可以检查哪些指针的可空性
+#### 3.4.1. 编译器可以检查哪些指针的可空性
 
 可以用 `_Nullable` 和 `_Nonnull` 修饰任意指针类型（裸指针、_Owned 和 _Borrow 指针），
 但只有指针满足以下条件时，编译器可以对它的可空性进行跟踪，从而保护空指针解引用。
@@ -4285,7 +4377,7 @@ _Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable volatile vp) {
 }
 ```
 
-#### 3.3.2. 指针类型的 Nullability
+#### 3.4.2. 指针类型的 Nullability
 
 指针类型的可空性标记和指针的类型以及指针的修饰符有关：
 
@@ -4366,7 +4458,7 @@ int main() {
 }
 ```
 
-#### 3.3.3. 什么是判空语句
+#### 3.4.3. 什么是判空语句
 
 在条件语句、循环语句的条件和三元表达式的条件表达式中，只有部分行为可以被视作“判断指针是否为空指针”：
 
@@ -4397,9 +4489,9 @@ int main() {
 
 6. 上述模式可以嵌套括号
 
-其中 `e` 需要满足 3.3.1 中“可被跟踪”的要求。
+其中 `e` 需要满足 3.4.1 中“可被跟踪”的要求。
 
-对这些“判空语句”，编译器会在在后续控制流中更新 `e` 的可空性状态：
+对这些“判空语句”，编译器会在后续控制流中更新 `e` 的可空性状态：
 
 - 在 `if (e)` / `while (e)` 的真分支（或循环体）里，`e` 视作 Nonnull
 - 在 `if (!e)` 的假分支里，`e` 视作 Nonnull
@@ -4447,7 +4539,7 @@ _Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
 }
 ```
 
-#### 3.3.4. 指针的赋值、传参和返回
+#### 3.4.4. 指针的赋值、传参和返回
 
 1. 不允许用可空表达式给可空性标记为 Nonnull 的指针赋值：
 ```C
@@ -4506,7 +4598,7 @@ int main() {
 }
 ```
 
-#### 3.3.5. 指针的强制类型转换
+#### 3.4.5. 指针的强制类型转换
 
 在开启编译选项`-nullability-check=all`后，在非安全区中不允许将 Nullable 指针强制类型转换为 Nonnull 类型：
 ```C
@@ -4539,7 +4631,7 @@ int main() {
 }
 ```
 
-#### 3.3.6. 指针的解引用、成员访问
+#### 3.4.6. 指针的解引用、成员访问
 
 可空性标记为 Nullable 的指针的可空性状态（Nullability）会随赋值和控制流发生变化，
 BSC 编译器会跟踪这些变换，保证指针解引用、成员访问等操作的安全性。
@@ -4566,7 +4658,7 @@ int main() {
 }
 ```
 
-#### 3.3.7. 结构体成员是 Nullable 指针
+#### 3.4.7. 结构体成员是 Nullable 指针
 
 初始化有 Nullable 指针成员的结构体变量时：
 1. 如果是通过初始化列表进行初始化，BSC 编译器会根据初始化表达式来初始化 Nullable 指针成员的 Nullability
@@ -4612,7 +4704,7 @@ int main() {
   return 0;
 }
 ```
-#### 3.3.8. 非空指针检查的范围和控制选项
+#### 3.4.8. 非空指针检查的范围和控制选项
 
 非空指针检查是一项强大的功能，能帮助开发者在编译期识别出潜在的危险行为。同时，这会带来一定的编译性能开销和编码行为限制。**默认情况下，对非空指针的检查仅在安全区生效**，安全区的定义详见[内存安全-安全区](#安全区)章节。
 
@@ -4639,11 +4731,11 @@ int main() {
 ```
 对于上面这个示例，当编译选项`-nullability-check`不存在或者`-nullability-check=safeonly`时，只有在`_Safe`区的`error2`会被报告；当`-nullability-check=all`时，非安全区的`error1`和安全区`error2`均会被报告。
 
-### 3.4. _Owned struct 类型
+### 3.5. _Owned struct 类型
 
 `_Owned struct` 是一种自定义类型，与 `struct` 不同，主要体现在非拷贝语义上，一律是 `move` 语义整体跟踪。这意味着原变量中的资源所有权会转移到新变量或参数中。本节依次介绍如何定义 `_Owned struct` 类型，如何创建 `_Owned struct` 实例。
 
-#### 3.4.1. 定义 `_Owned struct` 类型
+#### 3.5.1. 定义 `_Owned struct` 类型
 `_Owned struct` 类型的定义由关键字 `_Owned struct` 和自定义的名字组成，紧跟着是定义在一对花括号中 `_Owned struct` 定义体，在定义体中可以定义成员变量、析构函数、成员函数和访问修饰符。允许定义泛型 `_Owned struct`。
 
 **限制：** `_Owned struct` 必须在翻译单元的声明层级定义（与 `_Trait` 定义、普通函数定义等同级），不允许在函数体或块作用域内定义（例如在任何函数、`main`、条件/循环等块内直接写 `_Owned struct S { ... };`）。这与标准 C 允许在函数内定义 `struct` 不同。违反时编译器报错：`_Owned struct cannot be defined in function scope; move the definition to file scope`。若在函数里需要该类型，应将 `_Owned struct` 定义放在函数外部，再在函数内使用。
@@ -4674,7 +4766,7 @@ int main() {
 
 注：`_Owned struct` 与 `C struct`类似，允许结构体嵌套。
 
-##### 3.4.1.1. 成员变量
+##### 3.5.1.1. 成员变量
 
 `_Owned struct` 的成员变量分为实例成员变量和静态成员变量(由`static` 修饰)，和 `struct` 一样，成员变量定义的时候不允许写初始化。
 
@@ -4694,7 +4786,7 @@ int main() {
 }
 ```
 
-##### 3.4.1.2. 析构函数
+##### 3.5.1.2. 析构函数
 
 在一个对象生命周期结束时，会自动调用析构函数。析构函数与 `_Owned struct` 类型同名，前面带有 `~`, 但是不允许写泛型参数。当用户未定义析构函数时，编译器会自动提供默认的析构函数。
 ```c
@@ -4748,7 +4840,7 @@ int main() {
   1. 有成员变量被转移所有权的状态： `_Owned struct`（递归包含嵌套成员）至少有一个`_Owned` 修饰的成员被移动。结构体本身未被整体移动。
 + `_Owned struct`内 `_Owned` 修饰的指针需要在析构函数内被手动释放。如未被手动释放，则报错。 报错模板信息为 destructor for`%0` incorrect, %1 of _Owned type and needs to be handled manually（ `%0` 为 `_Owned struct` 变量名）
 
-##### 3.4.1.3. 成员函数
+##### 3.5.1.3. 成员函数
 
 `_Owned struct` 的成员函数分为实例成员函数和静态成员函数(不允许 `static` 修饰)。实例成员函数需要显式参数 `this`, 假设当前 `_Owned struct` 类型是 `C`, `this` 的类型可以是 `C*`、`const C*`、`C* _Borrow`、`const C * _Borrow`、`C * _Owned`。静态成员函数是没有 `this`。成员函数的访问与 `struct` 扩展成员函数访问一样(详见成员函数章节)。
 
@@ -4800,7 +4892,7 @@ int main() {
 ```
 `_Owned struct` 与 `struct` 类似，允许扩展成员函数（详见成员函数章节）。
 
-##### 3.4.1.4. 访问控制控制权限
+##### 3.5.1.4. 访问控制控制权限
 
 `_Owned struct` 定义体内，允许成员指定可见性分为 `_Public` 和 `_Private`, 默认为 `_Private`。只有 `_Owned struct` 定义体内部的成员函数有权访问 `_Private` 和 `_Public`成员，在`_Owned struct` 外部（包括扩展成员函数）, 只能访问 `_Public` 成员。示例：
 
@@ -4818,13 +4910,13 @@ int A::f(A* this) {
 }
 ```
 
-#### 3.4.2. 创建 `_Owned struct`实例
+#### 3.5.2. 创建 `_Owned struct`实例
 
 `_Owned struct` 允许使用 `struct initializer` 语法创建实例，也允许单独对每个成员变量初始化（如果成员变量是 `_Public`, 此时与 `struct` 一样单独跟踪每个成员的初始化状态，但是需要在安全区状态下保证在发生 `move`、传参、析构和返回等场景下该变量一定已经完整初始化, 非安全区不做保证。同时为了方便 **`_Owned struct` 类型在声明、定义时不携带 `_Owned struct` 关键字**。
 
-### 3.5. 安全区
+### 3.6. 安全区
 
-#### 3.5.1. 概述
+#### 3.6.1. 概述
 
 c 语言有很多规则过于灵活，不方便编译器做静态检查。因此我们引入一个新语法，使得在一定范围内的毕昇 c 代码必须遵循更严格的约束，保证在这个范围内的代码肯定不会出现“内存安全”问题。
 
@@ -4838,7 +4930,7 @@ c 语言有很多规则过于灵活，不方便编译器做静态检查。因此
 
 - 没有 `_Safe`或`_Unsafe`关键字修饰的全局函数默认是非安全的。
 
-#### 3.5.2. 代码示例
+#### 3.6.2. 代码示例
 
 ```c
 #include <stdlib.h>
@@ -4868,7 +4960,7 @@ int main(void) {
 }
 ```
 
-#### 3.5.3. 语法规则
+#### 3.6.3. 语法规则
 
 1. 允许使用`_Safe/_Unsafe`修饰函数声明、函数签名、函数定义、函数指针、语句、括号表达式。
 
@@ -5351,7 +5443,7 @@ int main() {
     1. 允许指向其他类型的owned指针显式转换为指向void类型的owned指针，该转换需要符合 [3.1.4.3 owned指针强制类型转换](#3143-强制类型转换) 的规则。
     2. 允许指向其他类型的borrow指针隐式转换为指向void类型的borrow指针，但原类型必须满足 is_trivial_data 的条件（不含指针和 _Owned struct），否则不允许转换。
 
-    安全区内不允许指针和非指针类型之间的转换。关于数组退化到指针的完整规则，详见 [3.2.10 数组退化](#3210-数组退化)。除数组退化规则外，安全区内不允许`_Owned/_Borrow/raw`指针之间的转换；另外，允许 `T *_Borrow _ArrayElem` 转换为 `T *_Borrow`。
+    安全区内不允许指针和非指针类型之间的转换。关于数组退化到指针的完整规则，详见 [3.3.2 数组退化规则拓展](#332-数组退化规则拓展)。除数组退化规则外，安全区内不允许`_Owned/_Borrow/raw`指针之间的转换；另外，允许 `T *_Borrow _ArrayElem` 转换为 `T *_Borrow`。
 
 ```c
 void test() {
@@ -5583,9 +5675,9 @@ _Safe void foo(void) {
 
 ```
 
-### 3.6. 初始化分析
+### 3.7. 初始化分析
 
-#### 3.6.1. 概述
+#### 3.7.1. 概述
 
 在 C 语言中，使用未初始化的变量是一种常见的未定义行为。编译器可能不会对此产生警告，但未初始化的值会导致不可预测的程序行为、安全漏洞或崩溃。
 
@@ -5593,7 +5685,7 @@ _Safe void foo(void) {
 
 初始化分析默认在 `_Safe` 区域内生效，也可通过 `-uninit-check=all` 选项扩展到所有代码区域，或通过 `-uninit-check=none` 禁用。
 
-#### 3.6.2. 代码示例
+#### 3.7.2. 代码示例
 
 ```c
 _Safe void example(int cond) {
@@ -5615,7 +5707,7 @@ _Safe void example_ok(int cond) {
 }
 ```
 
-#### 3.6.3. 语法及语义规则
+#### 3.7.3. 语法及语义规则
 
 1. 在安全区中，所有局部变量（标量、指针、结构体等）在使用前必须被确定初始化。未初始化或仅在部分路径上初始化的变量会导致编译错误。
 
@@ -5674,7 +5766,7 @@ _Safe void rule3_ok(int cond) {
 }
 ```
 
-4. 取地址操作（`&_Mut`、`&_Const`、`&`）被视为对变量的使用。对未初始化的变量取地址会报错。例外：作为 `ensure_init` 参数或 `__assume_initialized` 参数的取地址表达式不受此限制（详见 3.6.4 和 3.6.5）。
+4. 取地址操作（`&_Mut`、`&_Const`、`&`）被视为对变量的使用。对未初始化的变量取地址会报错。例外：作为 `ensure_init` 参数或 `__assume_initialized` 参数的取地址表达式不受此限制（详见 3.7.4 和 3.7.5）。
 
 ```c
 _Safe void rule4(void) {
@@ -5699,7 +5791,7 @@ _Safe int rule5(int cond) {
 } // error: return value of `rule5` may not be initialized on all paths
 ```
 
-6. 数组元素的逐个赋值**不会**将数组标记为已初始化。数组必须通过初始化列表或在 `_Unsafe` 区域中使用 `__assume_initialized` 来初始化（详见 3.6.5）。此规则同样适用于结构体中的数组字段——对数组元素的逐个写入不会将该字段标记为已初始化。
+6. 数组元素的逐个赋值**不会**将数组标记为已初始化。数组必须通过初始化列表或在 `_Unsafe` 区域中使用 `__assume_initialized` 来初始化（详见 3.7.5）。此规则同样适用于结构体中的数组字段——对数组元素的逐个写入不会将该字段标记为已初始化。
 
 ```c
 _Safe void rule6_error(void) {
@@ -5804,7 +5896,7 @@ _Safe void rule9(void) {
 }
 ```
 
-#### 3.6.4. `__attribute__((ensure_init))`
+#### 3.7.4. `__attribute__((ensure_init))`
 
 `__attribute__((ensure_init))` 是一个参数属性，用于标注指针参数，建立初始化契约：
 
@@ -5938,7 +6030,7 @@ _Safe void indirect_call(InitFn fn) {
 }
 ```
 
-#### 3.6.5. `__assume_initialized`
+#### 3.7.5. `__assume_initialized`
 
 `__assume_initialized(&x)` 是一个内建函数，用于在某个程序点将变量标记为已初始化。与 `ensure_init` 不同，它**不做契约验证**——由用户保证变量确实已初始化。
 
@@ -6023,7 +6115,7 @@ _Safe void array_subscript_example(void) {
 }
 ```
 
-#### 3.6.6. 检查模式
+#### 3.7.6. 检查模式
 
 通过编译选项 `-uninit-check=<mode>` 控制初始化分析的范围：
 
@@ -6946,7 +7038,7 @@ _Safe void example(void) {
 `safe_free`是 BiShengC 语言提供的一个安全的内存释放函数。
 该函数接收一个`void * _Owned`类型的指针，表示要释放的内存的地址。
 该函数的返回值为`void`类型。
-因此，在调用`safe_free`进行释放前需要将`_Owned`指针显式地强制转换为`void * _Owned`类型，具体的转换规则可参考 [3.3](#33-强制类型转换) 节。
+因此，在调用`safe_free`进行释放前需要将`_Owned`指针显式地强制转换为`void * _Owned`类型，具体的转换规则可参考 [3.1.4.3](#3143-强制类型转换) 节。
 一些具体的使用例子如下。
 
 ```c
