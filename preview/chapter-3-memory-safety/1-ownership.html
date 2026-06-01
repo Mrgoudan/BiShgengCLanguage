@@ -1,0 +1,1021 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>所有权 - 毕昇 C 语言用户手册</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-26674c87.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2f02e48b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">毕昇 C 语言用户手册</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="所有权"><a class="header" href="#所有权">所有权</a></h1>
+<h2 id="前言"><a class="header" href="#前言">前言</a></h2>
+<p>C 语言作为一种系统级编程语言，
+提供了对指针的高度灵活的直接操作以及利用内存管理函数使开发者手动精细控制和管理内存的能力，
+因而被广泛地应用于各种需要直接与硬件或内存等系统资源交互的领域和场景。
+然而，这种内存管理模式存在容易导致内存泄漏、释放后使用、空指针解引用、缓冲区溢出和越界读写等内存安全问题。
+内存安全问题不仅会造成资源的浪费，也可能导致程序行为错误，甚至导致程序崩溃，对程序的稳定性造成威胁。
+内存安全问题可以划分为<strong>时间内存安全</strong>和<strong>空间内存安全</strong>两大类，其中时间内存安全包含内存泄漏、释放后使用、空指针解引用等，空间内存安全包括缓冲区溢出、越界读写等。
+BiShengC 语言的内存管理为解决程序的时间内存安全问题，利用了<strong>所有权特性</strong>在编译期对潜在的内存安全问题进行检查，识别潜在的时间内存安全错误。</p>
+<h2 id="特性简介"><a class="header" href="#特性简介">特性简介</a></h2>
+<p>BiShengC 语言的所有权特性被用于确保程序中的指针及其指向内存空间能被正确地管理。
+在 BiShengC 语言中，使用<code>_Owned</code>关键字用来修饰一个指针类型，表明该指针拥有其指向的内存的所有权。
+拥有所有权的指针必须确保其指向的内存在指针作用域结束前被显式释放，否则存在潜在的内存泄漏错误；
+此外，一块堆内存只能同时被一个<code>_Owned</code>指针所拥有，<code>_Owned</code>指针为移动语义，这样避免了释放后使用等内存安全问题的发生。
+以下是一段使用了所有权特性的 BiShengC 语言代码，用于了解所有权特性：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+int *_Owned foo(int *_Owned p) { return p; }
+
+_Safe void bar(void) {
+  // 通过提供的 safe_malloc 申请一块大小为 sizeof(int) 的堆内存，并将值设置为2
+  int *_Owned p = safe_malloc(2);
+  // 将 p 指向的堆内存转移给 q，后续不可再使用 p 访问这块内存，否则编译报错
+  int *_Owned q = p;
+  _Unsafe {
+    // 通过函数参数转移走 q 的所有权，但通过函数返回值归还所有权
+    q = foo(q);
+    // 在 q 的作用域结束前调用 safe_free
+    // 安全释放堆内存，此处不释放则会报内存泄漏错误
+    safe_free((void *_Owned)q);
+  }
+  return;
+}
+
+int main() {
+  bar();
+  return 0;
+}
+</code></pre>
+<p>在安全区，<code>_Owned</code>指针指向的内存一定为堆上内存（如通过<code>safe_malloc</code>函数申请出的堆内存），<code>_Owned</code>指针不可能指向栈内存，在作用域结束前必须转移所有权或释放（如<code>safe_free</code>函数进行释放）。</p>
+<p>这两个函数的函数原型如下：</p>
+<pre><code class="language-c">T *_Owned safe_malloc&lt;T&gt;(T t);
+void safe_free(void *_Owned);
+</code></pre>
+<p>可以通过<code>safe_malloc</code>申请足够存放<code>T</code>类型的堆空间，并初始化为<code>t</code>，当<code>_Owned</code>指针生命周期结束前，必须通过<code>safe_free</code>进行释放，在使用时，需要将<code>T *_Owned</code>指针转换为<code>void *_Owned</code>指针类型再释放，对于<strong>多级指针，需要从内到外进行释放</strong>；对于结构体内部有<code>_Owned</code>指针成员的情况，需要<strong>先将结构体内全部<code>_Owned</code>指针成员释放后，才能释放结构体的<code>_Owned</code>指针</strong>。</p>
+<p><strong><code>_Owned</code> 与泛型类型参数</strong></p>
+<p>在泛型函数中，<code>_Owned</code> 修饰泛型类型参数（如 <code>T _Owned</code> 或 <code>_Owned T</code>）时，<code>_Owned</code> 应用于完整类型 <code>T</code>。当 <code>T</code> 实例化为 <code>int*</code> 时，<code>T _Owned</code> 和 <code>_Owned T</code> 都产生 <code>int* _Owned</code>（_Owned 指针），而非 <code>_Owned int*</code>。泛型定义时允许对类型参数使用 <code>_Owned</code>，有效性在实例化时检查。</p>
+<p>函数使用示例：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void foo(void) {
+  //变量所有权初始化
+  int *_Owned pi = safe_malloc(1);
+  // 结构体所有权初始化
+  struct S s = {.p = safe_malloc(2), .q = safe_malloc(3)};
+  struct S *_Owned s1 = safe_malloc(s);
+  // 多级指针所有权初始化
+  int *_Owned p = safe_malloc(1);
+  int *_Owned *_Owned pp = safe_malloc(p);
+  // 变量所有权释放
+  safe_free((void *_Owned)pi);
+  // 结构体所有权释放(从内到外)
+  safe_free((void *_Owned)s1-&gt;p);
+  safe_free((void *_Owned)s1-&gt;q);
+  safe_free((void *_Owned)s1);
+  // 多级指针所有权释放(从内到外)
+  safe_free((void *_Owned) * pp);
+  safe_free((void *_Owned)pp);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<h2 id="语法及语义规则"><a class="header" href="#语法及语义规则">语法及语义规则</a></h2>
+<p>为实现所有权特性，BiShengC 语言引入了<code>_Owned</code>关键字用于修饰指针类型的变量。为区分指向数组的带所有权指针，BiShengC 还引入了 <code>_ArrayElem</code> 关键字用于修饰带<code>_Owned</code>的指针类型。这两个关键字与<code>const</code>、<code>restrict</code>以及<code>volatile</code>均属于类型修饰符。</p>
+<p>具体而言，所有权特性的语法及部分语义规则有以下几点：</p>
+<ol>
+<li>
+<p><code>_Owned</code>与<code>_ArrayElem</code>关键字仅允许在 BiShengC 语言编译单元内使用；</p>
+</li>
+<li>
+<p><code>_Owned</code>关键字仅被允许用于修饰指针类型，不允许修饰非指针类型，修饰多级指针时，每级指针的类型修饰可以不一样，规则与<code>const</code>类似；</p>
+</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe int main(void) {
+  int *_Owned p = safe_malloc(2);
+  int _Owned a = 2; // error: _Owned 关键字必须修饰指针
+
+  double *_Owned q = safe_malloc(1.1);
+  double _Owned b = 1.1; // error: _Owned 关键字必须修饰指针
+
+  int *_Owned *_Owned pp = safe_malloc(p); // ok: 可以修饰多级指针
+  safe_free((void *_Owned)pp); // error: 多级指针释放时，应当从内向外释放
+  safe_free((void *_Owned) * pp); 
+
+  double *d = (double *)malloc(sizeof(double));
+  double **_Owned pd = safe_malloc(d);
+  free(*pd); // 也可直接 free(d);
+  safe_free((void *_Owned)pd);
+  safe_free((void *_Owned)q);
+  return 0;
+}
+</code></pre>
+<ol start="3">
+<li>允许使用<code>_Owned</code>关键字修饰结构体指针及结构体的指针成员；</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int m;
+  int n;
+};
+
+struct R {
+  int *_Owned p;
+  double *_Owned q;
+};
+
+_Safe void test(void) {
+  struct S s = {.m = 1, .n = 2};
+  struct S *_Owned sp = safe_malloc(s);
+  struct S _Owned so = {.m = 1, .n = 2}; // error: _Owned 不允许修饰结构体变量
+  
+  struct R r = {.p = safe_malloc(1), .q = safe_malloc(2.5)};
+  struct R *_Owned rp = safe_malloc(r);
+  safe_free((void *_Owned)sp);
+  // 先释放结构体内的 _Owned 指针成员
+  safe_free((void *_Owned)rp-&gt;p);
+  safe_free((void *_Owned)rp-&gt;q);
+  // 再释放结构体 _Owned 指针
+  safe_free((void *_Owned)rp);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="4">
+<li><code>_Owned</code>不允许修饰<code>union</code>类型和<code>union</code>的成员，且<code>union</code>的每个成员均不能拥有<code>_Owned</code>修饰的成员；</li>
+</ol>
+<pre><code class="language-c">struct S {
+  int a;
+  int b;
+};
+
+struct T {
+  int *_Owned p;
+  struct S s;
+};
+
+union A {
+  int a;
+  int *_Owned p; // error: 禁止 union 成员用 _Owned 修饰
+  struct S s;
+  struct S *_Owned sp; // error: 禁止 union 成员用 _Owned 修饰
+  struct T t; // error: 禁止 union 成员结构体有 _Owned 成员
+  struct T *_Owned tp; // error: 禁止 union 成员用 _Owned 修饰
+  struct T *trp; // ok: 不跟踪裸指针指向的变量的 _Owned 成员
+};
+</code></pre>
+<ol start="5">
+<li><code>_Owned</code>修饰的类型或拥有<code>_Owned</code>修饰的成员的类型不可以作为数组的成员、不可以作为 <code>_Owned _ArrayElem</code> 指针的指向类型或其成员；</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct A {
+  int *_Owned p;
+};
+
+_Safe void test(void) {
+  int *_Owned arr_i[2] = {safe_malloc(1), safe_malloc(2)}; // error: 数组成员不能被 _Owned 修饰
+  struct A arr_a[2] = {{safe_malloc(1)}, {safe_malloc(2)}}; // error: 数组成员不能被 _Owned 修饰
+}
+_Safe struct A *_Owned _ArrayElem test2(void); // error: _Owned _ArrayElem 指针指向类型不能含有 _Owned 成员
+</code></pre>
+<ol start="6">
+<li><code>_Owned</code>修饰的指针不支持下标运算、算术运算（指针偏移操作），但支持比较运算；</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe int main(void) {
+  int *_Owned p = safe_malloc(2);
+  int *_Owned q = safe_malloc(3);
+  
+  p += 1; // error: _Owned 指针不支持算术运算符
+  
+  p[3] = 3; // error: _Owned 指针不支持下标运算符
+
+  if (p == q) { // ok: _Owned 指针支持比较运算符
+  }
+
+  _Unsafe {
+    safe_free((void *_Owned)p);
+    safe_free((void *_Owned)q);
+  }
+  return 0;
+}
+</code></pre>
+<ol start="7">
+<li><code>_Owned _ArrayElem</code>修饰的指针表示指向数组的带所有权的指针，支持下标运算与比较运算，不支持算术运算。其分配与释放可以通过 <code>safe_malloc_array</code> 与 <code>safe_free_array</code> 实现。除非明确说明或单独列出 <code>_Owned _ArrayElem</code> 的情况，否则对 <code>_Owned</code> 指针的规则同样适用于<code>_Owned _ArrayElem</code>。 <code>_ArrayElem</code>不能修饰裸指针。</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs"
+// _Safe T *_Owned _ArrayElem safe_malloc_array&lt;T&gt;(size_t size, T t);
+// _Safe void safe_free_array(void *_Owned _ArrayElem);
+
+_Safe int main(void) {
+  int * _ArrayElem ptr; // error: _ArrayElem 不能修饰裸指针
+  int *_Owned _ArrayElem p = safe_malloc_array(10, 2);
+  int *_Owned _ArrayElem q = safe_malloc_array(10, 3);
+
+  p += 1; // error: _Owned _ArrayElem 指针不支持算术运算符
+
+  p[3] = 3; // ok: _Owned _ArrayElem 指针支持下标运算符
+
+  if (p == q) { // ok: _Owned _ArrayElem 指针支持比较运算符
+  }
+  safe_free_array((void *_Owned _ArrayElem)p);
+  safe_free_array((void *_Owned _ArrayElem)q);
+}
+</code></pre>
+<ol start="8">
+<li><code>_Owned</code>修饰的类型与非<code>_Owned</code>修饰的类型之间不允许隐式类型转换；</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe int main(void) {
+  _Unsafe {
+    int *b = (int *)malloc(sizeof(int));
+    int *_Owned p = b; // error: _Owned 指针不允许隐式类型转换
+  }
+  int *_Owned q = safe_malloc(3);
+  int *c = q; // error: _Owned 指针不允许隐式类型转换
+  safe_free((void *_Owned)q);
+  return 0;
+}
+</code></pre>
+<ol start="9">
+<li>
+<p>禁止 <code>_Owned</code> 指针类型与裸指针类型之间的显式强制类型转换（包括非安全区）。当用户需要将裸指针转换为 <code>_Owned</code> 指针时，必须使用内置函数 <code>__take_from_raw</code> 显式表达所有权转移；当用户需要将 <code>_Owned</code> 指针转换为裸指针时：若需转移所有权，必须使用 <code>__move_to_raw</code> 显式表达所有权转移；若不需转移所有权，必须先取借用再进行转换，例如 <code>(T *)&amp;_Mut *p</code>。以上转换均需在非安全区进行。对 <code>_Owned</code> 指针与裸指针之间转换的限制只对最外层指针类型生效；形如 <code>T*_Owned*</code> 与 <code>T**</code> 之间的转换视为裸指针之间的转换，在安全区不允许、非安全区允许显式执行。</p>
+<p>指向类型不一致时，只允许<code>void * _Owned</code>类型与<code>T * _Owned</code>类型之间的显式强制转换。此类转换在<a href="#强制类型转换">所有权状态转移规则-强制类型转换</a>有额外说明。其他指向类型不一致的 <code>_Owned</code> 指针之间不允许转换。</p>
+<p><strong>显式所有权转移接口</strong>（内置函数）：</p>
+<ul>
+<li><code>__move_to_raw(p)</code>：将 <code>_Owned</code> 指针 <code>p</code> 转为裸指针并转移所有权，返回的裸指针与入参具有相同的 Nullability。</li>
+<li><code>__take_from_raw(p)</code>：将裸指针 <code>p</code> 转为 <code>_Owned</code> 指针并取得其所指对象的所有权，返回的 <code>_Owned</code> 指针与入参具有相同的 Nullability。</li>
+</ul>
+</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+int main() {
+  int *pi1 = (int *)malloc(sizeof(int));
+  int *_Owned pi2 = (int *_Owned)pi1;  // error: 不允许裸指针转换为 _Owned 指针
+  int *_Owned pi3 = __take_from_raw(pi1);  // ok: 显式将裸指针所有权转移至 _Owned
+
+  double *_Owned pd1 = safe_malloc(1.0);
+  int *_Owned pi4 = (int *_Owned)pd1;   // error: pi4 和 pd1 基本类型不一致
+  double *pd2 = __move_to_raw(pd1); // ok: 显式将 _Owned 所有权转移至裸指针
+
+  double *_Owned pd3 = safe_malloc(1.5);
+  void *_Owned pv1 = (void *_Owned)pd3; // ok: 允许显式转换为 void *_Owned
+
+  void *_Owned * ppv1 = &amp;pv1;
+  void ** ppv2 = (void **) ppv1; // ok: 允许显式从 T *_Owned * 转为 T **
+  ppv1 = (void *_Owned *) ppv2; // ok: 允许显式从 T ** 转为 T *_Owned *
+  safe_free((void *_Owned)pi3);
+  safe_free(pv1);
+  free((void*)pd2);
+  return 0;
+}
+</code></pre>
+<pre><code class="language-c">// 不转移所有权时，先取借用再转换为裸指针:
+#include "bishengc_safety.hbs"
+void foo(int *);
+int main() {
+  int *_Owned p = safe_malloc(1);
+  int *raw_ptr = (int *)&amp;_Mut *p; // ok: 先取借用再转为裸指针，不转移所有权
+  foo(raw_ptr); // 使用 raw_ptr
+  safe_free((void *_Owned)p);
+  return 0;
+}
+</code></pre>
+<pre><code class="language-c">// _Owned 与裸指针转换函数保留入参指针的 Nullability
+#include "bishengc_safety.hbs"
+int main() {
+  int * p1 = malloc(sizeof(int));
+  if (p1 != nullptr) {
+    int * _Owned p2 = __take_from_raw(p1); // p1 判非空后 __take_from_raw(p1) 可以赋值给非空的 p2
+    safe_free((void*_Owned)p2);
+  }
+  p1 = malloc(sizeof(int));
+  int * _Owned p3 = __take_from_raw(p1); // p1 未判空，空指针检查启用时此处报错
+  safe_free((void*_Owned)p3);
+}
+</code></pre>
+<ol start="10">
+<li>
+<p><code>_Owned _ArrayElem</code>指针与裸指针之间的转换规则与<code>_Owned</code>指针类似，但是必须数组版本的所有权转移接口。不允许通过 C 风格强制类型转换在 <code>T *</code>、<code>T *_Owned</code>、<code>T *_Owned _ArrayElem</code> 三者之间互转。</p>
+<p>显式所有权转移接口（内置函数）：</p>
+<ul>
+<li><code>__move_array_to_raw(p)</code>：将 <code>_Owned _ArrayElem</code> 指针转为裸指针并转移所有权。</li>
+<li><code>__take_array_from_raw(p)</code>：将裸指针 <code>p</code> 转为 <code>_Owned _ArrayElem</code> 指针，并取得其所指数组的所有权。</li>
+</ul>
+</li>
+</ol>
+<pre><code class="language-c">#include &lt;stdlib.h&gt;
+
+int main() {
+  int *raw = (int *)malloc(4 * sizeof(int));
+  int *_Owned _ArrayElem arr = __take_array_from_raw(raw); // ok
+  int *_Owned plain = (int *_Owned)arr; // error: 不允许从 T *_Owned _ArrayElem 转为 T *_Owned
+  int *raw2 = __move_array_to_raw(arr); // ok
+  int *_Owned _ArrayElem arr2 = (int *_Owned _ArrayElem)raw2; // error: 应使用 __take_array_from_raw
+  free(raw2);
+  return 0;
+}
+</code></pre>
+<ol start="11">
+<li>
+<p><code>_Owned</code>允许修饰指向<code>_Trait</code>的指针，假设有一个具体类型<code>S</code>，它实现了<code>_Trait T</code>，则：</p>
+<ul>
+<li><code>S * _Owned</code>类型可以隐式转换为<code>_Trait T * _Owned</code>类型；</li>
+<li><code>_Trait T * _Owned</code>类型允许被显式转换为<code>void * _Owned</code>类型。</li>
+</ul>
+</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Trait T{};
+
+_Impl _Trait T for int;
+
+void test() {
+  int *_Owned pi = safe_malloc(1);
+  _Trait T *_Owned pti = pi; // ok: 隐式转换为 _Trait T *_Owned
+  void *_Owned pvi = (void *_Owned)pti; // ok: 显式转换为 void *_Owned
+  safe_free(pvi);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="12">
+<li>通过函数指针调用函数的时候，规则与一般的函数调用一样，会在函数调用时检查形参类型与实参类型是否匹配及返回类型与返回值类型是否匹配；</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+int deref_add(int *a, int *b) { return *a + *b; }
+typedef int (*FTP)(int *, int *);
+typedef int (*FTOP)(int *_Owned, int *);
+
+void foo() {
+  FTP ftp = deref_add;
+  int *_Owned pa = safe_malloc(1);
+  int *_Owned pb = safe_malloc(2);
+  
+  ftp(pa, pb); // error: 类型不匹配
+  FTOP ftop = deref_add; // error: 类型不匹配
+  safe_free((void *_Owned)pa);
+  safe_free((void *_Owned)pb);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<ol start="13">
+<li><code>_Owned</code>可以修饰 _Trait 类型，即<code>_Trait T* _Owned</code>，也表示该变量拥有其内部存储的数据的所有权。
+该类型可以作为类型声明、函数的入参类型及函数的返回值类型。但当前不支持<code>_Trait T* _Owned</code>与<code>_Trait T*</code>之间的类型转换。</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Trait T { _Safe void release(This * _Owned this); };
+struct IPv4 {
+  char *buf1;
+};
+struct IPv6 {
+  char *buf1;
+  char *buf2;
+};
+_Safe void struct IPv4::release(struct IPv4 *_Owned this) {
+  _Unsafe { free(this-&gt;buf1); }
+  safe_free((void *_Owned)this);
+}
+_Safe void struct IPv6::release(struct IPv6 *_Owned this) {
+  _Unsafe {
+    free(this-&gt;buf1);
+    free(this-&gt;buf2);
+  }
+  safe_free((void *_Owned)this);
+}
+_Impl _Trait T for struct IPv4;
+_Impl _Trait T for struct IPv6;
+
+void cleanup(_Trait T *_Owned t) { t-&gt;release(); }
+
+int main() {
+  struct IPv4 ipv4 = {.buf1 = "192.168.1.1"};
+  struct IPv6 ipv6 = {.buf1 = "2001:0db8:85a3:0000",
+                      .buf2 = "0000:8a2e:0370:7334"};
+  struct IPv4 *_Owned sipv4 = safe_malloc(ipv4);
+  struct IPv6 *_Owned sipv6 = safe_malloc(ipv6);
+  _Trait T *_Owned tipv4 = sipv4;
+  _Trait T *_Owned tipv6 = sipv6;
+  // 使用 _Trait T* _Owned 作为入参
+  tipv4-&gt;release();
+  tipv6-&gt;release();
+  safe_free((void *_Owned)tipv4);
+  safe_free((void *_Owned)tipv6);
+  return 0;
+}
+</code></pre>
+<ol start="14">
+<li>_Owned 指针可以使用逻辑运算符。</li>
+</ol>
+<pre><code class="language-c">void logical_not(int *_Owned _Nullable p) {
+  if (!p) { // equivalent: p == nullptr
+  }
+}
+void logical_and(int *_Owned _Nullable p, int *_Owned _Nullable q) {
+  if (p &amp;&amp; q) { // equivalent: (p != nullptr) &amp;&amp; (q != nullptr)
+  }
+}
+void logical_or(int *_Owned _Nullable p, int *_Owned _Nullable q) {
+  if (p || q) { // equivalent: (p != nullptr) || (q != nullptr)
+  }
+}
+</code></pre>
+<ol start="15">
+<li>允许 _Owned 指针作为 if while do-while for 语句和三元表达式的条件，不允许作为 switch 的条件。</li>
+</ol>
+<pre><code class="language-c">void foo(int *_Owned _Nullable p) {
+  if (p) { // equivalent: p != nullptr
+  }
+  while (p) { // equivalent: p!= nullptr
+  }
+  do {
+  } while (p); // equivalent: p != nullptr
+
+  for (;p;) { // equivalent: p != nullptr
+  }
+  swtich (p) { // error
+  default:
+    break;
+  }
+  int x = p ? 2 : 1; // equivalent: p != nullptr ? 2 : 1
+}
+</code></pre>
+<ol start="16">
+<li>允许在变量初始化、变量赋值和函数传参中将 <code>_Owned</code> 指针隐式转换为 <code>_Bool</code>，不会消耗其指向内容的所有权。</li>
+</ol>
+<pre><code class="language-c">void foo(int *_Owned _Nullable p) {
+  _Bool flag = p; // equivalent: _Bool flag = p != nullptr;
+}
+void bar(int *_Owned _Nullable p, _Bool flag) {
+  flag = p; // equivalent: flag = p != nullptr;
+}
+void use(_Bool);
+void baz(int *_Owned _Nullable p) {
+  use(p); // equivalent: use(p != nullptr);
+}
+</code></pre>
+<h2 id="所有权状态转移规则"><a class="header" href="#所有权状态转移规则">所有权状态转移规则</a></h2>
+<p>在对所有权特性的语法和部分语义有了解后，本节将对所有权的状态转移规则进行详细阐述。
+为更好地理解所有权特性对内存安全带来的保障，首先需要明白程序执行时的堆栈内存模型。</p>
+<p>总体而言，程序执行时内存可分为栈区和堆区两个部分，这两部分内存一起为程序在运行时提供内存空间。
+栈区即为调用栈，保存的是程序执行所需要维护的所有信息。
+每当一次函数调用发生时，就会创建一个对应的栈帧，函数调用的上下文、函数的入参以及函数体内的局部变量就存在这个栈帧中。
+栈帧的基址一般由 rbp 寄存器指向，而栈顶由 rsp 寄存器指向，两个寄存器共同标识了一个函数的栈帧。
+当一次函数调用结束时，相应的栈帧就会在函数返回前被销毁，相应的内存空间也就得到释放。
+这个过程是通过调整 rbp 寄存器的值为调用者的栈帧基址、rsp 的值为调用者的栈顶地址完成的，这也是为什么栈区的变量不需要显式释放。
+对于堆区，则存放的是那些在运行时动态分配内存的数据。
+一个典型的例子是对于<code>int *p = malloc(sizeof(int))</code>这种操作，需要由操作系统在堆区找到一块适合大小的内存空间用于分配，然后将这块内存的地址存在 p 中，指针 p 是程序的一个栈上变量。
+虽然堆区的内存分配更为灵活，但却缺乏组织，不正确的内存管理很容易导致堆区的内存泄漏。
+例如，当一次函数调用完成后，其局部变量 p 被销毁，而其指向的堆内存未被显式地调用<code>free(p)</code>进行回收，则这块堆内存将永远无法被回收，产生了内存安全错误。</p>
+<p>利用 BiShengC 语言提供的所有权特性，可以用<code>_Owned</code>关键字对那些需要管理的指针进行标识，这样就可以在程序编译时检查出潜在的错误，避免在运行时出现错误。
+以下是 BiShengC 语言所有权的核心规则：</p>
+<ol>
+<li>在 BiShengC 语言中每一个值都被一个<code>_Owned</code>指针变量所拥有，该<code>_Owned</code>指针变量即为值的所有者；</li>
+<li>一个值同时只能被一个<code>_Owned</code>指针变量所拥有，即一个值只能拥有一个所有者；</li>
+<li>当<code>_Owned</code>指针变量离开作用域范围时，需要释放其拥有的值所在的堆内存。</li>
+</ol>
+<p>基于以上核心规则，接下来结合详细的代码示例进行具体介绍。</p>
+<h3 id="转移所有权"><a class="header" href="#转移所有权">转移所有权</a></h3>
+<p><strong>1. 一个拥有所有权的变量<code>s1</code>被赋值给另一个变量<code>s2</code>是一个移动语义，该操作后变量<code>s1</code>失去了对值的所有权，原先的变量<code>s1</code>无法再使用。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe void foo(void) {
+  int *_Owned p = safe_malloc(10);
+  int *_Owned q = p;
+  int *_Owned r = p; // error: p 的所有权已移交给q了
+  _Unsafe {
+    safe_free((void *_Owned)q);
+    safe_free((void *_Owned)r);
+  }
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，<code>p</code>拥有一块堆内存的所有权，这块内存大小为<code>sizeof(int)</code>，存储的值为10。
+在声明<code>q</code>时，将<code>p</code>的所有权转移给了<code>q</code>，<code>p</code>不再拥有对这块堆内存的所有权。
+则在声明<code>m</code>时，便不可再将<code>p</code>的所有权转移给<code>m</code>，编译器会在此处报错。
+因此，利用所有权特性，可以保证一个值只能拥有一个所有者。
+（那么如果没有这条规则会出现什么后果呢？三个指针会同时指向一块内存，在作用域结束时对这块内存释放三次，出现重复释放的错误）</p>
+<p><strong>2. 一个拥有所有权的变量<code>s1</code>作为整体被赋值给另一个变量<code>s2</code>时，如果<code>s1</code>内部还有其他拥有所有权的指针，则会全部都转移给<code>s2</code>。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *p;
+  int *_Owned q;
+};
+
+void test(void) {
+  struct S s = {.p = (int *)malloc(sizeof(int)), .q = safe_malloc(1)};
+  struct S *_Owned s1 = safe_malloc(s);
+  struct S *_Owned s2 = s1;
+  int *_Owned p = s1-&gt;q; // error: q 的所有权被一并交给 s2 了
+  safe_free((void *_Owned)s2-&gt;q);
+  safe_free((void *_Owned)s2);
+  safe_free((void *_Owned)p);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，将<code>s1</code>指向堆内存的所有权转移给了<code>s2</code>，但同时<code>s1</code>内部还有一个拥有所有权的指针<code>s1-&gt;q</code>，因此也会一并将他的所有权转移给<code>s2-&gt;q</code>，后续再使用<code>s1-&gt;q</code>时便会报错。</p>
+<p><strong>3. 一个拥有所有权的变量<code>s1</code>作为整体被赋值给另一个变量<code>s2</code>时，如果<code>s1</code>内部还有其他拥有所有权的指针，则必须保证内部其他<code>_Owned</code>指针均拥有所有权，才能将<code>s1</code>赋值给<code>s2</code>。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void foo(void) {
+  struct S s = {.p = safe_malloc(2), .q = safe_malloc(3)};
+  struct S *_Owned s1 = safe_malloc(s);
+  int *_Owned p = s1-&gt;p;
+  struct S *_Owned s2 = s1; // error: s1 已无对全部成员的所有权
+  safe_free((void *_Owned)p);
+  safe_free((void *_Owned)s2-&gt;p);
+  safe_free((void *_Owned)s2-&gt;q);
+  safe_free((void *_Owned)s2);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，我们先将<code>s1-&gt;p</code>的所有权转移走，然后试图整体转移<code>s1</code>的所有权给<code>s2</code>，但此时<code>s1-&gt;p</code>已经不再持有对任何一块堆内存的所有权，因此这个操作是不合法的。</p>
+<p><strong>4. 一个拥有所有权的变量<code>s1</code>在失去其所有权后，可以通过赋值的方式使其再次拥有指向某块堆内存的所有权，这样就可以再次使用<code>s1</code>。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe void foo(void) {
+  int *_Owned p = safe_malloc(10);
+  // 移走 p
+  int *_Owned q = p;
+  // 重新拿到新元素的所有权
+  p = safe_malloc(4);
+  // 仍然可以将所有权交给其他指针
+  int *_Owned m = p;
+  safe_free((void *_Owned)q);
+  safe_free((void *_Owned)m);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，<code>p</code>的所有权转移给<code>q</code>后，再次调用了<code>safe_malloc</code>函数为其重新赋予了一块堆内存的所有权，因此后续仍可将<code>p</code>的所有权转移给<code>m</code>。</p>
+<p><strong>5. 不允许将所有权转移给一个已经拥有所有权的变量。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe void foo(void) {
+  int *_Owned p = safe_malloc(12);
+  int *_Owned q = safe_malloc(67);
+  q = p; // error: p 有拥有其他指针的所有权
+  safe_free((void *_Owned)p);
+  safe_free((void *_Owned)q);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，试图将<code>p</code>的所有权转移给<code>q</code>，但<code>q</code>此时已经拥有所有权，再试图转移的话会使<code>q</code>原先指向的堆内存泄漏，因此无法进行转移，会在编译时报错。</p>
+<p><strong>6. 如果一个变量<code>s1</code>拥有所有权，而其内部的<code>_Owned</code>指针变量的所有权已被转移，如果想再次赋予内部变量所有权，需要保证内部变量的所有父<code>_Owned</code>指针变量均拥有所有权。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void foo(void) {
+  struct S s = {.p = safe_malloc(2), .q = safe_malloc(3)};
+  struct S *_Owned s1 = safe_malloc(s);
+  struct S *_Owned s2 = s1;
+  s1-&gt;p = safe_malloc(5); // error: s1 已不再拥有所有权，无法给内部成员赋予所有权
+  safe_free((void *_Owned)s2-&gt;p);
+  safe_free((void *_Owned)s2-&gt;q);
+  safe_free((void *_Owned)s2);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，<code>s1</code>、<code>s1-&gt;p</code>以及<code>s1-&gt;q</code>的所有权均被转移给了<code>s2</code>，后续再试图赋予<code>s1-&gt;p</code>所有权时，其父<code>_Owned</code>变量指针<code>s1</code>尚未拥有所有权，因此此次操作是非法的，会在编译时报错。</p>
+<h3 id="作用域结束时的内存释放"><a class="header" href="#作用域结束时的内存释放">作用域结束时的内存释放</a></h3>
+<p><strong>1. 对于所有的<code>_Owned</code>指针变量，会在其词法作用域结束时检查其是否依然拥有堆内存的所有权，如果依然拥有，则存在内存泄漏错误。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void foo(void) {
+  int *_Owned p = safe_malloc(2);
+  struct S s = {.p = safe_malloc(2), .q = safe_malloc(3)};
+  struct S *_Owned s1 = safe_malloc(s);
+  struct S *_Owned s2 = s1;
+  // safe_free((void *_Owned)p);
+  // safe_free((void *_Owned)s2-&gt;p);
+  // safe_free((void *_Owned)s2-&gt;q);
+  // safe_free((void *_Owned)s2);
+} // error: 未释放 s2 内部成员所有权及 s2 所有权；未释放 p 所有权
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，当作用域结束时，编译器会发现<code>p</code>、<code>s2</code>、<code>s2-&gt;p</code>以及<code>s2-&gt;q</code>依然拥有其指向的堆内存的所有权，即这些堆内存都没有被释放，因此会编译失败并报告内存泄漏。</p>
+<h3 id="强制类型转换"><a class="header" href="#强制类型转换">强制类型转换</a></h3>
+<p><strong>1. 允许将<code>T * _Owned</code>类型的变量通过强制类型转换转为<code>void * _Owned</code>类型，但转换成功的条件为变量依然拥有所有权且其内部的<code>_Owned</code>指针变量均已不拥有所有权。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void foo(void) {
+  struct S s = {.p = safe_malloc(2), .q = safe_malloc(3)};
+  struct S *_Owned s1 = safe_malloc(s);
+  int *_Owned p = s1-&gt;p;
+  _Unsafe {
+    safe_free((void *_Owned)s1); // error: s1 仍然拥有内部成员(q)所有权，无法转为 void *_Owned
+    safe_free((void *_Owned)p);
+  }
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，试图将<code>s1</code>强制类型转换为<code>void * _Owned</code>类型，但<code>s1-&gt;q</code>依然拥有所有权，因此转换失败。</p>
+<p>注意，在涉及 <code>T * _Owned</code> 到 <code>void *</code> 的转换时，转换的顺序不同会导致语义不同:</p>
+<ol>
+<li>先将 <code>_Owned</code> 指针的指向类型转为 <code>void</code>，再使用 <code>__move_to_raw</code> 将 <code>_Owned</code> 指针转换为裸指针 (即<code>T * _Owned</code> 转 <code>void * _Owned</code> 转 <code>void *</code>): <code>T * _Owned</code> 指针必须具有所有权，但其指向的 <code>T</code> 内部所有 <code>_Owned</code> 指针变量必须<strong>均不拥有所有权</strong>才能进行转换。</li>
+<li>先使用 <code>__move_to_raw</code> 将 <code>_Owned</code> 指针转换为裸指针，再改变指向类型 (即<code>T * _Owned</code> 转 <code>T *</code> 转 <code>void *</code>): <code>T * _Owned</code> 指针必须具有所有权、其指向的 <code>T</code> 内部所有 <code>_Owned</code> 指针变量仍<strong>拥有所有权</strong>才能进行转换。</li>
+</ol>
+<p>用户在需要将 <code>T * _Owned</code> 转成裸指针进行释放时，应先将其成员释放，再采用第一种转换顺序，将 <code>T * _Owned</code> 转为 <code>void * _Owned</code> 再转为裸指针进行释放。编译器会在 <code>T * _Owned</code> 转为 <code>void * _Owned</code> 时检查 <code>T</code> 内的 <code>_Owned</code> 指针均已转移所有权，避免内存泄露。除了需要释放对象的情况，其余场景均应采用第二种转换顺序，将 <code>T * _Owned</code> 内 <code>_Owned</code> 指针的所有权保留下来，以免后续使用已释放的指针。</p>
+<p>以下是示例代码：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+void myfree(struct S *_Owned ptr) {
+  // 释放场景：采用第一种顺序 (T * _Owned 转 void * _Owned 转 void *)
+  safe_free((void *_Owned) ptr-&gt;p);
+  safe_free((void *_Owned) ptr-&gt;q);
+
+  // free((void *)__move_to_raw(ptr)); // error: ptr内部已经没有所有权， 不能使用 __move_to_raw
+  free(__move_to_raw((void *_Owned)ptr)); // ok
+}
+void *mymove(struct S *_Owned ptr) {
+  // 其余场景：采用第二种顺序 (T * _Owned 转 T * 转 void *)
+  // return __move_to_raw((void *_Owned)ptr); // error: ptr内部仍有所有权，不能转为 void *_Owned
+  return (void *)__move_to_raw(ptr); // ok
+}
+</code></pre>
+<p><strong>2. 允许将<code>void * _Owned</code>类型的变量通过强制类型转换转为<code>T * _Owned</code>类型，转换成功的条件为变量依然拥有所有权，转换成功后，得到的<code>T *_Owned</code>类型内部的<code>_Owned</code>指针变量均不拥有所有权。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+_Safe void *_Owned memAlloc(unsigned long);
+_Safe void memFree(void *_Owned);
+
+_Safe void foo(void) {
+  struct S *_Owned sp = _Unsafe((struct S *_Owned)memAlloc(sizeof(struct S)));
+  int *_Owned p = sp-&gt;p; // error: sp-&gt;p 此时未拥有所有权
+  sp-&gt;q = _Unsafe((int *_Owned)memAlloc(sizeof(int)));
+  *(sp-&gt;q) = 2;
+  _Unsafe {
+    memFree((void *_Owned)sp-&gt;q);
+    memFree((void *_Owned)sp);
+  }
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，试图直接转移<code>sp-&gt;p</code>的所有权给<code>p</code>，但此时<code>sp-&gt;p</code>还未拥有所有权，因此编译报错。</p>
+<h3 id="函数调用与返回"><a class="header" href="#函数调用与返回">函数调用与返回</a></h3>
+<p><strong>1. 函数调用和返回时，如果函数的形参或函数的返回值为<code>_Owned</code>指针类型，则要求传入的实参以及返回值必须拥有堆内存的所有权。</strong>
+以下是一段代码示例及说明：</p>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int *_Owned p;
+  int *_Owned q;
+};
+
+struct S *_Owned foo(struct S s) {
+  struct S *_Owned ret = safe_malloc(s);
+  return ret;
+}
+
+void bar(void) {
+  struct S s = {.p = safe_malloc(2), .q = safe_malloc(3)};
+  int *_Owned p = s.p;
+  struct S *_Owned s1 = foo(s); // error: s 已不再拥有全部内部成员的所有权
+  safe_free((void *_Owned)p);
+  safe_free((void *_Owned)s1-&gt;p);
+  safe_free((void *_Owned)s1-&gt;q);
+  safe_free((void *_Owned)s1);
+}
+
+int main() {
+  bar();
+  return 0;
+}
+</code></pre>
+<p>在这个例子中，传入<code>F</code>函数的结构体变量<code>s</code>内部有两个<code>_Owned</code>指针变量，而<code>s.p</code>已经被转移走，因此这次函数调用是非法的，会编译报错。</p>
+<h2 id="源源变换"><a class="header" href="#源源变换">源源变换</a></h2>
+<p>BiShengC 语言的 clang 编译器支持源源变换功能，即将<code>.cbs</code>文件转换为等价的<code>.c</code>文件。
+所有权特性仅引入了<code>_Owned</code>关键字表示所有权，在源源变换时只会去掉所有的<code>_Owned</code>关键字，然后生成相应的<code>.c</code>代码。
+关于源源变换的详细细节，请参考手册的源源变换章节。</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-3-memory-safety/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-3-memory-safety/2-borrowing.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-3-memory-safety/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-3-memory-safety/2-borrowing.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,684 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Non-Null Pointers - The BiSheng C Language User Manual</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-5788e8c0.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-a156a4de.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The BiSheng C Language User Manual</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="non-null-pointers"><a class="header" href="#non-null-pointers">Non-Null Pointers</a></h1>
+<p>To improve the safety of pointer usage, BSC introduces the concept of pointer nullability.</p>
+<p>Based on whether a pointer can be directly dereferenced, two attributes can be used to modify any pointer type (raw pointers, <code>_Owned</code> pointers, and <code>_Borrow</code> pointers).</p>
+<ol>
+<li>A pointer modified by the keyword <code>_Nullable</code> is a nullable pointer.</li>
+<li>A pointer modified by the keyword <code>_Nonnull</code> is a non-null pointer.</li>
+</ol>
+<p>The BSC compiler checks pointer nullability at compile time, preventing unsafe behaviors such as dereferencing a null pointer or accessing members through a null pointer.</p>
+<p>BSC does not allow the use of the macro <code>NULL</code> inside a safe zone, but C-style programming inevitably uses null pointers to express logic:</p>
+<ol>
+<li>A pointer’s target may only be determined at run time, so we can initialize the pointer to a null pointer and later modify its target according to the runtime state.</li>
+<li>For a nullable pointer, you must check whether the pointer is null before using it.</li>
+</ol>
+<p>BSC introduces the <code>nullptr</code> keyword to replace <code>NULL</code>.
+Users can define a Nullable pointer and initialize it to <code>nullptr</code>.
+A Nullable pointer must be null-checked before it can be dereferenced.</p>
+<p>Let’s use a simple example to learn how to define a pointer’s nullability and use it:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header file provided by the BiSheng C language, used for safe memory allocation and deallocation
+
+// Function that gets the current runtime status
+_Safe int get_current_status(void) {
+  _Unsafe { return rand() % 2; }
+}
+
+_Safe void read_data&lt;T&gt;(T *_Borrow p) {}
+
+struct Data {
+  int value;
+};
+
+// If init succeeds, return a concrete address; otherwise return nullptr
+_Safe struct Data *_Owned _Nullable init_data(void) {
+  if (get_current_status() == 1) {
+    struct Data data = {10};
+    struct Data *_Owned p = safe_malloc&lt;struct Data&gt;(data);
+    return p;
+  }
+  return nullptr;
+}
+
+_Safe int main(void) {
+  // Use _Nullable to modify the pointer type:
+  struct Data *_Owned _Nullable p = init_data();
+  // After init, p may be a null pointer, so it must be null-checked before use:
+  if (p != nullptr) {
+    // If p is not null-checked, the compiler will report an error!
+    read_data(&amp;_Mut * p);
+    safe_free((void *_Owned)p);
+  }
+  return 0;
+}
+</code></pre>
+<h2 id="which-pointers-nullability-can-the-compiler-check"><a class="header" href="#which-pointers-nullability-can-the-compiler-check">Which Pointers’ Nullability Can the Compiler Check</a></h2>
+<p>You can use <code>_Nullable</code> and <code>_Nonnull</code> to modify any pointer type (raw pointers, <code>_Owned</code> pointers, and <code>_Borrow</code> pointers),
+but the compiler can only track a pointer’s nullability — and thereby protect against null pointer dereferences — when the pointer satisfies the following conditions:</p>
+<ol>
+<li>It is an lvalue (it has a memory address).</li>
+<li>It is not modified by <code>volatile</code> (the pointer itself is not volatile).</li>
+<li>It is not a pointer obtained by accessing an array.</li>
+</ol>
+<p>A pointer that does not meet the above requirements cannot have its nullability modified by a null check. If an untrackable pointer <code>p1</code> is <code>_Nullable</code> and the user needs to dereference it, first create a trackable pointer variable <code>p2</code>, initialize it with <code>p1</code>, and then null-check and dereference <code>p2</code>.</p>
+<p>Example:</p>
+<pre><code class="language-c">// A function's return value is not an lvalue
+_Safe int *_Borrow _Nullable identity(int *_Borrow _Nullable p) { return p; }
+
+_Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable volatile vp) {
+  int local = 0;
+  int *_Borrow _Nullable q = nullptr;
+  int *_Borrow _Nullable arr[2] = {nullptr, &amp;_Mut local};
+
+  if ((q = p) != nullptr) {
+    *q = 1; // ok: q is an lvalue pointer, so the compiler can track its nullability
+  }
+
+  if ((0, q) != nullptr) {
+    *q = 2; // ok: the comma expression ultimately extracts q, which is still trackable
+  }
+
+  if (identity(p) != nullptr) { // not an lvalue, so its nullability cannot be updated
+    *identity(p) = 3; // error
+  }
+  int *_Borrow _Nullable t1 = identity(p); // should create a trackable temporary variable to receive it
+  if (t1 != nullptr) {
+    *t1 = 3; // ok
+  }
+
+  if (vp != nullptr) { // volatile pointer, so its nullability cannot be updated
+    *vp = 4; // error
+  }
+  int *_Borrow _Nullable t2 = vp; // should create a trackable temporary variable to receive it
+  if (t2 != nullptr) {
+    *t2 = 4; // ok
+  }
+
+  if (arr[1] != nullptr) { // the pointer expression contains a subscript operation '[]', so the pointer's nullability cannot be updated
+    *arr[1] = 5; // error
+  }
+  int *_Borrow _Nullable t3 = arr[1];  // should create a trackable temporary variable to receive it
+  if (t3 != nullptr) {
+    *t3 = 5; // ok
+  }
+}
+</code></pre>
+<h2 id="nullability-of-pointer-types"><a class="header" href="#nullability-of-pointer-types">Nullability of Pointer Types</a></h2>
+<p>A pointer type’s nullability marker depends on the pointer’s type and its modifiers:</p>
+<ol>
+<li>Raw pointers are Nullable, while <code>_Owned</code> and <code>_Borrow</code> pointers are Nonnull.</li>
+<li>You can explicitly use the <code>_Nonnull</code> and <code>_Nullable</code> modifiers to override the above rules.</li>
+</ol>
+<pre><code class="language-C">// Nullable pointers:
+int *_Nullable p1 = nullptr;
+int *_Borrow _Nullable p2 = nullptr;
+int *_Owned _Nullable p3 = nullptr;
+int *p4 = nullptr;
+int (*p5)(int) = nullptr;
+// Nonnull pointers:
+int *_Nonnull p5 = &amp;a;
+int *_Borrow _Nonnull p6 = &amp;_Mut a;
+int *_Owned _Nonnull p7 = safe_malloc&lt;int&gt;(5);
+int *_Borrow p8 = &amp;_Mut a;
+int *_Owned p9 = safe_malloc&lt;int&gt;(5);
+</code></pre>
+<p>For a pointer whose nullability marker is Nonnull, its nullability state must be Nonnull.
+If a null check is performed on it in a control-flow statement, then in the null branch it is considered to be a null pointer.</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header file provided by the BiSheng C language, used for safe memory allocation and deallocation
+
+_Safe int test(void) {
+  int * _Owned a = safe_malloc&lt;int&gt;(1); // an _Owned pointer is _Nonnull by default
+  if (a != nullptr) {
+    safe_free((void * _Owned)a);
+    return 1;
+  }
+  return 0; // ok: there will be no error: memory leak of value: `a`
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>For a pointer whose nullability marker is Nullable, its nullability state may change:</p>
+<ol>
+<li>If it is assigned a non-null expression, then after this assignment statement its nullability state becomes Nonnull.</li>
+<li>If a null check is performed on it in a control-flow statement, then in the non-null branch its nullability state becomes Nonnull.</li>
+</ol>
+<pre><code class="language-C">// Return type is Nullable
+_Safe T *_Borrow _Nullable foo&lt;T&gt;(T *_Borrow p) { return p; }
+// Return type is Nonnull
+_Safe T *_Borrow bar&lt;T&gt;(T *_Borrow p) { return p; }
+
+_Safe void test(void) {
+  int *_Borrow _Nullable p1 = nullptr; // after initialization, p1's Nullability is Nullable
+  *p1 = 10;                           // error
+
+  int local = 10;
+  p1 = &amp;_Mut local;      // after p1 is reassigned, its Nullability becomes Nonnull
+  *p1 = 20;             // ok
+
+  p1 = foo(&amp;_Mut local); // after p1 is reassigned, its Nullability becomes Nullable
+  *p1 = 20;             // error
+  
+  p1 = bar(&amp;_Mut local); // after p1 is reassigned, its Nullability becomes Nonnull
+  *p1 = 20;             // ok
+
+  int *_Borrow _Nullable p2 = foo(&amp;_Mut local); // Nullable
+  if (p2 != nullptr) // in the if branch, p2's Nullability is Nonnull
+    *p2 = 10;        // ok
+  else               // in the else branch, p2's Nullability is Nullable
+    *p2 = 20;        // error
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="what-is-a-null-check-statement"><a class="header" href="#what-is-a-null-check-statement">What Is a Null-Check Statement</a></h2>
+<p>In the conditions of conditional statements and loop statements, and in the condition expression of a ternary expression, only certain behaviors can be regarded as “checking whether a pointer is a null pointer”:</p>
+<ol>
+<li>Using the pointer <code>e</code> directly</li>
+</ol>
+<ul>
+<li><code>if (p)</code></li>
+<li><code>while (s.p)</code></li>
+<li><code>p ? do_with(p) : do_without()</code></li>
+</ul>
+<ol start="2">
+<li>The logical operators <code>!e</code> <code>e &amp;&amp; f</code> <code>e || f</code></li>
+</ol>
+<ul>
+<li><code>if (!p)</code> <code>if (p &amp;&amp; q)</code> <code>if (p || q)</code></li>
+<li><code>while (!s.p)</code>  <code>while (s.p &amp;&amp; s.q)</code> <code>while (s.p || s.q)</code></li>
+</ul>
+<ol start="3">
+<li>Explicit comparison against a null pointer <code>e == nullptr</code> <code>e != nullptr</code></li>
+</ol>
+<ul>
+<li>The comparison operators are symmetric, so <code>nullptr == e</code> and <code>nullptr != e</code> are also supported</li>
+</ul>
+<ol start="4">
+<li>The assignment operator <code>e = ...</code> may appear</li>
+</ol>
+<ul>
+<li><code>if (p = q)</code> can only check the nullability of <code>p</code></li>
+<li>The assignment operator can be chained, but <code>if (p = q = r)</code> can only check the nullability of <code>p</code></li>
+</ul>
+<ol start="5">
+<li>It can be part of a comma expression, i.e. <code>(..., e)</code></li>
+</ol>
+<ul>
+<li><code>if (x, p != nullptr)</code> can check the nullability of <code>p</code></li>
+<li><code>if (p != nullptr, q != nullptr)</code> can only check the nullability of <code>q</code></li>
+</ul>
+<ol start="6">
+<li>The above patterns can be nested in parentheses</li>
+</ol>
+<p>Here <code>e</code> must satisfy the “trackable” requirement described in section 3.3.1.</p>
+<p>For these “null-check statements”, the compiler updates the nullability state of <code>e</code> in the subsequent control flow:</p>
+<ul>
+<li>In the true branch (or loop body) of <code>if (e)</code> / <code>while (e)</code>, <code>e</code> is regarded as Nonnull</li>
+<li>In the false branch of <code>if (!e)</code>, <code>e</code> is regarded as Nonnull</li>
+<li>In the true branch of <code>if (e != nullptr)</code>, <code>e</code> is regarded as Nonnull</li>
+<li>In the false branch of <code>if (e == nullptr)</code>, <code>e</code> is regarded as Nonnull</li>
+</ul>
+<pre><code class="language-c">
+_Safe void test(int *_Borrow _Nullable p, int *_Borrow _Nullable q) {
+  // 1) Direct pointer condition
+  if (p) {
+    *p = 1; // ok: p is regarded as nonnull in the true branch
+  }
+
+  // 2) Logical operators
+  if (!p) {
+    *p = 1; // error: p is regarded as nullable in the true branch
+  }
+  if (p &amp;&amp; q) {
+    *p = 1; // ok
+    *q = 1; // ok
+  }
+  if (!p || !q) {
+    // snip
+  } else {
+    *p = 1; // ok
+    *q = 1; // ok
+  }
+
+  // 3) Comparison against nullptr
+  if (p != nullptr) {
+    *p = 1; // ok
+  }
+  if (nullptr == p) {
+    *p = 1; // error
+  }
+
+  // 4) Assignment / comma wrapping
+  if ((q = p) != nullptr) {
+    *q = 1; // ok
+  }
+  if ((0, q) != nullptr) {
+    *q = 1; // ok
+  }
+}
+</code></pre>
+<h2 id="pointer-assignment-argument-passing-and-return"><a class="header" href="#pointer-assignment-argument-passing-and-return">Pointer Assignment, Argument Passing, and Return</a></h2>
+<ol>
+<li>A pointer whose nullability marker is Nonnull may not be assigned a nullable expression:</li>
+</ol>
+<pre><code class="language-C">// Return type is Nullable
+_Safe T *_Borrow _Nullable foo&lt;T&gt;(T *_Borrow p) { return p; }
+// Return type is Nonnull
+_Safe T *_Borrow bar&lt;T&gt;(T *_Borrow p) { return p; }
+
+_Safe void test(void) {
+  int *_Borrow p1 = nullptr; // error: assigning a nullable value to a nonnull pointer is forbidden in a safe zone
+
+  int local = 10;
+  int *_Borrow p2 = foo(&amp;_Mut local); // error: assigning a nullable value to a nonnull pointer is forbidden in a safe zone
+  int *_Borrow p3 = bar(&amp;_Mut local); // ok
+
+  int *_Borrow _Nullable p4 = foo(&amp;_Mut local);
+  int *_Borrow p5 = p4; // error: assigning a nullable value to a nonnull pointer is forbidden in a safe zone
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="2">
+<li>When calling a function, if the parameter type has a Nonnull nullability marker, you cannot pass a nullable expression as the argument:</li>
+</ol>
+<pre><code class="language-C">// Return type is Nullable
+_Safe T *_Borrow _Nullable foo&lt;T&gt;(T *_Borrow p) { return p; }
+
+// Takes a Nonnull pointer as a parameter
+_Safe void bar(int *_Borrow p) {}
+
+_Safe void test(void) {
+  int local = 10;
+  int *_Borrow _Nullable p = foo(&amp;_Mut local);
+  bar(p); // error: a nonnull pointer is required, but the argument is nullable
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="3">
+<li>If a function’s return type has a Nonnull nullability marker, it cannot return the result of a nullable expression:</li>
+</ol>
+<pre><code class="language-C">_Safe int *_Borrow return_nonnull(int *_Borrow p) {
+  int *_Borrow _Nullable q = nullptr;
+  return q; // error: the returned pointer is required to be nonnull
+}
+int main() {
+  int i = 1;
+  int *_Borrow pi = return_nonnull(&amp;_Mut i);
+  return 0;
+}
+</code></pre>
+<h2 id="pointer-type-casts"><a class="header" href="#pointer-type-casts">Pointer Type Casts</a></h2>
+<p>After enabling the compiler option <code>-nullability-check=all</code>, casting a Nullable pointer to a Nonnull type is not allowed outside a safe zone:</p>
+<pre><code class="language-C">void foo() {
+  int *p1 = nullptr;
+  int *p2 = (int *_Nonnull)p1; // error: cannot cast nullable pointer to nonnull type
+  int *_Owned p3 = (int *_Owned)p1; // error: cannot cast nullable pointer to nonnull type
+  int *_Borrow p4 = (int *_Borrow)p1; // error: cannot cast nullable pointer to nonnull type
+}
+
+int main() {
+  foo();
+}
+</code></pre>
+<p>If you null-check a Nullable pointer, then in the non-null branch you can cast it to a Nonnull type:</p>
+<pre><code class="language-C">void foo() {
+  int *p1 = nullptr;
+  if (p1 != nullptr) {
+    int *p2 = (int *_Nonnull)p1;
+    int *_Owned p3 = (int *_Owned)p1;
+    int *_Borrow p4 = (int *_Borrow)p1;
+    safe_free((void *_Owned)p3);
+  }
+}
+
+int main() {
+  foo();
+}
+</code></pre>
+<h2 id="pointer-dereference-and-member-access"><a class="header" href="#pointer-dereference-and-member-access">Pointer Dereference and Member Access</a></h2>
+<p>The nullability state of a pointer whose nullability marker is Nullable changes with assignments and control flow.
+The BSC compiler tracks these changes to guarantee the safety of operations such as pointer dereference and member access.</p>
+<pre><code class="language-C">// Return type is Nullable
+_Safe T *_Borrow _Nullable foo&lt;T&gt;(T *_Borrow p) { return p; }
+
+struct Data {
+  int value;
+};
+
+_Safe void test(void) {
+  struct Data data = {.value = 10};
+  struct Data *_Borrow _Nullable p = foo(&amp;_Mut data);
+  if (p != nullptr) {
+    // after the null check, nullable is converted to nonnull
+    p-&gt;value = 10;
+  }
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="struct-members-that-are-nullable-pointers"><a class="header" href="#struct-members-that-are-nullable-pointers">Struct Members That Are Nullable Pointers</a></h2>
+<p>When initializing a struct variable that has Nullable pointer members:</p>
+<ol>
+<li>If it is initialized through an initializer list, the BSC compiler initializes the Nullability of the Nullable pointer members according to the initializer expressions.</li>
+<li>For other initialization methods, the Nullability of the Nullable pointer members is directly assumed to be Nullable. This may cause code that is otherwise correct to fail to compile; in this case you need to reassign the Nullable pointer member or use a null-check statement, either of which can change its Nullability.</li>
+</ol>
+<pre><code class="language-C">// Return type is Nonnull
+_Safe T *_Borrow bar&lt;T&gt;(T *_Borrow p) { return p; }
+
+struct Data {
+  int *_Borrow _Nullable value;
+};
+
+_Safe struct Data init_data(int *_Borrow p) {
+  struct Data d = {.value = p};
+  return d;
+}
+
+_Safe void test(void) {
+  int local = 10;
+  // Initialized using an initializer list: inferred as nonnull
+  struct Data data1 = {.value = bar(&amp;_Mut local)};
+  *data1.value = 10;
+
+  // Initialized using a function return value: nullability cannot be inferred, defaults to nullable
+  struct Data data2 = init_data(&amp;_Mut local);
+  *data2.value = 10; // error: directly using a nullable pointer
+
+  // Initialized by assignment from a variable: nullability cannot be inferred, defaults to nullable
+  struct Data data3 = data1;
+  *data3.value = 10; // error: directly using a nullable pointer
+
+  // Reassigning the Nullable pointer member can change its Nullability:
+  data2.value = bar(&amp;_Mut local);
+  *data2.value = 10;
+
+  // A pointer null-check statement can also change its Nullability:
+  if (data3.value != nullptr)
+    *data2.value = 10;
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="scope-and-control-options-for-non-null-pointer-checking"><a class="header" href="#scope-and-control-options-for-non-null-pointer-checking">Scope and Control Options for Non-Null Pointer Checking</a></h2>
+<p>Non-null pointer checking is a powerful feature that helps developers identify potentially dangerous behaviors at compile time. At the same time, it incurs some compilation performance overhead and imposes restrictions on coding behavior. <strong>By default, non-null pointer checking only takes effect in safe zones</strong>; for the definition of safe zones, see the <a href="../chapter-3-memory-safety/5-safe-zone.html">Safe Zone</a> chapter.</p>
+<p>In non-safe zones, we leave the choice of whether to enable non-null pointer checking to the developer, that is, the scope of this check is controlled through the compiler option <code>-nullability-check=value</code>. Here <code>value</code> is an enumerated value with two options, <code>safeonly</code> and <code>all</code>:</p>
+<ol>
+<li>The default value of <code>value</code> is <code>safeonly</code>, which controls the check to take effect only in safe zones; when this compiler option is absent, it is equivalent to <code>-nullability-check=safeonly</code>.</li>
+<li>When the value of <code>value</code> is <code>all</code>, non-null pointer checking is enabled overall, taking effect in both safe zones and non-safe zones.</li>
+</ol>
+<p>Here is an example for illustration:</p>
+<pre><code class="language-C">_Safe void test(void) {
+  int *_Borrow _Nullable p = nullptr;
+  _Unsafe {
+    *p = 10; // error1: nullable pointer cannot be dereferenced
+  }
+  *p = 5; // error2: nullable pointer cannot be dereferenced
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>For the example above, when the compiler option <code>-nullability-check</code> is absent or is <code>-nullability-check=safeonly</code>, only <code>error2</code> in the <code>_Safe</code> zone is reported; when <code>-nullability-check=all</code>, both <code>error1</code> in the non-safe zone and <code>error2</code> in the safe zone are reported.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-3-memory-safety/2-borrowing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-3-memory-safety/4-owned-struct.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-3-memory-safety/2-borrowing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-3-memory-safety/4-owned-struct.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

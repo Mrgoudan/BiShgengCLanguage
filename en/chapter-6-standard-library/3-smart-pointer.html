@@ -1,0 +1,661 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Smart Pointers - The BiSheng C Language User Manual</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-62b5e970.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-a156a4de.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The BiSheng C Language User Manual</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="smart-pointers"><a class="header" href="#smart-pointers">Smart Pointers</a></h1>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>BiSheng C’s ownership mechanism requires that a value can have only one owner. However, consider the following scenarios:</p>
+<ol>
+<li>In a graph data structure, multiple edges may point to the same node. This node is shared by all the edges pointing to it, and the node cannot be released and cleaned up until no edge points to it any longer.</li>
+<li>When we want to allocate some memory on the heap for multiple parts of the program to read, and we cannot determine at compile time which part of the program will finish using it last, this piece of memory cannot be released and cleaned up until the last part finishes using it.</li>
+</ol>
+<p>To solve such problems, we need to allow a value to have multiple owners at the same time. Therefore, BSC <strong>provides the <code>Rc&lt;T&gt;</code> type in the standard library to implement shared ownership. It is a smart pointer that points to the shared data.</strong> To improve the safety of Rc, BSC also provides <code>Weak&lt;T&gt;</code> to avoid the memory leak problem caused by circular references, and provides <code>Cell&lt;T&gt;</code> and <code>RefCell&lt;T&gt;</code> to be used together with Rc to enable mutability of the data that Rc points to.</p>
+<h2 id="using-rct-to-share-data"><a class="header" href="#using-rct-to-share-data">Using <code>Rc&lt;T&gt;</code> to share data</a></h2>
+<p>Rc is the abbreviation for reference counting. By recording the number of times data is referenced, it determines whether the data is still in use; the number of references is equivalent to the number of owners. <strong>If the reference count drops to 0, it means the referenced data can be cleaned up, at which point Rc will automatically call the data’s destructor to avoid a memory leak.</strong></p>
+<p>Note: When using <code>Rc&lt;T&gt;</code>, you must ensure that T is a copy-semantics type or an _Owned struct type, otherwise a compile-time error will occur, because for other types the compiler cannot know how to clean up the memory.</p>
+<p>The way to use <code>Rc&lt;T&gt;</code> is:</p>
+<ol>
+<li>Call the new method to create an Rc. This method allocates heap memory and stores the data to be referenced on the heap.</li>
+<li>Call the clone method to obtain another Rc from an existing Rc. This method does not perform a deep copy; it merely creates another pointer pointing to the referenced data.</li>
+<li>Call the deref method to obtain an immutable borrow of the data that Rc points to.</li>
+</ol>
+<p>We learn how to use Rc through the following example:
+Suppose a class has several students who share a single grade report. This grade record file is the data resource that needs to be shared. Now we read this file to obtain the grades of student 1 and student 2:</p>
+<pre><code class="language-C">#include "rc.hbs"
+
+_Owned struct ScoreRecord {  // student grade record file
+    FILE *fp;
+    ~ScoreRecord(This this) {
+        fclose(this.fp);
+    }
+};
+
+_Owned struct Student {
+    unsigned student_id;    // student id
+    Rc&lt;ScoreRecord&gt; scores; // assume the student grade record file is shared by all students
+};
+
+// open the file
+ScoreRecord ScoreRecord::open(String filename);
+// read the contents of line id of the file
+String ScoreRecord::read(const This *_Borrow this, unsigned id);
+
+// get the grade of student number id
+String Student::get_score(const This *_Borrow this) {
+    const ScoreRecord *_Borrow scores = this-&gt;scores.deref(); 
+    return scores-&gt;read(this-&gt;id);
+}
+
+int main() {
+    ScoreRecord scores = ScoreRecord::open(String::from("scores.txt"));
+
+    // student1 and student2 jointly own the grade file
+    Rc&lt;ScoreRecord&gt; rc1 = Rc&lt;ScoreRecord&gt;::new(scores);
+    Rc&lt;ScoreRecord&gt; rc2 = rc1.clone()；
+    Student student1 = { .id = 1, .scores = rc1 };
+    Student student2 = { .id = 2, .scores = rc2 };
+    // at this point the reference count of the shared file is 2, because it has 2 owners
+
+    print("Student 1's grade is: " + student1.get_score());
+    print("Student 2's grade is: " + student2.get_score());
+
+    return 0;
+}   // the shared file has been fully used, the reference count drops to 0, at which point Rc automatically calls ~ScoreRecord to close the file
+</code></pre>
+<h2 id="reference-counting"><a class="header" href="#reference-counting">Reference counting</a></h2>
+<p>Let us observe the changes in the reference count of <code>Rc&lt;T&gt;</code> when it is created, cloned, and goes out of scope through the following case.</p>
+<pre><code class="language-C">int main() {
+    Rc&lt;int&gt; rc1 = Rc&lt;int&gt;::new(5);
+    printf("ref count after creating rc1 = %d\n", rc1.strong_ref_count());
+    Rc&lt;int&gt; rc2 = rc1.clone();
+    printf("ref count after creating rc2 = %d\n", rc1.strong_ref_count());
+    {
+        Rc&lt;int&gt; rc3 = rc1.clone();
+        printf("ref count after creating rc3 = %d\n", rc1.strong_ref_count());
+    }
+    printf("ref count after rc3 goes out of scope = %d\n", rc1.strong_ref_count());
+    return 0;
+}
+</code></pre>
+<p>This code will print:</p>
+<pre><code class="language-text">ref count after creating rc1 = 1
+ref count after creating rc2 = 2
+ref count after creating rc3 = 3
+ref count after rc3 goes out of scope = 2
+</code></pre>
+<p>We can see that the initial reference count of rc1 is 1, and with each call to clone, the count increases by 1. When rc3 leaves its scope, the count decreases by 1. There is no need to call a function to decrease the count the way clone is called to increase the reference count, because the implementation of the <code>Rc&lt;T&gt;</code> destructor guarantees that the reference count is automatically decreased when an Rc leaves its scope.</p>
+<p>What we cannot see from this example is that at the end of the ref_count function, as rc1 and rc2 leave their scope, the count drops to 0, and the data they point to is also cleaned up; this cleanup operation is likewise automatically performed through the destructor of <code>Rc&lt;T&gt;</code>.</p>
+<h2 id="celltrefcellt-and-interior-mutability"><a class="header" href="#celltrefcellt-and-interior-mutability"><code>Cell&lt;T&gt;</code>/<code>RefCell&lt;T&gt;</code> and interior mutability</a></h2>
+<p>The deref method can be used to obtain an immutable borrow of the data that Rc points to, which allows data to be shared read-only among multiple parts of the program. If <code>Rc&lt;T&gt;</code> also allowed multiple mutable borrows, it would violate BSC’s borrowing rules: multiple mutable borrows of the same data cannot exist at the same time. However, in real-world application scenarios, modifying data is unavoidable. In this part, we will discuss the interior mutability pattern and the Cell/RefCell types, which <strong>can be used together with Rc to modify the data that Rc points to</strong>.</p>
+<p>The BSC compiler strictly checks the borrowing rules at compile time. It may reject a correct program, which often causes users a great deal of pain. Therefore, the standard library provides <code>Cell&lt;T&gt;</code> and <code>RefCell&lt;T&gt;</code> to implement interior mutability: modifying the target data while holding an immutable borrow! For a normal code implementation, this is impossible to achieve (either one mutable borrow, or multiple immutable borrows).</p>
+<h3 id="cellt"><a class="header" href="#cellt"><code>Cell&lt;T&gt;</code></a></h3>
+<p><code>Cell&lt;T&gt;</code> is used to obtain a copy of the value it wraps internally or to directly modify the internal value. It is suitable for Copy-semantics types, such as basic data types like int and float, or struct types.</p>
+<pre><code class="language-C">void cell_example() {
+    Cell&lt;int&gt; c = Cell&lt;int&gt;::new(5);
+    printf("Value in cell is: %d\n", c.get()); // the get method can obtain a copy of the value wrapped inside the cell
+    c.set(10);   // the set method can directly modify the value wrapped inside the cell
+    printf("Value in cell is: %d\n", c.get());
+}
+</code></pre>
+<h3 id="refcellt"><a class="header" href="#refcellt"><code>RefCell&lt;T&gt;</code></a></h3>
+<p><code>RefCell&lt;T&gt;</code> is used to obtain a mutable or immutable borrow of the value it wraps internally. It actually <strong>does not solve the problem of a mutable borrow and an immutable borrow being able to coexist; it merely defers the error from compile time to a runtime abort</strong>.</p>
+<p>By using the borrow_mut and borrow_immut methods of <code>RefCell&lt;T&gt;</code>, you attempt to obtain a borrow at runtime. If the borrow succeeds, a value of type <code>RefMut&lt;T&gt;</code> or <code>RefImmut&lt;T&gt;</code> is returned; otherwise it causes a runtime abort. The rules are:</p>
+<ol>
+<li>The borrow_mut method is used to obtain a <code>RefMut&lt;T&gt;</code>; if <strong>any other borrow</strong> exists within the current scope, the borrow fails.</li>
+<li>The borrow_immut method is used to obtain a <code>RefImmut&lt;T&gt;</code>; if <strong>any other mutable borrow</strong> exists within the current scope, the borrow fails.</li>
+</ol>
+<p><code>RefMut&lt;T&gt;</code> and <code>RefImmut&lt;T&gt;</code> are auxiliary data structures of <code>RefCell&lt;T&gt;</code>; their deref methods can respectively obtain a mutable and an immutable borrow of the RefCell’s internal value.</p>
+<pre><code class="language-C">void refcell_example() {
+    RefCell&lt;int&gt; c = RefCell&lt;int&gt;::new(5);
+
+    // obtain a RefMut through RefCell's borrow_mut method:
+    RefMut&lt;int&gt; ref_mut_c1 = c.borrow_mut();
+
+    // obtain a mutable borrow of RefCell's internal value through RefMut's deref method:
+    int* _Borrow mut_p1 = ref_mut_c.deref();
+
+    // modify the internal value through the mutable borrow:
+    *mut_p1 = 10;  
+
+    // attempt to obtain a mutable borrow again
+    RefMut&lt;int&gt; ref_mut_c2 = c.borrow_mut(); // runtime abort, because two mutable borrows exist at the same time
+}
+</code></pre>
+<h2 id="combining-rc-and-refcell-to-modify-shared-data"><a class="header" href="#combining-rc-and-refcell-to-modify-shared-data">Combining Rc and RefCell to modify shared data</a></h2>
+<p>In the example above of reading student grades, we only performed read operations on the data. With RefCell, we can modify shared data. The following example implements reading and updating grade data:</p>
+<pre><code class="language-C">#include "rc.hbs"
+#include "cell.hbs"
+
+_Owned struct ScoreRecord {  // student grade record file
+    FILE *fp;
+    ~ScoreRecord(This this) {
+        fclose(this.fp);
+    }
+};
+
+_Owned struct Student {
+    unsigned student_id;
+    Rc&lt;RefCell&lt;ScoreRecord&gt;&gt; scores; // wrap the shared data that needs to be modified with RefCell
+};
+
+// open the file
+ScoreRecord ScoreRecord::open(String filename);
+// read the contents of line id of the file
+String ScoreRecord::read(const This *_Borrow this, unsigned id);
+// update the contents of line id of the file
+void ScoreRecord::update(This *_Borrow this, unsigned id, String new);
+
+// get the grade of student number id
+String Student::get_score(const This *_Borrow this) {
+    // RefCell's borrow_immut method obtains an immutable borrow
+    RefImmut&lt;ScoreRecord&gt; ref_scores = this-&gt;scores.deref()-&gt;borrow_immut(); 
+    const ScoreRecord *_Borrow scores = ref_scores.deref();
+    return scores-&gt;read(this-&gt;id);
+}
+
+// update the grade of student number id
+String Student::update_score(const This *_Borrow this, String new_score) {
+    // RefCell's borrow_mut method obtains a mutable borrow
+    RefMut&lt;ScoreRecord&gt; ref_scores = this-&gt;scores.deref()-&gt;borrow_mut(); 
+    ScoreRecord *_Borrow scores = ref_scores.deref();
+    return scores-&gt;update(this-&gt;id, new_score);
+}
+
+int main() {
+    ScoreRecord scores = ScoreRecord::open(String::from("scores.txt"));
+
+    Rc&lt;RefCell&lt;ScoreRecord&gt;&gt; rc1 = Rc&lt;RefCell&lt;ScoreRecord&gt;&gt;::new(RefCell&lt;ScoreRecord&gt;::new(scores));
+    Rc&lt;RefCell&lt;ScoreRecord&gt;&gt; rc2 = rc1.clone()；
+    Student student1 = { .id = 1, .scores = rc1 };
+    Student student2 = { .id = 2, .scores = rc2 };
+
+    student1.update_score(String::from("100"));
+    student2.update_score(String::from("99"));
+
+    print("Student 1's grade is: " + student1.get_score());
+    print("Student 2's grade is: " + student2.get_score());
+
+    return 0;
+}
+</code></pre>
+<h2 id="weakt-solving-the-circular-reference-problem"><a class="header" href="#weakt-solving-the-circular-reference-problem"><code>Weak&lt;T&gt;</code> solving the circular reference problem</a></h2>
+<p>Although BSC has a comprehensive memory safety guarantee mechanism, this does not mean memory leaks cannot occur. A typical example is creating a circular reference using both <code>Rc&lt;T&gt;</code> and <code>RefCell&lt;T&gt;</code>; because the reference count cannot be reduced to zero, the data pointed to by <code>Rc&lt;T&gt;</code> will not be released and cleaned up.</p>
+<h3 id="creating-a-circular-reference"><a class="header" href="#creating-a-circular-reference">Creating a circular reference</a></h3>
+<pre><code class="language-C">#include "rc.hbs"
+#include "cell.hbs"
+
+_Owned struct B;
+
+_Owned struct A {
+_Public:
+    int value;
+    RefCell&lt;Rc&lt;B&gt;&gt; c;
+    ~A(A this) {
+        printf("A is destructed, value = %d\n", this.value);
+    }
+};
+
+_Owned struct B {
+_Public:
+    int value;
+    RefCell&lt;Rc&lt;A&gt;&gt; d;
+    ~B(B this) {
+        printf("B is destructed, value = %d\n", this.value);
+    }
+};
+
+int main() {
+    A a = { .value = 5 };
+    Rc&lt;A&gt; ap = Rc&lt;A&gt;::new(a);      // ap owns a
+
+    B b = { .value = 10 };
+    RefMut&lt;Rc&lt;A&gt;&gt; rm_b = b.d.borrow_mut();
+    *(rm_b.deref()) = ap.clone();  // through the clone of ap, here b.d owns a
+    Rc&lt;B&gt; bp = Rc&lt;B&gt;::new(b);      // bp owns b
+
+    RefMut&lt;Rc&lt;B&gt;&gt; rm_a = ap.deref()-&gt;c.borrow_mut();
+    *(rm_a.deref()) = bp.clone();  // through the clone of bp, here a.c owns b
+
+    printf("ref count of a : %d\n", ap.strong_ref_count());
+    printf("ref count of b : %d\n", bp.strong_ref_count());
+
+    return 0;
+}
+</code></pre>
+<p>This code will print:</p>
+<pre><code class="language-text">ref count of a : 2
+ref count of b : 2
+</code></pre>
+<p>Before the function ends, the reference counts of both a and b are 2, where a is shared by ap and b.d, and b is shared by bp and a.c.</p>
+<p>At the end of the function:</p>
+<ol>
+<li>For a, after ap goes out of scope, a’s reference count goes from 2 to 1; only when b.d is destructed will a’s reference count be reduced to 0, thereby triggering the destruction of a.</li>
+<li>For b, after bp goes out of scope, b’s reference count goes from 2 to 1; only when a.c is destructed will b’s reference count be reduced to 0, thereby triggering the destruction of b.</li>
+</ol>
+<p>The destruction of a requires b to be destructed first, while the destruction of b requires a to be destructed first. The result is that neither a nor b is destructed, and memory is leaked!</p>
+<h3 id="using-weakt-to-solve-circular-references"><a class="header" href="#using-weakt-to-solve-circular-references">Using <code>Weak&lt;T&gt;</code> to solve circular references</a></h3>
+<p>To solve this problem, BSC introduces the <code>Weak&lt;T&gt;</code> type. Unlike Rc, which holds ownership, Weak does not hold ownership; it merely keeps a weak reference pointing to the data. <strong>Establishing a weak reference does not increase the reference count, and it also cannot prevent the referenced data from being cleaned up.</strong></p>
+<p>The way to use <code>Weak&lt;T&gt;</code> is:</p>
+<ol>
+<li>Call the new method to create a <code>Weak&lt;T&gt;</code> from an existing <code>Rc&lt;T&gt;</code>.</li>
+<li>The referenced data cannot be accessed directly through <code>Weak&lt;T&gt;</code>. If you want to access the data, you need to upgrade the Weak to an Rc, which is done through Weak’s upgrade method. This method returns a value of type <code>Option&lt;Rc&lt;T&gt;&gt;</code>; if the referenced data has already been cleaned up and released, the value of the Option is None. In other words, Weak itself makes no guarantee about the existence of the referenced data.</li>
+</ol>
+<h3 id="circular-reference-scenario-1"><a class="header" href="#circular-reference-scenario-1">Circular reference scenario 1</a></h3>
+<p>We learn how to use <code>Weak&lt;T&gt;</code> through the example from the previous subsection where the circular reference of a and b caused a memory leak:</p>
+<pre><code class="language-C">#include "rc.hbs"
+#include "cell.hbs"
+
+_Owned struct B;
+
+_Owned struct A {
+_Public:
+    int value;
+    RefCell&lt;Rc&lt;B&gt;&gt; c;     // A references B through Rc
+    ~A(A this) {
+        printf("A is destructed, value = %d\n", this.value);
+    }
+};
+
+_Owned struct B {
+_Public:
+    int value;
+    RefCell&lt;Weak&lt;A&gt;&gt; d;  // B references A through Weak
+    ~B(B this) {
+        printf("B is destructed, value = %d\n", this.value);
+    }
+};
+
+int main() {
+    A a = { .value = 5 };
+    Rc&lt;A&gt; ap = Rc&lt;A&gt;::new(a);           // ap owns a
+
+    B b = { .value = 10 };
+    RefMut&lt;Weak&lt;A&gt;&gt; rm_b = b.d.borrow_mut();
+    *(rm_b.deref()) = Weak&lt;A&gt;::new(ap); // create a weak reference through ap, here b.d weakly references a
+    Rc&lt;B&gt; bp = Rc&lt;B&gt;::new(b);           // bp owns b
+
+    RefMut&lt;Rc&lt;B&gt;&gt; rm_a = ap.deref()-&gt;c.borrow_mut();
+    *(rm_a.deref()) = bp.clone();       // through the clone of bp, here a.c owns b
+
+    printf("ref count of a : %d\n", ap.strong_ref_count());
+    printf("ref count of b : %d\n", bp.strong_ref_count());
+
+    return 0;
+}
+</code></pre>
+<p>This code will print:</p>
+<pre><code class="language-text">ref count of a : 1
+ref count of b : 2
+B is destructed, value = 10
+A is destructed, value = 5
+</code></pre>
+<p>From the printed results, we see that both a and b were destructed. Analyzing this code:</p>
+<ol>
+<li>Before the function ends, a is owned by ap with a reference count of 1, and b is shared by bp and a.c with a reference count of 2;</li>
+<li>At the end of the function, after ap goes out of scope, a’s reference count goes from 1 to 0, thereby triggering the destruction of a; because a.c owns b, as a is destructed, b’s reference count is reduced from 2 to 1; subsequently, after bp goes out of scope, b’s reference count goes from 1 to 0, thereby triggering the destruction of b.</li>
+</ol>
+<h3 id="circular-reference-scenario-2"><a class="header" href="#circular-reference-scenario-2">Circular reference scenario 2</a></h3>
+<p>Weak is often applied in parent-child circular reference relationships. The approach is: let the parent node reference the child nodes through Rc, and then let the child nodes reference the parent node through Weak. Next we construct a simple tree with 1 root node and 2 leaf nodes:</p>
+<pre><code class="language-C">_Owned struct Node {
+_Public:
+    int value;
+    RefCell&lt;Weak&lt;Node&gt;&gt; parent;      // a child node references its parent node through Weak
+    RefCell&lt;Vec&lt;Rc&lt;Node&gt;&gt;&gt; children; // a parent node references its child nodes through Rc
+
+    ~Node(Node this) {
+        printf("node %d is destructed\n", this.value);
+    }
+};
+
+void tree() {
+    // construct the leaf nodes
+    Node temp_leaf1 = { .value = 5, .children = RefCell&lt;Vec&lt;Rc&lt;Node&gt;&gt;&gt;::new(Vec&lt;Rc&lt;Node&gt;&gt;::new()) };
+    Node temp_leaf2 = { .value = 6, .children = RefCell&lt;Vec&lt;Rc&lt;Node&gt;&gt;&gt;::new(Vec&lt;Rc&lt;Node&gt;&gt;::new()) };
+    Rc&lt;Node&gt; leaf1 = Rc&lt;Node&gt;::new(temp_leaf1);
+    Rc&lt;Node&gt; leaf2 = Rc&lt;Node&gt;::new(temp_leaf2);
+
+    printf("ref count of leaf1 after init : %d\n", leaf1.strong_ref_count());
+    printf("ref count of leaf2 after init : %d\n", leaf2.strong_ref_count());
+
+    // construct the parent node, and let the parent node reference the child nodes through Rc
+    Node temp_root = { .value = 10, .children = RefCell&lt;Vec&lt;Rc&lt;Node&gt;&gt;&gt;::new(Vec&lt;Rc&lt;Node&gt;&gt;::new()) };
+    RefMut&lt;Vec&lt;Rc&lt;Node&gt;&gt;&gt; rm_root_children = temp_root.children.borrow_mut();
+    rm_root_children.deref()-&gt;push(leaf1.clone());
+    rm_root_children.deref()-&gt;push(leaf2.clone());
+    Rc&lt;Node&gt; root = Rc&lt;Node&gt;::new(temp_root);
+
+    printf("ref count of root after init : %d\n", root.strong_ref_count());
+    printf("ref count of leaf1 after root points to it : %d\n", leaf1.strong_ref_count());
+    printf("ref count of leaf2 after root points to it : %d\n", leaf2.strong_ref_count());
+
+    // a child node references its parent node through Weak
+    RefMut&lt;Weak&lt;Node&gt;&gt; rm_leaf1_parent = leaf1.deref()-&gt;parent.borrow_mut();
+    *(rm_leaf1_parent.deref()) = Weak&lt;Node&gt;::new(&amp;_Const root);
+    RefMut&lt;Weak&lt;Node&gt;&gt; rm_leaf2_parent = leaf2.deref()-&gt;parent.borrow_mut();
+    *(rm_leaf2_parent.deref()) = Weak&lt;Node&gt;::new(&amp;_Const root);
+
+    printf("ref count of root after leaf1 and leaf2 weakly points to it : %d\n", root.strong_ref_count());
+}
+</code></pre>
+<p>This code will print:</p>
+<pre><code class="language-text">ref count of leaf1 after init : 1
+ref count of leaf2 after init : 1
+ref count of root after init : 1
+ref count of leaf1 after root points to it : 2
+ref count of leaf2 after root points to it : 2
+ref count of root after leaf1 and leaf2 weakly points to it : 1
+node 5 is destructed
+node 6 is destructed
+node 10 is destructed
+</code></pre>
+<p>From the printed results, you can see that all the node data was cleaned up and released.</p>
+<h2 id="related-apis"><a class="header" href="#related-apis">Related APIs</a></h2>
+<h3 id="rct-external-interfaces"><a class="header" href="#rct-external-interfaces"><code>Rc&lt;T&gt;</code> external interfaces</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>External interface</th><th>Interface function</th><th>Code example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_Safe Rc&lt;T&gt; Rc&lt;T&gt;::new(T data)</code></td><td>Constructs an Rc, allocating heap memory to store data</td><td><code>Rc&lt;int&gt; rc = Rc&lt;int&gt;::new(5);</code></td></tr>
+<tr><td><code>_Safe Rc&lt;T&gt; Rc&lt;T&gt;::clone(const This * _Borrow this)</code></td><td>Clones another Rc from an existing Rc, increasing the reference count by 1</td><td><code>Rc&lt;int&gt; rc2 = rc.clone();</code></td></tr>
+<tr><td><code>_Safe unsigned Rc&lt;T&gt;::strong_ref_count(const This * _Borrow this)</code></td><td>Gets the strong reference count</td><td><code>unsigned count = rc.strong_ref_count();</code></td></tr>
+<tr><td><code>_Safe unsigned Rc&lt;T&gt;::weak_ref_count(const This * _Borrow this)</code></td><td>Gets the weak reference count</td><td><code>unsigned count = rc.weak_ref_count();</code></td></tr>
+<tr><td><code>_Safe const T * _Borrow Rc&lt;T&gt;::deref(const This * _Borrow this)</code></td><td>Gets an immutable borrow of the data Rc points to</td><td><code>const int * _Borrow data = rc.deref();</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="weakt-external-interfaces"><a class="header" href="#weakt-external-interfaces"><code>Weak&lt;T&gt;</code> external interfaces</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>External interface</th><th>Interface function</th><th>Code example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_Safe Weak&lt;T&gt; Weak&lt;T&gt;::new(const Rc&lt;T&gt; * _Borrow rc)</code></td><td>Constructs a Weak from an existing Rc</td><td><code>Weak&lt;int&gt; w = Weak&lt;int&gt;::new(&amp;_Const rc);</code></td></tr>
+<tr><td><code>_Safe Weak&lt;T&gt; Weak&lt;T&gt;::clone(const This * _Borrow this)</code></td><td>Clones another Weak from an existing Weak</td><td><code>Weak&lt;int&gt; w2 = w.clone();</code></td></tr>
+<tr><td><code>_Safe unsigned Weak&lt;T&gt;::strong_ref_count(const This * _Borrow this)</code></td><td>Gets the strong reference count</td><td><code>unsigned count = w.strong_ref_count();</code></td></tr>
+<tr><td><code>_Safe unsigned Weak&lt;T&gt;::weak_ref_count(const This * _Borrow this)</code></td><td>Gets the weak reference count</td><td><code>unsigned count = w.weak_ref_count();</code></td></tr>
+<tr><td><code>_Safe Option&lt;Rc&lt;T&gt;&gt; Weak&lt;T&gt;::upgrade(const This * _Borrow this)</code></td><td>Converts the Weak into the corresponding Rc, returning None on conversion failure</td><td><code>Option&lt;Rc&lt;int&gt;&gt; rc = w.upgrade();</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="cellt-external-interfaces"><a class="header" href="#cellt-external-interfaces"><code>Cell&lt;T&gt;</code> external interfaces</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>External interface</th><th>Interface function</th><th>Code example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_Safe Cell&lt;T&gt; Cell&lt;T&gt;::new(T value)</code></td><td>Constructs a Cell with the given value</td><td><code>Cell&lt;int&gt; c = Cell&lt;int&gt;::new(5);</code></td></tr>
+<tr><td><code>_Safe T Cell&lt;T&gt;::get(const This * _Borrow this)</code></td><td>Gets a copy of the Cell’s internal value</td><td><code>int a = c.get();</code></td></tr>
+<tr><td><code>_Safe void Cell&lt;T&gt;::set(const This * _Borrow this, T val)</code></td><td>Replaces the Cell’s internal value with val</td><td><code>c.set(10);</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="refcellt-external-interfaces"><a class="header" href="#refcellt-external-interfaces"><code>RefCell&lt;T&gt;</code> external interfaces</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>External interface</th><th>Interface function</th><th>Code example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_Safe RefCell&lt;T&gt; RefCell&lt;T&gt;::new(T value)</code></td><td>Constructs a RefCell with the given value</td><td><code>RefCell&lt;int&gt; c = RefCell&lt;int&gt;::new(5);</code></td></tr>
+<tr><td><code>_Safe RefImmut&lt;T&gt; RefCell&lt;T&gt;::borrow_immut(const This * _Borrow this)</code></td><td>Gets the <code>RefImmut&lt;T&gt;</code> of the RefCell’s internal value; failure causes an abort</td><td><code>RefImmut&lt;int&gt; ref = c.borrow_immut();</code></td></tr>
+<tr><td><code>_Safe Option&lt;RefImmut&lt;T&gt;&gt; RefCell&lt;T&gt;::try_borrow_immut(const This * _Borrow this)</code></td><td>Gets the <code>RefImmut&lt;T&gt;</code> of the RefCell’s internal value; failure returns None</td><td><code>Option&lt;RefImmut&lt;int&gt;&gt; ref = c.try_borrow_immut();</code></td></tr>
+<tr><td><code>_Safe RefMut&lt;T&gt; RefCell&lt;T&gt;::borrow_mut(const This * _Borrow this)</code></td><td>Gets the <code>RefMut&lt;T&gt;</code> of the RefCell’s internal value; failure causes an abort</td><td><code>RefMut&lt;int&gt; ref = c.borrow_mut();</code></td></tr>
+<tr><td><code>_Safe Option&lt;RefMut&lt;T&gt;&gt; RefCell&lt;T&gt;::try_borrow_mut(const This * _Borrow this)</code></td><td>Gets the <code>RefMut&lt;T&gt;</code> of the RefCell’s internal value; failure returns None</td><td><code>Option&lt;RefMut&lt;int&gt;&gt; ref = c.try_borrow_mut();</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="refimmuttrefmutt-external-interfaces"><a class="header" href="#refimmuttrefmutt-external-interfaces"><code>RefImmut&lt;T&gt;/RefMut&lt;T&gt;</code> external interfaces</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>External interface</th><th>Interface function</th><th>Code example</th></tr>
+</thead>
+<tbody>
+<tr><td><code>_Safe const T * _Borrow RefImmut&lt;T&gt;::deref(const This * _Borrow this)</code></td><td>Gets an immutable borrow of the RefCell’s internal value</td><td><code>const int * _Borrow p = immut_ref.deref();</code></td></tr>
+<tr><td><code>_Safe T * _Borrow RefMut&lt;T&gt;::deref(This * _Borrow this)</code></td><td>Gets a mutable borrow of the RefCell’s internal value</td><td><code>int * _Borrow p = mut_ref.deref();</code></td></tr>
+</tbody>
+</table>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-6-standard-library/2-safe-container.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-6-standard-library/4-coroutine-scheduler.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-6-standard-library/2-safe-container.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-6-standard-library/4-coroutine-scheduler.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

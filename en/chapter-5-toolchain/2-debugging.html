@@ -1,0 +1,630 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Debugging - The BiSheng C Language User Manual</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-62b5e970.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-a156a4de.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The BiSheng C Language User Manual</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
+<p>BiSheng C supports basic debugging functionality. After source-to-source translation to standard C, debugging of the source files is still supported, making it convenient to tune programs and locate problems.</p>
+<h2 id="debugging-bisheng-c-source-files-directly"><a class="header" href="#debugging-bisheng-c-source-files-directly">Debugging BiSheng C source files directly</a></h2>
+<p>Debugging here mainly refers to gdb debugging, which can set breakpoints and print the values of basic variables. For types that already exist in standard C, variable values can be printed correctly; for the new types added by BiSheng C, such as _Owned struct and generics, values can also be printed correctly during debugging.</p>
+<p>Below is an example:</p>
+<pre><code class="language-c">_Owned struct Person&lt;T&gt;{
+_Public:
+    char name[50];
+    T age;
+    ~Person(This this) {
+    }
+};
+
+char* Person&lt;T&gt;::getName(This *this) {
+    return this-&gt;name;
+}
+
+int Person&lt;T&gt;::getAge(This *this) {
+    T a = this-&gt;age;
+    return a;
+}
+
+int main() {
+    Person&lt;int&gt; per = {"davi", 21};
+    char* name = per.getName();
+    int age = per.getAge();
+    return 0;
+}
+</code></pre>
+<p>The complete debugging process is as follows:</p>
+<ul>
+<li>
+<p>Generate an executable file with debug information:</p>
+<pre><code class="language-shell">clang -g debug_demo.cbs -o debug_demo_cbs
+</code></pre>
+<p><strong>Note:</strong> By default clang generates debug files in gdwarf-5 format, and the installed gdb version must be no lower than 10.1, otherwise there will be compatibility issues. Alternatively, you can add the <code>-gdwarf-4</code> compile option to generate debug files in the more compatible gdwarf-4 format:</p>
+<pre><code class="language-shell">clang -g -gdwarf-4 debug_demo.cbs -o debug_demo_cbs
+</code></pre>
+</li>
+<li>
+<p>Run <code>gdb debug_demo_cbs</code> to enter the gdb debugging interface.</p>
+</li>
+<li>
+<p>Below are some commonly used debugging commands:</p>
+<p>Enter <code>b main</code> to set a breakpoint, enter <code>run</code> to run the program; when the program reaches the breakpoint, enter <code>info locals</code> to view the values of local variables, enter <code>p var</code> to print the value of variable <code>var</code>, and enter <code>s</code> or <code>n</code> to step to the next line.</p>
+</li>
+</ul>
+<p>In the debugging example above, some information from the debugging process was recorded, as follows:</p>
+<pre><code class="language-shell">(gdb) b main
+Breakpoint 1 at 0x1162: file debug_demo.cbs, line 19.
+(gdb) r
+Starting program: /path/to/debug_demo 
+
+Breakpoint 1, main () at debug_demo.cbs:19
+19    Person&lt;int&gt; per = {"davi", 21};
+(gdb) n
+20    char* name = per.getName();
+(gdb) p per
+$1 = {name = "davi", '\000' &lt;repeats 45 times&gt;, age = 21}
+(gdb) s
+_ZN_ZTS6PersonIiEgetName (this=0x7fffffffdce0) at debug_demo.cbs:10
+10        return this-&gt;name;
+(gdb) s
+main () at debug_demo.cbs:21
+21    int age = per.getAge();
+(gdb) s
+_ZN_ZTS6PersonIiEgetAge (this=0x7fffffffdce0) at debug_demo.cbs:14
+14        T a = this-&gt;age;
+(gdb) s
+15        return a;
+(gdb) p a
+$2 = 21
+(gdb) s
+_ZN_ZTS6PersonIiE~Person (this=...) at debug_demo.cbs:5
+5    ~Person(This this) {
+...
+</code></pre>
+<p>During debugging, the value of <code>per</code> of type <code>_Owned struct</code> as well as the generic <code>a</code> were printed correctly.</p>
+<p><strong>Note:</strong> The function name is displayed as something like <code>_ZN_ZTS6PersonIiEgetName</code>. This is the result of the compiler’s name mangling (<code>Mangle</code>) and differs from the original name.</p>
+<h2 id="debugging-bisheng-c-source-files-after-source-to-source-translation"><a class="header" href="#debugging-bisheng-c-source-files-after-source-to-source-translation">Debugging BiSheng C source files after source-to-source translation</a></h2>
+<p>After translating BiSheng C source-to-source into standard C, you can directly debug the generated C file. Since the association information between standard C and BiSheng C is missing, debugging cannot establish a mapping to the original BiSheng C, which makes for a poor debugging experience. Against this backdrop, we have established a line-number mapping between the source-to-source-translated C file and the original cbs file, thereby supporting the ability to debug BiSheng C source files after source-to-source translation.</p>
+<p><strong>Note:</strong> The direct object of debugging is still the translated C file, but what is displayed during debugging is the cbs file from before translation; in essence, this establishes a certain degree of line-number mapping.</p>
+<h3 id="single-file-debugging"><a class="header" href="#single-file-debugging">Single-file debugging</a></h3>
+<p>Still using the cbs file from the previous subsection as an example, let us try to help developers better understand this debugging feature.</p>
+<p>The complete debugging process is as follows:</p>
+<ul>
+<li>
+<p>Perform source-to-source translation to generate a standard C file with line-number mappings:</p>
+<pre><code class="language-shell">clang -rewrite-bsc -line debug_demo.cbs -o debug_demo.c
+</code></pre>
+</li>
+<li>
+<p>View the generated C file:</p>
+<pre><code class="language-c">struct Person_int {
+    char name[50];
+    int age;
+};
+
+static char *struct_Person_int_getName( struct Person_int *this);
+
+static int struct_Person_int_getAge( struct Person_int *this);
+
+static void struct_Person_int_D( struct Person_int this);
+
+#line 18 "debug_demo.cbs"
+int main(void) {
+    struct Person_int per = {"davi", 21};
+    _Bool per_is_moved = 0;
+    char *name = struct_Person_int_getName(&amp;per);
+    int age = struct_Person_int_getAge(&amp;per);
+    if (!per_is_moved)
+        struct_Person_int_D(per);
+    return 0;
+}
+
+#line 9 "debug_demo.cbs"
+static char *struct_Person_int_getName( struct Person_int *this) {
+    return this-&gt;name;
+}
+
+#line 13 "debug_demo.cbs"
+static int struct_Person_int_getAge( struct Person_int *this) {
+    int a = this-&gt;age;
+    return a;
+ }
+
+#line 5 "debug_demo.cbs"
+static void struct_Person_int_D( struct Person_int this) {
+    _Bool this_is_moved = 0;
+}
+
+</code></pre>
+<p>Examining the generated C file, you can see that before each function code block, the starting line number of its corresponding part in the original cbs file is inserted, in the format:</p>
+<pre><code class="language-c">#line raw_number "debug_demo.cbs"
+</code></pre>
+<p>Here <code>raw_number</code> is the starting line number, and <code>"debug_demo.cbs"</code> is the name of the original cbs file under the relative path.</p>
+</li>
+<li>
+<p>Generate an executable file with debug information:</p>
+<pre><code class="language-shell">clang -g debug_demo.c -o debug_demo_c
+</code></pre>
+</li>
+<li>
+<p>Run <code>gdb debug_demo_c</code> to enter the gdb debugging interface.</p>
+<p>At this point, the <code>gdb</code> interactive interface displays the content and line numbers from the original cbs file, rather than the line numbers from the translated C file. With the common <code>gdb</code> debugging commands, you can navigate within the original BiSheng C code and print some variable values.</p>
+<p><strong>Note:</strong> If a relative path was used during source-to-source translation, debugging must be done under the same relative path; if an absolute path was used, this problem does not arise.</p>
+</li>
+<li>
+<p>Some information from the debugging process was recorded, as follows:</p>
+<pre><code class="language-shell">(gdb) b main
+Breakpoint 1 at 0x1152: file /path/to/debug_demo.cbs, line 19.
+(gdb) r
+Starting program: /path/to/debug_demo_c
+
+Breakpoint 1, main () at /path/to/debug_demo.cbs:19
+19    Person&lt;int&gt; per = {"davi", 21};
+(gdb) s
+20    char* name = per.getName();
+(gdb) s
+21    int age = per.getAge();
+(gdb) s
+struct_Person_int_getName (this=0x7fffffffdcf0) at /path/to/debug_demo.cbs:10
+10        return this-&gt;name;
+(gdb) s
+main () at /path/to/debug_demo.cbs:22
+22    return 0;
+(gdb) s
+struct_Person_int_getAge (this=0x7fffffffdcf0) at /path/to/debug_demo.cbs:14
+14        T a = this-&gt;age;
+(gdb) s
+15        return a;
+(gdb) info locals
+a = 21
+(gdb) s
+main () at /path/to/debug_demo.cbs:23
+23    }
+(gdb) s
+24
+(gdb) info locals
+per = {name = "davi", '\000' &lt;repeats 45 times&gt;, age = 21}
+per_is_moved = false
+name = 0x7fffffffdcf0 "davi"
+age = 21
+(gdb) s
+struct_Person_int_D (this=...) at /path/to/debug_demo.cbs:6
+6    }
+...
+</code></pre>
+</li>
+</ul>
+<h3 id="multi-file-debugging"><a class="header" href="#multi-file-debugging">Multi-file debugging</a></h3>
+<p>When there are references across multiple files, debugging can also correctly navigate between the multiple files. For example, suppose there is a source file <code>basic_math.cbs</code> containing basic math operation functions along with its header file <code>basic_math.hbs</code>, and the functions in <code>basic_math</code> are called within <code>cacl_demo.cbs</code>.</p>
+<ul>
+<li>
+<p>Source files</p>
+<p><code>basic_math.cbs</code></p>
+<pre><code class="language-c">#include "basic_math.hbs"
+
+int struct MyStruct::add(int a, int b){
+    int res = a + b;
+    return res;
+}
+
+int struct MyStruct::subtract(int a, int b) {
+    int res = a - b;
+    return res;
+}
+
+int struct MyStruct::multiply(int a, int b) {
+    int res = a * b;
+    return res;
+}
+
+int struct MyStruct::divide(int a, int b) {
+    if (b != 0) {
+        return a/b;
+    } else {
+        return 0;
+    }
+}
+</code></pre>
+<p><code>basic_math.hbs</code></p>
+<pre><code class="language-c">#ifndef REWRITE_H
+#define REWRITE_H
+
+struct MyStruct {
+    int a;
+    int b;
+};
+
+int struct MyStruct::add(int a, int b);
+int struct MyStruct::subtract(int a, int b);
+int struct MyStruct::multiply(int a, int b);
+int struct MyStruct::divide(int a, int b);
+
+T min&lt;T&gt;(T a, T b) {
+    return a &gt; b ? b : a;
+}
+
+T max&lt;T&gt;(T a, T b) {
+    return a &gt; b ? a : b;
+}
+
+#endif
+</code></pre>
+<p><code>cacl_demo.cbs</code></p>
+<pre><code class="language-c">#include "basic_math.hbs"
+
+int main() {
+    struct MyStruct s = {4, 2};
+    int r1 = struct MyStruct::add(s.a, s.b);
+    int r2 = struct MyStruct::subtract(s.a, s.b);
+    int r3 = struct MyStruct::multiply(s.a, s.b);
+    int r4 = struct MyStruct::divide(s.a, s.b);
+    int c1 = max&lt;int&gt;(s.a, s.b);
+    int c2 = min&lt;int&gt;(s.a, s.b);
+    return 0;
+}
+</code></pre>
+</li>
+<li>
+<p>Source-to-source translation</p>
+<pre><code class="language-shell">clang -rewrite-bsc -line basic_math.cbs basic_math.hbs calc_demo.cbs
+</code></pre>
+<p>After translation, <code>basic_math.c</code>, <code>basic_math.h</code>, and <code>calc_demo.c</code> are generated, as follows:</p>
+<p><code>basic_math.c</code></p>
+<pre><code class="language-c">#include "basic_math.h"
+
+#line 3 "basic_math.cbs"
+int struct_MyStruct_add(int a, int b) {
+    int res = a + b;
+    return res;
+}
+
+#line 8 "basic_math.cbs"
+int struct_MyStruct_subtract(int a, int b) {
+    int res = a - b;
+    return res;
+}
+
+#line 13 "basic_math.cbs"
+int struct_MyStruct_multiply(int a, int b) {
+    int res = a * b;
+    return res;
+}
+
+#line 18 "basic_math.cbs"
+int struct_MyStruct_divide(int a, int b) {
+    if (b != 0) {
+        return a / b;
+    } else {
+        return 0;
+    }   
+}
+</code></pre>
+<p><code>basic_math.h</code></p>
+<pre><code class="language-c">#ifndef REWRITE_H
+#define REWRITE_H
+
+struct MyStruct {
+    int a;
+    int b;
+};
+
+#line 9 "basic_math.hbs"
+int struct_MyStruct_add(int a, int b);
+
+#line 10 "basic_math.hbs"
+int struct_MyStruct_subtract(int a, int b);
+
+#line 11 "basic_math.hbs"
+int struct_MyStruct_multiply(int a, int b);
+
+#line 12 "basic_math.hbs"
+int struct_MyStruct_divide(int a, int b);
+#endif
+</code></pre>
+<p><code>calc_demo.c</code></p>
+<pre><code class="language-c">#include "basic_math.h"
+
+static int min_int(int a, int b); 
+
+static int max_int(int a, int b); 
+
+#line 3 "calc_demo.cbs"
+int main(void) {
+    struct MyStruct s = {4, 2}; 
+    int r1 = struct_MyStruct_add(s.a, s.b);
+    int r2 = struct_MyStruct_subtract(s.a, s.b);
+    int r3 = struct_MyStruct_multiply(s.a, s.b);
+    int r4 = struct_MyStruct_divide(s.a, s.b);
+    int c1 = max_int(s.a, s.b);
+    int c2 = min_int(s.a, s.b);
+    return 0;
+}
+
+#line 14 "./basic_math.hbs"
+static int min_int(int a, int b) {
+    return a &gt; b ? b : a;
+}
+
+#line 18 "./basic_math.hbs"
+static int max_int(int a, int b) {
+    return a &gt; b ? a : b;
+}
+</code></pre>
+</li>
+<li>
+<p>Generate debug information</p>
+<pre><code class="language-shell">clang -g calc_demo.c basic_math.c -o calc_demo_c
+</code></pre>
+</li>
+<li>
+<p>gdb debugging</p>
+<pre><code class="language-shell">gdb calc_demo_c
+</code></pre>
+<p>During debugging, you can navigate normally into the original <code>cbs</code> and <code>hbs</code> files. A partial example of the debugging process is shown below:</p>
+<pre><code class="language-shell">Breakpoint 1, main () at /path/go/calc_demo.cbs:4
+4    struct MyStruct s = {4, 2};
+(gdb) n
+5    int r1 = struct MyStruct::add(s.a, s.b);
+(gdb) s
+struct_MyStruct_add (a=4, b=2) at /path/go/basic_math.cbs:4
+4    int res = a + b;
+(gdb) s
+5    return res;
+(gdb) p res
+$1 = 6
+(gdb) c
+Continuing.
+
+Breakpoint 2, max_int (a=4, b=2) at ./basic_math.hbs:19
+19    return a &gt; b ? a : b;
+...
+</code></pre>
+<p>The features and issues supported by this debugging feature are summarized as follows:</p>
+</li>
+<li>
+<p>The object of debugging is the translated standard C; its execution logic, variable information, etc. are not changed.</p>
+</li>
+<li>
+<p>The code locations displayed during debugging point to the original cbs files, and debugging navigation across multiple source files is supported.</p>
+</li>
+<li>
+<p>When there is a difference in the number of code lines before and after source-to-source translation such that a line-by-line mapping is not possible — for example, features that generate new code such as <code>_Owned struct</code> destructors and <code>_Trait</code> — the displayed debug location may be inaccurate, which developers need to be aware of.</p>
+</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-5-toolchain/1-bsc2c.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-5-toolchain/3-ide.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-5-toolchain/1-bsc2c.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-5-toolchain/3-ide.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

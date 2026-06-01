@@ -1,0 +1,1248 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Borrowing - The BiSheng C Language User Manual</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-5788e8c0.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-a156a4de.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The BiSheng C Language User Manual</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="borrowing"><a class="header" href="#borrowing">Borrowing</a></h1>
+<p>As an important part of BiSheng C’s memory safety features, borrowing is a complement to ownership. The previous section described the ownership feature; the entity that owns a resource is responsible for releasing it. This section introduces borrowing a resource.</p>
+<h2 id="feature-overview"><a class="header" href="#feature-overview">Feature Overview</a></h2>
+<p>If we only had ownership types, code would be very limited, since operations such as function calls and assignments all transfer ownership. When programming, we often need to express the concept of “borrowing a resource”, as distinct from “owning a resource”. Just as in real life, if a person owns something, you can borrow it from them, and when you are done using it, you must return it to its owner.</p>
+<h3 id="definition-of-borrowing-and-the-borrow-operators"><a class="header" href="#definition-of-borrowing-and-the-borrow-operators">Definition of Borrowing and the Borrow Operators</a></h3>
+<p>In BiSheng C, <strong>a borrow is a pointer type that points to the memory address where the borrowed object is stored</strong>. To express the concept of borrowing:</p>
+<ol>
+<li>A new keyword <code>_Borrow</code> is introduced. Use <code>_Borrow</code> to qualify a pointer type <code>T*</code>, denoting a borrow type of T. <code>_ArrayElem</code> may also qualify a pointer type <code>T*</code> together with <code>_Borrow</code>, denoting a borrow type of an array member of T.</li>
+<li>The borrow operators <code>&amp;_Mut</code> and <code>&amp;_Const</code> are introduced. Here, <code>&amp;_Mut e</code> obtains a <strong>mutable borrow</strong> of expression e, and <code>&amp;_Const e</code> obtains a <strong>read-only borrow</strong> of expression <code>e</code>. Here, expression <code>e</code> is required to be an lvalue. Similar to the address-of operator <code>&amp;</code> in standard C, the borrow operators actually obtain the address of expression <code>e</code>.</li>
+</ol>
+<p>For example, we can create a mutable borrow <code>p1</code> and an immutable borrow <code>p2</code> of the local variable <code>local</code>, and use them:</p>
+<pre><code class="language-C">void use_immut(const int *_Borrow p) {}
+void use_mut(int *_Borrow p) {}
+
+void foo() {
+  int local = 5;
+  // p1 is a mutable borrow pointer to local
+  int *_Borrow p1 = &amp;_Mut local;
+  use_mut(p1);
+  // p2 is an immutable borrow pointer to local
+  const int *_Borrow p2 = &amp;_Const local;
+  use_immut(p2);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>In addition, if expression <code>e</code> is a pointer dereference expression, <code>&amp;_Mut *p</code> and <code>&amp;_Const *p</code> can be viewed as taking a mutable borrow and an immutable borrow, respectively, of the value stored at address <code>p</code>, that is, of <code>*p</code>. <strong>This operation does not produce a temporary variable for <code>*p</code>.</strong> Here, <code>p</code> may be a raw pointer, an <code>_Owned</code> pointer, or another borrow pointer. For example:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+
+void foo() {
+  int *x1 = malloc(sizeof(int));
+  *x1 = 1;
+  // p1 borrows *x1
+  int *_Borrow p1 = &amp;_Mut * x1;
+  int *_Owned x2 = safe_malloc(2);
+  // p2 borrows *x2
+  int *_Borrow p2 = &amp;_Mut * x2;
+  int local = 3;
+  int *_Borrow x3 = &amp;_Mut local;
+  // p3 borrows *x3
+  int *_Borrow p3 = &amp;_Mut * x3;
+  safe_free((void *_Owned)x2);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>If expression <code>e</code> is an array subscript expression, then the result type of <code>&amp;_Mut e</code> and <code>&amp;_Const e</code> carries the two qualifiers <code>_Borrow _ArrayElem</code>, denoting a borrow pointer that “points to an array element”. Apart from being allowed to use subscript <code>[]</code> and arithmetic operations, and having extra type-conversion rules, such a borrow pointer follows the same rules as an ordinary <code>_Borrow</code> pointer. Unless the <code>_Borrow _ArrayElem</code> case is explicitly stated or listed separately, the rules for <code>_Borrow</code> pointers apply equally to <code>_Borrow _ArrayElem</code>.</p>
+<pre><code class="language-C">void f1(int *_Borrow _ArrayElem p) {}
+void f2(const int *_Borrow _ArrayElem p) {}
+
+void foo() {
+  int arr[4] = {1, 2, 3, 4};
+  int *_Borrow _ArrayElem p = &amp;_Mut arr[0];
+  const int *_Borrow _ArrayElem q = &amp;_Const arr[1];
+  f1(&amp;_Mut arr[2]);
+  f2(&amp;_Const arr[3]);
+}
+</code></pre>
+<h3 id="the-purpose-of-borrowing"><a class="header" href="#the-purpose-of-borrowing">The Purpose of Borrowing</a></h3>
+<p>Suppose we have a requirement like this: create a file, and call some operation functions to read from and write to the file. Without the concept of borrowing, calling a file-operation function would transfer ownership of the file pointer. So that the file pointer can still be used after the function call, we would need to return ownership back to the caller:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+#include &lt;stdio.h&gt;
+
+typedef struct {
+  int file_id;
+} MyFile;
+
+MyFile *_Owned create_file(int id) {
+  MyFile f = {.file_id = id};
+  return safe_malloc(f);
+}
+void file_safe_free(MyFile *_Owned p) { safe_free((void *_Owned)p); }
+
+MyFile *_Owned insert_str(MyFile *_Owned p, char *str) {
+  // some operation to insert a string to file
+  printf("%s to file %d\n", str, p-&gt;file_id);
+  // Transfer ownership to the caller via the return value, to avoid losing ownership
+  return p;
+}
+
+MyFile *_Owned other_operation(MyFile *_Owned p) {
+  // some operation
+  // Transfer ownership to the caller via the return value, to avoid losing ownership
+  return p;
+}
+
+int main() {
+  MyFile *_Owned p = create_file(0);
+  char str[] = "insert str";
+  // Ownership of p is first moved into insert_str, then transferred back to the caller via the return value
+  p = insert_str(p, str);
+  p = other_operation(p);
+  file_safe_free(p);
+  return 0;
+}
+</code></pre>
+<p>This style causes frequent ownership transfers of the file pointer, which is error-prone when the code logic is complex, and if ownership is transferred away but not returned, the file pointer can no longer be used afterward. With borrowing, by passing a borrow of the file pointer as the argument to an operation function, the file pointer can still be used for other subsequent operations after the function returns. There is no longer any need, as in the previous example, to first pass ownership in via a function parameter and then pass it back out via the function return value, making the code more concise:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+#include &lt;stdio.h&gt;
+
+typedef struct {
+  int file_id;
+} MyFile;
+
+MyFile *_Owned create_file(int id) {
+  MyFile f = {.file_id = id};
+  return safe_malloc(f);
+}
+void file_safe_free(MyFile *_Owned p) { safe_free((void *_Owned)p); }
+
+void insert_str(MyFile *_Borrow p, char *str) {
+  // some operation to insert a string to file
+  printf("%s to file %d\n", str, p-&gt;file_id);
+  // No need to return ownership
+}
+
+void other_operation(MyFile *_Borrow p) {
+  // some operation
+  // No need to return ownership
+}
+
+int main() {
+  MyFile *_Owned p = create_file(0);
+  char str[] = "insert str";
+  // Ownership is not moved
+  insert_str(&amp;_Mut * p, str);
+  // Ownership is not moved
+  other_operation(&amp;_Mut * p);
+  file_safe_free(p);
+  return 0;
+}
+</code></pre>
+<h2 id="lifetimes-of-borrow-variables-and-borrowed-objects"><a class="header" href="#lifetimes-of-borrow-variables-and-borrowed-objects">Lifetimes of Borrow Variables and Borrowed Objects</a></h2>
+<h3 id="lifetimes-and-their-purpose"><a class="header" href="#lifetimes-and-their-purpose">Lifetimes and Their Purpose</a></h3>
+<p>We can take a borrow of various kinds of objects: <code>_Owned</code> variables, local variables of non-<code>_Owned</code> types, global variables, temporary anonymous variables, parameters, and even part of a composite variable. To correctly represent the valid scope of borrow variables and of the various kinds of borrowed objects, we introduce the concept of lifetime.</p>
+<p>The primary purpose of lifetime checking is to avoid dangling pointers, which cause a program to use data that it should not use. The following C code is a typical example of using a dangling pointer:</p>
+<pre><code class="language-C">int main() {
+  int *p;
+  {
+    int local = 5;
+    p = &amp;local;
+  }
+  *p = 1;
+  return 0;
+}
+</code></pre>
+<p>Two things are worth noting about this C code:</p>
+<ol>
+<li>Declaring <code>int *p</code> carries the risk of using <code>NULL</code>;</li>
+<li><code>p</code> points to the variable <code>local</code> in the inner block, but <code>local</code> is freed when the block ends. Therefore, after returning to the outer block, <code>p</code> points to an invalid address and is a dangling pointer that points to the prematurely freed variable <code>local</code>. As expected, <code>*p = 1</code> causes undefined behavior at runtime in this program. When the code logic is complex, such anomalous behavior is very hard to detect.</li>
+</ol>
+<p>Regarding the second point, BiSheng C stipulates: <strong>a borrow of a resource must not outlive the owner of that resource.</strong> That is, the lifetime of a borrow variable must not be longer than the lifetime of the borrowed object.</p>
+<p>Next, we rewrite the above C code using BiSheng C’s borrowing feature. By checking the lifetimes of borrow variables and borrowed objects, the potential memory-safety risk can be identified at compile time:</p>
+<pre><code class="language-C">int main() {
+  int local1 = 1;
+  // The borrow pointer variable p must be initialized before use, otherwise an error is reported
+  int *_Borrow p = &amp;_Mut local1;
+  {
+    int local2 = 2;
+    // After reassigning p, p no longer borrows local1 but borrows local2
+    p = &amp;_Mut local2;
+  }
+  *p = 3; // error: local2 does not live long enough
+  return 0;
+}
+</code></pre>
+<h3 id="borrow-variables-and-borrowed-objects"><a class="header" href="#borrow-variables-and-borrowed-objects">Borrow Variables and Borrowed Objects</a></h3>
+<p>Every borrow variable (i.e. a _Borrow pointer variable) has one or more borrowed objects, for example:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+
+struct S {
+  int a;
+};
+
+int *_Borrow bar(int *_Borrow, int *_Borrow);
+
+int g = 5;
+void foo(int a, int *_Owned b, int *c, struct S d) {
+  // The borrowed object is an ordinary local variable
+  int local = 5;
+  int *_Borrow p1 = &amp;_Mut local; // the borrowed object of p1 is local
+  int *_Borrow p2 = &amp;_Mut * p1;  // the borrowed object of p2 is *p1
+  int *_Borrow p3 = p1;         // the borrowed object of p3 is *p1
+
+  // The borrowed object is an owned variable
+  int *_Owned x1 = safe_malloc&lt;int&gt;(2);
+  int *_Borrow p4 = &amp;_Mut * x1; // the borrowed object of p4 is *x1
+
+  // The borrowed object is a raw pointer variable
+  int *x2 = malloc(sizeof(int));
+  int *_Borrow p5 = &amp;_Mut * x2; // the borrowed object of p5 is *x2
+
+  // The borrowed object is a field of a struct
+  struct S s = {.a = 5};
+  int *_Borrow p6 = &amp;_Mut s.a; // the borrowed object of p6 is s.a
+
+  // The borrowed object is the return value of a function; it is the same as the "borrowed objects" of the called function's borrow-type parameters
+  int local1 = 10, local2 = 20;
+  // The called function bar has two borrow-type parameters, so the borrowed objects of p7 are local1 and local2
+  int *_Borrow p7 = bar(&amp;_Mut local1, &amp;_Mut local2);
+
+  // The borrowed object is a global variable
+  const int *_Borrow p8 = &amp;_Const g; // the borrowed object of p8 is g
+
+  // The borrowed objects are function parameters
+  int *_Borrow p9 = &amp;_Mut a;    // the borrowed object of p9 is a
+  int *_Borrow p10 = &amp;_Mut * b; // the borrowed object of p10 is *b
+  int *_Borrow p11 = &amp;_Mut * c; // the borrowed object of p11 is *c
+  int *_Borrow p12 = &amp;_Mut d.a; // the borrowed object of p12 is d.a
+
+  safe_free((void *_Owned)b);
+  safe_free((void *_Owned)x1);
+}
+
+int main() {
+  int a = 42;
+  int *_Owned b = safe_malloc(73);
+  int *c = &amp;a;
+  struct S d = {.a = 31};
+  foo(a, b, c, d);
+  return 0;
+}
+</code></pre>
+<p>Note: if a borrowed object comes from taking an address, or from casting to a raw pointer and then taking a borrow, it is not recorded as a borrowed object. For example:</p>
+<pre><code class="language-C">void f1() {
+  int a = 1;
+  int *p = &amp;a;
+  int *_Borrow p1 = (int *_Borrow)(int *)(&amp;_Mut *p); // the borrowed object *p is not recorded
+  int *_Borrow p2 = &amp;_Mut *&amp;a; // the borrowed object a is not recorded
+}
+</code></pre>
+<h3 id="non-lexical-lifetime-of-borrow-variables"><a class="header" href="#non-lexical-lifetime-of-borrow-variables">Non-Lexical Lifetime of Borrow Variables</a></h3>
+<p>A variable’s lifetime starts at its declaration and ends at the end of the entire current statement block. This design is called Lexical Lifetime, because the variable’s lifetime is strictly bound to the lexical scope. This strategy is very simple to implement, but it may be overly conservative: in some cases the scope of a borrow variable is stretched too long, so that some code that is actually safe is also rejected, which to some extent restricts the code that a programmer can write. Therefore, BiSheng C introduces Non-Lexical Lifetime (abbreviated NLL) for borrow variables, using a more refined approach to compute the range over which a borrow variable is actually in effect. <strong>The NLL range of a borrow variable is: from the point of borrowing, lasting until the place of the last use.</strong> Specifically, it runs <strong>from the definition or reassignment of the borrow variable, to the end of the last use before it is reassigned</strong>.</p>
+<p>The following scenarios count as uses of borrow variable p:</p>
+<ol>
+<li>A function call, such as <code>use(p)</code> or <code>use(&amp;_Mut *p)</code></li>
+<li>A function return, <code>return p</code> or <code>return &amp;_Mut *p</code></li>
+<li>A dereference <code>*p</code></li>
+<li>A member access <code>p-&gt;field</code></li>
+</ol>
+<p>For example:</p>
+<pre><code class="language-C">void use(int *_Borrow p) {}
+void other_op() {}
+
+// In this example, the NLL of p is segmented, and each NLL segment has a borrowed object
+void foo() {
+  int local1 = 1, local2 = 2;  //#1
+  int *_Borrow p = &amp;_Mut local1; //#2, the first NLL segment of p begins, with borrowed object local1
+  other_op();                  //#3
+  use(p);                      //#4, the first NLL segment of p ends
+  other_op();                  //#5
+  p = &amp;_Mut local2;             //#6, the second NLL segment of p begins, with borrowed object local2; since p is not used again afterward, the NLL of p ends here
+  other_op();     //#7
+}
+// The NLL of p is: [2,4]-&gt;local1, [6,6]-&gt;local2
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<h3 id="lexical-lifetime-of-borrowed-objects"><a class="header" href="#lexical-lifetime-of-borrowed-objects">Lexical Lifetime of Borrowed Objects</a></h3>
+<p>Unlike borrow variables, the lifetime of a borrowed object is a Lexical Lifetime. For the lifetimes of the various kinds of borrowed objects, we give the following specific definitions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Kind of Borrowed Object</th><th></th><th>Lifetime Definition</th></tr>
+</thead>
+<tbody>
+<tr><td>Global variable</td><td></td><td>The lifetime of a global variable is the entire program; it exists from the start of the program until it exits</td></tr>
+<tr><td>Local variable</td><td>owned variable</td><td>From the definition of the variable to when it is moved away (if an <code>_Owned struct</code>-type variable is not moved, its lifetime ends when the current block ends)</td></tr>
+<tr><td></td><td>non-owned non-borrow variable</td><td>From the definition of the variable to the end of the current block</td></tr>
+<tr><td>Local literal</td><td><code>"string literal"</code></td><td>From the point of use to the end of the current block</td></tr>
+<tr><td></td><td><code>(struct S) { ... }</code></td><td>From the point of use to the end of the current block</td></tr>
+<tr><td><code>e-&gt;field</code></td><td></td><td>The lifetime of <code>*e</code></td></tr>
+<tr><td><code>e.field</code></td><td></td><td>The lifetime of <code>e</code></td></tr>
+<tr><td><code>e[index]</code> or <code>*e</code> (<code>e</code> is an array)</td><td></td><td>The lifetime of <code>e</code></td></tr>
+<tr><td><code>e[index]</code> or <code>*e</code> (<code>e</code> is a pointer)</td><td></td><td>The lifetime of <code>*e</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="lifetime-constraints-on-borrows"><a class="header" href="#lifetime-constraints-on-borrows">Lifetime Constraints on Borrows</a></h3>
+<p>In section 2.1 we mentioned that for borrows we have the following lifetime constraint: <strong>the lifetime of a borrow variable must not be longer than the lifetime of the borrowed object.</strong>
+For example:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+
+void use(int *_Borrow p) {}
+int *_Borrow call(int *_Borrow p, int *_Borrow q) { return p; }
+
+// In this example, the lifetime of p is [2,4], and the lifetime of the borrowed object local is [1,4], satisfying the lifetime constraint
+void test1() {
+  int local = 5;              //#1
+  int *_Borrow p = &amp;_Mut local; //#2
+  use(p);                     //#3
+} //#4
+
+// In this example, the lifetime of p has two segments:
+// ok: the first segment is [2,2], and the lifetime of the borrowed object local1 is [1,8], satisfying the lifetime constraint
+// error: the second segment is [5,7], and the lifetime of the borrowed object local2 is [4,6], not satisfying the lifetime constraint
+void test2() {
+  int local1 = 5;              //#1
+  int *_Borrow p = &amp;_Mut local1; //#2
+  {                            //#3
+    int local2 = 5;            //#4
+    p = &amp;_Mut local2;           //#5
+  }                            //#6
+  use(p);                      //#7
+} //#8
+
+// In this example, the lifetime of p has two segments:
+// ok: the first segment is [2,2], and the lifetime of the borrowed object local1 is [1, 8], satisfying the lifetime constraint
+// error: the second segment is [5,7], and there are two borrowed objects, local1 and local2; the lifetime of local2 is [4, 6], not satisfying the lifetime constraint
+void test3() {
+  int local1 = 5;                       //#1
+  int *_Borrow p = &amp;_Mut local1;          //#2
+  {                                     //#3
+    int local2 = 5;                     //#4
+    p = call(&amp;_Mut local1, &amp;_Mut local2); //#5
+  }                                     //#6
+  use(p);                               //#7
+} //#8
+
+// In this example, the if branch reassigns p at #6
+// error: at use(p), the lifetime of p's borrowed object local2 has already ended, not satisfying the lifetime constraint
+// ok: the else branch satisfies the lifetime constraint
+void test4() {
+  int local = 5;              //#1
+  int *_Borrow p = &amp;_Mut local; //#2
+  int local1 = 5;             //#3
+  if (rand()) {               //#4
+    int local2 = 5;           //#5
+    p = &amp;_Mut local2;          //#6
+  } else {                    //#7
+    p = &amp;_Mut local1;          //#8
+  }                           //#9
+  use(p);                     //#10
+}
+
+// In this example, the lifetime of p is [2,4], and the lifetime of the borrowed object *x is [1,3], not satisfying the lifetime constraint, error
+void test5() {
+  int *_Owned x = safe_malloc&lt;int&gt;(5); //#1
+  int *_Borrow p = &amp;_Mut * x;           //#2
+  safe_free((void *_Owned)x);          //#3
+  use(p);                             //#4
+} //#5
+
+int main() {
+  test1();
+  test2();
+  test3();
+  test4();
+  test5();
+  return 0;
+}
+</code></pre>
+<h2 id="mutable-borrows-and-immutable-borrows"><a class="header" href="#mutable-borrows-and-immutable-borrows">Mutable Borrows and Immutable Borrows</a></h2>
+<p>BiSheng C grades the permissions of borrow pointers into mutable (mut) borrows and immutable (immut) borrows. We can read and write the contents of the borrowed object through a mutable borrow pointer; through an immutable borrow pointer, we can only read the contents of the borrowed object but cannot modify it. For example:</p>
+<pre><code class="language-C">// A mutable borrow pointer has the type T *_Borrow
+void use_mut(int *_Borrow p) {
+  // Through a mutable borrow pointer, the value of the borrowed object can be modified
+  *p = 5;
+  // Through a mutable borrow pointer, the value of the borrowed object can be read
+  int a = *p;
+}
+
+// An immutable borrow pointer has the type const T *_Borrow
+void use_immut(const int *_Borrow p) {
+  *p = 5; // error: the value of the borrowed object cannot be modified through an immutable borrow pointer
+  // Through an immutable borrow pointer, the value of the borrowed object can be read
+  int a = *p;
+}
+
+int main() {
+  int i = 1;
+  int *_Borrow pmi = &amp;_Mut i;
+  use_mut(pmi);
+  const int *_Borrow pimi = &amp;_Const i;
+  use_immut(pimi);
+  return 0;
+}
+</code></pre>
+<h3 id="_mut-e-requires-e-to-be-modifiable"><a class="header" href="#_mut-e-requires-e-to-be-modifiable"><code>&amp;_Mut e</code> Requires e to Be Modifiable</a></h3>
+<p>We mentioned in section 1.1 that <code>&amp;_Mut e</code> and <code>&amp;_Const e</code> require expression e to be an lvalue, i.e. e can be address-taken. For the mutable borrow expression <code>&amp;_Mut e</code>, we additionally require e to be mutable. Specifically:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>lvalue Expression</th><th>Modifiable?</th></tr>
+</thead>
+<tbody>
+<tr><td>ident</td><td>The variable ident is not qualified by const, and ident cannot be a function name</td></tr>
+<tr><td>“string literal”</td><td>Not allowed, because a string constant is stored in the constant area and cannot be written. Attempting to take a mutable borrow of a string literal (such as <code>&amp;_Mut "hello"</code> or <code>&amp;_Mut * "hello"</code>) causes a compile error</td></tr>
+<tr><td>(struct S) { … }</td><td>Allowed</td></tr>
+<tr><td><code>e-&gt;field</code></td><td>Requires <code>e</code> to be a mutable borrow pointer, or an _Owned pointer to a modifiable type, or a raw pointer to a modifiable type, and that field is not qualified by const; in the case of multi-level fields, every level of field must not be qualified by const</td></tr>
+<tr><td><code>e.field</code></td><td>Requires <code>e</code> to be mutable, and that field is not qualified by const; in the case of multi-level fields, every level of field must not be qualified by const</td></tr>
+<tr><td><code>e[index]</code> or <code>*e</code> (<code>e</code> is an array)</td><td>Requires <code>e</code> to be mutable</td></tr>
+<tr><td><code>e[index]</code> or <code>*e</code> (<code>e</code> is a pointer)</td><td>Requires <code>e</code> to be a mutable borrow pointer, or an _Owned pointer to a modifiable type, or a raw pointer to a modifiable type</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="at-most-one-mutable-borrow-at-a-time"><a class="header" href="#at-most-one-mutable-borrow-at-a-time">At Most One Mutable Borrow at a Time</a></h3>
+<p>If two or more pointers access the same data at the same time and at least one of them is used to write data, it may cause undefined behavior. For example:</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+#include &lt;stdio.h&gt;
+
+void free_a(int *a) { free(a); }
+void read_a(int *a) { printf("%d\n", *a); }
+
+void test() {
+  int *a = malloc(sizeof(int));
+  *a = 42;
+  int *p1 = a;
+  int *p2 = a;
+  // This function frees the memory pointed to by a
+  free_a(p1);
+  // This function reads the memory pointed to by a
+  read_a(p2); // prints a garbage value
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>Since a borrow is essentially also a pointer, to avoid the above problem, BiSheng C stipulates: <strong>at any given moment, for the same object, there can be either only one mutable borrow, or any number of immutable borrows.</strong></p>
+<pre><code class="language-C">void write(int *_Borrow p) {}
+void read(const int *_Borrow p) {}
+
+void test1() {
+  int local = 1;
+  int *_Borrow p1 = &amp;_Mut local;
+  int *_Borrow p2 = &amp;_Mut local; // error: at most one mutable borrow variable pointing to local can exist at a time
+  write(p1);
+  write(p2);
+}
+
+void test2() {
+  int local = 1;
+  int *_Borrow p1 = &amp;_Mut local;
+  const int *_Borrow p2 = &amp;_Const local; // error: a mutable borrow and an immutable borrow pointing to local cannot exist at the same time
+  write(p1);
+  read(p2);
+}
+
+void test3() {
+  int local = 1;
+  const int *_Borrow p1 = &amp;_Const local;
+  int *_Borrow p2 = &amp;_Mut local; // error: a mutable borrow and an immutable borrow pointing to local cannot exist at the same time
+  read(p1);
+  write(p2);
+}
+
+int main() {
+  test1();
+  test2();
+  test3();
+  return 0;
+}
+</code></pre>
+<p>If a mutable borrow and an immutable borrow of the same variable exist at the same time, it is possible to modify the memory state of the borrowed object through the mutable borrow and then access the modified memory through the immutable borrow, leading to undefined behavior.
+For example:</p>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+struct A {
+  int *p;
+};
+
+const int *_Borrow struct A::get_p(This *_Borrow this) {
+  return &amp;_Const * (this-&gt;p);
+}
+
+void struct A::free_p(This *_Borrow this) { free(this-&gt;p); }
+
+int main() {
+  struct A a = {.p = malloc(sizeof(int))};
+  // q borrows a.p
+  const int *_Borrow q = a.get_p();
+  // The memory pointed to by a.p is freed
+  a.free_p(); // error: a is mutably borrowed more than once
+  // The operation *q may cause undefined behavior
+  printf("%d\n", *q);
+  return 0;
+}
+</code></pre>
+<p>In the code above, <code>a.free_p()</code> actually uses a mutable borrow of a; this mutable borrow invalidates the borrow q defined before it. Since <code>printf("%d\n", *q)</code> uses the invalidated q, the BiSheng C compiler reports an error, thereby preventing the unsafe behavior.</p>
+<p>Since immutable borrows do not cause the borrowed object to be modified, any number of immutable borrows can exist at the same time. For example:</p>
+<pre><code class="language-C">void read(const int *_Borrow p) {}
+
+void test() {
+  int local = 5;
+  const int *_Borrow p1 = &amp;_Const local;
+  const int *_Borrow p2 = &amp;_Const local;
+  read(p1);
+  read(p2);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="the-effect-of-borrowing-on-the-borrowed-object"><a class="header" href="#the-effect-of-borrowing-on-the-borrowed-object">The Effect of Borrowing on the Borrowed Object</a></h2>
+<h3 id="the-effect-of-an-immutable-borrow-on-the-borrowed-object"><a class="header" href="#the-effect-of-an-immutable-borrow-on-the-borrowed-object">The Effect of an Immutable Borrow on the Borrowed Object</a></h3>
+<p>When an immutable borrow is taken of expression e, i.e. <code>&amp;_Const e</code>, then before the lifetime of this immutable borrow ends, e can only be read, not modified, and no mutable borrow of e can be created, but immutable borrows of e can still be taken.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Immutable Borrow Expression</th><th>State of the Borrowed Object</th></tr>
+</thead>
+<tbody>
+<tr><td><code>&amp;_Const ident</code></td><td>The variable <code>ident</code> can only be read, not modified; no mutable borrow of the variable <code>ident</code> can be created; immutable borrows of the variable <code>ident</code> are allowed</td></tr>
+<tr><td><code>&amp;_Const "string literal"</code></td><td>The temporary variable is always “read-only”</td></tr>
+<tr><td><code>&amp;_Const (struct S) { ... }</code></td><td>The temporary variable is always “read-only”</td></tr>
+<tr><td><code>&amp;_Const e-&gt;field</code></td><td><code>e-&gt;field</code> enters the “read-only” state, and modifying <code>*e</code> as a whole is also not allowed. However, modifying the other members that <code>e</code> points to, or taking mutable borrows of those other members, is allowed</td></tr>
+<tr><td><code>&amp;_Const e.field</code></td><td><code>e.field</code> enters the “read-only” state, and modifying <code>e</code> as a whole is also not allowed. However, modifying the other members of <code>e</code>, or taking mutable borrows of those other members, is allowed</td></tr>
+<tr><td><code>&amp;_Const e[index]</code> or <code>&amp;_Const *e</code> (<code>e</code> is an array)</td><td><code>e</code> enters the “read-only” state; modifying <code>e</code> and its direct or indirect members, or taking mutable borrows of those other members, is not allowed</td></tr>
+<tr><td><code>&amp;_Const e[index]</code> or <code>&amp;_Const *e</code> (<code>e</code> is a pointer)</td><td><code>*e</code> enters the “read-only” state; directly modifying <code>*e</code> and its direct or indirect members, or taking mutable borrows of <code>*e</code> and its direct or indirect members, is not allowed. If <code>e</code> is an _Owned pointer type, then <code>e</code> also enters the read-only state. If <code>e</code> is a _Borrow pointer type (i.e. this is an immutable reborrow of <code>e</code>), then modifying what <code>e</code> points to is allowed, and after the pointee is modified, the read-write attribute of <code>e</code> reverts to what it was before the reborrow</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-effect-of-a-mutable-borrow-on-the-borrowed-object"><a class="header" href="#the-effect-of-a-mutable-borrow-on-the-borrowed-object">The Effect of a Mutable Borrow on the Borrowed Object</a></h3>
+<p>When a mutable borrow is taken of expression e, i.e. <code>&amp;_Mut e</code>, expression e enters the “frozen” state. Before the lifetime of this mutable borrow ends, e cannot be read, cannot be modified (including being moved), and cannot be borrowed.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Mutable Borrow Expression</th><th>State of the Borrowed Object</th></tr>
+</thead>
+<tbody>
+<tr><td><code>&amp;_Mut ident</code></td><td>The variable <code>ident</code> is frozen</td></tr>
+<tr><td><code>&amp;_Mut "string literal"</code></td><td>Compile error (string literals are immutable and cannot be mutably borrowed)</td></tr>
+<tr><td><code>&amp;_Mut (struct S) { ... }</code></td><td>The temporary variable is frozen</td></tr>
+<tr><td><code>&amp;_Mut e-&gt;field</code></td><td><code>e-&gt;field</code> is frozen; reading or writing <code>e-&gt;field</code> is not allowed, and modifying <code>*e</code> as a whole is not allowed, but modifying the other members that <code>e</code> points to, or taking mutable borrows of those other members, is allowed</td></tr>
+<tr><td><code>&amp;_Mut e.field</code></td><td><code>e.field</code> is frozen; reading or writing <code>e.field</code> is not allowed, and modifying <code>e</code> as a whole is not allowed, but modifying the other members of <code>e</code>, or taking mutable borrows of those other members, is allowed</td></tr>
+<tr><td><code>&amp;_Mut e[index]</code> or <code>&amp;_Mut *e</code> (<code>e</code> is an array)</td><td><code>e</code> is frozen; reading or writing <code>e</code> and its members is not allowed</td></tr>
+<tr><td><code>&amp;_Mut e[index]</code> or <code>&amp;_Mut *e</code> (<code>e</code> is a pointer)</td><td><code>*e</code> is frozen; reading, writing, or borrowing <code>*e</code> and its members is not allowed. If <code>e</code> is an _Owned pointer type, then reading or writing <code>e</code> is also not allowed; if <code>e</code> is a _Borrow pointer type (i.e. this is a mutable reborrow of <code>e</code>), then modifying what <code>e</code> points to is allowed, and after the pointee is modified, <code>*e</code> and its direct or indirect members can be read, written, and borrowed</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="borrow-types-in-function-definitions"><a class="header" href="#borrow-types-in-function-definitions">Borrow Types in Function Definitions</a></h2>
+<ol>
+<li>
+<p>It is not allowed for a function to have no borrow-type parameters while having a borrow-type return.</p>
+</li>
+<li>
+<p>If a function has one borrow-type parameter and the function returns a borrow type, then we directly regard this returned borrow as coming from that borrow-type parameter; the “borrowed object” of the returned borrow is the same as the “borrowed object” of that borrow-type parameter, and this returned borrow must also satisfy the borrow rules mentioned earlier.</p>
+</li>
+<li>
+<p>If a function has multiple borrow-type parameters and the function returns a borrow type, then we directly regard this returned borrow as simultaneously containing the “borrowed variables” passed in from the multiple borrow-type parameters, and this returned borrow must also satisfy the borrow rules mentioned earlier.</p>
+</li>
+</ol>
+<pre><code class="language-C">int *_Borrow f1(int *_Borrow p) { return p; }
+int *_Borrow f2(int *_Borrow p1, int *_Borrow p2) { return p1; }
+
+void test() {
+  int local = 5;
+  int *_Borrow p1 = f1(&amp;_Mut local);
+  /* The parameter of function f1 creates a mutable borrow of local, and this borrow is
+     passed to the return value p1, making p1 effectively a mutable borrow of local. So
+     the borrowed object of the return value p1 is local, and local stays frozen until the
+     lifetime of p1 ends. */
+
+  int local1, local2;
+  int *_Borrow p2 = f2(&amp;_Mut local1, &amp;_Mut local2);
+  /* The parameters of function f2 create mutable borrows of local1 and local2, and these
+     two borrows are passed to the return value p2, making p2 effectively a mutable borrow
+     of local1 and local2. So the borrowed objects of the return value p2 are local1 and
+     local2, and local1 and local2 stay frozen until the lifetime of p2 ends. */
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="borrow-types-in-struct-definitions"><a class="header" href="#borrow-types-in-struct-definitions">Borrow Types in struct Definitions</a></h2>
+<ol>
+<li>If a struct contains multiple borrow members, then this struct simultaneously has multiple “borrowed objects”, and these borrow members must also satisfy the borrow rules mentioned earlier.</li>
+</ol>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+
+struct R {
+  int *_Borrow m1;
+  int *_Borrow m2;
+};
+
+void test() {
+  int local1, local2;
+  struct R r = {.m1 = &amp;_Mut local1, .m2 = &amp;_Mut local2};
+  // local1 and local2 stay frozen until the lifetime of r ends.
+  // Because the variable r, upon initialization, created a mutable borrow of local1 and local2,
+  // r simultaneously contains a mutable borrow of local1 and a mutable borrow of local2.
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="dereferencing-borrow-variables"><a class="header" href="#dereferencing-borrow-variables">Dereferencing Borrow Variables</a></h2>
+<p>Dereferencing a borrow pointer variable is allowed, consistent with the dereference operation in standard C: the syntax for dereferencing a borrow pointer variable <code>p</code> is <code>*p</code>.
+Dereferencing a borrow variable <code>e</code> of type <code>const T * _Borrow</code>, i.e. <code>*e</code>, yields a result of type <code>T</code>.
+Dereferencing a borrow variable <code>e</code> of type <code>T * _Borrow</code>, i.e. <code>*e</code>, yields a result of type <code>T</code>.
+If <code>p</code> is a borrow pointing to type <code>T</code>, and <code>o</code> is an lvalue of type <code>T</code>, then for the expression <code>*p</code> there are the following restrictions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>T has Copy semantics</th><th>T has Move semantics</th></tr>
+</thead>
+<tbody>
+<tr><td>p is an immut borrow</td><td>*p = expr; not allowed</td><td>*p = expr; not allowed</td></tr>
+<tr><td></td><td>o = *p; allowed</td><td>o = *p; not allowed</td></tr>
+<tr><td>p is a mut borrow</td><td>*p = expr; allowed</td><td>*p = expr; allowed</td></tr>
+<tr><td></td><td>o = *p; allowed</td><td>o = *p; not allowed</td></tr>
+</tbody>
+</table>
+</div>
+<p>In the table above, Move / Copy semantics respectively refer to: <code>T</code> being a type qualified by <code>_Owned</code>, and <code>T</code> being any other type.</p>
+<p>Note: the assignment permissions in the table above apply equally to function argument-passing and return scenarios.</p>
+<h2 id="member-access-via-borrow-variables"><a class="header" href="#member-access-via-borrow-variables">Member Access via Borrow Variables</a></h2>
+<p>A borrow pointer variable is allowed to access member variables or call member functions, consistent with the arrow operator in standard C: the syntax for accessing the member variable <code>field</code> of a pointer variable <code>p</code> is <code>p-&gt;field</code>, and the syntax for calling the member method <code>method()</code> of a pointer variable <code>p</code> is <code>p-&gt;method()</code>.</p>
+<h3 id="accessing-member-variables"><a class="header" href="#accessing-member-variables">Accessing Member Variables</a></h3>
+<p>When accessing a member variable through a borrow, the type of the expression depends on the type of the member variable itself. The type of the <code>p-&gt;field</code> expression is the same as the type defined for the <code>field</code> member.
+If the type of <code>p-&gt;field</code> is <code>T</code>, and <code>o</code> is an lvalue of type <code>T</code>, then for the <code>p-&gt;field</code> expression there are the following restrictions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>T has Copy semantics</th><th>T has Move semantics</th></tr>
+</thead>
+<tbody>
+<tr><td>p is an immut borrow</td><td>p-&gt;field = expr; not allowed</td><td>p-&gt;field = expr; not allowed</td></tr>
+<tr><td></td><td>o = p-&gt;field; allowed</td><td>o = p-&gt;field; not allowed</td></tr>
+<tr><td>p is a mut borrow</td><td>p-&gt;field = expr; allowed</td><td>p-&gt;field = expr; allowed</td></tr>
+<tr><td></td><td>o = p-&gt;field; allowed</td><td>o = p-&gt;field; not allowed</td></tr>
+</tbody>
+</table>
+</div>
+<p>In the table above, Move / Copy semantics respectively refer to: T being a type qualified by _Owned, and T being any other type.</p>
+<p>Note: the assignment permissions in the table above apply equally to function argument-passing and return scenarios.</p>
+<h3 id="calling-member-functions"><a class="header" href="#calling-member-functions">Calling Member Functions</a></h3>
+<p>When calling a member function through a borrow, i.e. the <code>p-&gt;method()</code> scenario, the rules between arguments and parameters are as follows:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>void method(const This * _Borrow this)</th><th>void method(This * _Borrow this)</th><th></th></tr>
+</thead>
+<tbody>
+<tr><td>p is an immut borrow</td><td>allowed</td><td>not allowed; an immut borrow cannot create a mut borrow</td><td></td></tr>
+<tr><td>p is a mut borrow</td><td>allowed; a mut borrow is allowed to create an immut borrow</td><td>allowed</td><td></td></tr>
+</tbody>
+</table>
+</div>
+<p>For example:</p>
+<pre><code class="language-C">void int ::method1(const This *_Borrow this) {}
+void int ::method2(This *_Borrow this) {}
+
+void test() {
+  int local = 5;
+  const int *_Borrow p1 = &amp;_Const local;
+  int *_Borrow p2 = &amp;_Mut local;
+  p1-&gt;method1(); // ok: the parameter type and argument type match, both immutable borrows
+  p1-&gt;method2(); // error: the parameter is a mutable borrow type and the argument is an immutable borrow type; an immutable borrow cannot create a mutable borrow
+  p2-&gt;method1(); // ok: the parameter is an immutable borrow type and the argument is a mutable borrow type; a mutable borrow is allowed to create an immutable borrow
+  p2-&gt;method2(); // ok: the parameter type and argument type match, both mutable borrows
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="type-conversions-of-borrows"><a class="header" href="#type-conversions-of-borrows">Type Conversions of Borrows</a></h2>
+<ol>
+<li>For any type T, if T implements <code>_Trait TR</code>, then a borrow pointing to type T is allowed to be upcast to a borrow pointing to type TR; conversely, converting from a borrow of type TR to a borrow of type T is not allowed.</li>
+</ol>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+_Trait TR { void print(This * _Borrow this); };
+void int ::print(int *this) { printf("%d\n", *this); }
+
+_Impl _Trait TR for int;
+
+void test() {
+  int x = 10;
+  int *_Borrow r = &amp;_Mut x;
+  _Trait TR *_Borrow p = r; // ok: a borrow of type int* is supported to be upcast to a borrow of type _Trait TR*
+  p-&gt;print();
+  int *_Borrow px = (int *_Borrow)p; // error: downcasting from _Trait TR* is forbidden
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="2">
+<li>When the pointed-to types differ, a borrow pointing to T is allowed to be implicitly converted to a borrow pointing to void type; conversely, converting from a borrow of type void to a borrow of type T must be done explicitly. Type conversions between other borrow pointers with different pointed-to types are all disallowed.</li>
+</ol>
+<pre><code class="language-C">void test() {
+  int x = 10;
+  int *_Borrow r = &amp;_Mut x;
+  void *_Borrow p = r;
+  int *_Borrow t1 = p; // error: implicit conversion from void *_Borrow type is not allowed
+  int *_Borrow t2 = (int *_Borrow)p; // ok: an explicit cast from void *_Borrow type is allowed
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="3">
+<li>Conversion between <code>T * _Borrow</code> and <code>T *</code> is only allowed outside the safe zone.</li>
+</ol>
+<pre><code class="language-C">int main() {
+  int *_Borrow p = (int *_Borrow)NULL; // ok: conversion between T * _Borrow and T * is allowed outside the safe zone
+  int *q = p; // error: type conversion must be explicit; implicit type conversion is forbidden
+  _Safe { int *_Borrow p = (int *_Borrow)NULL; } // error: conversion between T * _Borrow and T * is forbidden inside the safe zone
+  return 0;
+}
+</code></pre>
+<ol start="4">
+<li>C-style casts between <code>T *_Owned</code> and <code>T *_Borrow</code> pointers are not allowed.</li>
+</ol>
+<pre><code class="language-C">int *_Owned test(int *_Owned p) {
+  int *_Borrow q = (int *_Borrow) p; // error: &amp;_Mut *p should be used instead of a cast
+  int *_Owned r = (int *_Owned) q; // error: a T *_Owned copy cannot be created from a T *_Borrow via a cast
+  return r;
+}
+</code></pre>
+<ol start="5">
+<li>
+<p>A mutable borrow <code>T *_Borrow</code> type can be implicitly converted to an immutable borrow <code>const T *_Borrow</code> type, with the compiler automatically inserting the <code>&amp;_Const *</code> operator. Casts between a mutable borrow and a read-only borrow are not allowed.</p>
+<p>The implicit conversion from a mutable borrow to an immutable borrow can occur in the following scenarios:</p>
+<ol>
+<li>Variable initialization and assignment</li>
+<li>Argument passing in a function call expression</li>
+<li>A function’s return statement</li>
+</ol>
+</li>
+</ol>
+<pre><code class="language-C">void foo(const int *_Borrow);
+
+void test1() {
+  int a = 1;
+  int *_Borrow p = &amp;_Mut a;
+  const int *_Borrow q = p; // ok
+  q = p; // ok
+  foo(p); // ok
+}
+
+const int *_Borrow test2(int *_Borrow p) {
+  return p; // ok
+}
+</code></pre>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+int main() {
+  int local = 10;
+  int *_Borrow p = &amp;_Mut local;
+  const int *_Borrow b = (const int *_Borrow)p; // error: casting a mutable borrow to a read-only borrow is not allowed
+  printf("%d\n", *b);  // read b
+  *p = 1;              // modify p (if the conversion were allowed, this would violate the borrow rules)
+  printf("%d\n", *b);  // read b again
+
+  const int *_Borrow c = &amp;_Const local;
+  int *_Borrow m = (int *_Borrow)c; // error: casting a read-only borrow to a mutable borrow is not allowed
+  *m = 20;  // if the conversion were allowed, this would violate const safety
+
+  return 0;
+}
+</code></pre>
+<p>For <code>_ArrayElem</code> borrows, it is also allowed to implicitly convert <code>T *_Borrow _ArrayElem</code> to <code>T *_Borrow</code>, which is equivalent to “re-taking a borrow at the current location, obtaining an ordinary borrow pointer”; the reverse cast <code>T *_Borrow -&gt; T *_Borrow _ArrayElem</code> is not allowed.</p>
+<pre><code class="language-C">void test(int arr[4], int local) {
+  int *_Borrow _ArrayElem p = &amp;_Mut arr[0];
+  int *_Borrow q = p; // ok, equivalent to &amp;_Mut *p
+
+  int *_Borrow plain = &amp;_Mut local;
+  int *_Borrow _ArrayElem bad = (int *_Borrow _ArrayElem)plain; // error: the reverse conversion is not allowed
+}
+</code></pre>
+<ol start="6">
+<li>Implicitly converting a <code>_Borrow</code> pointer to <code>_Bool</code> is allowed in variable initialization, variable assignment, function argument passing, and return.</li>
+</ol>
+<pre><code class="language-c">void foo(int *_Borrow _Nullable p) {
+  _Bool flag = p; // equivalent: _Bool flag = p != nullptr;
+}
+void bar(int *_Borrow _Nullable p, _Bool flag) {
+  flag = p; // equivalent: flag = p != nullptr;
+}
+void use(_Bool);
+void baz(int *_Borrow _Nullable p) {
+  use(p); // equivalent: use(p != nullptr);
+}
+_Bool foobar (int *_Borrow _Nullable p) {
+  return p; // equivalent: return p != nullptr;
+}
+</code></pre>
+<h2 id="other-rules-of-borrowing"><a class="header" href="#other-rules-of-borrowing">Other Rules of Borrowing</a></h2>
+<p>In addition to the rules above, we have the following rules for borrowing:</p>
+<ol>
+<li>
+<p>For global variables, we cannot track in the function signature which function reads a global variable and which function modifies it. To ensure safety, BiSheng C stipulates: inside the safe zone, only read-only borrows of global variables are allowed; mutable borrows are not allowed. If a borrow is taken of a function name, then from the lifetime perspective it can be treated as a borrow of a global variable.</p>
+</li>
+<li>
+<p>A borrow variable must be initialized before use.</p>
+</li>
+</ol>
+<pre><code class="language-C">void test() {
+  int *_Borrow p; 
+  use(p); // error: must be initialized
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="3">
+<li>When using an expression of borrow type to initialize or reassign another lvalue of borrow type, i.e. <code>p = e</code>, <code>p</code> and <code>e</code> must be of the same borrow type, and <code>e</code>’s lifetime is required to be greater than <code>p</code>’s lifetime.</li>
+</ol>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+void test() {
+  int x = 1;
+  int *_Borrow p = &amp;_Mut x;
+  {
+    int y = 2;
+    int *_Borrow pp = &amp;_Mut y;
+    p = pp; // error: pp has a shorter lifetime than p
+    printf("%d\n", *p);
+  }
+  printf("%d\n", *p);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>Based on this rule, a <code>_Borrow</code> pointer member inside a <code>struct</code> cannot borrow this <code>struct</code> or its other members.</p>
+<pre><code class="language-C">struct S {
+  int m;
+  const int *_Borrow p;
+};
+
+void test() {
+  struct S s = {.m = 0, .p = &amp;_Const s.m}; // error: because the lifetime of s.p is the same as the lifetime of s.m
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="4">
+<li>A borrow variable cannot be a global variable; it can only be a local variable.</li>
+</ol>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+
+int g = 5
+int *_Borrow p = &amp;_Mut g; // error: a borrow variable cannot be a global variable
+void test() { int *_Borrow p = &amp;_Mut g; }
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="5">
+<li>Taking a borrow of an expression that contains a borrow is not allowed. Likewise, in a borrow type <code>T* _Borrow</code>, <code>T</code> itself and its members cannot be borrow types.</li>
+</ol>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // Header provided by the BiSheng C language for safe memory allocation and deallocation
+
+struct R {
+  int *_Borrow p;
+};
+
+void test() {
+  int local = 5;
+  int *_Borrow *_Borrow p = &amp;_Mut(&amp;_Mut local); // error: multi-level borrow pointers are not allowed
+
+  struct R r1 = {.p = &amp;_Mut local};
+  struct R *_Borrow r2 = &amp;_Mut r1; // error: r1 already contains a borrow
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="6">
+<li>Implementing a _Trait for a borrow type is not allowed.</li>
+</ol>
+<pre><code class="language-C">_Trait TR{};
+
+_Impl _Trait TR for int *_Borrow; // error: implementing a _Trait for a borrow type is not allowed
+
+int main() { return 0; }
+</code></pre>
+<ol start="7">
+<li>Adding member functions for a borrow type is not allowed.</li>
+</ol>
+<pre><code class="language-C">void int *_Borrow::f() {} // error: adding member functions for a borrow type is not allowed
+
+int main() { return 0; }
+</code></pre>
+<ol start="8">
+<li>A member of a union cannot be a borrow type.</li>
+</ol>
+<pre><code class="language-C">union U {
+  int *_Borrow p; // error: a borrow pointer is not allowed as a union member
+};
+
+int main() { return 0; }
+</code></pre>
+<ol start="9">
+<li>
+<p>A borrow pointer type cannot be a generic argument.</p>
+</li>
+<li>
+<p>Ordinary borrow pointer variables do not support subscript operations; <code>_Borrow _ArrayElem</code> pointers support subscript operations.</p>
+</li>
+<li>
+<p>Ordinary borrow pointer variables do not support arithmetic operations; <code>_Borrow _ArrayElem</code> pointers support the <code>+</code>, <code>-</code>, <code>+=</code>, <code>-=</code>, <code>++</code>, <code>--</code> operations.</p>
+</li>
+<li>
+<p>The comparison operators <code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, etc. are allowed between borrow variables of the same type.</p>
+</li>
+<li>
+<p>The <code>sizeof</code> and <code>alignof</code> operators are allowed on borrow types, with:
+<code>sizeof(T* _Borrow) == sizeof(T*)</code>
+<code>_Alignof(T* _Borrow) == _Alignof(T*)</code>
+<code>sizeof(T* _Borrow _ArrayElem) == sizeof(T*)</code>
+<code>_Alignof(T* _Borrow _ArrayElem) == _Alignof(T*)</code></p>
+</li>
+<li>
+<p>The unary <code>&amp;</code>, <code>!</code> and binary <code>&amp;&amp;</code>, <code>||</code> operators are allowed on borrow types.</p>
+</li>
+<li>
+<p>The unary <code>-</code>, <code>~</code>, <code>&amp;_Const</code>, <code>&amp;_Mut</code>, <code>[]</code>, <code>++</code>, <code>--</code> operators are not allowed on ordinary borrow types, and the binary <code>*</code>, <code>/</code>, <code>%</code>, <code>&amp;</code>, <code>|</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>, <code>+</code>, <code>-</code> operators are also not allowed on ordinary borrow types. For <code>_Borrow _ArrayElem</code> borrows, the <code>[]</code>, <code>+</code>, <code>-</code>, <code>+=</code>, <code>-=</code>, <code>++</code>, <code>--</code> among these are allowed; the other restrictions remain unchanged.</p>
+</li>
+</ol>
+<pre><code class="language-C">_Safe int foo(void) {
+  int arr[4] = {1, 2, 3, 4};
+  int *_Borrow _ArrayElem p = &amp;_Mut arr[0];
+  p = p + 1; // ok: _Borrow _ArrayElem supports +
+  p += 1; // ok: _Borrow _ArrayElem supports +=
+  ++p; // ok: _Borrow _ArrayElem supports ++
+  int x = p[0]; // ok: _Borrow _ArrayElem supports []
+
+  int *_Borrow q = p; // ok: downgraded to an ordinary borrow
+  // q = q + 1; // error: ordinary borrows do not support +
+  // q += 1; // error: ordinary borrows do not support +=
+  // ++q; // error: ordinary borrows do not support ++
+  // int y = q[0]; // error: ordinary borrows do not support []
+  return x;
+}
+</code></pre>
+<ol start="16">
+<li>If a borrow pointer variable points to a function, then the function can be called through this borrow pointer variable.</li>
+</ol>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+void f() { printf("f()\n"); }
+
+void test() {
+  void (*_Borrow const p)() = &amp;_Const f; // ok: taking an immutable borrow of a function
+  p();
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="17">
+<li>
+<p>Taking a mutable borrow of a function is not allowed; only a read-only borrow is allowed.</p>
+</li>
+<li>
+<p>A _Borrow pointer is allowed as the condition of <code>if</code>, <code>while</code>, <code>do-while</code>, <code>for</code> statements and the ternary expression; it is not allowed as the condition of a <code>switch</code> statement.</p>
+</li>
+</ol>
+<pre><code class="language-c">void foo(int *_Borrow _Nullable p) {
+  if (p) { // equivalent: p != nullptr
+  }
+  while (p) { // equivalent: p != nullptr
+  }
+  do {
+  } while (p); // equivalent: p != nullptr
+
+  for (;p;) { // equivalent: p != nullptr
+  }
+  switch (p) { // error
+  default: 
+    break;
+  }
+  int x = p ? 2 : 1; // equivalent: p != nullptr ? 2 : 1;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-3-memory-safety/1-ownership.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-3-memory-safety/3-nonnull-pointer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-3-memory-safety/1-ownership.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-3-memory-safety/3-nonnull-pointer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

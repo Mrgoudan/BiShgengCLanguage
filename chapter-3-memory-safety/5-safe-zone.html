@@ -1,0 +1,918 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>安全区 - 毕昇 C 语言用户手册</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-276776bd.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2f02e48b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">毕昇 C 语言用户手册</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="安全区"><a class="header" href="#安全区">安全区</a></h1>
+<h2 id="概述"><a class="header" href="#概述">概述</a></h2>
+<p>c 语言有很多规则过于灵活，不方便编译器做静态检查。因此我们引入一个新语法，使得在一定范围内的毕昇 c 代码必须遵循更严格的约束，保证在这个范围内的代码肯定不会出现“内存安全”问题。</p>
+<p>允许用<code>_Safe</code>和<code>_Unsafe</code>关键字修饰函数、语句、括号表达式。</p>
+<ul>
+<li>
+<p><code>_Unsafe</code>表示这段代码在非安全区，这部分代码遵循标准 c 的规定，同时这部分代码的安全性由用户保证。</p>
+</li>
+<li>
+<p><code>_Safe</code>表示这段代码在安全区，这部分代码必须遵循更严格的约束，同时编译器可以保证内存安全。</p>
+</li>
+<li>
+<p>没有 <code>_Safe</code>或<code>_Unsafe</code>关键字修饰的全局函数默认是非安全的。</p>
+</li>
+</ul>
+<h2 id="代码示例"><a class="header" href="#代码示例">代码示例</a></h2>
+<pre><code class="language-c">#include &lt;stdlib.h&gt;
+
+typedef struct File {
+} FileID;
+
+// 无关键字修饰，表示按默认非安全区
+FileID *_Owned create(void) {
+  FileID *p = malloc(sizeof(FileID));
+  return (FileID * _Owned) p;
+}
+FileID *_Owned foo(FileID *_Owned p) { return p; }
+
+// 使用 _Safe 修饰函数，表示该函数为安全函数，函数内为安全区
+_Safe void safely_free(FileID *_Owned p) {
+  // 使用 _Unsafe 修饰代码块，表示这段代码在非安全区。这段代码是在安全区内的非安全区，也属于非安全区
+  _Unsafe { free((FileID *)p); }
+}
+
+int main(void) {
+  FileID *_Owned p1 = create();
+  FileID *_Owned p2 = foo(p1);
+  // 使用 _Safe 修饰语句，表示这段代码在安全区
+  _Safe safely_free(p2);
+  return 0;
+}
+</code></pre>
+<h2 id="语法规则"><a class="header" href="#语法规则">语法规则</a></h2>
+<ol>
+<li>允许使用<code>_Safe/_Unsafe</code>修饰函数声明、函数签名、函数定义、函数指针、语句、括号表达式。</li>
+</ol>
+<pre><code class="language-c">// 修饰函数签名
+_Safe int foo(int, int);
+// 修饰函数声明
+_Safe int bar(int a, int b);
+// 修饰函数定义
+_Safe int add(int a, int b) { return a + b; }
+// 修饰函数指针
+_Safe int (*p)(int, int);
+
+_Safe int main(void) {
+  // 修饰代码块
+  _Safe {
+    int a = 1;
+  }
+  _Unsafe { int b = 1; }
+  // 修饰语句
+  _Safe int c = 1;
+  _Unsafe c++;
+  // 修饰括号表达式
+  char d = _Unsafe((char)c);
+  return 0;
+}
+</code></pre>
+<ol start="2">
+<li>不能使用<code>_Safe/_Unsafe</code>修饰全局变量、函数外类型声明、<code>typedef</code>声明（允许修饰函数指针）。</li>
+</ol>
+<pre><code class="language-c">_Safe int g_a; // error: 不能修饰全局变量
+
+_Safe struct b { int a; }; // error: 不能修饰函数外类型声明
+
+_Safe typedef int mm; // error: 不能修饰 typedef
+
+int main() { return 0; }
+</code></pre>
+<ol start="3">
+<li><code>_Safe</code>修饰的函数，参数类型和返回类型允许是裸指针类型、成员中包含裸指针的<code>struct</code>类型、数组类型以及<code>union</code>类型。</li>
+</ol>
+<pre><code class="language-c">_Safe int *foo(int a); // ok: 返回值为裸指针类型
+
+_Safe int bar(int *a); // ok: 参数类型为裸指针类型
+
+typedef struct F {
+  int *a;
+} SF;
+
+_Safe SF wrapped_foo(int a); // ok: 返回值为成员中包含裸指针类型的 struct 类型
+
+_Safe int wrapped_bar(SF b); // ok: 参数类型为成员中包含裸指针类型的 struct 类型
+</code></pre>
+<ol start="4">
+<li><code>_Safe</code>修饰的函数，函数参数列表不可以省略。</li>
+</ol>
+<pre><code class="language-c">_Safe void test(); // error
+
+_Safe void test(void); // ok
+</code></pre>
+<ol start="5">
+<li><code>_Safe</code>修饰的函数，函数参数列表不可以包含变长参数，除非该函数使用了<code>__attribute__((format(...)))</code>属性。</li>
+</ol>
+<pre><code class="language-c">_Safe int foo(int a, ...); // error
+__attribute__((format(printf, 1, 2))) _Safe int bar(const char *fmt, ...); // ok
+</code></pre>
+<p>注意：即使允许声明带format属性的变长参数函数，在函数体内仍然不能使用<code>va_start</code>、<code>va_arg</code>、<code>va_end</code>等，这些操作在安全区域内是被禁止的。</p>
+<ol start="6">
+<li>如果<code>_Trait</code>中的函数被声明为<code>_Safe</code>，那么要求实现<code>_Trait</code>的类型的对应成员函数也必须是<code>_Safe</code>修饰的函数。若<code>_Trait</code>中的函数未声明为<code>_Safe</code>，也允许实现<code>_Trait</code>中的类型的成员函数为<code>_Safe</code>，但编译器会给出<strong>warning</strong>。</li>
+</ol>
+<pre><code class="language-c">_Trait G {
+  _Safe int *_Owned foo(This * _Owned this);
+  int *_Owned bar(This * _Owned this);
+};
+
+_Safe int *_Owned int ::foo(int *_Owned this) { return this; } // ok: _Trait 实现函数必须为 _Safe
+// 非 _Safe 函数的实现可以为 _Safe
+_Safe int *_Owned int ::bar(int *_Owned this) { return this; }
+_Impl _Trait G for int;
+
+int main() { return 0; }
+</code></pre>
+<ol start="7">
+<li>函数的多声明与混合模式</li>
+</ol>
+<p>同一函数标识符可以有多个声明,支持<code>_Safe</code>和<code>_Unsafe</code>混合声明。</p>
+<ul>
+<li>
+<p>7.1 兼容性要求</p>
+<p><strong>相同修饰符</strong>: 多个<code>_Safe</code>声明之间、或多个<code>_Unsafe</code>声明之间,函数类型必须兼容</p>
+<p><strong>混合模式</strong>: <code>_Safe</code>和<code>_Unsafe</code>声明可以共存,但必须满足混合模式兼容性(见7.3)</p>
+<p><strong>泛型函数除外</strong>: 泛型函数不支持混合模式,同一实例化不能同时有<code>_Safe</code>和<code>_Unsafe</code>声明</p>
+<p><strong>成员函数</strong>: 与普通函数规则相同</p>
+</li>
+<li>
+<p>7.2 函数类型兼容性</p>
+<p><strong>两个函数类型兼容的条件</strong>:</p>
+<ul>
+<li>返回类型兼容</li>
+<li>参数数量相同,省略号(<code>...</code>)使用一致</li>
+<li>对应参数类型兼容(兼容性检查时移除除<code>_Owned</code>、<code>_Borrow</code>、<code>_Nonnull</code>、<code>_Nullable</code>外的所有限定符)</li>
+</ul>
+<p><strong>指针兼容性</strong>:</p>
+<ul>
+<li>指针类型需要相同限定符(<code>_Owned</code>、<code>_Borrow</code>、<code>_Nonnull</code>、<code>_Nullable</code>)且目标类型兼容</li>
+<li><code>_Owned</code>和<code>_Borrow</code>指针互不兼容</li>
+<li><code>_Owned</code>/<code>_Borrow</code>指针与裸指针不兼容(混合模式除外,见7.3)</li>
+</ul>
+</li>
+<li>
+<p>7.3 混合模式兼容性(<code>_Unsafe</code>与<code>_Safe</code>共存)</p>
+<p><strong>返回类型兼容</strong>:</p>
+<ul>
+<li><code>_Unsafe T*</code> → <code>_Safe T* _Owned</code>: <code>_Safe</code>声明可以为裸指针添加<code>_Owned</code>限定符</li>
+<li><code>_Unsafe T*</code> → <code>_Safe T* _Borrow</code>: <code>_Safe</code>声明可以为裸指针添加<code>_Borrow</code>限定符</li>
+<li><code>_Unsafe T* _Owned</code> → <code>_Safe T* _Owned</code>: 必须保留<code>_Owned</code>限定符</li>
+<li><code>_Unsafe T* _Borrow</code> → <code>_Safe T* _Borrow</code>: 必须保留<code>_Borrow</code>限定符</li>
+<li><code>_Safe T* _Owned</code> ⟷ <code>_Safe T* _Borrow</code>: <strong>不兼容</strong></li>
+</ul>
+<p><strong>参数类型兼容</strong>:</p>
+<ul>
+<li>参数数量、省略号使用必须一致</li>
+<li><code>_Safe</code>声明只能为参数<strong>添加</strong><code>_Owned</code>或<code>_Borrow</code>限定符，不能<strong>移除</strong>已有的限定符</li>
+<li><strong><code>_Owned</code>参数与<code>_Borrow</code>参数不兼容</strong></li>
+</ul>
+<p><strong>示例</strong>:</p>
+<pre><code class="language-c">// ok: _Safe声明添加_Owned限定符
+_Unsafe int* foo(int* p);
+_Safe int* _Owned foo(int* _Owned p);
+
+// ok: _Safe声明添加_Borrow限定符
+_Unsafe int* bar(int* p);
+_Safe int* _Borrow bar(int* _Borrow p);
+
+// error: _Safe声明移除了unsafe声明中的_Borrow限定符
+int* _Borrow baz(int* _Borrow p);
+_Safe int* baz(int* p);
+
+// error: _Safe声明移除了unsafe声明中的_Owned限定符
+int* _Owned qux(int* _Owned p);
+_Safe int* qux(int* p);
+
+// error: 参数owned与borrow不兼容
+_Unsafe int* bad(int* p);
+_Safe int* _Borrow bad(int* _Owned p);
+
+// ok: 相同修饰符,类型完全相同
+_Safe int* _Owned fiz(int* _Owned p);
+_Safe int* _Owned fiz(int* _Owned q);
+</code></pre>
+</li>
+<li>
+<p>7.4 函数定义</p>
+<p>混合模式函数只能定义<strong>一次</strong></p>
+<p>定义可基于<code>_Unsafe</code>版本或<code>_Safe</code>版本,但必须与所有声明兼容</p>
+<pre><code class="language-c">_Unsafe int* foo(int* p);
+_Safe int* _Owned foo(int* _Owned p);
+
+// 定义(选择其一)
+_Safe int* _Owned foo(int* _Owned p) { return p; }
+// 或
+_Unsafe int* foo(int* p) { return p; }
+</code></pre>
+</li>
+</ul>
+<ol start="8">
+<li>函数调用解析</li>
+</ol>
+<ul>
+<li>
+<p>8.1 安全上下文调用</p>
+<p>安全上下文(<code>_Safe</code>块)内只能调用<code>_Safe</code>函数。如果函数只有<code>_Unsafe</code>声明,编译错误。</p>
+<pre><code class="language-c">_Unsafe void foo(void);
+
+int main() {
+  _Safe {
+    foo();  // error: 安全区内不允许调用非安全函数
+  }
+}
+</code></pre>
+</li>
+<li>
+<p>8.2 非安全上下文调用</p>
+<p>非安全上下文(<code>_Unsafe</code>块或默认)内执行重载解析:</p>
+<ul>
+<li>优先匹配<code>_Safe</code>声明</li>
+<li><code>_Safe</code>不匹配时使用<code>_Unsafe</code>声明</li>
+</ul>
+<pre><code class="language-c">_Unsafe int* foo(int* p);
+_Safe int* _Owned foo(int* _Owned p);
+
+int *_Owned bar() {
+  int* raw_p = nullptr;
+  int* _Owned owned_p = nullptr;
+
+  // 根据参数类型选择对应版本
+  foo(raw_p);      // 调用unsafe版本
+  return foo(owned_p);    // 调用safe版本
+}
+</code></pre>
+</li>
+</ul>
+<ol start="9">
+<li>函数指针赋值</li>
+</ol>
+<p>函数指针赋值规则:</p>
+<p><strong>给<code>_Safe</code>修饰的函数指针赋值时</strong>:</p>
+<ul>
+<li>如果被用于赋值的函数标识符没有<code>_Safe</code>版本的声明,则报错,即不允许<code>_Unsafe</code>版本的声明赋值给<code>_Safe</code>修饰的函数指针</li>
+<li>如果被用于赋值的函数标识符有<code>_Safe</code>版本的声明,则要求<code>_Safe</code>版本的声明类型与函数指针类型是兼容的</li>
+</ul>
+<p><strong>给<code>_Unsafe</code>修饰的函数指针赋值时</strong>:</p>
+<ul>
+<li>只要被用于赋值的函数标识符的<code>_Unsafe</code>版本声明类型与函数指针类型是兼容的,或<code>_Safe</code>版本声明类型与函数指针类型是<code>_Unsafe-_Safe</code>兼容的,即允许赋值</li>
+<li>都不满足则编译报错</li>
+</ul>
+<p><strong>示例</strong>:</p>
+<pre><code class="language-c">_Safe void safe_foo(void);
+_Unsafe void unsafe_foo(void);
+
+// 混合模式声明
+_Unsafe int* bar(int* p);
+_Safe int* _Owned bar(int* _Owned p);
+
+int main() {
+  _Safe void (*safe_ptr)(void) = nullptr;
+  _Unsafe void (*unsafe_ptr)(void) = nullptr;
+
+  safe_ptr = safe_foo;      // ok: safe函数赋值给safe指针
+  safe_ptr = unsafe_foo;    // error: 没有safe版本的声明
+
+  unsafe_ptr = unsafe_foo;  // ok: unsafe函数赋值给unsafe指针
+  unsafe_ptr = safe_foo;    // ok: safe版本与unsafe-safe兼容
+
+  // 混合模式函数指针赋值
+  _Safe int* _Owned (*safe_bar_ptr)(int* _Owned) = nullptr;
+  _Unsafe int* (*unsafe_bar_ptr)(int*) = nullptr;
+
+  safe_bar_ptr = bar;   // ok: 使用safe版本
+  unsafe_bar_ptr = bar; // ok: 使用unsafe版本或safe版本(_Unsafe-safe兼容)
+}
+</code></pre>
+<p>函数参数中声明为数组类型的形参与对应的指针类型形参等价，函数指针赋值时两者可以互换：</p>
+<pre><code class="language-c">_Safe void test10(int arr[3]) {}
+_Safe void test11(int *arr) {}
+
+_Safe void (*p10)(int arr[3]) = nullptr;
+_Safe void (*p11)(int *arr) = nullptr;
+
+_Safe int main(void) {
+    p10 = test11;  // ok: int arr[3] 与 int *arr 等价
+    p11 = test10;  // ok: int *arr 与 int arr[3] 等价
+    return 0;
+}
+</code></pre>
+<ol start="10">
+<li><code>_Safe</code>修饰泛型函数时，会对泛型每个实例化版本也做<code>_Safe</code>检查。</li>
+</ol>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+_Safe T identity&lt;T&gt;(T a) { return a; }
+
+void foo() {
+  int a = 1;
+  int b = identity&lt;int&gt;(a);
+  int *_Owned c = (int *_Owned)safe_malloc(1);
+  int *_Owned d = identity&lt;int * _Owned&gt;(c); // ok
+  int *e = identity&lt;void *&gt;((void *)0); // ok
+  safe_free((void *_Owned)d);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<ol start="11">
+<li>成员函数也可以被<code>_Safe/_Unsafe</code>修饰，其规则和全局函数一样。</li>
+</ol>
+<pre><code class="language-c">struct MyStruct&lt;T&gt; {
+  T res;
+};
+_Safe T struct MyStruct&lt;T&gt;::foo(T a) {
+  return a;
+}
+
+int main() { return 0; }
+</code></pre>
+<ol start="12">
+<li>安全区内被调用的函数或函数指针必须是<code>_Safe</code>的函数签名，不允许调用非安全函数或函数指针。</li>
+</ol>
+<pre><code class="language-c">_Safe void safe_foo(void) {}
+_Unsafe void unsafe_foo(void) {}
+_Safe void (*safe_func_ptr)(void);
+_Unsafe void (*unsafe_func_ptr)(void);
+int main() {
+  _Safe {
+    safe_foo();
+    unsafe_foo(); // error: 安全区内不允许调用非安全函数
+    safe_func_ptr();
+    unsafe_func_ptr(); // error: 安全区内不允许调用非安全函数指针
+  }
+  _Unsafe {
+    safe_foo();
+    unsafe_foo(); // ok
+    safe_func_ptr();
+    unsafe_func_ptr(); // ok
+  }
+}
+</code></pre>
+<ol start="13">
+<li>安全区内允许再包含<code>_Unsafe</code>修饰的语句、函数指针、括号表达式，非安全区内也允许再包含<code>_Safe</code>修饰的语句、函数指针、括号表达式。</li>
+</ol>
+<pre><code class="language-c">int add(int a, int b) { return a + b; }
+_Safe int max(int a, int b) { return a &gt; b ? a : b; }
+int main() {
+  _Safe {
+    int a = 0;
+    _Unsafe a++;
+    _Unsafe {
+      a = add(1, 3);
+      _Safe a = max(3, 5);
+    }
+  }
+}
+</code></pre>
+<ol start="14">
+<li>安全区内<code>switch</code>语句中的<code>case/default</code>只能存在于<code>switch</code>后面的第一层代码块中，且第一层代码块不允许有变量定义。</li>
+</ol>
+<pre><code class="language-c">_Safe void foo(int a) {
+  switch (a) {
+    int b = 10; // error: 第一层代码块不允许有变量定义
+    case 0: {
+        int c = 1;
+        break;
+    }
+    {
+        case 1 : { break; } // error: case 只能存在于 switch 后面的第一层代码块中
+    }
+    {
+        default: { break; } // error: default 只能存在于 switch 后面的第一层代码块中
+    }
+  }
+}
+
+int main() {
+  int a = 1;
+  foo(a);
+  return 0;
+}
+</code></pre>
+<ol start="15">
+<li>
+<p>安全区内不允许访问<code>union</code>的成员（读或写），不允许裸指针通过<code>-&gt;</code>访问成员。</p>
+<p>安全区内允许定义和声明<code>union</code>类型，允许<code>union</code>作为函数参数和返回类型，但不允许通过<code>.</code>操作符访问<code>union</code>的任何成员。</p>
+<p>允许owned指针和borrow指针通过<code>-&gt;</code>访问成员。</p>
+</li>
+</ol>
+<pre><code class="language-c">union AgeOrName {
+  int age;
+  char name[16];
+};
+struct AgeWrapper {
+  int age;
+};
+
+void foo(void) {
+  struct AgeWrapper d = {10};
+  struct AgeWrapper *e = &amp;d;
+  struct AgeWrapper *_Owned f = (struct AgeWrapper * _Owned) &amp; d;
+  struct AgeWrapper *_Borrow i = &amp;_Mut d;
+  _Safe {
+    int a = 1;
+
+    a++; // ok: 安全区允许自增// ok : 允许显式转换为void类型的owned指针
+    a--; // ok: 安全区允许自减
+
+    a += 1; // ok: 安全区允许 += 运算符
+    a -= 1; // ok: 安全区允许 -= 运算符
+
+    union AgeOrName b = {10}; // ok: 安全区允许声明和初始化 union
+
+    int c = b.age; // error: 安全区不允许通过"."访问 union 成员（读操作）
+    b.age = 20; // error: 安全区不允许通过"."访问 union 成员（写操作）
+
+    int g = e-&gt;age; // error: 安全区不允许裸指针通过"-&gt;"访问成员
+    int h = f-&gt;age; // ok: 允许owned指针通过"-&gt;"访问成员
+    int j = i-&gt;age; // ok: 允许borrow指针通过"-&gt;"访问成员
+  }
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<ol start="16">
+<li>
+<p>安全区内不允许使用取地址符<code>&amp;</code>（允许对函数取地址），只允许<code>&amp;_Const</code>，<code>&amp;_Mut</code>取借用。</p>
+<p>安全区内不允许解引用裸指针，但可以解引用<code>_Owned</code>指针、<code>_Borrow</code>指针和非空函数指针。</p>
+</li>
+</ol>
+<pre><code class="language-C">
+_Safe int inc(int a) { return a + 1; }
+
+_Safe int test1(unary_f _Nonnull f) {
+  return (*f)(1);  // ok: _Nonnull 函数指针
+}
+
+_Safe int test2(unary_f f) {
+  if (f != nullptr) {
+    return (*f)(1);  // ok: 判空后确认为非空
+  }
+  return 0;
+}
+</code></pre>
+<pre><code class="language-c">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+typedef _Safe int (*unary_f)(int);
+_Safe int inc(int a) { return a + 1; }
+
+void test(unary_f _Nonnull fn) {
+  _Safe {
+    int a = 10;
+    
+    int *b = &amp;a; // error: 安全区不允许取地址符号
+    int c = *b; // error: 安全区不允许解引用裸指针
+
+    int *_Owned d = safe_malloc(2);
+    int e = *d; // ok: 允许解引用owned指针
+    safe_free((void *_Owned)d);
+
+    int *_Borrow f = &amp;_Mut a;
+    int g = *f; // ok: 允许解引用borrow指针
+
+    int h = (*fn)(1);  // ok: 允许解引用函数指针
+  }
+}
+
+int main() {
+  test(inc);
+  return 0;
+}
+</code></pre>
+<ol start="17">
+<li>
+<p>安全区内不允许指向类型不同的指针类型之间转换，但允许其他类型owned指针显式转换为void类型的owned指针。</p>
+<p>安全区内不允许指针和非指针类型之间的转换（允许数组退化到裸指针），不允许<code>_Owned/_Borrow/raw</code>指针之间的转换。</p>
+</li>
+</ol>
+<pre><code class="language-c">void test() {
+  int *pa;
+  double *pb;
+  _Safe {
+    pb = pa; // error：不允许指向类型不同的指针类型之间转换
+    pa = pb; // error：不允许指向类型不同的指针类型之间转换
+    pb = (double *)pa; // error：不允许指向类型不同的指针类型之间转换
+  }
+  int i;
+  _Safe {
+    pa = i; // error：不允许指针和非指针类型之间的转换
+    i = pa; // error：不允许指针和非指针类型之间的转换
+  }
+  int *_Owned pd = (int *_Owned)pa;
+  _Safe {
+    pa = pd; // error：不允许 _Owned/raw 指针之间的转换
+    pd = pa; // error：不允许 _Owned/raw 指针之间的转换
+
+    void *_Owned pe = (void *_Owned)pd; // ok: 允许显式转换为void类型的owned指针
+  }
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="18">
+<li>
+<p>安全区内不允许<strong>隐式执行</strong>表达范围从大向小的类型转换（比如从<code>long</code>转换为<code>int</code>，从<code>int</code>转换为<code>_Bool</code>，从<code>int</code>转换为<code>enum</code>），不允许<strong>隐式执行</strong>表达精度从高向低的类型转换（比如从<code>double</code>转换为<code>float</code>）。安全区内不允许将一个算术类型转换为一个枚举类型，除非是从一个枚举类型显式转换为一个表达范围更大或相等的枚举类型。安全区内不允许从浮点类型转换到整数类型。对于<strong>编译期能确定值的常量</strong>发生类型转换，如果目标类型可以描述这个值，那么在安全区内该类型转换可以隐式执行，否则此类转换必须显式执行且需符合上述规则。</p>
+<p><strong>语义规则与具体说明：</strong>
+排除枚举类型时，安全区允许执行的类型转换如下图所示：（若同方向支持隐式转换则一定支持显式转换；只写需显式转换则说明不允许隐式转换。表示允许转换的边有一头连着子图时，等效于连接该子图的所有结点，比如 <code>_Bool</code> 有条边指向整数，表示允许 <code>_Bool</code> 以相同规则转换为任一整数类型。）</p>
+<pre><code class="language-mermaid">graph TB
+  bool["_Bool"]
+  subgraph int["整数"]
+    direction LR
+    subgraph signedint["有符号整数"]
+      direction TB
+      signedint_s["小类型"]
+      signedint_l["大类型"]
+      signedint_s -- 正向隐式，反向显式 --&gt; signedint_l
+    end
+    subgraph unsignedint["无符号整数"]
+      direction TB
+      unsignedint_s["小类型"]
+      unsignedint_l["大类型"]
+      unsignedint_s -- 正向隐式，反向显式 --&gt; unsignedint_l
+    end
+    signedint &lt;-- 需显式互转 --&gt; unsignedint
+  end
+  bool -- 正向隐式，反向显式 --&gt; int
+  subgraph fp["浮点数"]
+  direction TB
+    fp_s["小类型"]
+    fp_l["大类型"]
+    fp_s -- 正向隐式，反向显式 --&gt; fp_l
+  end
+  int -- 正向显式，反向不允许 --&gt; fp
+</code></pre>
+<p>18.1. 当将一个算术类型转换为 <code>_Bool</code> 时，当原类型的值为零，则转换后值为 0；否则，转换后值为 1 （与C一致）。</p>
+<pre><code class="language-c">int b = 0;
+_Bool c = (_Bool)b; // ok: int -&gt; _Bool; c = 0
+c = (_Bool)1;       // ok: int -&gt; _Bool; c = 1
+c = (_Bool)2;       // ok: int -&gt; _Bool; c = 1
+</code></pre>
+<p>18.2. 将一个有符号整数类型或一个表达范围更大的无符号整数类型转换为一个<strong>无符号</strong>整数类型时，如果原类型的值的大小在目标类型的范围内，则转换后值的大小不变；否则，转换后值的大小为“不断对原值加或减(1+目标类型的最大值)直到结果落在目标类型的范围内的值“ （与C一致）。如果目标无符号整数类型的表达范围是从 0 到 $2^N-1$ 且原类型的值为 $X$，那么转换后值的大小为 $X$ 不断加或减 $2^N$ 直到结果 $Y$ 落入 0 到 $2^N-1$ 之间，转换后的值即为 $Y$。上述表示等效于将大的整数类型截断为小的无符号整数类型，或是将小的有符号整数类型通过符号位拓展转为无符号整数类型。</p>
+<pre><code class="language-c">unsigned long a = 2;
+unsigned b = (unsigned) a; // ok: unsigned long -&gt; unsigned int
+int c = -1;
+unsigned d = (unsigned) c; // ok: int -&gt; unsigned int; d = 2^32 - 1
+unsigned long e = (unsigned long) c; // ok: int -&gt; unsigned long; e = 2^64 - 1
+</code></pre>
+<p>18.3. 将一个表达范围更大的整数类型转换为表达范围更小的<strong>有符号</strong>整数类型（不包括枚举类型）时，如果原类型的值的大小在目标类型的范围内，则转换后值的大小不变；否则，转换后值的大小由实现定义。在当前毕昇C编译器的实现中，原值超过目标类型的表示范围时，大的整数类型会截断为小的有符号整数类型。</p>
+<pre><code class="language-c">long a = 2;
+int b = (int) a; // ok: long -&gt; int
+unsigned c = 4294967295; // c = 2^32 - 1
+int d = (int) c; // ok: unsigned int -&gt; int; d = -1
+</code></pre>
+<p>18.4. 关于枚举类型：安全区只允许从一个枚举类型显式转换为另一个枚举类型（有限定条件），其他任何类型都不能转换为枚举类型。可以从枚举类型隐式转换为其对应的整数类型（比如有 <code>enum E : unsigned {...}</code> 就可以把 <code>enum E</code> 隐式转换为 <code>unsigned</code>）。使用显式转换将枚举类型 <code>E1</code> 转换为另一个枚举类型 <code>E2</code> 时，当且仅当 <code>E2</code> 中包含 <code>E1</code> 所有枚举值时允许这样的显式转换，转换后的值不变，否则会在编译时报错。安全区内不能隐式执行这样的转换。其他任何表达范围更大的类型转换到枚举类型的操作在安全区都不允许。在非安全区则与 C 一致，不对枚举类型的转换做额外检查。</p>
+<pre><code class="language-c">_Safe void foo(void) {
+  enum E {ZERO, ONE, TWO}; // represented by int
+  enum F {SUN, MON, TUES}; // represented by int
+  enum F day = SUN;
+  enum E num = (enum E)day; // ok: enum F -&gt; enum E
+  num = (enum E)SUN;        // ok: enum F -&gt; enum E
+  int a = num; // ok: enum E -&gt; int
+  a = ZERO;    // ok: enum E -&gt; int
+  num = 0; // error: cannot cast int to enum E in safe zone
+  enum G {G1, G2};
+  enum G g1 = (enum G) num; // error: cannot cast enum E to enum G in safe zone
+  g1 = (enum G) ZERO; // error: cannot cast enum E to enum G in safe zone
+}
+</code></pre>
+<p>18.5. 在安全区使用显式转换将一个浮点类型转换为精度更低的另一个浮点类型时，如果原值能在目标类型中精确表示，则转换后的值不变。如果原值在目标类型的表示范围内但是无法精确表示，则转换后的结果是最近的向上或向下近似的值，取决于具体实现。如果原值在目标类型的表示范围外，则具体值取决于具体实现。当前毕昇C编译器的实现应符合 IEEE 754 规范。安全区内不能隐式执行这样的类型转换。在非安全区则行为与 C 一致，语义相同且支持隐式执行这样的类型转换。</p>
+<pre><code class="language-c">_Safe {
+  double a = 1.0;
+  float b = 0.0f;
+  b = (float)a; // ok: double -&gt; float
+  b = a; // error: cannot implicitly cast double to float
+  a = b; // ok
+}
+</code></pre>
+<p>18.6. 在安全区使用显式转换将一个整数类型转换为浮点类型时，如果原值能在目标类型中精确表示，则转换后的值不变。如果原值在目标类型的表示范围内但无法精确表示，则转换后的结果是最近的向上或向下近似的值，取决于具体实现。当前毕昇C编译器的实现应符合 IEEE 754 规范、使用 IEEE 754 中的默认舍入规则。安全区内不能隐式执行这样的类型转换。安全区内不允许从浮点类型转换为整数类型。在非安全区则行为与 C 一致，语义相同且支持隐式执行这样的类型转换。</p>
+<pre><code class="language-c">_Safe {
+  int a = -1;
+  double b = a; // error: cannot implicitly cast int to double in safe zone
+  b = (double) a; // ok: int -&gt; double
+  a = (int) b; // error: cannot cast double to int in safe zone
+}
+</code></pre>
+<p>18.7. 比较运算符（<code>==</code>, <code>!=</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&lt;</code>）、逻辑运算符（<code>&amp;&amp;</code>, <code>||</code>, <code>!</code>）的运算结果为 <code>int</code> 类型的 0 或 1，这些值允许在安全区隐式转换到其他整数类型（因为任何基本整数类型都可以表示 0 和 1）。</p>
+<pre><code class="language-c">_Safe {
+  int a = 0, b = 1;
+  _Bool c = (a == 0) || (b == 0); // ok: int (0/1) -&gt; _Bool
+  char x = a &lt; 3 || a &gt;= 6; // ok: int (0/1) -&gt; char
+}
+</code></pre>
+<p>18.8. 对于<strong>编译期能确定值的常量</strong>发生类型转换，若目标类型可精确表示该值，则允许隐式转换；否则需显式转换并符合上述规则。</p>
+<pre><code class="language-c">_Safe {
+  int a = 10l; // ok: long -&gt; int
+  unsigned long b = 2*2; // ok: int -&gt; unsigned long
+
+  // int -2147483648~2147483647
+  int c = 2147483648; // error: 2147483648 out of range for int
+  int d = (int)2147483648; // ok: long -&gt; int; d = -2147483648
+  int e = 2147483647; // ok
+
+  // unsigned int 0~4294967295
+  unsigned int f = 0;
+  f = 4294967296; // error: 4294967296 out of range for unsigned int
+  f = (unsigned int) 4294967296; // ok: long -&gt; unsigned int; f = 0
+
+  unsigned long g = (unsigned long)-1; // ok: int -&gt; unsigned long; g = 2^64-1
+  int h = (int) 1.2; // error: cannot cast double to int in safe zone
+  float k = 1.0; // ok: double -&gt; float
+  float l = 1; // ok: int -&gt; float
+}
+</code></pre>
+<p>18.9.  <code>if/while</code> 的条件对类型的要求目前与C一致，任何算术类型都可以作为条件。</p>
+<pre><code class="language-c">int a = 2;
+_Safe {
+  if (a) { // ok: if 可以接受 int
+    a += 1;
+  } else {
+    a -= 1;
+  }
+}
+</code></pre>
+</li>
+<li>
+<p>安全区内不允许内嵌汇编语句。</p>
+</li>
+</ol>
+<pre><code class="language-c">void test() {
+  _Safe {
+    int ret = 0;
+    int src = 1;
+    asm("move %0, %1\n\t" : "=r"(ret) : "r"(src)); // error: 安全区不允许内嵌汇编
+  }
+}
+int main() { return 0; }
+</code></pre>
+<ol start="21">
+<li>安全区内，前缀/后缀自增（<code>++</code>）和自减（<code>--</code>）表达式的结果类型为 <code>void</code>，即仅允许使用其副作用（自增或自减1），不得使用 <code>++</code>/<code>--</code> 表达式的值。在返回类型为 <code>void</code> 的安全函数中，不得将 <code>++</code>/<code>--</code> 的结果直接作为 return 语句的返回值。</li>
+</ol>
+<pre><code class="language-c">safe void take_int(int x);
+safe void foo(void) {
+  int a = 0;
+  a++; // ok: 安全区允许自增自减（仅副作用，表达式结果为 void）
+  a--;
+  int x = a++; // error: 自增自减的结果为 void 类型，不能使用其值初始化 int 变量
+  int arr[5] = {1, 2, 3, 4, 5};
+  arr[a++] = 0; // error: 自增自减的结果为 void 类型，不能使用其值做为 arr[] 下标
+  take_int(a++); // error: 自增自减的结果为 void 类型，不能使用其值做为 take_int() 入参
+  unsafe {take_int(a++);} // ok: 非安全区不受影响
+  for (int i = 0; i &lt; 10; i++) {} // ok: for 循环的迭代部分可以使用 ++/--
+  int y = 0;
+  y = (a++, a); // ok: a++ 先求值、完成自增，再对逗号右侧的 a 求值
+  return a++; // error: 不得将 ++/-- 的结果直接作为返回值
+  return (void)a++; // ok
+}
+
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-3-memory-safety/4-owned-struct.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-3-memory-safety/6-initial-analysis.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-3-memory-safety/4-owned-struct.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-3-memory-safety/6-initial-analysis.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

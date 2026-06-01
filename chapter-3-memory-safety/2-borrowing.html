@@ -1,0 +1,1264 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>借用 - 毕昇 C 语言用户手册</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-276776bd.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2f02e48b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">毕昇 C 语言用户手册</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="借用"><a class="header" href="#借用">借用</a></h1>
+<p>借用作为毕昇C内存安全特性的重要组成部分，是对所有权的一个补充。前面小节描述了所有权特性(ownership)，对某个资源拥有所有权的主体，有责任释放这个资源。这个小节，将介绍对资源的借用(borrow)。</p>
+<h2 id="特性简介"><a class="header" href="#特性简介">特性简介</a></h2>
+<p>如果我们只有 ownership 类型，由于函数调用、赋值等操作都会转移所有权，那么代码能力会非常受限。在编程时，我们常常需要表达“对某个资源进行借用”的概念，区别于“拥有某个资源”。正如现实生活中，如果一个人拥有某样东西，你可以从他那里借来，当使用完毕后，也必须要物归原主。</p>
+<h3 id="借用的定义及借用操作符"><a class="header" href="#借用的定义及借用操作符">借用的定义及借用操作符</a></h3>
+<p>毕昇 C 的<strong>借用是一个指针类型，指向了被借用对象存储的内存地址</strong>。为表达借用的概念：</p>
+<ol>
+<li>引入新关键字<code>_Borrow</code>，用<code>_Borrow</code>来修饰指针类型 T*，表示 T 的借用类型</li>
+<li>引入借用操作符 <code>&amp;_Mut</code> 和 <code>&amp;_Const</code>，其中，<code>&amp;_Mut e</code>表示获取对表达式 e 的<strong>可变借用</strong>，<code>&amp;_Const e</code>表示获取对表达式<code>e</code>的<strong>只读借用</strong>。此处要求表达式<code>e</code>是 lvalue（左值）与标准 C 中的取地址操作符<code>&amp;</code>类似, 借用操作符实际上获取的是表达式<code>e</code>的地址</li>
+</ol>
+<p>例如，我们可以创建指向局部变量<code>local</code>的可变借用<code>p1</code>和不可变借用<code>p2</code>，并使用它们：</p>
+<pre><code class="language-C">void use_immut(const int *_Borrow p) {}
+void use_mut(int *_Borrow p) {}
+
+void foo() {
+  int local = 5;
+  // p1是local的可变借用指针
+  int *_Borrow p1 = &amp;_Mut local;
+  use_mut(p1);
+  // p2是local的不可变借用指针
+  const int *_Borrow p2 = &amp;_Const local;
+  use_immut(p2);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<p>另外，表达式<code>e</code>如果是指针的解引用表达式，<code>&amp;_Mut *p</code>和<code>&amp;_Const *p</code>分别可以看作对地址<code>p</code>中存放的值，也就是<code>*p</code>，取可变借用和不可变借用，<strong>这一操作不为<code>*p</code>产生临时变量</strong>。其中，<code>p</code>可以是裸指针、<code>_Owned</code>指针和其它借用指针。例如：</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+void foo() {
+  int *x1 = malloc(sizeof(int));
+  *x1 = 1;
+  // p1借用了*x1
+  int *_Borrow p1 = &amp;_Mut * x1;
+  int *_Owned x2 = safe_malloc(2);
+  // p2借用了*x2
+  int *_Borrow p2 = &amp;_Mut * x2;
+  int local = 3;
+  int *_Borrow x3 = &amp;_Mut local;
+  // p3借用了*x3
+  int *_Borrow p3 = &amp;_Mut * x3;
+  safe_free((void *_Owned)x2);
+}
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<h3 id="借用的作用"><a class="header" href="#借用的作用">借用的作用</a></h3>
+<p>假设我们有这样的一个需求：创建一个文件，并且调用一些操作函数对文件进行读写操作。如果没有借用的概念，调用文件操作函数会导致文件指针所有权的转移，为了使文件指针在函数调用之后仍然可以被使用，我们需要再将所有权返回给调用方：</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+#include &lt;stdio.h&gt;
+
+typedef struct {
+  int file_id;
+} MyFile;
+
+MyFile *_Owned create_file(int id) {
+  MyFile f = {.file_id = id};
+  return safe_malloc(f);
+}
+void file_safe_free(MyFile *_Owned p) { safe_free((void *_Owned)p); }
+
+MyFile *_Owned insert_str(MyFile *_Owned p, char *str) {
+  // some operation to insert a string to file
+  printf("%s to file %d\n", str, p-&gt;file_id);
+  // 通过返回值，将所有权转移给调用方，避免所有权转移
+  return p;
+}
+
+MyFile *_Owned other_operation(MyFile *_Owned p) {
+  // some operation
+  // 通过返回值，将所有权转移给调用方，避免所有权转移
+  return p;
+}
+
+int main() {
+  MyFile *_Owned p = create_file(0);
+  char str[] = "insert str";
+  // p的所有权先被移动到 insert_str 中，再通过返回值转移到调用方
+  p = insert_str(p, str);
+  p = other_operation(p);
+  file_safe_free(p);
+  return 0;
+}
+</code></pre>
+<p>这种写法会造成文件指针所有权的频繁转移，在代码逻辑较为复杂的时候很容易出错，而且如果所有权被转移走了但是没有归还，后续将无法再使用该文件指针。有了借用，将对文件指针的借用作为参数传递给操作函数，函数返回之后文件指针仍可以用于后续其他操作，不再需要像上面那个例子一样，先通过函数参数传入所有权，然后再通过函数返回来传出所有权，代码更加简洁：</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+#include &lt;stdio.h&gt;
+
+typedef struct {
+  int file_id;
+} MyFile;
+
+MyFile *_Owned create_file(int id) {
+  MyFile f = {.file_id = id};
+  return safe_malloc(f);
+}
+void file_safe_free(MyFile *_Owned p) { safe_free((void *_Owned)p); }
+
+void insert_str(MyFile *_Borrow p, char *str) {
+  // some operation to insert a string to file
+  printf("%s to file %d\n", str, p-&gt;file_id);
+  // 无需返回所有权
+}
+
+void other_operation(MyFile *_Borrow p) {
+  // some operation
+  // 无需返回所有权
+}
+
+int main() {
+  MyFile *_Owned p = create_file(0);
+  char str[] = "insert str";
+  // 所有权不会被移动
+  insert_str(&amp;_Mut * p, str);
+  // 所有权不会被移动
+  other_operation(&amp;_Mut * p);
+  file_safe_free(p);
+  return 0;
+}
+</code></pre>
+<h2 id="借用变量和被借用对象的生命周期"><a class="header" href="#借用变量和被借用对象的生命周期">借用变量和被借用对象的生命周期</a></h2>
+<h3 id="生命周期及其作用"><a class="header" href="#生命周期及其作用">生命周期及其作用</a></h3>
+<p>我们可以对不同种类的对象取借用：<code>_Owned</code>变量、非<code>_Owned</code>类型的局部变量、全局变量、临时匿名变量、参数等，甚至是某个复合变量的一部分。为正确表示借用变量和不同种类被借用对象的有效作用域，我们引入生命周期的概念。</p>
+<p>生命周期检查的主要作用是避免悬垂指针，它会导致程序使用本不该使用的数据，以下 C 代码就是一个使用了悬垂指针的典型例子：</p>
+<pre><code class="language-C">int main() {
+  int *p;
+  {
+    int local = 5;
+    p = &amp;local;
+  }
+  *p = 1;
+  return 0;
+}
+</code></pre>
+<p>这段 C 代码有两点值得注意：</p>
+<ol>
+<li><code>int *p</code>的声明方式存在使用<code>NULL</code>的风险；</li>
+<li><code>p</code>指向了内部block中的<code>local</code> 变量，但是<code>local</code>会在block结束的时候被释放，因此回到外部block后，<code>p</code>会指向一个无效的地址，是一个悬垂指针，它指向了提前被释放的变量<code>local</code>，可以预料到，<code>*p = 1</code> 会导致该段程序运行时出现未定义行为（undefined behavior）。当代码逻辑较为复杂时，这类异常行为很难被发现。</li>
+</ol>
+<p>对于第二点，毕昇 C 规定：<strong>任何一个对资源的借用，都不能比资源的所有者的生命周期长</strong>。也就是说：借用变量的生命周期，不能比被借用对象的生命周期长。</p>
+<p>接下来我们使用毕昇 C 的借用特性改写上面的 C 代码，通过检查借用变量和被借用对象的生命周期，在编译期就可以识别出潜在的内存安全风险：</p>
+<pre><code class="language-C">int main() {
+  int local1 = 1;
+  // 借用指针变量 p 必须使用前被初始化，否则会报错
+  int *_Borrow p = &amp;_Mut local1;
+  {
+    int local2 = 2;
+    // 对 p 进行再赋值之后，p 不再借用 local1，而是借用 local12
+    p = &amp;_Mut local2;
+  }
+  *p = 3; // error: local2 的生命周期不够长
+  return 0;
+}
+</code></pre>
+<h3 id="借用变量和被借用对象"><a class="header" href="#借用变量和被借用对象">借用变量和被借用对象</a></h3>
+<p>每个借用变量（也就是 _Borrow 指针变量）都会有一个或多个被借用对象，例如：</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct S {
+  int a;
+};
+
+int *_Borrow bar(int *_Borrow, int *_Borrow);
+
+int g = 5;
+void foo(int a, int *_Owned b, int *c, struct S d) {
+  // 被借用对象是普通局部变量
+  int local = 5;
+  int *_Borrow p1 = &amp;_Mut local; // p1的被借用对象是local
+  int *_Borrow p2 = &amp;_Mut * p1;  // p2的被借用对象是*p1
+  int *_Borrow p3 = p1;         // p3的被借用对象是*p1
+
+  // 被借用对象是owned变量
+  int *_Owned x1 = safe_malloc&lt;int&gt;(2);
+  int *_Borrow p4 = &amp;_Mut * x1; // p4的被借用对象是*x1
+
+  // 被借用对象是裸指针变量
+  int *x2 = malloc(sizeof(int));
+  int *_Borrow p5 = &amp;_Mut * x2; // p5的被借用对象是*x2
+
+  // 被借用对象是结构体的某个字段
+  struct S s = {.a = 5};
+  int *_Borrow p6 = &amp;_Mut s.a; // p6的被借用对象是s.a
+
+  // 被借用对象是函数的返回值，与被调用函数的借用类型入参的 “被借用对象” 一样
+  int local1 = 10, local2 = 20;
+  // 被调用函数bar有两个借用类型入参，因此p7的被借用对象是local1和local2
+  int *_Borrow p7 = bar(&amp;_Mut local1, &amp;_Mut local2);
+
+  // 被借用对象是全局变量
+  const int *_Borrow p8 = &amp;_Const g; // p8的被借用对象是g
+
+  // 被借用对象是函数入参
+  int *_Borrow p9 = &amp;_Mut a;    // p9的被借用对象是a
+  int *_Borrow p10 = &amp;_Mut * b; // p10的被借用对象是*b
+  int *_Borrow p11 = &amp;_Mut * c; // p11的被借用对象是*c
+  int *_Borrow p12 = &amp;_Mut d.a; // p12的被借用对象是d.a
+
+  safe_free((void *_Owned)b);
+  safe_free((void *_Owned)x1);
+}
+
+int main() {
+  int a = 42;
+  int *_Owned b = safe_malloc(73);
+  int *c = &amp;a;
+  struct S d = {.a = 31};
+  foo(a, b, c, d);
+  return 0;
+}
+</code></pre>
+<p>注：如果被借用对象是来自于取地址或强转到裸指针再获取借用的结果，则不会记录其为被借用对象。如：</p>
+<pre><code class="language-C">void f1() {
+  int a = 1;
+  int *p = &amp;a;
+  int *_Borrow p1 = (int *_Borrow)(int *)(&amp;_Mut *p); // 不记录被借用对象是*p
+  int *_Borrow p2 = &amp;_Mut *&amp;a; // 不记录被借用对象是a
+}
+</code></pre>
+<h3 id="借用变量的-non-lexical-lifetime"><a class="header" href="#借用变量的-non-lexical-lifetime">借用变量的 Non-Lexical Lifetime</a></h3>
+<p>一个变量的生命周期从它的声明开始，到当前整个语句块结束，这个设计被称为Lexical Lifetime，因为变量的生命周期是严格和词法中的作用域范围绑定的。这个策略实现起来非常简单，但它可能过于保守了，某些情况下借用变量的作用范围被过度拉长了，以至于某些实质上是安全的代码也被阻止了，这在一定程度上限制了程序员能编写出的代码。因此，毕昇 C 为借用变量引入 Non-Lexical Lifetime（简写为NLL），用更精细的手段计算借用变量真正起作用的范围，<strong>借用变量的 NLL 范围为：从借用处开始，一直持续到最后一次使用的地方</strong>。具体的，它是<strong>从借用变量定义或被再赋值开始，到被再赋值之前最后一次被使用结束</strong>。</p>
+<p>其中，以下场景属于对借用变量p的使用：</p>
+<ol>
+<li>函数调用，如<code>use(p)</code>或<code>use(&amp;_Mut *p)</code></li>
+<li>函数返回<code>return p</code>或<code>return &amp;_Mut *p</code></li>
+<li>解引用<code>*p</code></li>
+<li>成员访问<code>p-&gt;field</code></li>
+</ol>
+<p>举例来说：</p>
+<pre><code class="language-C">void use(int *_Borrow p) {}
+void other_op() {}
+
+// 本例中p的NLL是分段的，每段NLL都有一个被借用对象
+void foo() {
+  int local1 = 1, local2 = 2;  //#1
+  int *_Borrow p = &amp;_Mut local1; //#2，p的第一段NLL开始，被借用对象为local1
+  other_op();                  //#3
+  use(p);                      //#4，p的第一段NLL结束
+  other_op();                  //#5
+  p = &amp;_Mut local2;             //#6，p的第二段NLL开始，被借用对象为local2，由于后面没有再对p的使用，p的NLL结束
+  other_op();     //#7
+}
+// p的NLL是：[2,4]-&gt;local1, [6,6]-&gt;local2
+
+int main() {
+  foo();
+  return 0;
+}
+</code></pre>
+<h3 id="被借用对象的-lexical-lifetime"><a class="header" href="#被借用对象的-lexical-lifetime">被借用对象的 Lexical Lifetime</a></h3>
+<p>与借用变量不同，被借用对象的生命周期是 Lexical Lifetime，对于不同种类被借用对象的生命周期，我们给出具体的定义：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>被借用对象种类</th><th></th><th>生命周期定义</th></tr>
+</thead>
+<tbody>
+<tr><td>全局变量</td><td></td><td>全局变量的生命周期是整个程序，从程序开始到退出，一直存在</td></tr>
+<tr><td>局部变量</td><td>owned变量</td><td>从变量定义开始，到它被 move 走结束（_Owned struct类型如果没有被move，生命周期会在当前block结束的时候结束）</td></tr>
+<tr><td></td><td>非owned非borrow变量</td><td>从变量定义开始，到当前 block 结束</td></tr>
+<tr><td>局部字面量</td><td>“string literal”</td><td>从使用处开始，到当前 block 结束的时候结束</td></tr>
+<tr><td></td><td>(struct S) { … }</td><td>从使用处开始，到当前 block 结束的时候结束</td></tr>
+<tr><td>e-&gt;field</td><td></td><td>e 的生命周期</td></tr>
+<tr><td>e.field</td><td></td><td>e 的生命周期</td></tr>
+<tr><td>e[index]</td><td></td><td>e 的生命周期</td></tr>
+<tr><td>*e</td><td></td><td>e 的生命周期</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="借用的生命周期约束"><a class="header" href="#借用的生命周期约束">借用的生命周期约束</a></h3>
+<p>在2.1中我们提到过，对于借用，我们有这样的生命周期约束：<strong>借用变量的生命周期，不能比被借用对象的生命周期长</strong>。
+举例来说：</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+void use(int *_Borrow p) {}
+int *_Borrow call(int *_Borrow p, int *_Borrow q) { return p; }
+
+// 本例中，p的生命周期为[2,4]，被借用对象local的生命周期为[1,4]，满足生命周期约束
+void test1() {
+  int local = 5;              //#1
+  int *_Borrow p = &amp;_Mut local; //#2
+  use(p);                     //#3
+} //#4
+
+// 本例中，p的生命周期有两段“
+// ok: 第一段为[2,2]，被借用对象local1的生命周期为[1,8]，满足生命周期约束
+// error: 二段为[5,7]，被借用对象local2的生命周期为[4,6]，不满足生命周期约束
+void test2() {
+  int local1 = 5;              //#1
+  int *_Borrow p = &amp;_Mut local1; //#2
+  {                            //#3
+    int local2 = 5;            //#4
+    p = &amp;_Mut local2;           //#5
+  }                            //#6
+  use(p);                      //#7
+} //#8
+
+// 本例中p的生命周期有两段：
+// ok: 第一段为[2,2]，被借用对象local1的生命周期为[1, 8]，满足生命周期约束
+// error: 第二段为[5,7]，被借用对象有两个，分别是local1和local2，其中local2的生命周期为[4, 6]，不满足生命周期约束
+void test3() {
+  int local1 = 5;                       //#1
+  int *_Borrow p = &amp;_Mut local1;          //#2
+  {                                     //#3
+    int local2 = 5;                     //#4
+    p = call(&amp;_Mut local1, &amp;_Mut local2); //#5
+  }                                     //#6
+  use(p);                               //#7
+} //#8
+
+// 本例中，if分支对p进行了重新赋值，在#10
+// error: use(p)时，p的被借用对象local2的生命周期已经结束，不满足生命周期约束
+// ok" else分支满足生命周期约束
+void test4() {
+  int local = 5;              //#1
+  int *_Borrow p = &amp;_Mut local; //#2
+  int local1 = 5;             //#3
+  if (rand()) {               //#4
+    int local2 = 5;           //#5
+    p = &amp;_Mut local2;          //#6
+  } else {                    //#7
+    p = &amp;_Mut local1;          //#8
+  }                           //#9
+  use(p);                     //#10
+}
+
+//本例中，p的生命周期为[2,4]，被借用对象*x的生命周期为[1,3]，不满足生命周期约束，error
+void test5() {
+  int *_Owned x = safe_malloc&lt;int&gt;(5); //#1
+  int *_Borrow p = &amp;_Mut * x;           //#2
+  safe_free((void *_Owned)x);          //#3
+  use(p);                             //#4
+} //#5
+
+int main() {
+  test1();
+  test2();
+  test3();
+  test4();
+  test5();
+  return 0;
+}
+</code></pre>
+<h2 id="可变借用和不可变借用"><a class="header" href="#可变借用和不可变借用">可变借用和不可变借用</a></h2>
+<p>毕昇 C 将借用指针的权限进行了分级，分为可变（mut）借用和不可变（immut）借用，我们可以通过操纵可变借用指针来读写被借用对象的内容，通过不可变借用指针，我们只能读取被借用对象的内容，但是不能修改它。例如：</p>
+<pre><code class="language-C">// 可变借用指针类型为 T *_Borrow
+void use_mut(int *_Borrow p) {
+  // 通过可变借用指针，可以修改被借用对象的值
+  *p = 5;
+  // 通过可变借用指针，可以读取被借用对象的值
+  int a = *p;
+}
+
+// 不可变借用指针类型为 const T *_Borrow
+void use_immut(const int *_Borrow p) {
+  *p = 5; // error: 无法通过不可变借用指针，来修改被借用对象的值
+  // 通过不可变借用指针，可以读取被借用对象的值
+  int a = *p;
+}
+
+int main() {
+  int i = 1;
+  int *_Borrow pmi = &amp;_Mut i;
+  use_mut(pmi);
+  const int *_Borrow pimi = &amp;_Const i;
+  use_immut(pimi);
+  return 0;
+}
+</code></pre>
+<h3 id="_mut-e要求-e-是可修改的"><a class="header" href="#_mut-e要求-e-是可修改的"><code>&amp;_Mut e</code>要求 e 是可修改的</a></h3>
+<p>我们在 1.1 中提到过，<code>&amp;_Mut e</code>和<code>&amp;_Const e</code>要求表达式 e 是 lvalue，即 e 是可以被取地址的，对于可变借用表达式<code>&amp;_Mut e</code>，我们还要求 e 是可变的，具体的：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>lvalue表达式</th><th>是否可修改</th></tr>
+</thead>
+<tbody>
+<tr><td>ident</td><td>变量 ident 没有被 const 修饰，且ident 不能是函数名</td></tr>
+<tr><td>“string literal”</td><td>不允许，因为字符串常量保存在常量区，不能写。尝试对字符串字面量进行可变借用（如<code>&amp;_Mut "hello"</code>或<code>&amp;_Mut * "hello"</code>）会导致编译错误</td></tr>
+<tr><td>(struct S) { … }</td><td>允许</td></tr>
+<tr><td>e-&gt;field</td><td>要求 e 是可变借用指针，或者是指向可修改类型的 _Owned 指针，或者是指向可修改类型的裸指针，且field没有被const修饰，多级 field 的情况应该要求每一级的 field 都没有 const 修饰</td></tr>
+<tr><td>e.field</td><td>要求 e 是可变的，且field没有被const修饰，多级 field 的情况应该要求每一级的 field 都没有 const 修饰</td></tr>
+<tr><td>e[index]</td><td>要求 e 是可变的</td></tr>
+<tr><td>*e</td><td>要求 e 是可变借用，或者是指向可修改变量的裸指针</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="可变借用同时只能存在一个"><a class="header" href="#可变借用同时只能存在一个">可变借用同时只能存在一个</a></h3>
+<p>如果有两个或更多的指针同时访问同一数据，并且至少有一个指针被用来写入数据，可能会导致未定义行为，例如：</p>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+#include &lt;stdio.h&gt;
+
+void free_a(int *a) { free(a); }
+void read_a(int *a) { printf("%d\n", *a); }
+
+void test() {
+  int *a = malloc(sizeof(int));
+  *a = 42;
+  int *p1 = a;
+  int *p2 = a;
+  // 该函数会释放 a 所指向的内存
+  free_a(p1);
+  // 该函数会读取 a 所指向的内存
+  read_a(p2); // 打印一个脏值
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>由于借用本质上也是指针，所以为了避免上述问题，毕昇 C 规定，<strong>同一时刻，对于同一个对象，要么只能拥有一个可变借用, 要么任意多个不可变借用</strong>。</p>
+<pre><code class="language-C">void write(int *_Borrow p) {}
+void read(const int *_Borrow p) {}
+
+void test1() {
+  int local = 1;
+  int *_Borrow p1 = &amp;_Mut local;
+  int *_Borrow p2 = &amp;_Mut local; // error: 同一时刻最多只能有一个指向local的可变借用变量
+  write(p1);
+  write(p2);
+}
+
+void test2() {
+  int local = 1;
+  int *_Borrow p1 = &amp;_Mut local;
+  const int *_Borrow p2 = &amp;_Const local; // error: 指向local的可变和不可变借用不能同时存在
+  write(p1);
+  read(p2);
+}
+
+void test3() {
+  int local = 1;
+  const int *_Borrow p1 = &amp;_Const local;
+  int *_Borrow p2 = &amp;_Mut local; // error: 指向local的可变和不可变借用不能同时存在
+  read(p1);
+  write(p2);
+}
+
+int main() {
+  test1();
+  test2();
+  test3();
+  return 0;
+}
+</code></pre>
+<p>如果同时存在对一个变量的可变借用和不可变借用，可能会出现通过可变借用修改被借用对象的内存状态，然后再使用不可借用访问被修改的内存，从而导致未定义行为的情况。
+例如：</p>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+struct A {
+  int *p;
+};
+
+const int *_Borrow struct A::get_p(This *_Borrow this) {
+  return &amp;_Const * (this-&gt;p);
+}
+
+void struct A::free_p(This *_Borrow this) { free(this-&gt;p); }
+
+int main() {
+  struct A a = {.p = malloc(sizeof(int))};
+  // q借用了a.p
+  const int *_Borrow q = a.get_p();
+  // a.p指向的内存被释放
+  a.free_p(); // error: a 被可变借出了多次
+  // *q的操作可能会导致未定义行为
+  printf("%d\n", *q);
+  return 0;
+}
+</code></pre>
+<p>上述代码中，<code>a.free_p()</code>实际上使用了一个指向 a 的可变借用，该可变借用会使在它之前被定义的借用 q 失效，由于<code>printf("%d\n", *q)</code>使用了失效的 q，毕昇 C 编译器会报错，也就阻止了不安全行为的发生。</p>
+<p>由于不可变借用不会导致被借用对象被修改，因此同一时刻可以拥有任意多个不可变借用，例如：</p>
+<pre><code class="language-C">void read(const int *_Borrow p) {}
+
+void test() {
+  int local = 5;
+  const int *_Borrow p1 = &amp;_Const local;
+  const int *_Borrow p2 = &amp;_Const local;
+  read(p1);
+  read(p2);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h3 id="字符串字面量的自动借用转换"><a class="header" href="#字符串字面量的自动借用转换">字符串字面量的自动借用转换</a></h3>
+<p>为了方便使用字符串字面量，毕昇 C 提供了对字符串字面量的自动借用转换功能。</p>
+<h4 id="自动插入-_const--操作符"><a class="header" href="#自动插入-_const--操作符">自动插入 <code>&amp;_Const *</code> 操作符</a></h4>
+<p>当字符串字面量作为实参传递给 <code>const char * _Borrow</code> 类型的形参时，编译器会自动插入 <code>&amp;_Const *</code> 操作符，将字符串字面量转换为不可变借用指针。这样可以避免每次使用字符串字面量时都需要手动添加借用操作符。</p>
+<p>例如：</p>
+<pre><code class="language-C">void foo(const char * _Borrow str) {
+  // 函数实现
+}
+
+void test() {
+  // 编译器会自动将 "hello" 转换为 &amp;_Const * "hello"
+  foo("hello");
+
+  // 等价于显式写法
+  foo(&amp;_Const * "hello");
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h4 id="可变借用隐式转换为不可变借用"><a class="header" href="#可变借用隐式转换为不可变借用">可变借用隐式转换为不可变借用</a></h4>
+<p>即可变借用 <code>T *_Borrow</code> 类型可隐式转换为不可变借用 <code>const T *_Borrow</code> 类型，由编译器自动插入 <code>&amp;_Const *</code> 操作符。</p>
+<p>允许在以下四种位置发生该隐式类型转换：</p>
+<ol>
+<li>变量声明语句</li>
+<li>变量赋值表达式</li>
+<li>函数调用表达式传参</li>
+<li>函数的返回语句</li>
+</ol>
+<p>给出一些示例如下：</p>
+<pre><code class="language-C">void foo(const int *_Borrow);
+
+void test1() {
+  int a = 1;
+  int *_Borrow p = &amp;_Mut a;
+  const int *_Borrow q = p; // ok
+  q = p; // ok
+  foo(p); // ok
+}
+
+const int *_Borrow test2(int *_Borrow p) {
+  return p; // ok
+}
+</code></pre>
+<h4 id="限制与错误检查"><a class="header" href="#限制与错误检查">限制与错误检查</a></h4>
+<p>字符串字面量存储在只读内存区域，因此不能被修改。毕昇 C 对字符串字面量的借用有以下限制：</p>
+<ol>
+<li><strong>禁止对字符串字面量进行可变借用</strong>：直接使用 <code>&amp;_Mut</code> 操作符对字符串字面量取可变借用会导致编译错误。</li>
+</ol>
+<pre><code class="language-C">void test_error1() {
+  const char * _Borrow p = &amp;_Mut "hello";  // 编译错误：cannot take mutable _Borrow of string literal
+}
+</code></pre>
+<ol start="2">
+<li><strong>禁止通过解引用对字符串字面量进行可变借用</strong>：使用 <code>&amp;_Mut *</code> 操作符对字符串字面量取可变借用也会导致编译错误。</li>
+</ol>
+<pre><code class="language-C">void test_error2() {
+  const char * _Borrow p = &amp;_Mut * "hello";  // 编译错误：cannot take mutable _Borrow through string literal
+}
+</code></pre>
+<ol start="3">
+<li><strong>禁止将字符串字面量传递给可变借用参数</strong>：尝试将字符串字面量作为实参传递给 <code>char * _Borrow</code>（可变借用）类型的形参会导致编译错误。</li>
+</ol>
+<pre><code class="language-C">void foo_mut(char * _Borrow str) {}
+
+void test_error3() {
+  foo_mut("hello");  // 编译错误：cannot pass string literal to parameter of type 'char *_Borrow'
+}
+</code></pre>
+<p>这些限制确保了字符串字面量的不可变性，避免了对只读内存区域的非法写入操作，提高了程序的安全性。</p>
+<h2 id="借用对被借用对象的影响"><a class="header" href="#借用对被借用对象的影响">借用对被借用对象的影响</a></h2>
+<h3 id="不可变借用对被借用对象的影响"><a class="header" href="#不可变借用对被借用对象的影响">不可变借用对被借用对象的影响</a></h3>
+<p>对表达式 e 做不可变借用， 即<code>&amp;_Const e</code>，在这个不可变借用的生命周期结束之前，e 只能读不能修改，也不能对 e 创建可变借用。</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>不可变借用表达式</th><th>被借用对象的状态</th></tr>
+</thead>
+<tbody>
+<tr><td>&amp;_Const ident`</td><td>变量 ident 只能被读不能被修改，也不能再对变量 ident 创建可变借用，允许对变量ident创建不可变借用</td></tr>
+<tr><td>&amp;_Const “string literal”</td><td>临时变量永远是 “只读” 状态</td></tr>
+<tr><td>&amp;_Const (struct S) { … }</td><td>临时变量永远是 “只读” 状态</td></tr>
+<tr><td>&amp;_Const e-&gt;field</td><td>e-&gt;field 进入 “只读” 状态，也不允许整体修改 *e。但允许修改 e 指向的其它成员，或者对其它成员做可变借用</td></tr>
+<tr><td>&amp;_Const e.field</td><td>e.field 进入 “只读” 状态，也不允许整体修改 e。但允许修改 e 的其它成员，或者对其它成员做可变借用</td></tr>
+<tr><td>&amp;_Const e[index]</td><td>e 进入 “只读” 状态，不允许修改 e 及其直接或间接成员，或者对其它成员做可变借用</td></tr>
+<tr><td>&amp;_Const *e</td><td><code>*e</code> 进入 “只读” 状态，不允许修改 <code>*e</code> 及其直接或间接成员，或者对其它成员做可变借用，如果 e 是 _Owned 指针类型，则 e 也进入只读状态</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="可变借用对被借用对象的影响"><a class="header" href="#可变借用对被借用对象的影响">可变借用对被借用对象的影响</a></h3>
+<p>对表达式 e 做可变借用， 即<code>&amp;_Mut e</code>，表达式 e 进入 “冻结” 状态。在这个可变借用的生命周期结束之前，e 不能读，不能修改（包含被move），也不能被借用。</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>可变借用表达式</th><th>被借用对象的状态</th></tr>
+</thead>
+<tbody>
+<tr><td>&amp;_Mut ident`</td><td>变量 ident 被冻结</td></tr>
+<tr><td>&amp;_Mut “string literal”</td><td>编译错误（字符串字面量是不可变的，不能进行可变借用）</td></tr>
+<tr><td>&amp;_Mut (struct S) { … }</td><td>临时变量被冻结</td></tr>
+<tr><td>&amp;_Mut e-&gt;field</td><td>e-&gt;field 被冻结，不允许读写 e-&gt;field，不允许整体修改 *e，但允许修改 e 指向的其它成员，或者对其它成员做可变借用</td></tr>
+<tr><td>&amp;_Mut e.field</td><td>e.field 被冻结，不允许读写 e.field，不允许整体修改 e，但允许修改 e 的其它成员，或者对其它成员做可变借用</td></tr>
+<tr><td>&amp;_Mut e[index]</td><td>e 被冻结，不允许读写 e 以及它的成员</td></tr>
+<tr><td>&amp;_Mut *e</td><td><code>*e</code> 被冻结，不允许读写 <code>*e</code> 以及它的成员，如果 e 是 _Owned 指针类型，则也不允许读写 e</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="函数定义中包含借用类型"><a class="header" href="#函数定义中包含借用类型">函数定义中包含借用类型</a></h2>
+<ol>
+<li>
+<p>不允许函数参数中没有借用类型的参数，但是函数返回是借用类型。</p>
+</li>
+<li>
+<p>如果函数参数中有一个借用类型的参数，函数返回是借用类型，那么我们直接认为这个返回值的借用，是来自于这个借用类型参数，返回的借用的 “被借用对象” 与这个借用类型参数的 “被借用对象” 一样，这个返回的借用也应该满足前面提到的那些借用规则。</p>
+</li>
+<li>
+<p>如果函数参数中有多个借用类型的参数，函数返回是借用类型，那么我们直接认为这个返回值的借用，同时包含了从多个借用类型参数传递过来的 “被借用变量”，这个返回的借用也应该满足前面提到的那些借用规则。</p>
+</li>
+</ol>
+<pre><code class="language-C">int *_Borrow f1(int *_Borrow p) { return p; }
+int *_Borrow f2(int *_Borrow p1, int *_Borrow p2) { return p1; }
+
+void test() {
+  int local = 5;
+  int *_Borrow p1 = f1(&amp;_Mut local);
+  /* 函数 f1 的参数创建了一个对 local 的可变借用，这个借用被传递给了返回值 p1，
+     导致 p1 相当于是对 local 的一个可变借用, 所以返回值 p1 的被借用对象是
+     local, 在 p1 的生命周期结束之前，local 会一直被冻结。*/
+
+  int local1, local2;
+  int *_Borrow p2 = f2(&amp;_Mut local1, &amp;_Mut local2);
+  /* 函数 f2 的参数创建了一个对 local1 和 local2
+     的可变借用，这两个借用被传递给了返回值 p2， 导致 p2 相当于是对 local1 和
+     local2 的一个可变借用, 所以返回值 p2 的被借用对象是 local1 和 local2, 在 p2
+     的生命周期结束之前，local1 和 local2 一直被冻结。*/
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="struct定义中包含借用类型"><a class="header" href="#struct定义中包含借用类型">struct定义中包含借用类型</a></h2>
+<ol>
+<li>结构体内如果包含多个借用成员，那么这个结构体同时存在多个 “被借用对象”，这些借用成员也应该满足前面提到的那些借用规则。</li>
+</ol>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct R {
+  int *_Borrow m1;
+  int *_Borrow m2;
+};
+
+void test() {
+  int local1, local2;
+  struct R r = {.m1 = &amp;_Mut local1, .m2 = &amp;_Mut local2};
+  // 在 r 的生命周期结束之前，local1 和 local2 一直被冻结。
+  // 因为变量 r 在初始化的时候创建了一个对 local1 和 local2 的可变借用，
+  // 导致 r 同时包含对 local1 的一个可变借用，也包含对 local2 的可变借用。
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="借用变量的解引用操作"><a class="header" href="#借用变量的解引用操作">借用变量的解引用操作</a></h2>
+<p>允许对借用指针变量解引用，与标准 C 的解引用操作一致：对借用指针变量<code>p</code>解引用的语法为 <code>*p</code>。
+对<code>const T * _Borrow</code>类型的借用变量<code>e</code>解引用 <code>*e</code>，结果为<code>T</code>类型
+对<code>T * _Borrow</code>类型的借用变量<code>e</code>解引用 <code>*e</code>，结果为<code>T</code>类型
+如果<code>p</code>是指向<code>T</code>类型的借用，<code>o</code>是<code>T</code>类型的 lvalue，对于<code>*p</code>表达式，有如下限制：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>T是Copy语义</th><th>T是Move语义</th></tr>
+</thead>
+<tbody>
+<tr><td>p是immut借用</td><td>*p = expr; 不允许</td><td>*p = expr; 不允许</td></tr>
+<tr><td></td><td>o = *p; 允许</td><td>o = *p; 不允许</td></tr>
+<tr><td>p是mut借用</td><td>*p = expr; 允许</td><td>*p = expr; 允许</td></tr>
+<tr><td></td><td>o = *p; 允许</td><td>o = *p; 不允许</td></tr>
+</tbody>
+</table>
+</div>
+<p>上表中 move / copy 语义分别指： <code>T</code>是<code>_Owned</code>修饰的类型和<code>T</code>是其它类型。</p>
+<p>注：上表中的赋值操作的权限，可同样应用于函数的传参和返回场景。</p>
+<h2 id="借用变量的成员访问"><a class="header" href="#借用变量的成员访问">借用变量的成员访问</a></h2>
+<p>允许借用指针变量访问成员变量或调用成员函数，与标准 C 的箭头运算符一致：访问指针变量<code>p</code>的成员变量<code>field</code>的语法为<code>p-&gt;field</code>，调用指针变量<code>p</code>的成员方法<code>method()</code>的语法为<code>p-&gt;method()</code>。</p>
+<h3 id="访问成员变量"><a class="header" href="#访问成员变量">访问成员变量</a></h3>
+<p>通过借用访问成员变量，表达式的类型取决于成员变量本身的类型。<code>p-&gt;field</code> 表达式的类型与<code>field</code>成员定义的类型相同。
+如果 <code>p-&gt;field</code> 的类型是<code>T</code>，<code>o</code>是<code>T</code>类型的 lvalue，对于 <code>p-&gt;field</code> 表达式，有如下限制：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>T是Copy语义</th><th>T是Move语义</th></tr>
+</thead>
+<tbody>
+<tr><td>p是immut借用</td><td>p-&gt;field = expr; 不允许</td><td>p-&gt;field = expr; 不允许</td></tr>
+<tr><td></td><td>o = p-&gt;field; 允许</td><td>o = p-&gt;field; 不允许</td></tr>
+<tr><td>p是mut借用</td><td>p-&gt;field = expr; 允许</td><td>p-&gt;field = expr; 允许</td></tr>
+<tr><td></td><td>o = p-&gt;field; 允许</td><td>o = p-&gt;field; 不允许</td></tr>
+</tbody>
+</table>
+</div>
+<p>上表中 move / copy 语义分别指： T 是 _Owned 修饰的类型和 T 是其它类型。</p>
+<p>注：上表中的赋值操作的权限，可同样应用于函数的传参和返回场景。</p>
+<h3 id="调用成员函数"><a class="header" href="#调用成员函数">调用成员函数</a></h3>
+<p>通过借用调用成员函数，即 <code>p-&gt;method()</code> 的场景，实参和形参之间的规则如下：</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th></th><th>void method(const This * _Borrow this)</th><th>void method(This * _Borrow this)</th><th></th></tr>
+</thead>
+<tbody>
+<tr><td>p是immut借用</td><td>允许</td><td>不允许，immut借用不能创建出mut借用</td><td></td></tr>
+<tr><td>p是mut借用</td><td>允许，允许从mut借用创建immut借用</td><td>允许</td><td></td></tr>
+</tbody>
+</table>
+</div>
+<p>举例来说：</p>
+<pre><code class="language-C">void int ::method1(const This *_Borrow this) {}
+void int ::method2(This *_Borrow this) {}
+
+void test() {
+  int local = 5;
+  const int *_Borrow p1 = &amp;_Const local;
+  int *_Borrow p2 = &amp;_Mut local;
+  p1-&gt;method1(); // ok: 形参类型和实参类型一致，都是不可变借用
+  p1-&gt;method2(); // error: 形参是可变借用类型，实参是不可变借用类型，不可变借用不能创建出可变借用
+  p2-&gt;method1(); // ok: 形参是不可变借用类型，实参是可变借用类型，允许从可变借用创建出不可变借用
+  p2-&gt;method2(); // ok: 形参类型和实参类型一致，都是可变借用
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<h2 id="借用的类型转换"><a class="header" href="#借用的类型转换">借用的类型转换</a></h2>
+<ol>
+<li>对于任意类型 T，如果 T 实现了 _Trait TR，则允许指向类型 T 的借用向上转型为指向类型 TR 的借用；反过来，从类型 TR 的借用往类型 T 借用的转换，是不允许的。</li>
+</ol>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+_Trait TR { void print(This * _Borrow this); };
+void int ::print(int *this) { printf("%d\n", *this); }
+
+_Impl _Trait TR for int;
+
+void test() {
+  int x = 10;
+  int *_Borrow r = &amp;_Mut x;
+  _Trait TR *_Borrow p = r; // ok: 支持 int* 类型的借用向上转型为 _Trait TR* 类型的借用
+  p-&gt;print();
+  int *_Borrow px = (int *_Borrow)p; // error: 禁止 _Trait TR* 向下转型
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="2">
+<li>允许指向类型 T 的借用隐式转换为指向 void 类型的借用，反过来从类型 void 的借用往类型 T 借用的隐式转换，是不允许的，但强制类型转换是允许的。</li>
+</ol>
+<pre><code class="language-C">void test() {
+  int x = 10;
+  int *_Borrow r = &amp;_Mut x;
+  void *_Borrow p = r;
+  int *_Borrow t1 = p; // error: 不允许隐式转为 void *_Borrow 类型
+  int *_Borrow t2 = (int *_Borrow)p; // ok：允许强制转换为 void *_Borrow 类型
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="3">
+<li>只允许在非安全区进行<code>T * _Borrow</code>和<code>T *</code>之间的转换。</li>
+</ol>
+<pre><code class="language-C">int main() {
+  int *_Borrow p = (int *_Borrow)NULL; // ok: 非安全区允许 T * _Borrow 和 T * 之间的转换
+  int *q = p; // error: 类型转换必须是显式的，禁止隐式类型转换
+  _Safe { int *_Borrow p = (int *_Borrow)NULL; } // error: 安全区禁止 T * _Borrow 和 T * 之间的转换
+  return 0;
+}
+</code></pre>
+<ol start="4">
+<li>不允许在 <code>T *_Owned</code> 和 <code>T *_Borrow</code> 指针之间使用 C 风格强制类型转换</li>
+</ol>
+<pre><code class="language-C">int *_Owned test(int *_Owned p) {
+  int *_Borrow q = (int *_Borrow) p; // error: 应当使用 &amp;_Mut *p 代替强制类型转换
+  int *_Owned r = (int *_Owned) q; // error: 不能通过强制类型转换从 T *_Borrow 创建一个 T *_Owned 副本
+  return r;
+}
+</code></pre>
+<ol start="5">
+<li>不允许在可变借用(<code>T *_Borrow</code>)和只读借用(<code>const T *_Borrow</code>)之间进行强制类型转换</li>
+</ol>
+<p>这种转换会破坏借用检查的安全性:</p>
+<ul>
+<li>将可变借用转换为只读借用会创建两个独立的借用(一个可变,一个只读)指向同一个对象,从而允许在只读借用存在的同时进行修改操作</li>
+<li>将只读借用转换为可变借用会违反const安全性,允许通过原本只读的借用进行修改</li>
+</ul>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+int main() {
+  int local = 10;
+  int *_Borrow p = &amp;_Mut local;
+  const int *_Borrow b = (const int *_Borrow)p; // error: 不允许将可变借用强制转换为只读借用
+  printf("%d\n", *b);  // 读取 b
+  *p = 1;              // 修改 p (如果转换被允许,这会违反借用规则)
+  printf("%d\n", *b);  // 再次读取 b
+
+  const int *_Borrow c = &amp;_Const local;
+  int *_Borrow m = (int *_Borrow)c; // error: 不允许将只读借用强制转换为可变借用
+  *m = 20;  // 如果转换被允许,这会违反const安全性
+
+  return 0;
+}
+</code></pre>
+<ol start="6">
+<li>允许在变量初始化、变量赋值、函数传参和返回中将 <code>_Borrow</code> 指针隐式转换为 <code>_Bool</code></li>
+</ol>
+<pre><code class="language-c">void foo(int *_Borrow _Nullable p) {
+  _Bool flag = p; // equivalent: _Bool flag = p != nullptr;
+}
+void bar(int *_Borrow _Nullable p, _Bool flag) {
+  flag = p; // equivalent: flag = p != nullptr;
+}
+void use(_Bool);
+void baz(int *_Borrow _Nullable p) {
+  use(p); // equivalent: use(p != nullptr);
+}
+_Bool foobar (int *_Borrow _Nullable p) {
+  return p; // equivalent: return p != nullptr;
+}
+</code></pre>
+<p>注意:允许同类型的借用之间的转换(可变到可变,只读到只读)。</p>
+<h2 id="借用的其它规则"><a class="header" href="#借用的其它规则">借用的其它规则</a></h2>
+<p>除了上面的那些规则，对于借用，我们还有如下规则：</p>
+<ol>
+<li>
+<p>对于全局变量，我们无法在函数签名中跟踪哪个函数读取了全局变量，哪个函数修改了全局变量。为了保证安全性，毕昇 C 规定：在安全区内，只允许对全局变量取只读借用，不允许取可变借用。如果是对函数名做借用，从生命周期的角度，可以当做是对全局变量做借用。</p>
+</li>
+<li>
+<p>借用变量在使用前必须初始化。</p>
+</li>
+</ol>
+<pre><code class="language-C">void test() {
+  int *_Borrow p; 
+  use(p); // error: 必须初始化
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="3">
+<li>用一个借用类型的表达式给另外一个借用类型的 lvalue作初始化或再赋值，即<code>p = e</code>，<code>p</code>和<code>e</code>必须是同类型的借用类型，而且要求<code>e</code>的生命周期必须大于 p 的生命周期。</li>
+</ol>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+void test() {
+  int x = 1;
+  int *_Borrow p = &amp;_Mut x;
+  {
+    int y = 2;
+    int *_Borrow pp = &amp;_Mut y;
+    p = pp; // error: pp 生命周期小于 p
+    printf("%d\n", *p);
+  }
+  printf("%d\n", *p);
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<p>基于此规则，一个<code>struct</code>内部的<code>_Borrow</code>指针成员，是不可以对这个<code>struct</code>或者它的其它成员做借用的。</p>
+<pre><code class="language-C">struct S {
+  int m;
+  const int *_Borrow p;
+};
+
+void test() {
+  struct S s = {.m = 0, .p = &amp;_Const s.m}; // error: 因为s.p的生命周期与s.m的生命周期相同
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="4">
+<li>借用变量不允许是全局变量，只能是局部变量。</li>
+</ol>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+int g = 5
+int *_Borrow p = &amp;_Mut g; // error: 借用变量不允许是全局变量
+void test() { int *_Borrow p = &amp;_Mut g; }
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="5">
+<li>不允许对包含借用的表达式，再取借用。同理，借用类型<code>T* _Borrow</code>中，<code>T</code>本身及其成员不能是借用类型。</li>
+</ol>
+<pre><code class="language-C">#include "bishengc_safety.hbs" // BiShengC 语言提供的头文件，用于安全地进行内存分配及释放
+
+struct R {
+  int *_Borrow p;
+};
+
+void test() {
+  int local = 5;
+  int *_Borrow *_Borrow p = &amp;_Mut(&amp;_Mut local); // error: 不允许多级借用指针
+
+  struct R r1 = {.p = &amp;_Mut local};
+  struct R *_Borrow r2 = &amp;_Mut r1; // error: r1 中已经包含了借用
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="6">
+<li>不允许为借用类型实现 _Trait。</li>
+</ol>
+<pre><code class="language-C">_Trait TR{};
+
+_Impl _Trait TR for int *_Borrow; // error: 不允许为借用类型实现 _Trait
+
+int main() { return 0; }
+</code></pre>
+<ol start="7">
+<li>不允许为借用类型添加成员函数。</li>
+</ol>
+<pre><code class="language-C">void int *_Borrow::f() {} // error: 不允许为借用类型添加成员函数
+
+int main() { return 0; }
+</code></pre>
+<ol start="8">
+<li>union 的成员不允许是借用类型。</li>
+</ol>
+<pre><code class="language-C">union U {
+  int *_Borrow p; // error: 借用指针不允许作为 union 成员
+};
+
+int main() { return 0; }
+</code></pre>
+<ol start="9">
+<li>
+<p>借用指针类型不能是泛型实参。</p>
+</li>
+<li>
+<p>借用指针变量不支持索引运算。</p>
+</li>
+<li>
+<p>借用指针变量不支持算术运算。</p>
+</li>
+<li>
+<p>允许同类型的借用变量之间，使用 <code>==</code>、<code>!=</code>、<code>&gt;</code>、<code>&lt;</code>、<code>&lt;=</code>、<code>&gt;=</code> 等比较运算符操作。</p>
+</li>
+<li>
+<p>允许对借用类型使用 <code>sizeof</code>、<code>alignof</code>操作符，并且有：
+<code>sizeof(T* _Borrow) == sizeof(T*)</code>
+<code>_Alignof(T* _Borrow) == _Alignof(T*)</code></p>
+</li>
+<li>
+<p>允许对借用类型使用一元的<code>&amp;</code>、<code>!</code>及二元的<code>&amp;&amp;</code>、<code>||</code>运算符。</p>
+</li>
+<li>
+<p>不允许对借用类型使用一元的<code>-</code>、<code>~</code>、<code>&amp;_Const</code>、<code>&amp;_Mut</code>、<code>[]</code>、<code>++</code>、<code>--</code>运算符，也不允许对借用类型使用二元的<code>*</code>、<code>/</code>、<code>%</code>、<code>&amp;</code>、<code>|</code>、<code>&lt;&lt;</code>、<code>&gt;&gt;</code>、<code>+</code>、<code>-</code>运算符。</p>
+</li>
+<li>
+<p>如果一个借用指针变量指向的是函数，那么可以通过这个借用指针变量来调用函数。</p>
+</li>
+</ol>
+<pre><code class="language-C">#include &lt;stdio.h&gt;
+
+void f() { printf("f()\n"); }
+
+void test() {
+  void (*_Borrow const p)() = &amp;_Const f; // ok: 对函数取不可变借用
+  p();
+}
+
+int main() {
+  test();
+  return 0;
+}
+</code></pre>
+<ol start="17">
+<li>
+<p>不允许对函数做可变借用，只能做只读借用。</p>
+</li>
+<li>
+<p>允许 _Borrow 指针作为 <code>if</code> <code>while</code> <code>do-while</code> <code>for</code> 语句和三元表达式的条件，不允许作为 <code>switch</code> 语句的条件</p>
+</li>
+</ol>
+<pre><code class="language-c">void foo(int *_Borrow _Nullable p) {
+  if (p) { // equivalent: p != nullptr
+  }
+  while (p) { // equivalent: p != nullptr
+  }
+  do {
+  } while (p); // equivalent: p != nullptr
+
+  for (;p;) { // equivalent: p != nullptr
+  }
+  switch (p) { // error
+  default: 
+    break;
+  }
+  int x = p ? 2 : 1; // equivalent: p != nullptr ? 2 : 1;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-3-memory-safety/1-ownership.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-3-memory-safety/3-nonnull-pointer.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-3-memory-safety/1-ownership.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-3-memory-safety/3-nonnull-pointer.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

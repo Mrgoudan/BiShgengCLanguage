@@ -1,0 +1,647 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>泛型 - 毕昇 C 语言用户手册</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-26674c87.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2f02e48b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">毕昇 C 语言用户手册</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="泛型"><a class="header" href="#泛型">泛型</a></h1>
+<h2 id="概述"><a class="header" href="#概述">概述</a></h2>
+<p>泛型是一种编程技术，允许将类型（如整数、字符串等基本类型，或者用户自定义的类型）作为参数传递给函数或结构体，从而实现代码复用、提升灵活性，并在保持类型安全的前提下，提高开发效率。</p>
+<p>毕昇 C 的泛型是一种编译时的泛型机制，它可以定义一个通用的函数或类，然后根据不同的类型参数生成不同的实例。</p>
+<p>目前，毕昇 C 已支持<strong>泛型函数</strong>、<strong>泛型结构体</strong>和<strong>泛型类型别名</strong>。</p>
+<h3 id="实现动机"><a class="header" href="#实现动机">实现动机</a></h3>
+<p>泛型的目的是为了提高代码的<strong>效率</strong>和<strong>重用性</strong>而实现的，其优点在于：</p>
+<ul>
+<li>避免了代码冗余</li>
+<li>提高了代码的可读性和可维护性</li>
+<li>实现了类型安全和编译时检查</li>
+<li>…</li>
+</ul>
+<p>泛型编程使开发者能够编写适用于任意数据类型的通用算法，无需为不同类型（如整数、字符串或自定义类型）分别实现相同逻辑。</p>
+<p>通过泛型，用户可以为函数或结构体定义通用模板，使得类中的某些数据成员或成员函数的参数、返回值取得任意类型。</p>
+<h3 id="示例"><a class="header" href="#示例">示例</a></h3>
+<p>以下方的代码为例：</p>
+<pre><code class="language-c">int sum_int(int a, int b) {
+    int c = a + b;
+    return c;
+}
+
+float sum_float(float a, float b) {
+    float c = a + b;
+    return c;
+}
+
+int main() {
+    int sum1 = sum_int(1, 2);
+    float sum2 = sum_float(1.2, 2.5);
+}
+</code></pre>
+<p>可以看出，对于sum方法，如果要实现返回值分别为 <strong>float</strong> 和 <strong>int</strong> 两种情况，普通的 C 语言需要为同样实现的方法定义两次。</p>
+<p>但是如果使用毕昇 C 的泛型语法，则只需定义一次，即可在实例化时重复使用，如下：</p>
+<pre><code class="language-c">#include&lt;stdio.h&gt;
+T sum_t&lt;T&gt;(T a, T b) {
+    T c = a + b;
+    return c;
+}
+
+int main() {
+    int sum1 = sum_t&lt;int&gt;(1, 2);
+    float sum2 = sum_t&lt;float&gt;(1.2, 2.5);
+    printf("%d\n",sum1); // expected result: 3
+    printf("%f\n",sum2); // expected result: 3.700000
+    return 0;
+}
+</code></pre>
+<p>可以看出，泛型功能的引入，对于用了相同算法的声明场景，其代码量有明显的减少。</p>
+<h2 id="语法规则"><a class="header" href="#语法规则">语法规则</a></h2>
+<p>对于毕昇 C 泛型，我们设计了如下的语法规则：</p>
+<ul>
+<li>
+<p>在声明泛型函数、结构体或类型别名时，泛型参数列表要用尖括号 ‘&lt;&gt;’ 包裹起来，尖括号内部的类型一般是 identifier ，如 ‘T1’, ‘T2’ 之类 。</p>
+</li>
+<li>
+<p>在实例化时，既可以在尖括号内部传入具体的类型，如 int, float, struct S 等，也可以省略尖括号的书写，编译器会根据实际传入的参数进行隐式的类型推导。此外，如果将现有类型 typedef 为其他别名后，同样可以在实例化时用作泛型实参。</p>
+</li>
+<li>
+<p>同时，毕昇 C 的泛型函数、泛型结构体和泛型类型别名也支持使用<strong>常量参数</strong>作为泛型的形参。</p>
+</li>
+</ul>
+<p>下面我们将分为五个部分详细说明。</p>
+<h3 id="泛型函数"><a class="header" href="#泛型函数">泛型函数</a></h3>
+<p>对于泛型函数，我们对语法规则的设计，主要体现在两个方面：</p>
+<ol>
+<li>
+<p>声明时，区别于普通函数声明，我们需要在<strong>函数名</strong>和<strong>函数入参</strong>之间，添加一对尖括号 ‘&lt;&gt;’ ，并在尖括号中写明泛型函数的<strong>泛型形参</strong>，其中形参可以为任何合法的名字（此处的合法指的是不会导致语义冲突的情况）；</p>
+<p>同时，对于函数返回值的类型，可以是普通的 builtin 类型，可以是用户已经定义过的结构体，也可以是泛型形参中的一个（如 T）。</p>
+</li>
+<li>
+<p>实例化时，类型既可以在尖括号中显式指定，也可以省略尖括号以及其中的内容，由编译器进行隐式推导：</p>
+<ol>
+<li>显式指定类型时，区别于普通的函数调用，同样需要在被调用的<strong>函数名</strong>与<strong>函数入参</strong>之间添加一对尖括号 ‘&lt;&gt;’ ，且中间无空格；然后在尖括号中传入<strong>泛型实参</strong>，此处的实参可以是 builtin 类型，也可以是用户已经定义过的结构体。</li>
+<li>隐式推导时，写法与普通的函数调用相同，毕昇 C 编译器会根据函数调用传入的参数类型，自动推导<strong>泛型实参</strong>的类型。不过为了代码可读性等，推荐使显式指定类型。</li>
+</ol>
+</li>
+</ol>
+<p>下面是一些用法示例：</p>
+<pre><code class="language-c">typedef long int LT;
+
+// 泛型函数
+T max&lt;T&gt;(T a, T b) { // 开头的'T'为函数返回值类型，而'&lt;&gt;'中的'T'泛型函数'max'的泛型形参
+    T Max = a &gt; b ? a : b;
+    return Max;
+}
+
+int main() {
+    int a = 3;
+    int b = 5;
+    int c = 4;
+
+    // 泛型函数 实例化
+    int max1 = max&lt;int&gt;(a, b); // 显示指定泛型实参类型
+    int max3 = max(a, c); // 隐式推导，编译器自动推导'T'为 int 类型
+
+    return 0;
+}
+</code></pre>
+<h3 id="泛型结构体"><a class="header" href="#泛型结构体">泛型结构体</a></h3>
+<p>对于泛型结构体，我们对语法规则的设计，同样体现在两个方面：</p>
+<ol>
+<li>声明时，区别于普通结构体声明，我们需要在<strong>结构体名</strong>的后面之间，添加一对尖括号 ‘&lt;&gt;’ ，并在尖括号中写明泛型结构体的<strong>泛型形参</strong>。</li>
+<li>实例化时，泛型结构体仅支持显式指定类型，即：显示指定类型时，区别于普通的结构体的构造，同样需要在被构造的<strong>结构体名</strong>后面添加一对尖括号 ‘&lt;&gt;’ ，且中间无空格；然后在尖括号中传入<strong>泛型实参</strong>，此处的实参可以是 builtin 类型，也可以是用户已经定义过的结构体。</li>
+<li>在使用泛型结构体类型时，如声明泛型结构体类型的变量、声明泛型结构体类型的成员、声明参数、声明返回值、扩展成员函数时，可以省略 struct。即在使用形如<code>struct S&lt;T&gt;</code>的类型时，可以简写为<code>S&lt;T&gt;</code>，但在声明该类型时不允许省略。</li>
+</ol>
+<p>下面是一些用法示例：</p>
+<pre><code class="language-c">typedef long int LT;
+
+// 泛型struct
+struct S&lt;T, B&gt;{
+    T a;
+    B b;
+};
+
+// 泛型union
+union MyUnion&lt;T1, T2&gt; {
+    T1 u1;
+    T2 u2;
+};
+
+// 返回类型为'泛型union'的泛型函数'foo_union'
+union MyUnion&lt;T1, T2&gt; foo_union&lt;T1, T2&gt;(union MyUnion&lt;T1, T2&gt; *this) {
+    return *this;
+}
+
+int main() {
+    // 泛型struct 实例化
+    struct S&lt;int, LT&gt; s1 = {.a = 42, .b = 5}; // 使用 typedef 后的类型作为泛型实参
+
+    // 泛型union 实例化
+    union MyUnion&lt;int, float&gt; p;
+    foo_union(&amp;p); // 泛型函数 foo_union 的隐式类型推导
+
+    return 0;
+}
+</code></pre>
+<h3 id="泛型成员函数"><a class="header" href="#泛型成员函数">泛型成员函数</a></h3>
+<p>在支持定义泛型 struct 和泛型 union 类型的基础上，还可以为它们扩展普通成员函数。</p>
+<p>如下是一个用法示例，该示例包含了声明泛型成员函数、定义泛型成员函数及实例化调用泛型成员函数：</p>
+<pre><code class="language-c">struct MyStruct&lt;T&gt; {
+    T res;
+};
+
+union MyUnion&lt;T&gt; {
+    T res;
+};
+
+T struct MyStruct&lt;T&gt;::foo(struct MyStruct&lt;T&gt;* this, T a) { // 定义泛型成员函数
+    this-&gt;res = this-&gt;res + a;
+    return this-&gt;res;
+}
+
+T union MyUnion&lt;T&gt;::foo(union MyUnion&lt;T&gt;* this, T a) {
+    this-&gt;res = this-&gt;res + a;
+    return this-&gt;res;
+}
+
+int main() {
+    struct MyStruct&lt;int&gt; s = { .res = 1 };
+    union MyUnion&lt;int&gt; u = { .res = 5 };
+    int res1 = s.foo(2); // 调用泛型成员函数
+    int res2 = u.foo(6);
+    return 0;
+}
+</code></pre>
+<p>关于泛型成员函数，还有以下几点需要注意：</p>
+<ol>
+<li>泛型成员函数可以是静态函数，即第一个参数可以不为<code>this</code>；</li>
+<li>不允许泛型成员函数的重载，这与成员函数的规则相同；</li>
+</ol>
+<pre><code class="language-c">struct MyStruct&lt;T&gt; {
+    T val;
+};
+
+T static struct MyStruct&lt;T&gt;::static_add(T a, T b) {
+    return a + b;
+}
+
+
+T struct MyStruct&lt;T&gt;::static_add(T a);  // expected result: error: conflicting types for 'static_add'
+
+
+int main() {
+    int sum = MyStruct&lt;int&gt;::static_add(10, 20);   // 静态泛型成员函数
+    return 0;
+}
+</code></pre>
+<ol start="3">
+<li>泛型成员函数的返回类型可以是泛型 struct 或泛型 union类型。</li>
+</ol>
+<pre><code class="language-c">struct MyStruct&lt;T&gt; {
+    T val;
+};
+    
+struct MyStruct&lt;T&gt; struct MyStruct&lt;T&gt;::make_struct(T x) {
+    struct MyStruct&lt;T&gt; result = { .val = x };
+    return result;
+}
+
+
+int main() {
+    MyStruct&lt;int&gt; s = MyStruct&lt;int&gt;::make_struct(42);
+    return 0;
+}
+</code></pre>
+<h3 id="常量泛型"><a class="header" href="#常量泛型">常量泛型</a></h3>
+<p>除了基础泛型的实现，毕昇 C 还引入了常量泛型的功能。具体来说，常量泛型是一种允许程序项在常量值上泛型化的特性。也就是说，常量可以作为泛型参数传递到泛型变量中，代码会根据常量参数而进行特化，从而确保无开销，并可以直接在代码中作为常量来使用。</p>
+<p>例如，在 毕昇 C  中，可以定义一个泛型结构体，其中一个泛型参数是一个<strong>常量泛型参数</strong>，该参数可以用于表示结构体内定义的数组的大小。</p>
+<p>这样，通过在实例化时传入不同的常量值，便可以生成多个不同大小的数组对象，如：</p>
+<pre><code class="language-c">struct Array&lt;T, int N&gt; {
+    T data[N];
+};
+
+int main() {
+    struct Array&lt;int, 5&gt; arr1;
+    struct Array&lt;int, 10&gt; arr2;
+    return 0;
+}
+</code></pre>
+<p>如上，这里的 ‘10’ 和 ‘5’ 就是常量泛型参数 ‘int N’ 的实参，它们决定了数组的大小。</p>
+<p>目前，泛型常量的规则如下：</p>
+<ul>
+<li>常量泛型的形参只支持“可编译时计算的类型”，目前只支持整数类型</li>
+<li>常量泛型的实参只能是“编译时可计算”的常量表达式</li>
+<li>语法上，如果只是 int 字面量、constexpr 常量，那么可以不需要小括号，其它常量表达式一律需要用小括号</li>
+</ul>
+<p>目前，毕昇 C 对于常量泛型的实现仅限于整形的“整数常量”：</p>
+<ul>
+<li>对于声明时，形参列表仅接受 int 及其修饰符 long、short、unsigned、signed，以及上述关键字的各种组合。同时也支持将上述关键字 typedef 成其他别名再做为形参。</li>
+<li>对于实例化时，目前泛型实参列表支持 IntegerLiteral （即常量1，2之类），同时也支持 constexpr修饰的变量与常量表达式。</li>
+</ul>
+<p>下面是一些用法示例：</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+
+typedef long long int LLInt;
+
+// 使用了泛型常量的泛型函数
+int print_dataSize&lt;T, int B&gt;()
+{
+    T data[B];
+    printf("the size of data is %d\n", B);
+    return B;
+}
+
+// 使用了 typedef别名 作为泛型常量的泛型函数
+void print_const&lt;LLInt B&gt;() {
+    printf("the const is %d\n", B);
+}
+
+// 使用了泛型常量的泛型struct
+struct Array_1&lt;T, int N&gt;
+{
+    T data[N];
+};
+
+// 使用了 typedef别名 作为泛型常量的泛型struct
+struct Array_2&lt;LLInt B, int C, T&gt;
+{
+    LLInt data1[B];
+    int data2[C];
+    T a;
+};
+
+int main() {
+    int a1 = print_dataSize&lt;int, 5&gt;();
+    print_const&lt;20&gt;();
+
+    struct Array_1&lt;int, 5&gt; arr1;
+    struct Array_2&lt;5, 6, int&gt; arr2 = {.a = 1};
+
+    return 0;
+}
+</code></pre>
+<h3 id="泛型类型别名"><a class="header" href="#泛型类型别名">泛型类型别名</a></h3>
+<p>标准 C 已有类型别名的功能，语法为：</p>
+<pre><code class="language-c">typedef OldType NewType;
+</code></pre>
+<p>为了使类型别名能够与泛型一起配合使用，BSC 引入与标准 C 语法不同的类型别名语法：</p>
+<pre><code class="language-c">typedef NewType = OldType ;
+</code></pre>
+<p>加上泛型参数就形成了泛型类型别名，例如：</p>
+<pre><code class="language-c">typedef MyPointerType&lt;T&gt; = T*;
+</code></pre>
+<p>泛型类型别名的使用可以简化类型的书写，还可以为类型赋予更具描述性的名称，使代码更易于阅读和理解，举例来说：</p>
+<p>我们可以使用 HashMap 来记录某年级学生的各科成绩，Key 表示学生的学号，Value 表示学生的各科成绩，根据实际情况的不同，学生的学号可以用 int、string 等类型表示，成绩可以用 int、float 等类型表示，科目数量也可能发生变化，使用泛型类型别名有助于我们根据实际需求进行定制：</p>
+<pre><code class="language-C">//辅助类及成员方法
+struct HashMap&lt;K, V&gt; {
+   //省略实现
+};
+void struct HashMap&lt;K, V&gt;::insert(This* this, K key, V value) {
+   //省略实现
+}
+struct Array&lt;T, int N&gt; {
+    T a[N];
+};
+//使用泛型类型别名定义一个特殊的HashMap类型，它的key是T1类型，value是一个长度为N，元素类型为T2的数组类型：
+typedef GenericGrade&lt;T1, T2, int N&gt; = struct HashMap&lt;T1, struct Array&lt;T2, N&gt;&gt;;
+//继续使用类型别名，针对不同的年级进行定制：
+typedef Grade1 = GenericGrade&lt;int, int, 3&gt;;  //一年级学生学号为int，成绩为int，科目数量为3
+typedef Grade3 = GenericGrade&lt;int, float, 4&gt;;//三年级学生学号为int，成绩为float，科目数量为4
+typedef Grade6 = GenericGrade&lt;int, float, 5&gt;;//六年级学生学号为int，成绩为float，科目数量为5
+
+int main() {
+    Grade1 grade1;
+    grade1.insert(10, {80, 90, 95});
+    grade1.insert(11, {80, 95, 90});
+    Grade3 grade3;
+    grade3.insert(12, {90.0, 95.5, 90.0, 85.0});
+    grade3.insert(13, {80.0, 90.0, 95.5, 90.0});
+    Grade6 grade6;
+    grade6.insert(15, {80.0, 90.0, 95.5, 90.0, 85.0});
+    grade6.insert(16, {80.0, 90.0, 95.5, 90.0, 85.0});
+    return 0;
+}
+</code></pre>
+<p>对于类型别名，有以下规则：</p>
+<ol>
+<li>不允许为泛型类型别名扩展成员函数。</li>
+</ol>
+<pre><code class="language-C">struct S&lt;T&gt; {};
+typedef MyS&lt;T&gt; = struct S&lt;T&gt;;
+
+void MyS&lt;T&gt;::foo(This* this) {} //error: extended type of a BSC member function cannot be a generic typealias
+</code></pre>
+<ol start="2">
+<li>不允许在结构体类型内部定义类型别名。</li>
+</ol>
+<pre><code class="language-C">struct S&lt;T&gt; {
+    typedef type = T;    //error: type name does not allow storage class to be specified
+    typedef Int64 = int; //error: expected ';' at end of declaration list
+};
+</code></pre>
+<ol start="3">
+<li>不允许在函数体内定义泛型类型别名，但可以定义普通类型别名。</li>
+</ol>
+<pre><code class="language-C">void foo&lt;T&gt;() {
+    typedef type = T;
+    typedef Int64 = int;
+
+    typedef MyType1&lt;T&gt; = T;   //error: no template named 'MyType1'
+    typedef MyType2&lt;T1&gt; = T1; //error: BSC generic typealias cannot be declared within a function
+}
+</code></pre>
+<p>下面是一些用法示例：</p>
+<pre><code class="language-C">struct S&lt;T&gt; {};
+struct V&lt;T1, T2&gt; {
+    T1 a;
+    T2 b;
+};
+
+// 普通类型别名
+typedef Int64 = long int;   //等价于 typedef long int Int64;
+typedef MyS = struct S&lt;int&gt;;//等价于 typedef struct S&lt;int&gt; MyS;
+
+// 泛型类型别名
+typedef MyPointerType&lt;T&gt; = T*;
+typedef Array_3&lt;T&gt; = T[3];
+typedef Array_N&lt;T, int N&gt; = T[N]; //支持带常量泛型参数
+
+typedef MyS_T_T&lt;T&gt; = struct V&lt;T, T&gt;;
+typedef MyS_T_int&lt;T&gt; = struct V&lt;T, int&gt;;
+
+int main() {
+    Int64 a = 5;  //等价于int a = 5;
+    MyS s;        //等价于struct S&lt;int&gt; s;
+    int b = 2;
+    MyPointerType&lt;int&gt; c = &amp;b;  //等价于int* c = &amp;b;
+    Array_3&lt;int&gt; d = {1,2,3};   //等价于int d[3] = {1,2,3};
+    Array_N&lt;int, 3&gt; e= {1,2,3}; //等价于int e[3] = {1,2,3};
+    MyS_T_T&lt;int&gt; s2;
+    MyS_T_int&lt;int&gt; s3;
+    return 0;
+}
+</code></pre>
+<h4 id="conditional-泛型类型别名"><a class="header" href="#conditional-泛型类型别名">conditional 泛型类型别名</a></h4>
+<p>在 bsc_conditional.hbs 这一 BSC 标准库中提供了 conditional 泛型类型别名，可以实现类型层面的“分支逻辑”：</p>
+<pre><code class="language-c">// bsc_conditional.hbs
+typedef conditional&lt;int C, T, F&gt; = __conditional(int C, T, F);
+</code></pre>
+<p>当 C 非 0 时，conditional 类型别名指代类型 T ，否则指代类型 F，条件表达式必须是可以编译期求值的常量表达式：</p>
+<pre><code class="language-c">#include&lt;bsc_conditional.hbs&gt;  //使用conditional需要导入头文件
+int main() {
+    conditional&lt;1, int, double&gt; a = 1;   //等价于int a = 1;
+    conditional&lt;0, int, double&gt; b = 1.0; //等价于double b = 1.0;
+    return 0;
+}
+</code></pre>
+<p>使用conditional，不仅可以简化书写，可以在编译时根据条件选择不同的类型，避免了运行时的条件分支，提高代码的效率，以下是一个关于选择函数返回类型的使用案例：</p>
+<p>定义一个泛型函数，它的返回值类型取决于泛型参数 T ，如果 T 是指针类型，则返回值类型仍然是 T ，否则，返回 T 的指针类型。</p>
+<p>C++ 中需要借助泛型特化和 concept 来实现：</p>
+<pre><code class="language-cpp">// T 是指针类型时，std::is_pointer_v&lt;T&gt; == true，匹配该版本:
+template&lt;typename T&gt; requires std::is_pointer_v&lt;T&gt;
+T foo() { ... }
+
+// T 不是指针类型时，匹配该版本:
+template&lt;typename T&gt;
+T* foo() { ... }
+</code></pre>
+<p>在 BSC 中，我们可以借助 conditional 很方便地实现这样的功能，相比C++更加方便易用：</p>
+<pre><code class="language-c">typedef PointerType&lt;T&gt; = conditional&lt;is_pointer&lt;T&gt;(), T, T*&gt;;
+
+PointerType&lt;T&gt; foo&lt;T&gt;() { ... }
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-2-development-efficiency/1-member-functions.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-2-development-efficiency/3-constexpr.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-2-development-efficiency/1-member-functions.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-2-development-efficiency/3-constexpr.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

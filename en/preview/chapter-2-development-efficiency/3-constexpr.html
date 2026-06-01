@@ -1,0 +1,656 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Compile-Time Computation - The BiSheng C Language User Manual</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-5788e8c0.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-a156a4de.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The BiSheng C Language User Manual</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="compile-time-computation"><a class="header" href="#compile-time-computation">Compile-Time Computation</a></h1>
+<h2 id="constexpr"><a class="header" href="#constexpr">constexpr</a></h2>
+<h3 id="overview"><a class="header" href="#overview">Overview</a></h3>
+<p>In C, although the <code>const</code> keyword can indicate that a variable is read-only, it does <strong>not guarantee that the value is determined at compile time</strong>. To clearly express “this value must be computable at compile time”, we introduced the <code>constexpr</code> keyword. It can be used both to define <strong>compile-time constants</strong> and to define <strong>functions that can be executed at the compilation stage</strong>, thereby supporting stronger type checking and generic capabilities.</p>
+<p>Types that count as “compile-time computable”:
+bool, char (signed char, unsigned char), integer types (including int as well as the int type modified by short/signed/unsigned/long/long long, etc., but excluding enum types), and aliases of these types.</p>
+<p>The “compile-time computation” contexts — that is, the scenarios where a constexpr-qualified variable or function can be used as a constant — are defined as:</p>
+<ul>
+<li>It can be used in static_assert, where the first condition argument belongs to a “compile-time computation” context</li>
+<li>It can be used to define a fixed-length array, where the array length belongs to a “compile-time computation” context</li>
+<li>It can be used to initialize other constexpr constants</li>
+<li>It can be used as an argument to a constant generic</li>
+</ul>
+<p>The following example illustrates what a “compile-time computation” context is.</p>
+<pre><code class="language-c">void bar&lt;int N&gt;(){}
+
+constexpr int foo() {
+    return 5;
+}
+
+int main() {
+    constexpr int a = 5;
+
+    // can be used as an argument to a constant generic
+    bar&lt;a&gt;();
+    bar&lt;foo()&gt;();
+
+    // can be used to define a fixed-length array
+    int arr1[a] = {0};
+    int arr2[foo()] = {0};
+
+    // can be used to initialize other constexpr constants
+    constexpr int b = a;
+    constexpr int c = foo();
+
+    // can be used in static_assert
+    _Static_assert(a == 5, "fail");
+    _Static_assert(foo() == 5, "fail");
+
+    return 0;
+}
+</code></pre>
+<h3 id="usage-rules"><a class="header" href="#usage-rules">Usage Rules</a></h3>
+<h4 id="constexpr-qualifying-variables"><a class="header" href="#constexpr-qualifying-variables">constexpr Qualifying Variables</a></h4>
+<ol>
+<li>constexpr can qualify a constant definition, and it must be initialized at the point of definition, otherwise an error is reported</li>
+</ol>
+<pre><code class="language-c">constexpr int a = 5;
+constexpr int b; //error: constexpr variable 'b' must be initialized by a constant expression
+</code></pre>
+<ol start="2">
+<li>A constexpr-qualified constant cannot be modified after its definition</li>
+</ol>
+<pre><code class="language-c">constexpr int a = 5;
+a = 10; //error: redefinition of 'a' with a different type: 'int' vs 'const int'
+</code></pre>
+<ol start="3">
+<li>The type of a constexpr-qualified constant can only be one of the “compile-time computable” types described above</li>
+</ol>
+<pre><code class="language-c">constexpr float a = 5.0;//error: BSC constexpr variable does not support type 'const float'
+</code></pre>
+<ol start="4">
+<li>The initialization expression of a constexpr-qualified constant must be evaluable at compile time, otherwise an error is reported. A constant expression that is evaluable at compile time can be:</li>
+</ol>
+<ul>
+<li>A literal</li>
+<li>A constexpr-qualified constant</li>
+<li>A sizeof or _Alignof expression</li>
+<li>A call to a constexpr function with compile-time-evaluable constant expressions as arguments</li>
+<li>A constant expression composed of the following operators is also a constant expression: +,-,*,/,%,&gt;,&lt;,==,!=,&lt;=,&gt;=,&amp;,|,^,~,!,&amp;&amp;,||,&lt;&lt;,&gt;&gt;,?:</li>
+</ul>
+<p>For example:</p>
+<pre><code class="language-c">// Scenario 1
+int a = 10;
+constexpr int b = a;//error
+// Scenario 2
+constexpr int a = 10;
+constexpr int b = a;
+// Scenario 3
+constexpr int a = sizeof(int);
+constexpr int b = sizeof(int);
+// Scenario 4
+constexpr int foo(int a) {
+    return 5;
+};
+constexpr int a = 10;
+constexpr int b = foo(a);
+// Scenario 5
+constexpr int b = 1 == 1.0;
+</code></pre>
+<ol start="5">
+<li>A function pointer can be qualified with constexpr, and a function pointer can point to a constexpr function</li>
+<li>constexpr can qualify a pointer variable, but it can only point to a global variable or a static variable</li>
+</ol>
+<h4 id="constexpr-qualifying-functions"><a class="header" href="#constexpr-qualifying-functions">constexpr Qualifying Functions</a></h4>
+<ol>
+<li>constexpr can qualify a function declaration or definition, but you must ensure that both the declaration and the definition either both have the constexpr qualifier or both do not, otherwise it causes a compilation error</li>
+</ol>
+<pre><code class="language-c">constexpr int foo();
+constexpr int foo() {
+    return 5;
+}
+</code></pre>
+<ol start="2">
+<li>For a constexpr-qualified function, the parameter and return types can only be the “compile-time computable” types described above</li>
+</ol>
+<pre><code class="language-c">constexpr void foo(); //error: BSC constexpr function does not support type 'void'
+</code></pre>
+<ol start="3">
+<li>constexpr can qualify a generic function</li>
+</ol>
+<pre><code class="language-c">constexpr int foo&lt;T&gt;();
+</code></pre>
+<ol start="4">
+<li>All statements inside the body of a constexpr function are evaluable at compile time</li>
+</ol>
+<ul>
+<li>Defining static variables is not allowed inside the body of a constexpr function</li>
+<li>Calling non-constexpr functions is not allowed inside the body of a constexpr function</li>
+<li>Accessing external non-constexpr variables is not allowed inside the body of a constexpr function</li>
+<li>Inline assembly is not allowed inside the body of a constexpr function</li>
+<li>Local variables that are not qualified with constexpr are allowed inside the body of a constexpr function, but these variables can only be of the “compile-time computable” types</li>
+</ul>
+<ol start="5">
+<li>In a non-“compile-time computation” context, a constexpr-qualified function can be used as an ordinary function: the arguments do not need to be constants, and the return value does not need to be a constant. In a “compile-time computation” context, both the arguments and the return value are required to be constant expressions, otherwise an error is reported</li>
+</ol>
+<pre><code class="language-c">constexpr int foo(int a) {
+    return 5;
+};
+
+int a = 10;
+constexpr int b = foo(a);// error: constexpr variable 'b' must be initialized by a constant expression
+int c = foo(a);//ok, the foo function is in a non-"compile-time computation" context
+int main(){
+    int a = 10;
+    constexpr int b = foo(a);// error: constexpr variable 'b' must be initialized by a constant expression
+    int c = foo(a);//ok, the foo function is in a non-"compile-time computation" context
+    return 0;
+}
+</code></pre>
+<ol start="6">
+<li>constexpr can qualify member functions, including ordinary member functions and static member functions</li>
+</ol>
+<pre><code class="language-c">// Ordinary member function; the parameter This* this is not a compile-time computable type
+constexpr int int::foo1(This* this) { //error
+    return 5;
+}
+
+// Static member function
+constexpr int int::foo2() {
+    return 5;
+}
+
+int main() {
+    constexpr int c = int::foo2();//ok, evaluable at compile time
+    return 0;
+}
+</code></pre>
+<ol start="6">
+<li>constexpr is not allowed to qualify _Async functions</li>
+<li>constexpr does not support variadic arguments</li>
+<li>Function formal parameters cannot be qualified with constexpr</li>
+</ol>
+<pre><code class="language-c">int foo1(constexpr int a) { //error
+    return 5;
+}
+
+constexpr int foo2(constexpr int a) { //error
+    return 5;
+}
+</code></pre>
+<h2 id="type-trait"><a class="header" href="#type-trait">type trait</a></h2>
+<p>A type trait can be regarded as a constexpr function that computes its return value at compile time.
+The BSC standard library provides a series of type trait generic functions; to use them you need to import the header file bsc_type_traits.hbs</p>
+<p>The currently implemented type trait functions are:</p>
+<pre><code class="language-c">// Determine the category of a type
+constexpr bool is_integral&lt;T&gt;();
+constexpr bool is_floating_point&lt;T&gt;();
+constexpr bool is_pointer&lt;T&gt;();
+constexpr bool is_function&lt;T&gt;();
+constexpr bool is_array&lt;T&gt;();
+constexpr bool is_struct&lt;T&gt;();
+constexpr bool is_union&lt;T&gt;();
+constexpr bool is_enum&lt;T&gt;();
+constexpr bool is_void&lt;T&gt;();
+// Determine the properties of a type
+constexpr bool is_signed&lt;T&gt;();
+constexpr bool is_unsigned&lt;T&gt;();
+constexpr bool is_const&lt;T&gt;();
+constexpr bool is_volatile&lt;T&gt;();
+constexpr bool is_move_semantic&lt;T&gt;();
+constexpr bool is_owned_pointer&lt;T&gt;();
+constexpr bool is_owned_struct&lt;T&gt;();
+constexpr bool is_borrow&lt;T&gt;();
+constexpr bool is_immut_borrow&lt;T&gt;();
+constexpr bool is_mut_borrow&lt;T&gt;();
+constexpr bool is_trivial_data&lt;T&gt;();
+constexpr size_t rank&lt;T&gt;();
+constexpr size_t extent&lt;T, size_t N&gt;();
+// Determine the relationship between types
+constexpr bool is_same&lt;T1, T2&gt;();
+constexpr bool is_convertible&lt;From, To&gt;();
+</code></pre>
+<p>Explanations and examples for some of them:</p>
+<pre><code class="language-c">constexpr bool is_move_semantic&lt;T&gt;(); // determine whether type T is a move-semantic type
+// We consider types with move semantics to include:
+//   1. owned pointer types
+//   2. _Owned struct types
+//   3. struct types containing fields with move semantics
+is_move_semantic&lt;int *_Owned&gt;() == true;
+_Owned struct S {};
+is_move_semantic&lt;S&gt;() == true;
+struct S1 { int a; };
+struct S2 { int *_Owned p; };
+is_move_semantic&lt;struct S1&gt;() == false;
+is_move_semantic&lt;struct S2&gt;() == true;
+// The move semantics of an incomplete struct are meaningless; this reports an error
+struct I;
+is_move_semantic&lt;struct I&gt;(); // error: incomplete type 'struct I' used in type trait expression
+
+constexpr bool is_trivial_data&lt;T&gt;(); // determine whether type T is a trivial data type
+// We consider a trivial data type to be a type that does not contain the following:
+//   1. raw pointers, _Owned pointers, _Borrow pointers
+//   2. _Owned structs
+is_trivial_data&lt;int *_Owned&gt;() == false;
+_Owned struct S {};
+is_trivial_data&lt;S&gt;() == false;
+struct S1 { int a; };
+struct S2 { int *_Owned p; };
+struct S3 { int *_Borrow p; };
+struct S4 { int * p; };
+is_trivial_data&lt;struct S1&gt;() == true;
+is_trivial_data&lt;struct S2&gt;() == false;
+is_trivial_data&lt;struct S3&gt;() == false;
+is_trivial_data&lt;struct S4&gt;() == false;
+// Whether an incomplete struct is trivial data is meaningless; this reports an error
+struct I;
+is_trivial_data&lt;struct I&gt;(); // error: incomplete type 'struct I' used in type trait expression
+
+constexpr size_t rank&lt;T&gt;(); // can be used to compute the number of dimensions of an array, e.g.
+rank&lt;int&gt;() == 0;
+rank&lt;int[5]&gt;() == 1;
+rank&lt;int[5][5]&gt;() == 2;
+
+constexpr size_t extent&lt;T, size_t N&gt;();// can be used to compute the number of elements in the Nth dimension of an array, e.g.
+extent&lt;int[3],0&gt;() == 3;
+extent&lt;int[3],1&gt;() == 0;
+extent&lt;int[3][4],0&gt;() == 3;
+extent&lt;int[3][4],1&gt;() == 4;
+extent&lt;int[3][4],2&gt;() == 0;
+
+constexpr bool is_same&lt;T1, T2&gt;();// determine whether types T1 and T2 are the same, ignoring type aliases
+
+constexpr bool is_convertible&lt;From, To&gt;();// determine whether type From can be implicitly converted to type To, e.g.
+is_convertible&lt;int, float&gt;() == true;
+is_convertible&lt;int, const int&gt;() == true;
+is_convertible&lt;int, volatile int&gt;() == true;
+is_convertible&lt;int, signed&gt;() == true;
+is_convertible&lt;int, void&gt;() == false;
+is_convertible&lt;int, int*&gt;() == false;
+is_convertible&lt;int, void*&gt;() == false;
+is_convertible&lt;struct S, struct G&gt;() == false;
+</code></pre>
+<p>Using them is just like using ordinary generic functions</p>
+<pre><code class="language-c">#include&lt;stdio.h&gt;
+#include&lt;bsc_type_traits.hbs&gt;
+
+int main() {
+    printf("%d\n",is_integral&lt;int&gt;()); //expected result: 1
+    printf("%d\n",is_integral&lt;float&gt;()); //expected result: 0
+    return 0;
+}
+</code></pre>
+<p>type trait functions can be used in generic functions and in the member functions of generic structs</p>
+<pre><code class="language-c">#include&lt;stdio.h&gt;
+#include&lt;bsc_type_traits.hbs&gt;
+
+struct S&lt;T&gt; {};
+void struct S&lt;T&gt;::foo(struct S&lt;T&gt;* this) {
+    if (is_integral&lt;T&gt;()) {
+        printf("integral\n");
+    } else {
+        printf("not integral\n");
+    }
+}
+
+void bar&lt;T&gt;() {
+    if (is_integral&lt;T&gt;()) {
+        printf("integral\n");
+    } else {
+        printf("not integral\n");
+    }
+}
+
+int main() {
+    struct S&lt;int&gt; s1;
+    struct S&lt;float&gt; s2;
+    s1.foo(); //print "integral"
+    s2.foo(); //print "not integral"
+    bar&lt;int&gt;();  //print "integral"
+    bar&lt;float&gt;(); //print "not integral"
+    return 0;
+}
+</code></pre>
+<p>type trait functions can also be used in static assertions</p>
+<pre><code class="language-c">#include&lt;bsc_type_traits.hbs&gt;
+
+int main() {
+    _Static_assert(is_integral&lt;int&gt;() == true, "fail");
+    _Static_assert(is_integral&lt;float&gt;() == false, "fail");
+    return 0;
+}
+</code></pre>
+<h2 id="constexpr-if"><a class="header" href="#constexpr-if">constexpr if</a></h2>
+<h3 id="overview-1"><a class="header" href="#overview-1">Overview</a></h3>
+<p>A statement that begins with if constexpr is called a constexpr if statement. It allows the user to use a constexpr expression as the condition of an if statement, guaranteeing that the condition is a compile-time-computed constant. This enables the compiler to make the branch decision at compile time and perform dead-code elimination on the false branch, reducing runtime overhead.</p>
+<p>The difference between a constexpr if statement and an ordinary if statement is that the cond conditional expression is qualified with the constexpr keyword, that is:</p>
+<pre><code class="language-c">if constexpr (&lt;cond&gt;) {
+    &lt;then-statement&gt;
+} else {
+    &lt;else-statement&gt;
+}
+</code></pre>
+<p>Let’s get to know constexpr if using factorial computation as an example. First, here is a version that computes the factorial without using constexpr if:</p>
+<pre><code class="language-c">int factorial(int n) {
+    return (n == 1) ? 1 : n * factorial(n - 1);
+}
+
+int main() {
+    printf("%d", factorial(5));
+    return 0;
+}
+</code></pre>
+<p>Since BSC does not support generic specialization, the only way to implement the factorial is with an ordinary function, evaluated at runtime. Using constexpr if, we can implement functionality similar to generic specialization and compute the factorial result at compile time.</p>
+<pre><code class="language-c">constexpr int factorial&lt;int N&gt;() {
+    if constexpr (N == 1) {
+        return 1;
+    } else {
+        return N * factorial&lt;N - 1&gt;();
+    }
+}
+
+int main() {
+    _Static_assert(factorial&lt;5&gt;() == 120, "fail");
+    return 0;
+}
+</code></pre>
+<h3 id="usage"><a class="header" href="#usage">Usage</a></h3>
+<p>The cond expression in a constexpr if statement must satisfy the following constraints when used:</p>
+<ol>
+<li>The cond expression must be a constant expression that is evaluable at compile time;</li>
+<li>The type of the cond expression must be a type that is implicitly convertible to bool, including bool, integer types, and char.
+For example:</li>
+</ol>
+<pre><code class="language-c">int foo1() {
+    return 5;
+}
+
+constexpr int foo2(int a) {
+    return a;
+}
+
+int main() {
+    int a = 1;
+    if constexpr(5.0) { //error: BSC constexpr if condition expression does not support type 'double'
+        a = 6;
+    }
+    if constexpr(a) {  //error: constexpr if condition is not a constant expression
+        a = 6;
+    }
+    if constexpr(foo1()) {  //error: constexpr if condition is not a constant expression
+        a = 6;
+    }
+    if constexpr(foo2(a)) {  //error: constexpr if condition is not a constant expression
+        a = 6;
+    }
+    return 0;
+}
+</code></pre>
+<p>In a constexpr if statement, because the conditional expression is a constant expression computed at compile time, the branch that evaluates to false is defined as a “discarded statement” and is eliminated as dead code at compile time.
+For example:</p>
+<pre><code class="language-c">if constexpr (&lt;cond&gt;) {  // if the value of &lt;cond&gt; is true
+    &lt;true-statement&gt;
+} else {
+    &lt;false-statement&gt;  // then the statements inside the else branch become discarded statements and are eliminated as dead code at compile time
+}
+</code></pre>
+<p>For discarded statements, the following rules apply:</p>
+<ol>
+<li>In a non-generic context, the discarded statement still needs to undergo complete syntactic and semantic checking.</li>
+<li>In a generic context, the discarded statement is not instantiated, and therefore does not undergo the semantic checking that follows instantiation.
+For example:</li>
+</ol>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;bsc_type_traits.hbs&gt;
+
+void foo&lt;T&gt;(T a) {
+    if constexpr (is_pointer&lt;T&gt;()) {
+    // If T is not a pointer, during instantiation the block below is treated as dead code, is not instantiated, and therefore does not undergo the semantic checking that follows instantiation
+        printf("T is pointer\n");
+        void* p = (void*) a;
+    } else {
+        printf("T is a generic case\n");
+    }
+}
+
+int main() {
+    int b = 5;
+    foo&lt;int&gt;(5);
+    foo&lt;int*&gt;(&amp;b);
+    return 0;
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-2-development-efficiency/2-generic.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-2-development-efficiency/4-trait.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-2-development-efficiency/2-generic.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-2-development-efficiency/4-trait.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

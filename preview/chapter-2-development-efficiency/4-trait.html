@@ -1,0 +1,857 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Trait - 毕昇 C 语言用户手册</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-62cd27a9.css">
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "ayu";
+            window.path_to_searchindex_js = "../searchindex-26674c87.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-2f02e48b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">毕昇 C 语言用户手册</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/BiShengCLanguage/BiShgengCLanguage" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="trait"><a class="header" href="#trait">Trait</a></h1>
+<h2 id="概述"><a class="header" href="#概述">概述</a></h2>
+<p>Trait 是一种定义行为的方式，它类似于其它语言中的接口或抽象类，目的是定义一个实现某些目的所必须的行为集合。Trait 定义了一组方法签名，这些方法可以被多个结构体、枚举体或内置类型共享。主要作用是为了实现代码的复用和抽象，从而提高代码的可维护性和可扩展性。</p>
+<h2 id="语法规则"><a class="header" href="#语法规则">语法规则</a></h2>
+<p>毕昇 C 引入关键字 <code>_Trait</code> 与 <code>_Impl</code>，通过关键字 <code>_Trait</code> 来定义 Trait，通过 <code>_Impl</code> 可以为一个类型实现一个或多个 Trait。下面通过一些代码示例来了解 Trait 的使用方法。</p>
+<h3 id="trait-的定义"><a class="header" href="#trait-的定义">Trait 的定义</a></h3>
+<p><strong>语法：</strong></p>
+<pre><code class="language-c">_Trait TraitName {
+  // 定义 _Trait 中的方法签名
+};
+</code></pre>
+<p>其中，<code>TraitName</code> 是 Trait 的名称，后面跟着一对花括号，里面可以定义一些方法的签名。Trait 中定义的方法不支持默认实现，必须由实现该 Trait 的类型提供具体实现。下面我们来看一个简单的例子：</p>
+<pre><code class="language-c">_Trait T {
+    void doSomeThing1(This* this);
+    void doSomeThing2(This* this);
+};
+</code></pre>
+<p><strong>规则：</strong></p>
+<ol>
+<li>Trait 定义只能出现在 top-level</li>
+</ol>
+<pre><code class="language-c">void test() {
+    _Trait T {}; //不能在函数体中定义 _Trait. error: _Trait is only allowed to be defined at top-level
+}
+
+struct MyStruct {
+    _Trait T {}; //不能在结构体中定义 _Trait. error: _Trait is only allowed to be defined at top-level
+};
+</code></pre>
+<ol start="2">
+<li>Trait 内要求函数首个入参且只有首个入参类型为 <code>This</code> 指针，命名为 <code>this</code>; <code>This</code> 指代实现了 Trait 的具体类型</li>
+</ol>
+<pre><code class="language-c">_Trait T {
+    void doSomeThing1(This* this); // ok
+    void doSomeThing2(This* a); // error: the first parameter of _Trait member function must be 'This* this'
+    void doSomeThing3(int a, This* this); // error: the first parameter of _Trait member function must be 'This* this'
+};
+</code></pre>
+<ol start="3">
+<li>Trait 内只允许声明函数</li>
+</ol>
+<pre><code class="language-c">_Trait T {
+    void doSomeThing1(This* this) { // error: expected member name or ';' after declaration specifiers
+    }
+};
+</code></pre>
+<ol start="4">
+<li>Trait 内可以没有方法签名</li>
+</ol>
+<pre><code class="language-c">_Trait T {}; // ok
+</code></pre>
+<ol start="5">
+<li>不允许给 Trait 类型扩展成员函数</li>
+</ol>
+<pre><code class="language-c">void _Trait T::getArea(_Trait T* this) { // error: cannot combine with previous 'void' declaration specifier
+    ...
+}
+</code></pre>
+<h3 id="实现-trait"><a class="header" href="#实现-trait">实现 Trait</a></h3>
+<p><strong>语法：</strong></p>
+<pre><code class="language-c">_Impl &lt;_Trait&gt; for &lt;type&gt;;
+</code></pre>
+<p>我们可以通过 <code>_Impl</code> 关键字来为一个类型实现一个 Trait。直观的，我们来看一个简单的例子：</p>
+<pre><code class="language-c">_Trait T {
+    void f(This* this);
+};
+
+struct S {};
+void struct S::f(struct S* this);
+void int::f(int* this);
+
+_Impl _Trait T for int;
+_Impl _Trait T for struct S;
+</code></pre>
+<p><strong>规则：</strong></p>
+<ol>
+<li>在 <code>_Impl</code> 语句之前，一定存在 <code>&lt;_Trait&gt;</code> 和 <code>&lt;type&gt;</code> 的定义</li>
+<li>在 <code>_Impl</code> 语句之前，<code>&lt;type&gt;</code> 必须已经声明并实现 <code>&lt;_Trait&gt;</code> 中所有成员函数</li>
+</ol>
+<pre><code class="language-c">_Trait T {
+    int f1(This* this);
+    int f2(This* this);
+};
+
+struct S{};
+
+int struct S::f1(struct S* this);
+//_Impl _Trait T for struct S; // error: function 'f1' in '_Trait T' is not implemented for 'struct S
+int struct S::f2(struct S* this);
+//_Impl _Trait T for struct S; // error: function 'f1' in '_Trait T' is not implemented for 'struct S'
+int struct S::f2(struct S* this){
+    return 1;
+};
+int struct S::f1(struct S* this){
+    return 1;
+};
+
+_Impl _Trait T for struct S; // ok，struct S 已扩展声明了 _Trait 中所有成员函数
+</code></pre>
+<ol start="3">
+<li><code>&lt;type&gt;</code> 类型不允许是 Trait</li>
+</ol>
+<pre><code class="language-c">_Impl _Trait T for struct S; // ok，支持通过 _Impl 对已有 struct/union/enum 或内置类型实现 _Trait
+_Impl _Trait T for _Trait T; // error: function 'f1' in '_Trait T' is not implemented for '_Trait T'
+</code></pre>
+<ol start="4">
+<li>支持对 <code>typedef</code> 类型实现 Trait</li>
+</ol>
+<pre><code class="language-c">typedef struct S S1;
+_Impl _Trait T for S1;
+</code></pre>
+<h3 id="trait-类型的变量"><a class="header" href="#trait-类型的变量">Trait 类型的变量</a></h3>
+<p>我们可以定义 Trait 指针类型的变量，并可以通过该指针变量进行函数调用等，具体使用方法如下：</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+
+struct S {
+    float num;
+};
+
+typedef _Trait Print {
+    void print(This* this);
+}P;
+void struct S::print(struct S* this) {
+    printf("This is a struct instance, valued %f\n", this-&gt;num);
+}
+void int::print(int* this) {
+    printf("This is an int instance, valued %d\n", *this);
+}
+
+_Impl P for struct S;
+_Impl P for int;
+
+void test() {
+    struct S s = { 0.0 };
+    int a = 1;
+    float b = 1.0;
+
+    _Trait Print* p;
+    p = &amp;s; // ok，隐式转换
+    p-&gt;print(); // expected result: This is a struct instance, valued 0.000000
+    p = &amp;a;
+    p-&gt;print(); // expected result: This is an int instance, valued 1
+    p = &amp;b; // error: expected a pointer type which has implemented '_Trait Print', found 'float'
+}
+</code></pre>
+<p><strong>规则：</strong></p>
+<ol>
+<li>支持对 Trait 进行 <code>typedef</code></li>
+</ol>
+<pre><code class="language-c">typedef _Trait Print {
+    ...
+}P;
+</code></pre>
+<ol start="2">
+<li>只允许声明 Trait 指针类型的变量</li>
+</ol>
+<pre><code class="language-c">_Trait Print* p1; // ok
+_Trait Print p2; // error: only _Trait pointer type is allowed to be declared
+</code></pre>
+<ol start="3">
+<li>如果 <code>&lt;type&gt;</code> 实现了 <code>&lt;_Trait&gt;</code>，那么指向这个 <code>&lt;type&gt;</code> 的指针可以被转换为 <code>&lt;_Trait&gt;</code> 类型的变量</li>
+</ol>
+<pre><code class="language-c">_Impl _Trait Print for struct S;
+
+struct S s;
+_Trait Print* t1 = &amp;s; // 隐式转换
+_Trait Print* t2 = (_Trait Print*)&amp;s; // 显式转换
+</code></pre>
+<ol start="4">
+<li>Trait 指针类型的变量可以通过 <code>-&gt;</code> 方式调用该 Trait 中的成员方法</li>
+</ol>
+<pre><code class="language-c">struct S s;
+_Trait Print* t = &amp;s;
+t-&gt;print();
+</code></pre>
+<ol start="5">
+<li>Trait 指针类型的变量，允许用 <code>NULL</code> 赋值</li>
+</ol>
+<pre><code class="language-c">_Trait Print* p = NULL;
+</code></pre>
+<ol start="6">
+<li>允许指向 Trait 的多级指针，但这种类型不能直接调用成员函数。不允许结构体的二级指针直接隐式转换成 Trait 的二级指针</li>
+</ol>
+<pre><code class="language-c">_Trait Print* p;
+p-&gt;print();
+_Trait Print** q = &amp;p; // ok
+q-&gt;print(); // error: use of address-of-label extension outside of a function body
+(*q)-&gt;print(); // ok
+struct S s;
+q = &amp;&amp;s; // error: tentative definition has type 'struct S' that is never completed
+</code></pre>
+<ol start="7">
+<li>Trait 指针类型的变量，不可以解引用</li>
+</ol>
+<pre><code class="language-c">_Trait Print *p;
+int main(){
+    *p; // error: use of undeclared identifier 'p'
+}
+</code></pre>
+<ol start="8">
+<li>Trait 指针类型变量可以用 <code>const</code> / <code>volatile</code> 修饰</li>
+</ol>
+<pre><code class="language-c">const _Trait Print* p1;
+volatile _Trait Print* p2;
+</code></pre>
+<ol start="9">
+<li>支持 Trait 指针类型作为函数参数及返回值类型</li>
+</ol>
+<pre><code class="language-c">_Trait Print* get(_Trait Print* t) {
+    return t;
+}
+</code></pre>
+<ol start="10">
+<li>支持 Trait 指针变量和 <code>NULL</code> 做比较（这里的比较仅包含 <code>==</code> 和<code>!=</code>，下同）</li>
+</ol>
+<pre><code class="language-c">_Trait Print* p = NULL;
+if (p == NULL) {} // ok
+if (p != NULL) {} // ok
+</code></pre>
+<ol start="11">
+<li>支持 Trait 指针变量和非 Trait 指针变量比较</li>
+</ol>
+<pre><code class="language-c">struct S {
+    float num;
+};
+typedef _Trait Print {
+    void print(This* this);
+}P;
+void struct S::print(struct S* this) {
+    printf("This is a struct instance, valued %f\n", this-&gt;num);
+}
+// struct S 类型实现 _Trait F&lt;int&gt;，但 int 类型没有
+_Impl _Trait Print for struct S;
+int main(){
+    int a = 1;
+    int *p1 = &amp;a;
+    struct S s;
+    struct S *p2 = &amp;s;
+    _Trait Print* p;
+    if (p == p1) {}; // warning: expected a pointer type which has implemented '_Trait Print', found 'int *'
+    if (p == p2) {}; // ok
+    if (p == a) {};  // error: expected a pointer type which has implemented '_Trait Print', found 'int'
+}
+
+</code></pre>
+<ol start="12">
+<li>支持 Trait 指针变量和 Trait 指针变量比较</li>
+</ol>
+<pre><code class="language-c">_Trait Print* t1 = NULL;
+_Trait Print* t2 = NULL;
+_Trait G *g = NULL;
+if (t1 == g) {} // warning: 如果 _Trait 类型不同会报 warning
+if (t1 == t2) {} // ok
+</code></pre>
+<h3 id="类型转换"><a class="header" href="#类型转换">类型转换</a></h3>
+<p>Trait 类型转换只能在实现了对应 Trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。</p>
+<p><strong>规则：</strong></p>
+<ol>
+<li>
+<p>Trait 指针类型的变量，不允许强制转换为非指针类型</p>
+</li>
+<li>
+<p>支持 Trait 指针类型强制转为非 Trait 指针类型，但不支持隐式转换</p>
+</li>
+</ol>
+<pre><code class="language-c">int a = 0;
+_Trait T *p = &amp;a; // 假设 int 类型实现了 _Trait T
+int *q1 = p; // error: initializing 'int *' with an expression of incompatible type '_Trait T *'
+int *q2 = (int*)p; // ok
+struct S *q3 = (struct S*)p;
+</code></pre>
+<ol start="3">
+<li>Trait 类型支持强制转换为 <code>void *</code>类型，但<code>void *</code> 指针无法转换为 Trait 指针类型</li>
+</ol>
+<pre><code class="language-c">int a = 1;
+_Trait T *p = &amp;a; // 假设 int 类型实现了 _Trait T
+void * q = (void *)p; // ok: _Trait 类型支持强制转换为 `void *`类型
+_Trait T *p1 = (_Trait T *)q; // error: expected a pointer type which has implemented '_Trait T', found 'void'
+_Trait T *p2 = q; // error: expected a pointer type which has implemented '_Trait T', found 'void'
+</code></pre>
+<h2 id="泛型-trait-语法规则"><a class="header" href="#泛型-trait-语法规则">泛型 Trait 语法规则</a></h2>
+<p>泛型 Trait 是指在 Trait 中使用泛型类型参数，从而使 Trait 的方法可以适用于不同类型，避免代码的重复编写。下面通过一些代码示例来了解泛型 Trait 的使用方法。</p>
+<h3 id="泛型-trait-的定义"><a class="header" href="#泛型-trait-的定义">泛型 Trait 的定义</a></h3>
+<p><strong>语法：</strong></p>
+<pre><code class="language-c">_Trait TraitName&lt;T1,T2,...,Tn&gt; {
+  // 定义泛型 _Trait 中的方法签名，可以使用泛型类型 T1,T2,...,Tn
+};
+</code></pre>
+<p>与 Trait 定义类似，<code>TraitName</code> 是泛型 Trait 的名称，后面跟着一对尖括号，里面可以包含一个或多个泛型参数，在花括号里面可以定义一些方法的签名。同样，泛型 Trait 中定义的方法不支持默认实现，必须由实现该泛型 Trait 的类型提供具体实现。下面我们来看一个简单的例子：</p>
+<pre><code class="language-c">_Trait F&lt;T1, T2&gt; {
+    T1 doSomeThing1(This* this);
+    T1 doSomeThing2(This* this, T2 param);
+};
+</code></pre>
+<p><strong>规则：</strong></p>
+<ol>
+<li>泛型 Trait 定义只能出现在 top-level</li>
+</ol>
+<pre><code class="language-c">void test&lt;T&gt;() {
+    _Trait F&lt;T&gt; {}; // error: _Trait is only allowed to be defined at top-level
+}
+
+struct MyStruct&lt;T&gt; {
+    _Trait F&lt;T&gt; {}; // error: _Trait is only allowed to be defined at top-level
+};
+</code></pre>
+<ol start="2">
+<li>泛型 Trait 内要求函数首个入参且只有首个入参类型为 <code>This</code> 指针，命名为 <code>this</code>; <code>This</code> 指代实现了 Trait 的具体类型</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;T&gt; {
+    T doSomeThing1(This* this); // ok
+    T doSomeThing2(This* a); // error: the first parameter of _Trait member function must be 'This* this'
+    void doSomeThing3(T a, This* this); // error: the first parameter of _Trait member function must be 'This* this'
+};
+</code></pre>
+<ol start="3">
+<li>泛型 Trait 内只允许声明函数</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;T&gt; {
+    void doSomeThing1(This* this) { // error: expected member name or ';' after declaration specifiers
+        ...
+    }
+};
+</code></pre>
+<ol start="4">
+<li>泛型 Trait 内可以没有方法签名</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;T&gt; {}; // ok
+</code></pre>
+<ol start="5">
+<li>不允许给泛型 Trait 类型扩展成员函数</li>
+</ol>
+<pre><code class="language-c">void _Trait F&lt;T&gt;::getArea(_Trait F&lt;T&gt;* this) { // error: cannot combine with previous 'void' declaration specifier
+    ...
+}
+
+void _Trait F&lt;int&gt;::getArea(_Trait F&lt;int&gt;* this) { // error: cannot combine with previous 'void' declaration specifier
+    ...
+}
+</code></pre>
+<h3 id="实现泛型-trait"><a class="header" href="#实现泛型-trait">实现泛型 Trait</a></h3>
+<p><strong>语法：</strong></p>
+<pre><code class="language-c">_Impl &lt;_Trait&lt;SpecializationType&gt;&gt; for &lt;type&gt;;
+</code></pre>
+<p>我们可以通过 <code>_Impl</code> 关键字对已有 <code>struct</code>/<code>union</code>/<code>enum</code> 类型和内置类型实现 <code>_Trait&lt;int&gt;</code>/<code>_Trait&lt;float&gt;</code>等，需要注意的是，我们目前仅支持对实例化的 Trait 类型进行 Impl。直观的，我们来看一个简单的例子：</p>
+<pre><code class="language-c">_Trait F&lt;T&gt; {
+    T f(This* this);
+};
+
+struct S {};
+int struct S::f(struct S* this);
+int int::f(int* this);
+
+_Impl _Trait F&lt;int&gt; for int;
+_Impl _Trait F&lt;int&gt; for struct S;
+</code></pre>
+<p><strong>规则：</strong></p>
+<ol>
+<li>在 <code>_Impl</code> 语句之前，一定存在泛型 <code>&lt;_Trait&gt;</code> 和 <code>&lt;type&gt;</code> 的定义</li>
+<li>仅支持 <code>_Impl</code> 实例化的 Trait 类型</li>
+</ol>
+<pre><code class="language-c">_Impl _Trait F&lt;T&gt; for int; // error: use of undeclared identifier 'T'
+</code></pre>
+<ol start="3">
+<li>在 <code>_Impl</code> 语句之前，<code>&lt;type&gt;</code> 必须已经声明了 <code>&lt;_Trait&gt;</code> 中所有成员函数</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;T&gt; {
+    T f1(This* this);
+    T f2(This* this);
+};
+
+struct S{};
+
+int struct S::f1(struct S* this){};
+_Impl _Trait F&lt;int&gt; for struct S; // error: function 'f2' in '_Trait F&lt;int&gt;' is not implemented for 'struct S'
+int struct S::f2(struct S* this){};
+_Impl _Trait F&lt;int&gt; for struct S; // ok，struct S 已扩展声明了 _Trait 中所有成员函数
+</code></pre>
+<ol start="4">
+<li>支持通过 <code>_Impl</code> 关键字对已有 <code>struct</code>/<code>union</code>/<code>enum</code> 类型和内置类型实现 <code>_Trait&lt;int&gt;</code>/<code>_Trait&lt;float&gt;</code>，但<code>struct</code>/<code>union</code> 类型类型不能是泛型的</li>
+</ol>
+<pre><code class="language-c">struct S {};
+struct G&lt;T&gt; {};
+_Trait F&lt;T&gt; {};
+_Impl _Trait F&lt;int&gt; for int; // ok
+_Impl _Trait F&lt;int&gt; for struct S; // ok
+_Impl _Trait F&lt;int&gt; for struct G&lt;int&gt;; // error: cannot _Impl _Trait for an instantiated type
+</code></pre>
+<ol start="5">
+<li><code>&lt;type&gt;</code> 类型不允许是 Trait/泛型 Trait</li>
+</ol>
+<pre><code class="language-c">_Impl _Trait F&lt;int&gt;  for _Trait S; // error: unexpected token for ImplTraitDecl
+_Impl _Trait F&lt;int&gt;  for _Trait F&lt;int&gt;; // error: unexpected token for ImplTraitDecl
+</code></pre>
+<ol start="6">
+<li>支持对 <code>typedef</code> 类型实现泛型 Trait</li>
+</ol>
+<pre><code class="language-c">typedef struct S S1;
+_Impl _Trait F&lt;int&gt; for S1;
+</code></pre>
+<h3 id="泛型-trait-类型的变量"><a class="header" href="#泛型-trait-类型的变量">泛型 Trait 类型的变量</a></h3>
+<p>我们可以定义泛型 Trait 实例化后的指针类型变量，并可以通过该指针变量进行函数调用等，具体使用方法如下：</p>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+
+struct S {};
+
+_Trait F&lt;T&gt; {
+    T foo(This* this);
+};
+int struct S::foo(struct S* this) {
+    return 1;
+}
+int int::foo(int* this) {
+    return 0;
+}
+
+_Impl _Trait F&lt;int&gt; for struct S;
+_Impl _Trait F&lt;int&gt; for int;
+
+void test() {
+    struct S s;
+    int a = 1;
+    float b = 1.0;
+
+    _Trait F&lt;int&gt;* p;
+    p = &amp;s; // ok，隐式转换
+    p-&gt;foo(); // return 1
+    p = &amp;a;
+    p-&gt;foo(); // return 0
+    p = &amp;b; // error: expected a pointer type which has implemented '_Trait F&lt;int&gt;', found 'float'
+}
+</code></pre>
+<p><strong>规则：</strong></p>
+<ol>
+<li>只允许声明泛型 Trait 实例化后的指针类型变量</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt;* p1; // ok
+_Trait F&lt;int&gt; p2; // error: only _Trait pointer type is allowed to be declared
+</code></pre>
+<ol start="2">
+<li>如果 <code>&lt;type&gt;</code> 实现了 <code>&lt;_Trait&gt;</code>，那么指向这个 <code>&lt;type&gt;</code> 的指针可以被转换为 <code>&lt;_Trait&gt;</code> 类型的变量</li>
+</ol>
+<pre><code class="language-c">_Impl _Trait F&lt;int&gt; for struct S;
+
+struct S s;
+_Trait F&lt;int&gt;* t1 = &amp;s; // 隐式转换
+_Trait F&lt;int&gt;* t2 = (_Trait F&lt;int&gt;*)&amp;s; // 显式转换
+</code></pre>
+<ol start="3">
+<li>泛型 Trait 实例化后的指针类型变量可以通过 <code>-&gt;</code> 方式调用该泛型 Trait 中的成员函数</li>
+</ol>
+<pre><code class="language-c">struct S s;
+_Trait F&lt;int&gt;* t = &amp;s;
+t-&gt;foo();
+</code></pre>
+<ol start="4">
+<li>泛型 Trait 实例化后的指针类型变量，允许用 <code>NULL</code> 赋值</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt;* p = NULL;
+</code></pre>
+<ol start="5">
+<li>泛型 Trait 实例化后的指针类型变量，不可以解引用</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt; *p;
+*p; // error: use of undeclared identifier 'p'
+</code></pre>
+<ol start="6">
+<li>允许指向泛型 Trait 的多级指针，但这种类型不能直接调用成员函数。不允许结构体的二级指针直接隐式转换成泛型 Trait 的二级指针</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt;* p;
+p-&gt;foo();
+_Trait F&lt;int&gt;** q = &amp;p; // ok
+q-&gt;foo(); // error: use of address-of-label extension outside of a function body
+(*q)-&gt;foo(); // ok
+struct S s;
+q = &amp;&amp;s; // error: tentative definition has type 'struct S' that is never completed
+</code></pre>
+<ol start="7">
+<li>泛型 Trait 实例化后的指针类型变量可以用 <code>const</code> / <code>volatile</code> 修饰</li>
+</ol>
+<pre><code class="language-c">const _Trait F&lt;int&gt;* p1;
+volatile _Trait F&lt;int&gt;* p2;
+</code></pre>
+<ol start="8">
+<li>支持泛型 Trait 实例化后的指针类型作为函数参数及返回值类型</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt;* get(_Trait F&lt;int&gt;* t) {
+    return t;
+}
+</code></pre>
+<ol start="9">
+<li>支持泛型 Trait 实例化后的指针变量和 <code>NULL</code> 做比较（这里的比较仅包含 <code>==</code> 和<code>!=</code>，下同）</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt;* p = NULL;
+p == NULL; // ok
+p != NULL; // ok
+</code></pre>
+<ol start="10">
+<li>支持泛型 Trait 实例化后的指针变量和非 Trait 指针变量比较</li>
+</ol>
+<pre><code class="language-c">int a = 1;
+int *p1 = &amp;a;
+struct S s;
+struct S *p2 = &amp;s;
+_Trait F&lt;int&gt; *t = NULL;
+// 假设struct S 类型实现 _Trait F&lt;int&gt;，但 int 类型没有
+if (t == p1) {}; // warning
+if (t == p2) {}; // ok
+if (t == a) {}; // error: expected a pointer type which has implemented '_Trait F&lt;int&gt;', found 'int'
+</code></pre>
+<ol start="11">
+<li>支持指针变量和 Trait 指针变量比较</li>
+</ol>
+<pre><code class="language-c">_Trait F&lt;int&gt; *t1 = NULL;
+_Trait F&lt;int&gt; *t2 = NULL;
+_Trait F&lt;float&gt; *t3 = NULL;
+if (t1 == t2) {} // ok
+if (t1 == t3) {} // warning: comparison of distinct pointer types ('_Trait F&lt;int&gt; *' and '_Trait F&lt;float&gt; *')
+</code></pre>
+<h3 id="类型转换-1"><a class="header" href="#类型转换-1">类型转换</a></h3>
+<p>泛型 Trait 类型转换只能在实现了对应泛型 Trait 的类型之间进行，将一个类型转换为另一个类型，同时保留原有类型的特性和方法。</p>
+<p><strong>规则：</strong></p>
+<ol>
+<li>泛型 Trait 实例化后的指针变量，不允许强制转换为非指针类型</li>
+</ol>
+<pre><code class="language-c">struct S s;
+_Trait F&lt;int&gt; *p = &amp;s; // 假设 struct S 类型实现了 _Trait F&lt;int&gt;
+(struct S)p; // error: used type 'struct S' where arithmetic or pointer type is required
+</code></pre>
+<ol start="2">
+<li>支持泛型 Trait 指针类型强制转为非 Trait 指针类型，但不支持隐式转换</li>
+</ol>
+<pre><code class="language-c">struct S s;
+_Trait F&lt;int&gt; *p = &amp;s; // 假设 struct S 类型实现了 _Trait F&lt;int&gt;
+struct S *q1 = p; // error: initializing 'struct S *' with an expression of incompatible type '_Trait F&lt;int&gt; *'
+struct S *q2 = (struct S*)p; // ok
+int *q3 = (int*)p; // ok
+</code></pre>
+<ol start="3">
+<li>泛型 Trait 类型支持强制转换为 <code>void *</code>类型，但<code>void *</code> 指针无法转换为泛型 Trait 指针类型</li>
+</ol>
+<pre><code class="language-c">struct S s;
+_Trait F&lt;int&gt; *p = &amp;s;
+void * q = (void *)p; // ok: 泛型 _Trait 类型支持强制转换为 `void *`类型
+_Trait F&lt;int&gt; *p1 = (_Trait F&lt;int&gt; *)q; // // error: expected a pointer type which has implemented '_Trait F&lt;int&gt;'', found 'void'
+_Trait F&lt;int&gt; *p2 = q; // // error: expected a pointer type which has implemented '_Trait F&lt;int&gt;'', found 'void'
+</code></pre>
+<h2 id="应用"><a class="header" href="#应用">应用</a></h2>
+<pre><code class="language-c">#include &lt;stdio.h&gt;
+
+// 定义 _Trait
+_Trait Shape {
+    int getArea(This* this);
+    int getSideLen(This* this);
+};
+
+struct Square {
+    int side;
+};
+
+struct Rectangle {
+    int width;
+    int height;
+};
+
+int struct Square::getArea(struct Square* this) {
+    int area = this-&gt;side * this-&gt;side;
+    printf("the area of this square is %d.\n", area);
+    return area;
+}
+
+int struct Square::getSideLen(struct Square* this) {
+    int length = this-&gt;side * 4;
+    printf("the side length of this square is %d.\n", length);
+    return length;
+}
+
+int struct Rectangle::getArea(struct Rectangle* this) {
+    int area = this-&gt;width * this-&gt;height;
+    printf("the area of this rectangle is %d.\n", area);
+    return area;
+}
+
+int struct Rectangle::getSideLen(struct Rectangle* this) {
+    int length = (this-&gt;width + this-&gt;height) * 2;
+    printf("the side length of this rectangle is %d.\n", length);
+    return length;
+}
+
+// 为结构体类型实现 _Trait
+_Impl _Trait Shape for struct Square;
+_Impl _Trait Shape for struct Rectangle;
+
+// _Trait 指针类型作为函数参数及返回值类型
+_Trait Shape* get(_Trait Shape* s) {
+    return s;
+}
+
+void test() {
+    struct Square s = {.side = 5};
+    struct Rectangle r = {.width = 2, .height = 3};
+    _Trait Shape* shape = &amp;s;
+    // _Trait 指针变量调用方法
+    shape-&gt;getArea(); // the area of this square is 25.
+    // 强制转换
+    ((_Trait Shape*)&amp;s)-&gt;getSideLen(); // the side length of this square is 20.
+    // 将指针赋值给 _Trait 指针类型的变量
+    shape = &amp;r;
+    shape-&gt;getArea(); // the area of this rectangle is 6.
+    // 隐式转换，将 struct Rectangle* 转为 _Trait Shape*
+    _Trait Shape* shape2 = get(&amp;r);
+    shape2-&gt;getSideLen(); // the side length of this rectangle is 10
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapter-2-development-efficiency/3-constexpr.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapter-2-development-efficiency/5-operator-overloading.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapter-2-development-efficiency/3-constexpr.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapter-2-development-efficiency/5-operator-overloading.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-c22b7243.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/js/elasticlunr-04fe11a0.js"></script>
+        <script src="../assets/js/fzf-17e59c4c.umd.js"></script>
+        <script src="../theme/lang-switch-2820517c.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
