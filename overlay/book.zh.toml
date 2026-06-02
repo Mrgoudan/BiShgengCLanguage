@@ -1,0 +1,30 @@
+# GitHub-publish overlay config for the Chinese book.
+# Replaces the upstream bare book.toml at build time only (gitee stays pristine).
+[book]
+title = "毕昇 C 语言用户手册"
+authors = ["The BiSheng C Team"]
+language = "zh"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+mathjax-support = true
+git-repository-url = "https://github.com/BiShengCLanguage/BiShgengCLanguage"
+additional-css = ["theme/custom.css"]
+additional-js = [
+  "assets/js/elasticlunr.js",
+  "assets/js/fzf.umd.js",
+  "theme/lang-switch.js",
+]
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true
+
+[output.html.playground]
+runnable = false

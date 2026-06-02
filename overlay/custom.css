@@ -1,0 +1,95 @@
+/* BiSheng C manual — visual polish overlay (GitHub publish only). */
+
+:root {
+  --sidebar-width: 290px;
+  --content-max-width: 760px;
+  --page-padding: 20px;
+}
+
+/* Comfortable reading rhythm for the dense technical prose / CJK text. */
+.content {
+  font-size: 16px;
+  line-height: 1.75;
+}
+.content p,
+.content li {
+  letter-spacing: 0.1px;
+}
+
+/* Headings: clearer hierarchy + a soft rule under chapter titles. */
+.content h1 {
+  font-weight: 700;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid var(--quote-border, #cccccc44);
+}
+.content h2 {
+  margin-top: 1.8em;
+  font-weight: 650;
+}
+.content h1,
+.content h2,
+.content h3 {
+  scroll-margin-top: var(--menu-bar-height, 50px);
+}
+
+/* Inline code + code blocks: rounder, padded, easier to scan. */
+.content code {
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+pre > code {
+  border-radius: 8px;
+  padding: 1em 1.1em;
+}
+pre {
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Tables: zebra striping + crisp borders (the API reference pages are large). */
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.content table thead {
+  background: var(--quote-bg, #f3f3f3);
+}
+.content table th,
+.content table td {
+  border: 1px solid var(--table-border-color, #d0d0d0);
+  padding: 0.5em 0.7em;
+  vertical-align: top;
+}
+.content table tbody tr:nth-child(even) {
+  background: var(--table-alternate-bg, rgba(0, 0, 0, 0.025));
+}
+
+/* Blockquotes (used for the version/date note) — a tinted callout. */
+.content blockquote {
+  border-inline-start: 4px solid var(--quote-border, #7568f0);
+  background: var(--quote-bg, rgba(117, 104, 240, 0.06));
+  border-radius: 0 6px 6px 0;
+  padding: 0.4em 1em;
+}
+
+/* Sidebar chapter list a touch more breathable. */
+.chapter li.chapter-item {
+  line-height: 1.5;
+  margin-top: 0.4em;
+}
+
+/* Language toggle button in the menu bar. */
+.lang-switch {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: var(--menu-bar-height, 50px);
+  padding: 0 10px;
+  width: auto;
+  text-decoration: none;
+  color: var(--icons);
+}
+.lang-switch:hover {
+  color: var(--icons-hover);
+  text-decoration: none;
+}
