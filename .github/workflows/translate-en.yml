@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write           # to commit updated English back to book-ci
+  actions: write            # to dispatch the publish workflow after committing
 
 concurrency:
   group: translate-en
@@ -40,6 +41,7 @@ jobs:
           ./translate-sync.sh
 
       - name: Commit updated English (if any)
+        id: commit
         if: steps.tr.outputs.changed != '0' && steps.tr.outputs.changed != ''
         run: |
           git config user.name  'BiSheng C Bot'
@@ -47,7 +49,18 @@ jobs:
           git add overlay/en overlay/en-preview
           if git diff --cached --quiet; then
             echo "no file changes to commit"
+            echo "pushed=0" >> "$GITHUB_OUTPUT"
           else
             git commit -m "i18n: auto-sync English translation (${{ steps.tr.outputs.changed }} files changed)"
             git push origin book-ci
+            echo "pushed=1" >> "$GITHUB_OUTPUT"
           fi
+
+      # A push made with GITHUB_TOKEN does NOT trigger other workflows (GitHub's
+      # loop-prevention). So when we actually pushed, explicitly dispatch the publish
+      # workflow — workflow_dispatch IS permitted from GITHUB_TOKEN — to rebuild the site.
+      - name: Trigger site publish
+        if: steps.commit.outputs.pushed == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish-manual.yml --repo "$GITHUB_REPOSITORY" --ref book-ci
