@@ -48,9 +48,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no file changes to commit"
           else
-            git commit -m "i18n: sync English translation from Chinese source (${{ steps.tr.outputs.changed }} files)
-
-Automated by the Sync English Translation workflow. Re-translated the
-Chinese manual pages that changed on gitee since the last baseline."
+            git commit -m "i18n: auto-sync English translation (${{ steps.tr.outputs.changed }} files changed)"
             git push origin book-ci
           fi
