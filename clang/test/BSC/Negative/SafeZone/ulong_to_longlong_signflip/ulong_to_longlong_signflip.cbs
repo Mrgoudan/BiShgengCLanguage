@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify %s
+
+// Regression (umbrella IJP3AP, F71; PR #864): on LP64 `unsigned long` and
+// `long long` are both 64-bit, so `unsigned long -> long long` is a same-width
+// signedness flip that silently corrupts the value and must be rejected in the
+// safe zone. The triple is pinned to LP64 because the rejection is width-based:
+// on LLP64/ILP32 (where `unsigned long` is 32-bit) the same conversion is
+// value-preserving and stays accepted (see the value-preserving positive test).
+
+_Static_assert(sizeof(unsigned long) == 8 && sizeof(long long) == 8,
+               "LP64 integer widths");
+
+_Safe long long from_ulong(unsigned long u) {
+  long long x = u; // expected-error {{implicit conversion from type 'unsigned long' to 'long long' is forbidden in the safe zone}}
+  return x;
+}

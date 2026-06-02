@@ -1,0 +1,19 @@
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -verify %s
+// expected-no-diagnostics
+
+// Regression (umbrella IJP3AP, F71; PR #864): the value-preservation guard must
+// not over-reject same-signedness conversions or value-preserving widenings into
+// long long.
+
+_Safe unsigned long long same_sign(unsigned long u) {
+  unsigned long long x = u;
+  return x;
+}
+_Safe long long signed_widen(long s) {
+  long long x = s;
+  return x;
+}
+_Safe long long uint_value_preserving(unsigned int u) {
+  long long x = u;
+  return x;
+}

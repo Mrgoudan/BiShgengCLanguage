@@ -85,6 +85,15 @@ bool Sema::IsSafeFunctionPointerType(QualType Type) {
 // ........12 | N | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | N | N |
 // ........13 | N | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | N |
 // ........14 | N | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y | Y |
+//
+// The grid is LP64-shaped, but the unsigned-source / signed-destination
+// widening cells are not the final word: a cell is Y for the value-preserving
+// case (source strictly narrower, e.g. unsigned long -> long long on
+// ILP32/LLP64) and is then narrowed by the width guard in
+// IsSafeBuiltinTypeConversion, which rejects the same pair when the actual
+// target makes the two equal width (LP64 unsigned long -> long long is a sign
+// flip, not a widening). So row 11 / col 5 reads Y here yet is rejected on
+// LP64 — read the grid together with that guard, not alone.
 
 bool Sema::IsSafeBuiltinTypeConversion(const ASTContext &Ctx, QualType SrcType,
                                        QualType DestType) {
@@ -131,8 +140,17 @@ bool Sema::IsSafeBuiltinTypeConversion(const ASTContext &Ctx, QualType SrcType,
   auto ItSource = SafeZoneMap.find(SourceKind);
   auto ItDest = SafeZoneMap.find(DestKind);
   if (ItSource != SafeZoneMap.end() && ItDest != SafeZoneMap.end()) {
-    if (EnableToConvert[ItDest->second][ItSource->second])
+    if (EnableToConvert[ItDest->second][ItSource->second]) {
+      // A Y for an unsigned-source / signed-destination widening encodes the
+      // value-preserving case only; reject the equal-width pair the LP64 grid
+      // cannot distinguish (e.g. LP64 unsigned long -> long long is a sign
+      // flip, not a widening).
+      if (SrcType->isUnsignedIntegerType() && !SrcType->isBooleanType() &&
+          DestType->isSignedIntegerType() &&
+          Ctx.getTypeSize(SrcType) >= Ctx.getTypeSize(DestType))
+        return false;
       return true;
+    }
     // the matrix above assumes a strict ordering that matches LP64
     // but in ILP32, unsigned long and unsigned int are both 32-bit, and
     // their conversion should be allowed. Here if the test fails,

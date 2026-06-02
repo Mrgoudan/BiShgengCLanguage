@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple i386-pc-linux-gnu
+// expected-no-diagnostics
+
+// Regression (umbrella IJP3AP, F71; PR #864): on ILP32 `unsigned long` is 32-bit
+// and `long long` is 64-bit, so `unsigned long -> long long` is a value-preserving
+// widening and must stay accepted in the safe zone. The F71 rejection is
+// width-based, so it must NOT fire here (it only fires when the two types are the
+// same width, i.e. on LP64).
+
+_Static_assert(sizeof(unsigned long) == 4 && sizeof(long long) == 8,
+               "ILP32 integer widths");
+
+_Safe long long ulong_to_longlong_value_preserving(unsigned long u) {
+  long long x = u;
+  return x;
+}
