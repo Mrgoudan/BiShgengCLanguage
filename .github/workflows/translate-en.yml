@@ -1,0 +1,56 @@
+name: Sync English Translation
+
+# Daily: detect Chinese manual changes on gitee since the last translated baseline,
+# AI-translate the changed pages to English, and commit them to book-ci. The commit
+# triggers "Publish BiSheng C Manual", which rebuilds and deploys the site.
+#
+# Requires repo secret ANTHROPIC_API_KEY. Without it, translate-sync.sh is a no-op,
+# so this workflow stays green and simply does nothing until the secret is added.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"     # daily, 30 min before the publish schedule
+  workflow_dispatch: {}
+
+permissions:
+  contents: write           # to commit updated English back to book-ci
+
+concurrency:
+  group: translate-en
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout book-ci
+        uses: actions/checkout@v4
+        with:
+          ref: book-ci
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+
+      - name: AI-translate changed Chinese pages
+        id: tr
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          chmod +x ./translate-sync.sh
+          ./translate-sync.sh
+
+      - name: Commit updated English (if any)
+        if: steps.tr.outputs.changed != '0' && steps.tr.outputs.changed != ''
+        run: |
+          git config user.name  'BiSheng C Bot'
+          git config user.email 'qq1105258717@gmail.com'
+          git add overlay/en overlay/en-preview
+          if git diff --cached --quiet; then
+            echo "no file changes to commit"
+          else
+            git commit -m "i18n: sync English translation from Chinese source (${{ steps.tr.outputs.changed }} files)
+
+Automated by the Sync English Translation workflow. Re-translated the
+Chinese manual pages that changed on gitee since the last baseline."
+            git push origin book-ci
+          fi
