@@ -1769,19 +1769,38 @@ void InitAnalysis::run(SmallVectorImpl<InitDiagInfo> &Diags) const {
             break;
           }
 
-          // Check destination for implicit reads through Deref projections.
-          // Writing to (*_1.p) reads _1.p to compute the address.
-          // For each Deref in the projection chain, the prefix before it
-          // must be initialized.
+          // Check destination for implicit reads through Deref/Index
+          // projections. Writing to (*_1.p) or _1.p[i] reads _1.p to compute the
+          // address; the prefix before such a projection must be initialized.
+          // Indexing a real array (not a pointer) reads no pointer, so it is
+          // exempt.
           const Place &Dest = S.getAssign().Dest;
           if (!Dest.Projections.empty()) {
             for (unsigned I = 0; I < Dest.Projections.size(); ++I) {
-              if (Dest.Projections[I].K == ProjectionElem::Deref) {
-                // Build prefix place up to (not including) this Deref.
-                Place Prefix(Dest.Base, Dest.Projections.slice(0, I),
-                             Dest.Projections[I].ResultTy, Dest.Loc);
-                checkOperand(Operand::createCopy(Prefix), State, S.Loc,
-                             Diags);
+              // Type of the prefix place ending just before projection I, i.e.
+              // the operand that projection I reads from.
+              QualType PrefixTy = I == 0 ? B.getLocal(Dest.Base).Ty
+                                         : Dest.Projections[I - 1].ResultTy;
+              // True when projection I dereferences the prefix to reach the
+              // destination, so the prefix pointer must already be initialized:
+              // always for Deref, and for an index only when the indexed operand
+              // is a pointer (a real array is read in place, loading no pointer).
+              bool LoadsPointer = false;
+              switch (Dest.Projections[I].K) {
+              case ProjectionElem::Deref:
+                LoadsPointer = true;
+                break;
+              case ProjectionElem::Index:
+              case ProjectionElem::ConstantIndex:
+                LoadsPointer = !PrefixTy.isNull() && PrefixTy->isPointerType();
+                break;
+              case ProjectionElem::Field:
+                break;
+              }
+              if (LoadsPointer) {
+                Place Prefix(Dest.Base, Dest.Projections.slice(0, I), PrefixTy,
+                             Dest.Loc);
+                checkOperand(Operand::createCopy(Prefix), State, S.Loc, Diags);
               }
             }
           }
