@@ -2,33 +2,75 @@
 #
 # Build the BiSheng C user manual site (4 editions) into ./site.
 #
-# Designed to run BOTH in GitHub Actions and locally. It clones the book source
-# fresh from the public gitee repo, so it needs no pre-existing local clone and
-# no secrets.
+# Content source = the compiler repo's single-file manual, mirrored on THIS GitHub
+# repo's compiler branches. We fetch the manual over the GitHub API (fast, reliable,
+# no gitee dependency, no giant clone) and split it into the mdBook chapter tree with
+# split_manual.py. The site therefore always tracks the published compiler manual.
 #
-#   zh release  (gitee bishengc/15.0.4)          -> site/
-#   zh preview  (gitee bishengc/15.0.4-preview)  -> site/preview/
-#   en release  (overlay/en/src)                 -> site/en/
-#   en preview  (overlay/en-preview/src)         -> site/en/preview/
+#   zh release  (manual on bishengc/15.0.4)         -> site/
+#   zh preview  (manual on bishengc_manual_preview) -> site/preview/
+#   en release  (overlay/en/src)                    -> site/en/
+#   en preview  (overlay/en-preview/src)            -> site/en/preview/
 #
-# Layout assumed: this script + overlay/ live together on the `book-ci` branch.
+# Layout assumed: this script + overlay/ + split_manual.py live together on `book-ci`.
+# Needs: mdbook, python3 (>=3.10), and either `gh` (with GITHUB_TOKEN) or curl to read
+# the manual from this repo. Runs in GitHub Actions and locally.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 OVERLAY="$HERE/overlay"
-GITEE_BOOK="https://gitee.com/bisheng_c_language_dep/book.git"
-GITEE_WEB="https://gitee.com/bisheng_c_language_dep/book"
+REPO="${GITHUB_REPOSITORY:-BiShengCLanguage/BiShgengCLanguage}"
+REPO_WEB="https://github.com/$REPO"
+MANUAL_PATH="clang/docs/BSC/BiShengCLanguageUserManual.md"
 SITE="$HERE/site"
-SRC_CACHE=$(mktemp -d)
+WORKROOT=$(mktemp -d)
 TODAY=$(date +%Y/%m/%d)
+
+# Which compiler branch feeds each Chinese edition.
+ZH_MAIN_REF="bishengc/15.0.4"
+ZH_PREV_REF="bishengc_manual_preview"
 
 rm -rf "$SITE"; mkdir -p "$SITE"
 
-# Clone the two source branches from gitee (shallow — we only need the tip tree).
-git clone --quiet --depth 1 --branch bishengc/15.0.4 \
-    "$GITEE_BOOK" "$SRC_CACHE/zh-main"
-git clone --quiet --depth 1 --branch bishengc/15.0.4-preview \
-    "$GITEE_BOOK" "$SRC_CACHE/zh-prev"
+# Fetch a file from this repo at $1=ref $2=path -> stdout. Prefer gh; fall back to API URL.
+fetch_file() {
+  local ref="$1" path="$2"
+  if command -v gh >/dev/null && [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+    GH_TOKEN="${GH_TOKEN:-$GITHUB_TOKEN}" gh api \
+      "repos/$REPO/contents/$path?ref=$ref" -H "Accept: application/vnd.github.raw"
+  else
+    curl -fsSL -H "Accept: application/vnd.github.raw" \
+      ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
+      "https://api.github.com/repos/$REPO/contents/$path?ref=$ref"
+  fi
+}
+
+# Produce a split src/ tree for a compiler ref. $1=ref -> echoes the src dir path.
+make_zh_src() {
+  local ref="$1" d; d="$WORKROOT/manual-$(echo "$ref" | tr '/' '_')"
+  mkdir -p "$d"
+  fetch_file "$ref" "$MANUAL_PATH" > "$d/manual.md"
+  python3 "$HERE/split_manual.py" "$d/manual.md" "$d/src" >/dev/null
+  # record the source commit + date for the version stamp
+  fetch_commit_meta "$ref" > "$d/.meta"
+  echo "$d"
+}
+
+# Echo "shortsha<TAB>YYYY/MM/DD" for the tip of $1 (latest commit touching the manual).
+fetch_commit_meta() {
+  local ref="$1" json
+  if command -v gh >/dev/null && [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+    json=$(GH_TOKEN="${GH_TOKEN:-$GITHUB_TOKEN}" gh api \
+      "repos/$REPO/commits?sha=$ref&path=$MANUAL_PATH&per_page=1" 2>/dev/null)
+  else
+    json=$(curl -fsSL ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
+      "https://api.github.com/repos/$REPO/commits?sha=$ref&path=$MANUAL_PATH&per_page=1" 2>/dev/null)
+  fi
+  local sha date
+  sha=$(printf '%s' "$json" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d[0]["sha"][:7] if d else "")' 2>/dev/null)
+  date=$(printf '%s' "$json" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d[0]["commit"]["committer"]["date"][:10].replace("-","/") if d else "")' 2>/dev/null)
+  printf '%s\t%s\n' "${sha:-unknown}" "${date:-$TODAY}"
+}
 
 apply_overlay() {  # $1 work dir, $2 toml name
   cp "$OVERLAY/$2" "$1/book.toml"
@@ -37,21 +79,18 @@ apply_overlay() {  # $1 work dir, $2 toml name
   cp "$OVERLAY/lang-switch.js" "$1/theme/lang-switch.js"
 }
 
-attach_version_info() {  # $1 work, $2 src-clone (for git rev), $3 lang
-  local work="$1" clone="$2" lang="$3" version short_version latest_date readme
-  version=$(git -C "$clone" rev-parse HEAD)
-  short_version=$(printf '%s' "$version" | cut -c1-7)
-  latest_date=$(git -C "$clone" log -1 --date=format:%Y/%m/%d --format=%cd)
+attach_version_info() {  # $1 work, $2 ref, $3 lang, $4 meta-file
+  local work="$1" ref="$2" lang="$3" meta="$4" sha date readme
+  sha=$(cut -f1 "$meta"); date=$(cut -f2 "$meta")
   readme="$work/src/README.md"
-  local branch; branch=$(git -C "$clone" rev-parse --abbrev-ref HEAD)
   {
     echo ""
     if [ "$lang" = en ]; then
-      echo "> Version: [$branch]($GITEE_WEB/tree/$branch/) - [$short_version]($GITEE_WEB/commit/$version)"
-      echo ">"; echo "> Updated: $latest_date"; echo ">"; echo "> Released: $TODAY"
+      echo "> Version: [$ref]($REPO_WEB/tree/$ref/) - [$sha]($REPO_WEB/commit/$sha)"
+      echo ">"; echo "> Updated: $date"; echo ">"; echo "> Released: $TODAY"
     else
-      echo "> 版本说明：[$branch]($GITEE_WEB/tree/$branch/) - [$short_version]($GITEE_WEB/commit/$version)"
-      echo ">"; echo "> 更新日期：$latest_date"; echo ">"; echo "> 发布日期：$TODAY"
+      echo "> 版本说明：[$ref]($REPO_WEB/tree/$ref/) - [$sha]($REPO_WEB/commit/$sha)"
+      echo ">"; echo "> 更新日期：$date"; echo ">"; echo "> 发布日期：$TODAY"
     fi
   } >> "$readme"
 }
@@ -71,16 +110,19 @@ attach_preview_link() {  # $1 work, $2 url, $3 lang, $4 dir(toprev|torel)
   printf '%s\n\n%s\n' "$line" "$body" > "$readme"
 }
 
-build_edition() {  # $1 src dir, $2 toml, $3 lang, $4 dest sub, $5 version-clone
-  local src="$1" toml="$2" lang="$3" sub="$4" clone="$5" work
+# Pre-split the two Chinese editions from the compiler manual.
+ZH_MAIN=$(make_zh_src "$ZH_MAIN_REF")
+ZH_PREV=$(make_zh_src "$ZH_PREV_REF")
+
+build_edition() {  # $1 src dir, $2 toml, $3 lang, $4 dest sub, $5 ref, $6 meta-file
+  local src="$1" toml="$2" lang="$3" sub="$4" ref="$5" meta="$6" work
   work=$(mktemp -d)
-  # search assets (assets/js/*) come from the zh release clone
-  ( cd "$SRC_CACHE/zh-main" && git archive HEAD assets ) | tar -x -C "$work"
+  cp -r "$OVERLAY/assets" "$work/assets"        # search JS (assets/js/*)
   cp -r "$src" "$work/src"
   apply_overlay "$work" "$toml"
-  attach_version_info "$work" "$clone" "$lang"
+  attach_version_info "$work" "$ref" "$lang" "$meta"
   case "$sub" in
-    ""|"en")               attach_preview_link "$work" "./preview/" "$lang" toprev ;;
+    ""|"en")                attach_preview_link "$work" "./preview/" "$lang" toprev ;;
     "preview"|"en/preview") attach_preview_link "$work" "../"        "$lang" torel ;;
   esac
   echo "[INFO] building $lang -> ${sub:-<root>}"
@@ -88,11 +130,11 @@ build_edition() {  # $1 src dir, $2 toml, $3 lang, $4 dest sub, $5 version-clone
   rm -rf "$work"
 }
 
-build_edition "$SRC_CACHE/zh-main/src" book.zh.toml zh ""           "$SRC_CACHE/zh-main"
-build_edition "$SRC_CACHE/zh-prev/src" book.zh.toml zh "preview"    "$SRC_CACHE/zh-prev"
-build_edition "$OVERLAY/en/src"         book.en.toml en "en"         "$SRC_CACHE/zh-main"
-build_edition "$OVERLAY/en-preview/src" book.en.toml en "en/preview" "$SRC_CACHE/zh-prev"
+build_edition "$ZH_MAIN/src"            book.zh.toml zh ""           "$ZH_MAIN_REF" "$ZH_MAIN/.meta"
+build_edition "$ZH_PREV/src"            book.zh.toml zh "preview"    "$ZH_PREV_REF" "$ZH_PREV/.meta"
+build_edition "$OVERLAY/en/src"         book.en.toml en "en"         "$ZH_MAIN_REF" "$ZH_MAIN/.meta"
+build_edition "$OVERLAY/en-preview/src" book.en.toml en "en/preview" "$ZH_PREV_REF" "$ZH_PREV/.meta"
 
 touch "$SITE/.nojekyll"
-rm -rf "$SRC_CACHE"
+rm -rf "$WORKROOT"
 echo "[INFO] site built at $SITE"
