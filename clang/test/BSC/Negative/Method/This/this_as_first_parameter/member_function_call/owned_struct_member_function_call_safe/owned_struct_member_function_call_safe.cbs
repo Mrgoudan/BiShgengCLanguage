@@ -19,7 +19,7 @@ _Safe void free_owned<T>(T* _Owned p);
 // }
 
 _Safe int Bar::getA(This this) {
-  return this.a; // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type, please fix it}}
+  return this.a; // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type}}
 }
 
 _Safe int Bar::getB(This* this) {

@@ -30,7 +30,7 @@ Codes follow a `FEATURE-NNN` scheme: each feature numbers its errors independent
 | OWN-018 | err_ownership_cast_pass_to_arg_or_ret | cannot pass or return a cast from `void *_Owned` to %0 because it would use a moved value | — |
 | OWN-019 | err_nested_owned_borrow_type_check | type of %2 cannot be qualified by `%1` (3-variant select) | — |
 | OWN-020 | err_owned_qualcheck_incompatible | incompatible _Owned types, cannot cast %0 to %1 | — |
-| OWN-021 | err_owned_temporary_memLeak | memory leak because temporary variable `%0` is _Owned or indirect _Owned type, please fix it | — |
+| OWN-021 | err_owned_temporary_memLeak | memory leak because temporary variable `%0` is _Owned or indirect _Owned type | — |
 | OWN-022 | err_owned_qualifier_non_pointer | type of %1 cannot be qualified by `%0` | — |
 | OWN-023 | err_owned_and_borrow_conflict | cannot combine `_Owned` and `_Borrow` qualifiers on the same type | — |
 | OWN-024 | err_typecheck_invalid_owned_binOp | invalid operands to binary expression (%0 and %1) | — |
@@ -153,7 +153,7 @@ Catch-all for small-count categories that don't merit their own feature: heterog
 | SZONE-003 | err_union_member_access_in_safe_zone | access to union field is `_Unsafe` and requires `_Unsafe` block | — |
 | SZONE-004 | err_safe_zone_case_in_nested_braces | `case` label inside a nested `{ }` in the safe zone | `note_safe_zone_case_in_nested_braces` — remove the nested `{ }`, or wrap the switch in `_Unsafe { ... }` |
 | SZONE-005 | err_unsafe_cast | conversion from type %0 to %1 is forbidden in the safe zone | `note_inc_dec_void_in_safe_zone` — prefix/postfix `++`/`--` in safe zone produce void; use only for side effect (emitted when src is `void`); `note_unsafe_cast_non_trivial_pointee_type` — source pointee %0 is not a trivial data type (emitted for non-trivial `T* borrow → void* borrow`); `note_unsafe_cast_implicit_conversion` — source type %0 is implicit converted from type %1 |
-| SZONE-006 | err_unsafe_implicit_cast | implicit conversion from type %0 to %1 is forbidden in the safe zone; please use explicit cast or other means instead | `note_unsafe_cast_implicit_conversion` |
+| SZONE-006 | err_unsafe_implicit_cast | implicit conversion from type %0 to %1 is forbidden in the safe zone; use explicit cast or other means instead | `note_unsafe_cast_implicit_conversion` |
 | SZONE-007 | err_unsafe_fun_cast | conversion from type %0 to %1 is forbidden | `note_unsafe_to_safe_function_pointer` — assigning an unsafe function pointer to a safe function pointer type is not allowed |
 | SZONE-008 | err_safe_function | %0 is forbidden in the `_Safe` function | — |
 | SZONE-009 | err_safe_global_var | defining mutable global variables is not allowed within the safe zone | — |

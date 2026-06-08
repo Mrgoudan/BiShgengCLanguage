@@ -13,5 +13,5 @@ int main() {
    a.a+=2;
    a.a = 3;
    foo(a.a);
-   return foo(a.a);     // expected-error {{memory leak because temporary variable 'a' is _Owned or indirect _Owned type, please fix it}}
+   return foo(a.a);     // expected-error {{memory leak because temporary variable 'a' is _Owned or indirect _Owned type}}
 }

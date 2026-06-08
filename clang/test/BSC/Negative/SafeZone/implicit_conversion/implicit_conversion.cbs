@@ -7,25 +7,25 @@ void test_implicit_numeric_conversion(void) {
   _Safe {
     long a = 2;
     // Implicit narrowing conversion is forbidden
-    int b = a;  // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    int b = a;  // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
 
   _Safe {
     double x = 1.0;
     // Implicit high-precision to low-precision conversion is forbidden
-    float y = x;  // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    float y = x;  // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
 
   _Safe {
     int val = 1;
     // Implicit char conversion is forbidden
-    char c = val;  // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    char c = val;  // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
 
   _Safe {
     unsigned int a = 1;
     // Implicit signed/unsigned conversion is forbidden
-    int b = a;  // expected-error{{implicit conversion from type 'unsigned int' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    int b = a;  // expected-error{{implicit conversion from type 'unsigned int' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
 }
 
@@ -41,10 +41,10 @@ void test_implicit_enum_conversion(void) {
 
     enum F day = SUN;
     // Implicit enum to enum conversion is an error in the safe zone
-    num = day;  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = day;  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; use explicit cast or other means instead}}
 
     // Ternary with different enum types: still forbidden
-    num = cond ? num : day;  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = cond ? num : day;  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; use explicit cast or other means instead}}
 
     // Implicit enum to int conversion is allowed
     a = num;  // ok

@@ -56,7 +56,7 @@ void test() {
   p1->p = __take_from_raw(&a); // legal
   b = p1->p; // expected-error {{_Borrow type does not allow move ownership}}
 
-  foo(p1->p); // expected-error {{memory leak because temporary variable 'foo(p1->p)' is _Owned or indirect _Owned type, please fix it}}
+  foo(p1->p); // expected-error {{memory leak because temporary variable 'foo(p1->p)' is _Owned or indirect _Owned type}}
               // expected-error@-1 {{_Borrow type does not allow move ownership}}
   p2->f1(); // legal
   p2->f2(); // expected-error {{incompatible conversion from const type 'const struct S *_Borrow' to non-const type 'struct S *_Borrow' in member function call}}

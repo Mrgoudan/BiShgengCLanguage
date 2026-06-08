@@ -7,7 +7,7 @@ _Safe void test1<T>(void) {
 }
 
 _Safe void test2<T>(void) {
-  _Bool a = sizeof(T); // expected-error {{implicit conversion from type 'unsigned long' to '_Bool' is forbidden in the safe zone; please use explicit cast or other means instead}}
+  _Bool a = sizeof(T); // expected-error {{implicit conversion from type 'unsigned long' to '_Bool' is forbidden in the safe zone; use explicit cast or other means instead}}
 }
 
 _Safe void test3<T>(void) {

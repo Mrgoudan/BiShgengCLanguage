@@ -87,34 +87,34 @@ void baseTypeCastConver() {
   // long <-> int,
   _Safe {
     long a = 2;
-    int b = a;                 // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    int b = a;                 // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
     long c = b;               // int->long ok
     // int -2147483648～2147483647
     constexpr long _a = 10;
     int _b = _a;               // ok
     constexpr long _a_ = 2147483648;
-    int _b_ = _a_;             // expected-error{{implicit conversion from type 'const long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    int _b_ = _a_;             // expected-error{{implicit conversion from type 'const long' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
     int d = 2147483647;        // int->int ok
-    d = 2147483648;            // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    d = -2147483649;                // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    d = 2147483648;            // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
+    d = -2147483649;                // expected-error{{implicit conversion from type 'long' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
     // unsigned_int 0~4294967295
     unsigned int e = 0;             // ok
-    e = 4294967296;   // expected-error{{implicit conversion from type 'long' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    e = 4294967296;   // expected-error{{implicit conversion from type 'long' to 'unsigned int' is forbidden in the safe zone; use explicit cast or other means instead}}
     unsigned long f = 1;            // ok
-    f = b;           // expected-error{{implicit conversion from type 'int' to 'unsigned long' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    f = -1;          // expected-error{{implicit conversion from type 'int' to 'unsigned long' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    f = b;           // expected-error{{implicit conversion from type 'int' to 'unsigned long' is forbidden in the safe zone; use explicit cast or other means instead}}
+    f = -1;          // expected-error{{implicit conversion from type 'int' to 'unsigned long' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
   // int <-> char
   _Safe {
     int a = 1;
     // char -128~127
-    char b = a;                // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    char b = a;                // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; use explicit cast or other means instead}}
     b = 1;                     // ok
-    b = 128;                   // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    b = 128;                   // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; use explicit cast or other means instead}}
     b = _Unsafe(1);             // ok
     b = _Safe(1);               // ok
-    b = _Unsafe(128);           // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    b = _Safe(128);             // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    b = _Unsafe(128);           // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; use explicit cast or other means instead}}
+    b = _Safe(128);             // expected-error{{implicit conversion from type 'int' to 'char' is forbidden in the safe zone; use explicit cast or other means instead}}
 
     constexpr int c = 10;
     b = c;
@@ -123,22 +123,22 @@ void baseTypeCastConver() {
     a = _Unsafe(b);              // ok
     a = _Safe(b);                // ok
     unsigned int d = 0;
-    d = b;             // expected-error{{implicit conversion from type 'char' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    d = b;             // expected-error{{implicit conversion from type 'char' to 'unsigned int' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
   // int <-> bool
   _Safe {
     _Bool a = 0;
     int b = a;          // ok
-    _Bool c = b;      // expected-error{{implicit conversion from type 'int' to '_Bool' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    _Bool c = b;      // expected-error{{implicit conversion from type 'int' to '_Bool' is forbidden in the safe zone; use explicit cast or other means instead}}
     c = 1;
-    c = 2;            // expected-error{{implicit conversion from type 'int' to '_Bool' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    c = 2;            // expected-error{{implicit conversion from type 'int' to '_Bool' is forbidden in the safe zone; use explicit cast or other means instead}}
     c = _Unsafe(1);
     c = _Safe(1);
   }
   // char <-> long double
   _Safe {
     char a = 'A';
-    long double b = a;  // expected-error{{implicit conversion from type 'char' to 'long double' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    long double b = a;  // expected-error{{implicit conversion from type 'char' to 'long double' is forbidden in the safe zone; use explicit cast or other means instead}}
     char c = b;         // expected-error{{conversion from type 'long double' to 'char' is forbidden in the safe zone}}
   }
   // int <-> enum
@@ -160,13 +160,13 @@ void baseTypeCastConver() {
     num = _Safe(ZERO);   // ok
     num = _Unsafe(ZERO); // ok
     enum F day = SUN;
-    num = day;          // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = day;          // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; use explicit cast or other means instead}}
     num = SUN;          // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}} expected-note{{source type 'int' is implicit converted from type 'enum F'}}
     a = num;            // ok: enum E -> int implicit allowed
     a = ZERO;
-    num = _Safe(day);    // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = _Safe(day);    // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; use explicit cast or other means instead}}
     num = _Safe(SUN);    // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}} expected-note{{source type 'int' is implicit converted from type 'enum F'}}
-    num = _Unsafe(day);  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    num = _Unsafe(day);  // expected-error{{implicit conversion from type 'enum F' to 'enum E' is forbidden in the safe zone; use explicit cast or other means instead}}
     num = _Unsafe(SUN);  // expected-error{{conversion from type 'int' to 'enum E' is forbidden in the safe zone}} expected-note{{source type 'int' is implicit converted from type 'enum F'}}
     enum F f1 = a > 0 ? SUN : MON;   // ok
     enum F f2 = a == 0 ? SUN : MON;  // ok
@@ -176,18 +176,18 @@ void baseTypeCastConver() {
   // double <-> float
   _Safe {
     double a = 1.0;
-    float b = a;      // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    float b = a;      // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; use explicit cast or other means instead}}
     a = b;            // ok
     float c = 1.0;    // ok
-    c = 1.2;          // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    c = 1.2;          // expected-error{{implicit conversion from type 'double' to 'float' is forbidden in the safe zone; use explicit cast or other means instead}}
     c = 1.2f;         // ok
   }
   // int <-> unsigned int
   _Safe {
     unsigned int a = 1;  // ok
-    int b = a;           // expected-error{{implicit conversion from type 'unsigned int' to 'int' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    a = b;               // expected-error{{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
-    a = -1;              // expected-error{{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; please use explicit cast or other means instead}}
+    int b = a;           // expected-error{{implicit conversion from type 'unsigned int' to 'int' is forbidden in the safe zone; use explicit cast or other means instead}}
+    a = b;               // expected-error{{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; use explicit cast or other means instead}}
+    a = -1;              // expected-error{{implicit conversion from type 'int' to 'unsigned int' is forbidden in the safe zone; use explicit cast or other means instead}}
   }
 }
 

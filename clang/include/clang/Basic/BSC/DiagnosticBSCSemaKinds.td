@@ -24,7 +24,7 @@ def err_async_func_unsupported : Error<
 def err_not_a_async_call : Error<
   "the _Await expression's external function declaration must be modified by _Async or return 'Future' type">;
 def err_function_not_found : Error <
-  "'%0' was not found, you need to include %1 before using the '_Async' keyword">;
+  "'%0' was not found; include %1 before using the '_Async' keyword">;
 def err_invalid_async_function : Error <
   "function which returns 'Future' type should not be modified by '_Async'">;
 
@@ -62,7 +62,7 @@ def err_typecheck_invalid_owned_binOp : Error<
 def err_typecheck_invalid_owned_arrsub : Error<
   "_Owned pointer type (%0) do not support ArraySubscript operate">;
 def err_owned_temporary_memLeak : Error<
-  "memory leak because temporary variable '%0' is _Owned or indirect _Owned type, please fix it">;
+  "memory leak because temporary variable '%0' is _Owned or indirect _Owned type">;
 def err_funcPtr_incompatible : Error<
   "incompatible _Borrow function pointer types, cannot cast %0 to %1">;
 def err_borrow_on_borrow : Error<"%0 on a '_Borrow' qualified type is not allowed">;
@@ -124,7 +124,7 @@ def err_constexpr_if_cond_expr_unsupported_type : Error<
 
 // BSC safe scope warnings and errors.
 def err_unsafe_cast : Error<"conversion from type %0 to %1 is forbidden in the safe zone">;
-def err_unsafe_implicit_cast : Error<"implicit conversion from type %0 to %1 is forbidden in the safe zone; please use explicit cast or other means instead">;
+def err_unsafe_implicit_cast : Error<"implicit conversion from type %0 to %1 is forbidden in the safe zone; use explicit cast or other means instead">;
 def note_unsafe_cast_implicit_conversion : Note<
   "source type %0 is implicit converted from type %1">;
 def note_unsafe_cast_non_trivial_pointee_type : Note<

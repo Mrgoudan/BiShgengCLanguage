@@ -10,11 +10,11 @@ T* _Owned safe_malloc<T>(T value);
 void free_owned<T>(T* _Owned p);
 
 int Bar::getA(This this) {
-  return this.a; // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type, please fix it}}
+  return this.a; // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type}}
 }
 
 int Bar::getA_2(const This this) {
-  return this.a; // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type, please fix it}}
+  return this.a; // expected-error {{memory leak because temporary variable 'this' is _Owned or indirect _Owned type}}
 }
 
 int Bar::getB(This* this) {

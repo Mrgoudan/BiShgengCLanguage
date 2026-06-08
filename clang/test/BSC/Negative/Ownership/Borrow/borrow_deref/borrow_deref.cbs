@@ -120,7 +120,7 @@ void test() {
     int * _Owned *_Borrow b10 = &_Mut r.p;
     a4 = *b10; // expected-error {{_Borrow type does not allow move ownership}}
 
-    foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is _Owned or indirect _Owned type, please fix it}}
+    foo(*b8); // expected-error {{memory leak because temporary variable 'foo(*b8)' is _Owned or indirect _Owned type}}
               // expected-error@-1 {{_Borrow type does not allow move ownership}}
     test1<int>();
     test2<int>(); // expected-note {{in instantiation of function template specialization 'test2<int>' requested here}}
