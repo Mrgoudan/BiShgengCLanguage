@@ -131,6 +131,10 @@ struct Path {
   // Need for reborrow constraints generation.
   Decl *D = nullptr;
 
+  /// When true, a deref-like path models `_ArrayElem` subscript access and
+  /// should be printed as `base[]` rather than `*base`.
+  bool UsesArraySubscriptNotation = false;
+
   SourceLocation Location;
 
   /// Construct a Var type Path.
@@ -145,6 +149,7 @@ struct Path {
 
   Path(const Path &other)
       : type(other.type), fieldName(other.fieldName), ty(other.ty), D(other.D),
+        UsesArraySubscriptNotation(other.UsesArraySubscriptNotation),
         Location(other.Location) {
     if (other.base) {
       base = std::make_unique<Path>(*other.base);
@@ -220,10 +225,22 @@ struct Path {
     }
   }
 
+  /// Compare paths for borrow checking. Ignores UsesArraySubscriptNotation,
+  /// which affects display only.
+  bool structurallyEquals(const Path &other) const {
+    if (type != other.type || fieldName != other.fieldName)
+      return false;
+    if (type == PathType::Var)
+      return true;
+    return base->structurallyEquals(*other.base);
+  }
+
   std::string to_string() const {
     if (type == PathType::Var)
       return fieldName;
     if (isDeref()) {
+      if (UsesArraySubscriptNotation)
+        return base->to_string() + "[]";
       return "*" + base->to_string();
     }
     if (base->isDeref())

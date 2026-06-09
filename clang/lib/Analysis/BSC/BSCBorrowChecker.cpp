@@ -401,7 +401,8 @@ public:
     return std::move(actions);
   }
 
-  void VisitArraySubscriptExprOrUnaryDeref(Expr *E, Expr *SubExpr);
+  void VisitArraySubscriptExprOrUnaryDeref(Expr *E, Expr *SubExpr,
+                                           bool FromArraySubscript = false);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *ASE);
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitBinAssign(BinaryOperator *BO);
@@ -439,7 +440,8 @@ QualType getPointeeOrElementType(QualType T) {
 } // namespace
 
 void ActionExtract::VisitArraySubscriptExpr(ArraySubscriptExpr *ASE) {
-  VisitArraySubscriptExprOrUnaryDeref(ASE, ASE->getBase());
+  VisitArraySubscriptExprOrUnaryDeref(ASE, ASE->getBase(),
+                                      /*FromArraySubscript=*/true);
 }
 
 void ActionExtract::VisitBinaryOperator(BinaryOperator *BO) {
@@ -802,16 +804,23 @@ void ActionExtract::VisitUnaryAddrMutDeref(UnaryOperator *UO) {
   }
 }
 
-void ActionExtract::VisitArraySubscriptExprOrUnaryDeref(Expr *E, Expr *SubExpr) {
+void ActionExtract::VisitArraySubscriptExprOrUnaryDeref(
+    Expr *E, Expr *SubExpr, bool FromArraySubscript) {
   if (Kind == Action::Noop) {
     Kind = Action::Use;
     op = RHS;
   }
   QualType Type = E->getType();
+  QualType BaseTy = SubExpr->getType();
+  const bool ArrayElemSubscriptNotation =
+      FromArraySubscript && BaseTy.isBorrowQualified() &&
+      BaseTy.isArrayElemQualified();
   if (op == LHS) {
     Visit(SubExpr);
     std::unique_ptr<Path> Deref = std::make_unique<Path>(
         std::move(Dest), "*", Type, E->getBeginLoc());
+    if (ArrayElemSubscriptNotation)
+      Deref->UsesArraySubscriptNotation = true;
     Dest = std::move(Deref);
   } else if (op == RHS) {
     ++pathDepth;
@@ -826,6 +835,8 @@ void ActionExtract::VisitArraySubscriptExprOrUnaryDeref(Expr *E, Expr *SubExpr) 
     if (!DontAddDeref) {
       std::unique_ptr<Path> Deref = std::make_unique<Path>(
           std::move(Src), "*", Type, E->getBeginLoc());
+      if (ArrayElemSubscriptNotation)
+        Deref->UsesArraySubscriptNotation = true;
       Src = std::move(Deref);
     }
     --pathDepth;
@@ -1204,7 +1215,7 @@ LoansInScope::LoansKilledByWriteTo(const Path *path) const {
   // the path no longer evaluates to the same thing.
   for (const auto &IndexedLoan : llvm::enumerate(loans)) {
     for (const Path *p : IndexedLoan.value().path->prefixes()) {
-      if (p->to_string() == path->to_string()) {
+      if (p->structurallyEquals(*path)) {
         loanIndexes.push_back(IndexedLoan.index());
       }
     }
@@ -1416,7 +1427,7 @@ void BorrowCheck::CheckBorrows(Depth depth, Mode accessMode,
     case Mode::Write: {
       if (depth == Depth::Shallow) {
         reporter.emitDiag(BorrowDiagKind::ForWrite, path->Location, path.get(),
-                          loan->path->Location);
+                          loan->path->Location, loan->path.get());
       } else {
         if (loan->kind == BorrowKind::Mut) {
           reporter.emitDiag(BorrowDiagKind::ForMultiMut, path->Location,
@@ -1494,14 +1505,14 @@ BorrowCheck::FindLoansThatFreeze(const std::unique_ptr<Path> &path) {
     llvm::SmallVector<const Path *> frozenPaths = FrozenByBorrowOf(loan.path);
     // If you have borrowed `a.b`, this prevents writes to `a` or `a.b`:
     for (const Path *frozen : frozenPaths) {
-      if (frozen->to_string() == path.get()->to_string()) {
+      if (frozen->structurallyEquals(*path)) {
         NeedToInsert = true;
         break;
       }
     }
     // If you have borrowed `a.b`, this prevents writes to `a.b.c`:
     for (const Path *prefix : pathPrefixes) {
-      if (prefix->to_string() == loan.path->to_string()) {
+      if (prefix->structurallyEquals(*loan.path)) {
         NeedToInsert = true;
         break;
       }
@@ -1534,14 +1545,14 @@ BorrowCheck::FindLoansThatIntersect(const std::unique_ptr<Path> &path) {
     bool NeedToInsert = false;
     // Accessing `a.b.c` intersects a loan of `a.b.c`, `a.b` and `a`.
     for (const Path *prefix : pathPrefixes) {
-      if (prefix->to_string() == loan.path->to_string()) {
+      if (prefix->structurallyEquals(*loan.path)) {
         NeedToInsert = true;
         break;
       }
     }
     /// Accessing `a.b.c` also intersects a loan of `a.b.c.d`.
     for (const Path *prefix : loan.path->supportingPrefixes()) {
-      if (prefix->to_string() == path->to_string()) {
+      if (prefix->structurallyEquals(*path)) {
         NeedToInsert = true;
         break;
       }

@@ -3,8 +3,8 @@
 _Safe void t1(void) {
   int a[10] = {0};
   int * _Borrow _ArrayElem p1 = &_Mut a[0];
-  int * _Borrow _ArrayElem p2 = p1 + 3; // expected-note {{`*p1` is borrowed here}}
-  p1[1] = 5; // expected-error {{cannot assign to `*p1` because it is borrowed}}
+  int * _Borrow _ArrayElem p2 = p1 + 3; // expected-note {{`p1[]` is borrowed here}}
+  p1[1] = 5; // expected-error {{cannot assign to `p1[]` because it is borrowed}}
   p2[0] = 5;
 }
 
@@ -81,8 +81,8 @@ _Safe void cf_for_freeze(void) {
 _Safe void elem_assign_while_frozen(void) {
   int a[3] = {1, 2, 3};
   int * _Borrow _ArrayElem p1 = a;
-  int * _Borrow _ArrayElem p2 = p1 + 1; // expected-note {{`*p1` is borrowed here}}
-  p1[0] = 5; // expected-error {{cannot assign to `*p1` because it is borrowed}}
+  int * _Borrow _ArrayElem p2 = p1 + 1; // expected-note {{`p1[]` is borrowed here}}
+  p1[0] = 5; // expected-error {{cannot assign to `p1[]` because it is borrowed}}
   p2[0] = 30;
 }
 
