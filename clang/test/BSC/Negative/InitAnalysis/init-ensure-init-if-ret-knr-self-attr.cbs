@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -fsyntax-only -Wno-deprecated-non-prototype -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-deprecated-non-prototype -uninit-check=all -verify %s
+//
+// Guard, C89/K&R form: dropping an *inherited* ensure_init_if_ret contract on a
+// non-safe definition must not exempt a K&R-style definition that declares the
+// contract on its own defining declaration. A K&R definition has a real
+// parameter, so a contract written on it opts the body in and must be honored —
+// in every -uninit-check mode. (K&R parameters cannot carry _Borrow, so these
+// use a plain `int *`.)
+
+// Standalone K&R definition carrying the attribute directly: body must satisfy
+// it.
+int self_attr_knr(out) int * __attribute__((ensure_init_if_ret(0))) out; {
+  return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// _Safe prototype paired with a K&R definition that also declares the contract.
+// The cross-safety inheritance is dropped, but the definition carries the
+// attribute itself, so the body obligation still applies.
+_Safe int self_attr_knr_pair(int * __attribute__((ensure_init_if_ret(0))) out);
+int self_attr_knr_pair(out) int * __attribute__((ensure_init_if_ret(0))) out; {
+  return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}

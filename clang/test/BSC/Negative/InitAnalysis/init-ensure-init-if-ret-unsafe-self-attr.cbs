@@ -1,0 +1,26 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+//
+// Guard: dropping an *inherited* ensure_init_if_ret contract on a non-safe
+// definition must NOT exempt one that declares the contract on its own defining
+// declaration. A definition that writes the attribute itself opts in and must
+// honor it — in every -uninit-check mode.
+
+// _Unsafe definition carries the attribute directly: body must satisfy it.
+_Unsafe int self_attr(int *_Borrow __attribute__((ensure_init_if_ret(0))) out) {
+  return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// Unspecified-safety (plain) definition that carries the attribute directly:
+// body must satisfy it too.
+int self_attr_plain(int *_Borrow __attribute__((ensure_init_if_ret(0))) out) {
+  return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}
+
+// Both the _Unsafe definition and its paired _Safe prototype declare the
+// contract. The cross-safety inheritance is dropped, but the definition carries
+// the attribute itself, so the body obligation still applies.
+_Safe int self_attr_pair(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Unsafe int self_attr_pair(int *_Borrow __attribute__((ensure_init_if_ret(0))) out) {
+  return 0; // expected-error {{'*out' not initialized at return in __attribute__((ensure_init_if_ret(0))) function}}
+}

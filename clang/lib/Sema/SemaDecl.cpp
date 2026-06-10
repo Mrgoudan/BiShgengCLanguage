@@ -3547,7 +3547,32 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
   // done before we process them.
   if (!foundAny) newDecl->setAttrs(AttrVec());
 
+#if ENABLE_BSC
+  // A heterogeneous redeclaration (one _Safe, one non-safe) keeps the two
+  // function *types* separate — mergeFunctionTypes treats _Safe/non-safe as
+  // incompatible and never fuses them. The safety-bound initialization
+  // contracts ensure_init / ensure_init_if_ret must not leak across that
+  // boundary either: otherwise a non-safe definition's body would inherit a
+  // contract its own (non-safe) type does not carry, and would be checked
+  // against a promise that belongs to the separate _Safe overload. Keep them
+  // independent at the attribute level too.
+  bool SkipBSCContractAttrs = false;
+  if (S.getLangOpts().BSC) {
+    const auto *NewFD = dyn_cast<FunctionDecl>(newDecl->getDeclContext());
+    const auto *OldFD = dyn_cast<FunctionDecl>(oldDecl->getDeclContext());
+    if (NewFD && OldFD &&
+        (NewFD->getSafeZoneSpecifier() == SZ_Safe) !=
+            (OldFD->getSafeZoneSpecifier() == SZ_Safe))
+      SkipBSCContractAttrs = true;
+  }
+#endif
+
   for (const auto *I : oldDecl->specific_attrs<InheritableParamAttr>()) {
+#if ENABLE_BSC
+    if (SkipBSCContractAttrs &&
+        (isa<EnsureInitAttr>(I) || isa<EnsureInitIfRetAttr>(I)))
+      continue;
+#endif
     if (!DeclHasAttr(newDecl, I)) {
       InheritableAttr *newAttr =
         cast<InheritableParamAttr>(I->clone(S.Context));

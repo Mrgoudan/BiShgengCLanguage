@@ -1,0 +1,57 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify=expected,all %s
+//
+// Caller side of a heterogeneous-redeclaration contract (callee carries
+// ensure_init_if_ret on its _Safe declaration; non-safe definition omits it).
+//
+//   - `expected-` errors fire in every mode: the contract only guarantees
+//     initialization on the `ret == arg` branch, so unguarded / wrong-branch
+//     use in a checked context is an error.
+//   - `all-` errors fire only under -uninit-check=all: a non-safe caller's body
+//     is not checked under the default `safeonly` mode, but `all` mode flags the
+//     genuine uninitialized read (unrelated to the contract, which is not on the
+//     non-safe definition).
+
+// Heterogeneous callee: _Safe contract declaration + non-safe definition.
+_Safe int g(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Unsafe int g(int *_Borrow out) { return 0; }
+
+
+// --- Checked contexts: error in every mode -----------------------------------
+
+// _Safe caller: reading without checking the return value.
+_Safe int safe_unguarded(void) {
+  int x;
+  int ret = g(&_Mut x);
+  return x; // expected-error {{use of uninitialized value: `x`}}
+}
+
+// _Safe caller: reading on the failure branch.
+_Safe int safe_wrong_branch(void) {
+  int x;
+  if (g(&_Mut x) != 0)
+    return x; // expected-error {{use of uninitialized value: `x`}}
+  return -1;
+}
+
+// Non-safe caller, but a _Safe block reads the value without a guard.
+_Unsafe int unsafe_safe_block(void) {
+  int x;
+  g(&_Mut x);
+  _Safe { return x; } // expected-error {{use of uninitialized value: `x`}}
+}
+
+
+// --- Non-safe callers: unchecked under safeonly, flagged under -uninit-check=all
+
+_Unsafe int unsafe_unguarded(void) {
+  int x;
+  g(&_Mut x);
+  return x; // all-error {{use of uninitialized value: `x`}}
+}
+
+int plain_unguarded(void) {
+  int x;
+  g(&_Mut x);
+  return x; // all-error {{use of uninitialized value: `x`}}
+}

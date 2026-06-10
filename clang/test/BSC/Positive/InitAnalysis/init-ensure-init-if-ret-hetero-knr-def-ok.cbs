@@ -1,0 +1,24 @@
+// RUN: %clang_cc1 -fsyntax-only -Wno-deprecated-non-prototype -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-deprecated-non-prototype -uninit-check=all -verify %s
+// expected-no-diagnostics
+//
+// C89/K&R coverage for the heterogeneous ensure_init_if_ret merge. Unlike a
+// no-prototype declaration `int g();` (zero parameters, so it can carry no
+// contract), a K&R-style definition `int g(out) int *out; {}` DOES have a
+// parameter, so it flows through mergeParamDeclAttributes — the exact path
+// where a _Safe declaration's contract could leak onto a non-safe definition.
+//
+// The body-init obligation must NOT be imposed on a non-_Safe K&R definition
+// that omits the attribute, in BOTH redeclaration orderings and independently
+// of the -uninit-check mode. The skip keys off the defining declaration's
+// safety zone, which is set the same way for K&R and prototyped definitions, so
+// the inherited contract is dropped identically. (K&R parameters cannot carry
+// _Borrow, so these use a plain `int *`.)
+
+// decl-first: _Safe contract prototype, then non-safe K&R definition (no attr).
+_Safe int g_declfirst(int * __attribute__((ensure_init_if_ret(0))) out);
+int g_declfirst(out) int *out; { return 0; }
+
+// def-first: non-safe K&R definition (no attr), then _Safe contract prototype.
+int g_deffirst(out) int *out; { return 0; }
+_Safe int g_deffirst(int * __attribute__((ensure_init_if_ret(0))) out);

@@ -1,0 +1,55 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+// expected-no-diagnostics
+//
+// Caller side of a heterogeneous-redeclaration contract: the callee carries
+// ensure_init_if_ret on its _Safe declaration but the non-safe definition omits
+// it (the spec-allowed direction; the non-safe definition takes manual
+// responsibility, and the contract is not merged onto it).
+//
+// The contract is still attached to the _Safe declaration, so callers that bind
+// to it and check the return value get the guarantee. A guarded use is clean in
+// every -uninit-check mode and from any caller safety.
+
+// Heterogeneous callee: _Safe contract declaration + non-safe definition.
+_Safe int g(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Unsafe int g(int *_Borrow out) { return 0; }
+
+
+// --- _Safe callers -----------------------------------------------------------
+
+// Guarded use in the success branch.
+_Safe int safe_if_check(void) {
+  int x;
+  if (g(&_Mut x) == 0)
+    return x; // ok: contract guarantees *out initialized when g returns 0
+  return -1;
+}
+
+// Early-return on failure, then use.
+_Safe int safe_early_return(void) {
+  int x;
+  int ret = g(&_Mut x);
+  if (ret != 0)
+    return -1;
+  return x; // ok: only reached when ret == 0
+}
+
+
+// --- Non-safe callers: the contract is recognized at the call site too -------
+
+// _Unsafe caller, guarded use.
+_Unsafe int unsafe_caller(void) {
+  int x;
+  if (g(&_Mut x) == 0)
+    return x;
+  return -1;
+}
+
+// Plain (default-zone) caller, guarded use.
+int plain_caller(void) {
+  int x;
+  if (g(&_Mut x) == 0)
+    return x;
+  return -1;
+}

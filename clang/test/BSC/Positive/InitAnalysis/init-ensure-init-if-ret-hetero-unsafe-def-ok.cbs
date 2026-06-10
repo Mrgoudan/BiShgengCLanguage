@@ -1,0 +1,39 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -uninit-check=all -verify %s
+// expected-no-diagnostics
+//
+// Heterogeneous redeclaration: a _Safe declaration's ensure_init_if_ret
+// contract does NOT impose a body-initialization obligation on a non-_Safe
+// definition (explicit _Unsafe, or unspecified default safety) that omits the
+// attribute. Per spec this is the allowed direction — the non-_Safe definition
+// takes manual responsibility for the contract; cf. the `hetero_b`
+// prototype-only case in init-ensure-init-if-ret-redecl-ok.cbs.
+//
+// Crucially this must hold in BOTH redeclaration orderings AND independently of
+// the -uninit-check mode. _Safe and non-safe function types are never merged
+// (mergeFunctionTypes treats them as incompatible), so the contract attribute
+// must not leak onto the non-safe definition either — it is dropped during the
+// heterogeneous param-attr merge. The definition is genuinely the non-safe form
+// `g(int *_Borrow out)`, carrying no contract.
+
+
+// --- Explicit _Unsafe definition --------------------------------------------
+
+// def-first: _Unsafe definition (no attr), then _Safe contract prototype.
+_Unsafe int u_deffirst(int *_Borrow out) { return 0; }
+_Safe int u_deffirst(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+// decl-first: _Safe contract prototype, then _Unsafe definition (no attr).
+_Safe int u_declfirst(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+_Unsafe int u_declfirst(int *_Borrow out) { return 0; }
+
+
+// --- Unspecified-safety definition (plain `int`, default zone) --------------
+
+// def-first: plain definition (no attr), then _Safe contract prototype.
+int p_deffirst(int *_Borrow out) { return 0; }
+_Safe int p_deffirst(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+
+// decl-first: _Safe contract prototype, then plain definition (no attr).
+_Safe int p_declfirst(int *_Borrow __attribute__((ensure_init_if_ret(0))) out);
+int p_declfirst(int *_Borrow out) { return 0; }
