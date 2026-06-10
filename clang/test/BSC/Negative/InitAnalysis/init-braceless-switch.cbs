@@ -1,0 +1,39 @@
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+
+// Umbrella IJP3AP F98 [init-analysis] soundness FN: BSCIRBuilder::lowerSwitchStmt
+// used to lower a switch body only when it was a CompoundStmt, so a brace-less
+// body (a CaseStmt/DefaultStmt, optionally with several labels) was never
+// lowered into the BSCIR and the init analysis was blind to an uninitialized
+// read inside it. Each brace-less shape below reads an uninitialized local and
+// must now be rejected, exactly like its braced counterpart.
+
+_Safe void braceless_case(int x) {
+    int a;
+    switch (x) case 1: { int y = a; (void)y; } // expected-error {{use of uninitialized value: `a`}}
+}
+
+_Safe void braced_case(int x) {
+    int a;
+    switch (x) { case 1: { int y = a; (void)y; } break; } // expected-error {{use of uninitialized value: `a`}}
+}
+
+_Safe void braceless_default(int x) {
+    int a;
+    switch (x) default: { int y = a; (void)y; } // expected-error {{use of uninitialized value: `a`}}
+}
+
+_Safe void braceless_two_labels(int x) {
+    int a;
+    switch (x) case 1: case 2: { int y = a; (void)y; } // expected-error {{use of uninitialized value: `a`}}
+}
+
+_Safe int braceless_return_uninit(int x) {
+    int a;
+    switch (x) case 1: return a; // expected-error {{use of uninitialized value: `a`}}
+    return 0;
+}
+
+_Safe void braceless_nested_switch(int x, int z) {
+    int a;
+    switch (x) case 1: switch (z) case 2: { int y = a; (void)y; } // expected-error {{use of uninitialized value: `a`}}
+}

@@ -569,25 +569,27 @@ void BSCIRBuilder::lowerSwitchStmt(const SwitchStmt *SS) {
     return S; // not a label
   };
 
-  // Walk the CompoundStmt body linearly to build case regions.
   const Stmt *Body = SS->getBody();
-  // FIXME: handle brace-less switch body (e.g., "switch (x) case 1: foo();")
-  if (auto *CS = dyn_cast<CompoundStmt>(Body)) {
-    for (const Stmt *S : CS->body()) {
-      if (isa<CaseStmt>(S) || isa<DefaultStmt>(S)) {
-        // Start a new region
-        Regions.push_back({});
-        CaseRegion &R = Regions.back();
-        const Stmt *Inner = unwrapLabels(S, R);
-        // The innermost sub-statement is the first body statement
-        if (Inner)
-          R.Body.push_back(Inner);
-      } else {
-        // Non-label statement: add to current region's body
-        if (!Regions.empty())
-          Regions.back().Body.push_back(S);
-        // else: statements before any case label — unreachable in valid C
-      }
+  SmallVector<const Stmt *, 8> BodyStmts;
+  if (auto *CS = dyn_cast<CompoundStmt>(Body))
+    BodyStmts.append(CS->body_begin(), CS->body_end());
+  else if (Body)
+    BodyStmts.push_back(Body);
+
+  for (const Stmt *S : BodyStmts) {
+    if (isa<CaseStmt>(S) || isa<DefaultStmt>(S)) {
+      // Start a new region
+      Regions.push_back({});
+      CaseRegion &R = Regions.back();
+      const Stmt *Inner = unwrapLabels(S, R);
+      // The innermost sub-statement is the first body statement
+      if (Inner)
+        R.Body.push_back(Inner);
+    } else {
+      // Non-label statement: add to current region's body
+      if (!Regions.empty())
+        Regions.back().Body.push_back(S);
+      // else: statements before any case label — unreachable in valid C
     }
   }
 
@@ -612,9 +614,9 @@ void BSCIRBuilder::lowerSwitchStmt(const SwitchStmt *SS) {
                                             std::move(SwitchTargets), DefaultBB,
                                             currentSafeZone()));
 
-  // Push a scope for the switch body compound statement. Declarations in
-  // case regions (without explicit braces) are scoped to the switch body;
-  // StorageDead for these locals must appear at switch exit, not function exit.
+  // Push a scope for the switch body. Declarations in case regions (without
+  // explicit braces) are scoped to the switch body; StorageDead for these
+  // locals must appear at switch exit, not function exit.
   ScopeStack.push_back({});
 
   // Lower each region's body

@@ -1,0 +1,112 @@
+// RUN: %clang_cc1 -fsyntax-only -dump-bscir %s 2>&1 | FileCheck %s
+
+// Umbrella IJP3AP F98 [init-analysis]: BSCIRBuilder::lowerSwitchStmt used to
+// build case regions only when the switch body was a CompoundStmt, so a
+// brace-less body (switch (x) case 1: ...) was never lowered into the BSCIR.
+// The init analysis was therefore blind to reads inside it. These tests dump
+// the lowered BSCIR to show a brace-less body is now lowered into a real case
+// region whose statements are walked, byte-identical to the braced form.
+
+// ---------------------------------------------------------------------------
+// Brace-less case body lowers to a switchInt with a real case region (bb3)
+// that contains the case body.
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn braceless_switch
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = const 0
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int braceless_switch(int x) {
+    switch (x) case 1: return 1;
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
+// The braced equivalent must lower to the identical structure. Asserting the
+// same CHECK shape here makes the braced/brace-less symmetry explicit.
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn braced_switch
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+// CHECK:      bb2: {{[{]}}
+// CHECK-NEXT:   _0 = const 0
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = const 1
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int braced_switch(int x) {
+    switch (x) { case 1: return 1; }
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Multiple labels on a brace-less body map to one shared case region.
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn braceless_two_labels
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, 2: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   _0 = const 5
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int braceless_two_labels(int x) {
+    switch (x) case 1: case 2: return 5;
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
+// A declaration inside a brace-less case body is walked into the case region:
+// StorageLive/StorageDead for the local appear in the region, which is exactly
+// what lets the init analysis see reads inside the body.
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn braceless_with_decl
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   switchInt(copy(_1)) -> [1: bb3, otherwise: bb2]
+// CHECK-NEXT: }
+// CHECK:      bb3: {{[{]}}
+// CHECK-NEXT:   StorageLive(_2)
+// CHECK:        StorageDead(_2)
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+int braceless_with_decl(int x) {
+    switch (x) case 1: { int y = x + 1; return y; }
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
+// A brace-less default-only body is lowered: its body statement appears in the
+// region (here the only region, so lowering emits it directly).
+// ---------------------------------------------------------------------------
+
+// CHECK-LABEL: fn braceless_default
+// CHECK:      bb0: {{[{]}}
+// CHECK-NEXT:   _0 = const 7
+// CHECK-NEXT:   goto -> bb1
+// CHECK-NEXT: }
+// CHECK:      bb1: {{[{]}}
+// CHECK-NEXT:   return
+// CHECK-NEXT: }
+int braceless_default(int x) {
+    switch (x) default: return 7;
+}
